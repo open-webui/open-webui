@@ -1,0 +1,98 @@
+# Run with
+#    caddy run --envfile ./example.env --config ./Caddyfile.docker
+#
+# This is configured for
+#    - Automatic HTTPS (even for localhost)
+#    - Reverse Proxying to Ollama API Base URL (http://localhost:11434/api)
+#    - CORS
+#    - HTTP Basic Auth API Tokens (uncomment basicauth section)
+
+##################
+# Macro Snippets #
+##################
+
+# Macro for optional HTTP Basic Auth
+(maybe-basic-auth) {
+	@match-enforce-auth `"{$OLLAMA_API_TOKEN_DIGEST}".size() > 0`
+	basicauth @match-enforce-auth {
+		{$OLLAMA_API_ID} {$OLLAMA_API_TOKEN_DIGEST}
+	}
+}
+
+# Macro for CORS "Simple Requests"
+(cors-simple) {
+	@match-cors-request-simple {
+		not header Origin "{http.request.scheme}://{http.request.host}"
+		header Origin "{http.request.header.origin}"
+		method GET HEAD POST
+	}
+	handle @match-cors-request-simple {
+		header {
+			Access-Control-Allow-Origin "*"
+			Access-Control-Expose-Headers *
+			defer
+		}
+	}
+}
+
+# Macro for CORS Preflight Requests + Requests
+(cors-api) {
+	@match-cors-api-preflight {
+		not header Origin "{http.request.scheme}://{http.request.host}"
+		header Origin "{http.request.header.origin}"
+		method OPTIONS
+	}
+	handle @match-cors-api-preflight {
+		header {
+			Access-Control-Allow-Origin "{http.request.header.origin}"
+			Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+			Access-Control-Allow-Headers "Origin, Accept, Authorization, Content-Type, X-Requested-With"
+			Access-Control-Allow-Credentials "true"
+			Access-Control-Max-Age "3600"
+			defer
+		}
+		respond "" 204
+	}
+
+	@match-cors-api-request {
+		not header Origin "{http.request.scheme}://{http.request.host}"
+		header Origin "{http.request.header.origin}"
+		not method OPTIONS
+	}
+	handle @match-cors-api-request {
+		header {
+			Access-Control-Allow-Origin "{http.request.header.origin}"
+			Access-Control-Allow-Credentials "true"
+			Access-Control-Max-Age "3600"
+			defer
+		}
+	}
+}
+
+#################
+# Server Config #
+#################
+
+# disables automatic HTTPS certs, and handles any hostname
+http://*:8080 {
+	## Set OLLAMA_API_TOKEN_DIGEST to enable HTTP Basic Auth
+	# (see .example.env for how to generate tokens)
+	import maybe-basic-auth
+
+	handle /api/* {
+		# Comment to disable CORS
+		import cors-api
+
+		reverse_proxy localhost:11434
+	}
+
+	# Same-Origin Static Web Server
+	handle /* {
+        # Uncomment to enable CORS
+		#import cors-simple
+
+		file_server {
+			root ./build/
+		}
+	}
+}
