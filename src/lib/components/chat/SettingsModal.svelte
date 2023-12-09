@@ -1,11 +1,12 @@
 <script lang="ts">
 	import Modal from '../common/Modal.svelte';
 
-	import { WEB_UI_VERSION, OLLAMA_API_BASE_URL as BUILD_TIME_API_BASE_URL } from '$lib/constants';
+	import { WEB_UI_VERSION, OLLAMA_API_BASE_URL } from '$lib/constants';
 	import toast from 'svelte-french-toast';
 	import { onMount } from 'svelte';
 	import { config, models, settings, user } from '$lib/stores';
 	import { splitStream, getGravatarURL } from '$lib/utils';
+	import Advanced from './Settings/Advanced.svelte';
 
 	export let show = false;
 
@@ -19,17 +20,27 @@
 	let selectedTab = 'general';
 
 	// General
-	let API_BASE_URL = BUILD_TIME_API_BASE_URL;
+	let API_BASE_URL = OLLAMA_API_BASE_URL;
 	let theme = 'dark';
 	let system = '';
 
 	// Advanced
 	let requestFormat = '';
-	let seed = 0;
-	let temperature = 0.8;
-	let repeat_penalty = 1.1;
-	let top_k = 40;
-	let top_p = 0.9;
+	let options = {
+		// Advanced
+		seed: 0,
+		temperature: '',
+		repeat_penalty: '',
+		repeat_last_n: '',
+		mirostat: '',
+		mirostat_eta: '',
+		mirostat_tau: '',
+		top_k: '',
+		top_p: '',
+		stop: '',
+		tfs_z: '',
+		num_ctx: ''
+	};
 
 	// Models
 	let modelTag = '';
@@ -50,7 +61,7 @@
 
 	const checkOllamaConnection = async () => {
 		if (API_BASE_URL === '') {
-			API_BASE_URL = BUILD_TIME_API_BASE_URL;
+			API_BASE_URL = OLLAMA_API_BASE_URL;
 		}
 		const _models = await getModels(API_BASE_URL, 'ollama');
 
@@ -217,27 +228,6 @@
 		models.set(await getModels());
 	};
 
-	$: if (show) {
-		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-		console.log(settings);
-
-		theme = localStorage.theme ?? 'dark';
-		API_BASE_URL = settings.API_BASE_URL ?? BUILD_TIME_API_BASE_URL;
-		system = settings.system ?? '';
-
-		requestFormat = settings.requestFormat ?? '';
-		seed = settings.seed ?? 0;
-		temperature = settings.temperature ?? 0.8;
-		repeat_penalty = settings.repeat_penalty ?? 1.1;
-		top_k = settings.top_k ?? 40;
-		top_p = settings.top_p ?? 0.9;
-
-		titleAutoGenerate = settings.titleAutoGenerate ?? true;
-		speechAutoSend = settings.speechAutoSend ?? false;
-		gravatarEmail = settings.gravatarEmail ?? '';
-		OPENAI_API_KEY = settings.OPENAI_API_KEY ?? '';
-	}
-
 	const getModels = async (url = '', type = 'all') => {
 		let models = [];
 		const res = await fetch(`${url ? url : $settings?.API_BASE_URL ?? OLLAMA_API_BASE_URL}/tags`, {
@@ -304,6 +294,26 @@
 
 	onMount(() => {
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+		console.log(settings);
+
+		theme = localStorage.theme ?? 'dark';
+		API_BASE_URL = settings.API_BASE_URL ?? OLLAMA_API_BASE_URL;
+		system = settings.system ?? '';
+
+		requestFormat = settings.requestFormat ?? '';
+
+		options.seed = settings.seed ?? 0;
+		options.temperature = settings.temperature ?? '';
+		options.repeat_penalty = settings.repeat_penalty ?? '';
+		options.top_k = settings.top_k ?? '';
+		options.top_p = settings.top_p ?? '';
+		options.num_ctx = settings.num_ctx ?? '';
+		options = { ...options, ...settings.options };
+
+		titleAutoGenerate = settings.titleAutoGenerate ?? true;
+		speechAutoSend = settings.speechAutoSend ?? false;
+		gravatarEmail = settings.gravatarEmail ?? '';
+		OPENAI_API_KEY = settings.OPENAI_API_KEY ?? '';
 
 		authEnabled = settings.authHeader !== undefined ? true : false;
 		if (authEnabled) {
@@ -495,7 +505,7 @@
 					<div class=" self-center">About</div>
 				</button>
 			</div>
-			<div class="flex-1 md:min-h-[330px]">
+			<div class="flex-1 md:min-h-[340px]">
 				{#if selectedTab === 'general'}
 					<div class="flex flex-col space-y-3">
 						<div>
@@ -599,7 +609,7 @@
 								class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 								on:click={() => {
 									saveSettings({
-										API_BASE_URL: API_BASE_URL === '' ? BUILD_TIME_API_BASE_URL : API_BASE_URL,
+										API_BASE_URL: API_BASE_URL === '' ? OLLAMA_API_BASE_URL : API_BASE_URL,
 										system: system !== '' ? system : undefined
 									});
 									show = false;
@@ -610,8 +620,13 @@
 						</div>
 					</div>
 				{:else if selectedTab === 'advanced'}
-					<div class="flex flex-col h-full justify-between space-y-3 text-sm">
-						<div class=" space-y-3">
+					<div class="flex flex-col h-full justify-between text-sm">
+						<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-72">
+							<div class=" text-sm font-medium">Parameters</div>
+
+							<Advanced bind:options />
+							<hr class=" dark:border-gray-700" />
+
 							<div>
 								<div class=" py-1 flex w-full justify-between">
 									<div class=" self-center text-sm font-medium">Request Mode</div>
@@ -640,98 +655,6 @@
 									</button>
 								</div>
 							</div>
-
-							<hr class=" dark:border-gray-700" />
-
-							<div>
-								<div class=" py-1 flex w-full justify-between">
-									<div class=" w-20 text-sm font-medium self-center">Seed</div>
-									<div class=" flex-1 self-center">
-										<input
-											class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-											type="number"
-											placeholder="Enter Seed"
-											bind:value={seed}
-											autocomplete="off"
-											min="0"
-										/>
-									</div>
-								</div>
-							</div>
-
-							<hr class=" dark:border-gray-700" />
-
-							<div>
-								<label for="steps-range" class=" mb-2 text-sm font-medium flex justify-between">
-									<div>Temperature</div>
-									<div>
-										{temperature}
-									</div></label
-								>
-								<input
-									id="steps-range"
-									type="range"
-									min="0"
-									max="1"
-									bind:value={temperature}
-									step="0.05"
-									class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-								/>
-							</div>
-
-							<div>
-								<label for="steps-range" class=" mb-2 text-sm font-medium flex justify-between">
-									<div>Repeat Penalty</div>
-									<div>
-										{repeat_penalty}
-									</div></label
-								>
-								<input
-									id="steps-range"
-									type="range"
-									min="0"
-									max="2"
-									bind:value={repeat_penalty}
-									step="0.05"
-									class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-								/>
-							</div>
-
-							<div>
-								<label for="steps-range" class=" mb-2 text-sm font-medium flex justify-between">
-									<div>Top K</div>
-									<div>
-										{top_k}
-									</div></label
-								>
-								<input
-									id="steps-range"
-									type="range"
-									min="0"
-									max="100"
-									bind:value={top_k}
-									step="0.5"
-									class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-								/>
-							</div>
-
-							<div>
-								<label for="steps-range" class=" mb-2 text-sm font-medium flex justify-between">
-									<div>Top P</div>
-									<div>
-										{top_p}
-									</div></label
-								>
-								<input
-									id="steps-range"
-									type="range"
-									min="0"
-									max="1"
-									bind:value={top_p}
-									step="0.05"
-									class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-								/>
-							</div>
 						</div>
 
 						<div class="flex justify-end pt-3 text-sm font-medium">
@@ -739,11 +662,22 @@
 								class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 								on:click={() => {
 									saveSettings({
-										seed: (seed !== 0 ? seed : undefined) ?? undefined,
-										temperature: temperature !== 0.8 ? temperature : undefined,
-										repeat_penalty: repeat_penalty !== 1.1 ? repeat_penalty : undefined,
-										top_k: top_k !== 40 ? top_k : undefined,
-										top_p: top_p !== 0.9 ? top_p : undefined
+										options: {
+											seed: (options.seed !== 0 ? options.seed : undefined) ?? undefined,
+											stop: options.stop !== '' ? options.stop : undefined,
+											temperature: options.temperature !== '' ? options.temperature : undefined,
+											repeat_penalty:
+												options.repeat_penalty !== '' ? options.repeat_penalty : undefined,
+											repeat_last_n:
+												options.repeat_last_n !== '' ? options.repeat_last_n : undefined,
+											mirostat: options.mirostat !== '' ? options.mirostat : undefined,
+											mirostat_eta: options.mirostat_eta !== '' ? options.mirostat_eta : undefined,
+											mirostat_tau: options.mirostat_tau !== '' ? options.mirostat_tau : undefined,
+											top_k: options.top_k !== '' ? options.top_k : undefined,
+											top_p: options.top_p !== '' ? options.top_p : undefined,
+											tfs_z: options.tfs_z !== '' ? options.tfs_z : undefined,
+											num_ctx: options.num_ctx !== '' ? options.num_ctx : undefined
+										}
 									});
 									show = false;
 								}}
@@ -805,7 +739,7 @@
 											{pullProgress ?? 0}%
 										</div>
 									</div>
-									<div class="mt-1 text-xs dark:text-gray-700" style="font-size: 0.5rem;">
+									<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
 										{digest}
 									</div>
 								</div>

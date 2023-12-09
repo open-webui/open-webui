@@ -1,14 +1,25 @@
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
 	import { openDB, deleteDB } from 'idb';
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { config, user, showSettings, settings, models, db, chats } from '$lib/stores';
+	import {
+		config,
+		user,
+		showSettings,
+		settings,
+		models,
+		db,
+		chats,
+		chatId,
+		modelfiles
+	} from '$lib/stores';
 
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import toast from 'svelte-french-toast';
-	import { OLLAMA_API_BASE_URL } from '$lib/constants';
+	import { OLLAMA_API_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 
 	let loaded = false;
 
@@ -77,7 +88,7 @@
 	};
 
 	const getDB = async () => {
-		const _db = await openDB('Chats', 1, {
+		const DB = await openDB('Chats', 1, {
 			upgrade(db) {
 				const store = db.createObjectStore('chats', {
 					keyPath: 'id',
@@ -88,7 +99,7 @@
 		});
 
 		return {
-			db: _db,
+			db: DB,
 			getChatById: async function (id) {
 				return await this.db.get('chats', id);
 			},
@@ -133,6 +144,10 @@
 				await chats.set(await this.getChats());
 			},
 			deleteChatById: async function (id) {
+				if ($chatId === id) {
+					goto('/');
+					await chatId.set(uuidv4());
+				}
 				await this.db.delete('chats', id);
 				await chats.set(await this.getChats());
 			},
@@ -156,6 +171,14 @@
 		await models.set(_models);
 		let _db = await getDB();
 		await db.set(_db);
+
+		await modelfiles.set(
+			JSON.parse(localStorage.getItem('modelfiles') ?? JSON.stringify($modelfiles))
+		);
+
+		modelfiles.subscribe(async () => {
+			await models.set(await getModels());
+		});
 
 		await tick();
 		loaded = true;

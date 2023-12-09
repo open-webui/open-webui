@@ -15,6 +15,8 @@ ChatGPT-Style Web Interface for Ollama 🦙
 
 ![Ollama Web UI Demo](./demo.gif)
 
+Also check our sibling project, [OllamaHub](https://ollamahub.com/), where you can discover, download, and explore customized Modelfiles for Ollama! 🦙🔍
+
 ## Features ⭐
 
 - 🖥️ **Intuitive Interface**: Our chat interface takes inspiration from ChatGPT, ensuring a user-friendly experience.
@@ -32,6 +34,8 @@ ChatGPT-Style Web Interface for Ollama 🦙
 - 📥🗑️ **Download/Delete Models**: Easily download or remove models directly from the web UI.
 
 - 🤖 **Multiple Model Support**: Seamlessly switch between different chat models for diverse interactions.
+
+- 🧩 **Modelfile Builder**: Easily create Ollama modelfiles via the web UI. Create and add characters/agents, customize chat elements, and import modelfiles effortlessly through [OllamaHub](https://ollamahub.com/) integration.
 
 - ⚙️ **Many Models Conversations**: Effortlessly engage with various models simultaneously, harnessing their unique strengths for optimal responses. Enhance your experience by leveraging a diverse set of models in parallel.
 
@@ -54,6 +58,10 @@ ChatGPT-Style Web Interface for Ollama 🦙
 - 🔒 **Backend Reverse Proxy Support**: Strengthen security by enabling direct communication between Ollama Web UI backend and Ollama, eliminating the need to expose Ollama over LAN.
 
 - 🌟 **Continuous Updates**: We are committed to improving Ollama Web UI with regular updates and new features.
+
+## 🔗 Also Check Out OllamaHub!
+
+Don't forget to explore our sibling project, [OllamaHub](https://ollamahub.com/), where you can discover, download, and explore customized Modelfiles. OllamaHub offers a wide range of exciting possibilities for enhancing your chat interactions with Ollama! 🚀
 
 ## How to Install 🚀
 
@@ -109,43 +117,76 @@ docker build -t ollama-webui .
 docker run -d -p 3000:8080 -e OLLAMA_API_BASE_URL=https://example.com/api --name ollama-webui --restart always ollama-webui
 ```
 
-## How to Build for Static Deployment
+## How to Install Without Docker
 
-1. Clone & Enter the project
+While we strongly recommend using our convenient Docker container installation for optimal support, we understand that some situations may require a non-Docker setup, especially for development purposes. Please note that non-Docker installations are not officially supported, and you might need to troubleshoot on your own.
+
+### TL;DR 🚀
+
+Run the following commands to install:
+
+```sh
+git clone https://github.com/ollama-webui/ollama-webui.git
+cd ollama-webui/
+
+# Copying required .env file
+cp -RPp example.env .env
+
+# Building Frontend
+npm i
+npm run build
+
+# Serving Frontend with the Backend
+cd ./backend
+pip install -r requirements.txt
+sh start.sh
+```
+
+You should have the Ollama Web UI up and running at http://localhost:8080/. Enjoy! 😄
+
+### Project Components
+
+The Ollama Web UI consists of two primary components: the frontend and the backend (which serves as a reverse proxy, handling static frontend files, and additional features). Both need to be running concurrently for the development environment using `npm run dev`. Alternatively, you can set the `PUBLIC_API_BASE_URL` during the build process to have the frontend connect directly to your Ollama instance or build the frontend as static files and serve them with the backend.
+
+### Prerequisites
+
+1. **Clone and Enter the Project:**
 
    ```sh
    git clone https://github.com/ollama-webui/ollama-webui.git
-   pushd ./ollama-webui/
+   cd ollama-webui/
    ```
 
-2. Create and edit `.env`
+2. **Create and Edit `.env`:**
 
    ```sh
    cp -RPp example.env .env
    ```
 
-3. Install node dependencies
+### Building Ollama Web UI Frontend
+
+1. **Install Node Dependencies:**
 
    ```sh
-   npm i
+   npm install
    ```
 
-4. Run in dev mode, or build the site for deployment
+2. **Run in Dev Mode or Build for Deployment:**
 
-   - Test in Dev mode:
+   - Dev Mode (requires the backend to be running simultaneously):
 
      ```sh
      npm run dev
      ```
 
-   - Build for Deploy:
+   - Build for Deployment:
 
      ```sh
-     #`PUBLIC_API_BASE_URL` will overwrite the value in `.env`
+     # `PUBLIC_API_BASE_URL` overwrites the value in `.env`
      PUBLIC_API_BASE_URL='https://example.com/api' npm run build
      ```
 
-5. Test the build with `caddy` (or the server of your choice)
+3. **Test the Build with `Caddy` (or your preferred server):**
 
    ```sh
    curl https://webi.sh/caddy | sh
@@ -154,16 +195,47 @@ docker run -d -p 3000:8080 -e OLLAMA_API_BASE_URL=https://example.com/api --name
    caddy run --envfile .env --config ./Caddyfile.localhost
    ```
 
+### Running Ollama Web UI Backend
+
+If you wish to run the backend for deployment, ensure that the frontend is built so that the backend can serve the frontend files along with the API route.
+
+#### Setup Instructions
+
+1. **Install Python Requirements:**
+
+   ```sh
+   cd ./backend
+   pip install -r requirements.txt
+   ```
+
+2. **Run Python Backend:**
+
+   - Dev Mode with Hot Reloading:
+
+     ```sh
+     sh dev.sh
+     ```
+
+   - Deployment:
+
+     ```sh
+     sh start.sh
+     ```
+
+Now, you should have the Ollama Web UI up and running at [http://localhost:8080/](http://localhost:8080/). Feel free to explore the features and functionalities of Ollama! If you encounter any issues, please refer to the instructions above or reach out to the community for assistance.
+
 ## Troubleshooting
 
 See [TROUBLESHOOTING.md](/TROUBLESHOOTING.md) for information on how to troubleshoot and/or join our [Ollama Web UI Discord community](https://discord.gg/5rJgQTnV4s).
 
 ## What's Next? 🚀
 
-### To-Do List 📝
+### Roadmap 📝
 
-Here are some exciting tasks on our to-do list:
+Here are some exciting tasks on our roadmap:
 
+- 🔄 **Multi-Modal Support**: Seamlessly engage with models that support multimodal interactions, including images (e.g., LLava).
+- 📚 **RAG Integration**: Experience first-class retrieval augmented generation support, enabling chat with your documents.
 - 🔐 **Access Control**: Securely manage requests to Ollama by utilizing the backend as a reverse proxy gateway, ensuring only authenticated users can send specific requests.
 - 🧪 **Research-Centric Features**: Empower researchers in the fields of LLM and HCI with a comprehensive web UI for conducting user studies. Stay tuned for ongoing feature enhancements (e.g., surveys, analytics, and participant tracking) to facilitate their research.
 - 📈 **User Study Tools**: Providing specialized tools, like heat maps and behavior tracking modules, to empower researchers in capturing and analyzing user behavior patterns with precision and accuracy.

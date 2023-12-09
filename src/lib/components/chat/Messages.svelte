@@ -7,7 +7,7 @@
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
 
-	import { config, db, settings, user } from '$lib/stores';
+	import { config, db, modelfiles, settings, user } from '$lib/stores';
 	import { tick } from 'svelte';
 
 	import toast from 'svelte-french-toast';
@@ -16,8 +16,11 @@
 	export let regenerateResponse: Function;
 
 	export let autoScroll;
+	export let selectedModels;
 	export let history = {};
 	export let messages = [];
+
+	export let selectedModelfile = null;
 
 	$: if (messages && messages.length > 0 && (messages.at(-1).done ?? false)) {
 		(async () => {
@@ -28,6 +31,11 @@
 		})();
 	}
 
+	const speakMessage = (message) => {
+		const speak = new SpeechSynthesisUtterance(message);
+		speechSynthesis.speak(speak);
+	};
+
 	const createCopyCodeBlockButton = () => {
 		// use a class selector if available
 		let blocks = document.querySelectorAll('pre');
@@ -35,7 +43,7 @@
 		blocks.forEach((block) => {
 			// only add button if browser supports Clipboard API
 
-			if (navigator.clipboard && block.childNodes.length < 2) {
+			if (navigator.clipboard && block.childNodes.length < 2 && block.id !== 'user-message') {
 				let code = block.querySelector('code');
 				code.style.borderTopRightRadius = 0;
 				code.style.borderTopLeftRadius = 0;
@@ -301,10 +309,32 @@
 {#if messages.length == 0}
 	<div class="m-auto text-center max-w-md pb-56 px-2">
 		<div class="flex justify-center mt-8">
-			<img src="/ollama.png" class=" w-16 invert-[10%] dark:invert-[100%] rounded-full" />
+			{#if selectedModelfile && selectedModelfile.imageUrl}
+				<img src={selectedModelfile?.imageUrl} class=" w-20 mb-2 rounded-full" />
+			{:else}
+				<img src="/ollama.png" class=" w-16 invert-[10%] dark:invert-[100%] rounded-full" />
+			{/if}
 		</div>
-		<div class=" mt-1 text-2xl text-gray-800 dark:text-gray-100 font-semibold">
-			How can I help you today?
+		<div class=" mt-2 text-2xl text-gray-800 dark:text-gray-100 font-semibold">
+			{#if selectedModelfile}
+				<span class=" capitalize">
+					{selectedModelfile.title}
+				</span>
+				<div class="mt-0.5 text-base font-normal text-gray-600 dark:text-gray-400">
+					{selectedModelfile.desc}
+				</div>
+				{#if selectedModelfile.user}
+					<div class="mt-0.5 text-sm font-normal text-gray-500 dark:text-gray-500">
+						By <a href="https://ollamahub.com/"
+							>{selectedModelfile.user.name
+								? selectedModelfile.user.name
+								: `@${selectedModelfile.user.username}`}</a
+						>
+					</div>
+				{/if}
+			{:else}
+				How can I help you today?
+			{/if}
 		</div>
 	</div>
 {:else}
@@ -314,7 +344,7 @@
 				<div class=" flex w-full">
 					<div class=" mr-4">
 						{#if message.role === 'user'}
-							{#if $config === null}
+							{#if $config === null || !($config?.auth ?? true)}
 								<img
 									src="{$settings.gravatarUrl ? $settings.gravatarUrl : '/user'}.png"
 									class=" max-w-[28px] object-cover rounded-full"
@@ -327,6 +357,12 @@
 									alt="User profile"
 								/>
 							{/if}
+						{:else if selectedModelfile}
+							<img
+								src={selectedModelfile?.imageUrl ?? '/favicon.png'}
+								class=" max-w-[28px] object-cover rounded-full"
+								alt="Ollama profile"
+							/>
 						{:else}
 							<img
 								src="/favicon.png"
@@ -336,10 +372,14 @@
 						{/if}
 					</div>
 
-					<div class="w-full">
+					<div class="w-full overflow-hidden">
 						<div class=" self-center font-bold mb-0.5">
 							{#if message.role === 'user'}
 								You
+							{:else if selectedModelfile}
+								<span class="capitalize">
+									{selectedModelfile.title}
+								</span>
 							{:else}
 								Ollama <span class=" text-gray-500 text-sm font-medium"
 									>{message.model ? ` ${message.model}` : ''}</span
@@ -409,7 +449,18 @@
 										</div>
 									{:else}
 										<div class="w-full">
-											{message.content}
+											{#if message.files}
+												<div class="my-3">
+													{#each message.files as file}
+														<div>
+															{#if file.type === 'image'}
+																<img src={file.url} alt="input" class=" max-h-96" />
+															{/if}
+														</div>
+													{/each}
+												</div>
+											{/if}
+											<pre id="user-message">{message.content}</pre>
 
 											<div class=" flex justify-start space-x-1">
 												{#if message.parentId !== null && message.parentId in history.messages && (history.messages[message.parentId]?.childrenIds.length ?? 0) > 1}
@@ -612,6 +663,29 @@
 														</button>
 													</div>
 												{/if}
+
+												<!-- <button
+													class="invisible group-hover:visible p-1 rounded dark:hover:bg-gray-800 transition"
+													on:click={() => {
+														editMessageHandler(message.id);
+													}}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="1.5"
+														stroke="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+														/>
+													</svg>
+												</button> -->
+
 												<button
 													class="{messageIdx + 1 === messages.length
 														? 'visible'
@@ -679,6 +753,30 @@
 															d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
 														/></svg
 													>
+												</button>
+
+												<button
+													class="{messageIdx + 1 === messages.length
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1 rounded dark:hover:bg-gray-800 transition"
+													on:click={() => {
+														speakMessage(message.content);
+													}}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="1.5"
+														stroke="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+														/>
+													</svg>
 												</button>
 
 												{#if messageIdx + 1 === messages.length}
