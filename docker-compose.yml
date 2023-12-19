@@ -27,7 +27,7 @@ services:
       args:
         OLLAMA_API_BASE_URL: '/ollama/api'
       dockerfile: Dockerfile
-    image: ollama-webui:latest
+    image: harbor.fa-services.intra.dlr.de/hess_ja/ollama-webui
     container_name: ollama-webui
     depends_on:
       - ollama
