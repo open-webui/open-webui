@@ -31,13 +31,28 @@ services:
     container_name: ollama-webui
     depends_on:
       - ollama
-    ports:
-      - 3000:8080
     environment:
       - "OLLAMA_API_BASE_URL=http://ollama:11434/api"
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      #These labels control how the app will be available. Change all "changeme" to something unambigous, e.g. "mycoolapp"
+      #For these labels to be effective, the app needs to be connected to the network named "proxy". You're free to connect any backend network you like
+      labels:
+        - "traefik.enable=true"
+        - "traefik.constraint-label=traefik-public"
+        - "traefik.http.routers.ollama-webui.entrypoints=websecure"
+        - "traefik.http.routers.ollama-webui.rule=Host(`ollama.nimbus.dlr.de`)"
+        - "traefik.http.routers.ollama-webui.tls=true"
+        - "traefik.http.routers.ollama-webui.service=ollama-webui"
+        - "traefik.http.services.ollama-webui.loadbalancer.server.port=8080"
+        - "traefik.docker.network=proxy"
+        - "enable.autoupdate.custom.build=true"
 
 volumes:
   ollama: {}
