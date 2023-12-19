@@ -20,6 +20,8 @@ services:
     tty: true
     restart: unless-stopped
     image: ollama/ollama:latest
+    networks:
+      - proxy
 
   ollama-webui:
     build:
