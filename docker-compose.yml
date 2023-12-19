@@ -53,11 +53,11 @@ services:
         - "traefik.http.services.ollama-webui.loadbalancer.server.port=8080"
         - "traefik.docker.network=proxy"
         - "enable.autoupdate.custom.build=true"
-      networks:
+    networks:
       - proxy
 
 volumes:
   ollama: {}
 networks:
-  proxy:
-    external: true
+proxy:
+  external: true
