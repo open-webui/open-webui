@@ -240,7 +240,7 @@
 								if (responseMessage.content == '' && data.message.content == '\n') {
 									continue;
 								} else {
-									responseMessage.content += data.message.content;
+									responseMessage.content += decodeURIComponent(data.message.content);
 									messages = messages;
 								}
 							} else {
