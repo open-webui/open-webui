@@ -295,9 +295,7 @@
 					messages: messages,
 					history: history
 				});
-				await chats.set(await getChatList(localStorage.token));
-
-				await credits.set(await getUserCredits(localStorage.token));
+				await chats.set(await getChatList(localStorage.token));				
 			}
 		} else {
 			if (res !== null) {
@@ -332,6 +330,9 @@
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 			await generateChatTitle(_chatId, userPrompt);
 		}
+
+		// Refresh credits
+		await credits.set(await getUserCredits(localStorage.token));
 	};
 
 	const sendPromptOpenAI = async (model, userPrompt, parentId, _chatId) => {
