@@ -9,6 +9,9 @@
 	import { user, chats, showSettings, chatId } from '$lib/stores';
 	import { onMount } from 'svelte';
 	import { deleteChatById, getChatList, updateChatById } from '$lib/apis/chats';
+	
+	import { credits } from '$lib/stores';
+	import { getUserCredits } from '$lib/apis/credits';
 
 	let show = false;
 	let navElement;
@@ -28,6 +31,8 @@
 		}
 
 		await chats.set(await getChatList(localStorage.token));
+		
+		await credits.set(await getUserCredits(localStorage.token));
 	});
 
 	const loadChat = async (id) => {
@@ -390,7 +395,7 @@
 								alt="User profile"
 							/>
 						</div>
-						<div class=" self-center font-semibold">{$user.name}</div>
+						<div class=" self-center font-semibold">{$user.name} (${$credits.balance})</div>
 					</button>
 
 					{#if showDropdown}

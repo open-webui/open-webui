@@ -12,3 +12,4 @@ export const models = writable([]);
 export const modelfiles = writable([]);
 export const settings = writable({});
 export const showSettings = writable(false);
+export const credits = writable({});
