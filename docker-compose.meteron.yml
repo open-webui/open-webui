@@ -1,0 +1,32 @@
+version: '3.6'
+
+services:
+  caddy:
+    image: caddy:2.7.6-alpine
+    volumes:
+      - ${PWD}/Caddyfile.docker:/etc/caddy/Caddyfile
+      - caddy_data:/data
+    restart: unless-stopped
+    ports:
+      - 8888:8888
+    env_file:
+      - .env
+  ollama-webui:
+    build:
+      context: .
+      args:
+        OLLAMA_API_BASE_URL: '/ollama/api'
+      dockerfile: Dockerfile
+    image: ollama-webui:latest
+    container_name: ollama-webui
+    volumes:
+      - ollama-webui:/app/backend/data
+    env_file:
+      - .env
+    environment:
+      - "OLLAMA_API_BASE_URL=http://ollama:11434/api"
+    restart: unless-stopped
+
+volumes:
+  caddy_data: {}
+  ollama-webui: {}
