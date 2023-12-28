@@ -9,6 +9,9 @@ import time
 import uuid
 import os
 
+import requests
+import json
+
 from apps.web.models.auths import (
     SigninForm,
     SignupForm,
@@ -84,6 +87,7 @@ async def signin(form_data: SigninForm):
 
 # Allows users to register straight away without admin approval
 initial_role = os.environ.get("INITIAL_ROLE", "user")
+initial_credits = os.environ.get("INITIAL_CREDITS", 5)
 
 @router.post("/signup", response_model=SigninResponse)
 async def signup(form_data: SignupForm):
@@ -97,7 +101,17 @@ async def signup(form_data: SignupForm):
 
             if user:
                 token = create_token(data={"email": user.email})
-                # response.set_cookie(key='token', value=token, httponly=True)
+                
+                # Create user in Meteron and top them up with initial credits
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + os.environ["METERON_API_KEY"]
+                }
+                requests.put("https://app.meteron.ai/api/credits", headers=headers, data=json.dumps({
+                    "user": user.email,
+                    "amount": initial_credits
+                }))
+                                
 
                 return {
                     "token": token,

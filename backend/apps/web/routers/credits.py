@@ -69,7 +69,6 @@ async def start_user_checkout(cred=Depends(bearer_scheme)):
 
     if user:        
         try:
-            print('trying to create checkout session')
             checkout_session = stripe.checkout.Session.create(
                 customer_email=user.email,
                 line_items=[
@@ -85,8 +84,6 @@ async def start_user_checkout(cred=Depends(bearer_scheme)):
         except Exception as e:
             print(e)
             return str(e)
-
-        print('checkout session created', checkout_session.url)
         
         return {
             "url": checkout_session.url
