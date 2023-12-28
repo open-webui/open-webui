@@ -3,7 +3,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 export const getUserCredits = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/credits`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/credits/`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
