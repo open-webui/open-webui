@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import time
 import uuid
+import os
 
 from apps.web.models.auths import (
     SigninForm,
@@ -81,12 +82,14 @@ async def signin(form_data: SigninForm):
 # SignUp
 ############################
 
+# Allows users to register straight away without admin approval
+initial_role = os.environ.get("INITIAL_ROLE", "user")
 
 @router.post("/signup", response_model=SigninResponse)
 async def signup(form_data: SignupForm):
     if not Users.get_user_by_email(form_data.email.lower()):
         try:
-            role = "admin" if Users.get_num_users() == 0 else "pending"
+            role = "admin" if Users.get_num_users() == 0 else initial_role
             hashed = get_password_hash(form_data.password)
             user = Auths.insert_new_auth(
                 form_data.email.lower(), hashed, form_data.name, role
