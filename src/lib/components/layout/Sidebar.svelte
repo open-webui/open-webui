@@ -395,7 +395,7 @@
 								alt="User profile"
 							/>
 						</div>
-						<div class=" self-center font-semibold">{$user.name} (${$credits.balance})</div>
+						<div class=" self-center font-semibold">{$user.name} {#if $credits.balance !== undefined}(${$credits.balance}){/if}</div>
 					</button>
 
 					{#if showDropdown}
