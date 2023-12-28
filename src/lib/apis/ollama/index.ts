@@ -73,6 +73,7 @@ export const getOllamaModels = async (
 export const generateTitle = async (
 	base_url: string = OLLAMA_API_BASE_URL,
 	token: string = '',
+	user: string = '',
 	model: string,
 	prompt: string
 ) => {
@@ -82,6 +83,7 @@ export const generateTitle = async (
 		method: 'POST',
 		headers: {
 			'Content-Type': 'text/event-stream',
+			'X-User': user,
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
@@ -112,6 +114,7 @@ export const generateTitle = async (
 export const generateChatCompletion = async (
 	base_url: string = OLLAMA_API_BASE_URL,
 	token: string = '',
+	user: string = '',
 	body: object
 ) => {
 	let error = null;
@@ -120,6 +123,7 @@ export const generateChatCompletion = async (
 		method: 'POST',
 		headers: {
 			'Content-Type': 'text/event-stream',
+			'X-User': user,
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify(body)
