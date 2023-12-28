@@ -23,7 +23,7 @@ stripe.api_key = os.environ.get('STRIPE_API_KEY')
 price_id = os.environ.get('STRIPE_PRICE_ID')
 webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
 
-app_url = 'http://localhost:8888'
+app_url = os.environ.get('WEBUI_API_BASE_URL', 'https://chat.meteron.ai')
 
 class UserCredits(BaseModel):
     email: str
