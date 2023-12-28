@@ -2,6 +2,7 @@
 
     handle_path /ollama/* {
       reverse_proxy https://mixtral.ollama-v1.meteron.ai {
+        flush_interval -1
         header_up Host {env.METERON_MODEL_HOST}
         header_up Authorization "Bearer {env.METERON_API_KEY}"
       }
