@@ -111,9 +111,10 @@ async def stripe_webhook(request: Request):
             invoice = event['data']['object']
             customer_email = invoice['customer_email']
             amount = invoice["amount_total"]/100  # Stripe amounts are in cents
+            checkout_session_id = invoice["id"]
 
             # Print the customer's email address
-            print(f"Customer email: {customer_email}, amount: {amount}")
+            print(f"Customer email: {customer_email}, amount: {amount}, checkout session id: {checkout_session_id}")
 
             # Call Meteron's API to top up the user's credits
             headers = {

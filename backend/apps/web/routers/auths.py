@@ -102,6 +102,7 @@ async def signup(form_data: SignupForm):
             if user:
                 token = create_token(data={"email": user.email})
                 
+                print(f"user {user.email} created")
                 # Create user in Meteron and top them up with initial credits
                 headers = {
                     "Content-Type": "application/json",
