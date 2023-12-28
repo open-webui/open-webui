@@ -717,6 +717,8 @@
 					<div class=" self-center">Advanced</div>
 				</button>
 
+				<!-- Check if user is admin -->
+				{#if $user?.role === 'admin'}
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 					'models'
@@ -742,6 +744,7 @@
 					</div>
 					<div class=" self-center">Models</div>
 				</button>
+				{/if}
 
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
