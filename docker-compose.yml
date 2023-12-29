@@ -9,13 +9,31 @@ services:
     tty: true
     restart: unless-stopped
     image: ollama/ollama:latest
+# To expose Ollama API outside the container stack, remove # from the next lines
+#    ports:
+#      - 11434:11434
+
+# Remove # to enable GPU support (NVIDIA)
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: 1
+#              capabilities:
+#                - gpu
+
+
 
   ollama-webui:
-    build:
-      context: .
-      args:
-        OLLAMA_API_BASE_URL: '/ollama/api'
-      dockerfile: Dockerfile
+#  Make sure to comment out "image" if you want to built the image yourself. Use "image" to pull down an already compiled webui image.
+#    build:
+#      context: .
+#      args:
+#        OLLAMA_API_BASE_URL: '/ollama/api'
+#      dockerfile: Dockerfile
+
+#   Do not forget to comment out "image" if you are building your own image! 
     image: ollama-webui:latest
     container_name: ollama-webui
     volumes:
