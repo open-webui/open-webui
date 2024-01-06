@@ -18,5 +18,6 @@ bcrypt
 
 PyJWT
 pyjwt[crypto]
+piper-tts
 
 black

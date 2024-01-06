@@ -1,0 +1,58 @@
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Piper App</title>
+</head>
+<body>
+    <h4>Welcome to Piper App</h4>
+    <p>Click "Play Audio" to hear the synthesized speech.</p>
+
+    <!-- Display the text inside a div for user reference -->
+    <div id="displayText">
+        This is the text that will be read aloud. You can customize this paragraph.
+    </div>
+
+    <form id="textForm" method="post" action="/play">
+        <input type="submit" value="Play Audio">
+    </form>
+
+    <hr>
+
+    <!-- Audio player to play the generated audio -->
+    <audio id="audioPlayer">
+        <source id="audioSource" src="" type="audio/mp3">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        // Update the audio source when the form is submitted
+        document.getElementById('textForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            var text = document.getElementById('displayText').innerText;
+
+            // Make an asynchronous POST request to the /play route
+            fetch('/play', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'text=' + encodeURIComponent(text),
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                // Create a Blob URL for the audio source
+                var blobUrl = URL.createObjectURL(blob);
+                document.getElementById('audioSource').src = blobUrl;
+
+                // Load and play the audio
+                document.getElementById('audioPlayer').load();
+                document.getElementById('audioPlayer').play();
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>

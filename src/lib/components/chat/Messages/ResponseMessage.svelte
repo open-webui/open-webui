@@ -162,14 +162,61 @@
 		}
 	};
 
+	// const toggleSpeakMessage = async () => {
+	// 	if (speaking) {
+	// 		speechSynthesis.cancel();
+	// 		speaking = null;
+	// 	} else {
+	// 		speaking = true;
+	// 		const speak = new SpeechSynthesisUtterance(message.content);
+	// 		speechSynthesis.speak(speak);
+	// 	}
+	// };
+
+	// Keep track of the last played text
+	let lastPlayedText = '';
+
 	const toggleSpeakMessage = async () => {
+		const audioPlayer = document.getElementById('audioPlayer');
+
 		if (speaking) {
-			speechSynthesis.cancel();
+			// If already speaking, pause the audio
+			audioPlayer.pause();
 			speaking = null;
 		} else {
+			// If not speaking, start speaking the content of the message
 			speaking = true;
-			const speak = new SpeechSynthesisUtterance(message.content);
-			speechSynthesis.speak(speak);
+
+			const text = message.content;
+
+			// Check if the text is the same as the last played text
+			if (text != lastPlayedText) {
+				// Make an asynchronous POST request to the /play route
+				fetch('/play', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+					},
+					body: 'text=' + encodeURIComponent(text),
+				})
+				.then(response => response.blob())
+				.then(blob => {
+					// Create a Blob URL for the audio source
+					const blobUrl = URL.createObjectURL(blob);
+					audioPlayer.src = blobUrl;
+
+					// Load and play the audio
+					audioPlayer.load();
+					audioPlayer.play();
+				})
+				.catch(error => console.error('Error:', error));
+
+				// Update the last played text
+				lastPlayedText = text;
+			} else {
+				// If the text is the same, resume playing the current audio
+				audioPlayer.play();
+			}
 		}
 	};
 
@@ -434,6 +481,12 @@
 											/></svg
 										>
 									</button>
+
+									<!-- Audio player to play the generated audio -->
+									<audio id="audioPlayer">
+										<source id="audioSource" src="" type="audio/mp3">
+										Your browser does not support the audio element.
+									</audio>
 
 									<button
 										class="{isLastMessage
