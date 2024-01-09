@@ -235,6 +235,129 @@ sh start.sh
 
 You should have the Ollama Web UI up and running at http://localhost:8080/. Enjoy! 😄
 
+## Using an HTTPS Proxy
+
+To use HTTPS instead of HTTP, you must proxy the traffic through a service like Nginx, as shown below.
+
+### Prerequisites
+
+To use HTTPS on your installation, you need the following:
+
+- A Fully-Qualified Domain Name
+- Root access to your system
+- Ollama and Ollama WebUI installed on your system
+
+This tutorial assumes you are using Ollama and Ollama WebUI on the default ports.
+
+### Obtain the SSL Certificate
+
+First, you need to install Certbot:
+
+```
+# Use snap to install Certbot
+sudo snap install core
+sudo snap refresh core
+
+sudo snap install --classic certbot
+
+# Prepare the Certbot command
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+```
+
+Now, you need to actually get the certificate.
+
+**If you're already running a webserver on your machine and don't want it to go down, run:**
+
+`sudo certbot certonly --webroot`
+
+**Otherwise, run this command:**
+
+`sudo certbot certonly --standalone`
+
+Follow the instructions the command gives you.
+
+### Create the Nginx Proxy
+
+Now that you have your SSL certificate, you can create an HTTPS proxy using Nginx.
+
+To install, follow these commands:
+
+```
+sudo apt update
+sudo apt install nginx
+```
+
+Now, create the configuration file:
+
+```
+sudo nano /etc/nginx/sites-available/ollamaweb
+```
+
+Inside the file, put the following:
+
+```
+server {
+    listen 443 ssl;  # Replace '443' with the port you want your installation to serve on
+    server_name example.com;
+
+    ssl_certificate /etc/letsencrypt/live/example.com/cert.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Important:** Make sure to replace all instances of `example.com` with your domain name.
+
+To enable the proxy, simply run:
+
+```
+# Enable the Site Configuration File
+sudo ln -s /etc/nginx/sites-available/ollamaweb /etc/nginx/sites-enabled/
+
+# Test the configuration files for syntax errors
+sudo nginx -t
+
+# Restart nginx
+sudo service nginx reload
+```
+
+Now you should have an HTTP installation running on port `8080`, and an HTTPS proxy on port `443`. However, there's one more step that's required to allow Ollama WebUI to access the API.
+
+### Allow Ollama API Access
+
+The final step in this process is to allow traffic from your domain name to access the Ollama API. If this step is skipped, you won't be able to use the HTTPS proxy properly.
+
+First, make the systemd configuration file:
+
+```
+mkdir -p /etc/systemd/system/ollama.service.d
+echo '[Service]' >>/etc/systemd/system/ollama.service.d/environment.conf
+```
+
+Next, add the actual environment variable:
+
+```
+echo 'Environment="OLLAMA_ORIGINS=https://example.com:*"' >>/etc/systemd/system/ollama.service.d/environment.conf
+```
+
+Again, here you should replace `example.com` with your domain name.
+
+Finally, you need to restart Ollama:
+
+```
+systemctl daemon-reload
+systemctl restart ollama
+```
+
+Congratulations! You should now have an HTTP installation running on port `8080` and an HTTPS proxy running on port `443`.
+
 ## Troubleshooting
 
 See [TROUBLESHOOTING.md](/TROUBLESHOOTING.md) for information on how to troubleshoot and/or join our [Ollama Web UI Discord community](https://discord.gg/5rJgQTnV4s).
