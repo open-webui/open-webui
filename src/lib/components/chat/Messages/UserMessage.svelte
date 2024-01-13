@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import { modelfiles } from '$lib/stores';
+	import tippy from 'tippy.js';
 
 	export let user;
 	export let message;
@@ -40,6 +41,19 @@
 		edit = false;
 		editedContent = '';
 	};
+
+	const addTooltips = () => {
+		tooltipInstance = tippy(`.edit-user-message-button`, {
+			content: 'Edit Message'
+		});
+		tippy(`#copyUserMessageButton`, {
+			content: 'Copy to clipboard'
+		});
+	};
+
+	onMount(async () => {
+		addTooltips();
+	});
 </script>
 
 <div class=" flex w-full">
@@ -216,6 +230,7 @@
 						</button>
 
 						<button
+							id="copyUserMessageButton"
 							class="invisible group-hover:visible p-1 rounded dark:hover:bg-gray-800 transition"
 							on:click={() => {
 								copyToClipboard(message.content);

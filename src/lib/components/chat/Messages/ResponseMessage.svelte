@@ -201,8 +201,30 @@
 		renderStyling();
 	};
 
+	const addTooltips = () => {
+		tippy(`#editMessageButton`, {
+			content: 'Edit Message'
+		});
+		tippy(`.copy-response-button`, {
+			content: 'Copy to clipboard'
+		});
+		tippy(`#rateDownButton`, {
+			content: 'Down Rate Response'
+		});
+		tippy(`#rateUpButton`, {
+			content: 'Up Rate Response'
+		});
+		tippy(`#SpeakButton`, {
+			content: 'Speak Response'
+		});
+		tippy(`.regenerate-response-button`, {
+			content: 'Regenerate Response'
+		});
+	};
+
 	onMount(async () => {
 		await tick();
+		addTooltips();
 		renderStyling();
 	});
 </script>
@@ -339,6 +361,7 @@
 									{/if}
 
 									<button
+										id="editMessageButton"
 										class="{isLastMessage
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1 rounded dark:hover:bg-gray-800 transition"
@@ -387,6 +410,7 @@
 									</button>
 
 									<button
+										id="rateUpButton"
 										class="{isLastMessage
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1 rounded {message.rating === 1
@@ -411,6 +435,7 @@
 										>
 									</button>
 									<button
+										id="rateDownButton"
 										class="{isLastMessage
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1 rounded {message.rating === -1
@@ -436,6 +461,7 @@
 									</button>
 
 									<button
+										id="SpeakButton"
 										class="{isLastMessage
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1 rounded dark:hover:bg-gray-800 transition"
