@@ -10,7 +10,9 @@ The Ollama WebUI system is designed to streamline interactions between the clien
 
 ## Ollama WebUI: Server Connection Error
 
-If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
+If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container. Make sure that ollama api service is serving on a correct network interface (in this case, a docker network). After determining the IP address of the host, re-run the ollama api service, for example `OLLAMA_HOST=172.17.0.1 ollama serve`, where `172.17.0.1` is the IP address of the host, created by docker.
+
+Alternatively, if port mapping is not necessary, use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
 
 **Example Docker Command**:
 
