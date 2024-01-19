@@ -37,7 +37,7 @@
 						{:else}
 							<img
 								src={models.length === 1 ? '/ollama.png' : 'ollama-dark.png'}
-								class=" w-20 mb-2 {models.length === 1
+								class=" w-90 mb-2 {models.length === 1
 									? 'invert-[10%] dark:invert-[100%]'
 									: 'border-[5px] border-white dark:border-gray-800'}  rounded-full"
 								alt="ollama"
@@ -64,7 +64,7 @@
 					</div>
 				{/if}
 			{:else}
-				How can I help you today?
+				Chat with confidence. A chatGPT Clone based on Ollama UI with local opensource models.
 			{/if}
 		</div>
 	</div>

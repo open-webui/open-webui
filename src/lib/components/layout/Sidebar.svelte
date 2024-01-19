@@ -84,6 +84,7 @@
 		: '-translate-x-[260px]'}  w-[260px] fixed top-0 left-0 z-40 transition bg-black text-gray-200 shadow-2xl text-sm
         "
 >
+
 	<div class="py-2.5 my-auto flex flex-col justify-between h-screen">
 		<div class="px-2.5 flex justify-center space-x-2">
 			<button
