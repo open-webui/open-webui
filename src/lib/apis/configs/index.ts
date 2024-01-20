@@ -42,14 +42,25 @@ export const setDefaultPromptSuggestions = async (token: string, promptSuggestio
 		body: JSON.stringify({
 			suggestions: promptSuggestions
 		})
+	}
+}
+export const getUIConfigs = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/ui`, {
+		method: 'GET',
+		headers: {
+			contentType: 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
 			error = err.detail;
+			console.log(err);
 			return null;
 		});
 

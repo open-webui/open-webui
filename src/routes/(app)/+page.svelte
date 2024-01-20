@@ -36,6 +36,7 @@
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
+	import { getUIConfigs } from '$lib/apis/configs';
 
 	let stopResponseFlag = false;
 	let autoScroll = true;
@@ -90,8 +91,20 @@
 	}
 
 	onMount(async () => {
+		await getUIConfigurations();
 		await initNewChat();
 	});
+
+	//////////////////////////
+	// Config functions
+	//////////////////////////
+
+	const getUIConfigurations = async () => {
+		const config = await getUIConfigs(localStorage.token);
+		console.log(config);
+		
+		return config;
+	};
 
 	//////////////////////////
 	// Web functions

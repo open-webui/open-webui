@@ -2,6 +2,8 @@ from fastapi import Response, Request
 from fastapi import Depends, FastAPI, HTTPException, status
 from datetime import datetime, timedelta
 from typing import List, Union
+import json
+import os
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -64,3 +66,18 @@ async def set_global_default_suggestions(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+############################
+# GetUIConfig
+############################
+
+
+@router.get("/ui", response_model=list)
+async def get_ui_config():
+    config_dir = './data/config/ui'
+    if not os.path.isdir(config_dir):
+        return []
+
+    config_files = [f for f in os.listdir(config_dir) if f.endswith('.json')]
+    configs = [json.load(open(os.path.join(config_dir, f), 'r')) for f in config_files]
+
+    return configs
