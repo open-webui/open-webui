@@ -14,7 +14,8 @@
 		chats,
 		chatId,
 		config,
-		tags as _tags
+		tags as _tags,
+		showSidebar as _showSidebar
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream, convertMessagesToHistory } from '$lib/utils';
 
@@ -43,6 +44,11 @@
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
+
+	let showSidebar = false;
+	_showSidebar.subscribe((value) => {
+		showSidebar = value;
+	});
 
 	let currentRequestId = null;
 
@@ -782,24 +788,27 @@
 />
 
 {#if loaded}
-	<Navbar
-		{title}
-		shareEnabled={messages.length > 0}
-		initNewChat={async () => {
-			if (currentRequestId !== null) {
-				await cancelChatCompletion(localStorage.token, currentRequestId);
-				currentRequestId = null;
-			}
+	<div
+		class="min-h-screen flex justify-center ml-auto transition-all"
+		style={showSidebar ? 'width: calc(100% - 260px)' : 'width: 100%'}
+	>
+		<Navbar
+			{title}
+			shareEnabled={messages.length > 0}
+			initNewChat={async () => {
+				if (currentRequestId !== null) {
+					await cancelChatCompletion(localStorage.token, currentRequestId);
+					currentRequestId = null;
+				}
 
-			goto('/');
-		}}
-		{tags}
-		{addTag}
-		{deleteTag}
-	/>
-	<div class="min-h-screen w-full flex justify-center">
-		<div class=" py-2.5 flex flex-col justify-between w-full">
-			<div class="max-w-2xl mx-auto w-full px-3 md:px-0 mt-10">
+				goto('/');
+			}}
+			{tags}
+			{addTag}
+			{deleteTag}
+		/>
+		<div class=" py-2.5 flex flex-col justify-between px-5 mb-3 max-w-3xl w-full">
+			<div class="px-5 mb-3 max-w-3xl md:px-0 mt-10">
 				<ModelSelector
 					bind:selectedModels
 					disabled={messages.length > 0 && !selectedModels.includes('')}

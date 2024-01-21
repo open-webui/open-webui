@@ -14,7 +14,8 @@
 		chatId,
 		tags,
 		uiConfigs,
-		selectedUiConfigId
+		selectedUiConfigId,
+		showSidebar
 	} from '$lib/stores';
 	import { onMount } from 'svelte';
 	import {
@@ -26,7 +27,7 @@
 	} from '$lib/apis/chats';
 	import { get } from 'svelte/store';
 
-	let show = false;
+	let show = get(showSidebar);
 	let navElement;
 
 	let title: string = 'Ollama Web UI';
@@ -41,9 +42,13 @@
 	let orgLogo: any;
 	let disabledCapabilities: string[] | null;
 
+	showSidebar.subscribe((value) => {
+		show = value;
+	});
+
 	onMount(async () => {
 		if (window.innerWidth > 1280) {
-			show = true;
+			showSidebar.set(true);
 		}
 		await chats.set(await getChatList(localStorage.token));
 
@@ -758,7 +763,7 @@
 			id="sidebar-toggle-button"
 			class=" group"
 			on:click={() => {
-				show = !show;
+				showSidebar.set(!show);
 			}}
 			><span class="" data-state="closed"
 				><div

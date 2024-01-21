@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount } from 'svelte';
-	import { documents } from '$lib/stores';
+	import { documents, showSidebar as _showSidebar } from '$lib/stores';
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
@@ -23,6 +23,11 @@
 	let showEditDocModal = false;
 	let selectedDoc;
 	let selectedTag = '';
+
+	let showSidebar = false;
+	_showSidebar.subscribe((value) => {
+		showSidebar = value;
+	});
 
 	let dragged = false;
 
@@ -104,7 +109,14 @@
 						}
 					}
 				} else {
+<<<<<<< HEAD
 					toast.error(`File not found.`);
+=======
+					toast.error(
+						`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+					);
+					uploadDoc(file);
+>>>>>>> bb76621 (Keerthi: Fix chat window width)
 				}
 			}
 
@@ -148,6 +160,7 @@
 	<EditDocModal bind:show={showEditDocModal} {selectedDoc} />
 {/key}
 
+<<<<<<< HEAD
 <input
 	id="upload-doc-input"
 	bind:files={inputFiles}
@@ -180,6 +193,12 @@
 />
 
 <div class="min-h-screen w-full flex justify-center dark:text-white">
+=======
+<div
+	class="min-h-screen flex justify-center dark:text-white ml-auto transition-all"
+	style={showSidebar ? 'width: calc(100% - 260px)' : 'width: 100%'}
+>
+>>>>>>> bb76621 (Keerthi: Fix chat window width)
 	<div class=" py-2.5 flex flex-col justify-between w-full">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<div class="mb-6 flex justify-between items-center">
@@ -230,7 +249,39 @@
 				</div>
 			</div>
 
+<<<<<<< HEAD
 			<!-- <div>
+=======
+			<input
+				id="upload-doc-input"
+				bind:files={inputFiles}
+				type="file"
+				hidden
+				on:change={async (e) => {
+					if (inputFiles && inputFiles.length > 0) {
+						const file = inputFiles[0];
+						if (
+							SUPPORTED_FILE_TYPE.includes(file['type']) ||
+							['md'].includes(file.name.split('.').at(-1))
+						) {
+							uploadDoc(file);
+						} else {
+							toast.error(
+								`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+							);
+							uploadDoc(file);
+						}
+
+						inputFiles = null;
+						e.target.value = '';
+					} else {
+						toast.error(`File not found.`);
+					}
+				}}
+			/>
+
+			<div>
+>>>>>>> bb76621 (Keerthi: Fix chat window width)
 				<div
 					class="my-3 py-16 rounded-lg border-2 border-dashed dark:border-gray-600 {dragged &&
 						' dark:bg-gray-700'} "

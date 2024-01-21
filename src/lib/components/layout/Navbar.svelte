@@ -72,9 +72,91 @@
 >
 	<div class=" flex max-w-3xl w-full mx-auto px-3">
 		<div class="flex items-center w-full max-w-full">
-			<div class="pl-2 self-center flex items-center space-x-2">
+			<div class="pl-2 self-center flex items-center justify-between space-x-2 w-full">
 				{#if shareEnabled}
 					<Tags {tags} {deleteTag} {addTag} />
+					<div class="flex flex-row space-x-0.5 line-clamp-1">
+						Tags:&nbsp;
+						{#each tags as tag}
+							<div
+								class="px-2 py-0.5 space-x-1 flex h-fit items-center rounded-full transition border dark:border-gray-600 dark:text-white"
+							>
+								<div class=" text-[0.65rem] font-medium self-center line-clamp-1">
+									{tag.name}
+								</div>
+								<button
+									class=" m-auto self-center cursor-pointer"
+									on:click={() => {
+										deleteTag(tag.name);
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="w-3 h-3"
+									>
+										<path
+											d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+										/>
+									</svg>
+								</button>
+							</div>
+						{/each}
+
+						<div class="flex space-x-1 pl-1.5">
+							{#if showTagInput}
+								<div class="flex items-center">
+									<input
+										bind:value={tagName}
+										class=" cursor-pointer self-center text-xs h-fit bg-transparent outline-none line-clamp-1 w-[4rem]"
+										placeholder="Add a tag"
+									/>
+
+									<button
+										on:click={() => {
+											addTagHandler();
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-3 h-3"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									</button>
+								</div>
+
+								<!-- TODO: Tag Suggestions -->
+							{/if}
+
+							<button
+								class=" cursor-pointer self-center p-0.5 space-x-1 flex h-fit items-center dark:hover:bg-gray-700 rounded-full transition border dark:border-gray-600 border-dashed"
+								on:click={() => {
+									showTagInput = !showTagInput;
+								}}
+							>
+								<div class=" m-auto self-center">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="w-3 h-3 {showTagInput ? 'rotate-45' : ''} transition-all transform"
+									>
+										<path
+											d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+										/>
+									</svg>
+								</div>
+							</button>
+						</div>
+					</div>
 
 					<button
 						class=" cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-lg transition border dark:border-gray-600"

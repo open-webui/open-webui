@@ -14,7 +14,8 @@
 		chats,
 		chatId,
 		config,
-		tags as _tags
+		tags as _tags,
+		showSidebar as _showSidebar
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
@@ -41,6 +42,11 @@
 	let autoScroll = true;
 	let processing = '';
 
+	let showSidebar = false;
+	_showSidebar.subscribe((value) => {
+		showSidebar = value;
+	});
+
 	let currentRequestId = null;
 
 	let selectedModels = [''];
@@ -64,7 +70,7 @@
 	}, {});
 
 	let chat = null;
-	let tags = [];
+	let tags: any[] = [];
 
 	let title = '';
 	let prompt = '';
@@ -767,10 +773,13 @@
 	}}
 />
 
-<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
-<div class="min-h-screen w-full flex justify-center">
-	<div class=" py-2.5 flex flex-col justify-between w-full">
-		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 mt-2">
+<div
+	class="min-h-screen flex justify-center ml-auto transition-all"
+	style={showSidebar ? 'width: calc(100% - 260px)' : 'width: 100%'}
+>
+	<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
+	<div class=" py-2.5 flex flex-col justify-between px-5 mb-3 max-w-3xl w-full">
+		<div class="px-5 mb-3 max-w-3xl md:px-0 mt-10">
 			<ModelSelector bind:selectedModels disabled={messages.length > 0} />
 		</div>
 

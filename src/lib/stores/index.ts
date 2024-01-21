@@ -35,3 +35,5 @@ export const documents = writable([
 
 export const settings = writable({});
 export const showSettings = writable(false);
+
+export const showSidebar = writable(false);
