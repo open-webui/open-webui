@@ -5,5 +5,13 @@
 		"dark": "images/tw-dark-logo.png",
 		"alt": "Thoughtworks Logo"
 	},
-	"tagline": "Chat with confidence. A chatGPT Clone based on Ollama UI with local opensource models."
+	"tagline": "Chat with confidence. A chatGPT Clone based on Ollama UI with local opensource models.",
+	"capabilities": {
+		"modelfiles": {
+			"disabled": true
+		},
+		"prompts": {
+			"disabled": true
+		}
+	}
 }
