@@ -11,6 +11,7 @@
 
 	let orgLogo: any;
 	let tagline: string;
+	let selectedTheme: string = get(theme);
 
 	onMount(() => {
 		const configs: any[] = get(uiConfigs);
@@ -25,7 +26,11 @@
 				tagline = selectedUiConfig.tagline;
 			}
 		}
+		theme.subscribe((value) => {
+			selectedTheme = value;
+		});
 	});
+
 
 	$: modelfile =
 		models[selectedModelIdx] in modelfiles ? modelfiles[models[selectedModelIdx]] : null;
@@ -57,7 +62,7 @@
 						{:else}
 							<img
 								src={orgLogo
-									? get(theme) === 'light'
+									? selectedTheme === 'light'
 										? orgLogo.light
 										: orgLogo.dark
 									: '/ollama-dark.png'}

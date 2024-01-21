@@ -5,6 +5,23 @@
 	import { getOllamaModels } from '$lib/apis/ollama';
 	import { getOpenAIModels } from '$lib/apis/openai';
 
+	import {
+		getOllamaVersion,
+		getOllamaModels,
+		getOllamaAPIUrl,
+		updateOllamaAPIUrl,
+		pullModel,
+		createModel,
+		deleteModel
+	} from '$lib/apis/ollama';
+	import { updateUserPassword } from '$lib/apis/auths';
+	import { createNewChat, deleteAllChats, getAllChats, getChatList } from '$lib/apis/chats';
+	import { WEB_UI_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
+
+	import { config, models, settings, user, chats, theme } from '$lib/stores';
+	import { splitStream, getGravatarURL, getImportOrigin, convertOpenAIChats } from '$lib/utils';
+
+	import Advanced from './Settings/Advanced.svelte';
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
 	import Advanced from './Settings/Advanced.svelte';
@@ -27,6 +44,484 @@
 
 	let selectedTab = 'general';
 
+	// General
+	let API_BASE_URL = '';
+	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
+	let selectedTheme = 'dark';
+	let notificationEnabled = false;
+	let system = '';
+
+	// Advanced
+	let requestFormat = '';
+	let options = {
+		// Advanced
+		seed: 0,
+		temperature: '',
+		repeat_penalty: '',
+		repeat_last_n: '',
+		mirostat: '',
+		mirostat_eta: '',
+		mirostat_tau: '',
+		top_k: '',
+		top_p: '',
+		stop: '',
+		tfs_z: '',
+		num_ctx: '',
+		num_predict: ''
+	};
+
+	// Models
+	const MAX_PARALLEL_DOWNLOADS = 3;
+	const modelDownloadQueue = queue(
+		(task: { modelName: string }, cb) =>
+			pullModelHandlerProcessor({ modelName: task.modelName, callback: cb }),
+		MAX_PARALLEL_DOWNLOADS
+	);
+	let modelDownloadStatus: Record<string, any> = {};
+
+	let modelTransferring = false;
+	let modelTag = '';
+	let digest = '';
+	let pullProgress = null;
+
+	let modelUploadMode = 'file';
+	let modelInputFile = '';
+	let modelFileUrl = '';
+	let modelFileContent = `TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSSISTANT:"`;
+	let modelFileDigest = '';
+	let uploadProgress = null;
+
+	let deleteModelTag = '';
+
+	// External
+	let OPENAI_API_KEY = '';
+	let OPENAI_API_BASE_URL = '';
+
+	// Addons
+	let titleAutoGenerate = true;
+	let speechAutoSend = false;
+	let responseAutoCopy = false;
+
+	let gravatarEmail = '';
+	let titleAutoGenerateModel = '';
+
+	// Chats
+	let saveChatHistory = true;
+	let importFiles;
+	let showDeleteConfirm = false;
+
+	// Auth
+	let authEnabled = false;
+	let authType = 'Basic';
+	let authContent = '';
+
+	// Account
+	let currentPassword = '';
+	let newPassword = '';
+	let newPasswordConfirm = '';
+
+	// About
+	let ollamaVersion = '';
+
+	$: if (importFiles) {
+		console.log(importFiles);
+
+		let reader = new FileReader();
+		reader.onload = (event) => {
+			let chats = JSON.parse(event.target.result);
+			console.log(chats);
+			if (getImportOrigin(chats) == 'openai') {
+				try {
+					chats = convertOpenAIChats(chats);
+				} catch (error) {
+					console.log('Unable to import chats:', error);
+				}
+			}
+			importChats(chats);
+		};
+
+		if (importFiles.length > 0) {
+			reader.readAsText(importFiles[0]);
+		}
+	}
+
+	const importChats = async (_chats) => {
+		for (const chat of _chats) {
+			console.log(chat);
+
+			if (chat.chat) {
+				await createNewChat(localStorage.token, chat.chat);
+			} else {
+				await createNewChat(localStorage.token, chat);
+			}
+		}
+
+		await chats.set(await getChatList(localStorage.token));
+	};
+
+	const exportChats = async () => {
+		let blob = new Blob([JSON.stringify(await getAllChats(localStorage.token))], {
+			type: 'application/json'
+		});
+		saveAs(blob, `chat-export-${Date.now()}.json`);
+	};
+
+	const deleteChats = async () => {
+		await goto('/');
+		await deleteAllChats(localStorage.token);
+		await chats.set(await getChatList(localStorage.token));
+	};
+
+	const updateOllamaAPIUrlHandler = async () => {
+		API_BASE_URL = await updateOllamaAPIUrl(localStorage.token, API_BASE_URL);
+		const _models = await getModels('ollama');
+
+		if (_models.length > 0) {
+			toast.success('Server connection verified');
+			await models.set(_models);
+		}
+	};
+
+	const updateOpenAIHandler = async () => {
+		OPENAI_API_BASE_URL = await updateOpenAIUrl(localStorage.token, OPENAI_API_BASE_URL);
+		OPENAI_API_KEY = await updateOpenAIKey(localStorage.token, OPENAI_API_KEY);
+
+		await models.set(await getModels());
+	};
+
+	const toggleTheme = async () => {
+		if (selectedTheme === 'dark') {
+			selectedTheme = 'light';
+		} else {
+			selectedTheme = 'dark';
+		}
+
+		localStorage.theme = selectedTheme;
+
+		document.documentElement.classList.remove(selectedTheme === 'dark' ? 'light' : 'dark');
+		document.documentElement.classList.add(selectedTheme);
+	};
+
+	const toggleRequestFormat = async () => {
+		if (requestFormat === '') {
+			requestFormat = 'json';
+		} else {
+			requestFormat = '';
+		}
+
+		saveSettings({ requestFormat: requestFormat !== '' ? requestFormat : undefined });
+	};
+
+	const toggleSpeechAutoSend = async () => {
+		speechAutoSend = !speechAutoSend;
+		saveSettings({ speechAutoSend: speechAutoSend });
+	};
+
+	const toggleTitleAutoGenerate = async () => {
+		titleAutoGenerate = !titleAutoGenerate;
+		saveSettings({ titleAutoGenerate: titleAutoGenerate });
+	};
+
+	const toggleNotification = async () => {
+		const permission = await Notification.requestPermission();
+
+		if (permission === 'granted') {
+			notificationEnabled = !notificationEnabled;
+			saveSettings({ notificationEnabled: notificationEnabled });
+		} else {
+			toast.error(
+				'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
+			);
+		}
+	};
+
+	const toggleResponseAutoCopy = async () => {
+		const permission = await navigator.clipboard
+			.readText()
+			.then(() => {
+				return 'granted';
+			})
+			.catch(() => {
+				return '';
+			});
+
+		console.log(permission);
+
+		if (permission === 'granted') {
+			responseAutoCopy = !responseAutoCopy;
+			saveSettings({ responseAutoCopy: responseAutoCopy });
+		} else {
+			toast.error(
+				'Clipboard write permission denied. Please check your browser settings to grant the necessary access.'
+			);
+		}
+	};
+
+	const toggleSaveChatHistory = async () => {
+		saveChatHistory = !saveChatHistory;
+		console.log(saveChatHistory);
+
+		if (saveChatHistory === false) {
+			await goto('/');
+		}
+		saveSettings({ saveChatHistory: saveChatHistory });
+	};
+
+	const pullModelHandlerProcessor = async (opts: { modelName: string; callback: Function }) => {
+		const res = await pullModel(localStorage.token, opts.modelName).catch((error) => {
+			opts.callback({ success: false, error, modelName: opts.modelName });
+			return null;
+		});
+
+		if (res) {
+			const reader = res.body
+				.pipeThrough(new TextDecoderStream())
+				.pipeThrough(splitStream('\n'))
+				.getReader();
+
+			while (true) {
+				try {
+					const { value, done } = await reader.read();
+					if (done) break;
+
+					let lines = value.split('\n');
+
+					for (const line of lines) {
+						if (line !== '') {
+							let data = JSON.parse(line);
+							if (data.error) {
+								throw data.error;
+							}
+							if (data.detail) {
+								throw data.detail;
+							}
+							if (data.status) {
+								if (data.digest) {
+									let downloadProgress = 0;
+									if (data.completed) {
+										downloadProgress = Math.round((data.completed / data.total) * 1000) / 10;
+									} else {
+										downloadProgress = 100;
+									}
+									modelDownloadStatus[opts.modelName] = {
+										pullProgress: downloadProgress,
+										digest: data.digest
+									};
+								} else {
+									toast.success(data.status);
+								}
+							}
+						}
+					}
+				} catch (error) {
+					console.log(error);
+					if (typeof error !== 'string') {
+						error = error.message;
+					}
+					opts.callback({ success: false, error, modelName: opts.modelName });
+				}
+			}
+			opts.callback({ success: true, modelName: opts.modelName });
+		}
+	};
+
+	const pullModelHandler = async () => {
+		const sanitizedModelTag = modelTag.trim();
+		if (modelDownloadStatus[sanitizedModelTag]) {
+			toast.error(`Model '${sanitizedModelTag}' is already in queue for downloading.`);
+			return;
+		}
+		if (Object.keys(modelDownloadStatus).length === 3) {
+			toast.error('Maximum of 3 models can be downloaded simultaneously. Please try again later.');
+			return;
+		}
+
+		modelTransferring = true;
+
+		modelDownloadQueue.push(
+			{ modelName: sanitizedModelTag },
+			async (data: { modelName: string; success: boolean; error?: Error }) => {
+				const { modelName } = data;
+				// Remove the downloaded model
+				delete modelDownloadStatus[modelName];
+
+				console.log(data);
+
+				if (!data.success) {
+					toast.error(data.error);
+				} else {
+					toast.success(`Model '${modelName}' has been successfully downloaded.`);
+
+					const notification = new Notification(`Ollama`, {
+						body: `Model '${modelName}' has been successfully downloaded.`,
+						icon: '/favicon.png'
+					});
+
+					models.set(await getModels());
+				}
+			}
+		);
+
+		modelTag = '';
+		modelTransferring = false;
+	};
+
+	const uploadModelHandler = async () => {
+		modelTransferring = true;
+		uploadProgress = 0;
+
+		let uploaded = false;
+		let fileResponse = null;
+		let name = '';
+
+		if (modelUploadMode === 'file') {
+			const file = modelInputFile[0];
+			const formData = new FormData();
+			formData.append('file', file);
+
+			fileResponse = await fetch(`${WEBUI_API_BASE_URL}/utils/upload`, {
+				method: 'POST',
+				headers: {
+					...($user && { Authorization: `Bearer ${localStorage.token}` })
+				},
+				body: formData
+			}).catch((error) => {
+				console.log(error);
+				return null;
+			});
+		} else {
+			fileResponse = await fetch(`${WEBUI_API_BASE_URL}/utils/download?url=${modelFileUrl}`, {
+				method: 'GET',
+				headers: {
+					...($user && { Authorization: `Bearer ${localStorage.token}` })
+				}
+			}).catch((error) => {
+				console.log(error);
+				return null;
+			});
+		}
+
+		if (fileResponse && fileResponse.ok) {
+			const reader = fileResponse.body
+				.pipeThrough(new TextDecoderStream())
+				.pipeThrough(splitStream('\n'))
+				.getReader();
+
+			while (true) {
+				const { value, done } = await reader.read();
+				if (done) break;
+
+				try {
+					let lines = value.split('\n');
+
+					for (const line of lines) {
+						if (line !== '') {
+							let data = JSON.parse(line.replace(/^data: /, ''));
+
+							if (data.progress) {
+								uploadProgress = data.progress;
+							}
+
+							if (data.error) {
+								throw data.error;
+							}
+
+							if (data.done) {
+								modelFileDigest = data.blob;
+								name = data.name;
+								uploaded = true;
+							}
+						}
+					}
+				} catch (error) {
+					console.log(error);
+				}
+			}
+		}
+
+		if (uploaded) {
+			const res = await createModel(
+				localStorage.token,
+				`${name}:latest`,
+				`FROM @${modelFileDigest}\n${modelFileContent}`
+			);
+
+			if (res && res.ok) {
+				const reader = res.body
+					.pipeThrough(new TextDecoderStream())
+					.pipeThrough(splitStream('\n'))
+					.getReader();
+
+				while (true) {
+					const { value, done } = await reader.read();
+					if (done) break;
+
+					try {
+						let lines = value.split('\n');
+
+						for (const line of lines) {
+							if (line !== '') {
+								console.log(line);
+								let data = JSON.parse(line);
+								console.log(data);
+
+								if (data.error) {
+									throw data.error;
+								}
+								if (data.detail) {
+									throw data.detail;
+								}
+
+								if (data.status) {
+									if (
+										!data.digest &&
+										!data.status.includes('writing') &&
+										!data.status.includes('sha256')
+									) {
+										toast.success(data.status);
+									} else {
+										if (data.digest) {
+											digest = data.digest;
+
+											if (data.completed) {
+												pullProgress = Math.round((data.completed / data.total) * 1000) / 10;
+											} else {
+												pullProgress = 100;
+											}
+										}
+									}
+								}
+							}
+						}
+					} catch (error) {
+						console.log(error);
+						toast.error(error);
+					}
+				}
+			}
+		}
+
+		modelFileUrl = '';
+		modelInputFile = '';
+		modelTransferring = false;
+		uploadProgress = null;
+
+		models.set(await getModels());
+	};
+
+	const deleteModelHandler = async () => {
+		const res = await deleteModel(localStorage.token, deleteModelTag).catch((error) => {
+			toast.error(error);
+		});
+
+		if (res) {
+			toast.success(`Deleted ${deleteModelTag}`);
+		}
+
+		deleteModelTag = '';
+		models.set(await getModels());
+	};
+
 	const getModels = async (type = 'all') => {
 		const models = [];
 		models.push(
@@ -46,6 +541,76 @@
 
 		return models;
 	};
+
+	const updatePasswordHandler = async () => {
+		if (newPassword === newPasswordConfirm) {
+			const res = await updateUserPassword(localStorage.token, currentPassword, newPassword).catch(
+				(error) => {
+					toast.error(error);
+					return null;
+				}
+			);
+
+			if (res) {
+				toast.success('Successfully updated.');
+			}
+
+			currentPassword = '';
+			newPassword = '';
+			newPasswordConfirm = '';
+		} else {
+			toast.error(
+				`The passwords you entered don't quite match. Please double-check and try again.`
+			);
+			newPassword = '';
+			newPasswordConfirm = '';
+		}
+	};
+
+	onMount(async () => {
+		console.log('settings', $user.role === 'admin');
+		if ($user.role === 'admin') {
+			API_BASE_URL = await getOllamaAPIUrl(localStorage.token);
+			OPENAI_API_BASE_URL = await getOpenAIUrl(localStorage.token);
+			OPENAI_API_KEY = await getOpenAIKey(localStorage.token);
+		}
+
+		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+		console.log(settings);
+
+		selectedTheme = localStorage.theme ?? 'dark';
+		notificationEnabled = settings.notificationEnabled ?? false;
+
+		system = settings.system ?? '';
+		requestFormat = settings.requestFormat ?? '';
+
+		options.seed = settings.seed ?? 0;
+		options.temperature = settings.temperature ?? '';
+		options.repeat_penalty = settings.repeat_penalty ?? '';
+		options.top_k = settings.top_k ?? '';
+		options.top_p = settings.top_p ?? '';
+		options.num_ctx = settings.num_ctx ?? '';
+		options = { ...options, ...settings.options };
+		options.stop = (settings?.options?.stop ?? []).join(',');
+
+		titleAutoGenerate = settings.titleAutoGenerate ?? true;
+		speechAutoSend = settings.speechAutoSend ?? false;
+		responseAutoCopy = settings.responseAutoCopy ?? false;
+		titleAutoGenerateModel = settings.titleAutoGenerateModel ?? '';
+		gravatarEmail = settings.gravatarEmail ?? '';
+
+		saveChatHistory = settings.saveChatHistory ?? true;
+
+		authEnabled = settings.authHeader !== undefined ? true : false;
+		if (authEnabled) {
+			authType = settings.authHeader.split(' ')[0];
+			authContent = settings.authHeader.split(' ')[1];
+		}
+
+		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
+			return '';
+		});
+	});
 </script>
 
 <Modal bind:show>
@@ -318,6 +883,174 @@
 							show = false;
 						}}
 					/>
+					<div class="flex flex-col space-y-3">
+						<div>
+							<div class=" mb-1 text-sm font-medium">WebUI Settings</div>
+
+							<div class=" py-0.5 flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">Theme</div>
+
+								<!-- <button
+									class="p-1 px-3 text-xs flex rounded transition"
+									on:click={() => {
+										toggleTheme();
+									}}
+								>
+									
+								</button> -->
+
+								<div class="flex items-center relative">
+									<div class=" absolute right-16">
+										{#if selectedTheme === 'dark'}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M7.455 2.004a.75.75 0 01.26.77 7 7 0 009.958 7.967.75.75 0 011.067.853A8.5 8.5 0 116.647 1.921a.75.75 0 01.808.083z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										{:else if selectedTheme === 'light'}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="w-4 h-4 self-center"
+											>
+												<path
+													d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 001.06-1.06l-1.06-1.061a.75.75 0 10-1.06 1.06l1.06 1.06zM5.404 6.464a.75.75 0 001.06-1.06l-1.06-1.06a.75.75 0 10-1.061 1.06l1.06 1.06z"
+												/>
+											</svg>
+										{/if}
+									</div>
+
+									<select
+										class="w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
+										bind:value={selectedTheme}
+										placeholder="Select a theme"
+										on:change={(e) => {
+											localStorage.theme = selectedTheme;
+
+											themes
+												.filter((e) => e !== selectedTheme)
+												.forEach((e) => {
+													e.split(' ').forEach((e) => {
+														document.documentElement.classList.remove(e);
+													});
+												});
+
+											selectedTheme.split(' ').forEach((e) => {
+												document.documentElement.classList.add(e);
+											});
+
+											console.log(selectedTheme);
+											theme.set(selectedTheme);
+										}}
+									>
+										<option value="dark">Dark</option>
+										<option value="light">Light</option>
+										<option value="rose-pine dark">Rosé Pine</option>
+										<option value="rose-pine-dawn light">Rosé Pine Dawn</option>
+									</select>
+								</div>
+							</div>
+
+							<div>
+								<div class=" py-0.5 flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">Notification</div>
+
+									<button
+										class="p-1 px-3 text-xs flex rounded transition"
+										on:click={() => {
+											toggleNotification();
+										}}
+										type="button"
+									>
+										{#if notificationEnabled === true}
+											<span class="ml-2 self-center">On</span>
+										{:else}
+											<span class="ml-2 self-center">Off</span>
+										{/if}
+									</button>
+								</div>
+							</div>
+						</div>
+
+						{#if $user.role === 'admin'}
+							<hr class=" dark:border-gray-700" />
+							<div>
+								<div class=" mb-2.5 text-sm font-medium">Ollama API URL</div>
+								<div class="flex w-full">
+									<div class="flex-1 mr-2">
+										<input
+											class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+											placeholder="Enter URL (e.g. http://localhost:11434/api)"
+											bind:value={API_BASE_URL}
+										/>
+									</div>
+									<button
+										class="px-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-700 rounded transition"
+										on:click={() => {
+											updateOllamaAPIUrlHandler();
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									</button>
+								</div>
+
+								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+									Trouble accessing Ollama?
+									<a
+										class=" text-gray-300 font-medium"
+										href="https://github.com/ollama-webui/ollama-webui#troubleshooting"
+										target="_blank"
+									>
+										Click here for help.
+									</a>
+								</div>
+							</div>
+						{/if}
+
+						<hr class=" dark:border-gray-700" />
+
+						<div>
+							<div class=" mb-2.5 text-sm font-medium">System Prompt</div>
+							<textarea
+								bind:value={system}
+								class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
+								rows="4"
+							/>
+						</div>
+
+						<div class="flex justify-end pt-3 text-sm font-medium">
+							<button
+								class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
+								on:click={() => {
+									saveSettings({
+										system: system !== '' ? system : undefined
+									});
+									show = false;
+								}}
+							>
+								Save
+							</button>
+						</div>
+					</div>
 				{:else if selectedTab === 'advanced'}
 					<Advanced
 						on:save={() => {

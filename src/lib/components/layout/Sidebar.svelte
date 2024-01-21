@@ -14,7 +14,10 @@
 		chatId,
 		tags,
 		uiConfigs,
-		selectedUiConfigId
+		selectedUiConfigId,
+
+		theme
+
 	} from '$lib/stores';
 	import { onMount } from 'svelte';
 	import {
