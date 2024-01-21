@@ -6,7 +6,16 @@
 
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { user, chats, settings, showSettings, chatId, tags } from '$lib/stores';
+	import {
+		user,
+		chats,
+		settings,
+		showSettings,
+		chatId,
+		tags,
+		uiConfigs,
+		selectedUiConfigId
+	} from '$lib/stores';
 	import { onMount } from 'svelte';
 	import {
 		deleteChatById,
@@ -15,6 +24,7 @@
 		getChatListByTagName,
 		updateChatById
 	} from '$lib/apis/chats';
+	import { get } from 'svelte/store';
 
 	let show = false;
 	let navElement;
@@ -28,11 +38,32 @@
 
 	let showDropdown = false;
 
+	let orgLogo: any;
+
 	onMount(async () => {
 		if (window.innerWidth > 1280) {
 			show = true;
 		}
 		await chats.set(await getChatList(localStorage.token));
+
+		tags.subscribe(async (value) => {
+			if (value.length === 0) {
+				await chats.set(await getChatList(localStorage.token));
+			}
+		});
+
+		const configs: any[] = get(uiConfigs);
+		const selectedConfigId = get(selectedUiConfigId);
+
+		if (configs.length > 0 && selectedConfigId) {
+			const selectedUiConfig = configs.find((config) => config.id === selectedConfigId);
+			if (selectedUiConfig && selectedUiConfig.orgLogo) {
+				orgLogo = {
+					dark: selectedUiConfig.orgLogo.dark,
+					alt: selectedUiConfig.orgLogo.alt
+				};
+			}
+		}
 	});
 
 	// Helper function to fetch and add chat content to each chat
@@ -84,8 +115,16 @@
 		: '-translate-x-[260px]'}  w-[260px] fixed top-0 left-0 z-40 transition bg-black text-gray-200 shadow-2xl text-sm
         "
 >
-
 	<div class="py-2.5 my-auto flex flex-col justify-between h-screen">
+		<div class="flex self-center">
+			<div class="self-center">
+				<img
+					src={orgLogo ? orgLogo.dark : '/ollama-dark.png'}
+					class=" w-full rounded-full p-5"
+					alt={orgLogo ? orgLogo.alt : 'ollama'}
+				/>
+			</div>
+		</div>
 		<div class="px-2.5 flex justify-center space-x-2">
 			<button
 				id="sidebar-new-chat-button"
@@ -101,10 +140,6 @@
 				}}
 			>
 				<div class="flex self-center">
-					<div class="self-center mr-3.5">
-						<img src="/ollama.png" class=" w-5 invert-[100%] rounded-full" />
-					</div>
-
 					<div class=" self-center font-medium text-sm">New Chat</div>
 				</div>
 

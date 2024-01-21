@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from typing import List, Union
 import json
 import os
+import base64
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -78,6 +79,31 @@ async def get_ui_config():
         return []
 
     config_files = [f for f in os.listdir(config_dir) if f.endswith('.json')]
-    configs = [json.load(open(os.path.join(config_dir, f), 'r')) for f in config_files]
+    configs = []
+
+    for f in config_files:
+        with open(os.path.join(config_dir, f), 'r') as file:
+            config = json.load(file)
+            org_logo = config['orgLogo']
+            org_logo = clean_logo(org_logo, config_dir)
+            configs.append(config)
 
     return configs
+
+
+def clean_logo(logo, config_dir):
+    for theme in ['light', 'dark']:
+        if not logo[theme].startswith(('http', 'data:image')):
+            image_path = os.path.join(config_dir, logo[theme])
+            if os.path.isfile(image_path):
+                logo[theme] = convert_image_to_base64(image_path)
+            else:
+                logo[theme] = None
+    return logo
+
+
+def convert_image_to_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+        encoded_image = "data:image/png;base64," + encoded_image
+    return encoded_image

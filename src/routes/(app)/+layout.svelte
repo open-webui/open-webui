@@ -21,7 +21,8 @@
 		modelfiles,
 		prompts,
 		documents,
-		tags
+		tags,
+		uiConfigs
 	} from '$lib/stores';
 	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -31,6 +32,7 @@
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import { getDocs } from '$lib/apis/documents';
 	import { getAllChatTags } from '$lib/apis/chats';
+	import { getUIConfigs } from '$lib/apis/configs';
 
 	let ollamaVersion = '';
 	let loaded = false;
@@ -77,7 +79,25 @@
 		}
 	};
 
+	const getUIConfigurations = async () => {
+		const configs = await getUIConfigs(localStorage.token);
+
+		if (configs) {
+			uiConfigs.set(configs);
+		}
+	};
+
 	onMount(async () => {
+		//////////////////////////
+		// UI Configurations
+		//////////////////////////
+
+		await getUIConfigurations();
+
+		//////////////////////////
+		// User
+		//////////////////////////
+
 		if ($user === undefined) {
 			await goto('/auth');
 		} else if (['user', 'admin'].includes($user.role)) {

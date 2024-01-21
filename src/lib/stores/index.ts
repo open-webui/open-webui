@@ -7,6 +7,9 @@ export const user = writable(undefined);
 // Frontend
 export const theme = writable('dark');
 
+export const uiConfigs = writable([]);
+export const selectedUiConfigId = writable("thoughtworks");
+
 export const chatId = writable('');
 
 export const chats = writable([]);

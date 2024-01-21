@@ -1,0 +1,9 @@
+{
+	"id": "thoughtworks",
+	"orgLogo": {
+		"light": "https://www.thoughtworks.com/etc.clientlibs/thoughtworks/clientlibs/clientlib-site/resources/images/thoughtworks-logo.svg",
+		"dark": "images/tw-dark-logo.png",
+		"alt": "Thoughtworks Logo"
+	},
+	"tagline": "Chat with confidence. A chatGPT Clone based on Ollama UI with local opensource models."
+}

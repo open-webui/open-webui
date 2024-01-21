@@ -1,11 +1,31 @@
 <script lang="ts">
+	import { selectedUiConfigId, theme, uiConfigs } from '$lib/stores';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 
-	export let models = [];
-	export let modelfiles = [];
+	export let models: any[] = [];
+	export let modelfiles: any[] = [];
 
-	let modelfile = null;
+	let modelfile: any = null;
 	let selectedModelIdx = 0;
+
+	let orgLogo: any;
+	let tagline: string;
+
+	onMount(() => {
+		const configs: any[] = get(uiConfigs);
+		const selectedConfigId = get(selectedUiConfigId);
+
+		if (configs.length > 0 && selectedConfigId) {
+			const selectedUiConfig = configs.find((config) => config.id === selectedConfigId);
+			if (selectedUiConfig && selectedUiConfig.orgLogo) {
+				orgLogo = selectedUiConfig.orgLogo;
+			}
+			if (selectedUiConfig) {
+				tagline = selectedUiConfig.tagline;
+			}
+		}
+	});
 
 	$: modelfile =
 		models[selectedModelIdx] in modelfiles ? modelfiles[models[selectedModelIdx]] : null;
@@ -36,11 +56,15 @@
 							/>
 						{:else}
 							<img
-								src={models.length === 1 ? '/ollama.png' : 'ollama-dark.png'}
-								class=" w-90 mb-2 {models.length === 1
-									? 'invert-[10%] dark:invert-[100%]'
+								src={orgLogo
+									? get(theme) === 'light'
+										? orgLogo.light
+										: orgLogo.dark
+									: '/ollama-dark.png'}
+								class=" w-96 mb-2 {models.length === 1
+									? 'invert-[10%]'
 									: 'border-[5px] border-white dark:border-gray-800'}  rounded-full"
-								alt="ollama"
+								alt={orgLogo ? orgLogo.alt : 'ollama'}
 								draggable="false"
 							/>
 						{/if}
@@ -64,7 +88,7 @@
 					</div>
 				{/if}
 			{:else}
-				Chat with confidence. A chatGPT Clone based on Ollama UI with local opensource models.
+				{tagline}
 			{/if}
 		</div>
 	</div>
