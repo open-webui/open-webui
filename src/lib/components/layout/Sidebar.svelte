@@ -136,7 +136,7 @@
 			<div class="self-center">
 				<img
 					src={orgLogo ? orgLogo.dark : '/ollama-dark.png'}
-					class=" w-full rounded-full p-5"
+					class=" w-full p-5"
 					alt={orgLogo ? orgLogo.alt : 'ollama'}
 				/>
 			</div>

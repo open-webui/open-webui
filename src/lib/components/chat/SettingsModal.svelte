@@ -46,7 +46,7 @@
 
 	// General
 	let API_BASE_URL = '';
-	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
+	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'thoughtworks dark'];
 	let selectedTheme = 'dark';
 	let notificationEnabled = false;
 	let system = '';
@@ -955,6 +955,7 @@
 										<option value="light">Light</option>
 										<option value="rose-pine dark">Rosé Pine</option>
 										<option value="rose-pine-dawn light">Rosé Pine Dawn</option>
+										<option value="thoughtworks dark">Thoughtworks</option>
 									</select>
 								</div>
 							</div>

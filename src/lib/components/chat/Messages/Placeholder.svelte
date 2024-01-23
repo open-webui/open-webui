@@ -68,7 +68,7 @@
 									: '/ollama-dark.png'}
 								class=" w-96 mb-2 {models.length === 1
 									? 'invert-[10%]'
-									: 'border-[5px] border-white dark:border-gray-800'}  rounded-full"
+									: 'border-[5px] border-white dark:border-gray-800'}"
 								alt={orgLogo ? orgLogo.alt : 'ollama'}
 								draggable="false"
 							/>
