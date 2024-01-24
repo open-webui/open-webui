@@ -27,6 +27,8 @@
 		"eslint": "^8.56.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-plugin-svelte": "^2.30.0",
+		"flowbite": "^2.2.1",
+		"flowbite-svelte": "^0.44.22",
 		"postcss": "^8.4.31",
 		"prettier": "^2.8.0",
 		"prettier-plugin-svelte": "^2.10.1",
@@ -49,6 +51,7 @@
 		"katex": "^0.16.9",
 		"marked": "^9.1.0",
 		"svelte-french-toast": "^1.2.0",
+		"svelte-typewriter": "^3.2.3",
 		"tippy.js": "^6.3.7",
 		"uuid": "^9.0.1"
 	}

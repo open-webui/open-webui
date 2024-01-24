@@ -21,8 +21,9 @@ spec:
         - containerPort: 11434
         resources:
           limits:
-            cpu: "2000m"
-            memory: "2Gi"
+          #Für FCN: Max 180000Mi Memory und 40000m CPU - Stand 21.01.24
+            cpu: "25000m"
+            memory: "80000Mi"
         volumeMounts:
         - name: ollama-volume
           mountPath: /root/.ollama
@@ -34,4 +35,4 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 1Gi
+          storage: 50Gi

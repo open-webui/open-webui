@@ -2,12 +2,23 @@
 	import Modal from '../common/Modal.svelte';
 
 	export let show = false;
+
+	const faqs = [
+  {
+    id: 1,
+    question: "What's the best thing about Switzerland?",
+    answer:
+      "I don't know, but the flag is a big plus. Lorem ipsum dolor sit amet consectetur adipisicing elit. Quas cupiditate laboriosam fugiat.",
+  },
+  // More questions...
+]
+
 </script>
 
 <Modal bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
-			<div class=" text-lg font-medium self-center">Keyboard shortcuts</div>
+			<div class=" text-lg font-medium self-center">Shortcuts</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -32,13 +43,13 @@
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<div class="flex flex-col space-y-3 w-full self-start">
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">Open new chat</div>
+						<div class=" text-sm">Neuen Chat öffnen</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 							>
-								Ctrl/⌘
+								Strg /⌘
 							</div>
 
 							<div
@@ -56,7 +67,7 @@
 					</div>
 
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">Focus chat input</div>
+						<div class=" text-sm">Chat Input fokussieren</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
@@ -74,13 +85,13 @@
 					</div>
 
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">Copy last code block</div>
+						<div class=" text-sm">Letzten Code kopieren</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 							>
-								Ctrl/⌘
+							Strg/⌘
 							</div>
 
 							<div
@@ -98,13 +109,13 @@
 					</div>
 
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">Copy last response</div>
+						<div class=" text-sm">Letzte Antwort kopieren</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 							>
-								Ctrl/⌘
+							Strg /⌘
 							</div>
 
 							<div
@@ -124,13 +135,13 @@
 
 				<div class="flex flex-col space-y-3 w-full self-start">
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">Toggle settings</div>
+						<div class=" text-sm">Einstellungen aufrufen</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 							>
-								Ctrl/⌘
+							Strg /⌘
 							</div>
 							<div
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
@@ -141,13 +152,13 @@
 					</div>
 
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">Toggle sidebar</div>
+						<div class=" text-sm">Sidebar ein-/ausblenden</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 							>
-								Ctrl/⌘
+							Strg /⌘
 							</div>
 
 							<div
@@ -165,13 +176,13 @@
 					</div>
 
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">Delete chat</div>
+						<div class=" text-sm">Chat löschen</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 							>
-								Ctrl/⌘
+							Strg /⌘
 							</div>
 							<div
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
@@ -188,25 +199,52 @@
 					</div>
 
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">Show shortcuts</div>
+						<div class=" text-sm">Shortcuts anzeigen</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 							>
-								Ctrl/⌘
+							Strg /⌘
 							</div>
+
 
 							<div
 								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
 							>
 								/
 							</div>
+							
 						</div>
+						
 					</div>
 				</div>
+				
 			</div>
+			
 		</div>
+		<div class=" flex justify-between dark:text-gray-300 px-1 py-1">
+				<div class="mx-auto max-w-7xl divide-y divide-gray-900/10 px-1 py-1">
+				  <h2 class="text-2xl font-bold leading-10 tracking-tight text-gray-900">Frequently asked questions</h2>
+				  <dl class="mt-10 space-y-8 divide-y divide-gray-900/10">
+					<div class="pt-8 lg:grid lg:grid-cols-12 lg:gap-8">
+					  <dt class="text-base font-semibold leading-7 text-gray-900 lg:col-span-5">Warum ist die Antwortgenerierung teilweise langsam?</dt>
+					  <dd class="mt-4 lg:col-span-7 lg:mt-0">
+						<p class="text-base leading-7 text-gray-600">Da die LLM (Large Language Modelle) derzeit aus Konzeptgründen nur auf CPU Processing zurückgreifen können, ist die Geschwindigkeit eingeschränkt.</p>
+					  </dd>
+					  <dt class="text-base font-semibold leading-7 text-gray-900 lg:col-span-5">Welches Modell ist für was gut?</dt>
+					  <dd class="mt-4 lg:col-span-7 lg:mt-0">
+						<p class="text-base leading-7 text-gray-600">Es gibt unterschiedliche Open Source Modelle die für unterschiedliche zwecke trainiert wurden. LLama2 Modelle (von Meta) verstehen in der Regel am besten deutsch. Mistral ist für seine kompakte größe (um die 4GB) sehr gut, schneidet besser ab als Llama2 hat aber manchmal Schwierigkeiten deutsch zu verstehen. Codellama ist für Code spezifische Tasks (z.B. Codegenerieruing) bestens geeignet. Mixtral das größere Model von Mistral und derzeit eines der besten Modelle, braucht aufgrund seiner Größe aber mehr Rechenleistung -> langsamere Antworten.</p>
+					  </dd>
+					  <dt class="text-base font-semibold leading-7 text-gray-900 lg:col-span-5">Läuft die Anwendung wirklch 100% bei der FI-TS?</dt>
+					  <dd class="mt-4 lg:col-span-7 lg:mt-0">
+						<p class="text-base leading-7 text-gray-600">Ja! Sowohl das Frontend als auch der bedeutende Backend (Das Sprachmodell) läuft zu 100% auf FI-TS Rechenzentren.</p>
+					  </dd>
+			  
+					<!-- More questions... -->
+				  </dl>
+				</div>
+			  </div>
 	</div>
 </Modal>
 

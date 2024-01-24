@@ -4,9 +4,10 @@
 	import { tick } from 'svelte';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
-	import { modelfiles } from '$lib/stores';
+	import { modelfiles, user } from '$lib/stores';
 
-	export let user;
+
+	export let rawUser;
 	export let message;
 	export let siblings;
 
@@ -32,7 +33,7 @@
 	};
 
 	const editMessageConfirmHandler = async () => {
-		confirmEditMessage(message.id, editedContent);
+		confirmEditMessage(message.id, editedContent,);
 
 		edit = false;
 		editedContent = '';
@@ -46,27 +47,27 @@
 
 <div class=" flex w-full">
 	<ProfileImage
-		src={message.user
-			? $modelfiles.find((modelfile) => modelfile.tagName === message.user)?.imageUrl ?? '/user.png'
-			: user?.profile_image_url ?? '/user.png'}
+		src={message.rawUser
+			? $modelfiles.find((modelfile) => modelfile.tagName === message.rawUser)?.imageUrl ?? '/user.png'
+			: rawUser?.profile_image_url ?? '/user.png'}
 	/>
 
 	<div class="w-full overflow-hidden">
-		<div class="user-message">
+		<div class="rawUser-message">
 			<Name>
-				{#if message.user}
-					{#if $modelfiles.map((modelfile) => modelfile.tagName).includes(message.user)}
-						{$modelfiles.find((modelfile) => modelfile.tagName === message.user)?.title}
+				{#if message.rawUser}
+					{#if $modelfiles.map((modelfile) => modelfile.tagName).includes(message.rawUser)}
+						{$modelfiles.find((modelfile) => modelfile.tagName === message.rawUser)?.title}
 					{:else}
-						You <span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
+					{$user.name} <span class=" text-gray-500 text-sm font-medium">{message?.rawUser ?? ''}</span>
 					{/if}
 				{:else}
-					You
+				{$user.name}
 				{/if}
 
 				{#if message.timestamp}
 					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
-						{dayjs(message.timestamp * 1000).format('DD/MM/YYYY HH:MM')}
+						{dayjs(message.timestamp * 1000).format('DD.MM.YYYY HH:MM')}
 					</span>
 				{/if}
 			</Name>
@@ -108,7 +109,7 @@
 											{file.name}
 										</div>
 
-										<div class=" text-gray-500 text-sm">Document</div>
+										<div class=" text-gray-500 text-sm">Dokument</div>
 									</div>
 								</div>
 							{/if}
@@ -135,7 +136,7 @@
 								editMessageConfirmHandler();
 							}}
 						>
-							Save & Submit
+							Sichern & Absenden
 						</button>
 
 						<button
@@ -144,13 +145,13 @@
 								cancelEditMessage();
 							}}
 						>
-							Cancel
+							Abbrechen
 						</button>
 					</div>
 				</div>
 			{:else}
 				<div class="w-full">
-					<pre id="user-message">{message.content}</pre>
+					<pre id="rawUser-message">{message.content}</pre>
 
 					<div class=" flex justify-start space-x-1">
 						{#if siblings.length > 1}
@@ -202,7 +203,7 @@
 						{/if}
 
 						<button
-							class="invisible group-hover:visible p-1 rounded dark:hover:bg-gray-800 transition edit-user-message-button"
+							class="invisible group-hover:visible p-1 rounded dark:hover:bg-gray-800 transition edit-rawUser-message-button"
 							on:click={() => {
 								editMessageHandler();
 							}}

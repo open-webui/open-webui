@@ -19,22 +19,16 @@
 		<div class="absolute rounded-xl w-full h-full backdrop-blur flex justify-center">
 			<div class="m-auto pb-44 flex flex-col justify-center">
 				<div class="max-w-md">
-					<div class="text-center text-2xl font-medium z-50">Ollama WebUI Backend Required</div>
+					<div class="text-center text-2xl font-medium z-50">Ollama Backend nicht erreichbar.</div>
 
 					<div class=" mt-4 text-center text-sm w-full">
-						Oops! You're using an unsupported method (frontend only). Please serve the WebUI from
-						the backend.
+						Das Frontend kann derzeit keine Verbindug zum Backend herstellen. Versuche es später erneut. Eventuell werden Wartungsarbeiten vorgenommen.
 
 						<br class=" " />
 						<br class=" " />
-						<a
-							class=" font-semibold underline"
-							href="https://github.com/ollama-webui/ollama-webui#how-to-install-"
-							target="_blank">See readme.md for instructions</a
-						>
-						or
-						<a class=" font-semibold underline" href="https://discord.gg/5rJgQTnV4s" target="_blank"
-							>join our Discord for help.</a
+
+						<a class=" font-semibold underline" href="mailto:jannik.streidl@f-i-ts.de;christian.koenig@f-i-ts.de;patrick.wilhelm@f-i-ts.de;claus.jordan@f-i-ts.de" target="_blank"
+							>Falls dies länger besteht kontaktiere bitte einen Admin aus 55021 AI Services. Vielen Dank!</a
 						>
 					</div>
 
@@ -45,7 +39,7 @@
 								location.href = '/';
 							}}
 						>
-							Check Again
+							Erneut prüfen
 						</button>
 					</div>
 				</div>

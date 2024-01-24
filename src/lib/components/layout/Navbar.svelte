@@ -110,7 +110,7 @@
 			</div>
 			<div class=" flex-1 self-center font-medium line-clamp-1">
 				<div>
-					{title != '' ? title : 'Ollama Web UI'}
+					{title != '' ? title : 'FI-TS AI Chat'}
 				</div>
 			</div>
 
@@ -150,7 +150,7 @@
 									<input
 										bind:value={tagName}
 										class=" cursor-pointer self-center text-xs h-fit bg-transparent outline-none line-clamp-1 w-[4rem]"
-										placeholder="Add a tag"
+										placeholder="Neuer Tag"
 									/>
 
 									<button

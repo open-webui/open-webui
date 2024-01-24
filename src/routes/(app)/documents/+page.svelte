@@ -79,7 +79,7 @@
 					uploadDoc(file);
 				}
 			} else {
-				toast.error(`File not found.`);
+				toast.error(`Datei nicht gefunden.`);
 			}
 		}
 
@@ -95,7 +95,7 @@
 	<div class=" py-2.5 flex flex-col justify-between w-full">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<div class="mb-6 flex justify-between items-center">
-				<div class=" text-2xl font-semibold self-center">My Documents</div>
+				<div class=" text-2xl font-semibold self-center">Meine Dokumente</div>
 			</div>
 
 			<div class=" flex w-full space-x-2">
@@ -117,7 +117,7 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
 						bind:value={query}
-						placeholder="Search Document"
+						placeholder="Dokument suchen"
 					/>
 				</div>
 
@@ -165,7 +165,7 @@
 						inputFiles = null;
 						e.target.value = '';
 					} else {
-						toast.error(`File not found.`);
+						toast.error(`Datei nicht gefunden.`);
 					}
 				}}
 			/>
@@ -180,10 +180,10 @@
 					on:dragleave={onDragLeave}
 				>
 					<div class="  pointer-events-none">
-						<div class="text-center dark:text-white text-2xl font-semibold z-50">Add Files</div>
+						<div class="text-center dark:text-white text-2xl font-semibold z-50">Dateien hinzufügen</div>
 
 						<div class=" mt-2 text-center text-sm dark:text-gray-200 w-full">
-							Drop any files here to add to my documents
+							Ziehe hier deine Dateien rein um sie hinzuzufügen.
 						</div>
 					</div>
 				</div>
@@ -375,7 +375,7 @@
 								document.getElementById('documents-import-input')?.click();
 							}}
 						>
-							<div class=" self-center mr-2 font-medium">Import Documents Mapping</div>
+							<div class=" self-center mr-2 font-medium">Mapping Importieren</div>
 
 							<div class=" self-center">
 								<svg
@@ -402,7 +402,7 @@
 								saveAs(blob, `documents-mapping-export-${Date.now()}.json`);
 							}}
 						>
-							<div class=" self-center mr-2 font-medium">Export Documents Mapping</div>
+							<div class=" self-center mr-2 font-medium">Mapping Exportieren</div>
 
 							<div class=" self-center">
 								<svg
@@ -450,7 +450,7 @@
 				</div>
 
 				<div class="line-clamp-1">
-					Tip: Use '#' in the prompt input to swiftly load and select your documents.
+					Tipp: Nutze '#' im Eingabefeld um schnell zwischen Dokumenten zu wechseln.
 				</div>
 			</div>
 		</div>

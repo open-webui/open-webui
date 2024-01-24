@@ -144,7 +144,7 @@ export const generateTitle = async (token: string = '', model: string, prompt: s
 		},
 		body: JSON.stringify({
 			model: model,
-			prompt: `Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title': ${prompt}`,
+			prompt: `Erstellen Sie einen prägnanten Satz mit 3-5 Wörtern als Überschrift für die folgende Anfrage, wobei Sie mit maximal 5 Wörter antworten, nur auf deutsch und das Wort "Titel" und Doppelpunkte ":" vermeiden sollten: ${prompt}`,
 			stream: false
 		})
 	})
@@ -164,14 +164,14 @@ export const generateTitle = async (token: string = '', model: string, prompt: s
 		throw error;
 	}
 
-	return res?.response ?? 'New Chat';
+	return res?.response ?? 'Neuer Chat';
 };
 
 export const generatePrompt = async (token: string = '', model: string, conversation: string) => {
 	let error = null;
 
 	if (conversation === '') {
-		conversation = '[no existing conversation]';
+		conversation = '[keine existierende Konversation]';
 	}
 
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/generate`, {
@@ -182,12 +182,12 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 		},
 		body: JSON.stringify({
 			model: model,
-			prompt: `Conversation:
+			prompt: `Konversation:
 			${conversation}
 
-			As USER in the conversation above, your task is to continue the conversation. Remember, Your responses should be crafted as if you're a human conversing in a natural, realistic manner, keeping in mind the context and flow of the dialogue. Please generate a fitting response to the last message in the conversation, or if there is no existing conversation, initiate one as a normal person would.
+			Als USER im obigen Gespräch ist es Ihre Aufgabe, das Gespräch fortzusetzen. Denken Sie daran, dass Sie Ihre Antworten so formulieren sollten, als wären Sie ein Mensch, der sich auf natürliche, realistische Weise unterhält, und dabei den Kontext und den Fluss des Dialogs berücksichtigen sollten. Bitte geben Sie eine passende Antwort auf die letzte Nachricht in der Konversation, oder wenn es keine bestehende Konversation gibt, beginnen Sie eine, wie es eine normale Person tun würde.
 			
-			Response:
+			Antwort:
 			`
 		})
 	}).catch((err) => {

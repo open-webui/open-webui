@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Typewriter from 'svelte-typewriter'
 
 	export let models = [];
 	export let modelfiles = [];
@@ -13,6 +14,7 @@
 	$: if (models.length > 0) {
 		selectedModelIdx = models.length - 1;
 	}
+
 </script>
 
 {#if models.length > 0}
@@ -35,14 +37,15 @@
 								draggable="false"
 							/>
 						{:else}
-							<img
-								src={models.length === 1 ? '/ollama.png' : 'ollama-dark.png'}
-								class=" w-20 mb-2 {models.length === 1
-									? 'invert-[10%] dark:invert-[100%]'
-									: 'border-[5px] border-white dark:border-gray-800'}  rounded-full"
-								alt="ollama"
-								draggable="false"
-							/>
+						<img
+						src={models.length === 1 ? '/ollama.png' : 'ollama-dark.png'}
+						class={`w-20 mb-2 ${models.length === 1
+							? 'invert-[10%] shadow-xl'
+							: 'border-[5px] border-white dark:border-gray-800'} rounded-md`}
+						alt="ollama"
+						draggable="false"
+					/>
+					
 						{/if}
 					</button>
 				{/each}
@@ -64,7 +67,7 @@
 					</div>
 				{/if}
 			{:else}
-				How can I help you today?
+				<Typewriter>Wie kann ich Dir heute helfen?</Typewriter>
 			{/if}
 		</div>
 	</div>

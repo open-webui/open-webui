@@ -145,7 +145,7 @@
 		console.log('submitPrompt', $chatId);
 
 		if (selectedModels.includes('')) {
-			toast.error('Model not selected');
+			toast.error('Wähle erst ein Model aus');
 		} else if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
 			console.log('wait');
@@ -191,7 +191,7 @@
 				if ($settings.saveChatHistory ?? true) {
 					chat = await createNewChat(localStorage.token, {
 						id: $chatId,
-						title: 'New Chat',
+						title: 'Neuer Chat',
 						models: selectedModels,
 						system: $settings.system ?? undefined,
 						options: {
@@ -229,7 +229,7 @@
 
 		console.log(docs);
 		if (docs.length > 0) {
-			processing = 'Reading';
+			processing = 'Lese Inhalt';
 			const query = history.messages[parentId].content;
 
 			let relevantContexts = await Promise.all(

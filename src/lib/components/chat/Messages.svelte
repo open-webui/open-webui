@@ -60,7 +60,7 @@
 		navigator.clipboard.writeText(text).then(
 			function () {
 				console.log('Async: Copying to clipboard was successful!');
-				toast.success('Copying to clipboard was successful!');
+				toast.success('Erfolgreich in die Zwischenablage gesichert!');
 			},
 			function (err) {
 				console.error('Async: Could not copy text: ', err);

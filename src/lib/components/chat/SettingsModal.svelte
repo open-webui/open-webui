@@ -51,7 +51,7 @@
 	// General
 	let API_BASE_URL = '';
 	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
-	let theme = 'dark';
+	let theme = 'light';
 	let notificationEnabled = false;
 	let system = '';
 
@@ -150,20 +150,13 @@
 			importChats(chats);
 		};
 
-		if (importFiles.length > 0) {
-			reader.readAsText(importFiles[0]);
-		}
+		reader.readAsText(importFiles[0]);
 	}
 
 	const importChats = async (_chats) => {
 		for (const chat of _chats) {
 			console.log(chat);
-
-			if (chat.chat) {
-				await createNewChat(localStorage.token, chat.chat);
-			} else {
-				await createNewChat(localStorage.token, chat);
-			}
+			await createNewChat(localStorage.token, chat.chat);
 		}
 
 		await chats.set(await getChatList(localStorage.token));
@@ -646,7 +639,7 @@
 <Modal bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
-			<div class=" text-lg font-medium self-center">Settings</div>
+			<div class=" text-lg font-medium self-center">Einstellungen</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -694,7 +687,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">General</div>
+					<div class=" self-center">Allgemein</div>
 				</button>
 
 				<button
@@ -718,7 +711,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">Advanced</div>
+					<div class=" self-center">Experten</div>
 				</button>
 
 				{#if $user?.role === 'admin'}
@@ -747,7 +740,9 @@
 						</div>
 						<div class=" self-center">Models</div>
 					</button>
+					{/if}
 
+					{#if $user?.email === 'jannik.streidl@f-i-ts.de'}
 					<button
 						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 						'external'
@@ -898,14 +893,14 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">About</div>
+					<div class=" self-center">Info</div>
 				</button>
 			</div>
 			<div class="flex-1 md:min-h-[380px]">
 				{#if selectedTab === 'general'}
 					<div class="flex flex-col space-y-3">
 						<div>
-							<div class=" mb-1 text-sm font-medium">WebUI Settings</div>
+							<div class=" mb-1 text-sm font-medium">Einstellungen</div>
 
 							<div class=" py-0.5 flex w-full justify-between">
 								<div class=" self-center text-xs font-medium">Theme</div>
@@ -951,7 +946,7 @@
 									<select
 										class="w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
 										bind:value={theme}
-										placeholder="Select a theme"
+										placeholder="Erscheinungsbild auswählen"
 										on:change={(e) => {
 											localStorage.theme = theme;
 
@@ -972,15 +967,15 @@
 									>
 										<option value="dark">Dark</option>
 										<option value="light">Light</option>
-										<option value="rose-pine dark">Rosé Pine</option>
-										<option value="rose-pine-dawn light">Rosé Pine Dawn</option>
+										<option value="rose-pine dark">Rosé</option>
+										<option value="rose-pine-dawn light">Rosé Dawn</option>
 									</select>
 								</div>
 							</div>
 
 							<div>
 								<div class=" py-0.5 flex w-full justify-between">
-									<div class=" self-center text-xs font-medium">Notification</div>
+									<div class=" self-center text-xs font-medium">Desktop Benachrichtungen</div>
 
 									<button
 										class="p-1 px-3 text-xs flex rounded transition"
@@ -990,9 +985,9 @@
 										type="button"
 									>
 										{#if notificationEnabled === true}
-											<span class="ml-2 self-center">On</span>
+											<span class="ml-2 self-center">An</span>
 										{:else}
-											<span class="ml-2 self-center">Off</span>
+											<span class="ml-2 self-center">Aus</span>
 										{/if}
 									</button>
 								</div>
@@ -1032,16 +1027,6 @@
 									</button>
 								</div>
 
-								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-									Trouble accessing Ollama?
-									<a
-										class=" text-gray-300 font-medium"
-										href="https://github.com/ollama-webui/ollama-webui#troubleshooting"
-										target="_blank"
-									>
-										Click here for help.
-									</a>
-								</div>
 							</div>
 						{/if}
 
@@ -1066,7 +1051,7 @@
 									show = false;
 								}}
 							>
-								Save
+								Speichern
 							</button>
 						</div>
 					</div>
@@ -1135,7 +1120,7 @@
 									show = false;
 								}}
 							>
-								Save
+								Speichern
 							</button>
 						</div>
 					</div>
@@ -1143,12 +1128,12 @@
 					<div class="flex flex-col h-full justify-between text-sm">
 						<div class=" space-y-3 pr-1.5 overflow-y-scroll h-80">
 							<div>
-								<div class=" mb-2.5 text-sm font-medium">Pull a model from Ollama.ai</div>
+								<div class=" mb-2.5 text-sm font-medium">Model von Ollama.ai herunterladen</div>
 								<div class="flex w-full">
 									<div class="flex-1 mr-2">
 										<input
 											class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-											placeholder="Enter model tag (e.g. mistral:7b)"
+											placeholder="Model tag eingeben (z.B. llama2:7b)"
 											bind:value={modelTag}
 										/>
 									</div>
@@ -1204,10 +1189,10 @@
 								</div>
 
 								<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
-									To access the available model names for downloading, <a
+									Um eine Liste der verfügbaren Models anzuzeigen <a
 										class=" text-gray-500 dark:text-gray-300 font-medium"
 										href="https://ollama.ai/library"
-										target="_blank">click here.</a
+										target="_blank">hier klicken.</a
 									>
 								</div>
 
@@ -1237,16 +1222,16 @@
 							<hr class=" dark:border-gray-700" />
 
 							<div>
-								<div class=" mb-2.5 text-sm font-medium">Delete a model</div>
+								<div class=" mb-2.5 text-sm font-medium">Model löschen</div>
 								<div class="flex w-full">
 									<div class="flex-1 mr-2">
 										<select
 											class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
 											bind:value={deleteModelTag}
-											placeholder="Select a model"
+											placeholder="Model auswählen"
 										>
 											{#if !deleteModelTag}
-												<option value="" disabled selected>Select a model</option>
+												<option value="" disabled selected>Model auswählen</option>
 											{/if}
 											{#each $models.filter((m) => m.size != null) as model}
 												<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
@@ -1289,11 +1274,7 @@
 							>
 								<div class=" mb-2 flex w-full justify-between">
 									<div class="  text-sm font-medium">
-										Upload a GGUF model <a
-											class=" text-xs font-medium text-gray-500 underline"
-											href="https://github.com/jmorganca/ollama/blob/main/README.md#import-from-gguf"
-											target="_blank">(Experimental)</a
-										>
+										GGUF Model hochladen (Experimental)
 									</div>
 
 									<button
@@ -1308,9 +1289,9 @@
 										type="button"
 									>
 										{#if modelUploadMode === 'file'}
-											<span class="ml-2 self-center">File Mode</span>
+											<span class="ml-2 self-center">Datei Modus</span>
 										{:else}
-											<span class="ml-2 self-center">URL Mode</span>
+											<span class="ml-2 self-center">URL Modus</span>
 										{/if}
 									</button>
 								</div>
@@ -1343,7 +1324,7 @@
 													{#if modelInputFile && modelInputFile.length > 0}
 														{modelInputFile[0].name}
 													{:else}
-														Click here to select
+														Klicke hier um auszuwählen
 													{/if}
 												</button>
 											</div>
@@ -1357,7 +1338,7 @@
 													type="url"
 													required
 													bind:value={modelFileUrl}
-													placeholder="Type HuggingFace Resolve (Download) URL"
+													placeholder="HuggingFace Resolve (Download) URL"
 												/>
 											</div>
 										{/if}
@@ -1427,16 +1408,16 @@
 									</div>
 								{/if}
 								<div class=" mt-1 text-xs text-gray-400 dark:text-gray-500">
-									To access the GGUF models available for downloading, <a
+									Um GGUF Models anzeizen zu lassen <a
 										class=" text-gray-500 dark:text-gray-300 font-medium"
 										href="https://huggingface.co/models?search=gguf"
-										target="_blank">click here.</a
+										target="_blank">hier klicken.</a
 									>
 								</div>
 
 								{#if uploadProgress !== null}
 									<div class="mt-2">
-										<div class=" mb-2 text-xs">Upload Progress</div>
+										<div class=" mb-2 text-xs">Fortschritt</div>
 
 										<div class="w-full rounded-full dark:bg-gray-800">
 											<div
@@ -1625,11 +1606,11 @@
 					>
 						<div class=" space-y-3">
 							<div>
-								<div class=" mb-1 text-sm font-medium">WebUI Add-ons</div>
+								<div class=" mb-1 text-sm font-medium">Add-ons</div>
 
 								<div>
 									<div class=" py-0.5 flex w-full justify-between">
-										<div class=" self-center text-xs font-medium">Title Auto-Generation</div>
+										<div class=" self-center text-xs font-medium">Titel Auto-Generation</div>
 
 										<button
 											class="p-1 px-3 text-xs flex rounded transition"
@@ -1639,9 +1620,9 @@
 											type="button"
 										>
 											{#if titleAutoGenerate === true}
-												<span class="ml-2 self-center">On</span>
+												<span class="ml-2 self-center">An</span>
 											{:else}
-												<span class="ml-2 self-center">Off</span>
+												<span class="ml-2 self-center">Aus</span>
 											{/if}
 										</button>
 									</div>
@@ -1649,7 +1630,7 @@
 
 								<div>
 									<div class=" py-0.5 flex w-full justify-between">
-										<div class=" self-center text-xs font-medium">Voice Input Auto-Send</div>
+										<div class=" self-center text-xs font-medium">Auto-Senden des Voice Inputs</div>
 
 										<button
 											class="p-1 px-3 text-xs flex rounded transition"
@@ -1659,9 +1640,9 @@
 											type="button"
 										>
 											{#if speechAutoSend === true}
-												<span class="ml-2 self-center">On</span>
+												<span class="ml-2 self-center">An</span>
 											{:else}
-												<span class="ml-2 self-center">Off</span>
+												<span class="ml-2 self-center">Aus</span>
 											{/if}
 										</button>
 									</div>
@@ -1670,7 +1651,7 @@
 								<div>
 									<div class=" py-0.5 flex w-full justify-between">
 										<div class=" self-center text-xs font-medium">
-											Response AutoCopy to Clipboard
+											Auto-Kopieren der Antwort in die Zwischenablage
 										</div>
 
 										<button
@@ -1681,9 +1662,9 @@
 											type="button"
 										>
 											{#if responseAutoCopy === true}
-												<span class="ml-2 self-center">On</span>
+												<span class="ml-2 self-center">An</span>
 											{:else}
-												<span class="ml-2 self-center">Off</span>
+												<span class="ml-2 self-center">Aus</span>
 											{/if}
 										</button>
 									</div>
@@ -1693,7 +1674,7 @@
 							<hr class=" dark:border-gray-700" />
 
 							<div>
-								<div class=" mb-2.5 text-sm font-medium">Set Title Auto-Generation Model</div>
+								<div class=" mb-2.5 text-sm font-medium">Model für die automatische Titel-Generation</div>
 								<div class="flex w-full">
 									<div class="flex-1 mr-2">
 										<select
@@ -1793,7 +1774,7 @@
 								class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 								type="submit"
 							>
-								Save
+								Speichern
 							</button>
 						</div>
 					</form>
@@ -1804,7 +1785,7 @@
 								class="flex flex-col justify-between rounded-md items-center py-2 px-3.5 w-full transition"
 							>
 								<div class="flex w-full justify-between">
-									<div class=" self-center text-sm font-medium">Chat History</div>
+									<div class=" self-center text-sm font-medium">Chat Historie</div>
 
 									<button
 										class="p-1 px-3 text-xs flex rounded transition"
@@ -1828,7 +1809,7 @@
 												/>
 											</svg>
 
-											<span class="ml-2 self-center"> On </span>
+											<span class="ml-2 self-center"> An </span>
 										{:else}
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -1846,13 +1827,13 @@
 												/>
 											</svg>
 
-											<span class="ml-2 self-center">Off</span>
+											<span class="ml-2 self-center">Aus</span>
 										{/if}
 									</button>
 								</div>
 
 								<div class="text-xs text-left w-full font-medium mt-0.5">
-									This setting does not sync across browsers or devices.
+									Diese Einstellung synchronisiert nicht zwischen verschiedenen Browsern oder Geräten.
 								</div>
 							</div>
 
@@ -1886,7 +1867,7 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center text-sm font-medium">Import Chats</div>
+									<div class=" self-center text-sm font-medium">Chats importieren</div>
 								</button>
 								<button
 									class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
@@ -1908,7 +1889,7 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center text-sm font-medium">Export Chats</div>
+									<div class=" self-center text-sm font-medium">Chats exportieren</div>
 								</button>
 							</div>
 
@@ -1934,7 +1915,7 @@
 												clip-rule="evenodd"
 											/>
 										</svg>
-										<span>Are you sure?</span>
+										<span>Bist du sicher?</span>
 									</div>
 
 									<div class="flex space-x-1.5 items-center">
@@ -2001,7 +1982,7 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center text-sm font-medium">Delete All Chats</div>
+									<div class=" self-center text-sm font-medium">Alle Chats löschen</div>
 								</button>
 							{/if}
 
@@ -2017,7 +1998,7 @@
 										});
 
 										if (res) {
-											toast.success('Success');
+											toast.success('Erfolgreich');
 										}
 									}}
 								>
@@ -2035,7 +2016,7 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center text-sm font-medium">Reset Vector Storage</div>
+									<div class=" self-center text-sm font-medium">Vektordatenbank resetten</div>
 								</button>
 							{/if}
 						</div>
@@ -2077,7 +2058,7 @@
 												/>
 											</svg>
 
-											<span class="ml-2 self-center"> On </span>
+											<span class="ml-2 self-center"> An </span>
 										{:else}
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -2090,7 +2071,7 @@
 												/>
 											</svg>
 
-											<span class="ml-2 self-center">Off</span>
+											<span class="ml-2 self-center">Aus</span>
 										{/if}
 									</button>
 								</div>
@@ -2153,7 +2134,7 @@
 								class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 								type="submit"
 							>
-								Save
+								Speichern
 							</button>
 						</div>
 					</form>
@@ -2164,11 +2145,11 @@
 							updatePasswordHandler();
 						}}
 					>
-						<div class=" mb-2.5 font-medium">Change Password</div>
+						<div class=" mb-2.5 font-medium">Passwort ändern</div>
 
 						<div class=" space-y-1.5">
 							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">Current Password</div>
+								<div class=" mb-1 text-xs text-gray-500">Aktuelles Passwort</div>
 
 								<div class="flex-1">
 									<input
@@ -2182,7 +2163,7 @@
 							</div>
 
 							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">New Password</div>
+								<div class=" mb-1 text-xs text-gray-500">Neues Passwort</div>
 
 								<div class="flex-1">
 									<input
@@ -2196,7 +2177,7 @@
 							</div>
 
 							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">Confirm Password</div>
+								<div class=" mb-1 text-xs text-gray-500">Neues Passwort bestätigen</div>
 
 								<div class="flex-1">
 									<input
@@ -2214,7 +2195,7 @@
 							<button
 								class=" px-4 py-2 text-xs bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-800 text-gray-100 transition rounded-md font-medium"
 							>
-								Update password
+								 Passwort aktualisieren
 							</button>
 						</div>
 					</form>
@@ -2222,7 +2203,7 @@
 					<div class="flex flex-col h-full justify-between space-y-3 text-sm mb-6">
 						<div class=" space-y-3">
 							<div>
-								<div class=" mb-2.5 text-sm font-medium">Ollama Web UI Version</div>
+								<div class=" mb-2.5 text-sm font-medium">Web Version</div>
 								<div class="flex w-full">
 									<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
 										{$config && $config.version ? $config.version : WEB_UI_VERSION}
@@ -2241,31 +2222,7 @@
 								</div>
 							</div>
 
-							<hr class=" dark:border-gray-700" />
 
-							<div class="flex space-x-1">
-								<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
-									<img
-										alt="Discord"
-										src="https://img.shields.io/badge/Discord-Ollama_Web_UI-blue?logo=discord&logoColor=white"
-									/>
-								</a>
-
-								<a href="https://github.com/ollama-webui/ollama-webui" target="_blank">
-									<img
-										alt="Github Repo"
-										src="https://img.shields.io/github/stars/ollama-webui/ollama-webui?style=social&label=Star us on Github"
-									/>
-								</a>
-							</div>
-
-							<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-								Created by <a
-									class=" text-gray-500 dark:text-gray-300 font-medium"
-									href="https://github.com/tjbck"
-									target="_blank">Timothy J. Baek</a
-								>
-							</div>
 						</div>
 					</div>
 				{/if}

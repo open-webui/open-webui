@@ -32,8 +32,8 @@
 
 	export let files = [];
 
-	export let fileUploadEnabled = true;
-	export let speechRecognitionEnabled = true;
+	export let fileUploadEnabled = false;
+	export let speechRecognitionEnabled = false;
 	export let speechRecognitionListening = false;
 
 	export let prompt = '';
@@ -101,7 +101,7 @@
 				// Event triggered when an error occurs
 				speechRecognition.onerror = function (event) {
 					console.log(event);
-					toast.error(`Speech recognition error: ${event.error}`);
+					toast.error(`Fehler bei der Spracherkennung: ${event.error}`);
 					speechRecognitionListening = false;
 				};
 			} else {
@@ -142,7 +142,7 @@
 
 		const onDragOver = (e) => {
 			e.preventDefault();
-			dragged = true;
+			dragged = true; 
 		};
 
 		const onDragLeave = () => {
@@ -180,12 +180,12 @@
 						uploadDoc(file);
 					} else {
 						toast.error(
-							`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+							`Unbekanter Dateityp: '${file['type']}', es wird aber dennoch versucht Text zu erkennen und diesen hochzuladen.`
 						);
 						uploadDoc(file);
 					}
 				} else {
-					toast.error(`File not found.`);
+					toast.error(`Datei nicht gefunden.`);
 				}
 			}
 
@@ -324,7 +324,7 @@
 								filesInputElement.value = '';
 							}
 						} else {
-							toast.error(`File not found.`);
+							toast.error(`Datei nicht gefunden.`);
 						}
 					}}
 				/>
@@ -411,7 +411,7 @@
 													{file.name}
 												</div>
 
-												<div class=" text-gray-500 text-sm">Document</div>
+												<div class=" text-gray-500 text-sm">Dokument</div>
 											</div>
 										</div>
 									{/if}
@@ -470,14 +470,14 @@
 
 						<textarea
 							id="chat-textarea"
-							class=" dark:bg-gray-800 dark:text-gray-100 outline-none w-full py-3 px-2 {fileUploadEnabled
+							class="dark:bg-gray-800 dark:text-gray-100 outline-none w-full py-3 px-2 {fileUploadEnabled
 								? ''
 								: ' pl-4'} rounded-xl resize-none h-[48px]"
 							placeholder={chatInputPlaceholder !== ''
 								? chatInputPlaceholder
 								: speechRecognitionListening
-								? 'Listening...'
-								: 'Send a message'}
+									? 'Höre...'
+									: 'Eine Nachricht senden'}
 							bind:value={prompt}
 							on:keypress={(e) => {
 								if (e.keyCode == 13 && !e.shiftKey) {
@@ -716,7 +716,7 @@
 				</form>
 
 				<div class="mt-1.5 text-xs text-gray-500 text-center">
-					LLMs can make mistakes. Verify important information.
+					LLMs können Fehler machen. Alle Funktionen werden im FI-TS RZ gehostet.
 				</div>
 			</div>
 		</div>

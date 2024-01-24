@@ -54,7 +54,7 @@
 </script>
 
 <svelte:head>
-	<title>Ollama</title>
+	<title>FI-TS AI</title>
 
 	<link rel="stylesheet" type="text/css" href="/themes/rosepine.css" />
 	<link rel="stylesheet" type="text/css" href="/themes/rosepine-dawn.css" />

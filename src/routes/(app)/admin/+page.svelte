@@ -107,7 +107,7 @@
 									</svg>
 
 									<div class=" text-xs">
-										New Sign Up <span class=" font-semibold">Enabled</span>
+										Neue Registrierungen <span class=" font-semibold">Aktiviert</span>
 									</div>
 								{:else}
 									<svg
@@ -124,14 +124,14 @@
 									</svg>
 
 									<div class=" text-xs">
-										New Sign Up <span class=" font-semibold">Disabled</span>
+										Neue Registrierungen <span class=" font-semibold">Deaktiviert</span>
 									</div>
 								{/if}
 							</button>
 						</div>
 					</div>
 					<div class=" text-gray-500 text-xs font-medium mt-1">
-						Click on the user role cell in the table to change a user's role.
+						Klicke auf die Rolle im Userfeld um sie zu ändern.
 					</div>
 
 					<hr class=" my-3 dark:border-gray-600" />
@@ -144,8 +144,8 @@
 								<tr>
 									<th scope="col" class="px-6 py-3"> Name </th>
 									<th scope="col" class="px-6 py-3"> Email </th>
-									<th scope="col" class="px-6 py-3"> Role </th>
-									<th scope="col" class="px-6 py-3"> Action </th>
+									<th scope="col" class="px-6 py-3"> Rolle </th>
+									<th scope="col" class="px-6 py-3"> Aktionen </th>
 								</tr>
 							</thead>
 							<tbody>
@@ -165,7 +165,11 @@
 												<div class=" font-semibold self-center">{user.name}</div>
 											</div>
 										</th>
-										<td class="px-6 py-4"> {user.email} </td>
+										<td class="px-6 py-4">
+											<a href="mailto:{user.email}" style="cursor: pointer; color: blue; text-decoration: underline;">
+											  {user.email}
+											</a>
+										  </td>
 										<td class="px-6 py-4">
 											<button
 												class="  dark:text-white underline"

@@ -2,3 +2,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: ollama-namespace
+  #labels:
+    #pod-security.kubernetes.io/warn: baseline
+    #pod-security.kubernetes.io/audit: restricted
+    #pod-security.kubernetes.io/warn: restricted

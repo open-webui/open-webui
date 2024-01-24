@@ -161,7 +161,7 @@
 		console.log('submitPrompt', $chatId);
 
 		if (selectedModels.includes('')) {
-			toast.error('Model not selected');
+			toast.error('Wähle erst ein Model aus');
 		} else if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
 			console.log('wait');
@@ -171,7 +171,7 @@
 		) {
 			// Upload not done
 			toast.error(
-				`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
+				`Deine Dateien werden noch indiziert. Bitte warte einen Moment.`
 			);
 		} else {
 			// Reset chat message textarea height
@@ -207,7 +207,7 @@
 				if ($settings.saveChatHistory ?? true) {
 					chat = await createNewChat(localStorage.token, {
 						id: $chatId,
-						title: 'New Chat',
+						title: 'Neuer Chat',
 						models: selectedModels,
 						system: $settings.system ?? undefined,
 						options: {

@@ -3,18 +3,46 @@ kind: Ingress
 metadata:
   name: ollama-webui-ingress
   namespace: ollama-namespace
-  #annotations:
-    # Use appropriate annotations for your Ingress controller, e.g., for NGINX:
-    # nginx.ingress.kubernetes.io/rewrite-target: /
+  annotations:
+    kubernetes.io/ingress.class: nginx-mpls
+    nginx-ingress-kubernetes.io/client-max-body-size: 200m
+    nginx-ingress-kubernetes.io/proxy-read-timeout: '3600'
+    nginx-ingress-kubernetes.io/proxy-send-timeout: '3600'
+    nginx.ingress.kubernetes.io/body-size: 1024m
+    nginx.ingress.kubernetes.io/client-body-buffer-size: 100m
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: '3600'
+    nginx.org/proxy-connect-timeout: 3600s
+    nginx.org/proxy-read-timeout: 3600s
+    nginx.org/proxy-send-timeout: 3600s
+  managedFields:
+    - manager: kubectl-client-side-apply
+      operation: Update
+      apiVersion: networking.k8s.io/v1
+    - manager: nginx-ingress-controller
+      operation: Update
+    - manager: node-fetch
+      operation: Update
+  selfLink: >-
+    /apis/networking.k8s.io/v1/namespaces/ollama-namespace/ingresses/ollama-webui-ingress
+status:
+  loadBalancer:
+    ingress:
+      - ip: 100.127.170.68
 spec:
+  tls:
+    - hosts:
+        - ai.officelan.izb
+      secretName: test-ai-tls-mpls
   rules:
-  - host: ollama.minikube.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: ollama-webui-service
-            port:
-              number: 8080
+    - host: ai.officelan.izb
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ollama-webui-service
+                port:
+                  number: 8080

@@ -213,13 +213,11 @@
 					<div class="m-auto pb-44 flex flex-col justify-center">
 						<div class="max-w-md">
 							<div class="text-center dark:text-white text-2xl font-medium z-50">
-								Account Activation Pending<br /> Contact Admin for WebUI Access
+								Account Aktivierung angefragt. <br /> <a class=" font-semibold underline" href="mailto:jannik.streidl@f-i-ts.de;christian.koenig@f-i-ts.de;patrick.wilhelm@f-i-ts.de;claus.jordan@f-i-ts.de" target="_blank"> Kontaktiere einen Admin aus 55021 AI Services.</a>
 							</div>
 
 							<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">
-								Your account status is currently pending activation. To access the WebUI, please
-								reach out to the administrator. Admins can manage user statuses from the Admin
-								Panel.
+								Dein Account steht derzeit zur Aktivierung an. Um auf das WebUI zuzugreifen, kontaktiere bitte einen Administrator. Admins können User per Admin Panel aktivieren.
 							</div>
 
 							<div class=" mt-6 mx-auto relative group w-fit">
@@ -229,7 +227,7 @@
 										location.href = '/';
 									}}
 								>
-									Check Again
+									Erneut prüfen
 								</button>
 
 								<button
@@ -237,7 +235,7 @@
 									on:click={async () => {
 										localStorage.removeItem('token');
 										location.href = '/auth';
-									}}>Sign Out</button
+									}}>Abmelden</button
 								>
 							</div>
 						</div>
@@ -252,28 +250,16 @@
 					<div class="m-auto pb-44 flex flex-col justify-center">
 						<div class="max-w-md">
 							<div class="text-center dark:text-white text-2xl font-medium z-50">
-								Connection Issue or Update Needed
+								Verfindungsfehler oder Update erforderlich
 							</div>
 
 							<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">
-								Oops! It seems like your Ollama needs a little attention. <br
+								Scheint als wäre Ollama nicht auf dem neuesten Stand. <br
 									class=" hidden sm:flex"
-								/>We've detected either a connection hiccup or observed that you're using an older
-								version. Ensure you're on the latest Ollama version
-								<br class=" hidden sm:flex" />(version
-								<span class=" dark:text-white font-medium">{REQUIRED_OLLAMA_VERSION} or higher</span
-								>) or check your connection.
-
-								<div class="mt-1 text-sm">
-									Trouble accessing Ollama?
-									<a
-										class=" text-black dark:text-white font-semibold underline"
-										href="https://github.com/ollama-webui/ollama-webui#troubleshooting"
-										target="_blank"
-									>
-										Click here for help.
-									</a>
-								</div>
+								/>Entweder ist die Verbindung zum Ollama Service abgebrochen oder Ollama ist nicht auf dem neuesten Stand.
+								<br class=" hidden sm:flex" />(Version
+								<span class=" dark:text-white font-medium">{REQUIRED_OLLAMA_VERSION} oder neuer</span
+								>) oder überprüfe die Verbindung.
 							</div>
 
 							<div class=" mt-6 mx-auto relative group w-fit">
@@ -284,14 +270,14 @@
 										// await setOllamaVersion();
 									}}
 								>
-									Check Again
+									Erneut prüfen
 								</button>
 
 								<button
 									class="text-xs text-center w-full mt-2 text-gray-400 underline"
 									on:click={async () => {
 										await setOllamaVersion(REQUIRED_OLLAMA_VERSION);
-									}}>Close</button
+									}}>Schließen</button
 								>
 							</div>
 						</div>

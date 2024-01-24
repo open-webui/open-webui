@@ -42,7 +42,7 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
-			<div class=" text-lg font-medium self-center">Edit User</div>
+			<div class=" text-lg font-medium self-center">User bearbeiten</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -84,7 +84,7 @@
 							<div class=" self-center capitalize font-semibold">{selectedUser.name}</div>
 
 							<div class="text-xs text-gray-500">
-								Created at {dayjs(selectedUser.timestamp * 1000).format('MMMM DD, YYYY')}
+								Registriert seit {dayjs(selectedUser.timestamp * 1000).format('DD.MM.YYYY')}
 							</div>
 						</div>
 					</div>
@@ -122,7 +122,7 @@
 						</div>
 
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">New Password</div>
+							<div class=" mb-1 text-xs text-gray-500">Neues Passwort</div>
 
 							<div class="flex-1">
 								<input
