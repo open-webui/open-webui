@@ -81,7 +81,7 @@
 	class=" bg-white dark:bg-gray-800 dark:text-gray-100 min-h-screen w-full flex justify-center font-mona"
 >
 	{#if loaded}
-		<div class="w-full max-w-3xl px-10 md:px-16 min-h-screen flex flex-col">
+		<div class="w-full max-w-6xl px-10 md:px-16 min-h-screen flex flex-col">
 			<div class="py-10 w-full">
 				<div class=" flex flex-col justify-center">
 					<div class=" flex justify-between items-center">
