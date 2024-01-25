@@ -1682,7 +1682,7 @@
 											bind:value={titleAutoGenerateModel}
 											placeholder="Select a model"
 										>
-											<option value="" selected>Current Model</option>
+											<option value="" selected>Aktuelles Modell</option>
 											{#each $models.filter((m) => m.size != null) as model}
 												<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
 													>{model.name +
