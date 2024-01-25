@@ -22,8 +22,8 @@ spec:
         resources:
           limits:
           #Für FCN: Max 180000Mi Memory und 40000m CPU - Stand 21.01.24
-            cpu: "25000m"
-            memory: "80000Mi"
+            cpu: "35000m"
+            memory: "130000Mi"
         volumeMounts:
         - name: ollama-volume
           mountPath: /root/.ollama

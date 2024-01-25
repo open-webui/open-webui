@@ -32,7 +32,7 @@
 
 	export let files = [];
 
-	export let fileUploadEnabled = false;
+	export let fileUploadEnabled = true;
 	export let speechRecognitionEnabled = false;
 	export let speechRecognitionListening = false;
 
@@ -105,7 +105,7 @@
 					speechRecognitionListening = false;
 				};
 			} else {
-				toast.error('SpeechRecognition API is not supported in this browser.');
+				toast.error('SpeechRecognition wird unter deinem Browser nicht unterstützt.');
 			}
 		}
 	};
@@ -716,7 +716,7 @@
 				</form>
 
 				<div class="mt-1.5 text-xs text-gray-500 text-center">
-					LLMs können Fehler machen. Alle Funktionen werden im FI-TS RZ gehostet.
+					LLMs können Fehler machen. Performance kann aufgrund begrenzten Ressourcen variieren. Anwendung läuft vollständig auf FI-TS RZ. 
 				</div>
 			</div>
 		</div>

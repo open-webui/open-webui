@@ -213,7 +213,7 @@
 					<div class="m-auto pb-44 flex flex-col justify-center">
 						<div class="max-w-md">
 							<div class="text-center dark:text-white text-2xl font-medium z-50">
-								Account Aktivierung angefragt. <br /> <a class=" font-semibold underline" href="mailto:jannik.streidl@f-i-ts.de;christian.koenig@f-i-ts.de;patrick.wilhelm@f-i-ts.de;claus.jordan@f-i-ts.de" target="_blank"> Kontaktiere einen Admin aus 55021 AI Services.</a>
+								Account Aktivierung angefragt. <br /> <a class=" font-semibold underline" href="mailto:jannik.streidl@f-i-ts.de;christian.koenig@f-i-ts.de;patrick.wilhelm@f-i-ts.de" target="_blank"> Kontaktiere einen Admin aus 55021 AI Services.</a>
 							</div>
 
 							<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">

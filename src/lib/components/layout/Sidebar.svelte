@@ -197,36 +197,40 @@
 		{/if}
 
 
-
 		{#if $user?.role === 'admin'}
 			
 
-			<div class="px-2.5 flex justify-center mb-1">
-				<button
-					class="flex-grow flex space-x-3 rounded-md px-3 py-2 transition cursor-not-allowed">
-					<div class="self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
-							/>
-						</svg>
-					</div>
+		<div class="px-2.5 py-3 flex justify-center mb-1">
+			<button
+				class="flex-grow flex space-x-3 rounded-md px-3 py-2 hover:bg-gray-900 transition"
+				on:click={async () => {
+					goto('/documents');
+				}}
+			>
+				<div class="self-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="1.5"
+						stroke="currentColor"
+						class="w-4 h-4"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
+						/>
+					</svg>
+				</div>
 
-					<div class="flex self-center">
-						<div class="self-center font-medium text-sm">Dokumente</div>
-					</div>
-				</button>
-			</div>
+				<div class="flex self-center">
+					<div class=" self-center font-medium text-sm">Dokumente</div>
+				</div>
+			</button>
+		</div>
 		{/if}
+
 
 		<div class="relative flex flex-col flex-1 overflow-y-auto">
 			{#if !($settings.saveChatHistory ?? true)}
@@ -272,6 +276,7 @@
 
 			<div class="px-2.5 mt-1 mb-2 flex justify-center space-x-2">
 				<div class="flex w-full" id="chat-search">
+					
 					<div class="self-center pl-3 py-2 rounded-l bg-gray-950">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -292,23 +297,6 @@
 						placeholder="Suchen"
 						bind:value={search}
 					/>
-
-					<!-- <div class="self-center pr-3 py-2  bg-gray-900">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"
-							/>
-						</svg>
-					</div> -->
 				</div>
 			</div>
 
@@ -633,67 +621,7 @@
 									<div class=" self-center font-medium">Einstellungen</div>
 								</button>
 
-								<button
-								class="flex py-2.5 px-3.5 w-full hover:bg-gray-800 transition"
-								on:click={() => {
-									goto('/changelog');
-									showDropdown = false;
-								}}
-							>
-								<div class=" self-center mr-3">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke-width="1.5"
-										stroke="currentColor"
-										class="w-5 h-5"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M5.07,8A8,8,0,0,1,20,12"
-										/>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M18.93,16A8,8,0,0,1,4,12"
-										/>
-									</svg>
-								</div>
-								<div class=" self-center font-medium">Changelog</div>
-							</button>
 
-							<button
-							class="flex py-2.5 px-3.5 w-full hover:bg-gray-800 transition"
-							on:click={() => {
-								goto('#');
-								showDropdown = false;
-							}}
-						>
-							<div class=" self-center mr-3">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="1.5"
-									stroke="currentColor"
-									class="w-5 h-5"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"
-									/>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-									/>
-								</svg>
-							</div>
-							<div class=" self-center font-medium">Feedback</div>
-						</button>
 							</div>
 
 							<hr class=" border-gray-700 m-0 p-0" />

@@ -223,6 +223,7 @@
 			</div>
 			
 		</div>
+		<!--
 		<div class=" flex justify-between dark:text-gray-300 px-1 py-1">
 				<div class="mx-auto max-w-7xl divide-y divide-gray-900/10 px-1 py-1">
 				  <h2 class="text-2xl font-bold leading-10 tracking-tight text-gray-900">Frequently asked questions</h2>
@@ -241,10 +242,11 @@
 						<p class="text-base leading-7 text-gray-600">Ja! Sowohl das Frontend als auch der bedeutende Backend (Das Sprachmodell) läuft zu 100% auf FI-TS Rechenzentren.</p>
 					  </dd>
 			  
-					<!-- More questions... -->
+					 More questions... 
 				  </dl>
 				</div>
 			  </div>
+			-->
 	</div>
 </Modal>
 

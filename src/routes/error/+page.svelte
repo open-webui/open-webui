@@ -27,7 +27,7 @@
 						<br class=" " />
 						<br class=" " />
 
-						<a class=" font-semibold underline" href="mailto:jannik.streidl@f-i-ts.de;christian.koenig@f-i-ts.de;patrick.wilhelm@f-i-ts.de;claus.jordan@f-i-ts.de" target="_blank"
+						<a class=" font-semibold underline" href="mailto:jannik.streidl@f-i-ts.de;christian.koenig@f-i-ts.de;patrick.wilhelm@f-i-ts.de" target="_blank"
 							>Falls dies länger besteht kontaktiere bitte einen Admin aus 55021 AI Services. Vielen Dank!</a
 						>
 					</div>
