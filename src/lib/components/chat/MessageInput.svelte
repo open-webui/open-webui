@@ -105,14 +105,21 @@
 					speechRecognitionListening = false;
 				};
 			} else {
-				toast.error('SpeechRecognition wird unter deinem Browser nicht unterstützt.');
+				toast.error('Spracherkennung wird unter deinem Browser nicht unterstützt.');
 			}
 		}
 	};
 
 	const uploadDoc = async (file) => {
 		console.log(file);
-
+		toast(
+	"Fragen zu Dateien können aufgrund begrenzter Ressourcen länger dauern, je nach Dateigröße. \n\n Schließe den Chat nicht und warte auf eine Antwort.",
+	{
+		duration: 5000,
+		icon: '⚠️'
+	}
+);
+		
 		const doc = {
 			type: 'doc',
 			name: file.name,
@@ -318,7 +325,7 @@
 								filesInputElement.value = '';
 							} else {
 								toast.error(
-									`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+									`Unbekannter Dateityp: '${file['type']}', es wird aber dennoch versucht Text zu extrahieren.`
 								);
 								uploadDoc(file);
 								filesInputElement.value = '';

@@ -100,7 +100,7 @@
 						</div>
 
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">Title</div>
+							<div class=" mb-1 text-xs text-gray-500">Titel</div>
 
 							<div class="flex-1">
 								<input
@@ -119,7 +119,7 @@
 							class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 							type="submit"
 						>
-							Save
+							Speichern
 						</button>
 					</div>
 				</form>

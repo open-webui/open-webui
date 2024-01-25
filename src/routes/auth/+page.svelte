@@ -6,6 +6,7 @@
 	import { onMount } from 'svelte';
 	import toast from 'svelte-french-toast';
 	import Typewriter from 'svelte-typewriter'
+	
 
 	let loaded = false;
 	let mode = 'signin';
@@ -55,7 +56,15 @@
 			await goto('/');
 		}
 		loaded = true;
-	});
+		toast(
+	"Seit dem letzten Update muss ein neuer Account erstellt werden. \n\n In Zukunft ist das nicht mehr notwendig.",
+	{
+		duration: 5000,
+		icon: '⚠️'
+	}
+);
+  });
+
 </script>
 
 {#if loaded}

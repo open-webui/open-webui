@@ -1,5 +1,6 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
+	import 'dayjs/locale/de';
 	import { marked } from 'marked';
 	import { settings, voices } from '$lib/stores';
 	import tippy from 'tippy.js';
@@ -36,6 +37,8 @@
 	$: tokens = marked.lexer(message.content);
 
 	const renderer = new marked.Renderer();
+	
+	dayjs.locale('de'); // Setzt die Lokalisierung auf Deutsch
 
 	// For code blocks with simple backticks
 	renderer.codespan = (code) => {
@@ -166,14 +169,14 @@
 				{#if message.model in modelfiles}
 					{modelfiles[message.model]?.title}
 				{:else}
-					Ollama <span class=" text-gray-500 text-sm font-medium"
+					FI-TS AI <span class=" text-gray-500 text-sm font-medium"
 						>{message.model ? ` ${message.model}` : ''}</span
 					>
 				{/if}
 
 				{#if message.timestamp}
 					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
-						{dayjs(message.timestamp * 1000).format('DD/MM/YYYY HH:MM')}
+						{dayjs(message.timestamp * 1000).format('DD.MM.YYYY')}
 					</span>
 				{/if}
 			</Name>
@@ -203,7 +206,7 @@
 											editMessageConfirmHandler();
 										}}
 									>
-										Save
+										Speichern
 									</button>
 
 									<button
@@ -212,7 +215,7 @@
 											cancelEditMessage();
 										}}
 									>
-										Cancel
+										Abbrechen
 									</button>
 								</div>
 							</div>

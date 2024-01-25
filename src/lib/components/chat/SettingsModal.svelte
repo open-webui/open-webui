@@ -764,7 +764,7 @@
 								/>
 							</svg>
 						</div>
-						<div class=" self-center">External</div>
+						<div class=" self-center">Extern</div>
 					</button>
 
 					<button
@@ -1507,7 +1507,7 @@
 					>
 						<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 							<div class="flex w-full justify-between mb-2">
-								<div class=" self-center text-sm font-semibold">Default Prompt Suggestions</div>
+								<div class=" self-center text-sm font-semibold">Standard Prompt Vorschläge</div>
 
 								<button
 									class="p-1 px-3 text-xs flex rounded transition"
@@ -1580,7 +1580,7 @@
 
 							{#if promptSuggestions.length > 0}
 								<div class="text-xs text-left w-full mt-2">
-									Adjusting these settings will apply changes universally to all users.
+									Die Anpassung dieser Einstellungen wird universell für alle Benutzer angewendet.
 								</div>
 							{/if}
 						</div>
@@ -1590,7 +1590,7 @@
 								class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 								type="submit"
 							>
-								Save
+								Speichern
 							</button>
 						</div>
 					</form>

@@ -74,7 +74,7 @@
 					uploadDoc(file);
 				} else {
 					toast.error(
-						`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+						`Unbekannter Dateityp: '${file['type']}', es wird aber dennoch versucht Text zu extrahieren.t`
 					);
 					uploadDoc(file);
 				}
@@ -161,7 +161,7 @@
 							uploadDoc(file);
 						} else {
 							toast.error(
-								`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+								`Unbekannter Dateityp: '${file['type']}', es wird aber dennoch versucht Text zu extrahieren.`
 							);
 							uploadDoc(file);
 						}

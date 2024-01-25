@@ -85,7 +85,7 @@
 			<div class="py-10 w-full">
 				<div class=" flex flex-col justify-center">
 					<div class=" flex justify-between items-center">
-						<div class=" text-2xl font-semibold">Benuter ({users.length})</div>
+						<div class=" text-2xl font-semibold">Benutzer ({users.length})</div>
 						<div>
 							<button
 								class="flex items-center space-x-1 border border-gray-200 dark:border-gray-600 px-3 py-1 rounded-lg"
