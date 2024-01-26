@@ -677,20 +677,30 @@
 	};
 
 	const generateChatTitle = async (_chatId, userPrompt) => {
-		if ($settings.titleAutoGenerate ?? true) {
-			const title = await generateTitle(
-				localStorage.token,
-				$settings?.titleAutoGenerateModel ?? selectedModels[0],
-				userPrompt
-			);
+    if ($settings.titleAutoGenerate ?? true) {
+        // Generieren des Titels
+        const fullTitle = await generateTitle(
+            localStorage.token,
+            $settings?.titleAutoGenerateModel ?? selectedModels[0],
+            userPrompt
+        );
 
-			if (title) {
-				await setChatTitle(_chatId, title);
-			}
-		} else {
-			await setChatTitle(_chatId, `${userPrompt}`);
-		}
-	};
+        let title = fullTitle;
+
+        // Finden der Position des ersten Doppelpunkts
+        const colonIndex = fullTitle.indexOf(':');
+        if (colonIndex !== -1) {
+            // Kürzen des Textes bis zum Doppelpunkt (ohne den Doppelpunkt)
+            title = fullTitle.slice(0, colonIndex);
+        }
+
+        if (title) {
+            await setChatTitle(_chatId, title);
+        }
+    } else {
+        await setChatTitle(_chatId, `${userPrompt}`);
+    }
+};
 
 	const getTags = async () => {
 		return await getTagsById(localStorage.token, $chatId).catch(async (error) => {
