@@ -396,7 +396,7 @@
 									if (responseMessage.content == '') {
 										responseMessage.error = true;
 										responseMessage.content =
-											'Oops! No text generated from Ollama, Please try again.';
+											'Es konnte keine Antwort von Ollama empfangen werden. Bitte versuche es erneut.';
 									}
 
 									responseMessage.context = data.context ?? null;

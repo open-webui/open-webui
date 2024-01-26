@@ -101,8 +101,7 @@
 					</div>
 
 					<div class="line-clamp-1">
-						Tip: Update multiple variable slots consecutively by pressing the tab key in the chat
-						input after each replacement.
+						Tipp: Aktualisiere mehrere Variablen nacheinander, indem du nach jeder Ersetzung die Tabulatortaste drückst.
 					</div>
 				</div>
 			</div>

@@ -523,7 +523,7 @@
 		});
 
 		if (res) {
-			toast.success(`Deleted ${deleteModelTag}`);
+			toast.success(`${deleteModelTag} wurde erfolgreich gelöscht`);
 		}
 
 		deleteModelTag = '';
@@ -1723,7 +1723,7 @@
 
 							<div class=" space-y-3">
 								<div>
-									<div class=" mb-2.5 text-sm font-medium">Set Default Voice</div>
+									<div class=" mb-2.5 text-sm font-medium">Standardstimme für Text-To-Speech wählen</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<select
@@ -1731,7 +1731,7 @@
 												bind:value={speakVoice}
 												placeholder="Select a voice"
 											>
-												<option value="" selected>Default</option>
+												<option value="" selected>Browserstandard</option>
 												{#each $voices.filter((v) => v.localService === true) as voice}
 													<option value={voice.name} class="bg-gray-100 dark:bg-gray-700"
 														>{voice.name}</option

@@ -84,7 +84,7 @@
 							<div class=" self-center capitalize font-semibold">{selectedUser.name}</div>
 
 							<div class="text-xs text-gray-500">
-								Registriert seit {dayjs(selectedUser.timestamp * 1000).format('DD.MM.YYYY')}
+								Registriert seit {dayjs(selectedUser.timestamp * 1000).format('DD.MM.YYYY HH:mm')}
 							</div>
 						</div>
 					</div>

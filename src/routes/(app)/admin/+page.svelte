@@ -166,7 +166,7 @@
 											</div>
 										</th>
 										<td class="px-6 py-4">
-											<a href="mailto:{user.email}" style="cursor: pointer; color: blue; text-decoration: underline;">
+											<a class="  dark:text-white underline" href="mailto:{user.email}">
 											  {user.email}
 											</a>
 										  </td>

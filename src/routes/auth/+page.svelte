@@ -116,7 +116,7 @@
 									type="text"
 									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
 									autocomplete="name"
-									placeholder="Gib deinen vollständigen Namen ein"
+									placeholder="Gebe deinen Namen ein"
 									required
 								/>
 							</div>
@@ -131,7 +131,7 @@
 								type="email"
 								class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
 								autocomplete="email"
-								placeholder="Gib deine E-Mail ein"
+								placeholder="Gebe deine E-Mail ein"
 								required
 							/>
 						</div>

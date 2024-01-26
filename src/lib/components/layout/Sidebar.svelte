@@ -66,13 +66,19 @@
 		localStorage.setItem('settings', JSON.stringify($settings));
 		location.href = '/';
 	};
-	let currentTime = new Date();
-  	let greeting;
+	
+	let greeting;
+	let currentHour = new Date().getHours();
 
-  // Funktion, um die Begrüßung basierend auf der Tageszeit festzulegen
-  function setGreeting() {
-    const currentHour = currentTime.getHours();
+  onMount(() => {
+    setGreeting();
+    setInterval(() => {
+      currentHour = new Date().getHours();
+      setGreeting();
+    }, 900000);
+  });
 
+  $: setGreeting = () => {
     if (currentHour >= 5 && currentHour < 12) {
       greeting = "☀️ Guten Morgen,";
     } else if (currentHour >= 12 && currentHour < 18) {
@@ -80,10 +86,8 @@
     } else {
       greeting = "🌘 Guten Abend,";
     }
-  }
+  };
 
-  // Begrüßung initial setzen
-  setGreeting();
 </script>
 
 <div

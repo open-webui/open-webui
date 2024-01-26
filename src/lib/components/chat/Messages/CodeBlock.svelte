@@ -27,7 +27,7 @@
 		>
 			<div class="p-1">{@html lang}</div>
 			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
-				>{copied ? 'Copied' : 'Copy Code'}</button
+				>{copied ? 'kopiert!' : 'Code kopieren'}</button
 			>
 		</div>
 

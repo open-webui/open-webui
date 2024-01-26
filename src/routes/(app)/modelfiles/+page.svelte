@@ -22,7 +22,7 @@
 		success = await deleteModel(localStorage.token, tagName);
 
 		if (success) {
-			toast.success(`Deleted ${tagName}`);
+			toast.success(`${tagName} wurde erfolgreich gelöscht`);
 		}
 
 		return success;

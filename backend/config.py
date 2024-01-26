@@ -66,22 +66,22 @@ DEFAULT_MODELS = os.environ.get("DEFAULT_MODELS", None)
 DEFAULT_PROMPT_SUGGESTIONS = os.environ.get(
     "DEFAULT_PROMPT_SUGGESTIONS",
     [
-        {
-            "title": ["Help me study", "vocabulary for a college entrance exam"],
-            "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
-        },
-        {
-            "title": ["Give me ideas", "for what to do with my kids' art"],
-            "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
-        },
-        {
-            "title": ["Tell me a fun fact", "about the Roman Empire"],
-            "content": "Tell me a random fun fact about the Roman Empire",
-        },
-        {
-            "title": ["Show me a code snippet", "of a website's sticky header"],
-            "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
-        },
+            {
+                "title": ["Gebe mir Tipps", "wie ich den VIM verlasse"],
+                "content": "Gebe mir Tipps wie ich den VIM verlasse."
+            },
+            {
+                "title": ["Gebe mir Ideen in Bullet-Points", "für New Work Ansätze"],
+                "content": "Gebe mir Ideen in Bullet-Points für New Work Ansätze."
+            },
+            {
+                "title": ["Gebe mir den Python Code", "für ein Hello World Programm mit GUI"],
+                "content": "Gebe mir den Python Code für ein einfaches Hello World Programm mit GUI."
+            },
+            {
+                "title": ["Erzähle einen Fun-Fact", "über das römische Reich"],
+                "content": "Erzähle einen Fun-Fact über das römische Reich."
+            },
     ],
 )
 

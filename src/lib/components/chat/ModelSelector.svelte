@@ -135,5 +135,5 @@
 </div>
 
 <div class="text-left mt-1.5 text-xs text-gray-500">
-	<button on:click={saveDefaultModel}> Als default setzen</button>
+	<button on:click={saveDefaultModel}> Als Standardmodell festlegen</button>
 </div>
