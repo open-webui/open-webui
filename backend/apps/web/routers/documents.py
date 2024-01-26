@@ -35,7 +35,7 @@ async def get_documents(user=Depends(get_current_user)):
 
 @router.post("/create", response_model=Optional[DocumentModel])
 async def create_new_doc(form_data: DocumentForm, user=Depends(get_current_user)):
-    if user.role != "admin":
+    if user.role == "pending":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -86,7 +86,7 @@ async def get_doc_by_name(name: str, user=Depends(get_current_user)):
 async def update_doc_by_name(
     name: str, form_data: DocumentUpdateForm, user=Depends(get_current_user)
 ):
-    if user.role != "admin":
+    if user.role == "pending":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -109,7 +109,7 @@ async def update_doc_by_name(
 
 @router.delete("/name/{name}/delete", response_model=bool)
 async def delete_doc_by_name(name: str, user=Depends(get_current_user)):
-    if user.role != "admin":
+    if user.role == "pending":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,

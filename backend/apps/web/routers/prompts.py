@@ -30,7 +30,7 @@ async def get_prompts(user=Depends(get_current_user)):
 
 @router.post("/create", response_model=Optional[PromptModel])
 async def create_new_prompt(form_data: PromptForm, user=Depends(get_current_user)):
-    if user.role != "admin":
+    if user.role == "pending":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -81,7 +81,7 @@ async def get_prompt_by_command(command: str, user=Depends(get_current_user)):
 async def update_prompt_by_command(
     command: str, form_data: PromptForm, user=Depends(get_current_user)
 ):
-    if user.role != "admin":
+    if user.role == "pending":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -104,7 +104,7 @@ async def update_prompt_by_command(
 
 @router.delete("/command/{command}/delete", response_model=bool)
 async def delete_prompt_by_command(command: str, user=Depends(get_current_user)):
-    if user.role != "admin":
+    if user.role == "pending":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
