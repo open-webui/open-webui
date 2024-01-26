@@ -86,6 +86,8 @@ async def get_ui_config():
             config = json.load(file)
             org_logo = config['orgLogo']
             org_logo = clean_logo(org_logo, config_dir)
+            assistant_icon = config['assistant']['icon']
+            config['assistant']['icon'] = get_image(assistant_icon, config_dir)
             configs.append(config)
 
     return configs
@@ -93,13 +95,18 @@ async def get_ui_config():
 
 def clean_logo(logo, config_dir):
     for theme in ['light', 'dark']:
-        if not logo[theme].startswith(('http', 'data:image')):
-            image_path = os.path.join(config_dir, logo[theme])
-            if os.path.isfile(image_path):
-                logo[theme] = convert_image_to_base64(image_path)
-            else:
-                logo[theme] = None
+        logo[theme] = get_image(logo[theme], config_dir)
     return logo
+
+
+def get_image(image, config_dir):
+    if not image.startswith(('http', 'data:image')):
+        image_path = os.path.join(config_dir, image)
+        if os.path.isfile(image_path):
+            image = convert_image_to_base64(image_path)
+        else:
+            image = None
+    return image
 
 
 def convert_image_to_base64(image_path):

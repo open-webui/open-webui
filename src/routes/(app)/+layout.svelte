@@ -81,6 +81,7 @@
 
 	const getUIConfigurations = async () => {
 		const configs = await getUIConfigs(localStorage.token);
+		console.log({ configs });
 
 		if (configs) {
 			uiConfigs.set(configs);

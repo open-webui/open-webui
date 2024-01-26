@@ -15,6 +15,9 @@
 	import CodeBlock from './CodeBlock.svelte';
 
 	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
+	import { onMount, tick } from 'svelte';
+	import { get } from 'svelte/store';
+	import { selectedUiConfigId, uiConfigs } from '$lib/stores';
 
 	export let modelfiles = [];
 	export let message;
@@ -203,15 +206,28 @@
 		renderStyling();
 	};
 
+	let assistant: any;
+
 	onMount(async () => {
 		await tick();
 		renderStyling();
+
+		const configs: any[] = get(uiConfigs);
+		const selectedConfigId = get(selectedUiConfigId);
+
+		if (configs.length > 0 && selectedConfigId) {
+			const selectedUiConfig = configs.find((config) => config.id === selectedConfigId);
+			if (selectedUiConfig && selectedUiConfig.assistant) {
+				assistant = selectedUiConfig.assistant;
+			}
+		}
+		console.log({ assistant });
 	});
 </script>
 
 {#key message.id}
 	<div class=" flex w-full message-{message.id}">
-		<ProfileImage src={modelfiles[message.model]?.imageUrl ?? '/favicon.png'} />
+	<ProfileImage src={assistant?.icon ?? '/favicon.png'} />
 
 		<div class="w-full overflow-hidden">
 			<Name>
@@ -234,7 +250,10 @@
 				<Skeleton />
 			{:else}
 				<div
-					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-p:-mb-4 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-6 prose-li:-mb-4 whitespace-pre-line"
+					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-p:-mb-4 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-6 prose-li:-mb-4 whitespace-pre-line">
+				{assistant?.name ?? 'Ollama'}
+				<span class=" text-gray-500 text-sm font-medium"
+					>{message.model ? ` ${message.model}` : ''}</span
 				>
 					<div>
 						{#if edit === true}

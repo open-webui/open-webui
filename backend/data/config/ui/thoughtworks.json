@@ -13,5 +13,9 @@
 		"prompts": {
 			"disabled": true
 		}
+	},
+	"assistant": {
+		"name": "Wizard",
+		"icon": "images/tw-bot-icon.png"
 	}
 }
