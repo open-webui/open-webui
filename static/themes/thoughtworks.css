@@ -1,6 +1,6 @@
 .thoughtworks * {
 	color: #edf1f3 !important;
-	stroke: #47a1ad !important;
+	stroke: #378894 !important;
 }
 
 .thoughtworks .app > * {
@@ -20,7 +20,7 @@
 }
 
 .thoughtworks .w-4.h-4 {
-	fill: #003d50;
+	fill: #47a1ad;
 }
 
 .thoughtworks #chat-textarea {
