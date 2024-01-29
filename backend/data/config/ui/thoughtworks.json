@@ -11,11 +11,11 @@
 			"disabled": true
 		},
 		"prompts": {
-			"disabled": true
+			"disabled": false
 		}
 	},
 	"assistant": {
-		"name": "Wizard",
+		"name": "Echo Chat",
 		"icon": "images/tw-bot-icon.png"
 	}
 }
