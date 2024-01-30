@@ -2,7 +2,7 @@
 	import toast from 'svelte-french-toast';
 
 	import { goto } from '$app/navigation';
-	import { prompts } from '$lib/stores';
+	import { prompts, user } from '$lib/stores';
 	import { onMount, tick } from 'svelte';
 
 	import { getPrompts, updatePromptByCommand } from '$lib/apis/prompts';
@@ -17,6 +17,7 @@
 	let title = '';
 	let command = '';
 	let content = '';
+	let user_id = '';
 
 	const updateHandler = async () => {
 		loading = true;
@@ -62,6 +63,7 @@
 				await tick();
 				command = prompt.command.slice(1);
 				content = prompt.content;
+				user_id = prompt.user_id
 			} else {
 				goto('/prompts');
 			}
@@ -176,45 +178,47 @@
 					</div>
 				</div>
 
-				<div class="my-2 flex justify-end">
-					<button
-						class=" text-sm px-3 py-2 transition rounded-xl {loading
-							? ' cursor-not-allowed bg-gray-100 dark:bg-gray-800'
-							: ' bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-800'} flex"
-						type="submit"
-						disabled={loading}
-					>
-						<div class=" self-center font-medium">Save & Update</div>
+				{#if $user.role === 'admin' || $user.id === user_id}
+					<div class="my-2 flex justify-end">
+						<button
+							class=" text-sm px-3 py-2 transition rounded-xl {loading
+								? ' cursor-not-allowed bg-gray-100 dark:bg-gray-800'
+								: ' bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-800'} flex"
+							type="submit"
+							disabled={loading}
+						>
+							<div class=" self-center font-medium">Save & Update</div>
 
-						{#if loading}
-							<div class="ml-1.5 self-center">
-								<svg
-									class=" w-4 h-4"
-									viewBox="0 0 24 24"
-									fill="currentColor"
-									xmlns="http://www.w3.org/2000/svg"
-									><style>
-										.spinner_ajPY {
-											transform-origin: center;
-											animation: spinner_AtaB 0.75s infinite linear;
-										}
-										@keyframes spinner_AtaB {
-											100% {
-												transform: rotate(360deg);
+							{#if loading}
+								<div class="ml-1.5 self-center">
+									<svg
+										class=" w-4 h-4"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										xmlns="http://www.w3.org/2000/svg"
+										><style>
+											.spinner_ajPY {
+												transform-origin: center;
+												animation: spinner_AtaB 0.75s infinite linear;
 											}
-										}
-									</style><path
-										d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-										opacity=".25"
-									/><path
-										d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-										class="spinner_ajPY"
-									/></svg
-								>
-							</div>
-						{/if}
-					</button>
-				</div>
+											@keyframes spinner_AtaB {
+												100% {
+													transform: rotate(360deg);
+												}
+											}
+										</style><path
+											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+											opacity=".25"
+										/><path
+											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+											class="spinner_ajPY"
+										/></svg
+									>
+								</div>
+							{/if}
+						</button>
+					</div>
+				{/if}
 			</form>
 		</div>
 	</div>

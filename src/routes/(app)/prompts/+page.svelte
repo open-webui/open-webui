@@ -236,7 +236,7 @@
 				<div />
 			{:else}
 				<div class=" my-8">
-					<div class=" text-xl font-semibold mb-6">Unverified Prompts</div>
+					<div class=" text-xl font-semibold mb-6">Requested Prompts</div>
 					{#each $prompts.filter((p) => !p.verified && (p.user_id === $user.id || $user.role === 'admin')) as prompt}
 						<hr class=" dark:border-gray-700 my-2.5" />
 						<div class=" flex space-x-4 cursor-pointer w-full mb-3">
@@ -250,7 +250,7 @@
 									</div>
 								</a>
 							</div>
-							{#if $user.role === 'admin'}
+							{#if $user.role === 'admin' || $user.id === prompt.user_id}
 								<div class="flex flex-row space-x-1 self-center">
 									<a
 										class="self-center w-fit text-sm px-2 py-2 border dark:border-gray-600 rounded-xl"
@@ -299,6 +299,8 @@
 							{/if}
 						</div>
 					{/each}
+
+					<hr class=" dark:border-gray-700 my-2.5" />
 				</div>
 			{/if}
 

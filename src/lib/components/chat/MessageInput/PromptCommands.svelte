@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { prompts } from '$lib/stores';
+	import { prompts, user } from '$lib/stores';
 	import { findWordIndices } from '$lib/utils';
 	import { tick } from 'svelte';
 
@@ -8,7 +8,7 @@
 	let filteredPromptCommands = [];
 
 	$: filteredPromptCommands = $prompts
-		.filter((p) => p.command.includes(prompt))
+		.filter((p) => (p.verified || p.user_id === $user.id) && p.command.includes(prompt))
 		.sort((a, b) => a.title.localeCompare(b.title));
 
 	$: if (prompt) {

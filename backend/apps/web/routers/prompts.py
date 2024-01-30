@@ -78,7 +78,7 @@ async def update_prompt_by_command(
     command: str, form_data: PromptForm, user=Depends(get_current_user)
 ):
     is_admin = user.role == "admin" 
-    if user.role != "admin":
+    if user.role != "admin" and user.id != Prompts.get_prompt_by_command(f"/{command}").user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -101,7 +101,7 @@ async def update_prompt_by_command(
 
 @router.delete("/command/{command}/delete", response_model=bool)
 async def delete_prompt_by_command(command: str, user=Depends(get_current_user)):
-    if user.role != "admin":
+    if user.role != "admin" and user.id != Prompts.get_prompt_by_command(f"/{command}").user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
