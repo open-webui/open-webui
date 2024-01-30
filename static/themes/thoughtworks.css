@@ -4,11 +4,11 @@
 }
 
 .thoughtworks .app > * {
-	background-color: #003d50 !important;
+	background-color: #003343 !important;
 }
 
 .thoughtworks #nav {
-	background-color: #003343;
+	background-color: #002c3b;
 }
 
 .thoughtworks .py-2\.5.my-auto.flex.flex-col.justify-between.h-screen {
@@ -16,7 +16,7 @@
 }
 
 .thoughtworks .bg-white.dark\:bg-gray-800 {
-	background: #003343;
+	background: #003d50;
 }
 
 .thoughtworks .w-4.h-4 {
@@ -24,19 +24,19 @@
 }
 
 .thoughtworks #chat-textarea {
-	background: #003d50;
+	background: #003343;
 	margin: 0.3rem;
 	padding: 0.5rem;
 }
 
 .thoughtworks .bg-gradient-to-t.from-white.dark\:from-gray-800.from-40\%.pb-2 {
-	background: #003343 !important;
+	background: #003d50 !important;
 	padding-top: 0.6rem;
 }
 
 .thoughtworks
 	.text-white.bg-gray-100.dark\:text-gray-800.dark\:bg-gray-600.disabled.transition.rounded-lg.p-1.mr-0\.5.w-7.h-7.self-center {
-	background-color: #003d50;
+	background-color: #003343;
 	transition: background-color 0.2s ease-out linear;
 }
 
@@ -55,17 +55,17 @@
 
 .thoughtworks
 	.w-full.flex.justify-between.rounded-md.px-3.py-2.hover\:bg-gray-900.bg-gray-900.transition.whitespace-nowrap.text-ellipsis {
-	background-color: #003d50;
+	background-color: #003343;
 	font-weight: bold;
 }
 
 .thoughtworks .hover\:bg-gray-900:hover {
 	--tw-bg-opacity: 1;
-	background-color: #003343;
+	background-color: #003d50;
 }
 
 .thoughtworks .text-xs.text-gray-700.uppercase.bg-gray-50.dark\:bg-gray-700.dark\:text-gray-400 {
-	background-color: #003d50;
+	background-color: #003343;
 }
 
 .thoughtworks .scrollbar-hidden.relative.overflow-x-auto.whitespace-nowrap.svelte-3g4avz {
@@ -73,7 +73,7 @@
 }
 
 .thoughtworks .base.enter.svelte-ug60r4 {
-	background-color: #003d50;
+	background-color: #003343;
 }
 
 .thoughtworks .message.svelte-1nauejd {
@@ -81,25 +81,26 @@
 }
 
 .thoughtworks #dropdownDots {
-	background-color: #003d50;
+	background-color: #003343;
 }
 
 .thoughtworks .flex.py-2\.5.px-3\.5.w-full.hover\:bg-gray-800.transition:hover {
 	background: #002633;
 }
 
-.thoughtworks .m-auto.rounded-xl.max-w-full.w-\[40rem\].mx-2.bg-gray-50.dark\:bg-gray-900.shadow-3xl {
-	background-color: #003343;
+.thoughtworks
+	.m-auto.rounded-xl.max-w-full.w-\[40rem\].mx-2.bg-gray-50.dark\:bg-gray-900.shadow-3xl {
+	background-color: #003d50;
 }
 
 .thoughtworks
 	.w-full.rounded.p-4.text-sm.dark\:text-gray-300.dark\:bg-gray-800.outline-none.resize-none {
-	background-color: #003d50;
+	background-color: #003343;
 }
 
 .thoughtworks
 	.w-full.rounded.py-2.px-4.text-sm.dark\:text-gray-300.dark\:bg-gray-800.outline-none.svelte-1vx7r9s {
-	background-color: #003d50;
+	background-color: #003343;
 }
 
 .thoughtworks
@@ -109,7 +110,7 @@
 
 .thoughtworks
 	.px-2\.5.py-2\.5.min-w-fit.rounded-lg.flex-1.md\:flex-none.flex.text-right.transition.hover\:bg-gray-300.dark\:hover\:bg-gray-800:hover {
-	background-color: #003d50;
+	background-color: #003343;
 }
 
 .thoughtworks .px-4.py-2.bg-emerald-600.hover\:bg-emerald-700.text-gray-100.transition.rounded {
@@ -121,21 +122,28 @@
 }
 
 :is(.dark .dark\:outline-gray-600) {
-  outline-color: #31748f;
+	outline-color: #31748f;
 }
 
-:is(.dark .dark\:bg-gray-600,
-    .dark .dark\:bg-gray-800,
-    .dark .dark\:bg-gray-700) {
-    --tw-bg-opacity: 1;
-    background-color: #002633;
+:is(.dark .dark\:bg-gray-600) {
+	--tw-bg-opacity: 1;
+	background-color: #003d50;
+}
+
+:is(.dark .dark\:bg-gray-700) {
+	--tw-bg-opacity: 1;
+	background-color: #003343;
+}
+
+:is(.dark .dark\:bg-gray-800) {
+	--tw-bg-opacity: 1;
+	background-color: #002633;
 }
 
 :is(.dark .dark\:bg-gray-600:hover) {
-    --tw-bg-opacity: 1;
-    background-color: #003d50
+	--tw-bg-opacity: 1;
+	background-color: #003343;
 }
-
 
 .thoughtworks .svelte-1ee93ns {
 	--primary: #eb6f92 !important;
@@ -144,5 +152,5 @@
 
 .thoughtworks .svelte-11kvm4p {
 	--primary: #9ccfd8 !important;
-	--secondary: #003d50 !important;
+	--secondary: #003343 !important;
 }

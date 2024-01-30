@@ -61,12 +61,12 @@
 	<div class="fixed m-10 z-50">
 		<div class="flex space-x-2">
 			<div class=" self-center">
-				<img src="/ollama.png" class=" w-8" />
+				<img src="/logo-dark.png" class=" h-8" />
 			</div>
 		</div>
 	</div>
 
-	<div class=" bg-white min-h-screen w-full flex justify-center font-mona">
+	<div class=" bg-white min-h-screen w-full flex justify-center font-mona dark:bg-gray-800">
 		<!-- <div class="hidden lg:flex lg:flex-1 px-10 md:px-16 w-full bg-yellow-50 justify-center">
 			<div class=" my-auto pb-16 text-left">
 				<div>
@@ -81,7 +81,7 @@
 			</div>
 		</div> -->
 
-		<div class="w-full max-w-lg px-10 md:px-16 bg-white min-h-screen flex flex-col">
+		<div class="w-full max-w-lg px-10 md:px-16 bg-white min-h-screen flex flex-col dark:bg-gray-800">
 			<div class=" my-auto pb-10 w-full">
 				<form
 					class=" flex flex-col justify-center"
@@ -100,14 +100,13 @@
 								<input
 									bind:value={name}
 									type="text"
-									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+									class=" border px-4 py-2.5 rounded-2xl w-full text-sm dark:bg-gray-700"
 									autocomplete="name"
 									placeholder="Enter Your Full Name"
 									required
 								/>
 							</div>
 
-							<hr class=" my-3" />
 						{/if}
 
 						<div class="mb-2">
@@ -115,7 +114,7 @@
 							<input
 								bind:value={email}
 								type="email"
-								class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+								class=" border px-4 py-2.5 rounded-2xl w-full text-sm dark:bg-gray-700"
 								autocomplete="email"
 								placeholder="Enter Your Email"
 								required
@@ -127,7 +126,7 @@
 							<input
 								bind:value={password}
 								type="password"
-								class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+								class=" border px-4 py-2.5 rounded-2xl w-full text-sm dark:bg-gray-700"
 								placeholder="Enter Your Password"
 								autocomplete="current-password"
 								required

@@ -22,6 +22,7 @@ class Prompt(Model):
     title = CharField()
     content = TextField()
     timestamp = DateField()
+    verified = BooleanField()
 
     class Meta:
         database = DB
@@ -33,6 +34,7 @@ class PromptModel(BaseModel):
     title: str
     content: str
     timestamp: int  # timestamp in epoch
+    verified: bool
 
 
 ####################
@@ -53,7 +55,7 @@ class PromptsTable:
         self.db.create_tables([Prompt])
 
     def insert_new_prompt(self, user_id: str,
-                          form_data: PromptForm) -> Optional[PromptModel]:
+                          form_data: PromptForm, is_admin: bool) -> Optional[PromptModel]:
         prompt = PromptModel(
             **{
                 "user_id": user_id,
@@ -61,6 +63,7 @@ class PromptsTable:
                 "title": form_data.title,
                 "content": form_data.content,
                 "timestamp": int(time.time()),
+                "verified": is_admin
             })
 
         try:
@@ -87,12 +90,13 @@ class PromptsTable:
 
     def update_prompt_by_command(
             self, command: str,
-            form_data: PromptForm) -> Optional[PromptModel]:
+            form_data: PromptForm, is_admin: bool) -> Optional[PromptModel]:
         try:
             query = Prompt.update(
                 title=form_data.title,
                 content=form_data.content,
                 timestamp=int(time.time()),
+                verified=is_admin
             ).where(Prompt.command == command)
 
             query.execute()

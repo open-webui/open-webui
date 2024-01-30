@@ -177,7 +177,7 @@
 			</button>
 		</div>
 
-		{#if $user?.role === 'admin' && disabledCapabilities}
+		{#if disabledCapabilities}
 			{#if !disabledCapabilities.includes('modelfiles')}
 				<div class="px-2.5 flex justify-center mt-0.5">
 					<button
@@ -230,13 +230,13 @@
 								<path
 									stroke-linecap="round"
 									stroke-linejoin="round"
-									d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+									d="M21 20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V9.48907C3 9.18048 3.14247 8.88917 3.38606 8.69972L11.3861 2.47749C11.7472 2.19663 12.2528 2.19663 12.6139 2.47749L20.6139 8.69972C20.8575 8.88917 21 9.18048 21 9.48907V20ZM19 19V9.97815L12 4.53371L5 9.97815V19H19ZM7 15H17V17H7V15Z"
 								/>
 							</svg>
 						</div>
 
 						<div class="flex self-center">
-							<div class=" self-center font-medium text-sm">Prompts</div>
+							<div class=" self-center font-medium text-sm">Prompt Hub</div>
 						</div>
 					</button>
 				</div>

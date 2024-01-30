@@ -29,16 +29,12 @@ async def get_prompts(user=Depends(get_current_user)):
 
 
 @router.post("/create", response_model=Optional[PromptModel])
-async def create_new_prompt(form_data: PromptForm, user=Depends(get_current_user)):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+async def create_new_prompt(form_data: PromptForm, user=Depends(get_current_user)):    
+    is_admin = user.role == "admin" 
 
     prompt = Prompts.get_prompt_by_command(form_data.command)
     if prompt == None:
-        prompt = Prompts.insert_new_prompt(user.id, form_data)
+        prompt = Prompts.insert_new_prompt(user.id, form_data, is_admin)
 
         if prompt:
             return prompt
@@ -81,13 +77,14 @@ async def get_prompt_by_command(command: str, user=Depends(get_current_user)):
 async def update_prompt_by_command(
     command: str, form_data: PromptForm, user=Depends(get_current_user)
 ):
+    is_admin = user.role == "admin" 
     if user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    prompt = Prompts.update_prompt_by_command(f"/{command}", form_data)
+    prompt = Prompts.update_prompt_by_command(f"/{command}", form_data, is_admin)
     if prompt:
         return prompt
     else:

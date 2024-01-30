@@ -76,7 +76,7 @@
 <div class="min-h-screen w-full flex justify-center dark:text-white">
 	<div class=" py-2.5 flex flex-col justify-between w-full">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
-			<div class=" text-2xl font-semibold mb-6">My Prompts</div>
+			<div class=" text-2xl font-semibold mb-6">Prompt Hub</div>
 
 			<button
 				class="flex space-x-1"
