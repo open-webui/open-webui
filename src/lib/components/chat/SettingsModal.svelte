@@ -1512,7 +1512,7 @@
 				<div class="self-center text-sm font-semibold">Interface Settings</div>
 					<div class="py-2 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
-							Display username instead of "You" in the Chat
+							Display the username instead of "You" in the Chat
 						</div>
 
 						<button
@@ -1531,15 +1531,15 @@
 					</div>
 					
 					<form
-						class="flex flex-col h-full justify-between text-sm"
+						class="flex flex-col h-full text-sm"
 						on:submit|preventDefault={() => {
 							updateInterfaceHandler();
 							show = false;
 						}}
 					>
 						
-								<div class="overflow-y-scroll space-y-3 pr-1.5 max-h-80">
-									<div class="flex w-full justify-between mb-2">
+							<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
+								<div class="space-y-3 pr-1.5">
 								<div class="self-center text-sm font-semibold">Default Prompt Suggestions</div>
 
 								<button
@@ -1562,8 +1562,8 @@
 										/>
 									</svg>
 								</button>
-							</div>
-							<div class="flex flex-col space-y-1">
+							
+								<div class="flex flex-col space-y-1">
 								{#each promptSuggestions as prompt, promptIdx}
 									<div class=" flex border dark:border-gray-600 rounded-lg">
 										<div class="flex flex-col flex-1">
@@ -1608,13 +1608,15 @@
 											</svg>
 										</button>
 									</div>
-								{/each}
+									{/each}
 								
-							{#if promptSuggestions.length > 0}
-								<div class="text-xs text-left w-full mt-2">
+									{#if promptSuggestions.length > 0}
+									<div class="text-xs text-left w-full mt-2">
 									Adjusting these settings will apply changes universally to all users.
+									</div>
+									{/if}
 								</div>
-							{/if}
+							</div>
 						</div>
 					
 						<div class="flex justify-end pt-3 text-sm font-medium">
