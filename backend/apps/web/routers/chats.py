@@ -25,9 +25,6 @@ from apps.web.models.tags import (
     Tags,
 )
 
-from utils.utils import (
-    bearer_scheme,
-)
 from constants import ERROR_MESSAGES
 
 router = APIRouter()
@@ -55,6 +52,25 @@ async def get_all_user_chats(user=Depends(get_current_user)):
         ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
         for chat in Chats.get_all_chats_by_user_id(user.id)
     ]
+
+
+############################
+# GetAllChatsInDB
+############################
+
+
+@router.get("/all/db", response_model=List[ChatResponse])
+async def get_all_user_chats_in_db(user=Depends(get_current_user)):
+    if user.role == "admin":
+        return [
+            ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+            for chat in Chats.get_all_chats()
+        ]
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
 
 ############################
