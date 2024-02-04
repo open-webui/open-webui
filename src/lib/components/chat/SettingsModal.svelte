@@ -105,6 +105,8 @@
 
 	// Interface
 	let promptSuggestions = [];
+	let showUsername = false;
+
 
 	// Addons
 	let titleAutoGenerate = true;
@@ -238,6 +240,11 @@
 	const toggleTitleAutoGenerate = async () => {
 		titleAutoGenerate = !titleAutoGenerate;
 		saveSettings({ titleAutoGenerate: titleAutoGenerate });
+	};
+
+	const toggleShowUsername = async () => {
+		showUsername = !showUsername;
+		saveSettings({ showUsername: showUsername });
 	};
 
 	const toggleNotification = async () => {
@@ -592,6 +599,7 @@
 		titleAutoGenerate = settings.titleAutoGenerate ?? true;
 		speechAutoSend = settings.speechAutoSend ?? false;
 		responseAutoCopy = settings.responseAutoCopy ?? false;
+		showUsername = settings.showUsername ?? false;
 		titleAutoGenerateModel = settings.titleAutoGenerateModel ?? '';
 		gravatarEmail = settings.gravatarEmail ?? '';
 		speakVoice = settings.speakVoice ?? '';
@@ -1488,16 +1496,38 @@
 						</div>
 					</form>
 				{:else if selectedTab === 'interface'}
+				<div class="self-center text-sm font-semibold">Interface Settings</div>
+					<div class="py-2 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							Display username instead of "You" in the Chat
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								toggleShowUsername();
+							}}
+							type="button"
+						>
+							{#if showUsername === true}
+								<span class="ml-2 self-center">On</span>
+							{:else}
+								<span class="ml-2 self-center">Off</span>
+							{/if}
+						</button>
+					</div>
+					
 					<form
-						class="flex flex-col h-full justify-between space-y-3 text-sm"
+						class="flex flex-col h-full justify-between text-sm"
 						on:submit|preventDefault={() => {
 							updateInterfaceHandler();
 							show = false;
 						}}
 					>
-						<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
-							<div class="flex w-full justify-between mb-2">
-								<div class=" self-center text-sm font-semibold">Default Prompt Suggestions</div>
+						
+								<div class="overflow-y-scroll space-y-3 pr-1.5 max-h-80">
+									<div class="flex w-full justify-between mb-2">
+								<div class="self-center text-sm font-semibold">Default Prompt Suggestions</div>
 
 								<button
 									class="p-1 px-3 text-xs flex rounded transition"
@@ -1566,15 +1596,14 @@
 										</button>
 									</div>
 								{/each}
-							</div>
-
+								
 							{#if promptSuggestions.length > 0}
 								<div class="text-xs text-left w-full mt-2">
 									Adjusting these settings will apply changes universally to all users.
 								</div>
 							{/if}
 						</div>
-
+					
 						<div class="flex justify-end pt-3 text-sm font-medium">
 							<button
 								class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
@@ -1584,6 +1613,8 @@
 							</button>
 						</div>
 					</form>
+			
+
 				{:else if selectedTab === 'addons'}
 					<form
 						class="flex flex-col h-full justify-between space-y-3 text-sm"
