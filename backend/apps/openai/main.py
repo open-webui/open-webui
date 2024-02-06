@@ -81,10 +81,15 @@ async def speech(request: Request, user=Depends(get_current_user)):
 
     body = await request.body()
 
-    filename = hashlib.sha256(body).hexdigest() + ".mp3"
+    print(body)
+    print(type(body))
+
+    name = hashlib.sha256(body).hexdigest()
+
     SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
     SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    file_path = SPEECH_CACHE_DIR.joinpath(filename)
+    file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
+    file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
 
     print(file_path)
 
@@ -113,6 +118,9 @@ async def speech(request: Request, user=Depends(get_current_user)):
         with open(file_path, "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
+
+        with open(file_body_path, "w") as f:
+            json.dump(json.loads(body.decode("utf-8")), f)
 
         # Return the saved file
         return FileResponse(file_path)
