@@ -512,6 +512,10 @@
 	const sendPromptOpenAI = async (model, userPrompt, parentId, _chatId) => {
 		let responseMessageId = uuidv4();
 
+		const myModel = $models.find((m) => m.name === model);
+		let external = myModel?.external === true;
+		let externalPrompt = external && selectedModelfile.content.split('"""')[1];
+
 		let responseMessage = {
 			parentId: parentId,
 			id: responseMessageId,
@@ -537,12 +541,13 @@
 			model: model,
 			stream: true,
 			messages: [
-				$settings.system
+				$settings.system && !external
 					? {
 							role: 'system',
 							content: $settings.system
 					  }
 					: undefined,
+				external ? { role: 'system', content: externalPrompt } : undefined,
 				...messages
 			]
 				.filter((message) => message)

@@ -101,6 +101,9 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 	};
 
 	const submitHandler = async () => {
+		const model = $models.find((model) => model.name === tagName) ?? false;
+		const external = model?.external ?? false;
+
 		loading = true;
 
 		if (Object.keys(categories).filter((category) => categories[category]).length == 0) {
@@ -113,6 +116,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 		}
 
 		if (
+			!external &&
 			$models.map((model) => model.name).includes(tagName) ||
 			(await getModelfileByTagName(localStorage.token, tagName).catch(() => false))
 		) {
@@ -131,67 +135,71 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 			Object.keys(categories).filter((category) => categories[category]).length > 0 &&
 			!$models.includes(tagName)
 		) {
-			const res = await createModel(localStorage.token, tagName, content);
 
-			if (res) {
-				const reader = res.body
-					.pipeThrough(new TextDecoderStream())
-					.pipeThrough(splitStream('\n'))
-					.getReader();
+			if(!external) {
 
-				while (true) {
-					const { value, done } = await reader.read();
-					if (done) break;
+				const res = await createModel(localStorage.token, tagName, content);
 
-					try {
-						let lines = value.split('\n');
+				if (res) {
+					const reader = res.body
+						.pipeThrough(new TextDecoderStream())
+						.pipeThrough(splitStream('\n'))
+						.getReader();
 
-						for (const line of lines) {
-							if (line !== '') {
-								console.log(line);
-								let data = JSON.parse(line);
-								console.log(data);
+					while (true) {
+						const { value, done } = await reader.read();
+						if (done) break;
 
-								if (data.error) {
-									throw data.error;
-								}
-								if (data.detail) {
-									throw data.detail;
-								}
+						try {
+							let lines = value.split('\n');
 
-								if (data.status) {
-									if (
-										!data.digest &&
-										!data.status.includes('writing') &&
-										!data.status.includes('sha256')
-									) {
-										toast.success(data.status);
+							for (const line of lines) {
+								if (line !== '') {
+									console.log(line);
+									let data = JSON.parse(line);
+									console.log(data);
 
-										if (data.status === 'success') {
-											success = true;
-										}
-									} else {
-										if (data.digest) {
-											digest = data.digest;
+									if (data.error) {
+										throw data.error;
+									}
+									if (data.detail) {
+										throw data.detail;
+									}
 
-											if (data.completed) {
-												pullProgress = Math.round((data.completed / data.total) * 1000) / 10;
-											} else {
-												pullProgress = 100;
+									if (data.status) {
+										if (
+											!data.digest &&
+											!data.status.includes('writing') &&
+											!data.status.includes('sha256')
+										) {
+											toast.success(data.status);
+
+											if (data.status === 'success') {
+												success = true;
+											}
+										} else {
+											if (data.digest) {
+												digest = data.digest;
+
+												if (data.completed) {
+													pullProgress = Math.round((data.completed / data.total) * 1000) / 10;
+												} else {
+													pullProgress = 100;
+												}
 											}
 										}
 									}
 								}
 							}
+						} catch (error) {
+							console.log(error);
+							toast.error(error);
 						}
-					} catch (error) {
-						console.log(error);
-						toast.error(error);
 					}
 				}
 			}
 
-			if (success) {
+			if (success || external) {
 				await saveModelfile({
 					tagName: tagName,
 					imageUrl: imageUrl,

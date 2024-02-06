@@ -6,7 +6,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 
-	import { settings, user, config, modelfiles } from '$lib/stores';
+	import { settings, user, config, modelfiles, models } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
 	import { createModel } from '$lib/apis/ollama';
@@ -88,6 +88,9 @@
 	};
 
 	const updateHandler = async () => {
+		const model = $models.find((model) => model.name === tagName) ?? false;
+		const external = model?.external ?? false;
+
 		loading = true;
 
 		if (Object.keys(categories).filter((category) => categories[category]).length == 0) {
@@ -102,67 +105,68 @@
 			content !== '' &&
 			Object.keys(categories).filter((category) => categories[category]).length > 0
 		) {
-			const res = await createModel(localStorage.token, tagName, content);
+			if(!external) {
+				const res = await createModel(localStorage.token, tagName, content);
+				if (res) {
+					const reader = res.body
+						.pipeThrough(new TextDecoderStream())
+						.pipeThrough(splitStream('\n'))
+						.getReader();
 
-			if (res) {
-				const reader = res.body
-					.pipeThrough(new TextDecoderStream())
-					.pipeThrough(splitStream('\n'))
-					.getReader();
+					while (true) {
+						const { value, done } = await reader.read();
+						if (done) break;
 
-				while (true) {
-					const { value, done } = await reader.read();
-					if (done) break;
+						try {
+							let lines = value.split('\n');
 
-					try {
-						let lines = value.split('\n');
+							for (const line of lines) {
+								if (line !== '') {
+									console.log(line);
+									let data = JSON.parse(line);
+									console.log(data);
 
-						for (const line of lines) {
-							if (line !== '') {
-								console.log(line);
-								let data = JSON.parse(line);
-								console.log(data);
+									if (data.error) {
+										throw data.error;
+									}
+									if (data.detail) {
+										throw data.detail;
+									}
 
-								if (data.error) {
-									throw data.error;
-								}
-								if (data.detail) {
-									throw data.detail;
-								}
+									if (data.status) {
+										if (
+											!data.digest &&
+											!data.status.includes('writing') &&
+											!data.status.includes('sha256')
+										) {
+											toast.success(data.status);
 
-								if (data.status) {
-									if (
-										!data.digest &&
-										!data.status.includes('writing') &&
-										!data.status.includes('sha256')
-									) {
-										toast.success(data.status);
+											if (data.status === 'success') {
+												success = true;
+											}
+										} else {
+											if (data.digest) {
+												digest = data.digest;
 
-										if (data.status === 'success') {
-											success = true;
-										}
-									} else {
-										if (data.digest) {
-											digest = data.digest;
-
-											if (data.completed) {
-												pullProgress = Math.round((data.completed / data.total) * 1000) / 10;
-											} else {
-												pullProgress = 100;
+												if (data.completed) {
+													pullProgress = Math.round((data.completed / data.total) * 1000) / 10;
+												} else {
+													pullProgress = 100;
+												}
 											}
 										}
 									}
 								}
 							}
+						} catch (error) {
+							console.log(error);
+							toast.error(error);
 						}
-					} catch (error) {
-						console.log(error);
-						toast.error(error);
 					}
 				}
 			}
 
-			if (success) {
+			if (success || external) {
 				await updateModelfile({
 					tagName: tagName,
 					imageUrl: imageUrl,
