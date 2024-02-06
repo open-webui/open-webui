@@ -89,20 +89,19 @@
 				const inputFiles = e.dataTransfer?.files;
 
 				if (inputFiles && inputFiles.length > 0) {
-					const file = inputFiles[0];
-					console.log(file, file.name.split('.').at(-1));
-					if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
-						reader.readAsDataURL(file);
-					} else if (
-						SUPPORTED_FILE_TYPE.includes(file['type']) ||
-						SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-					) {
-						uploadDoc(file);
-					} else {
-						toast.error(
-							`Unknown File Type '${file['type']}', but accepting and treating as plain text`
-						);
-						uploadDoc(file);
+					for (const file of inputFiles) {
+						console.log(file, file.name.split('.').at(-1));
+						if (
+							SUPPORTED_FILE_TYPE.includes(file['type']) ||
+							SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+						) {
+							uploadDoc(file);
+						} else {
+							toast.error(
+								`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+							);
+							uploadDoc(file);
+						}
 					}
 				} else {
 					toast.error(`File not found.`);
@@ -153,20 +152,23 @@
 	id="upload-doc-input"
 	bind:files={inputFiles}
 	type="file"
+	multiple
 	hidden
 	on:change={async (e) => {
 		if (inputFiles && inputFiles.length > 0) {
-			const file = inputFiles[0];
-			if (
-				SUPPORTED_FILE_TYPE.includes(file['type']) ||
-				SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-			) {
-				uploadDoc(file);
-			} else {
-				toast.error(
-					`Unknown File Type '${file['type']}', but accepting and treating as plain text`
-				);
-				uploadDoc(file);
+			for (const file of inputFiles) {
+				console.log(file, file.name.split('.').at(-1));
+				if (
+					SUPPORTED_FILE_TYPE.includes(file['type']) ||
+					SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+				) {
+					uploadDoc(file);
+				} else {
+					toast.error(
+						`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+					);
+					uploadDoc(file);
+				}
 			}
 
 			inputFiles = null;
