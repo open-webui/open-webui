@@ -1,15 +1,19 @@
 from fastapi import FastAPI, Request, Response, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 
 import requests
 import json
 from pydantic import BaseModel
 
+
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import decode_token, get_current_user
-from config import OPENAI_API_BASE_URL, OPENAI_API_KEY
+from config import OPENAI_API_BASE_URL, OPENAI_API_KEY, CACHE_DIR
+
+import hashlib
+from pathlib import Path
 
 app = FastAPI()
 app.add_middleware(
@@ -64,6 +68,73 @@ async def update_openai_key(form_data: KeyUpdateForm, user=Depends(get_current_u
         return {"OPENAI_API_KEY": app.state.OPENAI_API_KEY}
     else:
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+
+@app.post("/audio/speech")
+async def speech(request: Request, user=Depends(get_current_user)):
+    target_url = f"{app.state.OPENAI_API_BASE_URL}/audio/speech"
+
+    if user.role not in ["user", "admin"]:
+        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+    if app.state.OPENAI_API_KEY == "":
+        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+    body = await request.body()
+
+    filename = hashlib.sha256(body).hexdigest() + ".mp3"
+    SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
+    SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    file_path = SPEECH_CACHE_DIR.joinpath(filename)
+
+    print(file_path)
+
+    # Check if the file already exists in the cache
+    if file_path.is_file():
+        return FileResponse(file_path)
+
+    headers = {}
+    headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEY}"
+    headers["Content-Type"] = "application/json"
+
+    try:
+        print("openai")
+        r = requests.post(
+            url=target_url,
+            data=body,
+            headers=headers,
+            stream=True,
+        )
+
+        print(r)
+
+        r.raise_for_status()
+
+        # Save the streaming content to a file
+        with open(file_path, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        # Return the saved file
+        return FileResponse(file_path)
+
+        # return StreamingResponse(
+        #     r.iter_content(chunk_size=8192),
+        #     status_code=r.status_code,
+        #     headers=dict(r.headers),
+        # )
+
+    except Exception as e:
+        print(e)
+        error_detail = "Ollama WebUI: Server Connection Error"
+        if r is not None:
+            try:
+                res = r.json()
+                if "error" in res:
+                    error_detail = f"External: {res['error']}"
+            except:
+                error_detail = f"External: {e}"
+
+        raise HTTPException(status_code=r.status_code, detail=error_detail)
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
@@ -128,8 +199,6 @@ async def proxy(path: str, request: Request, user=Depends(get_current_user)):
             # )
 
             response_data = r.json()
-
-            print(type(response_data))
 
             if "openai" in app.state.OPENAI_API_BASE_URL and path == "models":
                 response_data["data"] = list(

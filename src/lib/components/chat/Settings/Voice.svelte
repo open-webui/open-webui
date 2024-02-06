@@ -6,16 +6,23 @@
 
 	// Voice
 	let engines = ['', 'openai'];
-	let selectedEngine = '';
+	let engine = '';
 
 	let voices = [];
 	let speaker = '';
 
-	onMount(async () => {
-		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+	const getOpenAIVoices = () => {
+		voices = [
+			{ name: 'alloy' },
+			{ name: 'echo' },
+			{ name: 'fable' },
+			{ name: 'onyx' },
+			{ name: 'nova' },
+			{ name: 'shimmer' }
+		];
+	};
 
-		speaker = settings.speaker ?? '';
-
+	const getWebAPIVoices = () => {
 		const getVoicesLoop = setInterval(async () => {
 			voices = await speechSynthesis.getVoices();
 
@@ -24,6 +31,19 @@
 				clearInterval(getVoicesLoop);
 			}
 		}, 100);
+	};
+
+	onMount(async () => {
+		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+
+		engine = settings?.speech?.engine ?? '';
+		speaker = settings?.speech?.speaker ?? '';
+
+		if (engine === 'openai') {
+			getOpenAIVoices();
+		} else {
+			getWebAPIVoices();
+		}
 	});
 </script>
 
@@ -31,7 +51,10 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
 		saveSettings({
-			speaker: speaker !== '' ? speaker : undefined
+			speech: {
+				engine: engine !== '' ? engine : undefined,
+				speaker: speaker !== '' ? speaker : undefined
+			}
 		});
 		dispatch('save');
 	}}
@@ -42,10 +65,16 @@
 			<div class="flex items-center relative">
 				<select
 					class="w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
-					bind:value={selectedEngine}
+					bind:value={engine}
 					placeholder="Select a mode"
 					on:change={(e) => {
-						console.log(e);
+						if (e.target.value === 'openai') {
+							getOpenAIVoices();
+							speaker = 'alloy';
+						} else {
+							getWebAPIVoices();
+							speaker = '';
+						}
 					}}
 				>
 					<option value="">Default (Web API)</option>
@@ -56,7 +85,7 @@
 
 		<hr class=" dark:border-gray-700" />
 
-		{#if selectedEngine === ''}
+		{#if engine === ''}
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">Set Voice</div>
 				<div class="flex w-full">
@@ -68,6 +97,24 @@
 						>
 							<option value="" selected>Default</option>
 							{#each voices.filter((v) => v.localService === true) as voice}
+								<option value={voice.name} class="bg-gray-100 dark:bg-gray-700">{voice.name}</option
+								>
+							{/each}
+						</select>
+					</div>
+				</div>
+			</div>
+		{:else if engine === 'openai'}
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">Set Voice</div>
+				<div class="flex w-full">
+					<div class="flex-1">
+						<select
+							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							bind:value={speaker}
+							placeholder="Select a voice"
+						>
+							{#each voices as voice}
 								<option value={voice.name} class="bg-gray-100 dark:bg-gray-700">{voice.name}</option
 								>
 							{/each}

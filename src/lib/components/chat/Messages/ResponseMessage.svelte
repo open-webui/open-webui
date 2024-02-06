@@ -1,4 +1,5 @@
 <script lang="ts">
+	import toast from 'svelte-french-toast';
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
 	import { settings } from '$lib/stores';
@@ -13,6 +14,8 @@
 	import Skeleton from './Skeleton.svelte';
 	import CodeBlock from './CodeBlock.svelte';
 
+	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
+
 	export let modelfiles = [];
 	export let message;
 	export let siblings;
@@ -26,6 +29,8 @@
 
 	export let copyToClipboard: Function;
 	export let regenerateResponse: Function;
+
+	let audioMap = {};
 
 	let edit = false;
 	let editedContent = '';
@@ -114,22 +119,55 @@
 		if (speaking) {
 			speechSynthesis.cancel();
 			speaking = null;
+
+			audioMap[message.id].pause();
+			audioMap[message.id].currentTime = 0;
 		} else {
 			speaking = true;
 
-			let voices = [];
-			const getVoicesLoop = setInterval(async () => {
-				voices = await speechSynthesis.getVoices();
-				if (voices.length > 0) {
-					clearInterval(getVoicesLoop);
+			if ($settings?.speech?.engine === 'openai') {
+				const res = await synthesizeOpenAISpeech(
+					localStorage.token,
+					$settings?.speech?.speaker,
+					message.content
+				).catch((error) => {
+					toast.error(error);
+					return null;
+				});
 
-					const voice = voices?.filter((v) => v.name === $settings?.speaker)?.at(0) ?? undefined;
+				if (res) {
+					const blob = await res.blob();
+					const blobUrl = URL.createObjectURL(blob);
+					console.log(blobUrl);
 
-					const speak = new SpeechSynthesisUtterance(message.content);
-					speak.voice = voice;
-					speechSynthesis.speak(speak);
+					const audio = new Audio(blobUrl);
+					audioMap[message.id] = audio;
+
+					audio.onended = () => {
+						speaking = null;
+					};
+					audio.play().catch((e) => console.error('Error playing audio:', e));
 				}
-			}, 100);
+			} else {
+				let voices = [];
+				const getVoicesLoop = setInterval(async () => {
+					voices = await speechSynthesis.getVoices();
+					if (voices.length > 0) {
+						clearInterval(getVoicesLoop);
+
+						const voice =
+							voices?.filter((v) => v.name === $settings?.speech?.speaker)?.at(0) ?? undefined;
+
+						const speak = new SpeechSynthesisUtterance(message.content);
+
+						speak.onend = () => {
+							speaking = null;
+						};
+						speak.voice = voice;
+						speechSynthesis.speak(speak);
+					}
+				}, 100);
+			}
 		}
 	};
 
