@@ -30,13 +30,14 @@
 	export let copyToClipboard: Function;
 	export let regenerateResponse: Function;
 
-	let audioMap = {};
-
 	let edit = false;
 	let editedContent = '';
 
 	let tooltipInstance = null;
+
+	let audioMap = {};
 	let speaking = null;
+	let loadingSpeech = false;
 
 	$: tokens = marked.lexer(message.content);
 
@@ -126,6 +127,7 @@
 			speaking = true;
 
 			if ($settings?.speech?.engine === 'openai') {
+				loadingSpeech = true;
 				const res = await synthesizeOpenAISpeech(
 					localStorage.token,
 					$settings?.speech?.speaker,
@@ -139,6 +141,8 @@
 					const blob = await res.blob();
 					const blobUrl = URL.createObjectURL(blob);
 					console.log(blobUrl);
+
+					loadingSpeech = false;
 
 					const audio = new Audio(blobUrl);
 					audioMap[message.id] = audio;
@@ -458,10 +462,42 @@
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1 rounded dark:hover:bg-gray-800 transition"
 											on:click={() => {
-												toggleSpeakMessage(message);
+												if (!loadingSpeech) {
+													toggleSpeakMessage(message);
+												}
 											}}
 										>
-											{#if speaking}
+											{#if loadingSpeech}
+												<svg
+													class=" w-4 h-4"
+													fill="currentColor"
+													viewBox="0 0 24 24"
+													xmlns="http://www.w3.org/2000/svg"
+													><style>
+														.spinner_S1WN {
+															animation: spinner_MGfb 0.8s linear infinite;
+															animation-delay: -0.8s;
+														}
+														.spinner_Km9P {
+															animation-delay: -0.65s;
+														}
+														.spinner_JApP {
+															animation-delay: -0.5s;
+														}
+														@keyframes spinner_MGfb {
+															93.75%,
+															100% {
+																opacity: 0.2;
+															}
+														}
+													</style><circle class="spinner_S1WN" cx="4" cy="12" r="3" /><circle
+														class="spinner_S1WN spinner_Km9P"
+														cx="12"
+														cy="12"
+														r="3"
+													/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" /></svg
+												>
+											{:else if speaking}
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													fill="none"
