@@ -1,7 +1,7 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
-	import { settings, voices } from '$lib/stores';
+	import { settings } from '$lib/stores';
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
@@ -116,10 +116,20 @@
 			speaking = null;
 		} else {
 			speaking = true;
-			const speak = new SpeechSynthesisUtterance(message.content);
-			const voice = $voices?.filter((v) => v.name === $settings?.speakVoice)?.at(0) ?? undefined;
-			speak.voice = voice;
-			speechSynthesis.speak(speak);
+
+			let voices = [];
+			const getVoicesLoop = setInterval(async () => {
+				voices = await speechSynthesis.getVoices();
+				if (voices.length > 0) {
+					clearInterval(getVoicesLoop);
+
+					const voice = voices?.filter((v) => v.name === $settings?.speaker)?.at(0) ?? undefined;
+
+					const speak = new SpeechSynthesisUtterance(message.content);
+					speak.voice = voice;
+					speechSynthesis.speak(speak);
+				}
+			}, 100);
 		}
 	};
 
