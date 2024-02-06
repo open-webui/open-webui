@@ -70,6 +70,7 @@ if OPENAI_API_BASE_URL == "":
 # WEBUI
 ####################################
 
+ENABLE_SIGNUP = os.environ.get("ENABLE_SIGNUP", True)
 DEFAULT_MODELS = os.environ.get("DEFAULT_MODELS", None)
 DEFAULT_PROMPT_SUGGESTIONS = os.environ.get(
     "DEFAULT_PROMPT_SUGGESTIONS",
