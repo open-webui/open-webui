@@ -1,27 +1,49 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
-	import { voices } from '$lib/stores';
 	const dispatch = createEventDispatcher();
 
 	export let saveSettings: Function;
 
 	// Voice
-	let speakVoice = '';
+	let engines = ['', 'openai'];
+	let engine = '';
+
+	let voices = [];
+	let speaker = '';
+
+	const getOpenAIVoices = () => {
+		voices = [
+			{ name: 'alloy' },
+			{ name: 'echo' },
+			{ name: 'fable' },
+			{ name: 'onyx' },
+			{ name: 'nova' },
+			{ name: 'shimmer' }
+		];
+	};
+
+	const getWebAPIVoices = () => {
+		const getVoicesLoop = setInterval(async () => {
+			voices = await speechSynthesis.getVoices();
+
+			// do your loop
+			if (voices.length > 0) {
+				clearInterval(getVoicesLoop);
+			}
+		}, 100);
+	};
 
 	onMount(async () => {
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 
-		speakVoice = settings.speakVoice ?? '';
+		engine = settings?.speech?.engine ?? '';
+		speaker = settings?.speech?.speaker ?? '';
 
-		const getVoicesLoop = setInterval(async () => {
-			const _voices = await speechSynthesis.getVoices();
-			await voices.set(_voices);
-
-			// do your loop
-			if (_voices.length > 0) {
-				clearInterval(getVoicesLoop);
-			}
-		}, 100);
+		if (engine === 'openai') {
+			getOpenAIVoices();
+		} else {
+			getWebAPIVoices();
+		}
 	});
 </script>
 
@@ -29,24 +51,52 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
 		saveSettings({
-			speakVoice: speakVoice !== '' ? speakVoice : undefined
+			speech: {
+				engine: engine !== '' ? engine : undefined,
+				speaker: speaker !== '' ? speaker : undefined
+			}
 		});
 		dispatch('save');
 	}}
 >
 	<div class=" space-y-3">
-		<div class=" space-y-3">
+		<div class=" py-0.5 flex w-full justify-between">
+			<div class=" self-center text-sm font-medium">Speech Engine</div>
+			<div class="flex items-center relative">
+				<select
+					class="w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
+					bind:value={engine}
+					placeholder="Select a mode"
+					on:change={(e) => {
+						if (e.target.value === 'openai') {
+							getOpenAIVoices();
+							speaker = 'alloy';
+						} else {
+							getWebAPIVoices();
+							speaker = '';
+						}
+					}}
+				>
+					<option value="">Default (Web API)</option>
+					<option value="openai">Open AI</option>
+				</select>
+			</div>
+		</div>
+
+		<hr class=" dark:border-gray-700" />
+
+		{#if engine === ''}
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">Set Default Voice</div>
+				<div class=" mb-2.5 text-sm font-medium">Set Voice</div>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
 							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-							bind:value={speakVoice}
+							bind:value={speaker}
 							placeholder="Select a voice"
 						>
 							<option value="" selected>Default</option>
-							{#each $voices.filter((v) => v.localService === true) as voice}
+							{#each voices.filter((v) => v.localService === true) as voice}
 								<option value={voice.name} class="bg-gray-100 dark:bg-gray-700">{voice.name}</option
 								>
 							{/each}
@@ -54,32 +104,25 @@
 					</div>
 				</div>
 			</div>
-		</div>
-
-		<!--
-							<div>
-								<div class=" mb-2.5 text-sm font-medium">
-									Gravatar Email <span class=" text-gray-400 text-sm">(optional)</span>
-								</div>
-								<div class="flex w-full">
-									<div class="flex-1">
-										<input
-											class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-											placeholder="Enter Your Email"
-											bind:value={gravatarEmail}
-											autocomplete="off"
-											type="email"
-										/>
-									</div>
-								</div>
-								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-									Changes user profile image to match your <a
-										class=" text-gray-500 dark:text-gray-300 font-medium"
-										href="https://gravatar.com/"
-										target="_blank">Gravatar.</a
-									>
-								</div>
-							</div> -->
+		{:else if engine === 'openai'}
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">Set Voice</div>
+				<div class="flex w-full">
+					<div class="flex-1">
+						<select
+							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							bind:value={speaker}
+							placeholder="Select a voice"
+						>
+							{#each voices as voice}
+								<option value={voice.name} class="bg-gray-100 dark:bg-gray-700">{voice.name}</option
+								>
+							{/each}
+						</select>
+					</div>
+				</div>
+			</div>
+		{/if}
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">

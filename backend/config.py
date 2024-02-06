@@ -35,6 +35,14 @@ FRONTEND_BUILD_DIR = str(Path(os.getenv("FRONTEND_BUILD_DIR", "../build")))
 UPLOAD_DIR = f"{DATA_DIR}/uploads"
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
+
+####################################
+# Cache DIR
+####################################
+
+CACHE_DIR = f"{DATA_DIR}/cache"
+Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
+
 ####################################
 # OLLAMA_API_BASE_URL
 ####################################

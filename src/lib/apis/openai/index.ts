@@ -229,3 +229,34 @@ export const generateOpenAIChatCompletion = async (token: string = '', body: obj
 
 	return res;
 };
+
+export const synthesizeOpenAISpeech = async (
+	token: string = '',
+	speaker: string = 'alloy',
+	text: string = ''
+) => {
+	let error = null;
+
+	const res = await fetch(`${OPENAI_API_BASE_URL}/audio/speech`, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			model: 'tts-1',
+			input: text,
+			voice: speaker
+		})
+	}).catch((err) => {
+		console.log(err);
+		error = err;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

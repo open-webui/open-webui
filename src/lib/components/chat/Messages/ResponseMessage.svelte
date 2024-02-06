@@ -1,7 +1,8 @@
 <script lang="ts">
+	import toast from 'svelte-french-toast';
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
-	import { settings, voices } from '$lib/stores';
+	import { settings } from '$lib/stores';
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
@@ -12,6 +13,8 @@
 	import ProfileImage from './ProfileImage.svelte';
 	import Skeleton from './Skeleton.svelte';
 	import CodeBlock from './CodeBlock.svelte';
+
+	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
 
 	export let modelfiles = [];
 	export let message;
@@ -31,7 +34,10 @@
 	let editedContent = '';
 
 	let tooltipInstance = null;
+
+	let audioMap = {};
 	let speaking = null;
+	let loadingSpeech = false;
 
 	$: tokens = marked.lexer(message.content);
 
@@ -114,12 +120,58 @@
 		if (speaking) {
 			speechSynthesis.cancel();
 			speaking = null;
+
+			audioMap[message.id].pause();
+			audioMap[message.id].currentTime = 0;
 		} else {
 			speaking = true;
-			const speak = new SpeechSynthesisUtterance(message.content);
-			const voice = $voices?.filter((v) => v.name === $settings?.speakVoice)?.at(0) ?? undefined;
-			speak.voice = voice;
-			speechSynthesis.speak(speak);
+
+			if ($settings?.speech?.engine === 'openai') {
+				loadingSpeech = true;
+				const res = await synthesizeOpenAISpeech(
+					localStorage.token,
+					$settings?.speech?.speaker,
+					message.content
+				).catch((error) => {
+					toast.error(error);
+					return null;
+				});
+
+				if (res) {
+					const blob = await res.blob();
+					const blobUrl = URL.createObjectURL(blob);
+					console.log(blobUrl);
+
+					loadingSpeech = false;
+
+					const audio = new Audio(blobUrl);
+					audioMap[message.id] = audio;
+
+					audio.onended = () => {
+						speaking = null;
+					};
+					audio.play().catch((e) => console.error('Error playing audio:', e));
+				}
+			} else {
+				let voices = [];
+				const getVoicesLoop = setInterval(async () => {
+					voices = await speechSynthesis.getVoices();
+					if (voices.length > 0) {
+						clearInterval(getVoicesLoop);
+
+						const voice =
+							voices?.filter((v) => v.name === $settings?.speech?.speaker)?.at(0) ?? undefined;
+
+						const speak = new SpeechSynthesisUtterance(message.content);
+
+						speak.onend = () => {
+							speaking = null;
+						};
+						speak.voice = voice;
+						speechSynthesis.speak(speak);
+					}
+				}, 100);
+			}
 		}
 	};
 
@@ -410,10 +462,42 @@
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1 rounded dark:hover:bg-gray-800 transition"
 											on:click={() => {
-												toggleSpeakMessage(message);
+												if (!loadingSpeech) {
+													toggleSpeakMessage(message);
+												}
 											}}
 										>
-											{#if speaking}
+											{#if loadingSpeech}
+												<svg
+													class=" w-4 h-4"
+													fill="currentColor"
+													viewBox="0 0 24 24"
+													xmlns="http://www.w3.org/2000/svg"
+													><style>
+														.spinner_S1WN {
+															animation: spinner_MGfb 0.8s linear infinite;
+															animation-delay: -0.8s;
+														}
+														.spinner_Km9P {
+															animation-delay: -0.65s;
+														}
+														.spinner_JApP {
+															animation-delay: -0.5s;
+														}
+														@keyframes spinner_MGfb {
+															93.75%,
+															100% {
+																opacity: 0.2;
+															}
+														}
+													</style><circle class="spinner_S1WN" cx="4" cy="12" r="3" /><circle
+														class="spinner_S1WN spinner_Km9P"
+														cx="12"
+														cy="12"
+														r="3"
+													/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" /></svg
+												>
+											{:else if speaking}
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													fill="none"
