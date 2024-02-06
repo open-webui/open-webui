@@ -13,7 +13,7 @@
 	import General from './Settings/General.svelte';
 	import External from './Settings/External.svelte';
 	import Interface from './Settings/Interface.svelte';
-	import AddOns from './Settings/AddOns.svelte';
+	import Voice from './Settings/Voice.svelte';
 	import Chats from './Settings/Chats.svelte';
 
 	export let show = false;
@@ -176,56 +176,59 @@
 						</div>
 						<div class=" self-center">External</div>
 					</button>
-
-					<button
-						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-						'interface'
-							? 'bg-gray-200 dark:bg-gray-700'
-							: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
-						on:click={() => {
-							selectedTab = 'interface';
-						}}
-					>
-						<div class=" self-center mr-2">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-4 h-4"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</div>
-						<div class=" self-center">Interface</div>
-					</button>
 				{/if}
 
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-					'addons'
+					'interface'
 						? 'bg-gray-200 dark:bg-gray-700'
 						: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
 					on:click={() => {
-						selectedTab = 'addons';
+						selectedTab = 'interface';
 					}}
 				>
 					<div class=" self-center mr-2">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
+							viewBox="0 0 16 16"
 							fill="currentColor"
 							class="w-4 h-4"
 						>
 							<path
-								d="M12 4.467c0-.405.262-.75.559-1.027.276-.257.441-.584.441-.94 0-.828-.895-1.5-2-1.5s-2 .672-2 1.5c0 .362.171.694.456.953.29.265.544.6.544.994a.968.968 0 01-1.024.974 39.655 39.655 0 01-3.014-.306.75.75 0 00-.847.847c.14.993.242 1.999.306 3.014A.968.968 0 014.447 10c-.393 0-.729-.253-.994-.544C3.194 9.17 2.862 9 2.5 9 1.672 9 1 9.895 1 11s.672 2 1.5 2c.356 0 .683-.165.94-.441.276-.297.622-.559 1.027-.559a.997.997 0 011.004 1.03 39.747 39.747 0 01-.319 3.734.75.75 0 00.64.842c1.05.146 2.111.252 3.184.318A.97.97 0 0010 16.948c0-.394-.254-.73-.545-.995C9.171 15.693 9 15.362 9 15c0-.828.895-1.5 2-1.5s2 .672 2 1.5c0 .356-.165.683-.441.94-.297.276-.559.622-.559 1.027a.998.998 0 001.03 1.005c1.337-.05 2.659-.162 3.961-.337a.75.75 0 00.644-.644c.175-1.302.288-2.624.337-3.961A.998.998 0 0016.967 12c-.405 0-.75.262-1.027.559-.257.276-.584.441-.94.441-.828 0-1.5-.895-1.5-2s.672-2 1.5-2c.362 0 .694.17.953.455.265.291.601.545.995.545a.97.97 0 00.976-1.024 41.159 41.159 0 00-.318-3.184.75.75 0 00-.842-.64c-1.228.164-2.473.271-3.734.319A.997.997 0 0112 4.467z"
+								fill-rule="evenodd"
+								d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+								clip-rule="evenodd"
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">Add-ons</div>
+					<div class=" self-center">Interface</div>
+				</button>
+
+				<button
+					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+					'voice'
+						? 'bg-gray-200 dark:bg-gray-700'
+						: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+					on:click={() => {
+						selectedTab = 'voice';
+					}}
+				>
+					<div class=" self-center mr-2">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								d="M7.557 2.066A.75.75 0 0 1 8 2.75v10.5a.75.75 0 0 1-1.248.56L3.59 11H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.59l3.162-2.81a.75.75 0 0 1 .805-.124ZM12.95 3.05a.75.75 0 1 0-1.06 1.06 5.5 5.5 0 0 1 0 7.78.75.75 0 1 0 1.06 1.06 7 7 0 0 0 0-9.9Z"
+							/>
+							<path
+								d="M10.828 5.172a.75.75 0 1 0-1.06 1.06 2.5 2.5 0 0 1 0 3.536.75.75 0 1 0 1.06 1.06 4 4 0 0 0 0-5.656Z"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center">Voice</div>
 				</button>
 
 				<button
@@ -333,12 +336,13 @@
 					/>
 				{:else if selectedTab === 'interface'}
 					<Interface
+						{saveSettings}
 						on:save={() => {
 							show = false;
 						}}
 					/>
-				{:else if selectedTab === 'addons'}
-					<AddOns
+				{:else if selectedTab === 'voice'}
+					<Voice
 						{saveSettings}
 						on:save={() => {
 							show = false;
