@@ -81,17 +81,12 @@ async def speech(request: Request, user=Depends(get_current_user)):
 
     body = await request.body()
 
-    print(body)
-    print(type(body))
-
     name = hashlib.sha256(body).hexdigest()
 
     SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
     SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
     file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
-
-    print(file_path)
 
     # Check if the file already exists in the cache
     if file_path.is_file():
@@ -110,8 +105,6 @@ async def speech(request: Request, user=Depends(get_current_user)):
             stream=True,
         )
 
-        print(r)
-
         r.raise_for_status()
 
         # Save the streaming content to a file
@@ -124,12 +117,6 @@ async def speech(request: Request, user=Depends(get_current_user)):
 
         # Return the saved file
         return FileResponse(file_path)
-
-        # return StreamingResponse(
-        #     r.iter_content(chunk_size=8192),
-        #     status_code=r.status_code,
-        #     headers=dict(r.headers),
-        # )
 
     except Exception as e:
         print(e)
