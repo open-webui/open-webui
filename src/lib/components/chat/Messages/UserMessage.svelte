@@ -4,7 +4,7 @@
 	import { tick } from 'svelte';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
-	import { modelfiles, settings, user as userStore } from '$lib/stores';
+	import { modelfiles, settings } from '$lib/stores';
 
 	export let user;
 	export let message;
@@ -58,19 +58,13 @@
 					{#if $modelfiles.map((modelfile) => modelfile.tagName).includes(message.user)}
 						{$modelfiles.find((modelfile) => modelfile.tagName === message.user)?.title}
 					{:else}
-						{#if $settings.showUsername}
-							{$userStore.name}
-						{:else}
-							You <span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
-						{/if}
+						You <span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
 					{/if}
-					{:else}
-						{#if $settings.showUsername}
-							{$userStore.name}
-						{:else}
-							You
-						{/if}
-					{/if}
+				{:else if $settings.showUsername}
+					{user.name}
+				{:else}
+					You
+				{/if}
 
 				{#if message.timestamp}
 					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
