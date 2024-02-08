@@ -316,9 +316,9 @@
 			</div>
 		</div>
 	</div>
-	<div class="bg-white dark:bg-gray-800">
+	<div class="bg-white dark:bg-gray-900">
 		<div class="max-w-3xl px-2.5 -mb-0.5 mx-auto inset-x-0">
-			<div class="bg-gradient-to-t from-white dark:from-gray-800 from-40% pb-2">
+			<div class=" pb-2">
 				<input
 					bind:this={filesInputElement}
 					bind:files={inputFiles}
@@ -361,7 +361,7 @@
 					}}
 				/>
 				<form
-					class=" flex flex-col relative w-full rounded-xl border dark:border-gray-600 bg-white dark:bg-gray-800 dark:text-gray-100"
+					class=" flex flex-col relative w-full rounded-xl border dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100"
 					on:submit|preventDefault={() => {
 						submitPrompt(prompt, user);
 					}}
@@ -530,7 +530,7 @@
 
 						<textarea
 							id="chat-textarea"
-							class=" dark:bg-gray-800 dark:text-gray-100 outline-none w-full py-3 px-2 {fileUploadEnabled
+							class=" dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-2 {fileUploadEnabled
 								? ''
 								: ' pl-4'} rounded-xl resize-none h-[48px]"
 							placeholder={chatInputPlaceholder !== ''
