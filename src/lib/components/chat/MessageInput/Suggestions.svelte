@@ -1,10 +1,17 @@
 <script lang="ts">
 	export let submitPrompt: Function;
 	export let suggestionPrompts = [];
+
+	let prompts = [];
+
+	$: prompts =
+		suggestionPrompts.length <= 4
+			? suggestionPrompts
+			: suggestionPrompts.sort(() => Math.random() - 0.5).slice(0, 4);
 </script>
 
 <div class=" flex flex-wrap-reverse mb-3 md:p-1 text-left w-full">
-	{#each suggestionPrompts as prompt, promptIdx}
+	{#each prompts as prompt, promptIdx}
 		<div class="{promptIdx > 1 ? 'hidden sm:inline-flex' : ''} basis-full sm:basis-1/2 p-[5px]">
 			<button
 				class=" flex-1 flex justify-between w-full h-full px-4 py-2.5 bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-700 outline outline-1 outline-gray-200 dark:outline-gray-800 rounded-lg transition group"
