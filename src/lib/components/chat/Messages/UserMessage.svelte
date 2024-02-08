@@ -239,7 +239,7 @@
 						{/if}
 
 						<button
-							class="invisible group-hover:visible p-1 rounded dark:hover:bg-gray-800 transition edit-user-message-button"
+							class="invisible group-hover:visible p-1 rounded dark:hover:text-white transition edit-user-message-button"
 							on:click={() => {
 								editMessageHandler();
 							}}
@@ -261,7 +261,7 @@
 						</button>
 
 						<button
-							class="invisible group-hover:visible p-1 rounded dark:hover:bg-gray-800 transition"
+							class="invisible group-hover:visible p-1 rounded dark:hover:text-white transition"
 							on:click={() => {
 								copyToClipboard(message.content);
 							}}

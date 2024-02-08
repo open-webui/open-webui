@@ -363,7 +363,7 @@
 										<button
 											class="{isLastMessage
 												? 'visible'
-												: 'invisible group-hover:visible'} p-1 rounded dark:hover:bg-gray-800 transition"
+												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition"
 											on:click={() => {
 												editMessageHandler();
 											}}
@@ -387,7 +387,7 @@
 										<button
 											class="{isLastMessage
 												? 'visible'
-												: 'invisible group-hover:visible'} p-1 rounded dark:hover:bg-gray-800 transition copy-response-button"
+												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition copy-response-button"
 											on:click={() => {
 												copyToClipboard(message.content);
 											}}
@@ -412,7 +412,7 @@
 											class="{isLastMessage
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1 rounded {message.rating === 1
-												? 'bg-gray-100 dark:bg-gray-900'
+												? 'bg-gray-100 dark:bg-gray-800'
 												: ''} transition"
 											on:click={() => {
 												rateMessage(message.id, 1);
@@ -436,7 +436,7 @@
 											class="{isLastMessage
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1 rounded {message.rating === -1
-												? 'bg-gray-100 dark:bg-gray-900'
+												? 'bg-gray-100 dark:bg-gray-800'
 												: ''} transition"
 											on:click={() => {
 												rateMessage(message.id, -1);
@@ -460,7 +460,7 @@
 										<button
 											class="{isLastMessage
 												? 'visible'
-												: 'invisible group-hover:visible'} p-1 rounded dark:hover:bg-gray-800 transition"
+												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition"
 											on:click={() => {
 												if (!loadingSpeech) {
 													toggleSpeakMessage(message);
@@ -534,7 +534,7 @@
 											<button
 												class=" {isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:bg-gray-800 transition whitespace-pre-wrap"
+													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition whitespace-pre-wrap"
 												on:click={() => {
 													console.log(message);
 												}}
@@ -562,7 +562,7 @@
 												type="button"
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:bg-gray-800 transition regenerate-response-button"
+													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition regenerate-response-button"
 												on:click={regenerateResponse}
 											>
 												<svg
