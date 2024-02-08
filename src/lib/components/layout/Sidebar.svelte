@@ -11,6 +11,7 @@
 	import {
 		deleteChatById,
 		getChatList,
+		getChatById,
 		getChatListByTagName,
 		updateChatById
 	} from '$lib/apis/chats';
@@ -28,18 +29,34 @@
 	let showDropdown = false;
 
 	onMount(async () => {
-		if (window.innerWidth > 1280) {
-			show = true;
-		}
+        if (window.innerWidth > 1280) {
+            show = true;
+        }
 
-		await chats.set(await getChatList(localStorage.token));
+        const chatList = await getChatList(localStorage.token);
+        await enrichChatsWithContent(chatList);
+    });
 
-		tags.subscribe(async (value) => {
-			if (value.length === 0) {
-				await chats.set(await getChatList(localStorage.token));
-			}
-		});
-	});
+    tags.subscribe(async (value) => {
+        if (value.length === 0) {
+            const chatList = await getChatList(localStorage.token);
+            await enrichChatsWithContent(chatList);
+        }
+    });
+
+    // Helper function to fetch and add chat content to each chat
+    async function enrichChatsWithContent(chatList) {
+        const enrichedChats = await Promise.all(chatList.map(async (chat) => {
+            const chatDetails = await getChatById(localStorage.token, chat.id).catch(error => null); // Handle error or non-existent chat gracefully
+            if (chatDetails) {
+                chat.chat = chatDetails.chat; // Assuming chatDetails.chat contains the chat content
+            }
+            return chat;
+        }));
+
+        await chats.set(enrichedChats);
+    }
+
 
 	const loadChat = async (id) => {
 		goto(`/c/${id}`);
@@ -323,13 +340,19 @@
 						let title = chat.title.toLowerCase();
 						const query = search.toLowerCase();
 
-						if (title.includes(query)) {
-							return true;
-						} else {
-							return false;
+						let contentMatches = false;
+						// Access the messages within chat.chat.messages
+						if (chat.chat && chat.chat.messages && Array.isArray(chat.chat.messages)) {
+							contentMatches = chat.chat.messages.some(message => {
+								// Check if message.content exists and includes the search query
+								return message.content && message.content.toLowerCase().includes(query);
+							});
 						}
+
+						return title.includes(query) || contentMatches;
 					}
 				}) as chat, i}
+
 					<div class=" w-full pr-2 relative">
 						<button
 							class=" w-full flex justify-between rounded-md px-3 py-2 hover:bg-gray-900 {chat.id ===
