@@ -4,7 +4,7 @@
 	import { tick } from 'svelte';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
-	import { modelfiles } from '$lib/stores';
+	import { modelfiles, settings } from '$lib/stores';
 
 	export let user;
 	export let message;
@@ -60,6 +60,8 @@
 					{:else}
 						You <span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
 					{/if}
+				{:else if $settings.showUsername}
+					{user.name}
 				{:else}
 					You
 				{/if}

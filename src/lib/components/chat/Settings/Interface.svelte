@@ -16,6 +16,13 @@
 
 	// Interface
 	let promptSuggestions = [];
+	let showUsername = false;
+
+	const toggleShowUsername = async () => {
+		showUsername = !showUsername;
+		saveSettings({ showUsername: showUsername });
+	};
+
 
 	const toggleSpeechAutoSend = async () => {
 		speechAutoSend = !speechAutoSend;
@@ -64,7 +71,7 @@
 		titleAutoGenerate = settings.titleAutoGenerate ?? true;
 		speechAutoSend = settings.speechAutoSend ?? false;
 		responseAutoCopy = settings.responseAutoCopy ?? false;
-
+		showUsername = settings.showUsername ?? false;
 		titleAutoGenerateModel = settings.titleAutoGenerateModel ?? '';
 	});
 </script>
@@ -132,6 +139,25 @@
 						type="button"
 					>
 						{#if responseAutoCopy === true}
+							<span class="ml-2 self-center">On</span>
+						{:else}
+							<span class="ml-2 self-center">Off</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">Display the username instead of "You" in the Chat</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleShowUsername();
+						}}
+						type="button"
+					>
+						{#if showUsername === true}
 							<span class="ml-2 self-center">On</span>
 						{:else}
 							<span class="ml-2 self-center">Off</span>
