@@ -316,9 +316,9 @@
 			</div>
 		</div>
 	</div>
-	<div class="bg-white dark:bg-gray-800">
+	<div class="bg-white dark:bg-gray-900">
 		<div class="max-w-3xl px-2.5 -mb-0.5 mx-auto inset-x-0">
-			<div class="bg-gradient-to-t from-white dark:from-gray-800 from-40% pb-2">
+			<div class=" pb-2">
 				<input
 					bind:this={filesInputElement}
 					bind:files={inputFiles}
@@ -361,7 +361,7 @@
 					}}
 				/>
 				<form
-					class=" flex flex-col relative w-full rounded-xl border dark:border-gray-600 bg-white dark:bg-gray-800 dark:text-gray-100"
+					class=" flex flex-col relative w-full rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-900 dark:text-gray-100"
 					on:submit|preventDefault={() => {
 						submitPrompt(prompt, user);
 					}}
@@ -530,7 +530,7 @@
 
 						<textarea
 							id="chat-textarea"
-							class=" dark:bg-gray-800 dark:text-gray-100 outline-none w-full py-3 px-2 {fileUploadEnabled
+							class=" dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-2 {fileUploadEnabled
 								? ''
 								: ' pl-4'} rounded-xl resize-none h-[48px]"
 							placeholder={chatInputPlaceholder !== ''
@@ -735,19 +735,19 @@
 								<button
 									class="{prompt !== ''
 										? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-										: 'text-white bg-gray-100 dark:text-gray-800 dark:bg-gray-600 disabled'} transition rounded-lg p-1 mr-0.5 w-7 h-7 self-center"
+										: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-lg p-1 mr-0.5 w-7 h-7 self-center"
 									type="submit"
 									disabled={prompt === ''}
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
+										viewBox="0 0 16 16"
 										fill="currentColor"
-										class="w-5 h-5"
+										class="w-4.5 h-4.5 mx-auto"
 									>
 										<path
 											fill-rule="evenodd"
-											d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z"
+											d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
 											clip-rule="evenodd"
 										/>
 									</svg>

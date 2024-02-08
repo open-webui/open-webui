@@ -34,7 +34,7 @@
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
-		class="fixed top-0 right-0 left-0 bottom-0 bg-stone-900/50 w-full min-h-screen h-screen flex justify-center z-50 overflow-hidden overscroll-contain"
+		class="fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center z-50 overflow-hidden overscroll-contain"
 		on:click={() => {
 			show = false;
 		}}
