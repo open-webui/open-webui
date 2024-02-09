@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
-from utils.utils import decode_token, get_current_user
+from utils.utils import decode_token, get_current_user, get_verified_user, get_admin_user
 from config import OPENAI_API_BASE_URL, OPENAI_API_KEY, CACHE_DIR
 
 import hashlib
@@ -37,45 +37,32 @@ class KeyUpdateForm(BaseModel):
 
 
 @app.get("/url")
-async def get_openai_url(user=Depends(get_current_user)):
-    if user and user.role == "admin":
-        return {"OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL}
-    else:
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+async def get_openai_url(user=Depends(get_admin_user)):
+    return {"OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL}
 
 
 @app.post("/url/update")
-async def update_openai_url(form_data: UrlUpdateForm, user=Depends(get_current_user)):
-    if user and user.role == "admin":
-        app.state.OPENAI_API_BASE_URL = form_data.url
-        return {"OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL}
-    else:
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+async def update_openai_url(form_data: UrlUpdateForm, user=Depends(get_admin_user)):
+    app.state.OPENAI_API_BASE_URL = form_data.url
+    return {"OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL}
+
 
 
 @app.get("/key")
-async def get_openai_key(user=Depends(get_current_user)):
-    if user and user.role == "admin":
-        return {"OPENAI_API_KEY": app.state.OPENAI_API_KEY}
-    else:
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+async def get_openai_key(user=Depends(get_admin_user)):
+    return {"OPENAI_API_KEY": app.state.OPENAI_API_KEY}
 
 
 @app.post("/key/update")
-async def update_openai_key(form_data: KeyUpdateForm, user=Depends(get_current_user)):
-    if user and user.role == "admin":
-        app.state.OPENAI_API_KEY = form_data.key
-        return {"OPENAI_API_KEY": app.state.OPENAI_API_KEY}
-    else:
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+async def update_openai_key(form_data: KeyUpdateForm, user=Depends(get_admin_user)):
+    app.state.OPENAI_API_KEY = form_data.key
+    return {"OPENAI_API_KEY": app.state.OPENAI_API_KEY}
 
 
 @app.post("/audio/speech")
-async def speech(request: Request, user=Depends(get_current_user)):
+async def speech(request: Request, user=Depends(get_verified_user)):
     target_url = f"{app.state.OPENAI_API_BASE_URL}/audio/speech"
 
-    if user.role not in ["user", "admin"]:
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
     if app.state.OPENAI_API_KEY == "":
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
@@ -133,12 +120,10 @@ async def speech(request: Request, user=Depends(get_current_user)):
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
-async def proxy(path: str, request: Request, user=Depends(get_current_user)):
+async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     target_url = f"{app.state.OPENAI_API_BASE_URL}/{path}"
     print(target_url, app.state.OPENAI_API_KEY)
 
-    if user.role not in ["user", "admin"]:
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
     if app.state.OPENAI_API_KEY == "":
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
