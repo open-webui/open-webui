@@ -76,8 +76,8 @@ async def speech(request: Request, user=Depends(get_current_user)):
 
     if user.role not in ["user", "admin"]:
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-    if app.state.OPENAI_API_KEY == "":
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+    # if app.state.OPENAI_API_KEY == "":
+    #     raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
     body = await request.body()
 
@@ -139,8 +139,8 @@ async def proxy(path: str, request: Request, user=Depends(get_current_user)):
 
     if user.role not in ["user", "admin"]:
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-    if app.state.OPENAI_API_KEY == "":
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+    # if app.state.OPENAI_API_KEY == "":
+    #     raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
     body = await request.body()
 

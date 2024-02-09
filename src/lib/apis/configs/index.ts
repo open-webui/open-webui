@@ -42,7 +42,7 @@ export const setDefaultPromptSuggestions = async (token: string, promptSuggestio
 		body: JSON.stringify({
 			suggestions: promptSuggestions
 		})
-	}
+	})
 }
 export const getUIConfigs = async (token: string) => {
 	let error = null;

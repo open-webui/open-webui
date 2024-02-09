@@ -7,7 +7,6 @@
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
 
-	import { onMount, tick } from 'svelte';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';

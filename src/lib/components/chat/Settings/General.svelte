@@ -126,6 +126,7 @@
 					<option value="light">Light</option>
 					<option value="rose-pine dark">Rosé Pine</option>
 					<option value="rose-pine-dawn light">Rosé Pine Dawn</option>
+					<option value="thoughtworks dark">Thoughtworks Theme</option>
 				</select>
 			</div>
 		</div>
