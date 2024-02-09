@@ -39,7 +39,7 @@ import uuid
 import time
 
 from utils.misc import calculate_sha256, calculate_sha256_string
-from utils.utils import get_current_user
+from utils.utils import get_current_user, get_admin_user
 from config import UPLOAD_DIR, EMBED_MODEL, CHROMA_CLIENT, CHUNK_SIZE, CHUNK_OVERLAP
 from constants import ERROR_MESSAGES
 
@@ -354,38 +354,26 @@ def store_doc(
 
 
 @app.get("/reset/db")
-def reset_vector_db(user=Depends(get_current_user)):
-    if user.role == "admin":
-        CHROMA_CLIENT.reset()
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+def reset_vector_db(user=Depends(get_admin_user)):
+    CHROMA_CLIENT.reset()
 
 
 @app.get("/reset")
-def reset(user=Depends(get_current_user)) -> bool:
-    if user.role == "admin":
-        folder = f"{UPLOAD_DIR}"
-        for filename in os.listdir(folder):
-            file_path = os.path.join(folder, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print("Failed to delete %s. Reason: %s" % (file_path, e))
-
+def reset(user=Depends(get_admin_user)) -> bool:
+    folder = f"{UPLOAD_DIR}"
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
         try:
-            CHROMA_CLIENT.reset()
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
         except Exception as e:
-            print(e)
+            print("Failed to delete %s. Reason: %s" % (file_path, e))
 
-        return True
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+    try:
+        CHROMA_CLIENT.reset()
+    except Exception as e:
+        print(e)
+
+    return True

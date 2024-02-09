@@ -1,7 +1,7 @@
 from fastapi import Depends, Request, HTTPException, status
 from datetime import datetime, timedelta
 from typing import List, Union, Optional
-from utils.utils import get_current_user
+from utils.utils import get_current_user, get_admin_user
 from fastapi import APIRouter
 from pydantic import BaseModel
 import json
@@ -60,17 +60,11 @@ async def get_all_user_chats(user=Depends(get_current_user)):
 
 
 @router.get("/all/db", response_model=List[ChatResponse])
-async def get_all_user_chats_in_db(user=Depends(get_current_user)):
-    if user.role == "admin":
-        return [
-            ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
-            for chat in Chats.get_all_chats()
-        ]
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
+    return [
+        ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+        for chat in Chats.get_all_chats()
+    ]
 
 
 ############################

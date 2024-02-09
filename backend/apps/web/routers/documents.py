@@ -14,7 +14,7 @@ from apps.web.models.documents import (
     DocumentResponse,
 )
 
-from utils.utils import get_current_user
+from utils.utils import get_current_user, get_admin_user
 from constants import ERROR_MESSAGES
 
 router = APIRouter()
@@ -44,13 +44,7 @@ async def get_documents(user=Depends(get_current_user)):
 
 
 @router.post("/create", response_model=Optional[DocumentResponse])
-async def create_new_doc(form_data: DocumentForm, user=Depends(get_current_user)):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
+async def create_new_doc(form_data: DocumentForm, user=Depends(get_admin_user)):
     doc = Documents.get_doc_by_name(form_data.name)
     if doc == None:
         doc = Documents.insert_new_doc(user.id, form_data)
@@ -132,14 +126,8 @@ async def tag_doc_by_name(form_data: TagDocumentForm, user=Depends(get_current_u
 
 @router.post("/name/{name}/update", response_model=Optional[DocumentResponse])
 async def update_doc_by_name(
-    name: str, form_data: DocumentUpdateForm, user=Depends(get_current_user)
+    name: str, form_data: DocumentUpdateForm, user=Depends(get_admin_user)
 ):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
     doc = Documents.update_doc_by_name(name, form_data)
     if doc:
         return DocumentResponse(
@@ -161,12 +149,6 @@ async def update_doc_by_name(
 
 
 @router.delete("/name/{name}/delete", response_model=bool)
-async def delete_doc_by_name(name: str, user=Depends(get_current_user)):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
+async def delete_doc_by_name(name: str, user=Depends(get_admin_user)):
     result = Documents.delete_doc_by_name(name)
     return result
