@@ -4,6 +4,7 @@
 
 	import { getOllamaModels } from '$lib/apis/ollama';
 	import { getOpenAIModels } from '$lib/apis/openai';
+	import { getOpenAICompatModelLabelList } from '$lib/apis/openai_compat';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -35,6 +36,10 @@
 				return [];
 			}))
 		);
+		models.push(...(await getOpenAICompatModels(localStorage.token).catch((error) => {
+			toast.error(error);
+			return [];
+		})));
 
 		if (type === 'all') {
 			const openAIModels = await getOpenAIModels(localStorage.token).catch((error) => {

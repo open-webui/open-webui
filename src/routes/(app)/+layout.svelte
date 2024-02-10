@@ -12,6 +12,7 @@
 	import { getPrompts } from '$lib/apis/prompts';
 
 	import { getOpenAIModels } from '$lib/apis/openai';
+	import { getOpenAICompatModelLabelList } from '$lib/apis/openai_compat';
 
 	import {
 		user,
@@ -56,8 +57,15 @@
 			console.log(error);
 			return null;
 		});
-
 		models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
+
+		const openAICompatModelLabelList = await getOpenAICompatModelLabelList(localStorage.token).catch(
+			(error) => {
+				console.log(error);
+				return null;
+			}
+		);
+		models.push(...(openAICompatModelLabelList ? openAICompatModelLabelList : []));
 
 		return models;
 	};

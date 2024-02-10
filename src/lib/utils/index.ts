@@ -196,6 +196,7 @@ export const calculateSHA256 = async (file) => {
 export const getImportOrigin = (_chats) => {
 	// Check what external service chat imports are from
 	if ('mapping' in _chats[0]) {
+		// this may be for both openai and openai_compat
 		return 'openai';
 	}
 	return 'webui';

@@ -18,7 +18,7 @@
 		.filter(
 			(p) =>
 				p.name !== 'hr' &&
-				!p.external &&
+				!p.external && !external_compat &&
 				p.name.includes(prompt.split(' ')?.at(0)?.substring(1) ?? '')
 		)
 		.sort((a, b) => a.name.localeCompare(b.name));

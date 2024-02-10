@@ -30,6 +30,7 @@
 	} from '$lib/apis/chats';
 	import { queryCollection, queryDoc } from '$lib/apis/rag';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { generateOpenAICompatChatCompletion } from '$lib/apis/openai_compat';
 
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
@@ -272,8 +273,10 @@
 				console.log(model);
 				const modelTag = $models.filter((m) => m.name === model).at(0);
 
-				if (modelTag?.external) {
-					await sendPromptOpenAI(model, prompt, parentId, _chatId);
+				if (modelTag?.external_compat) {
+				    await sendPromptOpenAIGeneratorFunc(model, prompt, parentId, _chatId, '(compat)', generateOpenAICompatChatCompletion);
+				} else if (modelTag?.external) {
+					await sendPromptOpenAIGeneratorFunc(model, prompt, parentId, _chatId, '', generateOpenAIChatCompletion);
 				} else if (modelTag) {
 					await sendPromptOllama(model, prompt, parentId, _chatId);
 				} else {
@@ -514,7 +517,7 @@
 		}
 	};
 
-	const sendPromptOpenAI = async (model, userPrompt, parentId, _chatId) => {
+	const sendPromptOpenAI = async (model, userPrompt, parentId, _chatId, notificationTag, generateOpenAIChatCompletionFunc) => {
 		let responseMessageId = uuidv4();
 
 		let responseMessage = {
@@ -538,7 +541,7 @@
 
 		window.scrollTo({ top: document.body.scrollHeight });
 
-		const res = await generateOpenAIChatCompletion(localStorage.token, {
+		const res = await generateOpenAIChatCompletionFunc(localStorage.token, {
 			model: model,
 			stream: true,
 			messages: [
@@ -628,7 +631,7 @@
 				}
 
 				if ($settings.notificationEnabled && !document.hasFocus()) {
-					const notification = new Notification(`OpenAI ${model}`, {
+					const notification = new Notification(`OpenAI ${notificationTag} ${model}`, {
 						body: responseMessage.content,
 						icon: '/favicon.png'
 					});
