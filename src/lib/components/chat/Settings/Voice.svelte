@@ -50,6 +50,9 @@
 	onMount(async () => {
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 
+		speechAutoSend = settings.speechAutoSend ?? false;
+		responseAutoPlayback = settings.responseAutoPlayback ?? false;
+
 		engine = settings?.speech?.engine ?? '';
 		speaker = settings?.speech?.speaker ?? '';
 

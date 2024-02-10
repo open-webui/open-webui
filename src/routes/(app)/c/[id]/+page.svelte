@@ -464,6 +464,7 @@
 									}
 
 									if ($settings.responseAutoPlayback) {
+										await tick();
 										document.getElementById(`speak-button-${responseMessage.id}`)?.click();
 									}
 								}
@@ -652,6 +653,7 @@
 				}
 
 				if ($settings.responseAutoPlayback) {
+					await tick();
 					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
 				}
 

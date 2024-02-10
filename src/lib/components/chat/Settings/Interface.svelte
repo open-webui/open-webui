@@ -62,7 +62,6 @@
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 
 		titleAutoGenerate = settings.titleAutoGenerate ?? true;
-		speechAutoSend = settings.speechAutoSend ?? false;
 		responseAutoCopy = settings.responseAutoCopy ?? false;
 		showUsername = settings.showUsername ?? false;
 		titleAutoGenerateModel = settings.titleAutoGenerateModel ?? '';
