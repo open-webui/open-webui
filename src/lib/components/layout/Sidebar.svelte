@@ -19,7 +19,7 @@
 	let show = false;
 	let navElement;
 
-	let title: string = 'Ollama Web UI';
+	let title: string = 'UI';
 	let search = '';
 
 	let chatDeleteId = null;
@@ -88,7 +88,7 @@
 		<div class="px-2.5 flex justify-center space-x-2">
 			<button
 				id="sidebar-new-chat-button"
-				class="flex-grow flex justify-between rounded-md px-3 py-2 mt-1 hover:bg-gray-900 transition"
+				class="flex-grow flex justify-between rounded-md px-3 py-2 hover:bg-gray-900 transition"
 				on:click={async () => {
 					goto('/');
 
@@ -100,8 +100,8 @@
 				}}
 			>
 				<div class="flex self-center">
-					<div class="self-center mr-3.5">
-						<img src="/ollama.png" class=" w-5 invert-[100%] rounded-full" />
+					<div class="self-center mr-1.5">
+						<img src="/favicon.png" class=" w-7 -translate-x-1.5 rounded-full" alt="logo" />
 					</div>
 
 					<div class=" self-center font-medium text-sm">New Chat</div>

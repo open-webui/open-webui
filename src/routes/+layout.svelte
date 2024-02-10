@@ -10,6 +10,7 @@
 	import '../app.css';
 	import '../tailwind.css';
 	import 'tippy.js/dist/tippy.css';
+	import { WEBUI_NAME } from '$lib/constants';
 
 	let loaded = false;
 
@@ -54,7 +55,7 @@
 </script>
 
 <svelte:head>
-	<title>Ollama</title>
+	<title>{WEBUI_NAME}</title>
 
 	<link rel="stylesheet" type="text/css" href="/themes/rosepine.css" />
 	<link rel="stylesheet" type="text/css" href="/themes/rosepine-dawn.css" />

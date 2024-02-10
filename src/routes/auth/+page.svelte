@@ -1,7 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { userSignIn, userSignUp } from '$lib/apis/auths';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_NAME } from '$lib/constants';
 	import { config, user } from '$lib/stores';
 	import { onMount } from 'svelte';
 	import toast from 'svelte-french-toast';
@@ -90,7 +90,7 @@
 					}}
 				>
 					<div class=" text-xl md:text-2xl font-bold">
-						{mode === 'signin' ? 'Sign in' : 'Sign up'} to Ollama Web UI
+						{mode === 'signin' ? 'Sign in' : 'Sign up'} to {WEBUI_NAME}
 					</div>
 
 					<div class="flex flex-col mt-4">

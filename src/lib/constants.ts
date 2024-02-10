@@ -1,5 +1,6 @@
 import { dev } from '$app/environment';
 
+export const WEBUI_NAME = 'Ollama Web UI';
 export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
 
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
@@ -26,12 +27,57 @@ export const SUPPORTED_FILE_TYPE = [
 ];
 
 export const SUPPORTED_FILE_EXTENSIONS = [
-	'md', 'rst','go', 'py', 'java', 'sh', 'bat', 'ps1', 'cmd', 'js', 
-	'ts', 'css', 'cpp', 'hpp','h', 'c', 'cs', 'sql', 'log', 'ini',
-	'pl', 'pm', 'r', 'dart', 'dockerfile', 'env', 'php', 'hs',
-	'hsc', 'lua', 'nginxconf', 'conf', 'm', 'mm', 'plsql', 'perl',
-	'rb', 'rs', 'db2', 'scala', 'bash', 'swift', 'vue', 'svelte',
-	'doc','docx', 'pdf', 'csv', 'txt', 'xls', 'xlsx'
+	'md',
+	'rst',
+	'go',
+	'py',
+	'java',
+	'sh',
+	'bat',
+	'ps1',
+	'cmd',
+	'js',
+	'ts',
+	'css',
+	'cpp',
+	'hpp',
+	'h',
+	'c',
+	'cs',
+	'sql',
+	'log',
+	'ini',
+	'pl',
+	'pm',
+	'r',
+	'dart',
+	'dockerfile',
+	'env',
+	'php',
+	'hs',
+	'hsc',
+	'lua',
+	'nginxconf',
+	'conf',
+	'm',
+	'mm',
+	'plsql',
+	'perl',
+	'rb',
+	'rs',
+	'db2',
+	'scala',
+	'bash',
+	'swift',
+	'vue',
+	'svelte',
+	'doc',
+	'docx',
+	'pdf',
+	'csv',
+	'txt',
+	'xls',
+	'xlsx'
 ];
 
 // Source: https://kit.svelte.dev/docs/modules#$env-static-public

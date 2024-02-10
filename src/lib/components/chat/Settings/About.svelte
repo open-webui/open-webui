@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { WEB_UI_VERSION } from '$lib/constants';
+	import { WEBUI_NAME, WEB_UI_VERSION } from '$lib/constants';
 	import { config } from '$lib/stores';
 	import { onMount } from 'svelte';
 
@@ -15,7 +15,7 @@
 <div class="flex flex-col h-full justify-between space-y-3 text-sm mb-6">
 	<div class=" space-y-3">
 		<div>
-			<div class=" mb-2.5 text-sm font-medium">Ollama Web UI Version</div>
+			<div class=" mb-2.5 text-sm font-medium">{WEBUI_NAME} Version</div>
 			<div class="flex w-full">
 				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
 					{$config && $config.version ? $config.version : WEB_UI_VERSION}
