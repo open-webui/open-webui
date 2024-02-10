@@ -67,6 +67,14 @@ if OPENAI_API_BASE_URL == "":
 
 
 ####################################
+# OPENAI_API_COMPAT
+####################################
+
+OPENAI_COMPAT_API_KEY_LIST = os.environ.get("OPENAI_COMPAT_API_KEY_LIST", "")
+OPENAI_COMPAT_API_BASE_URL_LIST = os.environ.get("OPENAI_COMPAT_API_BASE_URL_LIST", "")
+OPENAI_COMPAT_MODEL_LABEL_LIST = os.environ.get("OPENAI_COMPAT_MODEL_LABEL_LIST", "")
+
+####################################
 # WEBUI
 ####################################
 
