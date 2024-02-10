@@ -27,6 +27,9 @@ ENV OPENAI_API_KEY ""
 
 ENV WEBUI_SECRET_KEY ""
 
+ENV SCARF_NO_ANALYTICS true
+ENV DO_NOT_TRACK true
+
 WORKDIR /app/backend
 
 # install python dependencies
