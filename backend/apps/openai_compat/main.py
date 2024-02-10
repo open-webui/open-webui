@@ -82,7 +82,6 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     url_list = app.state.OPENAI_COMPAT_API_BASE_URL_LIST.split(STATE_LIST_SEPARATOR)
     key_list = app.state.OPENAI_COMPAT_API_KEY_LIST.split(STATE_LIST_SEPARATOR)
     print("URL List: ", url_list)
-    print("Key List: ", key_list)
     api_url = url_list[index]
     api_key = key_list[index]
     
