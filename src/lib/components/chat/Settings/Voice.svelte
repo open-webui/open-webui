@@ -5,6 +5,10 @@
 	export let saveSettings: Function;
 
 	// Voice
+
+	let speechAutoSend = false;
+	let responseAutoPlayback = false;
+
 	let engines = ['', 'openai'];
 	let engine = '';
 
@@ -33,8 +37,21 @@
 		}, 100);
 	};
 
+	const toggleResponseAutoPlayback = async () => {
+		responseAutoPlayback = !responseAutoPlayback;
+		saveSettings({ responseAutoPlayback: responseAutoPlayback });
+	};
+
+	const toggleSpeechAutoSend = async () => {
+		speechAutoSend = !speechAutoSend;
+		saveSettings({ speechAutoSend: speechAutoSend });
+	};
+
 	onMount(async () => {
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+
+		speechAutoSend = settings.speechAutoSend ?? false;
+		responseAutoPlayback = settings.responseAutoPlayback ?? false;
 
 		engine = settings?.speech?.engine ?? '';
 		speaker = settings?.speech?.speaker ?? '';
@@ -60,26 +77,66 @@
 	}}
 >
 	<div class=" space-y-3">
-		<div class=" py-0.5 flex w-full justify-between">
-			<div class=" self-center text-sm font-medium">Speech Engine</div>
-			<div class="flex items-center relative">
-				<select
-					class="w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
-					bind:value={engine}
-					placeholder="Select a mode"
-					on:change={(e) => {
-						if (e.target.value === 'openai') {
-							getOpenAIVoices();
-							speaker = 'alloy';
-						} else {
-							getWebAPIVoices();
-							speaker = '';
-						}
+		<div>
+			<div class=" mb-1 text-sm font-medium">TTS Settings</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">Speech Engine</div>
+				<div class="flex items-center relative">
+					<select
+						class="w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+						bind:value={engine}
+						placeholder="Select a mode"
+						on:change={(e) => {
+							if (e.target.value === 'openai') {
+								getOpenAIVoices();
+								speaker = 'alloy';
+							} else {
+								getWebAPIVoices();
+								speaker = '';
+							}
+						}}
+					>
+						<option value="">Default (Web API)</option>
+						<option value="openai">Open AI</option>
+					</select>
+				</div>
+			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">Voice Input Auto-Send</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						toggleSpeechAutoSend();
 					}}
+					type="button"
 				>
-					<option value="">Default (Web API)</option>
-					<option value="openai">Open AI</option>
-				</select>
+					{#if speechAutoSend === true}
+						<span class="ml-2 self-center">On</span>
+					{:else}
+						<span class="ml-2 self-center">Off</span>
+					{/if}
+				</button>
+			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">TTS Automatic Playback</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						toggleResponseAutoPlayback();
+					}}
+					type="button"
+				>
+					{#if responseAutoPlayback === true}
+						<span class="ml-2 self-center">On</span>
+					{:else}
+						<span class="ml-2 self-center">Off</span>
+					{/if}
+				</button>
 			</div>
 		</div>
 

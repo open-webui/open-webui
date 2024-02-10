@@ -458,6 +458,7 @@
 										</button>
 
 										<button
+											id="speak-button-{message.id}"
 											class="{isLastMessage
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition"

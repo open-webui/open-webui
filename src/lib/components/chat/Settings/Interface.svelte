@@ -10,7 +10,6 @@
 
 	// Addons
 	let titleAutoGenerate = true;
-	let speechAutoSend = false;
 	let responseAutoCopy = false;
 	let titleAutoGenerateModel = '';
 
@@ -21,12 +20,6 @@
 	const toggleShowUsername = async () => {
 		showUsername = !showUsername;
 		saveSettings({ showUsername: showUsername });
-	};
-
-
-	const toggleSpeechAutoSend = async () => {
-		speechAutoSend = !speechAutoSend;
-		saveSettings({ speechAutoSend: speechAutoSend });
 	};
 
 	const toggleTitleAutoGenerate = async () => {
@@ -69,7 +62,6 @@
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 
 		titleAutoGenerate = settings.titleAutoGenerate ?? true;
-		speechAutoSend = settings.speechAutoSend ?? false;
 		responseAutoCopy = settings.responseAutoCopy ?? false;
 		showUsername = settings.showUsername ?? false;
 		titleAutoGenerateModel = settings.titleAutoGenerateModel ?? '';
@@ -109,26 +101,6 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">Voice Input Auto-Send</div>
-
-					<button
-						class="p-1 px-3 text-xs flex rounded transition"
-						on:click={() => {
-							toggleSpeechAutoSend();
-						}}
-						type="button"
-					>
-						{#if speechAutoSend === true}
-							<span class="ml-2 self-center">On</span>
-						{:else}
-							<span class="ml-2 self-center">Off</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">Response AutoCopy to Clipboard</div>
 
 					<button
@@ -146,9 +118,12 @@
 					</button>
 				</div>
 			</div>
+
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">Display the username instead of "You" in the Chat</div>
+					<div class=" self-center text-xs font-medium">
+						Display the username instead of "You" in the Chat
+					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"

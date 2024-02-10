@@ -448,6 +448,11 @@
 									if ($settings.responseAutoCopy) {
 										copyToClipboard(responseMessage.content);
 									}
+
+									if ($settings.responseAutoPlayback) {
+										await tick();
+										document.getElementById(`speak-button-${responseMessage.id}`)?.click();
+									}
 								}
 							}
 						}
@@ -631,6 +636,11 @@
 
 				if ($settings.responseAutoCopy) {
 					copyToClipboard(responseMessage.content);
+				}
+
+				if ($settings.responseAutoPlayback) {
+					await tick();
+					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
 				}
 
 				if (autoScroll) {
