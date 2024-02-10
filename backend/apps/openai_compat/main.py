@@ -2,9 +2,9 @@ from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+import json
 import requests
 from pydantic import BaseModel
-
 
 from apps.web.models.users import Users
 from utils.utils import decode_token, get_current_user, get_verified_user, get_admin_user
@@ -69,17 +69,25 @@ async def update_openai_model(form_data: LabelUpdateForm, user=Depends(get_admin
 # TODO: add index into list
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
-    index = int(request.query_params.get("index", 0))
-    url_list = app.state.OPENAI_COMPAT_API_KEY_LIST.split(STATE_LIST_SEPARATOR)
-    key_list = app.state.OPENAI_COMPAT_API_BASE_URL_LIST.split(STATE_LIST_SEPARATOR)
+    body = await request.body()
+    body_json = json.loads(body)
 
+    if "model" in body_json:
+        print("Getting model from JSON body: ", body_json["model"])
+        index = app.state.OPENAI_COMPAT_MODEL_LABEL_LIST.split(STATE_LIST_SEPARATOR).index(body_json["model"])
+        print("Found model at index: ", index)
+    else:
+        raise HTTPException(status_code=400, detail=f"Model not found. Got JSON body: {body_json}")
+
+    url_list = app.state.OPENAI_COMPAT_API_BASE_URL_LIST.split(STATE_LIST_SEPARATOR)
+    key_list = app.state.OPENAI_COMPAT_API_KEY_LIST.split(STATE_LIST_SEPARATOR)
+    print("URL List: ", url_list)
+    print("Key List: ", key_list)
     api_url = url_list[index]
     api_key = key_list[index]
     
     target_url = f"{api_url}/{path}"
-    
-
-    body = await request.body()
+    print("Hitting OpenAI compat URL: ", target_url)
 
     headers = {}
     headers["Authorization"] = f"Bearer {api_key}"
