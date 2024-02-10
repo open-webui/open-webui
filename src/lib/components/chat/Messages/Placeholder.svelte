@@ -27,19 +27,19 @@
 					>
 						{#if model in modelfiles}
 							<img
-								src={modelfiles[model]?.imageUrl ?? '/ollama-dark.png'}
+								src={modelfiles[model]?.imageUrl ?? './favicon.png'}
 								alt="modelfile"
 								class=" w-20 mb-2 rounded-full {models.length > 1
-									? ' border-[5px] border-white dark:border-gray-800'
+									? ' border-[5px] border-white dark:border-gray-900'
 									: ''}"
 								draggable="false"
 							/>
 						{:else}
 							<img
-								src={models.length === 1 ? '/ollama.png' : 'ollama-dark.png'}
+								src={models.length === 1 ? '/favicon.png' : '/favicon.png'}
 								class=" w-20 mb-2 {models.length === 1
-									? 'invert-[10%] dark:invert-[100%]'
-									: 'border-[5px] border-white dark:border-gray-800'}  rounded-full"
+									? ''
+									: 'border-[5px] border-white dark:border-gray-900'}  rounded-full"
 								alt="ollama"
 								draggable="false"
 							/>
