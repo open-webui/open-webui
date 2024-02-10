@@ -117,45 +117,6 @@
 		</div>
 	</div>
 
-	<div class=" space-y-3">
-		<h1>External API</h1>
-		<div>
-			<div class=" mb-2.5 text-sm font-medium">OpenAI API Key</div>
-			<div class="flex w-full">
-				<div class="flex-1">
-					<input
-						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-						placeholder="Enter OpenAI API Key"
-						bind:value={OPENAI_API_KEY}
-						autocomplete="off"
-					/>
-				</div>
-			</div>
-			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				Adds optional support for online models.
-			</div>
-		</div>
-
-		<hr class=" dark:border-gray-700" />
-
-		<div>
-			<div class=" mb-2.5 text-sm font-medium">OpenAI API Base URL</div>
-			<div class="flex w-full">
-				<div class="flex-1">
-					<input
-						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-						placeholder="Enter OpenAI API Key"
-						bind:value={OPENAI_API_BASE_URL}
-						autocomplete="off"
-					/>
-				</div>
-			</div>
-			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				WebUI will make requests to <span class=" text-gray-200">'{OPENAI_API_BASE_URL}/chat'</span>
-			</div>
-		</div>
-	</div>
-
 	<h1>Add New Open AI Compatible API</h1>
 	{#each APIs as api, index (api.index)}
 		<div class="flex justify-between space-x-2">
