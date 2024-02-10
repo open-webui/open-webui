@@ -6,6 +6,7 @@
 
 	// Voice
 
+	let conversationMode = false;
 	let speechAutoSend = false;
 	let responseAutoPlayback = false;
 
@@ -37,6 +38,21 @@
 		}, 100);
 	};
 
+	const toggleConversationMode = async () => {
+		conversationMode = !conversationMode;
+
+		if (conversationMode) {
+			responseAutoPlayback = true;
+			speechAutoSend = true;
+		}
+
+		saveSettings({
+			conversationMode: conversationMode,
+			responseAutoPlayback: responseAutoPlayback,
+			speechAutoSend: speechAutoSend
+		});
+	};
+
 	const toggleResponseAutoPlayback = async () => {
 		responseAutoPlayback = !responseAutoPlayback;
 		saveSettings({ responseAutoPlayback: responseAutoPlayback });
@@ -50,6 +66,7 @@
 	onMount(async () => {
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 
+		conversationMode = settings.conversationMode ?? false;
 		speechAutoSend = settings.speechAutoSend ?? false;
 		responseAutoPlayback = settings.responseAutoPlayback ?? false;
 
@@ -104,7 +121,25 @@
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Voice Input Auto-Send</div>
+				<div class=" self-center text-xs font-medium">Conversation Mode</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						toggleConversationMode();
+					}}
+					type="button"
+				>
+					{#if conversationMode === true}
+						<span class="ml-2 self-center">On</span>
+					{:else}
+						<span class="ml-2 self-center">Off</span>
+					{/if}
+				</button>
+			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">Auto-send input after 3 sec.</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition"
@@ -122,7 +157,7 @@
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">TTS Automatic Playback</div>
+				<div class=" self-center text-xs font-medium">Auto-playback response</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition"

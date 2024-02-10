@@ -149,6 +149,9 @@
 
 					audio.onended = () => {
 						speaking = null;
+						if ($settings.conversationMode) {
+							document.getElementById('voice-input-button')?.click();
+						}
 					};
 					audio.play().catch((e) => console.error('Error playing audio:', e));
 				}
@@ -166,6 +169,9 @@
 
 						speak.onend = () => {
 							speaking = null;
+							if ($settings.conversationMode) {
+								document.getElementById('voice-input-button')?.click();
+							}
 						};
 						speak.voice = voice;
 						speechSynthesis.speak(speak);

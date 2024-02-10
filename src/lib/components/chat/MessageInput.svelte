@@ -674,6 +674,7 @@
 							{#if messages.length == 0 || messages.at(-1).done == true}
 								{#if speechRecognitionEnabled}
 									<button
+										id="voice-input-button"
 										class=" text-gray-600 dark:text-gray-300 transition rounded-lg p-1.5 mr-0.5 self-center"
 										type="button"
 										on:click={() => {
