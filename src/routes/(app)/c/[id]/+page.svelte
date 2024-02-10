@@ -288,9 +288,9 @@
 				const modelTag = $models.filter((m) => m.name === model).at(0);
 
 				if (modelTag?.external_compat) {
-					await sendPromptOpenAIGeneratorFunc(model, prompt, parentId, _chatId, '(compat)', generateOpenAICompatChatCompletion);
+					await sendPromptOpenAIGeneric(model, prompt, parentId, _chatId, '(compat)', generateOpenAICompatChatCompletion);
 				} else if (modelTag?.external) {
-					await sendPromptOpenAIGeneratorFunc(model, prompt, parentId, _chatId, '', generateOpenAIChatCompletion);
+					await sendPromptOpenAIGeneric(model, prompt, parentId, _chatId, '', generateOpenAIChatCompletion);
 				} else if (modelTag) {
 					await sendPromptOllama(model, prompt, parentId, _chatId);
 				} else {
@@ -531,7 +531,7 @@
 		}
 	};
 
-	const sendPromptOpenAIGeneratorFunc = async (
+	const sendPromptOpenAIGeneric = async (
 		model,
 		userPrompt,
 		parentId,

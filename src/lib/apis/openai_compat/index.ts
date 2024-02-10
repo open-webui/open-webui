@@ -204,8 +204,7 @@ export const updateOpenAICompatModelLabelList = async (token: string = '', label
 export const getOpenAICompatModels = async (token: string = '') => {
 	let error = null;
 
-	// TODO: call backend and split
-	const res: {"OPENAI_COMPAT_MODEL_LABEL_LIST": string} = await getOpenAICompatModelLabelList(token)
+	const res = await getOpenAICompatModelLabelList(token)
 		.then(async (res) => {
 			if (!res) throw 'Server connection failed';
 			return res;
@@ -220,9 +219,7 @@ export const getOpenAICompatModels = async (token: string = '') => {
 		throw error;
 	}
 
-	console.log("getOpenAICompatModelLabels res", res);
-	const labels = res.OPENAI_COMPAT_MODEL_LABEL_LIST.split(';');
-	console.log("getOpenAICompatModelLabels labels", labels);
+	const labels = res.split(';');
 	return labels
 		? labels
 				.map((label) => ({ 

@@ -4,7 +4,7 @@
 
 	import { getOllamaModels } from '$lib/apis/ollama';
 	import { getOpenAIModels } from '$lib/apis/openai';
-	import { getOpenAICompatModelLabelList } from '$lib/apis/openai_compat';
+	import { getOpenAICompatModels } from '$lib/apis/openai_compat';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -36,17 +36,18 @@
 				return [];
 			}))
 		);
-		models.push(...(await getOpenAICompatModels(localStorage.token).catch((error) => {
-			toast.error(error);
-			return [];
-		})));
-
 		if (type === 'all') {
 			const openAIModels = await getOpenAIModels(localStorage.token).catch((error) => {
 				console.log(error);
 				return null;
 			});
+			const openAICompatModel = await getOpenAICompatModels(localStorage.token).catch((error) => {
+				console.log(error);
+				return null;
+			});
 			models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
+			models.push(...(openAICompatModel ? [{ name: 'hr' }, ...openAICompatModel] : []));
+			console.log("enumerated")
 		}
 
 		return models;

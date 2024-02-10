@@ -12,7 +12,7 @@
 	import { getPrompts } from '$lib/apis/prompts';
 
 	import { getOpenAIModels } from '$lib/apis/openai';
-	import { getOpenAICompatModelLabelList } from '$lib/apis/openai_compat';
+	import { getOpenAICompatModels } from '$lib/apis/openai_compat';
 
 	import {
 		user,
@@ -59,14 +59,14 @@
 		});
 		models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
 
-		const openAICompatModelLabelList = await getOpenAICompatModelLabelList(localStorage.token).catch(
+		const openAICompatModelLabelList = await getOpenAICompatModels(localStorage.token).catch(
 			(error) => {
 				console.log(error);
 				return null;
 			}
 		);
-		models.push(...(openAICompatModelLabelList ? openAICompatModelLabelList : []));
-
+		models.push(...(openAICompatModelLabelList ? [{ name: 'hr' }, ...openAICompatModelLabelList] : []));
+		
 		return models;
 	};
 
