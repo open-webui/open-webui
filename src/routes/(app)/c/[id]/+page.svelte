@@ -536,7 +536,7 @@
 		userPrompt,
 		parentId,
 		_chatId,
-		notificationTag, // tag added to notification to indicate external model kind
+		notificationTag,
 		generateOpenAIChatCompletionFunc,
 	) => {
 		let responseMessageId = uuidv4();

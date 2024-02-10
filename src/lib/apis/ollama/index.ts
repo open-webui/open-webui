@@ -128,7 +128,6 @@ export const getOllamaModels = async (token: string = '') => {
 		throw error;
 	}
 
-	console.log(res.models);
 	return (res?.models ?? []).sort((a, b) => {
 		return a.name.localeCompare(b.name);
 	});
