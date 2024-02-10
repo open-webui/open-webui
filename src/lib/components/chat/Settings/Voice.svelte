@@ -40,7 +40,17 @@
 
 	const toggleConversationMode = async () => {
 		conversationMode = !conversationMode;
-		saveSettings({ conversationMode: conversationMode });
+
+		if (conversationMode) {
+			responseAutoPlayback = true;
+			speechAutoSend = true;
+		}
+
+		saveSettings({
+			conversationMode: conversationMode,
+			responseAutoPlayback: responseAutoPlayback,
+			speechAutoSend: speechAutoSend
+		});
 	};
 
 	const toggleResponseAutoPlayback = async () => {
