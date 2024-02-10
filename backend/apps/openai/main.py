@@ -122,7 +122,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     target_url = f"{app.state.OPENAI_API_BASE_URL}/{path}"
-    print(target_url, app.state.OPENAI_API_KEY)
+    print(target_url, "<KEY_REDACTED>")
 
     if app.state.OPENAI_API_KEY == "":
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
