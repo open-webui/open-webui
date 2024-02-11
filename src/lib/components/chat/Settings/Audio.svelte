@@ -5,7 +5,7 @@
 
 	export let saveSettings: Function;
 
-	// Voice
+	// Audio
 
 	let STTEngines = ['', 'openai'];
 	let STTEngine = '';
@@ -74,9 +74,9 @@
 		speechAutoSend = settings.speechAutoSend ?? false;
 		responseAutoPlayback = settings.responseAutoPlayback ?? false;
 
-		STTEngine = settings?.voice?.STTEngine ?? '';
-		TTSEngine = settings?.voice?.TTSEngine ?? '';
-		speaker = settings?.voice?.speaker ?? '';
+		STTEngine = settings?.audio?.STTEngine ?? '';
+		TTSEngine = settings?.audio?.TTSEngine ?? '';
+		speaker = settings?.audio?.speaker ?? '';
 
 		if (TTSEngine === 'openai') {
 			getOpenAIVoices();
@@ -90,7 +90,7 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
 		saveSettings({
-			voice: {
+			audio: {
 				STTEngine: STTEngine !== '' ? STTEngine : undefined,
 				TTSEngine: TTSEngine !== '' ? TTSEngine : undefined,
 				speaker: speaker !== '' ? speaker : undefined
