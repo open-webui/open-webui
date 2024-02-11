@@ -61,7 +61,7 @@
 	<div class="fixed m-10 z-50">
 		<div class="flex space-x-2">
 			<div class=" self-center">
-				<img src="/ollama.png" class=" w-8" />
+				<img src="/favicon.png" class=" w-8 rounded-full" />
 			</div>
 		</div>
 	</div>
