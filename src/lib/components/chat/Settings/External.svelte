@@ -4,7 +4,9 @@
 		getAzureOpenAIKey,
 		getAzureOpenAIUrl,
 		updateAzureOpenAIKey,
-		updateAzureOpenAIUrl
+		updateAzureOpenAIUrl,
+		getAzureOpenAIApiVersion,
+		updateAzureOpenAIApiVersion
 	} from '$lib/apis/azureopenai';
 	import { models, user } from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
@@ -26,6 +28,7 @@
 
 	let AZURE_OPENAI_API_KEY = '';
 	let AZURE_OPENAI_API_BASE_URL = '';
+	let AZURE_OPENAI_API_VERSION = '';
 
 	const updateAzureOpenAIHandler = async () => {
 		AZURE_OPENAI_API_BASE_URL = await updateAzureOpenAIUrl(
@@ -33,6 +36,10 @@
 			AZURE_OPENAI_API_BASE_URL
 		);
 		AZURE_OPENAI_API_KEY = await updateAzureOpenAIKey(localStorage.token, AZURE_OPENAI_API_KEY);
+		AZURE_OPENAI_API_VERSION = await updateAzureOpenAIApiVersion(
+			localStorage.token,
+			AZURE_OPENAI_API_VERSION
+		);
 
 		await models.set(await getAzureModels());
 	};
@@ -43,6 +50,7 @@
 			OPENAI_API_KEY = await getOpenAIKey(localStorage.token);
 			AZURE_OPENAI_API_BASE_URL = await getAzureOpenAIUrl(localStorage.token);
 			AZURE_OPENAI_API_KEY = await getAzureOpenAIKey(localStorage.token);
+			AZURE_OPENAI_API_VERSION = await getAzureOpenAIApiVersion(localStorage.token);
 		}
 	});
 </script>
@@ -133,6 +141,25 @@
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 				WebUI will make requests to <span class=" text-gray-200">'{AZURE_OPENAI_API_BASE_URL}'</span
 				>
+			</div>
+		</div>
+
+		<hr class=" dark:border-gray-700" />
+
+		<div>
+			<div class=" mb-2.5 text-sm font-medium">Azure OpenAI API Version</div>
+			<div class="flex w-full">
+				<div class="flex-1">
+					<input
+						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+						placeholder="Enter Azure OpenAI API Key"
+						bind:value={AZURE_OPENAI_API_VERSION}
+						autocomplete="off"
+					/>
+				</div>
+			</div>
+			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+				WebUI will make requests to <span class=" text-gray-200">'{AZURE_OPENAI_API_VERSION}'</span>
 			</div>
 		</div>
 	</div>

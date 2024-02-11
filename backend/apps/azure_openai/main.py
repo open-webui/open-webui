@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import decode_token, get_current_user
-from config import AZURE_OPENAI_API_BASE_URL, AZURE_OPENAI_API_KEY, CACHE_DIR
+from config import AZURE_OPENAI_API_BASE_URL, AZURE_OPENAI_API_KEY, AZURE_OPENAI_API_VERSION, CACHE_DIR
 
 import hashlib
 from pathlib import Path
@@ -26,6 +26,7 @@ app.add_middleware(
 
 app.state.AZURE_OPENAI_API_BASE_URL = AZURE_OPENAI_API_BASE_URL
 app.state.AZURE_OPENAI_API_KEY = AZURE_OPENAI_API_KEY
+app.state.AZURE_OPENAI_API_VERSION = AZURE_OPENAI_API_VERSION
 
 
 class UrlUpdateForm(BaseModel):
@@ -34,6 +35,10 @@ class UrlUpdateForm(BaseModel):
 
 class KeyUpdateForm(BaseModel):
     key: str
+
+
+class VersionUpdateForm(BaseModel):
+    version: str
 
 
 @app.get("/url")
@@ -70,6 +75,26 @@ async def update_azure_openai_key(form_data: KeyUpdateForm, user=Depends(get_cur
     if user and user.role == "admin":
         app.state.AZURE_OPENAI_API_KEY = form_data.key
         return {"AZURE_OPENAI_API_KEY": app.state.AZURE_OPENAI_API_KEY}
+    else:
+        raise HTTPException(
+            status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+
+@app.get("/version")
+async def get_azure_openai_version(user=Depends(get_current_user)):
+    if user and user.role == "admin":
+        return {"AZURE_OPENAI_API_VERSION": app.state.AZURE_OPENAI_API_VERSION}
+    else:
+        raise HTTPException(
+            status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+
+@app.post("/version/update")
+async def update_azure_openai_version(form_data: VersionUpdateForm, user=Depends(get_current_user)):
+    print(form_data)
+    if user and user.role == "admin":
+        app.state.AZURE_OPENAI_API_VERSION = form_data.version
+        return {"AZURE_OPENAI_API_VERSION": app.state.AZURE_OPENAI_API_VERSION}
     else:
         raise HTTPException(
             status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
@@ -170,8 +195,9 @@ async def proxy(path: str, request: Request, user=Depends(get_current_user)):
         print("Error loading request body into a dictionary:", e)
 
     headers = {}
-    headers["Authorization"] = f"Bearer {app.state.AZURE_OPENAI_API_KEY}"
     headers["Content-Type"] = "application/json"
+
+    target_url = f"{target_url}?api-version={app.state.AZURE_OPENAI_API_VERSION}&api-key={app.state.AZURE_OPENAI_API_KEY}"
 
     try:
         r = requests.request(

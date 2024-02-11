@@ -4,6 +4,7 @@
 
 	import { getOllamaModels } from '$lib/apis/ollama';
 	import { getOpenAIModels } from '$lib/apis/openai';
+	import { getAzureOpenAIModels } from '$lib/apis/azureopenai';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -42,6 +43,12 @@
 				return null;
 			});
 			models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
+
+			const azureOpenAIModels = await getAzureOpenAIModels(localStorage.token).catch((error) => {
+				console.log(error);
+				return null;
+			});
+			models.push(...(azureOpenAIModels ? [{ name: 'hr' }, ...azureOpenAIModels] : []));
 		}
 
 		return models;

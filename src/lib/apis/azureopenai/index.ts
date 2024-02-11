@@ -134,6 +134,73 @@ export const updateAzureOpenAIKey = async (token: string = '', key: string) => {
 	return res.AZURE_OPENAI_API_KEY;
 };
 
+export const getAzureOpenAIApiVersion = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/version`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.AZURE_OPENAI_API_VERSION;
+};
+
+export const updateAzureOpenAIApiVersion = async (token: string = '', version: string) => {
+	let error = null;
+
+	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/version/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			version: version
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.AZURE_OPENAI_API_VERSION;
+};
+
 export const getAzureOpenAIModels = async (token: string = '') => {
 	let error = null;
 
