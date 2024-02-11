@@ -69,7 +69,7 @@ def transcribe(
 
         transcript = "".join([segment.text for segment in list(segments)])
 
-        return {"text": transcript}
+        return {"text": transcript.strip()}
 
     except Exception as e:
         print(e)
