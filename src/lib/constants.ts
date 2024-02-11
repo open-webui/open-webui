@@ -24,7 +24,9 @@ export const SUPPORTED_FILE_TYPE = [
 	'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 	'application/octet-stream',
 	'application/x-javascript',
-	'text/markdown'
+	'text/markdown',
+	'audio/mpeg',
+	'audio/wav'
 ];
 
 export const SUPPORTED_FILE_EXTENSIONS = [

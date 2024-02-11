@@ -341,3 +341,9 @@ export const extractSentences = (text) => {
 		.map((sentence) => removeEmojis(sentence.trim()))
 		.filter((sentence) => sentence !== '');
 };
+
+export const blobToFile = (blob, fileName) => {
+	// Create a new File object from the Blob
+	const file = new File([blob], fileName, { type: blob.type });
+	return file;
+};

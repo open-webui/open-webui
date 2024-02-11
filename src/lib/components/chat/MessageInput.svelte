@@ -2,7 +2,7 @@
 	import toast from 'svelte-french-toast';
 	import { onMount, tick } from 'svelte';
 	import { settings } from '$lib/stores';
-	import { calculateSHA256, findWordIndices } from '$lib/utils';
+	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import Prompts from './MessageInput/PromptCommands.svelte';
 	import Suggestions from './MessageInput/Suggestions.svelte';
@@ -124,6 +124,20 @@
 
 		try {
 			files = [...files, doc];
+
+			if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
+				const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+					toast.error(error);
+					return null;
+				});
+
+				if (res) {
+					console.log(res);
+					const blob = new Blob([res.text], { type: 'text/plain' });
+					file = blobToFile(blob, `${file.name}.txt`);
+				}
+			}
+
 			const res = await uploadDocToVectorDB(localStorage.token, '', file);
 
 			if (res) {
@@ -202,9 +216,6 @@
 					console.log(file, file.name.split('.').at(-1));
 					if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
 						reader.readAsDataURL(file);
-					} else if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
-						const res = await transcribeAudio(localStorage.token, file);
-						console.log(res);
 					} else if (
 						SUPPORTED_FILE_TYPE.includes(file['type']) ||
 						SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
