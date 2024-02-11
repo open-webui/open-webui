@@ -132,3 +132,8 @@ CHROMA_CLIENT = chromadb.PersistentClient(
 )
 CHUNK_SIZE = 1500
 CHUNK_OVERLAP = 100
+
+####################################
+# Transcribe
+####################################
+WHISPER_MODEL_NAME = "tiny"

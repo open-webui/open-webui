@@ -11,6 +11,7 @@
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
 	import Documents from './MessageInput/Documents.svelte';
 	import Models from './MessageInput/Models.svelte';
+	import { transcribeAudio } from '$lib/apis/audio';
 
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
@@ -201,6 +202,9 @@
 					console.log(file, file.name.split('.').at(-1));
 					if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
 						reader.readAsDataURL(file);
+					} else if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
+						const res = await transcribeAudio(localStorage.token, file);
+						console.log(res);
 					} else if (
 						SUPPORTED_FILE_TYPE.includes(file['type']) ||
 						SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
