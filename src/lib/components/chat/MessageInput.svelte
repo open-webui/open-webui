@@ -156,7 +156,7 @@
 		} else {
 			isRecording = true;
 
-			if ($settings?.voice?.STTEngine ?? '' !== '') {
+			if ($settings?.audio?.STTEngine ?? '' !== '') {
 				startRecording();
 			} else {
 				if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
