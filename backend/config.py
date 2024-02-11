@@ -136,4 +136,4 @@ CHUNK_OVERLAP = 100
 ####################################
 # Transcribe
 ####################################
-WHISPER_MODEL_NAME = "tiny"
+WHISPER_MODEL_NAME = "base"
