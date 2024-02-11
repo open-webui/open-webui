@@ -35,7 +35,6 @@
 
 	export let fileUploadEnabled = true;
 	export let speechRecognitionEnabled = true;
-	export let speechRecognitionListening = false;
 
 	export let prompt = '';
 	export let messages = [];
@@ -51,62 +50,170 @@
 		}
 	}
 
+	let mediaRecorder;
+	let audioChunks = [];
+	let isRecording = false;
+	const MIN_DECIBELS = -45;
+
+	const startRecording = async () => {
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		mediaRecorder = new MediaRecorder(stream);
+		mediaRecorder.onstart = () => {
+			isRecording = true;
+			console.log('Recording started');
+		};
+		mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+		mediaRecorder.onstop = async () => {
+			isRecording = false;
+			console.log('Recording stopped');
+
+			// Create a blob from the audio chunks
+			const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+
+			const file = blobToFile(audioBlob, 'recording.wav');
+
+			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+				toast.error(error);
+				return null;
+			});
+
+			if (res) {
+				prompt = res.text;
+				await tick();
+
+				const inputElement = document.getElementById('chat-textarea');
+				inputElement?.focus();
+
+				if (prompt !== '' && $settings?.speechAutoSend === true) {
+					submitPrompt(prompt, user);
+				}
+			}
+
+			// saveRecording(audioBlob);
+			audioChunks = [];
+		};
+
+		// Start recording
+		mediaRecorder.start();
+
+		// Monitor silence
+		monitorSilence(stream);
+	};
+
+	const monitorSilence = (stream) => {
+		const audioContext = new AudioContext();
+		const audioStreamSource = audioContext.createMediaStreamSource(stream);
+		const analyser = audioContext.createAnalyser();
+		analyser.minDecibels = MIN_DECIBELS;
+		audioStreamSource.connect(analyser);
+
+		const bufferLength = analyser.frequencyBinCount;
+		const domainData = new Uint8Array(bufferLength);
+
+		let lastSoundTime = Date.now();
+
+		const detectSound = () => {
+			analyser.getByteFrequencyData(domainData);
+
+			if (domainData.some((value) => value > 0)) {
+				lastSoundTime = Date.now();
+			}
+
+			if (isRecording && Date.now() - lastSoundTime > 3000) {
+				mediaRecorder.stop();
+				audioContext.close();
+				return;
+			}
+
+			window.requestAnimationFrame(detectSound);
+		};
+
+		window.requestAnimationFrame(detectSound);
+	};
+
+	const saveRecording = (blob) => {
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		document.body.appendChild(a);
+		a.style = 'display: none';
+		a.href = url;
+		a.download = 'recording.wav';
+		a.click();
+		window.URL.revokeObjectURL(url);
+	};
+
 	const speechRecognitionHandler = () => {
 		// Check if SpeechRecognition is supported
 
-		if (speechRecognitionListening) {
-			speechRecognition.stop();
+		if (isRecording) {
+			if (speechRecognition) {
+				speechRecognition.stop();
+			}
+
+			if (mediaRecorder) {
+				mediaRecorder.stop();
+			}
 		} else {
-			if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-				// Create a SpeechRecognition object
-				speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+			isRecording = true;
 
-				// Set continuous to true for continuous recognition
-				speechRecognition.continuous = true;
-
-				// Set the timeout for turning off the recognition after inactivity (in milliseconds)
-				const inactivityTimeout = 3000; // 3 seconds
-
-				let timeoutId;
-				// Start recognition
-				speechRecognition.start();
-				speechRecognitionListening = true;
-
-				// Event triggered when speech is recognized
-				speechRecognition.onresult = function (event) {
-					// Clear the inactivity timeout
-					clearTimeout(timeoutId);
-
-					// Handle recognized speech
-					console.log(event);
-					const transcript = event.results[Object.keys(event.results).length - 1][0].transcript;
-					prompt = `${prompt}${transcript}`;
-
-					// Restart the inactivity timeout
-					timeoutId = setTimeout(() => {
-						console.log('Speech recognition turned off due to inactivity.');
-						speechRecognition.stop();
-					}, inactivityTimeout);
-				};
-
-				// Event triggered when recognition is ended
-				speechRecognition.onend = function () {
-					// Restart recognition after it ends
-					console.log('recognition ended');
-					speechRecognitionListening = false;
-					if (prompt !== '' && $settings?.speechAutoSend === true) {
-						submitPrompt(prompt, user);
-					}
-				};
-
-				// Event triggered when an error occurs
-				speechRecognition.onerror = function (event) {
-					console.log(event);
-					toast.error(`Speech recognition error: ${event.error}`);
-					speechRecognitionListening = false;
-				};
+			if ($settings?.voice?.STTEngine ?? '' !== '') {
+				startRecording();
 			} else {
-				toast.error('SpeechRecognition API is not supported in this browser.');
+				if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+					// Create a SpeechRecognition object
+					speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+					// Set continuous to true for continuous recognition
+					speechRecognition.continuous = true;
+
+					// Set the timeout for turning off the recognition after inactivity (in milliseconds)
+					const inactivityTimeout = 3000; // 3 seconds
+
+					let timeoutId;
+					// Start recognition
+					speechRecognition.start();
+
+					// Event triggered when speech is recognized
+					speechRecognition.onresult = async (event) => {
+						// Clear the inactivity timeout
+						clearTimeout(timeoutId);
+
+						// Handle recognized speech
+						console.log(event);
+						const transcript = event.results[Object.keys(event.results).length - 1][0].transcript;
+
+						prompt = `${prompt}${transcript}`;
+
+						await tick();
+						const inputElement = document.getElementById('chat-textarea');
+						inputElement?.focus();
+
+						// Restart the inactivity timeout
+						timeoutId = setTimeout(() => {
+							console.log('Speech recognition turned off due to inactivity.');
+							speechRecognition.stop();
+						}, inactivityTimeout);
+					};
+
+					// Event triggered when recognition is ended
+					speechRecognition.onend = function () {
+						// Restart recognition after it ends
+						console.log('recognition ended');
+						isRecording = false;
+						if (prompt !== '' && $settings?.speechAutoSend === true) {
+							submitPrompt(prompt, user);
+						}
+					};
+
+					// Event triggered when an error occurs
+					speechRecognition.onerror = function (event) {
+						console.log(event);
+						toast.error(`Speech recognition error: ${event.error}`);
+						isRecording = false;
+					};
+				} else {
+					toast.error('SpeechRecognition API is not supported in this browser.');
+				}
 			}
 		}
 	};
@@ -550,7 +657,7 @@
 								: ' pl-4'} rounded-xl resize-none h-[48px]"
 							placeholder={chatInputPlaceholder !== ''
 								? chatInputPlaceholder
-								: speechRecognitionListening
+								: isRecording
 								? 'Listening...'
 								: 'Send a message'}
 							bind:value={prompt}
@@ -659,6 +766,10 @@
 								e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 								user = null;
 							}}
+							on:focus={(e) => {
+								e.target.style.height = '';
+								e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+							}}
 							on:paste={(e) => {
 								const clipboardData = e.clipboardData || window.clipboardData;
 
@@ -696,7 +807,7 @@
 											speechRecognitionHandler();
 										}}
 									>
-										{#if speechRecognitionListening}
+										{#if isRecording}
 											<svg
 												class=" w-5 h-5 translate-y-[0.5px]"
 												fill="currentColor"

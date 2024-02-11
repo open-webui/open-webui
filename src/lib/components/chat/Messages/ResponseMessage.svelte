@@ -148,7 +148,7 @@
 		} else {
 			speaking = true;
 
-			if ($settings?.speech?.engine === 'openai') {
+			if ($settings?.voice?.TTSEngine === 'openai') {
 				loadingSpeech = true;
 
 				const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
@@ -179,7 +179,7 @@
 				for (const [idx, sentence] of sentences.entries()) {
 					const res = await synthesizeOpenAISpeech(
 						localStorage.token,
-						$settings?.speech?.speaker,
+						$settings?.voice?.speaker,
 						sentence
 					).catch((error) => {
 						toast.error(error);
@@ -204,7 +204,7 @@
 						clearInterval(getVoicesLoop);
 
 						const voice =
-							voices?.filter((v) => v.name === $settings?.speech?.speaker)?.at(0) ?? undefined;
+							voices?.filter((v) => v.name === $settings?.voice?.speaker)?.at(0) ?? undefined;
 
 						const speak = new SpeechSynthesisUtterance(message.content);
 
