@@ -324,3 +324,20 @@ export const isValidHttpUrl = (string) => {
 
 	return url.protocol === 'http:' || url.protocol === 'https:';
 };
+
+export const removeEmojis = (str) => {
+	// Regular expression to match emojis
+	const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;
+
+	// Replace emojis with an empty string
+	return str.replace(emojiRegex, '');
+};
+
+export const extractSentences = (text) => {
+	// Split the paragraph into sentences based on common punctuation marks
+	const sentences = text.split(/(?<=[.!?])/);
+
+	return sentences
+		.map((sentence) => removeEmojis(sentence.trim()))
+		.filter((sentence) => sentence !== '');
+};
