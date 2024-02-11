@@ -61,7 +61,7 @@
 	<div class="fixed m-10 z-50">
 		<div class="flex space-x-2">
 			<div class=" self-center">
-				<img src="/favicon.png" class=" w-8 rounded-full" />
+				<img src="/favicon.png" class=" w-8 rounded-full" alt="logo" />
 			</div>
 		</div>
 	</div>
