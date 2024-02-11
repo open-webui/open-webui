@@ -151,7 +151,22 @@
 			if ($settings?.speech?.engine === 'openai') {
 				loadingSpeech = true;
 
-				const sentences = extractSentences(message.content);
+				const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
+					const lastIndex = mergedTexts.length - 1;
+					if (lastIndex >= 0) {
+						const previousText = mergedTexts[lastIndex];
+						const wordCount = previousText.split(/\s+/).length;
+						if (wordCount < 2) {
+							mergedTexts[lastIndex] = previousText + ' ' + currentText;
+						} else {
+							mergedTexts.push(currentText);
+						}
+					} else {
+						mergedTexts.push(currentText);
+					}
+					return mergedTexts;
+				}, []);
+
 				console.log(sentences);
 
 				sentencesAudio = sentences.reduce((a, e, i, arr) => {
