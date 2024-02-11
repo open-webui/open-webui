@@ -125,7 +125,7 @@
 			const audio = sentencesAudio[idx];
 			audio.play();
 			audio.onended = async (e) => {
-				await new Promise((r) => setTimeout(r, 500));
+				await new Promise((r) => setTimeout(r, 300));
 
 				if (Object.keys(sentencesAudio).length - 1 === idx) {
 					speaking = null;
