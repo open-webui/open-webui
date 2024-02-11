@@ -30,6 +30,8 @@ openpyxl
 pyxlsb
 xlrd
 
+faster-whisper
+
 PyJWT
 pyjwt[crypto]
 

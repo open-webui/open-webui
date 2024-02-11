@@ -13,7 +13,7 @@
 	import General from './Settings/General.svelte';
 	import External from './Settings/External.svelte';
 	import Interface from './Settings/Interface.svelte';
-	import Voice from './Settings/Voice.svelte';
+	import Audio from './Settings/Audio.svelte';
 	import Chats from './Settings/Chats.svelte';
 
 	export let show = false;
@@ -206,11 +206,11 @@
 
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-					'voice'
+					'audio'
 						? 'bg-gray-200 dark:bg-gray-700'
 						: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
 					on:click={() => {
-						selectedTab = 'voice';
+						selectedTab = 'audio';
 					}}
 				>
 					<div class=" self-center mr-2">
@@ -228,7 +228,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">Voice</div>
+					<div class=" self-center">Audio</div>
 				</button>
 
 				<button
@@ -341,8 +341,8 @@
 							show = false;
 						}}
 					/>
-				{:else if selectedTab === 'voice'}
-					<Voice
+				{:else if selectedTab === 'audio'}
+					<Audio
 						{saveSettings}
 						on:save={() => {
 							show = false;
