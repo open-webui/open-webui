@@ -15,6 +15,7 @@
 	import CodeBlock from './CodeBlock.svelte';
 
 	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
+	import { extractSentences } from '$lib/utils';
 
 	export let modelfiles = [];
 	export let message;
@@ -35,8 +36,10 @@
 
 	let tooltipInstance = null;
 
-	let audioMap = {};
+	let sentencesAudio = {};
 	let speaking = null;
+	let speakingIdx = null;
+
 	let loadingSpeech = false;
 
 	$: tokens = marked.lexer(message.content);
@@ -116,44 +119,82 @@
 		}
 	};
 
+	const playAudio = (idx) => {
+		return new Promise((res) => {
+			speakingIdx = idx;
+			const audio = sentencesAudio[idx];
+			audio.play();
+			audio.onended = async (e) => {
+				await new Promise((r) => setTimeout(r, 300));
+
+				if (Object.keys(sentencesAudio).length - 1 === idx) {
+					speaking = null;
+				}
+
+				res(e);
+			};
+		});
+	};
+
 	const toggleSpeakMessage = async () => {
 		if (speaking) {
 			speechSynthesis.cancel();
-			speaking = null;
 
-			audioMap[message.id].pause();
-			audioMap[message.id].currentTime = 0;
+			sentencesAudio[speakingIdx].pause();
+			sentencesAudio[speakingIdx].currentTime = 0;
+
+			speaking = null;
+			speakingIdx = null;
 		} else {
 			speaking = true;
 
 			if ($settings?.speech?.engine === 'openai') {
 				loadingSpeech = true;
-				const res = await synthesizeOpenAISpeech(
-					localStorage.token,
-					$settings?.speech?.speaker,
-					message.content
-				).catch((error) => {
-					toast.error(error);
-					return null;
-				});
 
-				if (res) {
-					const blob = await res.blob();
-					const blobUrl = URL.createObjectURL(blob);
-					console.log(blobUrl);
-
-					loadingSpeech = false;
-
-					const audio = new Audio(blobUrl);
-					audioMap[message.id] = audio;
-
-					audio.onended = () => {
-						speaking = null;
-						if ($settings.conversationMode) {
-							document.getElementById('voice-input-button')?.click();
+				const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
+					const lastIndex = mergedTexts.length - 1;
+					if (lastIndex >= 0) {
+						const previousText = mergedTexts[lastIndex];
+						const wordCount = previousText.split(/\s+/).length;
+						if (wordCount < 2) {
+							mergedTexts[lastIndex] = previousText + ' ' + currentText;
+						} else {
+							mergedTexts.push(currentText);
 						}
-					};
-					audio.play().catch((e) => console.error('Error playing audio:', e));
+					} else {
+						mergedTexts.push(currentText);
+					}
+					return mergedTexts;
+				}, []);
+
+				console.log(sentences);
+
+				sentencesAudio = sentences.reduce((a, e, i, arr) => {
+					a[i] = null;
+					return a;
+				}, {});
+
+				let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+
+				for (const [idx, sentence] of sentences.entries()) {
+					const res = await synthesizeOpenAISpeech(
+						localStorage.token,
+						$settings?.speech?.speaker,
+						sentence
+					).catch((error) => {
+						toast.error(error);
+						return null;
+					});
+
+					if (res) {
+						const blob = await res.blob();
+						const blobUrl = URL.createObjectURL(blob);
+						const audio = new Audio(blobUrl);
+						sentencesAudio[idx] = audio;
+						loadingSpeech = false;
+
+						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+					}
 				}
 			} else {
 				let voices = [];
