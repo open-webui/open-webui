@@ -95,8 +95,8 @@
 
 					{#if mode === 'signup'}
 						<div class=" mt-1 text-xs font-medium text-gray-500">
-							ⓘ Your data stays secure on your locally hosted server and {WEBUI_NAME} does not make any
-							external connections.
+							ⓘ {WEBUI_NAME} does not make any external connections, and your data stays securely on
+							your locally hosted server.
 						</div>
 					{/if}
 
