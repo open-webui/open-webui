@@ -93,6 +93,13 @@
 						{mode === 'signin' ? 'Sign in' : 'Sign up'} to {WEBUI_NAME}
 					</div>
 
+					{#if mode === 'signup'}
+						<div class=" mt-1 text-xs font-medium text-gray-500">
+							ⓘ Your data stays secure on your locally hosted server and {WEBUI_NAME} does not make any
+							external connections.
+						</div>
+					{/if}
+
 					<div class="flex flex-col mt-4">
 						{#if mode === 'signup'}
 							<div>
