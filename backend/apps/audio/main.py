@@ -1,3 +1,4 @@
+import os
 from fastapi import (
     FastAPI,
     Request,
@@ -53,12 +54,14 @@ def transcribe(
             f.write(contents)
             f.close()
 
-        model_name = WHISPER_MODEL_NAME
+        model_name = os.getenv('WHISPER_MODEL', WHISPER_MODEL_NAME)
+        download_root = os.getenv('WHISPER_DIR', f"{CACHE_DIR}/whisper/models")
+
         model = WhisperModel(
             model_name,
             device="cpu",
             compute_type="int8",
-            download_root=f"{CACHE_DIR}/whisper/models",
+            download_root=download_root,
         )
 
         segments, info = model.transcribe(file_path, beam_size=5)
