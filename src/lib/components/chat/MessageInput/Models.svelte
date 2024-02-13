@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { generatePrompt } from '$lib/apis/ollama';
-	import { models } from '$lib/stores';
+	import { models, settings } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 	import { tick } from 'svelte';
 	import toast from 'svelte-french-toast';
@@ -53,7 +53,7 @@
 			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
 		}, '');
 
-		const res = await generatePrompt(localStorage.token, model.name, convoText);
+		const res = await generatePrompt(localStorage.token, model.name, convoText, { keep_alive: $settings.keepAlive ?? undefined });
 
 		if (res && res.ok) {
 			const reader = res.body

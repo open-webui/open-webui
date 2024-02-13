@@ -7,6 +7,7 @@
 
 	// Advanced
 	let requestFormat = '';
+	let keepAlive = '';
 	let options = {
 		// Advanced
 		seed: 0,
@@ -38,6 +39,7 @@
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 
 		requestFormat = settings.requestFormat ?? '';
+		keepAlive = settings.keepAlive ?? '';
 
 		options.seed = settings.seed ?? 0;
 		options.temperature = settings.temperature ?? '';
@@ -85,6 +87,19 @@
 				</button>
 			</div>
 		</div>
+		<div class=" py-1 flex w-full justify-between">
+			<div class=" w-20 text-xs font-medium self-center">Keep Alive</div>
+			<div class=" flex-1 self-center">
+				<input
+					class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+					type="number"
+					placeholder="Default"
+					bind:value={keepAlive}
+					autocomplete="off"
+					min="-1"
+				/>
+			</div>
+		</div>
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
@@ -106,7 +121,8 @@
 						tfs_z: options.tfs_z !== '' ? options.tfs_z : undefined,
 						num_ctx: options.num_ctx !== '' ? options.num_ctx : undefined,
 						num_predict: options.num_predict !== '' ? options.num_predict : undefined
-					}
+					},
+					keepAlive: keepAlive !== '' ? keepAlive : undefined
 				});
 
 				dispatch('save');

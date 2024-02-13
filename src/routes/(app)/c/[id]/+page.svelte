@@ -372,7 +372,8 @@
 			options: {
 				...($settings.options ?? {})
 			},
-			format: $settings.requestFormat ?? undefined
+			format: $settings.requestFormat ?? undefined,
+			keep_alive: $settings.keepAlive ?? undefined
 		});
 
 		if (res && res.ok) {
