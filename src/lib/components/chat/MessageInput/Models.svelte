@@ -53,7 +53,7 @@
 			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
 		}, '');
 
-		const res = await generatePrompt(localStorage.token, model.name, convoText, { keep_alive: $settings.keepAlive ?? undefined });
+		const res = await generatePrompt(localStorage.token, model.name, convoText);
 
 		if (res && res.ok) {
 			const reader = res.body
