@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { generatePrompt } from '$lib/apis/ollama';
-	import { models, settings } from '$lib/stores';
+	import { models } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 	import { tick } from 'svelte';
 	import toast from 'svelte-french-toast';
