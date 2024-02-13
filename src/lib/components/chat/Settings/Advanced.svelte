@@ -40,7 +40,7 @@
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 
 		requestFormat = settings.requestFormat ?? '';
-		keepAlive = settings.keepAlive ?? '';
+		keepAlive = settings.keepAlive ?? null;
 
 		options.seed = settings.seed ?? 0;
 		options.temperature = settings.temperature ?? '';
@@ -141,7 +141,7 @@
 						num_ctx: options.num_ctx !== '' ? options.num_ctx : undefined,
 						num_predict: options.num_predict !== '' ? options.num_predict : undefined
 					},
-					keepAlive: keepAlive !== '' ? keepAlive : undefined
+					keepAlive: keepAlive ? keepAlive : undefined
 				});
 
 				dispatch('save');
