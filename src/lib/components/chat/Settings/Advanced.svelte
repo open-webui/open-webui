@@ -7,6 +7,8 @@
 
 	// Advanced
 	let requestFormat = '';
+	let keepAlive = null;
+
 	let options = {
 		// Advanced
 		seed: 0,
@@ -38,6 +40,7 @@
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 
 		requestFormat = settings.requestFormat ?? '';
+		keepAlive = settings.keepAlive ?? null;
 
 		options.seed = settings.seed ?? 0;
 		options.temperature = settings.temperature ?? '';
@@ -56,6 +59,37 @@
 
 		<AdvancedParams bind:options />
 		<hr class=" dark:border-gray-700" />
+
+		<div class=" py-1 w-full justify-between">
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">Keep Alive</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					type="button"
+					on:click={() => {
+						keepAlive = keepAlive === null ? '5m' : null;
+					}}
+				>
+					{#if keepAlive === null}
+						<span class="ml-2 self-center"> Default </span>
+					{:else}
+						<span class="ml-2 self-center"> Custom </span>
+					{/if}
+				</button>
+			</div>
+
+			{#if keepAlive !== null}
+				<div class="flex mt-1 space-x-2">
+					<input
+						class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+						type="text"
+						placeholder={`e.g.) "30s","10m". Valid time units are "s", "m", "h".`}
+						bind:value={keepAlive}
+					/>
+				</div>
+			{/if}
+		</div>
 
 		<div>
 			<div class=" py-1 flex w-full justify-between">
@@ -106,7 +140,8 @@
 						tfs_z: options.tfs_z !== '' ? options.tfs_z : undefined,
 						num_ctx: options.num_ctx !== '' ? options.num_ctx : undefined,
 						num_predict: options.num_predict !== '' ? options.num_predict : undefined
-					}
+					},
+					keepAlive: keepAlive ? keepAlive : undefined
 				});
 
 				dispatch('save');
