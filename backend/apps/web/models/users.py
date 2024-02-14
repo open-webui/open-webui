@@ -92,7 +92,8 @@ class UsersTable:
     def get_users(self, skip: int = 0, limit: int = 50) -> List[UserModel]:
         return [
             UserModel(**model_to_dict(user))
-            for user in User.select().limit(limit).offset(skip)
+            for user in User.select()
+            # .limit(limit).offset(skip)
         ]
 
     def get_num_users(self) -> Optional[int]:
