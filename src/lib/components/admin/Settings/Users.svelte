@@ -26,7 +26,7 @@
 >
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 		<div>
-			<div class=" mb-2 text-sm font-medium">User Permission</div>
+			<div class=" mb-2 text-sm font-medium">User Permissions</div>
 
 			<div class="  flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">Allow Chat Deletion</div>
