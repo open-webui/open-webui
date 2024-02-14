@@ -15,6 +15,7 @@
 		getChatListByTagName,
 		updateChatById
 	} from '$lib/apis/chats';
+	import toast from 'svelte-french-toast';
 
 	let show = false;
 	let navElement;
@@ -64,10 +65,17 @@
 	};
 
 	const deleteChat = async (id) => {
-		goto('/');
+		const res = await deleteChatById(localStorage.token, id).catch((error) => {
+			toast.error(error);
+			chatDeleteId = null;
 
-		await deleteChatById(localStorage.token, id);
-		await chats.set(await getChatList(localStorage.token));
+			return null;
+		});
+
+		if (res) {
+			goto('/');
+			await chats.set(await getChatList(localStorage.token));
+		}
 	};
 
 	const saveSettings = async (updated) => {
