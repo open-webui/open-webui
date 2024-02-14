@@ -121,7 +121,7 @@ Don't forget to explore our sibling project, [OllamaHub](https://ollamahub.com/)
 
 2. **Ensure You Have the Latest Version of Ollama:**
 
-   - Download the latest version from [https://ollama.ai/](https://ollama.ai/).
+   - Download the latest version from [https://ollama.com/](https://ollama.com/).
 
 3. **Verify Ollama Installation:**
    - After installing Ollama, check if it's working by visiting [http://127.0.0.1:11434/](http://127.0.0.1:11434/) in your web browser. Remember, the port number might be different for you.

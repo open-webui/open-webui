@@ -74,7 +74,7 @@ On your latest installation of Ollama, make sure that you have setup your api se
 
 The guide doesn't seem to match the current updated service file on linux. So, we will address it here:
 
-Unless when you're compiling Ollama from source, installing with the standard install `curl https://ollama.ai/install.sh | sh` creates a file called `ollama.service` in /etc/systemd/system. You can use nano to edit the file:
+Unless when you're compiling Ollama from source, installing with the standard install `curl https://ollama.com/install.sh | sh` creates a file called `ollama.service` in /etc/systemd/system. You can use nano to edit the file:
 
 ```
 sudo nano /etc/systemd/system/ollama.service

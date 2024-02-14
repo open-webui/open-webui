@@ -497,7 +497,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 								To access the available model names for downloading, <a
 									class=" text-gray-500 dark:text-gray-300 font-medium"
-									href="https://ollama.ai/library"
+									href="https://ollama.com/library"
 									target="_blank">click here.</a
 								>
 							</div>
