@@ -101,7 +101,7 @@ USER_PERMISSIONS = {"chat": {"deletion": True}}
 # WEBUI_VERSION
 ####################################
 
-WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.92")
+WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
 
 ####################################
 # WEBUI_AUTH (Required for security)
