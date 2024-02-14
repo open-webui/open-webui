@@ -93,6 +93,9 @@ DEFAULT_PROMPT_SUGGESTIONS = os.environ.get(
         },
     ],
 )
+DEFAULT_USER_ROLE = "pending"
+USER_PERMISSIONS = {"chat": {"deletion": True}}
+
 
 ####################################
 # WEBUI_VERSION

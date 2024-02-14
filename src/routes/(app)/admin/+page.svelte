@@ -9,13 +9,14 @@
 	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
+	import SettingsModal from '$lib/components/admin/SettingsModal.svelte';
 
 	let loaded = false;
 	let users = [];
 
 	let selectedUser = null;
 
-	let signUpEnabled = true;
+	let showSettingsModal = false;
 	let showEditUserModal = false;
 
 	const updateRoleHandler = async (id, role) => {
@@ -50,17 +51,11 @@
 		}
 	};
 
-	const toggleSignUpEnabled = async () => {
-		signUpEnabled = await toggleSignUpEnabledStatus(localStorage.token);
-	};
-
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
 		} else {
 			users = await getUsers(localStorage.token);
-
-			signUpEnabled = await getSignUpEnabledStatus(localStorage.token);
 		}
 		loaded = true;
 	});
@@ -77,6 +72,8 @@
 	/>
 {/key}
 
+<SettingsModal bind:show={showSettingsModal} />
+
 <div
 	class=" bg-white dark:bg-gray-900 dark:text-gray-100 min-h-screen w-full flex justify-center font-mona"
 >
@@ -91,42 +88,23 @@
 								class="flex items-center space-x-1 border border-gray-200 dark:border-gray-600 px-3 py-1 rounded-lg"
 								type="button"
 								on:click={() => {
-									toggleSignUpEnabled();
+									showSettingsModal = !showSettingsModal;
 								}}
 							>
-								{#if signUpEnabled}
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M11.5 1A3.5 3.5 0 0 0 8 4.5V7H2.5A1.5 1.5 0 0 0 1 8.5v5A1.5 1.5 0 0 0 2.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 9.5 7V4.5a2 2 0 1 1 4 0v1.75a.75.75 0 0 0 1.5 0V4.5A3.5 3.5 0 0 0 11.5 1Z"
-										/>
-									</svg>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M6.955 1.45A.5.5 0 0 1 7.452 1h1.096a.5.5 0 0 1 .497.45l.17 1.699c.484.12.94.312 1.356.562l1.321-1.081a.5.5 0 0 1 .67.033l.774.775a.5.5 0 0 1 .034.67l-1.08 1.32c.25.417.44.873.561 1.357l1.699.17a.5.5 0 0 1 .45.497v1.096a.5.5 0 0 1-.45.497l-1.699.17c-.12.484-.312.94-.562 1.356l1.082 1.322a.5.5 0 0 1-.034.67l-.774.774a.5.5 0 0 1-.67.033l-1.322-1.08c-.416.25-.872.44-1.356.561l-.17 1.699a.5.5 0 0 1-.497.45H7.452a.5.5 0 0 1-.497-.45l-.17-1.699a4.973 4.973 0 0 1-1.356-.562L4.108 13.37a.5.5 0 0 1-.67-.033l-.774-.775a.5.5 0 0 1-.034-.67l1.08-1.32a4.971 4.971 0 0 1-.561-1.357l-1.699-.17A.5.5 0 0 1 1 8.548V7.452a.5.5 0 0 1 .45-.497l1.699-.17c.12-.484.312-.94.562-1.356L2.629 4.107a.5.5 0 0 1 .034-.67l.774-.774a.5.5 0 0 1 .67-.033L5.43 3.71a4.97 4.97 0 0 1 1.356-.561l.17-1.699ZM6 8c0 .538.212 1.026.558 1.385l.057.057a2 2 0 0 0 2.828-2.828l-.058-.056A2 2 0 0 0 6 8Z"
+										clip-rule="evenodd"
+									/>
+								</svg>
 
-									<div class=" text-xs">
-										New Sign Up <span class=" font-semibold">Enabled</span>
-									</div>
-								{:else}
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-
-									<div class=" text-xs">
-										New Sign Up <span class=" font-semibold">Disabled</span>
-									</div>
-								{/if}
+								<div class=" text-xs">Admin Settings</div>
 							</button>
 						</div>
 					</div>

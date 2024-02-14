@@ -1,4 +1,4 @@
-from fastapi import Response
+from fastapi import Response, Request
 from fastapi import Depends, FastAPI, HTTPException, status
 from datetime import datetime, timedelta
 from typing import List, Union, Optional
@@ -24,6 +24,24 @@ router = APIRouter()
 @router.get("/", response_model=List[UserModel])
 async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)):
     return Users.get_users(skip, limit)
+
+
+############################
+# User Permissions
+############################
+
+
+@router.get("/permissions/user")
+async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
+    return request.app.state.USER_PERMISSIONS
+
+
+@router.post("/permissions/user")
+async def update_user_permissions(
+    request: Request, form_data: dict, user=Depends(get_admin_user)
+):
+    request.app.state.USER_PERMISSIONS = form_data
+    return request.app.state.USER_PERMISSIONS
 
 
 ############################

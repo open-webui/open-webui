@@ -165,7 +165,17 @@ async def update_chat_by_id(
 
 
 @router.delete("/{id}", response_model=bool)
-async def delete_chat_by_id(id: str, user=Depends(get_current_user)):
+async def delete_chat_by_id(request: Request, id: str, user=Depends(get_current_user)):
+
+    if (
+        user.role == "user"
+        and not request.app.state.USER_PERMISSIONS["chat"]["deletion"]
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     result = Chats.delete_chat_by_id_and_user_id(id, user.id)
     return result
 
