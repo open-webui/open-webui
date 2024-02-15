@@ -29,6 +29,7 @@
 	export let rateMessage: Function;
 
 	export let copyToClipboard: Function;
+	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
 
 	let edit = false;
@@ -362,7 +363,7 @@
 								{/if}
 
 								{#if message.done}
-									<div class=" flex justify-start space-x-1 -mt-2">
+									<div class=" flex justify-start space-x-1 -mt-2 overflow-x-auto buttons">
 										{#if siblings.length > 1}
 											<div class="flex self-center">
 												<button
@@ -615,6 +616,36 @@
 												class="{isLastMessage
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition regenerate-response-button"
+												on:click={() => {
+													continueGeneration();
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="1.5"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+													/>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z"
+													/>
+												</svg>
+											</button>
+
+											<button
+												type="button"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition regenerate-response-button"
 												on:click={regenerateResponse}
 											>
 												<svg
@@ -643,3 +674,14 @@
 		</div>
 	</div>
 {/key}
+
+<style>
+	.buttons::-webkit-scrollbar {
+		display: none; /* for Chrome, Safari and Opera */
+	}
+
+	.buttons {
+		-ms-overflow-style: none; /* IE and Edge */
+		scrollbar-width: none; /* Firefox */
+	}
+</style>

@@ -14,6 +14,7 @@
 
 	export let chatId = '';
 	export let sendPrompt: Function;
+	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
 
 	export let processing = '';
@@ -296,6 +297,7 @@
 							{showNextMessage}
 							{rateMessage}
 							{copyToClipboard}
+							{continueGeneration}
 							{regenerateResponse}
 						/>
 					{/if}
