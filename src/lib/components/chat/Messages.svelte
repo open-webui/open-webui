@@ -220,7 +220,11 @@
 	{#key chatId}
 		{#each messages as message, messageIdx}
 			<div class=" w-full">
-				<div class="flex flex-col justify-between px-5 mb-3 max-w-3xl mx-auto rounded-lg group">
+				<div
+					class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
+						? 'max-w-full'
+						: 'max-w-3xl'} mx-auto rounded-lg group"
+				>
 					{#if message.role === 'user'}
 						<UserMessage
 							user={$user}
