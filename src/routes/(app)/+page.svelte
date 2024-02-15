@@ -801,7 +801,7 @@
 				<ModelSelector bind:selectedModels disabled={messages.length > 0} />
 			</div>
 
-			<div class=" h-full mt-10 w-full flex flex-col">
+			<div class=" h-full mt-14 w-full flex flex-col">
 				<Messages
 					chatId={$chatId}
 					{selectedModels}
