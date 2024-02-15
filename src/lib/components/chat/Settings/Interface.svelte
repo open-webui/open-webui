@@ -12,10 +12,16 @@
 	let titleAutoGenerate = true;
 	let responseAutoCopy = false;
 	let titleAutoGenerateModel = '';
+	let fullScreenMode = false;
 
 	// Interface
 	let promptSuggestions = [];
 	let showUsername = false;
+
+	const toggleFullScreenMode = async () => {
+		fullScreenMode = !fullScreenMode;
+		saveSettings({ fullScreenMode: fullScreenMode });
+	};
 
 	const toggleShowUsername = async () => {
 		showUsername = !showUsername;
@@ -64,6 +70,7 @@
 		titleAutoGenerate = settings.titleAutoGenerate ?? true;
 		responseAutoCopy = settings.responseAutoCopy ?? false;
 		showUsername = settings.showUsername ?? false;
+		fullScreenMode = settings.fullScreenMode ?? false;
 		titleAutoGenerateModel = settings.titleAutoGenerateModel ?? '';
 	});
 </script>
@@ -111,6 +118,26 @@
 						type="button"
 					>
 						{#if responseAutoCopy === true}
+							<span class="ml-2 self-center">On</span>
+						{:else}
+							<span class="ml-2 self-center">Off</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">Full Screen Mode</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleFullScreenMode();
+						}}
+						type="button"
+					>
+						{#if fullScreenMode === true}
 							<span class="ml-2 self-center">On</span>
 						{:else}
 							<span class="ml-2 self-center">Off</span>
