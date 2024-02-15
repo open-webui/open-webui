@@ -709,9 +709,19 @@
 			const modelTag = $models.filter((m) => m.name === responseMessage.model).at(0);
 
 			if (modelTag?.external) {
-				await sendPromptOpenAI(responseMessage.model, prompt, responseMessage.id, _chatId);
+				await sendPromptOpenAI(
+					responseMessage.model,
+					history.messages[responseMessage.parentId].content,
+					responseMessage.id,
+					_chatId
+				);
 			} else if (modelTag) {
-				await sendPromptOllama(responseMessage.model, prompt, responseMessage.id, _chatId);
+				await sendPromptOllama(
+					responseMessage.model,
+					history.messages[responseMessage.parentId].content,
+					responseMessage.id,
+					_chatId
+				);
 			} else {
 				toast.error(`Model ${model} not found`);
 			}
