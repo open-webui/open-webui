@@ -454,7 +454,7 @@
 														selectedModelfile.title.charAt(0).toUpperCase() +
 														selectedModelfile.title.slice(1)
 												  }`
-												: `Ollama - ${model}`,
+												: `${model}`,
 											{
 												body: responseMessage.content,
 												icon: selectedModelfile?.imageUrl ?? '/favicon.png'
@@ -804,59 +804,62 @@
 />
 
 {#if loaded}
-	<Navbar
-		{title}
-		shareEnabled={messages.length > 0}
-		initNewChat={async () => {
-			if (currentRequestId !== null) {
-				await cancelChatCompletion(localStorage.token, currentRequestId);
-				currentRequestId = null;
-			}
+	<div class="min-h-screen w-full flex flex-col">
+		<Navbar
+			{title}
+			shareEnabled={messages.length > 0}
+			initNewChat={async () => {
+				if (currentRequestId !== null) {
+					await cancelChatCompletion(localStorage.token, currentRequestId);
+					currentRequestId = null;
+				}
 
-			goto('/');
-		}}
-		{tags}
-		{addTag}
-		{deleteTag}
-	/>
-	<div class="min-h-screen w-full flex justify-center">
-		<div class=" py-2.5 flex flex-col justify-between w-full">
-			<div
-				class="{$settings?.fullScreenMode ?? null
-					? 'max-w-full'
-					: 'max-w-2xl md:px-0'} mx-auto w-full px-4 mt-10"
-			>
-				<ModelSelector
-					bind:selectedModels
-					disabled={messages.length > 0 && !selectedModels.includes('')}
-				/>
-			</div>
-
-			<div class=" h-full mt-10 mb-32 w-full flex flex-col">
-				<Messages
-					chatId={$chatId}
-					{selectedModels}
-					{selectedModelfiles}
-					{processing}
-					bind:history
-					bind:messages
-					bind:autoScroll
-					bottomPadding={files.length > 0}
-					{sendPrompt}
-					{continueGeneration}
-					{regenerateResponse}
-				/>
-			</div>
-		</div>
-
-		<MessageInput
-			bind:files
-			bind:prompt
-			bind:autoScroll
-			suggestionPrompts={selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
-			{messages}
-			{submitPrompt}
-			{stopResponse}
+				goto('/');
+			}}
+			{tags}
+			{addTag}
+			{deleteTag}
 		/>
+		<div class="justify-center">
+			<div class=" pb-2.5 flex flex-col justify-between w-full">
+				<div
+					class="{$settings?.fullScreenMode ?? null
+						? 'max-w-full'
+						: 'max-w-2xl md:px-0'} mx-auto w-full px-4"
+				>
+					<ModelSelector
+						bind:selectedModels
+						disabled={messages.length > 0 && !selectedModels.includes('')}
+					/>
+				</div>
+
+				<div class=" h-full mt-10 mb-32 w-full flex flex-col">
+					<Messages
+						chatId={$chatId}
+						{selectedModels}
+						{selectedModelfiles}
+						{processing}
+						bind:history
+						bind:messages
+						bind:autoScroll
+						bottomPadding={files.length > 0}
+						{sendPrompt}
+						{continueGeneration}
+						{regenerateResponse}
+					/>
+				</div>
+			</div>
+
+			<MessageInput
+				bind:files
+				bind:prompt
+				bind:autoScroll
+				suggestionPrompts={selectedModelfile?.suggestionPrompts ??
+					$config.default_prompt_suggestions}
+				{messages}
+				{submitPrompt}
+				{stopResponse}
+			/>
+		</div>
 	</div>
 {/if}

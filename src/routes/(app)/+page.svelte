@@ -440,7 +440,7 @@
 														selectedModelfile.title.charAt(0).toUpperCase() +
 														selectedModelfile.title.slice(1)
 												  }`
-												: `Ollama - ${model}`,
+												: `${model}`,
 											{
 												body: responseMessage.content,
 												icon: selectedModelfile?.imageUrl ?? '/favicon.png'
@@ -789,41 +789,43 @@
 	}}
 />
 
-<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
-<div class="min-h-screen w-full flex justify-center">
-	<div class=" py-2.5 flex flex-col justify-between w-full">
-		<div
-			class="{$settings?.fullScreenMode ?? null
-				? 'max-w-full'
-				: 'max-w-2xl md:px-0'} mx-auto w-full px-4 mt-10"
-		>
-			<ModelSelector bind:selectedModels disabled={messages.length > 0} />
+<div class="min-h-screen w-full flex flex-col">
+	<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
+	<div class="flex flex-col justify-center h-full">
+		<div class=" pb-2.5 flex flex-1 flex-col justify-between w-full overflow-hidden">
+			<div
+				class="{$settings?.fullScreenMode ?? null
+					? 'max-w-full'
+					: 'max-w-2xl md:px-0'} mx-auto w-full px-4"
+			>
+				<ModelSelector bind:selectedModels disabled={messages.length > 0} />
+			</div>
+
+			<div class=" h-full mt-10 w-full flex flex-col">
+				<Messages
+					chatId={$chatId}
+					{selectedModels}
+					{selectedModelfiles}
+					{processing}
+					bind:history
+					bind:messages
+					bind:autoScroll
+					bottomPadding={files.length > 0}
+					{sendPrompt}
+					{continueGeneration}
+					{regenerateResponse}
+				/>
+			</div>
 		</div>
 
-		<div class=" h-full mt-10 mb-32 w-full flex flex-col">
-			<Messages
-				chatId={$chatId}
-				{selectedModels}
-				{selectedModelfiles}
-				{processing}
-				bind:history
-				bind:messages
-				bind:autoScroll
-				bottomPadding={files.length > 0}
-				{sendPrompt}
-				{continueGeneration}
-				{regenerateResponse}
-			/>
-		</div>
+		<MessageInput
+			bind:files
+			bind:prompt
+			bind:autoScroll
+			suggestionPrompts={selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
+			{messages}
+			{submitPrompt}
+			{stopResponse}
+		/>
 	</div>
-
-	<MessageInput
-		bind:files
-		bind:prompt
-		bind:autoScroll
-		suggestionPrompts={selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
-		{messages}
-		{submitPrompt}
-		{stopResponse}
-	/>
 </div>
