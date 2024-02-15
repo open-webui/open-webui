@@ -20,7 +20,7 @@ docker run -d --network=host -v ollama-webui:/app/backend/data -e OLLAMA_API_BAS
 
 ### General Connection Errors
 
-**Ensure Ollama Version is Up-to-Date**: Always start by checking that you have the latest version of Ollama. Visit [Ollama's official site](https://ollama.ai/) for the latest updates.
+**Ensure Ollama Version is Up-to-Date**: Always start by checking that you have the latest version of Ollama. Visit [Ollama's official site](https://ollama.com/) for the latest updates.
 
 **Troubleshooting Steps**:
 

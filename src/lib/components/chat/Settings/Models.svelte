@@ -291,7 +291,7 @@
 <div class="flex flex-col h-full justify-between text-sm">
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-80">
 		<div>
-			<div class=" mb-2.5 text-sm font-medium">Pull a model from Ollama.ai</div>
+			<div class=" mb-2.5 text-sm font-medium">Pull a model from Ollama.com</div>
 			<div class="flex w-full">
 				<div class="flex-1 mr-2">
 					<input
@@ -354,7 +354,7 @@
 			<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
 				To access the available model names for downloading, <a
 					class=" text-gray-500 dark:text-gray-300 font-medium"
-					href="https://ollama.ai/library"
+					href="https://ollama.com/library"
 					target="_blank">click here.</a
 				>
 			</div>
