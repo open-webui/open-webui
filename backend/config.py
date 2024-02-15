@@ -139,4 +139,6 @@ CHUNK_OVERLAP = 100
 ####################################
 # Transcribe
 ####################################
-WHISPER_MODEL_NAME = "base"
+
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
+WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
