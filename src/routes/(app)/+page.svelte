@@ -784,7 +784,7 @@
 		<div
 			class="{$settings?.fullScreenMode ?? null
 				? 'max-w-full'
-				: 'max-w-2xl md:px-0'}mx-auto w-full px-4 md:px-0 mt-10"
+				: 'max-w-2xl md:px-0'} mx-auto w-full px-4 md:px-0 mt-10"
 		>
 			<ModelSelector bind:selectedModels disabled={messages.length > 0} />
 		</div>
