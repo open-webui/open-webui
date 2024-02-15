@@ -1,0 +1,55 @@
+# Contributing to Ollama WebUI
+
+🚀 **Welcome, Contributors!** 🚀
+
+Your interest in contributing to Ollama WebUI is greatly appreciated. This document is here to guide you through the process, ensuring your contributions enhance the project effectively. Let's make Ollama WebUI even better, together!
+
+## 📌 Key Points
+
+### 🦙 Ollama vs. Ollama WebUI
+
+It's crucial to distinguish between Ollama and Ollama WebUI:
+
+- **Ollama WebUI** focuses on providing an intuitive and responsive web interface for chat interactions.
+- **Ollama** is the underlying technology that powers these interactions.
+
+If your issue or contribution pertains directly to the core Ollama technology, please direct it to the appropriate [Ollama project repository](https://ollama.com/). Ollama WebUI's repository is dedicated to the web interface aspect only.
+
+### 🚨 Reporting Issues
+
+Noticed something off? Have an idea? Check our [Issues tab](https://github.com/ollama-webui/ollama-webui/issues) to see if it's already been reported or suggested. If not, feel free to open a new issue. Include as much detail as possible to help us understand and address your concern efficiently.
+
+### 🧭 Scope of Support
+
+We've noticed an uptick in issues not directly related to Ollama WebUI but rather to the environment it's run in, especially Docker setups. While we strive to support Docker deployment, understanding Docker fundamentals is crucial for a smooth experience.
+
+- **Docker Deployment Support**: Ollama WebUI supports Docker deployment. Familiarity with Docker is assumed. For Docker basics, please refer to the [official Docker documentation](https://docs.docker.com/get-started/overview/).
+
+- **Advanced Configurations**: Setting up reverse proxies for HTTPS and managing Docker deployments requires foundational knowledge. There are numerous online resources available to learn these skills. Ensuring you have this knowledge will greatly enhance your experience with Ollama WebUI and similar projects.
+
+## 💡 Contributing
+
+Looking to contribute? Great! Here's how you can help:
+
+### 🛠 Pull Requests
+
+We welcome pull requests. Before submitting one, please:
+
+1. Discuss your idea or issue in the [issues section](https://github.com/ollama-webui/ollama-webui/issues).
+2. Follow the project's coding standards and include tests for new features.
+3. Update documentation as necessary.
+4. Write clear, descriptive commit messages.
+
+### 📚 Documentation & Tutorials
+
+Help us make Ollama WebUI more accessible by improving documentation, writing tutorials, or creating guides on setting up and optimizing the web UI.
+
+### 🤔 Questions & Feedback
+
+Got questions or feedback? Join our [Discord community](https://discord.gg/5rJgQTnV4s) or open an issue. We're here to help!
+
+## 🙏 Thank You!
+
+Your contributions, big or small, make a significant impact on Ollama WebUI. We're excited to see what you bring to the project!
+
+Together, let's create an even more powerful tool for the community. 🌟
