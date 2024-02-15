@@ -31,8 +31,8 @@ ENV SCARF_NO_ANALYTICS true
 ENV DO_NOT_TRACK true
 
 #Whisper TTS Settings
-ENV WHISPER_DIR="/app/backend/data/cache/whisper/models"
 ENV WHISPER_MODEL="base"
+ENV WHISPER_MODEL_DIR="/app/backend/data/cache/whisper/models"
 
 WORKDIR /app/backend
 
@@ -49,7 +49,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # RUN python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('all-MiniLM-L6-v2')"
-RUN python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_DIR'])"
+RUN python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"
 
 
 # copy embedding weight from build
