@@ -286,10 +286,34 @@
 				console.log(model);
 				const modelTag = $models.filter((m) => m.name === model).at(0);
 
+				// Create response message
+				let responseMessageId = uuidv4();
+				let responseMessage = {
+					parentId: parentId,
+					id: responseMessageId,
+					childrenIds: [],
+					role: 'assistant',
+					content: '',
+					model: model,
+					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+				};
+
+				// Add message to history and Set currentId to messageId
+				history.messages[responseMessageId] = responseMessage;
+				history.currentId = responseMessageId;
+
+				// Append messageId to childrenIds of parent message
+				if (parentId !== null) {
+					history.messages[parentId].childrenIds = [
+						...history.messages[parentId].childrenIds,
+						responseMessageId
+					];
+				}
+
 				if (modelTag?.external) {
-					await sendPromptOpenAI(model, prompt, parentId, _chatId);
+					await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
 				} else if (modelTag) {
-					await sendPromptOllama(model, prompt, parentId, _chatId);
+					await sendPromptOllama(model, prompt, responseMessageId, _chatId);
 				} else {
 					toast.error(`Model ${model} not found`);
 				}
@@ -299,30 +323,8 @@
 		await chats.set(await getChatList(localStorage.token));
 	};
 
-	const sendPromptOllama = async (model, userPrompt, parentId, _chatId) => {
-		// Create response message
-		let responseMessageId = uuidv4();
-		let responseMessage = {
-			parentId: parentId,
-			id: responseMessageId,
-			childrenIds: [],
-			role: 'assistant',
-			content: '',
-			model: model,
-			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-		};
-
-		// Add message to history and Set currentId to messageId
-		history.messages[responseMessageId] = responseMessage;
-		history.currentId = responseMessageId;
-
-		// Append messageId to childrenIds of parent message
-		if (parentId !== null) {
-			history.messages[parentId].childrenIds = [
-				...history.messages[parentId].childrenIds,
-				responseMessageId
-			];
-		}
+	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
+		const responseMessage = history.messages[responseMessageId];
 
 		// Wait until history/message have been updated
 		await tick();
@@ -529,27 +531,8 @@
 		}
 	};
 
-	const sendPromptOpenAI = async (model, userPrompt, parentId, _chatId) => {
-		let responseMessageId = uuidv4();
-
-		let responseMessage = {
-			parentId: parentId,
-			id: responseMessageId,
-			childrenIds: [],
-			role: 'assistant',
-			content: '',
-			model: model,
-			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-		};
-
-		history.messages[responseMessageId] = responseMessage;
-		history.currentId = responseMessageId;
-		if (parentId !== null) {
-			history.messages[parentId].childrenIds = [
-				...history.messages[parentId].childrenIds,
-				responseMessageId
-			];
-		}
+	const sendPromptOpenAI = async (model, userPrompt, responseMessageId, _chatId) => {
+		const responseMessage = history.messages[responseMessageId];
 
 		window.scrollTo({ top: document.body.scrollHeight });
 
@@ -717,6 +700,24 @@
 		console.log('stopResponse');
 	};
 
+	const continueGeneration = async () => {
+		console.log('continueGeneration');
+		const _chatId = JSON.parse(JSON.stringify($chatId));
+
+		if (messages.length != 0 && messages.at(-1).done == true) {
+			const responseMessage = history.messages[history.currentId];
+			const modelTag = $models.filter((m) => m.name === responseMessage.model).at(0);
+
+			if (modelTag?.external) {
+				await sendPromptOpenAI(responseMessage.model, prompt, responseMessage.id, _chatId);
+			} else if (modelTag) {
+				await sendPromptOllama(responseMessage.model, prompt, responseMessage.id, _chatId);
+			} else {
+				toast.error(`Model ${model} not found`);
+			}
+		}
+	};
+
 	const regenerateResponse = async () => {
 		console.log('regenerateResponse');
 		if (messages.length != 0 && messages.at(-1).done == true) {
@@ -832,6 +833,7 @@
 					bind:autoScroll
 					bottomPadding={files.length > 0}
 					{sendPrompt}
+					{continueGeneration}
 					{regenerateResponse}
 				/>
 			</div>
