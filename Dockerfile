@@ -34,13 +34,19 @@ ENV DO_NOT_TRACK true
 ENV WHISPER_MODEL="base"
 ENV WHISPER_MODEL_DIR="/app/backend/data/cache/whisper/models"
 
+# Install uv package manager
+RUN pip3 install uv
+
 WORKDIR /app/backend
+
+# Create and activate virtual environment
+RUN uv venv && . .venv/bin/activate
 
 # install python dependencies
 COPY ./backend/requirements.txt ./requirements.txt
 
-RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir
-RUN pip3 install -r requirements.txt --no-cache-dir
+RUN uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir
+RUN uv pip install -r requirements.txt --no-cache-dir
 
 # Install pandoc and netcat
 # RUN python -c "import pypandoc; pypandoc.download_pandoc()"
@@ -49,7 +55,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # RUN python -c "from sentence_transformers import SentenceTransformer; model = SentenceTransformer('all-MiniLM-L6-v2')"
-RUN python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"
+RUN . .venv/bin/activate && python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"
 
 
 # copy embedding weight from build
