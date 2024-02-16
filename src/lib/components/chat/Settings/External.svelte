@@ -63,7 +63,7 @@
 				<div class="flex-1">
 					<input
 						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-						placeholder="Enter OpenAI API Key"
+						placeholder="Enter OpenAI API Base URL"
 						bind:value={OPENAI_API_BASE_URL}
 						autocomplete="off"
 					/>
