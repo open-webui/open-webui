@@ -840,7 +840,7 @@
 					/>
 				</div>
 
-				<div class=" h-full mt-10 mb-32 w-full flex flex-col">
+				<div class=" h-full w-full flex flex-col py-8">
 					<Messages
 						chatId={$chatId}
 						{selectedModels}
