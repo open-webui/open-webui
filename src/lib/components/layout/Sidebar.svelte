@@ -89,10 +89,14 @@
 	bind:this={navElement}
 	class="h-screen {show
 		? ''
-		: '-translate-x-[260px]'}  w-[260px] fixed top-0 left-0 z-40 transition bg-black text-gray-200 shadow-2xl text-sm
+		: '-translate-x-[260px] w-[0px]'}  w-[260px] min-w[260px] bg-black text-gray-200 shadow-2xl text-sm transition z-40 fixed top-0 left-0 lg:relative
         "
 >
-	<div class="py-2.5 my-auto flex flex-col justify-between h-screen">
+	<div
+		class="py-2.5 my-auto flex flex-col justify-between h-screen w-[260px] {show
+			? ''
+			: 'invisible'}"
+	>
 		<div class="px-2.5 flex justify-center space-x-2">
 			<button
 				id="sidebar-new-chat-button"

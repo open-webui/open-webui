@@ -55,6 +55,11 @@
 	let isRecording = false;
 	const MIN_DECIBELS = -45;
 
+	const scrollToBottom = () => {
+		const element = document.getElementById('messages-container');
+		element.scrollTop = element.scrollHeight;
+	};
+
 	const startRecording = async () => {
 		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 		mediaRecorder = new MediaRecorder(stream);
@@ -371,17 +376,17 @@
 	</div>
 {/if}
 
-<div class="fixed bottom-0 w-full">
-	<div class="px-2.5 pt-2.5 -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
+<div class="w-full">
+	<div class="px-2.5 -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
 		<div class="flex flex-col max-w-3xl w-full">
-			<div>
+			<div class="relative">
 				{#if autoScroll === false && messages.length > 0}
-					<div class=" flex justify-center mb-4">
+					<div class=" absolute -top-12 left-0 right-0 flex justify-center">
 						<button
 							class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full"
 							on:click={() => {
 								autoScroll = true;
-								window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+								scrollToBottom();
 							}}
 						>
 							<svg
@@ -401,7 +406,7 @@
 				{/if}
 			</div>
 
-			<div class="w-full">
+			<div class="w-full relative">
 				{#if prompt.charAt(0) === '/'}
 					<Prompts bind:this={promptsElement} bind:prompt />
 				{:else if prompt.charAt(0) === '#'}
@@ -432,14 +437,16 @@
 						bind:chatInputPlaceholder
 						{messages}
 					/>
-				{:else if messages.length == 0 && suggestionPrompts.length !== 0}
+				{/if}
+
+				{#if messages.length == 0 && suggestionPrompts.length !== 0}
 					<Suggestions {suggestionPrompts} {submitPrompt} />
 				{/if}
 			</div>
 		</div>
 	</div>
 	<div class="bg-white dark:bg-gray-900">
-		<div class="max-w-3xl px-2.5 -mb-0.5 mx-auto inset-x-0">
+		<div class="max-w-3xl px-2.5 mx-auto inset-x-0">
 			<div class=" pb-2">
 				<input
 					bind:this={filesInputElement}

@@ -16,7 +16,7 @@
 </script>
 
 {#if models.length > 0}
-	<div class="m-auto text-center max-w-md pb-56 px-2">
+	<div class="m-auto text-center max-w-md px-2">
 		<div class="flex justify-center mt-8">
 			<div class="flex -space-x-4 mb-1">
 				{#each models as model, modelIdx}

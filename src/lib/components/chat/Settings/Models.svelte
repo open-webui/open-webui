@@ -3,7 +3,7 @@
 	import toast from 'svelte-french-toast';
 
 	import { createModel, deleteModel, pullModel } from '$lib/apis/ollama';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_NAME } from '$lib/constants';
 	import { models, user } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
@@ -59,7 +59,7 @@
 				} else {
 					toast.success(`Model '${modelName}' has been successfully downloaded.`);
 
-					const notification = new Notification(`Ollama`, {
+					const notification = new Notification(WEBUI_NAME, {
 						body: `Model '${modelName}' has been successfully downloaded.`,
 						icon: '/favicon.png'
 					});

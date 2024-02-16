@@ -69,7 +69,7 @@
 <ShareChatModal bind:show={showShareChatModal} {downloadChat} {shareChat} />
 <nav
 	id="nav"
-	class=" fixed py-2.5 top-0 flex flex-row justify-center bg-white/95 dark:bg-gray-900/90 dark:text-gray-200 backdrop-blur-xl w-screen z-30"
+	class=" sticky py-2.5 top-0 flex flex-row justify-center bg-white/95 dark:bg-gray-900/90 dark:text-gray-200 backdrop-blur-xl z-30"
 >
 	<div
 		class=" flex {$settings?.fullScreenMode ?? null

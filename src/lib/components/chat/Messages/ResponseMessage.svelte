@@ -270,9 +270,7 @@
 				{#if message.model in modelfiles}
 					{modelfiles[message.model]?.title}
 				{:else}
-					Ollama <span class=" text-gray-500 text-sm font-medium"
-						>{message.model ? ` ${message.model}` : ''}</span
-					>
+					{message.model ? ` ${message.model}` : ''}
 				{/if}
 
 				{#if message.timestamp}
@@ -365,7 +363,7 @@
 								{#if message.done}
 									<div class=" flex justify-start space-x-1 -mt-2 overflow-x-auto buttons">
 										{#if siblings.length > 1}
-											<div class="flex self-center">
+											<div class="flex self-center min-w-fit">
 												<button
 													class="self-center"
 													on:click={() => {
@@ -386,7 +384,7 @@
 													</svg>
 												</button>
 
-												<div class="text-xs font-bold self-center">
+												<div class="text-xs font-bold self-center min-w-fit">
 													{siblings.indexOf(message.id) + 1} / {siblings.length}
 												</div>
 
