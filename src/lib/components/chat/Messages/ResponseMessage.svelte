@@ -239,6 +239,10 @@
 	};
 
 	const editMessageConfirmHandler = async () => {
+		if (editedContent === '') {
+			editedContent = ' ';
+		}
+
 		confirmEditResponseMessage(message.id, editedContent);
 
 		edit = false;
@@ -284,7 +288,7 @@
 				<Skeleton />
 			{:else}
 				<div
-					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-p:-mb-4 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-6 prose-li:-mb-4 whitespace-pre-line"
+					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-6 prose-li:-mb-4 whitespace-pre-line"
 				>
 					<div>
 						{#if edit === true}
@@ -361,11 +365,13 @@
 								{/if}
 
 								{#if message.done}
-									<div class=" flex justify-start space-x-1 -mt-2 overflow-x-auto buttons">
+									<div
+										class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
+									>
 										{#if siblings.length > 1}
 											<div class="flex self-center min-w-fit">
 												<button
-													class="self-center"
+													class="self-center dark:hover:text-white hover:text-black transition"
 													on:click={() => {
 														showPreviousMessage(message);
 													}}
@@ -384,12 +390,12 @@
 													</svg>
 												</button>
 
-												<div class="text-xs font-bold self-center min-w-fit">
+												<div class="text-xs font-bold self-center min-w-fit dark:text-gray-100">
 													{siblings.indexOf(message.id) + 1} / {siblings.length}
 												</div>
 
 												<button
-													class="self-center"
+													class="self-center dark:hover:text-white hover:text-black transition"
 													on:click={() => {
 														showNextMessage(message);
 													}}
@@ -413,7 +419,7 @@
 										<button
 											class="{isLastMessage
 												? 'visible'
-												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition"
+												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
 											on:click={() => {
 												editMessageHandler();
 											}}
@@ -437,7 +443,7 @@
 										<button
 											class="{isLastMessage
 												? 'visible'
-												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition copy-response-button"
+												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition copy-response-button"
 											on:click={() => {
 												copyToClipboard(message.content);
 											}}
@@ -463,7 +469,7 @@
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1 rounded {message.rating === 1
 												? 'bg-gray-100 dark:bg-gray-800'
-												: ''} transition"
+												: ''} dark:hover:text-white hover:text-black transition"
 											on:click={() => {
 												rateMessage(message.id, 1);
 											}}
@@ -487,7 +493,7 @@
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1 rounded {message.rating === -1
 												? 'bg-gray-100 dark:bg-gray-800'
-												: ''} transition"
+												: ''} dark:hover:text-white hover:text-black transition"
 											on:click={() => {
 												rateMessage(message.id, -1);
 											}}
@@ -511,7 +517,7 @@
 											id="speak-button-{message.id}"
 											class="{isLastMessage
 												? 'visible'
-												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition"
+												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
 											on:click={() => {
 												if (!loadingSpeech) {
 													toggleSpeakMessage(message);
@@ -585,7 +591,7 @@
 											<button
 												class=" {isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition whitespace-pre-wrap"
+													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
 												on:click={() => {
 													console.log(message);
 												}}
@@ -613,7 +619,7 @@
 												type="button"
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition regenerate-response-button"
+													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition regenerate-response-button"
 												on:click={() => {
 													continueGeneration();
 												}}
@@ -643,7 +649,7 @@
 												type="button"
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white transition regenerate-response-button"
+													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition regenerate-response-button"
 												on:click={regenerateResponse}
 											>
 												<svg
