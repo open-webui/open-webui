@@ -26,3 +26,10 @@ spec:
         - name: OLLAMA_API_BASE_URL
           value: "http://ollama-service.ollama-namespace.svc.cluster.local:11434/api"
         tty: true
+        volumeMounts:
+        - name: webui-volume
+          mountPath: /app/backend/data
+      volumes:
+      - name: webui-volume
+        persistentVolumeClaim:
+          claimName: ollama-webui-pvc          
