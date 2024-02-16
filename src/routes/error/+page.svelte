@@ -1,5 +1,6 @@
 <script>
 	import { goto } from '$app/navigation';
+	import { WEBUI_NAME } from '$lib/constants';
 	import { config } from '$lib/stores';
 	import { onMount } from 'svelte';
 
@@ -19,7 +20,7 @@
 		<div class="absolute rounded-xl w-full h-full backdrop-blur flex justify-center">
 			<div class="m-auto pb-44 flex flex-col justify-center">
 				<div class="max-w-md">
-					<div class="text-center text-2xl font-medium z-50">Ollama WebUI Backend Required</div>
+					<div class="text-center text-2xl font-medium z-50">{WEBUI_NAME} Backend Required</div>
 
 					<div class=" mt-4 text-center text-sm w-full">
 						Oops! You're using an unsupported method (frontend only). Please serve the WebUI from
