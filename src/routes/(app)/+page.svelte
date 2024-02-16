@@ -791,7 +791,7 @@
 	<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
 	<div class="flex flex-col flex-auto">
 		<div
-			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-80"
+			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 			id="messages-container"
 			on:scroll={(e) => {
 				autoScroll = e.target.scrollHeight - e.target.scrollTop <= e.target.clientHeight + 50;
@@ -802,7 +802,10 @@
 					? 'max-w-full'
 					: 'max-w-2xl md:px-0'} mx-auto w-full px-4"
 			>
-				<ModelSelector bind:selectedModels disabled={messages.length > 0} />
+				<ModelSelector
+					bind:selectedModels
+					disabled={messages.length > 0 && !selectedModels.includes('')}
+				/>
 			</div>
 
 			<div class=" h-full w-full flex flex-col py-8">
