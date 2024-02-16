@@ -709,6 +709,9 @@
 
 		if (messages.length != 0 && messages.at(-1).done == true) {
 			const responseMessage = history.messages[history.currentId];
+			responseMessage.done = false;
+			await tick();
+
 			const modelTag = $models.filter((m) => m.name === responseMessage.model).at(0);
 
 			if (modelTag?.external) {

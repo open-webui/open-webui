@@ -65,7 +65,7 @@
 		await tick();
 
 		if (tooltipInstance) {
-			tooltipInstance[0].destroy();
+			tooltipInstance[0]?.destroy();
 		}
 
 		renderLatex();
