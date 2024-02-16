@@ -787,7 +787,7 @@
 	};
 </script>
 
-<div class="min-h-screen max-h-screen w-full flex flex-col">
+<div class="h-screen max-h-[100dvh] w-full flex flex-col">
 	<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
 	<div class="flex flex-col flex-auto">
 		<div
