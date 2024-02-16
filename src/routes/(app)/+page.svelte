@@ -709,6 +709,9 @@
 
 		if (messages.length != 0 && messages.at(-1).done == true) {
 			const responseMessage = history.messages[history.currentId];
+			responseMessage.done = false;
+			await tick();
+
 			const modelTag = $models.filter((m) => m.name === responseMessage.model).at(0);
 
 			if (modelTag?.external) {
@@ -787,7 +790,7 @@
 	};
 </script>
 
-<div class="min-h-screen max-h-screen w-full flex flex-col">
+<div class="h-screen max-h-[100dvh] w-full flex flex-col">
 	<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
 	<div class="flex flex-col flex-auto">
 		<div

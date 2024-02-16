@@ -87,13 +87,13 @@
 
 <div
 	bind:this={navElement}
-	class="h-screen {show
+	class="h-screen max-h-[100dvh] {show
 		? ''
 		: '-translate-x-[260px] w-[0px]'}  w-[260px] min-w[260px] bg-black text-gray-200 shadow-2xl text-sm transition z-40 fixed top-0 left-0 lg:relative
         "
 >
 	<div
-		class="py-2.5 my-auto flex flex-col justify-between h-screen w-[260px] {show
+		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] {show
 			? ''
 			: 'invisible'}"
 	>
