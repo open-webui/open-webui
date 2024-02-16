@@ -288,7 +288,7 @@
 				<Skeleton />
 			{:else}
 				<div
-					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-6 prose-li:-mb-4 whitespace-pre-line"
+					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-li:-mb-4 whitespace-pre-line"
 				>
 					<div>
 						{#if edit === true}
@@ -366,7 +366,7 @@
 
 								{#if message.done}
 									<div
-										class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
+										class=" flex justify-start space-x-1 -mt-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
 									>
 										{#if siblings.length > 1}
 											<div class="flex self-center min-w-fit">
