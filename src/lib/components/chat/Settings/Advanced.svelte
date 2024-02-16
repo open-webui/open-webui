@@ -141,7 +141,7 @@
 						num_ctx: options.num_ctx !== '' ? options.num_ctx : undefined,
 						num_predict: options.num_predict !== '' ? options.num_predict : undefined
 					},
-					keepAlive: keepAlive ? keepAlive : undefined
+					keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined
 				});
 
 				dispatch('save');
