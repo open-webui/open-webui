@@ -794,8 +794,6 @@
 			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-80"
 			id="messages-container"
 			on:scroll={(e) => {
-				console.log(e.target.scrollHeight, e.target.scrollTop, e.target.clientHeight);
-				console.log(e.target.scrollHeight - e.target.scrollTop, e.target.clientHeight);
 				autoScroll = e.target.scrollHeight - e.target.scrollTop <= e.target.clientHeight + 50;
 			}}
 		>

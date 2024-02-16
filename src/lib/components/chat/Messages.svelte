@@ -29,7 +29,6 @@
 	$: if (autoScroll && bottomPadding) {
 		(async () => {
 			await tick();
-
 			scrollToBottom();
 		})();
 	}
@@ -167,7 +166,7 @@
 		await tick();
 
 		const element = document.getElementById('messages-container');
-		autoScroll = element.scrollHeight - element.scrollTop === element.clientHeight - 40;
+		autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
 		setTimeout(() => {
 			scrollToBottom();
@@ -216,7 +215,7 @@
 		await tick();
 
 		const element = document.getElementById('messages-container');
-		autoScroll = element.scrollHeight - element.scrollTop === element.clientHeight - 40;
+		autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
 		setTimeout(() => {
 			scrollToBottom();
