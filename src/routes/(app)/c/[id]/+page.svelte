@@ -153,6 +153,11 @@
 		}
 	};
 
+	const scrollToBottom = () => {
+		const element = document.getElementById('messages-container');
+		element.scrollTop = element.scrollHeight;
+	};
+
 	//////////////////////////
 	// Ollama functions
 	//////////////////////////
@@ -330,7 +335,7 @@
 		await tick();
 
 		// Scroll down
-		window.scrollTo({ top: document.body.scrollHeight });
+		scrollToBottom();
 
 		const messagesBody = [
 			$settings.system
@@ -483,7 +488,7 @@
 				}
 
 				if (autoScroll) {
-					window.scrollTo({ top: document.body.scrollHeight });
+					scrollToBottom();
 				}
 			}
 
@@ -522,7 +527,7 @@
 		await tick();
 
 		if (autoScroll) {
-			window.scrollTo({ top: document.body.scrollHeight });
+			scrollToBottom();
 		}
 
 		if (messages.length == 2 && messages.at(1).content !== '') {
@@ -534,7 +539,7 @@
 	const sendPromptOpenAI = async (model, userPrompt, responseMessageId, _chatId) => {
 		const responseMessage = history.messages[responseMessageId];
 
-		window.scrollTo({ top: document.body.scrollHeight });
+		scrollToBottom();
 
 		const res = await generateOpenAIChatCompletion(localStorage.token, {
 			model: model,
@@ -642,7 +647,7 @@
 				}
 
 				if (autoScroll) {
-					window.scrollTo({ top: document.body.scrollHeight });
+					scrollToBottom();
 				}
 			}
 
@@ -686,7 +691,7 @@
 		await tick();
 
 		if (autoScroll) {
-			window.scrollTo({ top: document.body.scrollHeight });
+			scrollToBottom();
 		}
 
 		if (messages.length == 2) {
@@ -797,14 +802,8 @@
 	});
 </script>
 
-<svelte:window
-	on:scroll={(e) => {
-		autoScroll = window.innerHeight + window.scrollY >= document.body.offsetHeight - 40;
-	}}
-/>
-
 {#if loaded}
-	<div class="min-h-screen w-full flex flex-col">
+	<div class="min-h-screen max-h-screen w-full flex flex-col">
 		<Navbar
 			{title}
 			shareEnabled={messages.length > 0}
@@ -820,8 +819,16 @@
 			{addTag}
 			{deleteTag}
 		/>
-		<div class="justify-center">
-			<div class=" pb-2.5 flex flex-col justify-between w-full">
+		<div class="flex flex-col flex-auto">
+			<div
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+				id="messages-container"
+				on:scroll={(e) => {
+					console.log(e.target.scrollHeight, e.target.scrollTop, e.target.clientHeight);
+					console.log(e.target.scrollHeight - e.target.scrollTop, e.target.clientHeight);
+					autoScroll = e.target.scrollHeight - e.target.scrollTop <= e.target.clientHeight + 50;
+				}}
+			>
 				<div
 					class="{$settings?.fullScreenMode ?? null
 						? 'max-w-full'

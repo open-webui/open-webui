@@ -29,9 +29,15 @@
 	$: if (autoScroll && bottomPadding) {
 		(async () => {
 			await tick();
-			window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+			scrollToBottom();
 		})();
 	}
+
+	const scrollToBottom = () => {
+		const element = document.getElementById('messages-container');
+		element.scrollTop = element.scrollHeight;
+	};
 
 	const copyToClipboard = (text) => {
 		if (!navigator.clipboard) {
@@ -160,10 +166,11 @@
 
 		await tick();
 
-		autoScroll = window.innerHeight + window.scrollY >= document.body.offsetHeight - 40;
+		const element = document.getElementById('messages-container');
+		autoScroll = element.scrollHeight - element.scrollTop === element.clientHeight - 40;
 
 		setTimeout(() => {
-			window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+			scrollToBottom();
 		}, 100);
 	};
 
@@ -208,9 +215,11 @@
 
 		await tick();
 
-		autoScroll = window.innerHeight + window.scrollY >= document.body.offsetHeight - 40;
+		const element = document.getElementById('messages-container');
+		autoScroll = element.scrollHeight - element.scrollTop === element.clientHeight - 40;
+
 		setTimeout(() => {
-			window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+			scrollToBottom();
 		}, 100);
 	};
 </script>
@@ -218,95 +227,97 @@
 {#if messages.length == 0}
 	<Placeholder models={selectedModels} modelfiles={selectedModelfiles} />
 {:else}
-	{#key chatId}
-		{#each messages as message, messageIdx}
-			<div class=" w-full">
-				<div
-					class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
-						? 'max-w-full'
-						: 'max-w-3xl'} mx-auto rounded-lg group"
-				>
-					{#if message.role === 'user'}
-						<UserMessage
-							user={$user}
-							{message}
-							siblings={message.parentId !== null
-								? history.messages[message.parentId]?.childrenIds ?? []
-								: Object.values(history.messages)
-										.filter((message) => message.parentId === null)
-										.map((message) => message.id) ?? []}
-							{confirmEditMessage}
-							{showPreviousMessage}
-							{showNextMessage}
-							{copyToClipboard}
-						/>
+	<div class=" pb-10">
+		{#key chatId}
+			{#each messages as message, messageIdx}
+				<div class=" w-full">
+					<div
+						class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
+							? 'max-w-full'
+							: 'max-w-3xl'} mx-auto rounded-lg group"
+					>
+						{#if message.role === 'user'}
+							<UserMessage
+								user={$user}
+								{message}
+								siblings={message.parentId !== null
+									? history.messages[message.parentId]?.childrenIds ?? []
+									: Object.values(history.messages)
+											.filter((message) => message.parentId === null)
+											.map((message) => message.id) ?? []}
+								{confirmEditMessage}
+								{showPreviousMessage}
+								{showNextMessage}
+								{copyToClipboard}
+							/>
 
-						{#if messages.length - 1 === messageIdx && processing !== ''}
-							<div class="flex my-2.5 ml-12 items-center w-fit space-x-2.5">
-								<div class=" dark:text-blue-100">
-									<svg
-										class=" w-4 h-4 translate-y-[0.5px]"
-										fill="currentColor"
-										viewBox="0 0 24 24"
-										xmlns="http://www.w3.org/2000/svg"
-										><style>
-											.spinner_qM83 {
-												animation: spinner_8HQG 1.05s infinite;
-											}
-											.spinner_oXPr {
-												animation-delay: 0.1s;
-											}
-											.spinner_ZTLf {
-												animation-delay: 0.2s;
-											}
-											@keyframes spinner_8HQG {
-												0%,
-												57.14% {
-													animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-													transform: translate(0);
+							{#if messages.length - 1 === messageIdx && processing !== ''}
+								<div class="flex my-2.5 ml-12 items-center w-fit space-x-2.5">
+									<div class=" dark:text-blue-100">
+										<svg
+											class=" w-4 h-4 translate-y-[0.5px]"
+											fill="currentColor"
+											viewBox="0 0 24 24"
+											xmlns="http://www.w3.org/2000/svg"
+											><style>
+												.spinner_qM83 {
+													animation: spinner_8HQG 1.05s infinite;
 												}
-												28.57% {
-													animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-													transform: translateY(-6px);
+												.spinner_oXPr {
+													animation-delay: 0.1s;
 												}
-												100% {
-													transform: translate(0);
+												.spinner_ZTLf {
+													animation-delay: 0.2s;
 												}
-											}
-										</style><circle class="spinner_qM83" cx="4" cy="12" r="2.5" /><circle
-											class="spinner_qM83 spinner_oXPr"
-											cx="12"
-											cy="12"
-											r="2.5"
-										/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="2.5" /></svg
-									>
+												@keyframes spinner_8HQG {
+													0%,
+													57.14% {
+														animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
+														transform: translate(0);
+													}
+													28.57% {
+														animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
+														transform: translateY(-6px);
+													}
+													100% {
+														transform: translate(0);
+													}
+												}
+											</style><circle class="spinner_qM83" cx="4" cy="12" r="2.5" /><circle
+												class="spinner_qM83 spinner_oXPr"
+												cx="12"
+												cy="12"
+												r="2.5"
+											/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="2.5" /></svg
+										>
+									</div>
+									<div class=" text-sm font-medium">
+										{processing}
+									</div>
 								</div>
-								<div class=" text-sm font-medium">
-									{processing}
-								</div>
-							</div>
+							{/if}
+						{:else}
+							<ResponseMessage
+								{message}
+								modelfiles={selectedModelfiles}
+								siblings={history.messages[message.parentId]?.childrenIds ?? []}
+								isLastMessage={messageIdx + 1 === messages.length}
+								{confirmEditResponseMessage}
+								{showPreviousMessage}
+								{showNextMessage}
+								{rateMessage}
+								{copyToClipboard}
+								{continueGeneration}
+								{regenerateResponse}
+							/>
 						{/if}
-					{:else}
-						<ResponseMessage
-							{message}
-							modelfiles={selectedModelfiles}
-							siblings={history.messages[message.parentId]?.childrenIds ?? []}
-							isLastMessage={messageIdx + 1 === messages.length}
-							{confirmEditResponseMessage}
-							{showPreviousMessage}
-							{showNextMessage}
-							{rateMessage}
-							{copyToClipboard}
-							{continueGeneration}
-							{regenerateResponse}
-						/>
-					{/if}
+					</div>
 				</div>
-			</div>
-		{/each}
+			{/each}
 
-		{#if bottomPadding}
-			<div class=" mb-10" />
-		{/if}
-	{/key}
+			{#if bottomPadding}
+				<div class=" mb-10" />
+			{/if}
+		{/key}
+	</div>
 {/if}
