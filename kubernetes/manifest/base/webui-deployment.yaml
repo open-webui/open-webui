@@ -19,9 +19,12 @@ spec:
         ports:
         - containerPort: 8080
         resources:
-          limits:
+          requests:
             cpu: "500m"
             memory: "500Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
         env:
         - name: OLLAMA_API_BASE_URL
           value: "http://ollama-service.ollama-namespace.svc.cluster.local:11434/api"
