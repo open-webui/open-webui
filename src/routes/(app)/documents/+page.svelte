@@ -179,8 +179,8 @@
 	}}
 />
 
-<div class="min-h-screen w-full flex justify-center dark:text-white">
-	<div class=" py-2.5 flex flex-col justify-between w-full">
+<div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
+	<div class=" py-2.5 flex flex-col justify-between w-full overflow-y-auto">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<div class="mb-6 flex justify-between items-center">
 				<div class=" text-2xl font-semibold self-center">My Documents</div>
