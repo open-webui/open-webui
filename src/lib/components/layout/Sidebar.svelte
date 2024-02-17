@@ -87,9 +87,9 @@
 
 <div
 	bind:this={navElement}
-	class="h-screen max-h-[100dvh] {show
-		? ''
-		: '-translate-x-[260px] w-[0px]'}  w-[260px] min-w[260px] bg-black text-gray-200 shadow-2xl text-sm transition z-40 fixed top-0 left-0 lg:relative
+	class="h-screen max-h-[100dvh] min-h-screen {show
+		? 'lg:relative'
+		: '-translate-x-[260px] w-[0px]'}  w-[260px] min-w[260px] bg-black text-gray-200 shadow-2xl text-sm transition z-40 fixed top-0 left-0
         "
 >
 	<div
