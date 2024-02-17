@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ollama-webui-deployment
+  name: open-webui-deployment
   namespace: open-webui
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ollama-webui
+      app: open-webui
   template:
     metadata:
       labels:
-        app: ollama-webui
+        app: open-webui
     spec:
       containers:
-      - name: ollama-webui
+      - name: open-webui
         image: ghcr.io/open-webui/open-webui:main
         ports:
         - containerPort: 8080
