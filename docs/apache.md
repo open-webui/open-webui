@@ -2,7 +2,7 @@
 
 Sometimes, its beneficial to host Ollama, separate from the UI, but retain the RAG and RBAC support features shared across users:
 
-# Ollama WebUI Configuration
+# Open WebUI Configuration
 
 ## UI Configuration
 
@@ -23,7 +23,6 @@ For the UI configuration, you can set up the Apache VirtualHost as follows:
 Enable the site first before you can request SSL:
 
 `a2ensite server.com.conf` # this will enable the site. a2ensite is short for "Apache 2 Enable Site"
-
 
 ```
 # For SSL
@@ -62,13 +61,11 @@ Create server.com.conf if it is not yet already created, containing the above `<
 
 Once it's created, run `certbot --apache -d server.com`, this will request and add/create an SSL keys for you as well as create the server.com.le-ssl.conf
 
-
 # Configuring Ollama Server
 
 On your latest installation of Ollama, make sure that you have setup your api server from the official Ollama reference:
 
 [Ollama FAQ](https://github.com/jmorganca/ollama/blob/main/docs/faq.md)
-
 
 ### TL;DR
 
@@ -81,6 +78,7 @@ sudo nano /etc/systemd/system/ollama.service
 ```
 
 Add the following lines:
+
 ```
 Environment="OLLAMA_HOST=0.0.0.0:11434" # this line is mandatory. You can also specify
 ```
@@ -106,15 +104,13 @@ Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/
 WantedBy=default.target
 ```
 
-
 Save the file by pressing CTRL+S, then press CTRL+X
 
 When your computer restarts, the Ollama server will now be listening on the IP:PORT you specified, in this case 0.0.0.0:11434, or 192.168.254.106:11434 (whatever your local IP address is). Make sure that your router is correctly configured to serve pages from that local IP by forwarding 11434 to your local IP server.
 
-
 # Ollama Model Configuration
-## For the Ollama model configuration, use the following Apache VirtualHost setup:
 
+## For the Ollama model configuration, use the following Apache VirtualHost setup:
 
 Navigate to the apache sites-available directory:
 
@@ -198,7 +194,6 @@ If you encounter any misconfiguration or errors, please file an issue or engage 
 
 Let's make this UI much more user friendly for everyone!
 
-Thanks for making ollama-webui your UI Choice for AI!
+Thanks for making open-webui your UI Choice for AI!
 
-
-This doc is made by **Bob Reyes**, your **Ollama-Web-UI** fan from the Philippines.
+This doc is made by **Bob Reyes**, your **Open-WebUI** fan from the Philippines.

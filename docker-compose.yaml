@@ -10,16 +10,16 @@ services:
     restart: unless-stopped
     image: ollama/ollama:latest
 
-  ollama-webui:
+  open-webui:
     build:
       context: .
       args:
         OLLAMA_API_BASE_URL: '/ollama/api'
       dockerfile: Dockerfile
-    image: ghcr.io/ollama-webui/ollama-webui:main
-    container_name: ollama-webui
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
     volumes:
-      - ollama-webui:/app/backend/data
+      - open-webui:/app/backend/data
     depends_on:
       - ollama
     ports:
@@ -33,4 +33,4 @@ services:
 
 volumes:
   ollama: {}
-  ollama-webui: {}
+  open-webui: {}

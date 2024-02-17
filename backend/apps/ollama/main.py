@@ -40,9 +40,7 @@ class UrlUpdateForm(BaseModel):
 
 
 @app.post("/url/update")
-async def update_ollama_api_url(
-    form_data: UrlUpdateForm, user=Depends(get_admin_user)
-):
+async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin_user)):
     app.state.OLLAMA_API_BASE_URL = form_data.url
     return {"OLLAMA_API_BASE_URL": app.state.OLLAMA_API_BASE_URL}
 
@@ -68,10 +66,14 @@ async def proxy(path: str, request: Request, user=Depends(get_current_user)):
         if path in ["pull", "delete", "push", "copy", "create"]:
             if user.role != "admin":
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                 )
     else:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
     headers.pop("host", None)
     headers.pop("authorization", None)
@@ -126,7 +128,7 @@ async def proxy(path: str, request: Request, user=Depends(get_current_user)):
     try:
         return await run_in_threadpool(get_request)
     except Exception as e:
-        error_detail = "Ollama WebUI: Server Connection Error"
+        error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
                 res = r.json()

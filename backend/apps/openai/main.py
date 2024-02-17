@@ -9,7 +9,12 @@ from pydantic import BaseModel
 
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
-from utils.utils import decode_token, get_current_user, get_verified_user, get_admin_user
+from utils.utils import (
+    decode_token,
+    get_current_user,
+    get_verified_user,
+    get_admin_user,
+)
 from config import OPENAI_API_BASE_URL, OPENAI_API_KEY, CACHE_DIR
 
 import hashlib
@@ -45,7 +50,6 @@ async def get_openai_url(user=Depends(get_admin_user)):
 async def update_openai_url(form_data: UrlUpdateForm, user=Depends(get_admin_user)):
     app.state.OPENAI_API_BASE_URL = form_data.url
     return {"OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL}
-
 
 
 @app.get("/key")
@@ -107,7 +111,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
     except Exception as e:
         print(e)
-        error_detail = "Ollama WebUI: Server Connection Error"
+        error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
                 res = r.json()
@@ -188,7 +192,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             return response_data
     except Exception as e:
         print(e)
-        error_detail = "Ollama WebUI: Server Connection Error"
+        error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
                 res = r.json()

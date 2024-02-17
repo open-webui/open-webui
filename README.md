@@ -126,19 +126,19 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 
 #### Installing with Docker 🐳
 
-- **Important:** When using Docker to install Open WebUI, make sure to include the `-v ollama-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
+- **Important:** When using Docker to install Open WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
 
 - **If Ollama is on your computer**, use this command:
 
   ```bash
-  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v ollama-webui:/app/backend/data --name ollama-webui --restart always ghcr.io/ollama-webui/ollama-webui:main
+  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
 - **To build the container yourself**, follow these steps:
 
   ```bash
-  docker build -t ollama-webui .
-  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v ollama-webui:/app/backend/data --name ollama-webui --restart always ollama-webui
+  docker build -t open-webui .
+  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always open-webui
   ```
 
 - After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000).
@@ -148,14 +148,14 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 - To connect to Ollama on another server, change the `OLLAMA_API_BASE_URL` to the server's URL:
 
   ```bash
-  docker run -d -p 3000:8080 -e OLLAMA_API_BASE_URL=https://example.com/api -v ollama-webui:/app/backend/data --name ollama-webui --restart always ghcr.io/ollama-webui/ollama-webui:main
+  docker run -d -p 3000:8080 -e OLLAMA_API_BASE_URL=https://example.com/api -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
   Or for a self-built container:
 
   ```bash
-  docker build -t ollama-webui .
-  docker run -d -p 3000:8080 -e OLLAMA_API_BASE_URL=https://example.com/api -v ollama-webui:/app/backend/data --name ollama-webui --restart always ollama-webui
+  docker build -t open-webui .
+  docker run -d -p 3000:8080 -e OLLAMA_API_BASE_URL=https://example.com/api -v open-webui:/app/backend/data --name open-webui --restart always open-webui
   ```
 
 ### Installing Ollama and Open WebUI Together
@@ -215,8 +215,8 @@ For other ways to install, like using Kustomize or Helm, check out [INSTALLATION
 In case you want to update your local Docker installation to the latest version, you can do it performing the following actions:
 
 ```bash
-docker rm -f ollama-webui
-docker pull ghcr.io/ollama-webui/ollama-webui:main
+docker rm -f open-webui
+docker pull ghcr.io/open-webui/open-webui:main
 [insert command you used to install]
 ```
 
@@ -243,8 +243,8 @@ The Open WebUI consists of two primary components: the frontend and the backend 
 Run the following commands to install:
 
 ```sh
-git clone https://github.com/ollama-webui/ollama-webui.git
-cd ollama-webui/
+git clone https://github.com/open-webui/open-webui.git
+cd open-webui/
 
 # Copying required .env file
 cp -RPp example.env .env
