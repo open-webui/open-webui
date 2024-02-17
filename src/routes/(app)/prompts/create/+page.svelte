@@ -53,9 +53,13 @@
 	onMount(() => {
 		window.addEventListener('message', async (event) => {
 			if (
-				!['https://ollamahub.com', 'https://www.ollamahub.com', 'http://localhost:5173'].includes(
-					event.origin
-				)
+				![
+					'https://ollamahub.com',
+					'https://www.ollamahub.com',
+					'https://openwebui.com',
+					'https://www.openwebui.com',
+					'http://localhost:5173'
+				].includes(event.origin)
 			)
 				return;
 			const prompt = JSON.parse(event.data);

@@ -1,6 +1,6 @@
 import { dev } from '$app/environment';
 
-export const WEBUI_NAME = 'Ollama Web UI';
+export const WEBUI_NAME = 'Open Web UI';
 export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
 
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;

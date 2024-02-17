@@ -212,9 +212,13 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 	onMount(() => {
 		window.addEventListener('message', async (event) => {
 			if (
-				!['https://ollamahub.com', 'https://www.ollamahub.com', 'http://localhost:5173'].includes(
-					event.origin
-				)
+				![
+					'https://ollamahub.com',
+					'https://www.ollamahub.com',
+					'https://openwebui.com',
+					'https://www.openwebui.com',
+					'http://localhost:5173'
+				].includes(event.origin)
 			)
 				return;
 			const modelfile = JSON.parse(event.data);
@@ -474,7 +478,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 								or
 								<a
 									class=" text-gray-500 dark:text-gray-300 font-medium"
-									href="https://ollamahub.com"
+									href="https://openwebui.com"
 									target="_blank"
 								>
 									Click here to check other modelfiles.

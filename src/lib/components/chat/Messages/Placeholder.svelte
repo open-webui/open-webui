@@ -54,7 +54,7 @@
 				</div>
 				{#if modelfile.user}
 					<div class="mt-0.5 text-sm font-normal text-gray-500 dark:text-gray-500">
-						By <a href="https://ollamahub.com/m/{modelfile.user.username}"
+						By <a href="https://openwebui.com/m/{modelfile.user.username}"
 							>{modelfile.user.name ? modelfile.user.name : `@${modelfile.user.username}`}</a
 						>
 					</div>
