@@ -212,6 +212,18 @@ Don't forget to explore our sibling project, [OllamaHub](https://ollamahub.com/)
 
 For other ways to install, like using Kustomize or Helm, check out [INSTALLATION.md](/INSTALLATION.md). Join our [Ollama Web UI Discord community](https://discord.gg/5rJgQTnV4s) for more help and information.
 
+### Updating your Docker Installation
+
+In case you want to update your local Docker installation to the latest version, you can do it performing the following actions:
+
+```bash
+docker rm -f ollama-webui
+docker pull ghcr.io/ollama-webui/ollama-webui:main
+[insert command you used to install]
+```
+
+In the last line, you need to use the very same command you used to install (local install, remote server, etc.)
+
 ## How to Install Without Docker
 
 While we strongly recommend using our convenient Docker container installation for optimal support, we understand that some situations may require a non-Docker setup, especially for development purposes. Please note that non-Docker installations are not officially supported, and you might need to troubleshoot on your own.
