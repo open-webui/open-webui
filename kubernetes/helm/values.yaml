@@ -19,7 +19,7 @@ ollama:
 
 webui:
   replicaCount: 1
-  image: ghcr.io/ollama-webui/ollama-webui:main
+  image: ghcr.io/open-webui/open-webui:main
   servicePort: 8080
   resources:
     limits:
@@ -30,7 +30,7 @@ webui:
     annotations:
     # Use appropriate annotations for your Ingress controller, e.g., for NGINX:
       # nginx.ingress.kubernetes.io/rewrite-target: /
-    host: ollama.minikube.local
+    host: open-webui.minikube.local
   volumeSize: 1Gi
   nodeSelector: {}
   tolerations: []

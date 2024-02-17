@@ -8,7 +8,7 @@ metadata:
     # nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-  - host: ollama.minikube.local
+  - host: open-webui.minikube.local
     http:
       paths:
       - path: /

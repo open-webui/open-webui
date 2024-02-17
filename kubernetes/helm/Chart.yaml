@@ -1,5 +1,5 @@
 apiVersion: v2
 name: open-webui
-description: "Ollama Web UI: A User-Friendly Web Interface for Chat Interactions 👋"
+description: "open-webui UI: A User-Friendly Web Interface for Chat Interactions 👋"
 version: 1.0.0
-icon: https://raw.githubusercontent.com/ollama-webui/ollama-webui/main/static/favicon.png
+icon: https://github.com/open-webui/open-webui/blob/main/static/favicon.png
