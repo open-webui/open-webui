@@ -1,3 +1,5 @@
+REM This method is not recommended, and we recommend you use the `start.sh` file with WSL instead.
+
 @echo off
 SETLOCAL ENABLEDELAYEDEXPANSION
 
