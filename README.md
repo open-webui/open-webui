@@ -1,4 +1,4 @@
-# Ollama Web UI: A User-Friendly Web Interface for Chat Interactions 👋
+# Open Web UI (Formerly Ollama WebUI) 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/ollama-webui/ollama-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/ollama-webui/ollama-webui?style=social)
@@ -13,11 +13,9 @@
 
 ChatGPT-Style Web Interface for Ollama 🦙
 
-**Disclaimer:** _ollama-webui is a community-driven project and is not affiliated with the Ollama team in any way. This initiative is independent, and any inquiries or feedback should be directed to [our community on Discord](https://discord.gg/5rJgQTnV4s). We kindly request users to refrain from contacting or harassing the Ollama team regarding this project._
+![Open Web UI Demo](./demo.gif)
 
-![Ollama Web UI Demo](./demo.gif)
-
-Also check our sibling project, [OllamaHub](https://ollamahub.com/), where you can discover, download, and explore customized Modelfiles for Ollama! 🦙🔍
+Also check our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles for Ollama! 🦙🔍
 
 ## Features ⭐
 
@@ -37,7 +35,7 @@ Also check our sibling project, [OllamaHub](https://ollamahub.com/), where you c
 
 - 🌐 **Web Browsing Capability**: Seamlessly integrate websites into your chat experience using the `#` command followed by the URL. This feature allows you to incorporate web content directly into your conversations, enhancing the richness and depth of your interactions.
 
-- 📜 **Prompt Preset Support**: Instantly access preset prompts using the `/` command in the chat input. Load predefined conversation starters effortlessly and expedite your interactions. Effortlessly import prompts through [OllamaHub](https://ollamahub.com/) integration.
+- 📜 **Prompt Preset Support**: Instantly access preset prompts using the `/` command in the chat input. Load predefined conversation starters effortlessly and expedite your interactions. Effortlessly import prompts through [Open WebUI Community](https://openwebui.com/) integration.
 
 - 👍👎 **RLHF Annotation**: Empower your messages by rating them with thumbs up and thumbs down, facilitating the creation of datasets for Reinforcement Learning from Human Feedback (RLHF). Utilize your messages to train or fine-tune models, all while ensuring the confidentiality of locally saved data.
 
@@ -51,7 +49,7 @@ Also check our sibling project, [OllamaHub](https://ollamahub.com/), where you c
 
 - 🔄 **Multi-Modal Support**: Seamlessly engage with models that support multimodal interactions, including images (e.g., LLava).
 
-- 🧩 **Modelfile Builder**: Easily create Ollama modelfiles via the web UI. Create and add characters/agents, customize chat elements, and import modelfiles effortlessly through [OllamaHub](https://ollamahub.com/) integration.
+- 🧩 **Modelfile Builder**: Easily create Ollama modelfiles via the web UI. Create and add characters/agents, customize chat elements, and import modelfiles effortlessly through [Open WebUI Community](https://openwebui.com/) integration.
 
 - ⚙️ **Many Models Conversations**: Effortlessly engage with various models simultaneously, harnessing their unique strengths for optimal responses. Enhance your experience by leveraging a diverse set of models in parallel.
 
@@ -77,9 +75,9 @@ Also check our sibling project, [OllamaHub](https://ollamahub.com/), where you c
 
 - 🌟 **Continuous Updates**: We are committed to improving Ollama Web UI with regular updates and new features.
 
-## 🔗 Also Check Out OllamaHub!
+## 🔗 Also Check Out Open WebUI Community!
 
-Don't forget to explore our sibling project, [OllamaHub](https://ollamahub.com/), where you can discover, download, and explore customized Modelfiles. OllamaHub offers a wide range of exciting possibilities for enhancing your chat interactions with Ollama! 🚀
+Don't forget to explore our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Open WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with Ollama! 🚀
 
 ## How to Install 🚀
 
@@ -308,9 +306,8 @@ This project is licensed under the [MIT License](LICENSE) - see the [LICENSE](LI
 ## Support 💬
 
 If you have any questions, suggestions, or need assistance, please open an issue or join our
-[Ollama Web UI Discord community](https://discord.gg/5rJgQTnV4s) or
-[Ollama Discord community](https://discord.gg/ollama) to connect with us! 🤝
+[Open WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
 
 ---
 
-Created by [Timothy J. Baek](https://github.com/tjbck) - Let's make Ollama Web UI even more amazing together! 💪
+Created by [Timothy J. Baek](https://github.com/tjbck) - Let's make Open Web UI even more amazing together! 💪
