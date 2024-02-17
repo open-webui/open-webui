@@ -1,4 +1,4 @@
-# Ollama Web UI Troubleshooting Guide
+# Open WebUI Troubleshooting Guide
 
 ## Understanding the Open WebUI Architecture
 
