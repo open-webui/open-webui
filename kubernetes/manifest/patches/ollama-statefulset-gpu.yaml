@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: ollama
-  namespace: ollama-namespace
+  namespace: open-webui
 spec:
   selector:
     matchLabels:

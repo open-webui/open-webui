@@ -1,4 +1,4 @@
-namespace: ollama-namespace
+namespace: open-webui
 
 ollama:
   replicaCount: 1
