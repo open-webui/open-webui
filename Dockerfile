@@ -38,7 +38,7 @@ ENV WHISPER_MODEL_DIR="/app/backend/data/cache/whisper/models"
 # Leaderboard: https://huggingface.co/spaces/mteb/leaderboard 
 # for better persormance and multilangauge support use "intfloat/multilingual-e5-large"
 # IMPORTANT: If you change the default model (all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
-ENV DOCKER_SENTENCE_TRANSFORMER_EMBED_MODEL="all-MiniLM-L6-v2"
+ENV RAG_EMBEDDING_MODEL="all-MiniLM-L6-v2"
 
 WORKDIR /app/backend
 
@@ -55,7 +55,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # preload embedding model
-RUN python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['DOCKER_SENTENCE_TRANSFORMER_EMBED_MODEL'])"
+RUN python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'])"
 # preload tts model
 RUN python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"
 
