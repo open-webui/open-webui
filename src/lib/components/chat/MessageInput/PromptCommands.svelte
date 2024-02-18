@@ -2,6 +2,7 @@
 	import { prompts } from '$lib/stores';
 	import { findWordIndices } from '$lib/utils';
 	import { tick } from 'svelte';
+	import toast from 'svelte-french-toast';
 
 	export let prompt = '';
 	let selectedCommandIdx = 0;
@@ -24,7 +25,18 @@
 	};
 
 	const confirmCommand = async (command) => {
-		prompt = command.content;
+		let text = command.content;
+
+		if (command.content.includes('{{CLIPBOARD}}')) {
+			const clipboardText = await navigator.clipboard.readText().catch((err) => {
+				toast.error('Failed to read clipboard contents');
+				return '{{CLIPBOARD}}';
+			});
+
+			text = command.content.replaceAll('{{CLIPBOARD}}', clipboardText);
+		}
+
+		prompt = text;
 
 		const chatInputElement = document.getElementById('chat-textarea');
 

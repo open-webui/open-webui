@@ -171,12 +171,18 @@
 						</div>
 
 						<div class="text-xs text-gray-400 dark:text-gray-500">
-							Format your variables using square brackets like this: <span
+							ⓘ Format your variables using square brackets like this: <span
 								class=" text-gray-600 dark:text-gray-300 font-medium">[variable]</span
 							>
 							. Make sure to enclose them with
 							<span class=" text-gray-600 dark:text-gray-300 font-medium">'['</span>
-							and <span class=" text-gray-600 dark:text-gray-300 font-medium">']'</span> .
+							and <span class=" text-gray-600 dark:text-gray-300 font-medium">']'</span>.
+						</div>
+
+						<div class="text-xs text-gray-400 dark:text-gray-500">
+							Utilize <span class=" text-gray-600 dark:text-gray-300 font-medium"
+								>{`{{CLIPBOARD}}`}</span
+							> variable to have them replaced with clipboard content.
 						</div>
 					</div>
 				</div>
