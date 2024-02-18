@@ -79,6 +79,11 @@
 						) / 100
 					} tokens` ?? 'N/A'
 				}<br/>
+					prompt/s: ${
+						Math.round(
+							((message.info.prompt_eval_count ?? 0) / (message.info.prompt_eval_duration / 1000000000)) * 100
+						) / 100 ?? 'N/A'
+					} prompts<br/>
                     total_duration: ${
 											Math.round(((message.info.total_duration ?? 0) / 1000000) * 100) / 100 ??
 											'N/A'
