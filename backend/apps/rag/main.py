@@ -62,6 +62,7 @@ from config import (
     CHROMA_CLIENT,
     CHUNK_SIZE,
     CHUNK_OVERLAP,
+    RAG_TEMPLATE,
 )
 from constants import ERROR_MESSAGES
 
@@ -73,6 +74,8 @@ app = FastAPI()
 
 app.state.CHUNK_SIZE = CHUNK_SIZE
 app.state.CHUNK_OVERLAP = CHUNK_OVERLAP
+app.state.RAG_TEMPLATE = RAG_TEMPLATE
+
 
 origins = ["*"]
 
@@ -152,6 +155,25 @@ async def update_chunk_params(
         "chunk_size": app.state.CHUNK_SIZE,
         "chunk_overlap": app.state.CHUNK_OVERLAP,
     }
+
+
+@app.get("/template")
+async def get_rag_template(user=Depends(get_current_user)):
+    return {
+        "status": True,
+        "template": app.state.RAG_TEMPLATE,
+    }
+
+
+class RAGTemplateForm(BaseModel):
+    template: str
+
+
+@app.post("/template/update")
+async def update_rag_template(form_data: RAGTemplateForm, user=Depends(get_admin_user)):
+    # TODO: check template requirements
+    app.state.RAG_TEMPLATE = form_data.template
+    return {"status": True, "template": app.state.RAG_TEMPLATE}
 
 
 class QueryDocForm(BaseModel):
