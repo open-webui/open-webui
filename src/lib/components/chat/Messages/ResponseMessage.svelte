@@ -72,18 +72,18 @@
 
 		if (message.info) {
 			tooltipInstance = tippy(`#info-${message.id}`, {
-				content: `<span class="text-xs" id="tooltip-${message.id}">token/s: ${
+				content: `<span class="text-xs" id="tooltip-${message.id}">response_token/s: ${
 					`${
 						Math.round(
 							((message.info.eval_count ?? 0) / (message.info.eval_duration / 1000000000)) * 100
 						) / 100
 					} tokens` ?? 'N/A'
 				}<br/>
-					prompt/s: ${
+					prompt_token/s: ${
 						Math.round(
 							((message.info.prompt_eval_count ?? 0) / (message.info.prompt_eval_duration / 1000000000)) * 100
 						) / 100 ?? 'N/A'
-					} prompts<br/>
+					} tokens<br/>
                     total_duration: ${
 											Math.round(((message.info.total_duration ?? 0) / 1000000) * 100) / 100 ??
 											'N/A'
