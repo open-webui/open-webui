@@ -19,10 +19,20 @@ spec:
         ports:
         - containerPort: 8080
         resources:
-          limits:
+          requests:
             cpu: "500m"
             memory: "500Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
         env:
         - name: OLLAMA_API_BASE_URL
           value: "http://ollama-service.ollama-namespace.svc.cluster.local:11434/api"
         tty: true
+        volumeMounts:
+        - name: webui-volume
+          mountPath: /app/backend/data
+      volumes:
+      - name: webui-volume
+        persistentVolumeClaim:
+          claimName: ollama-webui-pvc          
