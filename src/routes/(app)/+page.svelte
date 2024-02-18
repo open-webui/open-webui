@@ -266,7 +266,11 @@
 
 			console.log(contextString);
 
-			history.messages[parentId].raContent = RAGTemplate(contextString, query);
+			history.messages[parentId].raContent = await RAGTemplate(
+				localStorage.token,
+				contextString,
+				query
+			);
 			history.messages[parentId].contexts = relevantContexts;
 			await tick();
 			processing = '';

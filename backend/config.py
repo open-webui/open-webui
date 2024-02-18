@@ -43,6 +43,14 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 CACHE_DIR = f"{DATA_DIR}/cache"
 Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
+
+####################################
+# Docs DIR
+####################################
+
+DOCS_DIR = f"{DATA_DIR}/docs"
+Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
+
 ####################################
 # OLLAMA_API_BASE_URL
 ####################################
@@ -136,6 +144,21 @@ CHROMA_CLIENT = chromadb.PersistentClient(
 )
 CHUNK_SIZE = 1500
 CHUNK_OVERLAP = 100
+
+
+RAG_TEMPLATE = """Use the following context as your learned knowledge, inside <context></context> XML tags.
+<context>
+    [context]
+</context>
+
+When answer to user:
+- If you don't know, just say that you don't know.
+- If you don't know when you are not sure, ask for clarification.
+Avoid mentioning that you obtained the information from the context.
+And answer according to the language of the user's question.
+        
+Given the context information, answer the query.
+Query: [query]"""
 
 ####################################
 # Transcribe
