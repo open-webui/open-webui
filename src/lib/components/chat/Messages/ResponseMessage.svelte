@@ -366,7 +366,7 @@
 
 								{#if message.done}
 									<div
-										class=" flex justify-start space-x-1 -mt-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
+										class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
 									>
 										{#if siblings.length > 1}
 											<div class="flex self-center min-w-fit">
