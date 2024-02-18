@@ -82,7 +82,7 @@ export const getRAGTemplate = async (token: string) => {
 		throw error;
 	}
 
-	return res;
+	return res?.template ?? '';
 };
 
 export const updateRAGTemplate = async (token: string, template: string) => {
