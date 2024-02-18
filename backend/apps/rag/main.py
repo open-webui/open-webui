@@ -71,6 +71,9 @@ from constants import ERROR_MESSAGES
 
 app = FastAPI()
 
+app.state.CHUNK_SIZE = CHUNK_SIZE
+app.state.CHUNK_OVERLAP = CHUNK_OVERLAP
+
 origins = ["*"]
 
 app.add_middleware(
@@ -92,7 +95,7 @@ class StoreWebForm(CollectionNameForm):
 
 def store_data_in_vector_db(data, collection_name) -> bool:
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP
+        chunk_size=app.state.CHUNK_SIZE, chunk_overlap=app.state.CHUNK_OVERLAP
     )
     docs = text_splitter.split_documents(data)
 
@@ -116,7 +119,39 @@ def store_data_in_vector_db(data, collection_name) -> bool:
 
 @app.get("/")
 async def get_status():
-    return {"status": True}
+    return {
+        "status": True,
+        "chunk_size": app.state.CHUNK_SIZE,
+        "chunk_overlap": app.state.CHUNK_OVERLAP,
+    }
+
+
+@app.get("/chunk")
+async def get_chunk_params(user=Depends(get_admin_user)):
+    return {
+        "status": True,
+        "chunk_size": app.state.CHUNK_SIZE,
+        "chunk_overlap": app.state.CHUNK_OVERLAP,
+    }
+
+
+class ChunkParamUpdateForm(BaseModel):
+    chunk_size: int
+    chunk_overlap: int
+
+
+@app.post("/chunk/update")
+async def update_chunk_params(
+    form_data: ChunkParamUpdateForm, user=Depends(get_admin_user)
+):
+    app.state.CHUNK_SIZE = form_data.chunk_size
+    app.state.CHUNK_OVERLAP = form_data.chunk_overlap
+
+    return {
+        "status": True,
+        "chunk_size": app.state.CHUNK_SIZE,
+        "chunk_overlap": app.state.CHUNK_OVERLAP,
+    }
 
 
 class QueryDocForm(BaseModel):

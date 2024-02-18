@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getDocs } from '$lib/apis/documents';
-	import { scanDocs } from '$lib/apis/rag';
+	import { getChunkParams, scanDocs, updateChunkParams } from '$lib/apis/rag';
 	import { documents } from '$lib/stores';
 	import { onMount } from 'svelte';
 	import toast from 'svelte-french-toast';
@@ -8,6 +8,9 @@
 	export let saveHandler: Function;
 
 	let loading = false;
+
+	let chunkSize = 0;
+	let chunkOverlap = 0;
 
 	const scanHandler = async () => {
 		loading = true;
@@ -20,13 +23,24 @@
 		}
 	};
 
-	onMount(async () => {});
+	const submitHandler = async () => {
+		const res = await updateChunkParams(localStorage.token, chunkSize, chunkOverlap);
+	};
+
+	onMount(async () => {
+		const res = await getChunkParams(localStorage.token);
+
+		if (res) {
+			chunkSize = res.chunk_size;
+			chunkOverlap = res.chunk_overlap;
+		}
+	});
 </script>
 
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
-		// console.log('submit');
+		submitHandler();
 		saveHandler();
 	}}
 >
@@ -93,14 +107,52 @@
 				</button>
 			</div>
 		</div>
+
+		<hr class=" dark:border-gray-700" />
+
+		<div class=" ">
+			<div class=" text-sm font-medium">Chunk Params</div>
+
+			<div class=" flex">
+				<div class="  flex w-full justify-between">
+					<div class="self-center text-xs font-medium min-w-fit">Chunk Size</div>
+
+					<div class="self-center p-3">
+						<input
+							class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+							type="number"
+							placeholder="Enter Chunk Size"
+							bind:value={chunkSize}
+							autocomplete="off"
+							min="0"
+						/>
+					</div>
+				</div>
+
+				<div class="flex w-full">
+					<div class=" self-center text-xs font-medium min-w-fit">Chunk Overlap</div>
+
+					<div class="self-center p-3">
+						<input
+							class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+							type="number"
+							placeholder="Enter Chunk Overlap"
+							bind:value={chunkOverlap}
+							autocomplete="off"
+							min="0"
+						/>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 
-	<!-- <div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
 			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 			type="submit"
 		>
 			Save
 		</button>
-	</div> -->
+	</div>
 </form>
