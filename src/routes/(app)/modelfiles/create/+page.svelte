@@ -209,7 +209,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 		success = false;
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		window.addEventListener('message', async (event) => {
 			if (
 				![
@@ -252,6 +252,31 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 
 		if (window.opener ?? false) {
 			window.opener.postMessage('loaded', '*');
+		}
+
+		if (sessionStorage.modelfile) {
+			const modelfile = JSON.parse(sessionStorage.modelfile);
+			console.log(modelfile);
+			imageUrl = modelfile.imageUrl;
+			title = modelfile.title;
+			await tick();
+			tagName = modelfile.tagName;
+			desc = modelfile.desc;
+			content = modelfile.content;
+			suggestions =
+				modelfile.suggestionPrompts.length != 0
+					? modelfile.suggestionPrompts
+					: [
+							{
+								content: ''
+							}
+					  ];
+
+			for (const category of modelfile.categories) {
+				categories[category.toLowerCase()] = true;
+			}
+
+			sessionStorage.removeItem('modelfile');
 		}
 	});
 </script>
