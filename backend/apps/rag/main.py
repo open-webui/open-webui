@@ -172,7 +172,9 @@ class RAGTemplateForm(BaseModel):
 @app.post("/template/update")
 async def update_rag_template(form_data: RAGTemplateForm, user=Depends(get_admin_user)):
     # TODO: check template requirements
-    app.state.RAG_TEMPLATE = form_data.template
+    app.state.RAG_TEMPLATE = (
+        form_data.template if form_data.template != "" else RAG_TEMPLATE
+    )
     return {"status": True, "template": app.state.RAG_TEMPLATE}
 
 
