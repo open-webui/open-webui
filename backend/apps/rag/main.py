@@ -388,7 +388,9 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                 collection_name = calculate_sha256(f)[:63]
                 f.close()
 
-                loader, known_type = get_loader(filename, file_content_type, str(path))
+                loader, known_type = get_loader(
+                    filename, file_content_type[0], str(path)
+                )
                 data = loader.load()
 
                 result = store_data_in_vector_db(data, collection_name)
