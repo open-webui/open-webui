@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { getDocs } from '$lib/apis/documents';
-	import { getChunkParams, scanDocs, updateChunkParams } from '$lib/apis/rag';
+	import {
+		getChunkParams,
+		getRAGTemplate,
+		scanDocs,
+		updateChunkParams,
+		updateRAGTemplate
+	} from '$lib/apis/rag';
 	import { documents } from '$lib/stores';
 	import { onMount } from 'svelte';
 	import toast from 'svelte-french-toast';
@@ -11,6 +17,8 @@
 
 	let chunkSize = 0;
 	let chunkOverlap = 0;
+
+	let template = '';
 
 	const scanHandler = async () => {
 		loading = true;
@@ -25,6 +33,7 @@
 
 	const submitHandler = async () => {
 		const res = await updateChunkParams(localStorage.token, chunkSize, chunkOverlap);
+		await updateRAGTemplate(localStorage.token, template);
 	};
 
 	onMount(async () => {
@@ -34,6 +43,8 @@
 			chunkSize = res.chunk_size;
 			chunkOverlap = res.chunk_overlap;
 		}
+
+		template = await getRAGTemplate(localStorage.token);
 	});
 </script>
 
@@ -143,6 +154,15 @@
 						/>
 					</div>
 				</div>
+			</div>
+
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">RAG Template</div>
+				<textarea
+					bind:value={template}
+					class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
+					rows="4"
+				/>
 			</div>
 		</div>
 	</div>
