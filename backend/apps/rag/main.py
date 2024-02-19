@@ -13,6 +13,7 @@ import os, shutil
 from pathlib import Path
 from typing import List
 
+from sentence_transformers import SentenceTransformer
 from chromadb.utils import embedding_functions
 
 from langchain_community.document_loaders import (
@@ -52,6 +53,7 @@ from config import (
     UPLOAD_DIR,
     DOCS_DIR,
     RAG_EMBEDDING_MODEL,
+    RAG_EMBEDDING_MODEL_DEVICE_TYPE,
     CHROMA_CLIENT,
     CHUNK_SIZE,
     CHUNK_OVERLAP,
@@ -60,10 +62,18 @@ from config import (
 
 from constants import ERROR_MESSAGES
 
+#
+#if RAG_EMBEDDING_MODEL:
+#    sentence_transformer_ef = SentenceTransformer(
+#        model_name_or_path=RAG_EMBEDDING_MODEL,
+#        cache_folder=RAG_EMBEDDING_MODEL_DIR,
+#        device=RAG_EMBEDDING_MODEL_DEVICE_TYPE,
+#    )
 
 if RAG_EMBEDDING_MODEL:
     sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name=RAG_EMBEDDING_MODEL
+        model_name=RAG_EMBEDDING_MODEL,
+        device=RAG_EMBEDDING_MODEL_DEVICE_TYPE,
     )
 
 app = FastAPI()
