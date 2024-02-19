@@ -22,6 +22,8 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
       containers:
       - name: {{ .Chart.Name }}
         {{- with .Values.webui.image }}
@@ -39,7 +41,7 @@ spec:
           mountPath: /app/backend/data
         env:
         - name: OLLAMA_API_BASE_URL
-          value: {{ printf "http://%s.%s.svc.cluster.local:%s/api" (include "ollama.name" .) (.Release.Namespace) (.Values.ollama.servicePort) | quote }}
+          value: {{ include "ollama.url" . | quote }}
         tty: true
       {{- with .Values.webui.nodeSelector }}
       nodeSelector:

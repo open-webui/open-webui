@@ -6,6 +6,10 @@
 ollama
 {{- end -}}
 
+{{- define "ollama.url" -}}
+{{- printf "http://%s.%s.svc.cluster.local:%d/api" (include "ollama.name" .) (.Release.Namespace) (.Values.ollama.service.port | int) }}
+{{- end }}
+
 {{- define "chart.name" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}

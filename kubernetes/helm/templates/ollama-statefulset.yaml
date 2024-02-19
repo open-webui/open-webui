@@ -23,6 +23,11 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      {{- with .Values.ollama.runtimeClassName }}
+      runtimeClassName: {{ . }}
+      {{- end }}
       containers:
       - name: {{ include "ollama.name" . }}
         {{- with .Values.ollama.image }}

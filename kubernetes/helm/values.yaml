@@ -1,3 +1,5 @@
+nameOverride: ""
+
 ollama:
   annotations: {}
   podAnnotations: {}
@@ -16,6 +18,8 @@ ollama:
     selector: {}
     annotations: {}
   nodeSelector: {}
+  # -- If using a special runtime container such as nvidia, set it here.
+  runtimeClassName: ""
   tolerations:
   - key: nvidia.com/gpu
     operator: Exists
