@@ -44,10 +44,13 @@ webui:
   resources: {}
   ingress:
     enabled: false
+    class: ""
     # -- Use appropriate annotations for your Ingress controller, e.g., for NGINX:
     # nginx.ingress.kubernetes.io/rewrite-target: /
     annotations: {}
     host: ""
+    tls: false
+    existingSecret: ""
   persistence:
     enabled: true
     size: 30Gi

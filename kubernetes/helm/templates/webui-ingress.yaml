@@ -10,6 +10,15 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- with .Values.webui.ingress.class }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.webui.ingress.tls }}
+  tls:
+    - hosts:
+      - {{ .Values.webui.ingress.host | quote }}
+      secretName: {{ default (printf "%s-tls" .Release.Name) .Values.webui.ingress.existingSecret }}
+  {{- end }}
   rules:
   - host: {{ .Values.webui.ingress.host }}
     http:
