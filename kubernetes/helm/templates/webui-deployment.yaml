@@ -16,7 +16,10 @@ spec:
     spec:
       containers:
       - name: {{ .Chart.Name }}
-        image: {{ .Values.webui.image }}
+        {{- with .Values.webui.image }}
+        image: {{ .repository }}:{{ .tag }}
+        imagePullPolicy: {{ .pullPolicy }}
+        {{- end }}
         ports:
         - name: http
           containerPort: {{ .Values.webui.service.containerPort }}

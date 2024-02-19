@@ -1,6 +1,9 @@
 ollama:
   replicaCount: 1
-  image: ollama/ollama:latest
+  image:
+    repository: ollama/ollama
+    tag: latest
+    pullPolicy: Always
   resources:
     requests:
       cpu: "2000m"
@@ -9,9 +12,14 @@ ollama:
       cpu: "4000m"
       memory: "4Gi"
       nvidia.com/gpu: "0"
-  volumeSize: 30Gi
+  persistence:
+    enabled: true
+    size: 30Gi
   nodeSelector: {}
-  tolerations: []
+  tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
   service:
     type: ClusterIP
     port: 80
@@ -21,7 +29,10 @@ ollama:
 
 webui:
   replicaCount: 1
-  image: ghcr.io/open-webui/open-webui:main
+  image:
+    repository: ghcr.io/open-webui/open-webui
+    tag: main
+    pullPolicy: Always
   resources:
     requests:
       cpu: "500m"

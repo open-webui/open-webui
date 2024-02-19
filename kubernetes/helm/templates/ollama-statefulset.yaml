@@ -17,7 +17,10 @@ spec:
     spec:
       containers:
       - name: {{ include "ollama.name" . }}
-        image: {{ .Values.ollama.image }}
+        {{- with .Values.ollama.image }}
+        image: {{ .repository }}:{{ .tag }}
+        imagePullPolicy: {{ .pullPolicy }}
+        {{- end }}
         ports:
         - name: http
           containerPort: {{ .Values.ollama.service.containerPort }}
@@ -29,7 +32,7 @@ spec:
             value: /usr/local/nvidia/lib:/usr/local/nvidia/lib64
           - name: NVIDIA_DRIVER_CAPABILITIES
             value: compute,utility
-        {{- end}}
+        {{- end }}
         {{- with .Values.ollama.resources }}
         resources: {{- toYaml . | nindent 10 }}
         {{- end }}
@@ -41,12 +44,10 @@ spec:
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.ollama.tolerations }}
       tolerations:
-        {{- if .Values.ollama.gpu.enabled }}
-        - key: nvidia.com/gpu
-          operator: Exists
-          effect: NoSchedule
-        {{- end }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
   volumeClaimTemplates:
   - metadata:
       name: ollama-volume
@@ -54,4 +55,4 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: {{ .Values.ollama.volumeSize }}
+          storage: {{ .Values.ollama.persistence.size }}
