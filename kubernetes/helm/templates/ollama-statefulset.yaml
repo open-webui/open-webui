@@ -21,6 +21,7 @@ spec:
         image: {{ .repository }}:{{ .tag }}
         imagePullPolicy: {{ .pullPolicy }}
         {{- end }}
+        tty: true
         ports:
         - name: http
           containerPort: {{ .Values.ollama.service.containerPort }}
@@ -37,9 +38,8 @@ spec:
         resources: {{- toYaml . | nindent 10 }}
         {{- end }}
         volumeMounts:
-        - name: ollama-volume
+        - name: data
           mountPath: /root/.ollama
-        tty: true
       {{- with .Values.ollama.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -48,11 +48,36 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      volumes:
+      {{- if and .Values.ollama.persistence.enabled .Values.ollama.persistence.existingClaim }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.ollama.persistence.existingClaim }}
+      {{- else if not .Values.ollama.persistence.enabled }}
+      - name: data
+        emptyDir: {}
+      {{- else if and .Values.ollama.persistence.enabled (not .Values.ollama.persistence.existingClaim) }}
+        {}
   volumeClaimTemplates:
   - metadata:
-      name: ollama-volume
+      name: data
+      labels:
+        {{- include "ollama.selectorLabels" . | nindent 8 }}
+      {{- with .Values.ollama.persistence.annotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
-      accessModes: [ "ReadWriteOnce" ]
+      accessModes:
+        {{- range .Values.ollama.persistence.accessModes }}
+        - {{ . | quote }}
+        {{- end }}
       resources:
         requests:
-          storage: {{ .Values.ollama.persistence.size }}
+          storage: {{ .Values.ollama.persistence.size | quote }}
+      storageClass: {{ .Values.ollama.persistence.storageClass }}
+      {{- with .Values.ollama.persistence.selector }}
+      selector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}

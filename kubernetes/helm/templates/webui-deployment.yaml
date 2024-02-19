@@ -27,7 +27,7 @@ spec:
         resources: {{- toYaml . | nindent 10 }}
         {{- end }}
         volumeMounts:
-        - name: webui-volume
+        - name: data
           mountPath: /app/backend/data
         env:
         - name: OLLAMA_API_BASE_URL
@@ -38,6 +38,15 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
-      - name: webui-volume
+      {{- if and .Values.webui.persistence.enabled .Values.webui.persistence.existingClaim }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.webui.persistence.existingClaim }}
+      {{- else if not .Values.webui.persistence.enabled }}
+      - name: data
+        emptyDir: {}
+      {{- else if and .Values.webui.persistence.enabled (not .Values.webui.persistence.existingClaim) }}
+      - name: data
         persistentVolumeClaim:
           claimName: {{ include "open-webui.name" . }}
+      {{- end }}
