@@ -24,11 +24,11 @@ webui:
   replicaCount: 1
   image:
     repository: ghcr.io/open-webui/open-webui
-    tag: main
+    tag: latest
     pullPolicy: Always
   resources: {}
   ingress:
-    enabled: disable
+    enabled: false
     # -- Use appropriate annotations for your Ingress controller, e.g., for NGINX:
     # nginx.ingress.kubernetes.io/rewrite-target: /
     annotations: {}
