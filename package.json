@@ -1,5 +1,5 @@
 {
-	"name": "ollama-webui",
+	"name": "open-webui",
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {

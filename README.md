@@ -1,12 +1,12 @@
 # Open WebUI (Formerly Ollama WebUI) 👋
 
-![GitHub stars](https://img.shields.io/github/stars/ollama-webui/ollama-webui?style=social)
-![GitHub forks](https://img.shields.io/github/forks/ollama-webui/ollama-webui?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/ollama-webui/ollama-webui?style=social)
-![GitHub repo size](https://img.shields.io/github/repo-size/ollama-webui/ollama-webui)
-![GitHub language count](https://img.shields.io/github/languages/count/ollama-webui/ollama-webui)
-![GitHub top language](https://img.shields.io/github/languages/top/ollama-webui/ollama-webui)
-![GitHub last commit](https://img.shields.io/github/last-commit/ollama-webui/ollama-webui?color=red)
+![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
+![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
+![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
+![GitHub repo size](https://img.shields.io/github/repo-size/open-webui/open-webui)
+![GitHub language count](https://img.shields.io/github/languages/count/open-webui/open-webui)
+![GitHub top language](https://img.shields.io/github/languages/top/open-webui/open-webui)
+![GitHub last commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
 ![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Follama-webui%2Follama-wbui&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
@@ -219,6 +219,7 @@ docker rm -f open-webui
 docker pull ghcr.io/open-webui/open-webui:main
 [insert command you used to install]
 ```
+
 In the last line, you need to use the very same command you used to install (local install, remote server, etc.)
 
 ### Moving from Ollama WebUI to Open WebUI
@@ -256,10 +257,6 @@ Once you verify that all the data has been migrated you can erase the old volume
 ```bash
 docker volume rm ollama-webui
 ```
-
-
-
-
 
 ## How to Install Without Docker
 
