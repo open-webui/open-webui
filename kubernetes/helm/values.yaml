@@ -53,7 +53,7 @@ webui:
     existingSecret: ""
   persistence:
     enabled: true
-    size: 30Gi
+    size: 2Gi
     # -- If using multiple replicas, you must update accessModes to ReadWriteMany
     accessModes:
     - ReadWriteOnce
