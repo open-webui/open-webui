@@ -4,14 +4,7 @@ ollama:
     repository: ollama/ollama
     tag: latest
     pullPolicy: Always
-  resources:
-    requests:
-      cpu: "2000m"
-      memory: "2Gi"
-    limits:
-      cpu: "4000m"
-      memory: "4Gi"
-      nvidia.com/gpu: "0"
+  resources: {}
   persistence:
     enabled: true
     size: 30Gi
@@ -33,19 +26,13 @@ webui:
     repository: ghcr.io/open-webui/open-webui
     tag: main
     pullPolicy: Always
-  resources:
-    requests:
-      cpu: "500m"
-      memory: "500Mi"
-    limits:
-      cpu: "1000m"
-      memory: "1Gi"
+  resources: {}
   ingress:
-    enabled: true
+    enabled: disable
+    # -- Use appropriate annotations for your Ingress controller, e.g., for NGINX:
+    # nginx.ingress.kubernetes.io/rewrite-target: /
     annotations: {}
-    # Use appropriate annotations for your Ingress controller, e.g., for NGINX:
-      # nginx.ingress.kubernetes.io/rewrite-target: /
-    host: open-webui.minikube.local
+    host: ""
   persistence:
     enabled: true
     size: 2Gi
