@@ -72,13 +72,18 @@
 
 		if (message.info) {
 			tooltipInstance = tippy(`#info-${message.id}`, {
-				content: `<span class="text-xs" id="tooltip-${message.id}">token/s: ${
+				content: `<span class="text-xs" id="tooltip-${message.id}">response_token/s: ${
 					`${
 						Math.round(
 							((message.info.eval_count ?? 0) / (message.info.eval_duration / 1000000000)) * 100
 						) / 100
 					} tokens` ?? 'N/A'
 				}<br/>
+					prompt_token/s: ${
+						Math.round(
+							((message.info.prompt_eval_count ?? 0) / (message.info.prompt_eval_duration / 1000000000)) * 100
+						) / 100 ?? 'N/A'
+					} tokens<br/>
                     total_duration: ${
 											Math.round(((message.info.total_duration ?? 0) / 1000000) * 100) / 100 ??
 											'N/A'
@@ -366,7 +371,7 @@
 
 								{#if message.done}
 									<div
-										class=" flex justify-start space-x-1 -mt-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
+										class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
 									>
 										{#if siblings.length > 1}
 											<div class="flex self-center min-w-fit">
