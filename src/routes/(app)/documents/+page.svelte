@@ -316,7 +316,9 @@
 				{#each $documents.filter((doc) => (selectedTag === '' || (doc?.content?.tags ?? [])
 								.map((tag) => tag.name)
 								.includes(selectedTag)) && (query === '' || doc.name.includes(query))) as doc}
-					<div class=" flex space-x-4 cursor-pointer w-full mt-3 mb-3">
+					<div
+						class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
+					>
 						<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 							<div class=" flex items-center space-x-3">
 								<div class="p-2.5 bg-red-400 text-white rounded-lg">
@@ -385,7 +387,7 @@
 						</div>
 						<div class="flex flex-row space-x-1 self-center">
 							<button
-								class="self-center w-fit text-sm px-2 py-2 border dark:border-gray-600 rounded-xl"
+								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 								type="button"
 								on:click={async () => {
 									showEditDocModal = !showEditDocModal;
@@ -431,7 +433,7 @@
 					</button> -->
 
 							<button
-								class="self-center w-fit text-sm px-2 py-2 border dark:border-gray-600 rounded-xl"
+								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 								type="button"
 								on:click={() => {
 									deleteDoc(doc.name);
@@ -454,8 +456,6 @@
 							</button>
 						</div>
 					</div>
-
-					<div class=" my-2.5" />
 				{/each}
 			</div>
 
@@ -496,7 +496,7 @@
 					/>
 
 					<button
-						class="self-center w-fit text-sm px-3 py-1 border dark:border-gray-600 rounded-xl flex"
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 						on:click={async () => {
 							document.getElementById('documents-import-input')?.click();
 						}}
@@ -520,7 +520,7 @@
 					</button>
 
 					<button
-						class="self-center w-fit text-sm px-3 py-1 border dark:border-gray-600 rounded-xl flex"
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 						on:click={async () => {
 							let blob = new Blob([JSON.stringify($documents)], {
 								type: 'application/json'
