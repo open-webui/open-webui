@@ -45,6 +45,13 @@ Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
 
 ####################################
+# Functions DIR
+####################################
+
+FUNCTIONS_DIR = f"{DATA_DIR}/functions"
+Path(FUNCTIONS_DIR).mkdir(parents=True, exist_ok=True)
+
+####################################
 # Docs DIR
 ####################################
 
