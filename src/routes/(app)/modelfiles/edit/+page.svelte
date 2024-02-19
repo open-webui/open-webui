@@ -181,7 +181,7 @@
 </script>
 
 <div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
-	<div class=" py-2.5 flex flex-col justify-between w-full overflow-y-auto">
+	<div class="flex flex-col justify-between w-full overflow-y-auto">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<input
 				bind:this={filesInputElement}
