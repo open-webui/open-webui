@@ -2,23 +2,25 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "open-webui.name" . }}
+  labels:
+    {{- include "open-webui.labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: open-webui
+      {{- include "open-webui.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: open-webui
+        {{- include "open-webui.selectorLabels" . | nindent 8 }}
     spec:
       containers:
       - name: {{ .Chart.Name }}
         image: {{ .Values.webui.image }}
         ports:
         - containerPort: 8080
-        {{- if .Values.webui.resources }}
-        resources: {{- toYaml .Values.webui.resources | nindent 10 }}
+        {{- with .Values.webui.resources }}
+        resources: {{- toYaml . | nindent 10 }}
         {{- end }}
         volumeMounts:
         - name: webui-volume

@@ -2,19 +2,21 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ include "ollama.name" . }}
+  labels:
+    {{- include "ollama.labels" . | nindent 4 }}
 spec:
   serviceName: {{ include "ollama.name" . }}
   replicas: {{ .Values.ollama.replicaCount }}
   selector:
     matchLabels:
-      app: ollama
+      {{- include "ollama.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: ollama
+        {{- include "ollama.selectorLabels" . | nindent 8 }}
     spec:
       containers:
-      - name: ollama
+      - name: {{ include "ollama.name" . }}
         image: {{ .Values.ollama.image }}
         ports:
         - containerPort: {{ .Values.ollama.servicePort }}
@@ -27,8 +29,8 @@ spec:
           - name: NVIDIA_DRIVER_CAPABILITIES
             value: compute,utility
         {{- end}}
-        {{- if .Values.ollama.resources }}
-        resources: {{- toYaml .Values.ollama.resources | nindent 10 }}
+        {{- with .Values.ollama.resources }}
+        resources: {{- toYaml . | nindent 10 }}
         {{- end }}
         volumeMounts:
         - name: ollama-volume

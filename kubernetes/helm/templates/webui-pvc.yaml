@@ -3,7 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: {{ include "open-webui.name" . }}
   labels:
-    app: open-webui
+    {{- include "open-webui.labels" . | nindent 4 }}
 spec:
   accessModes: [ "ReadWriteOnce" ]
   resources:

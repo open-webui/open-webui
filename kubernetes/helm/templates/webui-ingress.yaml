@@ -3,9 +3,11 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "open-webui.name" . }}
-{{- if .Values.webui.ingress.annotations }}
+  labels:
+    {{- include "open-webui.labels" . | nindent 4 }}
+{{- with .Values.webui.ingress.annotations }}
   annotations:
-{{ toYaml .Values.webui.ingress.annotations | trimSuffix "\n" | indent 4 }}
+    {{- toYaml . | nindent 4 }}
 {{- end }}
 spec:
   rules:
