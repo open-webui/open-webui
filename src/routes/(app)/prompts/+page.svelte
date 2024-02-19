@@ -296,7 +296,7 @@
 			</div>
 
 			<div class=" my-16">
-				<div class=" text-2xl font-semibold mb-6">Made by OpenWebUI Community</div>
+				<div class=" text-2xl font-semibold mb-3">Made by OpenWebUI Community</div>
 
 				<a
 					class=" flex space-x-4 cursor-pointer w-full mb-3 px-3 py-2"
