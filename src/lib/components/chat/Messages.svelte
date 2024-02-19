@@ -239,6 +239,7 @@
 							<UserMessage
 								user={$user}
 								{message}
+								isFirstMessage={messageIdx === 0}
 								siblings={message.parentId !== null
 									? history.messages[message.parentId]?.childrenIds ?? []
 									: Object.values(history.messages)

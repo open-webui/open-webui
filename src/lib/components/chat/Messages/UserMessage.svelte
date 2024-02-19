@@ -9,6 +9,7 @@
 	export let user;
 	export let message;
 	export let siblings;
+	export let isFirstMessage: boolean;
 
 	export let confirmEditMessage: Function;
 	export let showPreviousMessage: Function;
@@ -282,11 +283,11 @@
 							</svg>
 						</button>
 
-						<!-- {#if not first message }
+						{#if !isFirstMessage}
 						<button
 							class="invisible group-hover:visible p-1 rounded dark:hover:text-white transition"
 							on:click={() => {
-								// delete message
+								// TODO delete message
 							}}
 						>
 							<svg
@@ -304,7 +305,7 @@
 								/>
 							</svg>
 						</button>
-						{/if} -->
+						{/if} 
 					</div>
 				</div>
 			{/if}
