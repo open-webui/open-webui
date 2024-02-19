@@ -83,10 +83,16 @@
 				<div class="py-10 w-full">
 					<div class=" flex flex-col justify-center">
 						<div class=" flex justify-between items-center">
-							<div class=" text-2xl font-semibold">Users ({users.length})</div>
+							<div class="flex items-center text-2xl font-semibold">
+								All Users
+								<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
+								<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
+									>{users.length}</span
+								>
+							</div>
 							<div>
 								<button
-									class="flex items-center space-x-1 border border-gray-200 dark:border-gray-600 px-3 py-1 rounded-lg"
+									class="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
 									type="button"
 									on:click={() => {
 										showSettingsModal = !showSettingsModal;
@@ -110,7 +116,7 @@
 							</div>
 						</div>
 						<div class=" text-gray-500 text-xs mt-1">
-							Click on the user role cell in the table to change a user's role.
+							ⓘ Click on the user role button to change a user's role.
 						</div>
 
 						<hr class=" my-3 dark:border-gray-600" />

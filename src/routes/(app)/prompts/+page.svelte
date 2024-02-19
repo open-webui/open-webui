@@ -37,7 +37,7 @@
 </script>
 
 <div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
-	<div class=" py-2.5 flex flex-col justify-between w-full overflow-y-auto">
+	<div class="flex flex-col justify-between w-full overflow-y-auto">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<div class="mb-6 flex justify-between items-center">
 				<div class=" text-2xl font-semibold self-center">My Prompts</div>
@@ -84,13 +84,13 @@
 					</a>
 				</div>
 			</div>
+			<hr class=" dark:border-gray-700 my-2.5" />
 
-			{#if $prompts.length === 0}
-				<div />
-			{:else}
+			<div class="my-3 mb-5">
 				{#each $prompts.filter((p) => query === '' || p.command.includes(query)) as prompt}
-					<hr class=" dark:border-gray-700 my-2.5" />
-					<div class=" flex space-x-4 cursor-pointer w-full mb-3">
+					<div
+						class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
+					>
 						<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 							<a href={`/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
 								<div class=" flex-1 self-center pl-5">
@@ -196,11 +196,9 @@
 						</div>
 					</div>
 				{/each}
-			{/if}
+			</div>
 
-			<hr class=" dark:border-gray-700 my-2.5" />
-
-			<div class=" flex justify-between w-full mb-3">
+			<div class=" flex justify-end w-full mb-3">
 				<div class="flex space-x-2">
 					<input
 						id="prompts-import-input"
@@ -301,7 +299,7 @@
 				<div class=" text-2xl font-semibold mb-6">Made by OpenWebUI Community</div>
 
 				<a
-					class=" flex space-x-4 cursor-pointer w-full mb-3"
+					class=" flex space-x-4 cursor-pointer w-full mb-3 px-3 py-2"
 					href="https://openwebui.com/?type=prompts"
 					target="_blank"
 				>
@@ -326,7 +324,7 @@
 
 					<div class=" self-center">
 						<div class=" font-bold">Discover a prompt</div>
-						<div class=" text-sm">Discover, download, and explore custom Prompts</div>
+						<div class=" text-sm">Discover, download, and explore custom prompts</div>
 					</div>
 				</a>
 			</div>
