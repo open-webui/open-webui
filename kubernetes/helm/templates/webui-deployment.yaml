@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: open-webui-deployment
+  name: {{ include "open-webui.name" . }}
 spec:
   replicas: 1
   selector:
@@ -13,7 +13,7 @@ spec:
         app: open-webui
     spec:
       containers:
-      - name: open-webui
+      - name: {{ .Chart.Name }}
         image: {{ .Values.webui.image }}
         ports:
         - containerPort: 8080
@@ -25,7 +25,7 @@ spec:
           mountPath: /app/backend/data
         env:
         - name: OLLAMA_API_BASE_URL
-          value: "http://ollama-service.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.ollama.servicePort }}/api"
+          value: {{ printf "http://%s.%s.svc.cluster.local:%s/api" (include "ollama.name" .) (.Release.Namespace) (.Values.ollama.servicePort) | quote }}
         tty: true
       {{- with .Values.webui.nodeSelector }}
       nodeSelector:
@@ -34,4 +34,4 @@ spec:
       volumes:
       - name: webui-volume
         persistentVolumeClaim:
-          claimName: open-webui-pvc
+          claimName: {{ include "open-webui.name" . }}

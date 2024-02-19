@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: open-webui-ingress
+  name: {{ include "open-webui.name" . }}
 {{- if .Values.webui.ingress.annotations }}
   annotations:
 {{ toYaml .Values.webui.ingress.annotations | trimSuffix "\n" | indent 4 }}

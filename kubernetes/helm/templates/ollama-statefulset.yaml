@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: ollama
+  name: {{ include "ollama.name" . }}
 spec:
-  serviceName: "ollama"
+  serviceName: {{ include "ollama.name" . }}
   replicas: {{ .Values.ollama.replicaCount }}
   selector:
     matchLabels:
