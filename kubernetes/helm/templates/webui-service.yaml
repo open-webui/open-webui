@@ -11,8 +11,8 @@ spec:
   type: {{ .type }}
   ports:
   - protocol: TCP
-    port: {{ .port }}
-    targetPort: {{ .containerPort }}
+    port: http
+    targetPort: {{ .port }}
     {{- if .nodePort }}
     nodePort: {{ .nodePort }}
     {{- end }}

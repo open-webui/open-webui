@@ -5,20 +5,21 @@ metadata:
   labels:
     {{- include "open-webui.labels" . | nindent 4 }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.webui.replicaCount }}
   selector:
     matchLabels:
       {{- include "open-webui.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "open-webui.selectorLabels" . | nindent 8 }}
+        {{- include "open-webui.labels" . | nindent 8 }}
     spec:
       containers:
       - name: {{ .Chart.Name }}
         image: {{ .Values.webui.image }}
         ports:
-        - containerPort: 8080
+        - name: http
+          containerPort: {{ .Values.webui.service.containerPort }}
         {{- with .Values.webui.resources }}
         resources: {{- toYaml . | nindent 10 }}
         {{- end }}

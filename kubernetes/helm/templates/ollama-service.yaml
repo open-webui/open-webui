@@ -12,6 +12,6 @@ spec:
   ports:
   - protocol: TCP
     name: http
-    port: {{ .port }}
-    targetPort: {{ .containerPort }}
+    port: http
+    targetPort: {{ .port }}
 {{- end }}

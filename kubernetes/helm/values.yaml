@@ -1,7 +1,6 @@
 ollama:
   replicaCount: 1
   image: ollama/ollama:latest
-  servicePort: 11434
   resources:
     requests:
       cpu: "2000m"
@@ -15,13 +14,14 @@ ollama:
   tolerations: []
   service:
     type: ClusterIP
+    port: 80
+    containerPort: 11434
   gpu:
     enabled: false
 
 webui:
   replicaCount: 1
   image: ghcr.io/open-webui/open-webui:main
-  servicePort: 8080
   resources:
     requests:
       cpu: "500m"
@@ -31,12 +31,17 @@ webui:
       memory: "1Gi"
   ingress:
     enabled: true
-    annotations:
+    annotations: {}
     # Use appropriate annotations for your Ingress controller, e.g., for NGINX:
       # nginx.ingress.kubernetes.io/rewrite-target: /
     host: open-webui.minikube.local
-  volumeSize: 2Gi
+  persistence:
+    enabled: true
+    size: 2Gi
   nodeSelector: {}
   tolerations: []
   service:
-    type: NodePort
+    type: ClusterIP
+    port: 80
+    containerPort: 8080
+    nodePort: ""

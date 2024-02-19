@@ -13,13 +13,14 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "ollama.selectorLabels" . | nindent 8 }}
+        {{- include "ollama.labels" . | nindent 8 }}
     spec:
       containers:
       - name: {{ include "ollama.name" . }}
         image: {{ .Values.ollama.image }}
         ports:
-        - containerPort: {{ .Values.ollama.servicePort }}
+        - name: http
+          containerPort: {{ .Values.ollama.service.containerPort }}
         env:
         {{- if .Values.ollama.gpu.enabled }}
           - name: PATH

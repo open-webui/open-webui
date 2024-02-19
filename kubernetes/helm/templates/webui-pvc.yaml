@@ -3,9 +3,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: {{ include "open-webui.name" . }}
   labels:
-    {{- include "open-webui.labels" . | nindent 4 }}
+    {{- include "open-webui.selectorLabels" . | nindent 4 }}
 spec:
   accessModes: [ "ReadWriteOnce" ]
   resources:
     requests:
-      storage: {{ .Values.webui.volumeSize }}
+      storage: {{ .Values.webui.persistence.size }}
