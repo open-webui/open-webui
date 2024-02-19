@@ -5,10 +5,10 @@ metadata:
   name: {{ include "open-webui.name" . }}
   labels:
     {{- include "open-webui.labels" . | nindent 4 }}
-{{- with .Values.webui.ingress.annotations }}
+  {{- with .Values.webui.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
-{{- end }}
+  {{- end }}
 spec:
   rules:
   - host: {{ .Values.webui.ingress.host }}

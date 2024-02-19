@@ -4,6 +4,10 @@ metadata:
   name: {{ include "open-webui.name" . }}
   labels:
     {{- include "open-webui.labels" . | nindent 4 }}
+  {{- with .Values.webui.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   replicas: {{ .Values.webui.replicaCount }}
   selector:
@@ -13,6 +17,10 @@ spec:
     metadata:
       labels:
         {{- include "open-webui.labels" . | nindent 8 }}
+      {{- with .Values.webui.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
       containers:
       - name: {{ .Chart.Name }}

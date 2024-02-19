@@ -4,6 +4,10 @@ metadata:
   name: {{ include "ollama.name" . }}
   labels:
     {{- include "ollama.labels" . | nindent 4 }}
+  {{- with .Values.ollama.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   selector:
     {{- include "ollama.selectorLabels" . | nindent 4 }}

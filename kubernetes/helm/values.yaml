@@ -1,4 +1,6 @@
 ollama:
+  annotations: {}
+  podAnnotations: {}
   replicaCount: 1
   image:
     repository: ollama/ollama
@@ -20,6 +22,7 @@ ollama:
     effect: NoSchedule
   service:
     type: ClusterIP
+    annotations: {}
     port: 80
     containerPort: 11434
   gpu:
@@ -27,6 +30,8 @@ ollama:
     enabled: false
 
 webui:
+  annotations: {}
+  podAnnotations: {}
   replicaCount: 1
   image:
     repository: ghcr.io/open-webui/open-webui
@@ -52,6 +57,7 @@ webui:
   tolerations: []
   service:
     type: ClusterIP
+    annotations: {}
     port: 80
     containerPort: 8080
     nodePort: ""

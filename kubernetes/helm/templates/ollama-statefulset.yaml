@@ -4,6 +4,10 @@ metadata:
   name: {{ include "ollama.name" . }}
   labels:
     {{- include "ollama.labels" . | nindent 4 }}
+  {{- with .Values.ollama.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   serviceName: {{ include "ollama.name" . }}
   replicas: {{ .Values.ollama.replicaCount }}
@@ -14,6 +18,10 @@ spec:
     metadata:
       labels:
         {{- include "ollama.labels" . | nindent 8 }}
+      {{- with .Values.ollama.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
       containers:
       - name: {{ include "ollama.name" . }}
