@@ -286,9 +286,9 @@
 			<hr class=" dark:border-gray-700 my-2.5" />
 
 			{#if tags.length > 0}
-				<div class="px-2.5 mt-0.5 mb-2 flex gap-1 flex-wrap">
+				<div class="px-2.5 pt-1 flex gap-1 flex-wrap">
 					<button
-						class="px-2 py-0.5 space-x-1 flex h-fit items-center rounded-full transition border dark:border-gray-600 dark:text-white"
+						class="px-2 py-0.5 space-x-1 flex h-fit items-center rounded-full transition bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:text-white"
 						on:click={async () => {
 							selectedTag = '';
 							// await chats.set(await getChatListByTagName(localStorage.token, tag.name));
@@ -298,7 +298,7 @@
 					</button>
 					{#each tags as tag}
 						<button
-							class="px-2 py-0.5 space-x-1 flex h-fit items-center rounded-full transition border dark:border-gray-600 dark:text-white"
+							class="px-2 py-0.5 space-x-1 flex h-fit items-center rounded-full transition bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:text-white"
 							on:click={async () => {
 								selectedTag = tag;
 								// await chats.set(await getChatListByTagName(localStorage.token, tag.name));
@@ -377,7 +377,7 @@
 										>
 									{/if}
 								</div>
-								<div class=" flex-1 self-center flex-1">
+								<div class=" self-center flex-1">
 									<div class=" font-bold line-clamp-1">#{doc.name} ({doc.filename})</div>
 									<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 										{doc.title}
