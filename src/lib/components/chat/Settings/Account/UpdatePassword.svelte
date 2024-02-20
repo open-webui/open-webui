@@ -39,7 +39,7 @@
 		updatePasswordHandler();
 	}}
 >
-	<div class="flex justify-between mb-2.5 items-center text-sm">
+	<div class="flex justify-between items-center text-sm">
 		<div class="  font-medium">Change Password</div>
 		<button
 			class=" text-xs font-medium text-gray-500"
@@ -51,7 +51,7 @@
 	</div>
 
 	{#if show}
-		<div class=" space-y-1.5">
+		<div class=" py-2.5 space-y-1.5">
 			<div class="flex flex-col w-full">
 				<div class=" mb-1 text-xs text-gray-500">Current Password</div>
 
