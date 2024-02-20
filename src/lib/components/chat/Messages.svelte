@@ -16,6 +16,7 @@
 	export let sendPrompt: Function;
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
+	export let stopResponse: Function;
 
 	export let processing = '';
 	export let bottomPadding = false;
@@ -228,6 +229,7 @@
 
 		await updateChatById(localStorage.token, chatId, { history });
 		await chats.set(await getChatList(localStorage.token));
+		stopResponse();
 	};
 </script>
 
