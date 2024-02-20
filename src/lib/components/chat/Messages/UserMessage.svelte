@@ -1,10 +1,12 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 
-	import { tick } from 'svelte';
+	import { tick, createEventDispatcher } from 'svelte';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import { modelfiles, settings } from '$lib/stores';
+
+	const dispatch = createEventDispatcher();
 
 	export let user;
 	export let message;
@@ -286,9 +288,7 @@
 						{#if !isFirstMessage}
 						<button
 							class="invisible group-hover:visible p-1 rounded dark:hover:text-white transition"
-							on:click={() => {
-								// TODO delete message
-							}}
+							on:click={() => dispatch('delete', { messageId: message.id })}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
