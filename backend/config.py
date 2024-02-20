@@ -36,7 +36,6 @@ try:
 except:
     CONFIG_DATA = {}
 
-print(CONFIG_DATA)
 ####################################
 # File Upload DIR
 ####################################
@@ -93,7 +92,9 @@ DEFAULT_MODELS = os.environ.get("DEFAULT_MODELS", None)
 
 DEFAULT_PROMPT_SUGGESTIONS = (
     CONFIG_DATA["ui"]["prompt_suggestions"]
-    if "ui" in CONFIG_DATA and "prompt_suggestions" in CONFIG_DATA["ui"]
+    if "ui" in CONFIG_DATA
+    and "prompt_suggestions" in CONFIG_DATA["ui"]
+    and type(CONFIG_DATA["ui"]["prompt_suggestions"]) is list
     else [
         {
             "title": ["Help me study", "vocabulary for a college entrance exam"],
