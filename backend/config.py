@@ -5,6 +5,8 @@ from secrets import token_bytes
 from base64 import b64encode
 from constants import ERROR_MESSAGES
 from pathlib import Path
+import json
+
 
 try:
     from dotenv import load_dotenv, find_dotenv
@@ -27,6 +29,12 @@ ENV = os.environ.get("ENV", "dev")
 
 DATA_DIR = str(Path(os.getenv("DATA_DIR", "./data")).resolve())
 FRONTEND_BUILD_DIR = str(Path(os.getenv("FRONTEND_BUILD_DIR", "../build")))
+
+try:
+    with open(f"{DATA_DIR}/config.json", "r") as f:
+        CONFIG_DATA = json.load(f)
+except:
+    CONFIG_DATA = {}
 
 ####################################
 # File Upload DIR
@@ -80,9 +88,14 @@ if OPENAI_API_BASE_URL == "":
 
 ENABLE_SIGNUP = os.environ.get("ENABLE_SIGNUP", True)
 DEFAULT_MODELS = os.environ.get("DEFAULT_MODELS", None)
-DEFAULT_PROMPT_SUGGESTIONS = os.environ.get(
-    "DEFAULT_PROMPT_SUGGESTIONS",
-    [
+
+
+DEFAULT_PROMPT_SUGGESTIONS = (
+    CONFIG_DATA["ui"]["prompt_suggestions"]
+    if "ui" in CONFIG_DATA
+    and "prompt_suggestions" in CONFIG_DATA["ui"]
+    and type(CONFIG_DATA["ui"]["prompt_suggestions"]) is list
+    else [
         {
             "title": ["Help me study", "vocabulary for a college entrance exam"],
             "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
@@ -99,8 +112,10 @@ DEFAULT_PROMPT_SUGGESTIONS = os.environ.get(
             "title": ["Show me a code snippet", "of a website's sticky header"],
             "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
         },
-    ],
+    ]
 )
+
+
 DEFAULT_USER_ROLE = "pending"
 USER_PERMISSIONS = {"chat": {"deletion": True}}
 
