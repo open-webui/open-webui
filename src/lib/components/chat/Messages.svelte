@@ -221,14 +221,13 @@
 			scrollToBottom();
 		}, 100);
 	};
-	
-	const deleteMessage = async (messageId) => {
+
+	const deleteMessagePair = async (messageId) => {
 		history.messages[messageId].deleted = true;
 		history.messages[history.messages[messageId].childrenIds[0]].deleted = true;
-		updateChatById(localStorage.token, chatId, {
-			messages: messages,
-			history: history
-		});
+
+		await updateChatById(localStorage.token, chatId, { history });
+		await chats.set(await getChatList(localStorage.token));
 	};
 </script>
 
@@ -247,7 +246,7 @@
 						>
 							{#if message.role === 'user'}
 								<UserMessage
-									on:delete={() => deleteMessage(message.id)}
+									on:delete={() => deleteMessagePair(message.id)}
 									user={$user}
 									{message}
 									isFirstMessage={messageIdx === 0}

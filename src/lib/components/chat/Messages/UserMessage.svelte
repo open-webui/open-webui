@@ -45,6 +45,10 @@
 		edit = false;
 		editedContent = '';
 	};
+
+	const deleteMessageHandler = async () => {
+		dispatch('delete', message.id);
+	};
 </script>
 
 <div class=" flex w-full">
@@ -288,7 +292,9 @@
 						{#if !isFirstMessage}
 						<button
 							class="invisible group-hover:visible p-1 rounded dark:hover:text-white transition"
-							on:click={() => dispatch('delete', { messageId: message.id })}
+							on:click={() => {
+								deleteMessageHandler();
+							}}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
