@@ -1,15 +1,18 @@
 <script lang="ts">
 	import {
 		getDefaultUserRole,
+		getJWTExpiresDuration,
 		getSignUpEnabledStatus,
 		toggleSignUpEnabledStatus,
-		updateDefaultUserRole
+		updateDefaultUserRole,
+		updateJWTExpiresDuration
 	} from '$lib/apis/auths';
 	import { onMount } from 'svelte';
 
 	export let saveHandler: Function;
 	let signUpEnabled = true;
 	let defaultUserRole = 'pending';
+	let JWTExpiresIn = '';
 
 	const toggleSignUpEnabled = async () => {
 		signUpEnabled = await toggleSignUpEnabledStatus(localStorage.token);
@@ -19,9 +22,14 @@
 		defaultUserRole = await updateDefaultUserRole(localStorage.token, role);
 	};
 
+	const updateJWTExpiresDurationHandler = async (duration) => {
+		JWTExpiresIn = await updateJWTExpiresDuration(localStorage.token, duration);
+	};
+
 	onMount(async () => {
 		signUpEnabled = await getSignUpEnabledStatus(localStorage.token);
 		defaultUserRole = await getDefaultUserRole(localStorage.token);
+		JWTExpiresIn = await getJWTExpiresDuration(localStorage.token);
 	});
 </script>
 
@@ -29,6 +37,7 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
 		// console.log('submit');
+		updateJWTExpiresDurationHandler(JWTExpiresIn);
 		saveHandler();
 	}}
 >
@@ -92,6 +101,29 @@
 						<option value="user">User</option>
 						<option value="admin">Admin</option>
 					</select>
+				</div>
+			</div>
+
+			<hr class=" dark:border-gray-700 my-3" />
+
+			<div class=" w-full justify-between">
+				<div class="flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">JWT Expiration</div>
+				</div>
+
+				<div class="flex mt-2 space-x-2">
+					<input
+						class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+						type="text"
+						placeholder={`e.g.) "30m","1h", "10d". `}
+						bind:value={JWTExpiresIn}
+					/>
+				</div>
+
+				<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+					Valid time units: <span class=" text-gray-300 font-medium"
+						>'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.</span
+					>
 				</div>
 			</div>
 		</div>
