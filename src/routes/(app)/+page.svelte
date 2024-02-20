@@ -334,7 +334,7 @@
 						content: $settings.system
 				  }
 				: undefined,
-			...messages
+			...messages.filter(message => !message.deleted)
 		]
 			.filter((message) => message)
 			.map((message, idx, arr) => ({
@@ -540,7 +540,7 @@
 							content: $settings.system
 					  }
 					: undefined,
-				...messages
+			...messages.filter(message => !message.deleted)
 			]
 				.filter((message) => message)
 				.map((message, idx, arr) => ({
