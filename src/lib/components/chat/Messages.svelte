@@ -223,15 +223,18 @@
 		}, 100);
 	};
 
-	const deleteMessagePair = async (messageId) => {
-		history.messages[messageId].deleted = true;
-		history.messages[history.messages[messageId].childrenIds[0]].deleted = true;
+	const deleteMessageAndDescendants = async (messageId: string) => {
+		if (history.messages[messageId]) {
+			history.messages[messageId].deleted = true;
 
-		const responseId = history.messages[messageId].childrenIds[0];
-		if (history.messages[responseId].childrenIds.length === 0) {
-			await cancelChatCompletion(localStorage.token, chatId);
+			for (const childId of history.messages[messageId].childrenIds) {
+				await deleteMessageAndDescendants(childId);
+			}
 		}
+	};
 
+	const triggerDeleteMessageRecursive = async (messageId: string) => {
+		await deleteMessageAndDescendants(messageId);
 		await updateChatById(localStorage.token, chatId, { history });
 		await chats.set(await getChatList(localStorage.token));
 	};
@@ -252,7 +255,7 @@
 						>
 							{#if message.role === 'user'}
 								<UserMessage
-									on:delete={() => deleteMessagePair(message.id)}
+									on:delete={() => triggerDeleteMessageRecursive(message.id)}
 									user={$user}
 									{message}
 									isFirstMessage={messageIdx === 0}
