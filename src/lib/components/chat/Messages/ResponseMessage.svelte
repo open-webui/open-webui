@@ -81,7 +81,9 @@
 				}<br/>
 					prompt_token/s: ${
 						Math.round(
-							((message.info.prompt_eval_count ?? 0) / (message.info.prompt_eval_duration / 1000000000)) * 100
+							((message.info.prompt_eval_count ?? 0) /
+								(message.info.prompt_eval_duration / 1000000000)) *
+								100
 						) / 100 ?? 'N/A'
 					} tokens<br/>
                     total_duration: ${
@@ -115,9 +117,10 @@
 				// • auto-render specific keys, e.g.:
 				delimiters: [
 					{ left: '$$', right: '$$', display: true },
-					// { left: '$', right: '$', display: false },
+					{ left: '$', right: '$', display: false },
 					{ left: '\\(', right: '\\)', display: true },
-					{ left: '\\[', right: '\\]', display: true }
+					{ left: '\\[', right: '\\]', display: true },
+					{ left: '[', right: ']', display: true }
 				],
 				// • rendering keys, e.g.:
 				throwOnError: false
