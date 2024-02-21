@@ -7,14 +7,13 @@
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
-	import Advanced from './Settings/Advanced.svelte';
 	import About from './Settings/About.svelte';
 	import Models from './Settings/Models.svelte';
 	import General from './Settings/General.svelte';
 	import Interface from './Settings/Interface.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import Chats from './Settings/Chats.svelte';
-	import Connection from './Settings/Connection.svelte';
+	import Connections from './Settings/Connections.svelte';
 
 	export let show = false;
 
@@ -105,11 +104,11 @@
 				{#if $user?.role === 'admin'}
 					<button
 						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-						'connection'
+						'connections'
 							? 'bg-gray-200 dark:bg-gray-700'
 							: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
 						on:click={() => {
-							selectedTab = 'connection';
+							selectedTab = 'connections';
 						}}
 					>
 						<div class=" self-center mr-2">
@@ -124,7 +123,7 @@
 								/>
 							</svg>
 						</div>
-						<div class=" self-center">Connection</div>
+						<div class=" self-center">Connections</div>
 					</button>
 
 					<button
@@ -322,8 +321,8 @@
 					/>
 				{:else if selectedTab === 'models'}
 					<Models {getModels} />
-				{:else if selectedTab === 'connection'}
-					<Connection
+				{:else if selectedTab === 'connections'}
+					<Connections
 						{getModels}
 						on:save={() => {
 							show = false;
