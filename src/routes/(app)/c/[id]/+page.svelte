@@ -755,7 +755,13 @@
 
 	const generateChatTitle = async (_chatId, userPrompt) => {
 		if ($settings.titleAutoGenerate ?? true) {
-			const title = await generateTitle(localStorage.token, selectedModels[0], userPrompt);
+			const title = await generateTitle(
+				localStorage.token,
+				$settings?.titleGenerationPrompt ??
+					"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title': {{prompt}}",
+				$settings?.titleAutoGenerateModel ?? selectedModels[0],
+				userPrompt
+			);
 
 			if (title) {
 				await setChatTitle(_chatId, title);
