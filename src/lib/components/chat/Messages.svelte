@@ -227,9 +227,13 @@
 		history.messages[messageId].deleted = true;
 		history.messages[history.messages[messageId].childrenIds[0]].deleted = true;
 
+		const responseId = history.messages[messageId].childrenIds[0];
+		if (history.messages[responseId].childrenIds.length === 0) {
+			await cancelChatCompletion(localStorage.token, chatId);
+		}
+
 		await updateChatById(localStorage.token, chatId, { history });
 		await chats.set(await getChatList(localStorage.token));
-		await cancelChatCompletion(localStorage.token, chatId);
 	};
 </script>
 
