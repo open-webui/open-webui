@@ -83,11 +83,11 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 
 🌟 **Important Note on User Roles and Privacy:**
 
-- **Admin Creation:** The very first account to sign up on the Open WebUI will be granted **Administrator privileges**. This account will have comprehensive control over the platform, including user management and system settings.
+- **Admin Creation:** The very first account to sign up on Open WebUI will be granted **Administrator privileges**. This account will have comprehensive control over the platform, including user management and system settings.
 
 - **User Registrations:** All subsequent users signing up will initially have their accounts set to **Pending** status by default. These accounts will require approval from the Administrator to gain access to the platform functionalities.
 
-- **Privacy and Data Security:** We prioritize your privacy and data security above all. Please be reassured that all data entered into the Open WebUI is stored locally on your device. Our system is designed to be privacy-first, ensuring that no external requests are made, and your data does not leave your local environment. We are committed to maintaining the highest standards of data privacy and security, ensuring that your information remains confidential and under your control.
+- **Privacy and Data Security:** We prioritize your privacy and data security above all. Please be reassured that all data entered into Open WebUI is stored locally on your device. Our system is designed to be privacy-first, ensuring that no external requests are made, and your data does not leave your local environment. We are committed to maintaining the highest standards of data privacy and security, ensuring that your information remains confidential and under your control.
 
 ### Steps to Install Open WebUI
 
@@ -264,7 +264,7 @@ While we strongly recommend using our convenient Docker container installation f
 
 ### Project Components
 
-The Open WebUI consists of two primary components: the frontend and the backend (which serves as a reverse proxy, handling static frontend files, and additional features). Both need to be running concurrently for the development environment.
+Open WebUI consists of two primary components: the frontend and the backend (which serves as a reverse proxy, handling static frontend files, and additional features). Both need to be running concurrently for the development environment.
 
 > [!IMPORTANT]
 > The backend is required for proper functionality
@@ -299,7 +299,7 @@ pip install -r requirements.txt -U
 sh start.sh
 ```
 
-You should have the Open WebUI up and running at http://localhost:8080/. Enjoy! 😄
+You should have Open WebUI up and running at http://localhost:8080/. Enjoy! 😄
 
 ## Troubleshooting
 
