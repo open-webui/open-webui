@@ -828,7 +828,6 @@
 					{sendPrompt}
 					{continueGeneration}
 					{regenerateResponse}
-					{stopResponse}
 				/>
 			</div>
 		</div>
