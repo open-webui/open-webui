@@ -16,6 +16,8 @@ aiohttp
 peewee
 bcrypt
 
+litellm[proxy]
+
 langchain
 langchain-community
 chromadb

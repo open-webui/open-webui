@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
+from litellm.proxy.proxy_server import app as litellm_app
+
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
 from apps.audio.main import app as audio_app
@@ -54,6 +56,8 @@ async def check_url(request: Request, call_next):
 
 
 app.mount("/api/v1", webui_app)
+app.mount("/litellm/api", litellm_app)
+
 
 app.mount("/ollama/api", ollama_app)
 app.mount("/openai/api", openai_app)
