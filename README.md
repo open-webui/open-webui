@@ -212,15 +212,13 @@ For other ways to install, like using Kustomize or Helm, check out [INSTALLATION
 
 ### Updating your Docker Installation
 
-In case you want to update your local Docker installation to the latest version, you can do it performing the following actions:
+In case you want to update your local Docker installation to the latest version, you can do it with [Watchtower](https://containrrr.dev/watchtower/):
 
 ```bash
-docker rm -f open-webui
-docker pull ghcr.io/open-webui/open-webui:main
-[insert command you used to install]
+docker run --rm --volume /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --run-once open-webui
 ```
 
-In the last line, you need to use the very same command you used to install (local install, remote server, etc.)
+In the last part of the command, replace `open-webui` with your container name if it is different.
 
 ### Moving from Ollama WebUI to Open WebUI
 
