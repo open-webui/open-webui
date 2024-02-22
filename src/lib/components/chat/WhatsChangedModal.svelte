@@ -1,9 +1,8 @@
 <script lang="ts">
 	import Modal from '../common/Modal.svelte';
+	import { Confetti } from 'svelte-confetti';
 	import { WEBUI_NAME, WEB_UI_VERSION, RELEASE_NOTES } from '$lib/constants';
 	import { config, showWhatsChanged } from '$lib/stores';
-
-	export let show = false;
 
 	function toggleVisibility() {
 		showWhatsChanged.update((value) => !value);
@@ -13,7 +12,10 @@
 <Modal>
 	<div class="px-5 py-4 dark:text-gray-300">
 		<div class="flex justify-between items-start">
-			<div class="text-xl font-bold">{WEBUI_NAME}</div>
+			<div class="text-xl font-bold">
+				{WEBUI_NAME}
+				<Confetti x={[-1, -0.25]} y={[0, 0.5]} />
+			</div>
 			<button class="self-center" on:click={toggleVisibility}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -67,6 +69,3 @@
 		</div>
 	</div>
 </Modal>
-
-<style>
-</style>
