@@ -184,25 +184,24 @@
 					</button>
 				</div>
 			</div>
-		</div>
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">Show "WhatsChanged" Modal on Startup</div>
 
-		<div>
-			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Show "WhatsChanged" Modal on Startup</div>
-
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					on:click={() => {
-						toggleenableWhatsChanged();
-					}}
-					type="button"
-				>
-					{#if enableWhatsChanged === true}
-						<span class="ml-2 self-center">On</span>
-					{:else}
-						<span class="ml-2 self-center">Off</span>
-					{/if}
-				</button>
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleenableWhatsChanged();
+						}}
+						type="button"
+					>
+						{#if enableWhatsChanged === true}
+							<span class="ml-2 self-center">On</span>
+						{:else}
+							<span class="ml-2 self-center">Off</span>
+						{/if}
+					</button>
+				</div>
 			</div>
 		</div>
 
