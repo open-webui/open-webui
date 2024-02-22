@@ -13,6 +13,8 @@
 	function handleClick() {
 		toggleVisibility();
 	}
+
+	let hasValidNotes = Array.isArray(RELEASE_NOTES) && RELEASE_NOTES.length > 0;
 </script>
 
 <Modal bind:show>
@@ -44,7 +46,7 @@
 		</div>
 		<hr class=" dark:border-gray-800" />
 		<div class="p-4 overflow-y-scroll max-h-80">
-			{#if RELEASE_NOTES.length === 0}
+			{#if !hasValidNotes}
 				<div class="pt-10 text-center font-bold">There are no notes given.</div>
 
 				<div class="pb-10 text-center">
