@@ -19,6 +19,7 @@
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
 	import { generateChatCompletion, cancelChatCompletion, generateTitle } from '$lib/apis/ollama';
+	import { generateVertexAIChatCompletion } from '$lib/apis/vertexai';
 	import {
 		addTagById,
 		createNewChat,
@@ -306,7 +307,11 @@
 				}
 
 				if (modelTag?.external) {
-					await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+					if (modelTag.provider === 'vertexai') {
+						await sendPromptVertexAI(model, prompt, responseMessageId, _chatId);
+					} else {
+						await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+					}
 				} else if (modelTag) {
 					await sendPromptOllama(model, prompt, responseMessageId, _chatId);
 				} else {
@@ -689,6 +694,177 @@
 		}
 	};
 
+	const sendPromptVertexAI = async (model, userPrompt, responseMessageId, _chatId) => {
+		const responseMessage = history.messages[responseMessageId];
+		scrollToBottom();
+
+		// const token = await getVertexAIKey(localStorage.token);
+		const res = await generateVertexAIChatCompletion(localStorage.token, model, {
+			'generation_config': {
+				temperature: $settings?.options?.temperature ?? undefined,
+				// 	topK:
+				topP: $settings?.options?.top_p ?? undefined,
+				maxOutputTokens: $settings?.options?.num_predict ?? undefined,
+				stopSequences: $settings?.options?.stop ?? undefined,
+				candidateCount: 1
+
+			},
+			contents: [
+				$settings.system
+					? {
+						role: 'MODEL',
+						content: $settings.system
+					}
+					: undefined,
+				...messages
+			]
+				.filter((message) => message)
+				.filter(it => it.content !== '')
+				.map((message, idx, arr) => ({
+					role: message.role == 'system' ? 'MODEL' : message.role,
+					...(
+						message.files?.filter((file) => file.type === 'image').length > 0 ?? false ? {
+								content: [
+									{
+										type: 'text',
+										text:
+											arr.length - 1 !== idx
+												? message.content
+												: message?.raContent ?? message.content
+									},
+									...message.files
+										.filter((file) => file.type === 'image')
+										.map((file) => ({
+											type: 'image_url',
+											image_url: {
+												url: file.url
+											}
+										}))
+								]
+							}
+							: {
+								parts: {
+									text: arr.length - 1 !== idx ? message.content : message?.raContent ?? message.content
+								}
+							})
+				}))
+		});
+
+		if (res && res.ok) {
+			const data = await res.json();
+			responseMessage.content = data.candidates[0].content.parts[0].text;
+			responseMessage.done = true;
+			messages = messages;
+			// const reader = res.body
+			// 	.pipeThrough(new TextDecoderStream())
+			// 	.pipeThrough(splitStream('\n'))
+			// 	.getReader();
+
+			// while (true) {
+			// 	const { value, done } = await reader.read();
+			// 	if (done || stopResponseFlag || _chatId !== $chatId) {
+			// 		responseMessage.done = true;
+			// 		messages = messages;
+			// 		break;
+			// 	}
+			//
+			// 	try {
+			// 		let lines = value.split('\n');
+			//
+			// 		for (const line of lines) {
+			// 			if (line !== '') {
+			// 				console.log(line);
+			// 				if (line === 'data: [DONE]') {
+			// 					responseMessage.done = true;
+			// 					messages = messages;
+			// 				} else {
+			// 					let data = JSON.parse(line.replace(/^data: /, ''));
+			// 					console.log(data);
+			//
+			// 					let content = data.candidates[0].content.parts[0].text;
+			// 					if (responseMessage.content == '' && content == '\n') {
+			// 						continue;
+			// 					} else {
+			// 						responseMessage.content += content ?? '';
+			// 						messages = messages;
+			// 					}
+			// 				}
+			// 			}
+			// 		}
+			// 	} catch (error) {
+			// 		console.log(error);
+			// 	}
+			//
+			// 	if ($settings.notificationEnabled && !document.hasFocus()) {
+			// 		const notification = new Notification(`OpenAI ${model}`, {
+			// 			body: responseMessage.content,
+			// 			icon: '/favicon.png'
+			// 		});
+			// 	}
+			//
+			// 	if ($settings.responseAutoCopy) {
+			// 		copyToClipboard(responseMessage.content);
+			// 	}
+			//
+			// 	if ($settings.responseAutoPlayback) {
+			// 		await tick();
+			// 		document.getElementById(`speak-button-${responseMessage.id}`)?.click();
+			// 	}
+			//
+			// 	if (autoScroll) {
+			// 		scrollToBottom();
+			// 	}
+			// }
+
+			if ($chatId == _chatId) {
+				if ($settings.saveChatHistory ?? true) {
+					chat = await updateChatById(localStorage.token, _chatId, {
+						messages: messages,
+						history: history
+					});
+					await chats.set(await getChatList(localStorage.token));
+				}
+			}
+		} else {
+			if (res !== null) {
+				const error = await res.json();
+				console.log(error);
+				if ('detail' in error) {
+					toast.error(error.detail);
+					responseMessage.content = error.detail;
+				} else {
+					if ('message' in error.error) {
+						toast.error(error.error.message);
+						responseMessage.content = error.error.message;
+					} else {
+						toast.error(error.error);
+						responseMessage.content = error.error;
+					}
+				}
+			} else {
+				toast.error(`Uh-oh! There was an issue connecting to ${model}.`);
+				responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
+			}
+
+			responseMessage.error = true;
+			responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
+			responseMessage.done = true;
+			messages = messages;
+		}
+
+		stopResponseFlag = false;
+		await tick();
+
+		if (autoScroll) {
+			scrollToBottom();
+		}
+
+		if (messages.length == 2) {
+			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			await setChatTitle(_chatId, userPrompt);
+		}
+	};
+
 	const stopResponse = () => {
 		stopResponseFlag = true;
 		console.log('stopResponse');
@@ -719,12 +895,21 @@
 			const modelTag = $models.filter((m) => m.name === responseMessage.model).at(0);
 
 			if (modelTag?.external) {
-				await sendPromptOpenAI(
-					responseMessage.model,
-					history.messages[responseMessage.parentId].content,
-					responseMessage.id,
-					_chatId
-				);
+				if (modelTag.provider === 'vertexai') {
+					await sendPromptVertexAI(
+						responseMessage.model,
+						history.messages[responseMessage.parentId].content,
+						responseMessage.id,
+						_chatId
+					);
+				} else {
+					await sendPromptOpenAI(
+						responseMessage.model,
+						history.messages[responseMessage.parentId].content,
+						responseMessage.id,
+						_chatId
+					);
+				}
 			} else if (modelTag) {
 				await sendPromptOllama(
 					responseMessage.model,
