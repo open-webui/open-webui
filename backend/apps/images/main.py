@@ -33,7 +33,7 @@ app.add_middleware(
 )
 
 app.state.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
-app.state.ENABLED = False
+app.state.ENABLED = app.state.AUTOMATIC1111_BASE_URL != ""
 
 
 @app.get("/enabled", response_model=bool)
@@ -129,20 +129,33 @@ def generate_image(
     form_data: GenerateImageForm,
     user=Depends(get_current_user),
 ):
-    if form_data.model:
-        set_model_handler(form_data.model)
 
-    width, height = tuple(map(int, form_data.size.split("x")))
+    print(form_data)
 
-    r = requests.get(
-        url=f"{app.state.AUTOMATIC1111_BASE_URL}/sdapi/v1/txt2img",
-        json={
+    try:
+        if form_data.model:
+            set_model_handler(form_data.model)
+
+        width, height = tuple(map(int, form_data.size.split("x")))
+
+        data = {
             "prompt": form_data.prompt,
-            "negative_prompt": form_data.negative_prompt,
             "batch_size": form_data.n,
             "width": width,
             "height": height,
-        },
-    )
+        }
 
-    return r.json()
+        if form_data.negative_prompt != None:
+            data["negative_prompt"] = form_data.negative_prompt
+
+        print(data)
+
+        r = requests.post(
+            url=f"{app.state.AUTOMATIC1111_BASE_URL}/sdapi/v1/txt2img",
+            json=data,
+        )
+
+        return r.json()
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=r.status_code, detail=ERROR_MESSAGES.DEFAULT(e))

@@ -2,14 +2,17 @@
 	import toast from 'svelte-french-toast';
 
 	import { createEventDispatcher, onMount } from 'svelte';
-	import { user } from '$lib/stores';
+	import { config, user } from '$lib/stores';
 	import {
 		getAUTOMATIC1111Url,
 		getDefaultDiffusionModel,
 		getDiffusionModels,
+		getImageGenerationEnabledStatus,
+		toggleImageGenerationEnabledStatus,
 		updateAUTOMATIC1111Url,
 		updateDefaultDiffusionModel
 	} from '$lib/apis/images';
+	import { getBackendConfig } from '$lib/apis';
 	const dispatch = createEventDispatcher();
 
 	export let saveSettings: Function;
@@ -42,11 +45,13 @@
 	};
 
 	const toggleImageGeneration = async () => {
-		enableImageGeneration = !enableImageGeneration;
+		enableImageGeneration = await toggleImageGenerationEnabledStatus(localStorage.token);
+		config.set(await getBackendConfig(localStorage.token));
 	};
 
 	onMount(async () => {
 		if ($user.role === 'admin') {
+			enableImageGeneration = await getImageGenerationEnabledStatus(localStorage.token);
 			AUTOMATIC1111_BASE_URL = await getAUTOMATIC1111Url(localStorage.token);
 
 			if (AUTOMATIC1111_BASE_URL) {

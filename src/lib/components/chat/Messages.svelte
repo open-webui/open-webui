@@ -11,6 +11,7 @@
 	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { imageGenerations } from '$lib/apis/images';
 
 	export let chatId = '';
 	export let sendPrompt: Function;
