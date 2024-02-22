@@ -12,6 +12,7 @@
 	import { getPrompts } from '$lib/apis/prompts';
 
 	import { getOpenAIModels } from '$lib/apis/openai';
+	import { getLiteLLMModels } from '$lib/apis/litellm';
 
 	import {
 		user,
@@ -58,6 +59,13 @@
 		});
 
 		models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
+
+		const liteLLMModels = await getLiteLLMModels(localStorage.token).catch((error) => {
+			console.log(error);
+			return null;
+		});
+
+		models.push(...(liteLLMModels ? [{ name: 'hr' }, ...liteLLMModels] : []));
 
 		return models;
 	};

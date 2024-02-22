@@ -36,6 +36,7 @@
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
+	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
 
 	let stopResponseFlag = false;
 	let autoScroll = true;
@@ -277,9 +278,8 @@
 		}
 
 		await Promise.all(
-			selectedModels.map(async (model) => {
-				console.log(model);
-				const modelTag = $models.filter((m) => m.name === model).at(0);
+			selectedModels.map(async (modelId) => {
+				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				// Create response message
 				let responseMessageId = uuidv4();
@@ -289,7 +289,7 @@
 					childrenIds: [],
 					role: 'assistant',
 					content: '',
-					model: model,
+					model: model.id,
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
 
@@ -305,12 +305,12 @@
 					];
 				}
 
-				if (modelTag?.external) {
+				if (model?.external) {
 					await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-				} else if (modelTag) {
+				} else if (model) {
 					await sendPromptOllama(model, prompt, responseMessageId, _chatId);
 				} else {
-					toast.error(`Model ${model} not found`);
+					toast.error(`Model ${model.id} not found`);
 				}
 			})
 		);
@@ -319,6 +319,7 @@
 	};
 
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
+		model = model.id;
 		const responseMessage = history.messages[responseMessageId];
 
 		// Wait until history/message have been updated
@@ -530,54 +531,58 @@
 		const responseMessage = history.messages[responseMessageId];
 		scrollToBottom();
 
-		const res = await generateOpenAIChatCompletion(localStorage.token, {
-			model: model,
-			stream: true,
-			messages: [
-				$settings.system
-					? {
-							role: 'system',
-							content: $settings.system
-					  }
-					: undefined,
-				...messages
-			]
-				.filter((message) => message)
-				.map((message, idx, arr) => ({
-					role: message.role,
-					...(message.files?.filter((file) => file.type === 'image').length > 0 ?? false
+		const res = await generateOpenAIChatCompletion(
+			localStorage.token,
+			{
+				model: model.id,
+				stream: true,
+				messages: [
+					$settings.system
 						? {
-								content: [
-									{
-										type: 'text',
-										text:
-											arr.length - 1 !== idx
-												? message.content
-												: message?.raContent ?? message.content
-									},
-									...message.files
-										.filter((file) => file.type === 'image')
-										.map((file) => ({
-											type: 'image_url',
-											image_url: {
-												url: file.url
-											}
-										}))
-								]
+								role: 'system',
+								content: $settings.system
 						  }
-						: {
-								content:
-									arr.length - 1 !== idx ? message.content : message?.raContent ?? message.content
-						  })
-				})),
-			seed: $settings?.options?.seed ?? undefined,
-			stop: $settings?.options?.stop ?? undefined,
-			temperature: $settings?.options?.temperature ?? undefined,
-			top_p: $settings?.options?.top_p ?? undefined,
-			num_ctx: $settings?.options?.num_ctx ?? undefined,
-			frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
-			max_tokens: $settings?.options?.num_predict ?? undefined
-		});
+						: undefined,
+					...messages
+				]
+					.filter((message) => message)
+					.map((message, idx, arr) => ({
+						role: message.role,
+						...(message.files?.filter((file) => file.type === 'image').length > 0 ?? false
+							? {
+									content: [
+										{
+											type: 'text',
+											text:
+												arr.length - 1 !== idx
+													? message.content
+													: message?.raContent ?? message.content
+										},
+										...message.files
+											.filter((file) => file.type === 'image')
+											.map((file) => ({
+												type: 'image_url',
+												image_url: {
+													url: file.url
+												}
+											}))
+									]
+							  }
+							: {
+									content:
+										arr.length - 1 !== idx ? message.content : message?.raContent ?? message.content
+							  })
+					})),
+				seed: $settings?.options?.seed ?? undefined,
+				stop: $settings?.options?.stop ?? undefined,
+				temperature: $settings?.options?.temperature ?? undefined,
+				top_p: $settings?.options?.top_p ?? undefined,
+				num_ctx: $settings?.options?.num_ctx ?? undefined,
+				frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
+				max_tokens: $settings?.options?.num_predict ?? undefined
+			},
+			model.source === 'litellm' ? `${LITELLM_API_BASE_URL}/v1` : `${OPENAI_API_BASE_URL}`
+		);
 
 		if (res && res.ok) {
 			const reader = res.body
