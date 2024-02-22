@@ -5,6 +5,7 @@
 
 	import { getOllamaAPIUrl, updateOllamaAPIUrl } from '$lib/apis/ollama';
 	import { getOpenAIKey, getOpenAIUrl, updateOpenAIKey, updateOpenAIUrl } from '$lib/apis/openai';
+	import { getVertexAIKey, getVertexAIUrl, updateVertexAIKey, updateVertexAIUrl } from '$lib/apis/vertexai';
 	import toast from 'svelte-french-toast';
 
 	export let getModels: Function;
@@ -15,9 +16,19 @@
 	let OPENAI_API_KEY = '';
 	let OPENAI_API_BASE_URL = '';
 
+	let VERTEXAI_API_KEY = '';
+	let VERTEXAI_API_BASE_URL = '';
+
 	const updateOpenAIHandler = async () => {
 		OPENAI_API_BASE_URL = await updateOpenAIUrl(localStorage.token, OPENAI_API_BASE_URL);
 		OPENAI_API_KEY = await updateOpenAIKey(localStorage.token, OPENAI_API_KEY);
+
+		await models.set(await getModels());
+	};
+
+	const updateVertexAIHandler = async () => {
+		VERTEXAI_API_BASE_URL = await updateVertexAIUrl(localStorage.token, VERTEXAI_API_BASE_URL);
+		VERTEXAI_API_KEY = await updateVertexAIKey(localStorage.token, VERTEXAI_API_KEY);
 
 		await models.set(await getModels());
 	};
@@ -37,6 +48,8 @@
 			API_BASE_URL = await getOllamaAPIUrl(localStorage.token);
 			OPENAI_API_BASE_URL = await getOpenAIUrl(localStorage.token);
 			OPENAI_API_KEY = await getOpenAIKey(localStorage.token);
+			VERTEXAI_API_BASE_URL = await getVertexAIUrl(localStorage.token);
+			VERTEXAI_API_KEY = await getVertexAIKey(localStorage.token);
 		}
 	});
 </script>
@@ -45,6 +58,7 @@
 	class="flex flex-col h-full space-y-3 text-sm"
 	on:submit|preventDefault={() => {
 		updateOpenAIHandler();
+		updateVertexAIHandler();
 		dispatch('save');
 
 		// saveSettings({
@@ -128,6 +142,42 @@
 			</div>
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 				WebUI will make requests to <span class=" text-gray-200">'{OPENAI_API_BASE_URL}/chat'</span>
+			</div>
+		</div>
+	</div>
+
+
+	<hr class=" dark:border-gray-700" />
+
+	<div class=" space-y-3">
+		<div>
+			<div class=" mb-2.5 text-sm font-medium">VertexAI API Key</div>
+			<div class="flex w-full">
+				<div class="flex-1">
+					<input
+						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+						placeholder="Enter VertexAI API Key"
+						bind:value={VERTEXAI_API_KEY}
+						autocomplete="off"
+					/>
+				</div>
+			</div>
+		</div>
+
+		<div>
+			<div class=" mb-2.5 text-sm font-medium">VertexAI API Base URL</div>
+			<div class="flex w-full">
+				<div class="flex-1">
+					<input
+						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+						placeholder="Enter VertexAI API Base URL"
+						bind:value={VERTEXAI_API_BASE_URL}
+						autocomplete="off"
+					/>
+				</div>
+			</div>
+			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+				WebUI will make requests to <span class=" text-gray-200">'{VERTEXAI_API_BASE_URL}/chat'</span>
 			</div>
 		</div>
 	</div>
