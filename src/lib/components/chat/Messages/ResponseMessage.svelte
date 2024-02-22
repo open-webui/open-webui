@@ -2,21 +2,24 @@
 	import toast from 'svelte-french-toast';
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
-	import { config, settings } from '$lib/stores';
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
 
+	import { createEventDispatcher } from 'svelte';
 	import { onMount, tick } from 'svelte';
+
+	const dispatch = createEventDispatcher();
+
+	import { config, settings } from '$lib/stores';
+	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
+	import { imageGenerations } from '$lib/apis/images';
+	import { extractSentences } from '$lib/utils';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import Skeleton from './Skeleton.svelte';
 	import CodeBlock from './CodeBlock.svelte';
-
-	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
-	import { extractSentences } from '$lib/utils';
-	import { imageGenerations } from '$lib/apis/images';
 
 	export let modelfiles = [];
 	export let message;
@@ -280,6 +283,8 @@
 				type: 'image',
 				url: `data:image/png;base64,${image}`
 			}));
+
+			dispatch('save', message);
 		}
 
 		generatingImage = false;

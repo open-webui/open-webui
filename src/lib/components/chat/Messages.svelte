@@ -309,6 +309,16 @@
 								{copyToClipboard}
 								{continueGeneration}
 								{regenerateResponse}
+								on:save={async (e) => {
+									console.log('save', e);
+
+									const message = e.detail;
+									history.messages[message.id] = message;
+									await updateChatById(localStorage.token, chatId, {
+										messages: messages,
+										history: history
+									});
+								}}
 							/>
 						{/if}
 					</div>
