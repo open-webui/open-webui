@@ -14,9 +14,7 @@
 	<div class="px-5 py-4 dark:text-gray-300">
 		<div class="flex justify-between items-start">
 			<div class="text-xl font-bold">{WEBUI_NAME}</div>
-			<!-- WEBUI_NAME groß und oben -->
 			<button class="self-center" on:click={toggleVisibility}>
-				<!-- SVG-Icon für Schließen-Button -->
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
@@ -30,10 +28,8 @@
 			</button>
 		</div>
 		<div class=" pb-3 flex items-center mt-2">
-			<!-- Container für die Elemente darunter -->
 			<div class="text-sm dark:text-gray-200">Release Notes</div>
 			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
-			<!-- Trennstrich -->
 			<div class="text-sm dark:text-gray-200">
 				{$config && $config.version ? $config.version : WEB_UI_VERSION}
 			</div>
