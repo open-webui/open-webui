@@ -755,6 +755,27 @@
 			responseMessage.content = data.candidates[0].content.parts[0].text;
 			responseMessage.done = true;
 			messages = messages;
+
+			if ($settings.notificationEnabled && !document.hasFocus()) {
+				new Notification(`VertexAI ${model}`, {
+					body: responseMessage.content,
+					icon: '/favicon.png'
+				});
+			}
+
+			if ($settings.responseAutoCopy) {
+				copyToClipboard(responseMessage.content);
+			}
+
+			if ($settings.responseAutoPlayback) {
+				await tick();
+				document.getElementById(`speak-button-${responseMessage.id}`)?.click();
+			}
+
+			if (autoScroll) {
+				scrollToBottom();
+			}
+			// TODO STREAMING SUPPORT
 			// const reader = res.body
 			// 	.pipeThrough(new TextDecoderStream())
 			// 	.pipeThrough(splitStream('\n'))
@@ -793,26 +814,6 @@
 			// 		}
 			// 	} catch (error) {
 			// 		console.log(error);
-			// 	}
-			//
-			// 	if ($settings.notificationEnabled && !document.hasFocus()) {
-			// 		const notification = new Notification(`OpenAI ${model}`, {
-			// 			body: responseMessage.content,
-			// 			icon: '/favicon.png'
-			// 		});
-			// 	}
-			//
-			// 	if ($settings.responseAutoCopy) {
-			// 		copyToClipboard(responseMessage.content);
-			// 	}
-			//
-			// 	if ($settings.responseAutoPlayback) {
-			// 		await tick();
-			// 		document.getElementById(`speak-button-${responseMessage.id}`)?.click();
-			// 	}
-			//
-			// 	if (autoScroll) {
-			// 		scrollToBottom();
 			// 	}
 			// }
 
