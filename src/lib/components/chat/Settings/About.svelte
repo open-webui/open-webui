@@ -18,7 +18,7 @@
 			<div class=" mb-2.5 text-sm font-medium">{WEBUI_NAME} Version</div>
 			<div class="flex w-full">
 				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
-					{WEB_UI_VERSION}
+					v{WEB_UI_VERSION}
 				</div>
 			</div>
 		</div>
