@@ -81,6 +81,12 @@ OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
+####################################
+# VERTEXAI_API
+####################################
+
+VERTEXAI_API_KEY = os.environ.get("VERTEXAI_API_KEY", "")
+VERTEXAI_API_BASE_URL = os.environ.get("VERTEXAI_API_BASE_URL", "")
 
 ####################################
 # WEBUI
