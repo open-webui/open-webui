@@ -44,6 +44,13 @@
 				/>
 			</a>
 
+			<a href="https://twitter.com/OpenWebUI" target="_blank">
+				<img
+					alt="X (formerly Twitter) Follow"
+					src="https://img.shields.io/twitter/follow/OpenWebUI"
+				/>
+			</a>
+
 			<a href="https://github.com/open-webui/open-webui" target="_blank">
 				<img
 					alt="Github Repo"
