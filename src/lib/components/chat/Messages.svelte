@@ -11,6 +11,7 @@
 	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { imageGenerations } from '$lib/apis/images';
 
 	export let chatId = '';
 	export let sendPrompt: Function;
@@ -308,6 +309,16 @@
 								{copyToClipboard}
 								{continueGeneration}
 								{regenerateResponse}
+								on:save={async (e) => {
+									console.log('save', e);
+
+									const message = e.detail;
+									history.messages[message.id] = message;
+									await updateChatById(localStorage.token, chatId, {
+										messages: messages,
+										history: history
+									});
+								}}
 							/>
 						{/if}
 					</div>

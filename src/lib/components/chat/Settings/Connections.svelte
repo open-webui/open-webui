@@ -1,12 +1,17 @@
 <script lang="ts">
-	import { getOpenAIKey, getOpenAIUrl, updateOpenAIKey, updateOpenAIUrl } from '$lib/apis/openai';
 	import { models, user } from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
 	const dispatch = createEventDispatcher();
 
+	import { getOllamaAPIUrl, updateOllamaAPIUrl } from '$lib/apis/ollama';
+	import { getOpenAIKey, getOpenAIUrl, updateOpenAIKey, updateOpenAIUrl } from '$lib/apis/openai';
+	import toast from 'svelte-french-toast';
+
 	export let getModels: Function;
 
 	// External
+	let API_BASE_URL = '';
+
 	let OPENAI_API_KEY = '';
 	let OPENAI_API_BASE_URL = '';
 
@@ -17,8 +22,19 @@
 		await models.set(await getModels());
 	};
 
+	const updateOllamaAPIUrlHandler = async () => {
+		API_BASE_URL = await updateOllamaAPIUrl(localStorage.token, API_BASE_URL);
+		const _models = await getModels('ollama');
+
+		if (_models.length > 0) {
+			toast.success('Server connection verified');
+			await models.set(_models);
+		}
+	};
+
 	onMount(async () => {
 		if ($user.role === 'admin') {
+			API_BASE_URL = await getOllamaAPIUrl(localStorage.token);
 			OPENAI_API_BASE_URL = await getOpenAIUrl(localStorage.token);
 			OPENAI_API_KEY = await getOpenAIKey(localStorage.token);
 		}
@@ -26,7 +42,7 @@
 </script>
 
 <form
-	class="flex flex-col h-full justify-between space-y-3 text-sm"
+	class="flex flex-col h-full space-y-3 text-sm"
 	on:submit|preventDefault={() => {
 		updateOpenAIHandler();
 		dispatch('save');
@@ -37,6 +53,52 @@
 		// });
 	}}
 >
+	<div>
+		<div class=" mb-2.5 text-sm font-medium">Ollama API URL</div>
+		<div class="flex w-full">
+			<div class="flex-1 mr-2">
+				<input
+					class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+					placeholder="Enter URL (e.g. http://localhost:11434/api)"
+					bind:value={API_BASE_URL}
+				/>
+			</div>
+			<button
+				class="px-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-700 rounded transition"
+				on:click={() => {
+					updateOllamaAPIUrlHandler();
+				}}
+				type="button"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</button>
+		</div>
+
+		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+			Trouble accessing Ollama?
+			<a
+				class=" text-gray-300 font-medium"
+				href="https://github.com/open-webui/open-webui#troubleshooting"
+				target="_blank"
+			>
+				Click here for help.
+			</a>
+		</div>
+	</div>
+
+	<hr class=" dark:border-gray-700" />
+
 	<div class=" space-y-3">
 		<div>
 			<div class=" mb-2.5 text-sm font-medium">OpenAI API Key</div>
@@ -50,12 +112,7 @@
 					/>
 				</div>
 			</div>
-			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				Adds optional support for online models.
-			</div>
 		</div>
-
-		<hr class=" dark:border-gray-700" />
 
 		<div>
 			<div class=" mb-2.5 text-sm font-medium">OpenAI API Base URL</div>

@@ -57,7 +57,6 @@ app.include_router(utils.router, prefix="/utils", tags=["utils"])
 async def get_status():
     return {
         "status": True,
-        "version": WEBUI_VERSION,
         "auth": WEBUI_AUTH,
         "default_models": app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": app.state.DEFAULT_PROMPT_SUGGESTIONS,
