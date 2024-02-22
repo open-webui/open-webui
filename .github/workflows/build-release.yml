@@ -13,11 +13,18 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Get commit hash
-      id: get_hash
+    - name: Check for changes in package.json
       run: |
-        HASH=$(git rev-parse --short "$GITHUB_SHA")
-        echo "::set-output name=hash::$HASH"
+        git diff --cached --diff-filter=d package.json || {
+          echo "No changes to package.json"
+          exit 1
+        }
+
+    - name: Get version number from package.json
+      id: get_version
+      run: |
+        VERSION=$(jq -r '.version' package.json)
+        echo "::set-output name=version::$VERSION"
 
     - name: Create GitHub release
       uses: actions/github-script@v5
@@ -27,8 +34,8 @@ jobs:
           const release = await github.rest.repos.createRelease({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            tag_name: `v${{ steps.get_hash.outputs.hash }}`,
-            name: `v${{ steps.get_hash.outputs.hash }}`,
+            tag_name: `v${{ steps.get_version.outputs.version }}`,
+            name: `v${{ steps.get_version.outputs.version }}`,
             body: 'Automatically created new release',
           })
           console.log(`Created release ${release.data.html_url}`)
