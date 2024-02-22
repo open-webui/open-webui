@@ -16,6 +16,7 @@
 		updateChatById
 	} from '$lib/apis/chats';
 	import toast from 'svelte-french-toast';
+	import { slide } from 'svelte/transition';
 
 	let show = false;
 	let navElement;
@@ -562,6 +563,7 @@
 						<div
 							id="dropdownDots"
 							class="absolute z-40 bottom-[70px] 4.5rem rounded-lg shadow w-[240px] bg-gray-900"
+							transition:slide={{ duration: 300 }}
 						>
 							<div class="py-2 w-full">
 								{#if $user.role === 'admin'}
