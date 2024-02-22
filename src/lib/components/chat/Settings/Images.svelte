@@ -45,8 +45,13 @@
 	};
 
 	const toggleImageGeneration = async () => {
-		enableImageGeneration = await toggleImageGenerationEnabledStatus(localStorage.token);
-		config.set(await getBackendConfig(localStorage.token));
+		if (AUTOMATIC1111_BASE_URL) {
+			enableImageGeneration = await toggleImageGenerationEnabledStatus(localStorage.token);
+			config.set(await getBackendConfig(localStorage.token));
+		} else {
+			enableImageGeneration = false;
+			toast.error('AUTOMATIC1111_BASE_URL not provided');
+		}
 	};
 
 	onMount(async () => {

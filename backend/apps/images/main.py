@@ -43,8 +43,12 @@ async def get_enable_status(request: Request, user=Depends(get_admin_user)):
 
 @app.get("/enabled/toggle", response_model=bool)
 async def toggle_enabled(request: Request, user=Depends(get_admin_user)):
-    app.state.ENABLED = not app.state.ENABLED
-    return app.state.ENABLED
+    try:
+        r = requests.head(app.state.AUTOMATIC1111_BASE_URL)
+        app.state.ENABLED = not app.state.ENABLED
+        return app.state.ENABLED
+    except Exception as e:
+        raise HTTPException(status_code=r.status_code, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 class UrlUpdateForm(BaseModel):
