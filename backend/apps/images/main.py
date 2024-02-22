@@ -62,16 +62,16 @@ async def get_openai_url(user=Depends(get_admin_user)):
 
 @app.post("/url/update")
 async def update_openai_url(form_data: UrlUpdateForm, user=Depends(get_admin_user)):
-    try:
-        r = requests.head(form_data.url)
-        if r.ok:
-            app.state.AUTOMATIC1111_BASE_URL = form_data.url.strip("/")
-        return {
-            "AUTOMATIC1111_BASE_URL": app.state.AUTOMATIC1111_BASE_URL,
-            "status": True,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=r.status_code, detail=ERROR_MESSAGES.DEFAULT(e))
+
+    if form_data.url == "":
+        app.state.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
+    else:
+        app.state.AUTOMATIC1111_BASE_URL = form_data.url.strip("/")
+
+    return {
+        "AUTOMATIC1111_BASE_URL": app.state.AUTOMATIC1111_BASE_URL,
+        "status": True,
+    }
 
 
 @app.get("/models")

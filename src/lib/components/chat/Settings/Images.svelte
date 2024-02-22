@@ -25,6 +25,14 @@
 	let selectedModel = '';
 	let models = [];
 
+	const getModels = async () => {
+		models = await getDiffusionModels(localStorage.token).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+		selectedModel = await getDefaultDiffusionModel(localStorage.token);
+	};
+
 	const updateAUTOMATIC1111UrlHandler = async () => {
 		const res = await updateAUTOMATIC1111Url(localStorage.token, AUTOMATIC1111_BASE_URL).catch(
 			(error) => {
@@ -34,11 +42,13 @@
 		);
 
 		if (res) {
-			toast.success('Server connection verified');
 			AUTOMATIC1111_BASE_URL = res;
 
-			models = await getDiffusionModels(localStorage.token);
-			selectedModel = await getDefaultDiffusionModel(localStorage.token);
+			await getModels();
+
+			if (models) {
+				toast.success('Server connection verified');
+			}
 		} else {
 			AUTOMATIC1111_BASE_URL = await getAUTOMATIC1111Url(localStorage.token);
 		}
@@ -46,8 +56,17 @@
 
 	const toggleImageGeneration = async () => {
 		if (AUTOMATIC1111_BASE_URL) {
-			enableImageGeneration = await toggleImageGenerationEnabledStatus(localStorage.token);
-			config.set(await getBackendConfig(localStorage.token));
+			enableImageGeneration = await toggleImageGenerationEnabledStatus(localStorage.token).catch(
+				(error) => {
+					toast.error(error);
+					return false;
+				}
+			);
+
+			if (enableImageGeneration) {
+				config.set(await getBackendConfig(localStorage.token));
+				getModels();
+			}
 		} else {
 			enableImageGeneration = false;
 			toast.error('AUTOMATIC1111_BASE_URL not provided');
@@ -59,9 +78,8 @@
 			enableImageGeneration = await getImageGenerationEnabledStatus(localStorage.token);
 			AUTOMATIC1111_BASE_URL = await getAUTOMATIC1111Url(localStorage.token);
 
-			if (AUTOMATIC1111_BASE_URL) {
-				models = await getDiffusionModels(localStorage.token);
-				selectedModel = await getDefaultDiffusionModel(localStorage.token);
+			if (enableImageGeneration && AUTOMATIC1111_BASE_URL) {
+				getModels();
 			}
 		}
 	});
