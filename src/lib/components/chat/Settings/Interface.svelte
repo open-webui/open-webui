@@ -32,6 +32,9 @@
 
 	const toggleenableWhatsChanged = async () => {
 		enableWhatsChanged = !enableWhatsChanged;
+		if (enableWhatsChanged) {
+			showWhatsChanged.update((value) => true);
+		}
 		saveSettings({ enableWhatsChanged: enableWhatsChanged });
 	};
 

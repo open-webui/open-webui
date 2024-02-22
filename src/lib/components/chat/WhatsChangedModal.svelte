@@ -4,19 +4,25 @@
 	import { WEBUI_NAME, WEB_UI_VERSION, RELEASE_NOTES } from '$lib/constants';
 	import { config, showWhatsChanged } from '$lib/stores';
 
+	export let show = false;
+
 	function toggleVisibility() {
 		showWhatsChanged.update((value) => !value);
 	}
+
+	function handleClick() {
+		toggleVisibility();
+	}
 </script>
 
-<Modal>
+<Modal bind:show>
 	<div class="px-5 py-4 dark:text-gray-300">
 		<div class="flex justify-between items-start">
 			<div class="text-xl font-bold">
 				{WEBUI_NAME}
 				<Confetti x={[-1, -0.25]} y={[0, 0.5]} />
 			</div>
-			<button class="self-center" on:click={toggleVisibility}>
+			<button class="self-center" on:click={handleClick}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
@@ -58,7 +64,7 @@
 		</div>
 		<div class="m-4 flex justify-end pt-3 text-sm font-medium">
 			<button
-				on:click={toggleVisibility}
+				on:click={handleClick}
 				class=" rounded px-4 py-2 overflow-hidden group bg-green-600 relative hover:bg-gradient-to-r hover:from-green-600 hover:to-green-500 text-white hover:ring-2 hover:ring-offset-2 hover:ring-green-500 transition-all ease-out duration-300"
 			>
 				<span
