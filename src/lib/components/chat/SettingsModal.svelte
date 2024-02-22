@@ -4,6 +4,7 @@
 
 	import { getOllamaModels } from '$lib/apis/ollama';
 	import { getOpenAIModels } from '$lib/apis/openai';
+	import { getVertexAIModels } from '$lib/apis/vertexai';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -42,6 +43,11 @@
 				return null;
 			});
 			models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
+			const vertexAIModels = await getVertexAIModels(localStorage.token).catch((error) => {
+				console.log(error);
+				return null;
+			});
+			models.push(...(vertexAIModels ? [{ name: 'hr' }, ...vertexAIModels] : []));
 		}
 
 		return models;
