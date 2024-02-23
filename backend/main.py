@@ -65,7 +65,6 @@ app.mount("/openai/api", openai_app)
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
 app.mount("/rag/api/v1", rag_app)
-app.mount("/audio/api/v1", audio_app)
 app.mount("/functions/api/v1", functions_app)
 
 
