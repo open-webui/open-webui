@@ -177,20 +177,7 @@
 			<hr class=" dark:border-gray-700" />
 
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">Set Image Size</div>
-				<div class="flex w-full">
-					<div class="flex-1 mr-2">
-						<input
-							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-							placeholder="Enter Image Size (e.g. 512x512)"
-							bind:value={imageSize}
-						/>
-					</div>
-				</div>
-			</div>
-
-			<div>
-				<div class=" mb-2.5 text-sm font-medium">Set default model</div>
+				<div class=" mb-2.5 text-sm font-medium">Set Default Model</div>
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<select
@@ -207,6 +194,19 @@
 								>
 							{/each}
 						</select>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">Set Image Size</div>
+				<div class="flex w-full">
+					<div class="flex-1 mr-2">
+						<input
+							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							placeholder="Enter Image Size (e.g. 512x512)"
+							bind:value={imageSize}
+						/>
 					</div>
 				</div>
 			</div>
