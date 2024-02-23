@@ -70,7 +70,7 @@ spec:
       - name: data
         emptyDir: {}
       {{- else if and .Values.ollama.persistence.enabled (not .Values.ollama.persistence.existingClaim) }}
-        {}
+        []
   volumeClaimTemplates:
   - metadata:
       name: data
