@@ -4,7 +4,7 @@ metadata:
   labels:
     app: ollama-webui
   name: ollama-webui-pvc
-  namespace: ollama-namespace
+  namespace: open-webui
 spec:
   accessModes: ["ReadWriteOnce"]
   resources:
