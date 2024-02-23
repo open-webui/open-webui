@@ -1,10 +1,10 @@
 #!/bin/bash
 # update_llm.sh
 
-# Récupère la liste des LLM installées dans le container Docker
+# Retrieves the list of LLMs installed in the Docker container
 llm_list=$(docker exec ollama ollama list | tail -n +2 | awk '{print $1}')
 
-# Boucle sur chaque LLM pour la mettre à jour
+# Loop over each LLM to update it
 for llm in $llm_list; do
   docker exec ollama ollama pull $llm
 done
