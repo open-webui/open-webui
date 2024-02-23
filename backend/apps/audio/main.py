@@ -56,7 +56,7 @@ def transcribe(
 
         model = WhisperModel(
             WHISPER_MODEL,
-            device="cpu",
+            device="auto",
             compute_type="int8",
             download_root=WHISPER_MODEL_DIR,
         )

@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ollama-webui-ingress
+  name: open-webui-ingress
   namespace: {{ .Values.namespace }}
 {{- if .Values.webui.ingress.annotations }}
   annotations:
@@ -17,7 +17,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: ollama-webui-service
+            name: open-webui-service
             port:
               number: {{ .Values.webui.servicePort }}
 {{- end }}

@@ -1,9 +1,9 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { WEBUI_BASE_URL } from '$lib/constants';
 
 export const getBackendConfig = async () => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/config`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json'

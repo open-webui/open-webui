@@ -1,15 +1,18 @@
-namespace: ollama-namespace
+namespace: open-webui
 
 ollama:
   replicaCount: 1
   image: ollama/ollama:latest
   servicePort: 11434
   resources:
-    limits:
+    requests:
       cpu: "2000m"
       memory: "2Gi"
+    limits:
+      cpu: "4000m"
+      memory: "4Gi"
       nvidia.com/gpu: "0"
-  volumeSize: 1Gi
+  volumeSize: 30Gi
   nodeSelector: {}
   tolerations: []
   service:
@@ -19,19 +22,22 @@ ollama:
 
 webui:
   replicaCount: 1
-  image: ghcr.io/ollama-webui/ollama-webui:main
+  image: ghcr.io/open-webui/open-webui:main
   servicePort: 8080
   resources:
-    limits:
+    requests:
       cpu: "500m"
       memory: "500Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
   ingress:
     enabled: true
     annotations:
     # Use appropriate annotations for your Ingress controller, e.g., for NGINX:
       # nginx.ingress.kubernetes.io/rewrite-target: /
-    host: ollama.minikube.local
-  volumeSize: 1Gi
+    host: open-webui.minikube.local
+  volumeSize: 2Gi
   nodeSelector: {}
   tolerations: []
   service:

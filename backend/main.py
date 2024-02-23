@@ -11,10 +11,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
 from apps.audio.main import app as audio_app
-
+from apps.images.main import app as images_app
+from apps.rag.main import app as rag_app
 
 from apps.web.main import app as webui_app
-from apps.rag.main import app as rag_app
 
 from config import ENV, FRONTEND_BUILD_DIR
 
@@ -58,8 +58,19 @@ app.mount("/api/v1", webui_app)
 app.mount("/ollama/api", ollama_app)
 app.mount("/openai/api", openai_app)
 
+app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
 app.mount("/rag/api/v1", rag_app)
+
+
+@app.get("/api/config")
+async def get_app_config():
+    return {
+        "status": True,
+        "images": images_app.state.ENABLED,
+        "default_models": webui_app.state.DEFAULT_MODELS,
+        "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
+    }
 
 
 app.mount(

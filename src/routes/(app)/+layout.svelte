@@ -268,7 +268,7 @@
 									Trouble accessing Ollama?
 									<a
 										class=" text-black dark:text-white font-semibold underline"
-										href="https://github.com/ollama-webui/ollama-webui#troubleshooting"
+										href="https://github.com/open-webui/open-webui#troubleshooting"
 										target="_blank"
 									>
 										Click here for help.

@@ -1,17 +1,17 @@
 # Open WebUI (Formerly Ollama WebUI) 👋
 
-![GitHub stars](https://img.shields.io/github/stars/ollama-webui/ollama-webui?style=social)
-![GitHub forks](https://img.shields.io/github/forks/ollama-webui/ollama-webui?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/ollama-webui/ollama-webui?style=social)
-![GitHub repo size](https://img.shields.io/github/repo-size/ollama-webui/ollama-webui)
-![GitHub language count](https://img.shields.io/github/languages/count/ollama-webui/ollama-webui)
-![GitHub top language](https://img.shields.io/github/languages/top/ollama-webui/ollama-webui)
-![GitHub last commit](https://img.shields.io/github/last-commit/ollama-webui/ollama-webui?color=red)
+![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
+![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
+![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
+![GitHub repo size](https://img.shields.io/github/repo-size/open-webui/open-webui)
+![GitHub language count](https://img.shields.io/github/languages/count/open-webui/open-webui)
+![GitHub top language](https://img.shields.io/github/languages/top/open-webui/open-webui)
+![GitHub last commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
 ![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Follama-webui%2Follama-wbui&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
 
-ChatGPT-Style Web Interface for Ollama 🦙
+User-friendly WebUI for LLMs, Inspired by ChatGPT
 
 ![Open WebUI Demo](./demo.gif)
 
@@ -83,11 +83,11 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 
 🌟 **Important Note on User Roles and Privacy:**
 
-- **Admin Creation:** The very first account to sign up on the Open WebUI will be granted **Administrator privileges**. This account will have comprehensive control over the platform, including user management and system settings.
+- **Admin Creation:** The very first account to sign up on Open WebUI will be granted **Administrator privileges**. This account will have comprehensive control over the platform, including user management and system settings.
 
 - **User Registrations:** All subsequent users signing up will initially have their accounts set to **Pending** status by default. These accounts will require approval from the Administrator to gain access to the platform functionalities.
 
-- **Privacy and Data Security:** We prioritize your privacy and data security above all. Please be reassured that all data entered into the Open WebUI is stored locally on your device. Our system is designed to be privacy-first, ensuring that no external requests are made, and your data does not leave your local environment. We are committed to maintaining the highest standards of data privacy and security, ensuring that your information remains confidential and under your control.
+- **Privacy and Data Security:** We prioritize your privacy and data security above all. Please be reassured that all data entered into Open WebUI is stored locally on your device. Our system is designed to be privacy-first, ensuring that no external requests are made, and your data does not leave your local environment. We are committed to maintaining the highest standards of data privacy and security, ensuring that your information remains confidential and under your control.
 
 ### Steps to Install Open WebUI
 
@@ -212,14 +212,13 @@ For other ways to install, like using Kustomize or Helm, check out [INSTALLATION
 
 ### Updating your Docker Installation
 
-In case you want to update your local Docker installation to the latest version, you can do it performing the following actions:
+In case you want to update your local Docker installation to the latest version, you can do it with [Watchtower](https://containrrr.dev/watchtower/):
 
 ```bash
-docker rm -f open-webui
-docker pull ghcr.io/open-webui/open-webui:main
-[insert command you used to install]
+docker run --rm --volume /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --run-once open-webui
 ```
-In the last line, you need to use the very same command you used to install (local install, remote server, etc.)
+
+In the last part of the command, replace `open-webui` with your container name if it is different.
 
 ### Moving from Ollama WebUI to Open WebUI
 
@@ -257,17 +256,13 @@ Once you verify that all the data has been migrated you can erase the old volume
 docker volume rm ollama-webui
 ```
 
-
-
-
-
 ## How to Install Without Docker
 
 While we strongly recommend using our convenient Docker container installation for optimal support, we understand that some situations may require a non-Docker setup, especially for development purposes. Please note that non-Docker installations are not officially supported, and you might need to troubleshoot on your own.
 
 ### Project Components
 
-The Open WebUI consists of two primary components: the frontend and the backend (which serves as a reverse proxy, handling static frontend files, and additional features). Both need to be running concurrently for the development environment.
+Open WebUI consists of two primary components: the frontend and the backend (which serves as a reverse proxy, handling static frontend files, and additional features). Both need to be running concurrently for the development environment.
 
 > [!IMPORTANT]
 > The backend is required for proper functionality
@@ -286,7 +281,7 @@ git clone https://github.com/open-webui/open-webui.git
 cd open-webui/
 
 # Copying required .env file
-cp -RPp example.env .env
+cp -RPp .env.example .env
 
 # Building Frontend Using Node
 npm i
@@ -302,7 +297,7 @@ pip install -r requirements.txt -U
 sh start.sh
 ```
 
-You should have the Open WebUI up and running at http://localhost:8080/. Enjoy! 😄
+You should have Open WebUI up and running at http://localhost:8080/. Enjoy! 😄
 
 ## Troubleshooting
 

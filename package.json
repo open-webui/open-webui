@@ -1,6 +1,6 @@
 {
-	"name": "ollama-webui",
-	"version": "0.0.1",
+	"name": "open-webui",
+	"version": "0.1.0-101",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev --host",

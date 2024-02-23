@@ -26,6 +26,8 @@ app = FastAPI()
 origins = ["*"]
 
 app.state.ENABLE_SIGNUP = ENABLE_SIGNUP
+app.state.JWT_EXPIRES_IN = "-1"
+
 app.state.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
@@ -55,7 +57,6 @@ app.include_router(utils.router, prefix="/utils", tags=["utils"])
 async def get_status():
     return {
         "status": True,
-        "version": WEBUI_VERSION,
         "auth": WEBUI_AUTH,
         "default_models": app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": app.state.DEFAULT_PROMPT_SUGGESTIONS,

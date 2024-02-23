@@ -18,7 +18,7 @@
 			<div class=" mb-2.5 text-sm font-medium">{WEBUI_NAME} Version</div>
 			<div class="flex w-full">
 				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
-					{$config && $config.version ? $config.version : WEB_UI_VERSION}
+					v{WEB_UI_VERSION}
 				</div>
 			</div>
 		</div>
@@ -44,10 +44,17 @@
 				/>
 			</a>
 
-			<a href="https://github.com/ollama-webui/ollama-webui" target="_blank">
+			<a href="https://twitter.com/OpenWebUI" target="_blank">
+				<img
+					alt="X (formerly Twitter) Follow"
+					src="https://img.shields.io/twitter/follow/OpenWebUI"
+				/>
+			</a>
+
+			<a href="https://github.com/open-webui/open-webui" target="_blank">
 				<img
 					alt="Github Repo"
-					src="https://img.shields.io/github/stars/ollama-webui/ollama-webui?style=social&label=Star us on Github"
+					src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
 				/>
 			</a>
 		</div>

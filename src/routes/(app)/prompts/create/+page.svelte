@@ -50,7 +50,7 @@
 		return regex.test(inputString);
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		window.addEventListener('message', async (event) => {
 			if (
 				![
@@ -74,11 +74,23 @@
 		if (window.opener ?? false) {
 			window.opener.postMessage('loaded', '*');
 		}
+
+		if (sessionStorage.prompt) {
+			const prompt = JSON.parse(sessionStorage.prompt);
+
+			console.log(prompt);
+			title = prompt.title;
+			await tick();
+			content = prompt.content;
+			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
+
+			sessionStorage.removeItem('prompt');
+		}
 	});
 </script>
 
 <div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
-	<div class=" py-2.5 flex flex-col justify-between w-full overflow-y-auto">
+	<div class=" flex flex-col justify-between w-full overflow-y-auto">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<div class=" text-2xl font-semibold mb-6">My Prompts</div>
 
