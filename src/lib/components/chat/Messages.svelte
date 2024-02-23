@@ -329,28 +329,28 @@
 								{/if}
 							{:else}
 								<ResponseMessage
-								{message}
-								modelfiles={selectedModelfiles}
-								siblings={history.messages[message.parentId]?.childrenIds ?? []}
-								isLastMessage={messageIdx + 1 === messages.length}
-								{confirmEditResponseMessage}
-								{showPreviousMessage}
-								{showNextMessage}
-								{rateMessage}
-								{copyToClipboard}
-								{continueGeneration}
-								{regenerateResponse}
-								on:save={async (e) => {
-									console.log('save', e);
+									{message}
+									modelfiles={selectedModelfiles}
+									siblings={history.messages[message.parentId]?.childrenIds ?? []}
+									isLastMessage={messageIdx + 1 === messages.length}
+									{confirmEditResponseMessage}
+									{showPreviousMessage}
+									{showNextMessage}
+									{rateMessage}
+									{copyToClipboard}
+									{continueGeneration}
+									{regenerateResponse}
+									on:save={async (e) => {
+										console.log('save', e);
 
-									const message = e.detail;
-									history.messages[message.id] = message;
-									await updateChatById(localStorage.token, chatId, {
-										messages: messages,
-										history: history
-									});
-								}}
-							/>
+										const message = e.detail;
+										history.messages[message.id] = message;
+										await updateChatById(localStorage.token, chatId, {
+											messages: messages,
+											history: history
+										});
+									}}
+								/>
 							{/if}
 						</div>
 					</div>
