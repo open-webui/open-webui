@@ -184,7 +184,9 @@
 				}
 			});
 
-			showChangelog.set(localStorage.version !== $config.version);
+			if ($user.role === 'admin') {
+				showChangelog.set(localStorage.version !== $config.version);
+			}
 
 			await tick();
 		}
