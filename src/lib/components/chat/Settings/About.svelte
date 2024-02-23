@@ -22,7 +22,7 @@
 			</div>
 			<div class="flex w-full">
 				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
-					{WEB_UI_VERSION}
+					v{WEB_UI_VERSION}
 
 					<button
 						class="mt-1 underline flex items-center space-x-1 text-xs text-gray-600 dark:text-gray-400"
@@ -54,6 +54,13 @@
 				<img
 					alt="Discord"
 					src="https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white"
+				/>
+			</a>
+
+			<a href="https://twitter.com/OpenWebUI" target="_blank">
+				<img
+					alt="X (formerly Twitter) Follow"
+					src="https://img.shields.io/twitter/follow/OpenWebUI"
 				/>
 			</a>
 

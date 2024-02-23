@@ -8,9 +8,11 @@
 		getDefaultDiffusionModel,
 		getDiffusionModels,
 		getImageGenerationEnabledStatus,
+		getImageSize,
 		toggleImageGenerationEnabledStatus,
 		updateAUTOMATIC1111Url,
-		updateDefaultDiffusionModel
+		updateDefaultDiffusionModel,
+		updateImageSize
 	} from '$lib/apis/images';
 	import { getBackendConfig } from '$lib/apis';
 	const dispatch = createEventDispatcher();
@@ -24,6 +26,8 @@
 
 	let selectedModel = '';
 	let models = [];
+
+	let imageSize = '';
 
 	const getModels = async () => {
 		models = await getDiffusionModels(localStorage.token).catch((error) => {
@@ -53,7 +57,6 @@
 			AUTOMATIC1111_BASE_URL = await getAUTOMATIC1111Url(localStorage.token);
 		}
 	};
-
 	const toggleImageGeneration = async () => {
 		if (AUTOMATIC1111_BASE_URL) {
 			enableImageGeneration = await toggleImageGenerationEnabledStatus(localStorage.token).catch(
@@ -79,6 +82,7 @@
 			AUTOMATIC1111_BASE_URL = await getAUTOMATIC1111Url(localStorage.token);
 
 			if (enableImageGeneration && AUTOMATIC1111_BASE_URL) {
+				imageSize = await getImageSize(localStorage.token);
 				getModels();
 			}
 		}
@@ -89,13 +93,17 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
 		loading = true;
-		const res = await updateDefaultDiffusionModel(localStorage.token, selectedModel);
+		await updateDefaultDiffusionModel(localStorage.token, selectedModel);
+		await updateImageSize(localStorage.token, imageSize).catch((error) => {
+			toast.error(error);
+			return null;
+		});
 
 		dispatch('save');
 		loading = false;
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[21rem]">
 		<div>
 			<div class=" mb-1 text-sm font-medium">Image Settings</div>
 
@@ -169,7 +177,7 @@
 			<hr class=" dark:border-gray-700" />
 
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">Set default model</div>
+				<div class=" mb-2.5 text-sm font-medium">Set Default Model</div>
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<select
@@ -186,6 +194,19 @@
 								>
 							{/each}
 						</select>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">Set Image Size</div>
+				<div class="flex w-full">
+					<div class="flex-1 mr-2">
+						<input
+							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							placeholder="Enter Image Size (e.g. 512x512)"
+							bind:value={imageSize}
+						/>
 					</div>
 				</div>
 			</div>
