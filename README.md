@@ -171,30 +171,31 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
    ```bash
    podman pull ghcr.io/open-webui/open-webui:main
    ```
-2. Create a new container using desired configuration
+2. Create a new container using desired configuration:
+   
    **Note:** `-p 127.0.0.1:3000:8080` ensures that we listen only on localhost, `--network slirp4netns:allow_host_loopback=true` permits the container to access Ollama when it also listens strictly on localhost. `--add-host=ollama.local:10.0.2.2 --env 'OLLAMA_API_BASE_URL=http://ollama.local:11434/api'` adds a hosts record to the container and configures open-webui to use the friendly hostname. `10.0.2.2` is the default slirp4netns address used for localhost mapping. `--env 'ANONYMIZED_TELEMETRY=False'` isn't necessary since Chroma telemetry has been disabled in the code but is included as an example.
    ```bash
    podman create -p 127.0.0.1:3000:8080 --network slirp4netns:allow_host_loopback=true --add-host=ollama.local:10.0.2.2 --env 'OLLAMA_API_BASE_URL=http://ollama.local:11434/api' --env 'ANONYMIZED_TELEMETRY=False' -v open-webui:/app/backend/data --label io.containers.autoupdate=registry --name open-webui ghcr.io/open-webui/open-webui:main
    ```
-3. Prepare for systemd user service:
+4. Prepare for systemd user service:
    ```bash
    mkdir -p ~/.config/systemd/user/
    ```
-4. Generate user service with Podman:
+5. Generate user service with Podman:
    ```bash
    podman generate systemd --new open-webui > ~/.config/systemd/user/open-webui.service
    ```
-5. Reload systemd configuration:
+6. Reload systemd configuration:
    ```bash
    systemctl --user daemon-reload
    ```
-6. Enable and validate new service:
+7. Enable and validate new service:
    ```bash
    systemctl --user enable open-webui.service
    systemctl --user start open-webui.service
    systemctl --user status open-webui.service
    ```
-7. Enable and validate Podman auto-update:
+8. Enable and validate Podman auto-update:
    ```bash
    systemctl --user enable podman-auto-update.timer
    systemctl --user enable podman-auto-update.service
