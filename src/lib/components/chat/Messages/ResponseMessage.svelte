@@ -20,6 +20,7 @@
 	import ProfileImage from './ProfileImage.svelte';
 	import Skeleton from './Skeleton.svelte';
 	import CodeBlock from './CodeBlock.svelte';
+	import Image from '$lib/components/common/Image.svelte';
 
 	export let modelfiles = [];
 	export let message;
@@ -46,7 +47,6 @@
 	let speakingIdx = null;
 
 	let loadingSpeech = false;
-
 	let generatingImage = false;
 
 	$: tokens = marked.lexer(message.content);
@@ -323,7 +323,7 @@
 						{#each message.files as file}
 							<div>
 								{#if file.type === 'image'}
-									<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
+									<Image src={file.url} />
 								{/if}
 							</div>
 						{/each}

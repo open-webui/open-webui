@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getOllamaVersion } from '$lib/apis/ollama';
 	import { WEBUI_NAME, WEB_UI_VERSION } from '$lib/constants';
-	import { config } from '$lib/stores';
+	import { config, showChangelog } from '$lib/stores';
 	import { onMount } from 'svelte';
 
 	let ollamaVersion = '';
@@ -15,10 +15,25 @@
 <div class="flex flex-col h-full justify-between space-y-3 text-sm mb-6">
 	<div class=" space-y-3">
 		<div>
-			<div class=" mb-2.5 text-sm font-medium">{WEBUI_NAME} Version</div>
+			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
+				<div>
+					{WEBUI_NAME} Version
+				</div>
+			</div>
 			<div class="flex w-full">
-				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
-					{WEB_UI_VERSION}
+				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200 flex space-x-1.5 items-center">
+					<div>
+						v{WEB_UI_VERSION}
+					</div>
+
+					<button
+						class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
+						on:click={() => {
+							showChangelog.set(true);
+						}}
+					>
+						<div>See what's new</div>
+					</button>
 				</div>
 			</div>
 		</div>

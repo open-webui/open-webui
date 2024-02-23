@@ -1,18 +1,20 @@
 <script lang="ts">
 	import toast from 'svelte-french-toast';
 	import { openDB, deleteDB } from 'idb';
-	import { onMount, tick } from 'svelte';
-	import { goto } from '$app/navigation';
-
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
+
+	import { onMount, tick } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	import { getOllamaModels, getOllamaVersion } from '$lib/apis/ollama';
 	import { getModelfiles } from '$lib/apis/modelfiles';
 	import { getPrompts } from '$lib/apis/prompts';
-
+ 	import { getOllamaEnablement } from '$lib/apis/ollama';
 	import { getOpenAIModels } from '$lib/apis/openai';
 	import { getVertexAIModels } from '$lib/apis/vertexai';
+	import { getDocs } from '$lib/apis/documents';
+	import { getAllChatTags } from '$lib/apis/chats';
 
 	import {
 		user,
@@ -22,17 +24,16 @@
 		modelfiles,
 		prompts,
 		documents,
-		tags
+		tags,
+		showChangelog,
+		config
 	} from '$lib/stores';
-	import { REQUIRED_OLLAMA_VERSION } from '$lib/constants';
-
+	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
+	import { checkVersion } from '$lib/utils';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
-	import { checkVersion } from '$lib/utils';
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
-	import { getDocs } from '$lib/apis/documents';
-	import { getAllChatTags } from '$lib/apis/chats';
-	import { getOllamaEnablement } from '$lib/apis/ollama/index.js';
+	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 
 	let ollamaEnabled = true;
 	let ollamaVersion = '';
@@ -194,6 +195,10 @@
 					document.getElementById('show-shortcuts-button')?.click();
 				}
 			});
+
+			if ($user.role === 'admin') {
+				showChangelog.set(localStorage.version !== $config.version);
+			}
 
 			await tick();
 		}
@@ -368,6 +373,7 @@
 		>
 			<Sidebar />
 			<SettingsModal bind:show={$showSettings} />
+			<ChangelogModal bind:show={$showChangelog} />
 			<slot />
 		</div>
 	</div>
