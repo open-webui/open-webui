@@ -27,7 +27,7 @@ spec:
       containers:
       - name: {{ .Chart.Name }}
         {{- with .Values.webui.image }}
-        image: {{ .repository }}:{{ .tag }}
+        image: {{ .repository }}:{{ .tag | default $.Chart.AppVersion }}
         imagePullPolicy: {{ .pullPolicy }}
         {{- end }}
         ports:
