@@ -1,5 +1,37 @@
 import { VERTEXAI_API_BASE_URL } from '$lib/constants';
 
+export const getVertexAIEnablement = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${VERTEXAI_API_BASE_URL}/enabled`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.ENABLE_VERTEXAI;
+};
+
 export const getVertexAIUrl = async (token: string = '') => {
 	let error = null;
 
@@ -30,6 +62,41 @@ export const getVertexAIUrl = async (token: string = '') => {
 	}
 
 	return res.VERTEXAI_API_BASE_URL;
+};
+
+export const updateVertexAIEnablement = async (token: string = '', enabled: boolean) => {
+	let error = null;
+
+	const res = await fetch(`${VERTEXAI_API_BASE_URL}/enabled/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			enabled: enabled
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.ENABLE_VERTEXAI;
 };
 
 export const updateVertexAIUrl = async (token: string = '', url: string) => {

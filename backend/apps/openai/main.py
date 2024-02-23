@@ -15,7 +15,7 @@ from utils.utils import (
     get_verified_user,
     get_admin_user,
 )
-from config import OPENAI_API_BASE_URL, OPENAI_API_KEY, CACHE_DIR
+from config import ENABLE_OPENAI, OPENAI_API_BASE_URL, OPENAI_API_KEY, CACHE_DIR
 
 import hashlib
 from pathlib import Path
@@ -29,6 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.state.ENABLE_OPENAI = ENABLE_OPENAI
 app.state.OPENAI_API_BASE_URL = OPENAI_API_BASE_URL
 app.state.OPENAI_API_KEY = OPENAI_API_KEY
 
@@ -39,6 +40,10 @@ class UrlUpdateForm(BaseModel):
 
 class KeyUpdateForm(BaseModel):
     key: str
+
+
+class EnabledUpdateForm(BaseModel):
+    enabled: bool
 
 
 @app.get("/url")
@@ -61,6 +66,17 @@ async def get_openai_key(user=Depends(get_admin_user)):
 async def update_openai_key(form_data: KeyUpdateForm, user=Depends(get_admin_user)):
     app.state.OPENAI_API_KEY = form_data.key
     return {"OPENAI_API_KEY": app.state.OPENAI_API_KEY}
+
+
+@app.get("/enabled")
+async def get_openai_enablement(user=Depends(get_admin_user)):
+    return {"ENABLE_OPENAI": app.state.ENABLE_OPENAI}
+
+
+@app.post("/enabled/update")
+async def update_openai_enablement(form_data: EnabledUpdateForm, user=Depends(get_admin_user)):
+    app.state.ENABLE_OPENAI = form_data.enabled
+    return {"ENABLE_OPENAI": app.state.ENABLE_OPENAI}
 
 
 @app.post("/audio/speech")

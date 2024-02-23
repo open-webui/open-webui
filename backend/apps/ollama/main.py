@@ -1,17 +1,15 @@
-from fastapi import FastAPI, Request, Response, HTTPException, Depends, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from fastapi.concurrency import run_in_threadpool
-
-import requests
 import json
 import uuid
-from pydantic import BaseModel
 
-from apps.web.models.users import Users
+import requests
+from config import ENABLE_OLLAMA, OLLAMA_API_BASE_URL
 from constants import ERROR_MESSAGES
-from utils.utils import decode_token, get_current_user, get_admin_user
-from config import OLLAMA_API_BASE_URL, WEBUI_AUTH
+from fastapi import FastAPI, Request, HTTPException, Depends, status
+from fastapi.concurrency import run_in_threadpool
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from utils.utils import get_current_user, get_admin_user
 
 app = FastAPI()
 app.add_middleware(
@@ -22,12 +20,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.state.ENABLE_OLLAMA = ENABLE_OLLAMA
 app.state.OLLAMA_API_BASE_URL = OLLAMA_API_BASE_URL
 
 # TARGET_SERVER_URL = OLLAMA_API_BASE_URL
 
 
 REQUEST_POOL = []
+
+
+class EnabledUpdateForm(BaseModel):
+    enabled: bool
+
+
+@app.get("/enabled")
+async def get_ollama_enablement(user=Depends(get_admin_user)):
+    return {"ENABLE_OLLAMA": app.state.ENABLE_OLLAMA}
+
+
+@app.post("/enabled/update")
+async def update_ollama_enablement(form_data: EnabledUpdateForm, user=Depends(get_admin_user)):
+    app.state.ENABLE_OLLAMA = form_data.enabled
+    return {"ENABLE_OLLAMA": app.state.ENABLE_OLLAMA}
 
 
 @app.get("/url")

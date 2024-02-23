@@ -63,6 +63,7 @@ Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
 # OLLAMA_API_BASE_URL
 ####################################
 
+ENABLE_OLLAMA = os.environ.get("ENABLE_OLLAMA", True)
 OLLAMA_API_BASE_URL = os.environ.get(
     "OLLAMA_API_BASE_URL", "http://localhost:11434/api"
 )
@@ -75,6 +76,7 @@ if ENV == "prod":
 # OPENAI_API
 ####################################
 
+ENABLE_OPENAI = os.environ.get("ENABLE_OPENAI", False)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 
@@ -85,6 +87,7 @@ if OPENAI_API_BASE_URL == "":
 # VERTEXAI_API
 ####################################
 
+ENABLE_VERTEXAI = os.environ.get("ENABLE_VERTEXAI", False)
 VERTEXAI_API_KEY = os.environ.get("VERTEXAI_API_KEY", "")
 VERTEXAI_API_BASE_URL = os.environ.get("VERTEXAI_API_BASE_URL", "")
 

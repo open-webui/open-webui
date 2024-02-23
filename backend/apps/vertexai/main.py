@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 import requests
-from config import VERTEXAI_API_BASE_URL, VERTEXAI_API_KEY, CACHE_DIR
+from config import ENABLE_VERTEXAI, VERTEXAI_API_BASE_URL, VERTEXAI_API_KEY, CACHE_DIR
 from constants import ERROR_MESSAGES
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.state.ENABLE_VERTEXAI = ENABLE_VERTEXAI
 app.state.VERTEXAI_API_BASE_URL = VERTEXAI_API_BASE_URL
 app.state.VERTEXAI_API_KEY = VERTEXAI_API_KEY
 
@@ -33,6 +34,10 @@ class UrlUpdateForm(BaseModel):
 
 class KeyUpdateForm(BaseModel):
     key: str
+
+
+class EnabledUpdateForm(BaseModel):
+    enabled: bool
 
 
 @app.get("/url")
@@ -55,6 +60,17 @@ async def get_vertexai_key(user=Depends(get_admin_user)):
 async def update_vertexai_key(form_data: KeyUpdateForm, user=Depends(get_admin_user)):
     app.state.VERTEXAI_API_KEY = form_data.key
     return {"VERTEXAI_API_KEY": app.state.VERTEXAI_API_KEY}
+
+
+@app.get("/enabled")
+async def get_vertexai_enablement(user=Depends(get_admin_user)):
+    return {"ENABLE_VERTEXAI": app.state.ENABLE_VERTEXAI}
+
+
+@app.post("/enabled/update")
+async def update_vertexai_enablement(form_data: EnabledUpdateForm, user=Depends(get_admin_user)):
+    app.state.ENABLE_VERTEXAI = form_data.enabled
+    return {"ENABLE_VERTEXAI": app.state.ENABLE_VERTEXAI}
 
 
 @app.get("/models")

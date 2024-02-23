@@ -1,53 +1,82 @@
 <script lang="ts">
 	import { models, user } from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
-	const dispatch = createEventDispatcher();
-
-	import { getOllamaAPIUrl, updateOllamaAPIUrl } from '$lib/apis/ollama';
-	import { getOpenAIKey, getOpenAIUrl, updateOpenAIKey, updateOpenAIUrl } from '$lib/apis/openai';
-	import { getVertexAIKey, getVertexAIUrl, updateVertexAIKey, updateVertexAIUrl } from '$lib/apis/vertexai';
+	import { getOllamaAPIUrl, getOllamaEnablement, updateOllamaAPIUrl, updateOllamaEnablement } from '$lib/apis/ollama';
+	import {
+		getOpenAIEnablement,
+		getOpenAIKey,
+		getOpenAIUrl,
+		updateOpenAIEnablement,
+		updateOpenAIKey,
+		updateOpenAIUrl
+	} from '$lib/apis/openai';
+	import {
+		getVertexAIEnablement,
+		getVertexAIKey,
+		getVertexAIUrl,
+		updateVertexAIEnablement,
+		updateVertexAIKey,
+		updateVertexAIUrl
+	} from '$lib/apis/vertexai';
 	import toast from 'svelte-french-toast';
+
+	const dispatch = createEventDispatcher();
 
 	export let getModels: Function;
 
 	// External
+	let ENABLE_OLLAMA = true;
 	let API_BASE_URL = '';
 
+	let ENABLE_OPENAI = false;
 	let OPENAI_API_KEY = '';
 	let OPENAI_API_BASE_URL = '';
 
+	let ENABLE_VERTEXAI = false;
 	let VERTEXAI_API_KEY = '';
 	let VERTEXAI_API_BASE_URL = '';
 
 	const updateOpenAIHandler = async () => {
+		ENABLE_OPENAI = await updateOpenAIEnablement(localStorage.token, ENABLE_OPENAI);
 		OPENAI_API_BASE_URL = await updateOpenAIUrl(localStorage.token, OPENAI_API_BASE_URL);
 		OPENAI_API_KEY = await updateOpenAIKey(localStorage.token, OPENAI_API_KEY);
 
-		await models.set(await getModels());
+		if (ENABLE_OPENAI) {
+			await models.set(await getModels());
+		}
 	};
 
 	const updateVertexAIHandler = async () => {
+		ENABLE_VERTEXAI = await updateVertexAIEnablement(localStorage.token, ENABLE_VERTEXAI);
 		VERTEXAI_API_BASE_URL = await updateVertexAIUrl(localStorage.token, VERTEXAI_API_BASE_URL);
 		VERTEXAI_API_KEY = await updateVertexAIKey(localStorage.token, VERTEXAI_API_KEY);
 
-		await models.set(await getModels());
+		if (ENABLE_VERTEXAI) {
+			await models.set(await getModels());
+		}
 	};
 
 	const updateOllamaAPIUrlHandler = async () => {
+		ENABLE_OLLAMA = await updateOllamaEnablement(localStorage.token, ENABLE_OLLAMA);
 		API_BASE_URL = await updateOllamaAPIUrl(localStorage.token, API_BASE_URL);
-		const _models = await getModels('ollama');
+		if (ENABLE_OLLAMA) {
+			const _models = await getModels('ollama');
 
-		if (_models.length > 0) {
-			toast.success('Server connection verified');
-			await models.set(_models);
+			if (_models.length > 0) {
+				toast.success('Server connection verified');
+				await models.set(_models);
+			}
 		}
 	};
 
 	onMount(async () => {
 		if ($user.role === 'admin') {
 			API_BASE_URL = await getOllamaAPIUrl(localStorage.token);
+			ENABLE_OLLAMA = await getOllamaEnablement(localStorage.token);
+			ENABLE_OPENAI = await getOpenAIEnablement(localStorage.token);
 			OPENAI_API_BASE_URL = await getOpenAIUrl(localStorage.token);
 			OPENAI_API_KEY = await getOpenAIKey(localStorage.token);
+			ENABLE_VERTEXAI = await getVertexAIEnablement(localStorage.token);
 			VERTEXAI_API_BASE_URL = await getVertexAIUrl(localStorage.token);
 			VERTEXAI_API_KEY = await getVertexAIKey(localStorage.token);
 		}
@@ -68,6 +97,17 @@
 	}}
 >
 	<div>
+		<div>
+			<div class=" mb-2.5 text-sm font-medium">Enable Ollama</div>
+			<div class="flex w-full">
+				<div class="flex-1">
+					<label class="switch">
+						<input type="checkbox" bind:checked={ENABLE_OLLAMA}>
+						<span class="slider round"></span>
+					</label>
+				</div>
+			</div>
+		</div>
 		<div class=" mb-2.5 text-sm font-medium">Ollama API URL</div>
 		<div class="flex w-full">
 			<div class="flex-1 mr-2">
@@ -115,6 +155,18 @@
 
 	<div class=" space-y-3">
 		<div>
+			<div class=" mb-2.5 text-sm font-medium">Enable OpenAI</div>
+			<div class="flex w-full">
+				<div class="flex-1">
+					<label class="switch">
+						<input type="checkbox" bind:checked={ENABLE_OPENAI}>
+						<span class="slider round"></span>
+					</label>
+				</div>
+			</div>
+		</div>
+
+		<div>
 			<div class=" mb-2.5 text-sm font-medium">OpenAI API Key</div>
 			<div class="flex w-full">
 				<div class="flex-1">
@@ -150,6 +202,18 @@
 	<hr class=" dark:border-gray-700" />
 
 	<div class=" space-y-3">
+		<div>
+			<div class=" mb-2.5 text-sm font-medium">Enable VertexAI</div>
+			<div class="flex w-full">
+				<div class="flex-1">
+					<label class="switch">
+						<input type="checkbox" bind:checked={ENABLE_VERTEXAI}>
+						<span class="slider round"></span>
+					</label>
+				</div>
+			</div>
+		</div>
+
 		<div>
 			<div class=" mb-2.5 text-sm font-medium">VertexAI API Key</div>
 			<div class="flex w-full">
