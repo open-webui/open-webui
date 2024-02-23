@@ -9,10 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🖼️ Image Generation**: Generate Images using the stable-difusion-webui API. You can set this up in settings -> images.
-- **📝 Change title generation prompt**: Change the promt used to generate titles for your chats. You can set this up in the settings -> interface.
+- **🖼️ Image Generation**: Generate Images using the AUTOMATIC1111/stable-diffusion-webui API. You can set this up in Settings > Images.
+- **📝 Change title generation prompt**: Change the prompt used to generate titles for your chats. You can set this up in the Settings > Interface.
 - **🤖 Change embedding model**: Change the embedding model used to generate embeddings for your chats in the Dockerfile. Use any sentence transformer model from huggingface.co.
-- **📢 CHANGELOG.md/Popup**: This popup will show you the latest changes. You can edit it in the constants.ts file.
+- **📢 CHANGELOG.md/Popup**: This popup will show you the latest changes.
 
 ## [0.1.101] - 2024-02-22
 
