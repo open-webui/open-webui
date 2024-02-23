@@ -61,7 +61,7 @@
 
 	@keyframes scaleUp {
 		from {
-			transform: scale(0.9);
+			transform: scale(0.985);
 			opacity: 0;
 		}
 		to {
