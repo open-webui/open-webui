@@ -44,3 +44,6 @@ class ERROR_MESSAGES(str, Enum):
     MALICIOUS = "Unusual activities detected, please try again in a few minutes."
 
     PANDOC_NOT_INSTALLED = "Pandoc is not installed on the server. Please contact your administrator for assistance."
+    INCORRECT_FORMAT = (
+        lambda err="": f"Invalid format. Please use the correct format{err if err else ''}"
+    )

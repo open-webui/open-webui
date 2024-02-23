@@ -1,4 +1,4 @@
-import os
+import re
 import requests
 from fastapi import (
     FastAPI,
@@ -34,6 +34,7 @@ app.add_middleware(
 
 app.state.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
 app.state.ENABLED = app.state.AUTOMATIC1111_BASE_URL != ""
+app.state.IMAGE_SIZE = "512x512"
 
 
 @app.get("/enabled", response_model=bool)
@@ -72,6 +73,33 @@ async def update_openai_url(form_data: UrlUpdateForm, user=Depends(get_admin_use
         "AUTOMATIC1111_BASE_URL": app.state.AUTOMATIC1111_BASE_URL,
         "status": True,
     }
+
+
+class ImageSizeUpdateForm(BaseModel):
+    size: str
+
+
+@app.get("/size")
+async def get_image_size(user=Depends(get_admin_user)):
+    return {"IMAGE_SIZE": app.state.IMAGE_SIZE}
+
+
+@app.post("/size/update")
+async def update_image_size(
+    form_data: ImageSizeUpdateForm, user=Depends(get_admin_user)
+):
+    pattern = r"^\d+x\d+$"  # Regular expression pattern
+    if re.match(pattern, form_data.size):
+        app.state.IMAGE_SIZE = form_data.size
+        return {
+            "IMAGE_SIZE": app.state.IMAGE_SIZE,
+            "status": True,
+        }
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=ERROR_MESSAGES.INCORRECT_FORMAT("  (e.g., 512x512)."),
+        )
 
 
 @app.get("/models")
@@ -140,7 +168,7 @@ def generate_image(
         if form_data.model:
             set_model_handler(form_data.model)
 
-        width, height = tuple(map(int, form_data.size.split("x")))
+        width, height = tuple(map(int, app.state.IMAGE_SIZE.split("x")))
 
         data = {
             "prompt": form_data.prompt,
