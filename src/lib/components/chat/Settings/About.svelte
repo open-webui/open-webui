@@ -27,7 +27,7 @@
 					</div>
 
 					<button
-						class=" underline flex items-center space-x-1 text-xs text-gray-600 dark:text-gray-400"
+						class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
 						on:click={() => {
 							showChangelog.set(true);
 						}}
