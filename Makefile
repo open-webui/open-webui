@@ -11,11 +11,11 @@ stop:
 	@docker-compose stop
 
 update:
-	# Appelle le script de mise à jour des LLM
+	# Calls the LLM update script
 	@./update_llm.sh
 	@git pull
 	@docker-compose down
-	# Assure-toi que le conteneur ollama-webui est arrêté avant de reconstruire
+	# Make sure the ollama-webui container is stopped before rebuilding
 	@docker stop ollama-webui || true
 	@docker-compose up --build -d
 	@docker-compose start
