@@ -223,20 +223,32 @@
 		}, 100);
 	};
 
-	const deleteMessageAndDescendants = async (messageId: string) => {
+	// TODO: change delete behaviour
+	// const deleteMessageAndDescendants = async (messageId: string) => {
+	// 	if (history.messages[messageId]) {
+	// 		history.messages[messageId].deleted = true;
+
+	// 		for (const childId of history.messages[messageId].childrenIds) {
+	// 			await deleteMessageAndDescendants(childId);
+	// 		}
+	// 	}
+	// };
+
+	// const triggerDeleteMessageRecursive = async (messageId: string) => {
+	// 	await deleteMessageAndDescendants(messageId);
+	// 	await updateChatById(localStorage.token, chatId, { history });
+	// 	await chats.set(await getChatList(localStorage.token));
+	// };
+
+	const messageDeleteHandler = async (messageId) => {
 		if (history.messages[messageId]) {
 			history.messages[messageId].deleted = true;
 
 			for (const childId of history.messages[messageId].childrenIds) {
-				await deleteMessageAndDescendants(childId);
+				history.messages[childId].deleted = true;
 			}
 		}
-	};
-
-	const triggerDeleteMessageRecursive = async (messageId: string) => {
-		await deleteMessageAndDescendants(messageId);
 		await updateChatById(localStorage.token, chatId, { history });
-		await chats.set(await getChatList(localStorage.token));
 	};
 </script>
 
@@ -255,7 +267,7 @@
 						>
 							{#if message.role === 'user'}
 								<UserMessage
-									on:delete={() => triggerDeleteMessageRecursive(message.id)}
+									on:delete={() => messageDeleteHandler(message.id)}
 									user={$user}
 									{message}
 									isFirstMessage={messageIdx === 0}
