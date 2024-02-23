@@ -14,20 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🤖 Change embedding model**: Change the embedding model used to generate embeddings for your chats in the Dockerfile. Use any sentence transformer model from huggingface.co.
 - **📢 CHANGELOG.md/Popup**: This popup will show you the latest changes. You can edit it in the constants.ts file.
 
+## [0.1.101] - 2024-02-22
+
 ### Fixed
 
-- X, Y, and Z
+- LaTex output formatting issue (#828)
 
 ### Changed
 
-- X, Y, and Z
-
-### Removed
-
-- X, Y, and Z
-
-## [0.1.101] - 2024-02-21
-
-### Added
-
-- X, Y, and Z
+- Instead of having the previous 1.0.0-alpha.101, we switched to semantic versioning as a way to respect global conventions.

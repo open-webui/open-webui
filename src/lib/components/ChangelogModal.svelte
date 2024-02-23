@@ -24,7 +24,7 @@
 		<div class="flex justify-between items-start">
 			<div class="text-xl font-bold">
 				What’s New in {WEBUI_NAME}
-				<!-- <Confetti x={[-1, -0.25]} y={[0, 0.5]} /> -->
+				<Confetti x={[-1, -0.25]} y={[0, 0.5]} />
 			</div>
 			<button
 				class="self-center"
@@ -44,39 +44,45 @@
 				</svg>
 			</button>
 		</div>
-		<div class=" pb-3 flex items-center mt-2">
+		<div class="flex items-center mt-1">
 			<div class="text-sm dark:text-gray-200">Release Notes</div>
 			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
 			<div class="text-sm dark:text-gray-200">
 				v{WEB_UI_VERSION}
 			</div>
 		</div>
-		<hr class=" dark:border-gray-800" />
+	</div>
+
+	<hr class=" dark:border-gray-800" />
+
+	<div class=" w-full p-4 px-5">
 		<div class=" overflow-y-scroll max-h-80">
-			<div class="my-3">
+			<div class="mb-3">
 				{#if changelog}
 					{#each Object.keys(changelog) as version}
 						<div class="font-bold text-xl mb-1">
 							v{version} - {changelog[version].date}
 						</div>
 
+						<hr class=" dark:border-gray-800 my-2" />
+
 						{#each Object.keys(changelog[version]).filter((section) => section !== 'date') as section}
 							<div class="">
 								<div
 									class="font-bold capitalize text-xs {section === 'added'
-										? 'text-white bg-blue-500'
+										? 'text-white bg-blue-600'
 										: section === 'fixed'
-										? 'text-white bg-green-500'
+										? 'text-white bg-green-600'
 										: section === 'changed'
-										? 'text-white bg-yellow-500'
+										? 'text-white bg-yellow-600'
 										: section === 'removed'
-										? 'text-white bg-red-500'
+										? 'text-white bg-red-600'
 										: ''}  w-fit px-3 rounded-full my-3"
 								>
 									{section}
 								</div>
 
-								<div class="my-2">
+								<div class="my-1.5 px-1.5">
 									{#each Object.keys(changelog[version][section]) as item}
 										<div class="text-sm mb-2">
 											<div class="font-semibold">
