@@ -11,7 +11,6 @@
 	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { cancelChatCompletion } from '$lib/apis/ollama';
 
 	export let chatId = '';
 	export let sendPrompt: Function;
