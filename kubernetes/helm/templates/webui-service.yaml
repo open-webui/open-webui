@@ -4,6 +4,10 @@ metadata:
   name: {{ include "open-webui.name" . }}
   labels:
     {{- include "open-webui.labels" . | nindent 4 }}
+  {{- with .Values.webui.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   selector:
     {{- include "open-webui.selectorLabels" . | nindent 4 }}
@@ -11,6 +15,7 @@ spec:
   type: {{ .type }}
   ports:
   - protocol: TCP
+    name: http
     port: {{ .port }}
     targetPort: http
     {{- if .nodePort }}
