@@ -12,29 +12,6 @@ export const IMAGES_API_BASE_URL = `${WEBUI_BASE_URL}/images/api/v1`;
 export const RAG_API_BASE_URL = `${WEBUI_BASE_URL}/rag/api/v1`;
 
 export const WEB_UI_VERSION = APP_VERSION;
-export const RELEASE_NOTES = [
-	{
-		title: ' 🖼️ Image Generation',
-		description:
-			'Generate Images using the stable-difusion-webui API. You can set this up in settings -> images.'
-	},
-	{
-		title: ' 📝 Change title generation prompt',
-		description:
-			'Change the promt used to generate titles for your chats. You can set this up in the settings -> interface.'
-	},
-	{
-		title: ' 🤖 Change embedding model',
-		description:
-			'Change the embedding model used to generate embeddings for your chats in the Dockerfile. Use any sentence transformer model from huggingface.co.'
-	},
-	{
-		title: ' 📢 This Whats Changed Popup',
-		description:
-			'This popup will show you the latest changes. You can edit it in the constants.ts file.'
-	}
-	//...
-];
 export const REQUIRED_OLLAMA_VERSION = '0.1.16';
 
 export const SUPPORTED_FILE_TYPE = [

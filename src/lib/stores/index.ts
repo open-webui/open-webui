@@ -32,16 +32,3 @@ export const documents = writable([
 
 export const settings = writable({});
 export const showSettings = writable(false);
-function createLocalStorageStore(key, startValue) {
-	const storedValue = localStorage.getItem(key);
-	const initialValue = storedValue ? JSON.parse(storedValue) : startValue;
-
-	const store = writable(initialValue);
-
-	store.subscribe((value) => {
-		localStorage.setItem(key, JSON.stringify(value));
-	});
-
-	return store;
-}
-export const showWhatsChanged = createLocalStorageStore('showWhatsChanged', true);

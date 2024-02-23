@@ -23,6 +23,14 @@ except ImportError:
 ENV = os.environ.get("ENV", "dev")
 
 
+try:
+    with open(f"../package.json", "r") as f:
+        PACKAGE_DATA = json.load(f)
+except:
+    PACKAGE_DATA = {"version": "0.0.0"}
+
+VERSION = PACKAGE_DATA["version"]
+
 ####################################
 # DATA/FRONTEND BUILD DIR
 ####################################

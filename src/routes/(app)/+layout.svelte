@@ -31,6 +31,7 @@
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import { getDocs } from '$lib/apis/documents';
 	import { getAllChatTags } from '$lib/apis/chats';
+	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 
 	let ollamaVersion = '';
 	let loaded = false;
@@ -348,6 +349,8 @@
 					</div>
 				</div>
 			</div>
+		{:else}
+			<ChangelogModal show={true} />
 		{/if}
 
 		<div

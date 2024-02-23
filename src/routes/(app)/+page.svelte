@@ -14,7 +14,6 @@
 		chats,
 		chatId,
 		config,
-		showWhatsChanged,
 		tags as _tags
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
@@ -36,7 +35,6 @@
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
-	import WhatsChangedModal from '$lib/components/chat//WhatsChangedModal.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
 
 	let stopResponseFlag = false;
@@ -799,9 +797,6 @@
 </script>
 
 <div class="h-screen max-h-[100dvh] w-full flex flex-col">
-	{#if $showWhatsChanged && !['pending'].includes($user.role) && $settings.enableWhatsChanged}
-		<WhatsChangedModal show={true} />
-	{/if}
 	<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
 	<div class="flex flex-col flex-auto">
 		<div

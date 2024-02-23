@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getBackendConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
-	import { config, models, user, showWhatsChanged } from '$lib/stores';
+	import { config, models, user } from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import toast from 'svelte-french-toast';
 	const dispatch = createEventDispatcher();
@@ -18,7 +18,6 @@
 	// Interface
 	let promptSuggestions = [];
 	let showUsername = false;
-	let enableWhatsChanged = true;
 
 	const toggleFullScreenMode = async () => {
 		fullScreenMode = !fullScreenMode;
@@ -28,14 +27,6 @@
 	const toggleShowUsername = async () => {
 		showUsername = !showUsername;
 		saveSettings({ showUsername: showUsername });
-	};
-
-	const toggleenableWhatsChanged = async () => {
-		enableWhatsChanged = !enableWhatsChanged;
-		if (enableWhatsChanged) {
-			showWhatsChanged.update((value) => true);
-		}
-		saveSettings({ enableWhatsChanged: enableWhatsChanged });
 	};
 
 	const toggleTitleAutoGenerate = async () => {
@@ -86,7 +77,6 @@
 		titleAutoGenerate = settings.titleAutoGenerate ?? true;
 		responseAutoCopy = settings.responseAutoCopy ?? false;
 		showUsername = settings.showUsername ?? false;
-		enableWhatsChanged = settings.enableWhatsChanged ?? true;
 		fullScreenMode = settings.fullScreenMode ?? false;
 		titleAutoGenerateModel = settings.titleAutoGenerateModel ?? '';
 		titleGenerationPrompt =
@@ -180,25 +170,6 @@
 						type="button"
 					>
 						{#if showUsername === true}
-							<span class="ml-2 self-center">On</span>
-						{:else}
-							<span class="ml-2 self-center">Off</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">Show "WhatsChanged" Modal on Startup</div>
-
-					<button
-						class="p-1 px-3 text-xs flex rounded transition"
-						on:click={() => {
-							toggleenableWhatsChanged();
-						}}
-						type="button"
-					>
-						{#if enableWhatsChanged === true}
 							<span class="ml-2 self-center">On</span>
 						{:else}
 							<span class="ml-2 self-center">Off</span>
