@@ -12,6 +12,7 @@ ollama:
   persistence:
     enabled: true
     size: 30Gi
+    existingClaim: ""
     accessModes:
     - ReadWriteOnce
     storageClass: ""
@@ -54,6 +55,7 @@ webui:
   persistence:
     enabled: true
     size: 2Gi
+    existingClaim: ""
     # -- If using multiple replicas, you must update accessModes to ReadWriteMany
     accessModes:
     - ReadWriteOnce
