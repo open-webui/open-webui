@@ -15,8 +15,6 @@
 
 ### Changelog Entry
 
-[Insert your changelog entry here following the format of Keep a Changelog]
-
 ### Added
 
 - [List any new features or additions]
