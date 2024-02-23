@@ -286,6 +286,8 @@ cp -RPp .env.example .env
 # Building Frontend Using Node
 npm i
 npm run build
+# or for development (hot reload)
+# npm run dev
 
 # or Building Frontend Using Bun
 # bun install
@@ -295,6 +297,9 @@ npm run build
 cd ./backend
 pip install -r requirements.txt -U
 sh start.sh
+# or for development (hot reload)
+# npm run build must have been run once before!
+# sh dev.sh
 ```
 
 You should have Open WebUI up and running at http://localhost:8080/. Enjoy! 😄
