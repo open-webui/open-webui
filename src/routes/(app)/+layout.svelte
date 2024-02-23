@@ -24,7 +24,7 @@
 		documents,
 		tags
 	} from '$lib/stores';
-	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
+	import { REQUIRED_OLLAMA_VERSION } from '$lib/constants';
 
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -32,7 +32,9 @@
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import { getDocs } from '$lib/apis/documents';
 	import { getAllChatTags } from '$lib/apis/chats';
+	import { getOllamaEnablement } from '$lib/apis/ollama/index.js';
 
+	let ollamaEnabled = true;
 	let ollamaVersion = '';
 	let loaded = false;
 
@@ -71,6 +73,9 @@
 	};
 
 	const setOllamaVersion = async (version: string = '') => {
+		ollamaEnabled = await getOllamaEnablement(localStorage.token);
+		if (!ollamaEnabled) return '';
+
 		if (version === '') {
 			version = await getOllamaVersion(localStorage.token).catch((error) => {
 				return '';
@@ -252,7 +257,7 @@
 					</div>
 				</div>
 			</div>
-		{:else if checkVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion ?? '0')}
+		{:else if ollamaEnabled && checkVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion ?? '0')}
 			<div class="fixed w-full h-full flex z-50">
 				<div
 					class="absolute w-full h-full backdrop-blur-md bg-white/20 dark:bg-gray-900/50 flex justify-center"

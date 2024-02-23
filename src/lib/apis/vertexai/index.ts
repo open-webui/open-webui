@@ -204,6 +204,8 @@ export const updateVertexAIKey = async (token: string = '', key: string) => {
 export const getVertexAIModels = async (token: string = '') => {
 	let error = null;
 
+	const enabled = await getVertexAIEnablement(token);
+	if (!enabled) return [];
 	const res = await fetch(`${VERTEXAI_API_BASE_URL}/models`, {
 		method: 'GET',
 		headers: {

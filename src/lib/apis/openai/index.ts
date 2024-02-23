@@ -204,6 +204,8 @@ export const updateOpenAIKey = async (token: string = '', key: string) => {
 export const getOpenAIModels = async (token: string = '') => {
 	let error = null;
 
+	const enabled = await getOpenAIEnablement(token);
+	if (!enabled) return [];
 	const res = await fetch(`${OPENAI_API_BASE_URL}/models`, {
 		method: 'GET',
 		headers: {

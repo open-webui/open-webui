@@ -86,6 +86,7 @@
 <form
 	class="flex flex-col h-full space-y-3 text-sm"
 	on:submit|preventDefault={() => {
+		updateOllamaAPIUrlHandler();
 		updateOpenAIHandler();
 		updateVertexAIHandler();
 		dispatch('save');

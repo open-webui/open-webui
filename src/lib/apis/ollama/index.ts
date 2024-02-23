@@ -1,4 +1,4 @@
-import { OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
+import { OLLAMA_API_BASE_URL } from '$lib/constants';
 
 export const getOllamaEnablement = async (token: string = '') => {
 	let error = null;
@@ -169,6 +169,8 @@ export const getOllamaVersion = async (token: string = '') => {
 export const getOllamaModels = async (token: string = '') => {
 	let error = null;
 
+	const enabled = await getOllamaEnablement(token);
+	if (!enabled) return [];
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/tags`, {
 		method: 'GET',
 		headers: {
