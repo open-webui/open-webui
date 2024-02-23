@@ -78,12 +78,12 @@
 											? 'text-white bg-yellow-600'
 											: section === 'removed'
 											? 'text-white bg-red-600'
-											: ''}  w-fit px-3 rounded-full my-2"
+											: ''}  w-fit px-3 rounded-full my-2.5"
 									>
 										{section}
 									</div>
 
-									<div class="my-1.5 px-1.5">
+									<div class="my-2.5 px-1.5">
 										{#each Object.keys(changelog[version][section]) as item}
 											<div class="text-sm mb-2">
 												<div class="font-semibold uppercase">
