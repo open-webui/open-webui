@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ollama-webui-deployment
+  name: open-webui-deployment
   namespace: {{ .Values.namespace }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ollama-webui
+      app: open-webui
   template:
     metadata:
       labels:
-        app: ollama-webui
+        app: open-webui
     spec:
       containers:
-      - name: ollama-webui
+      - name: open-webui
         image: {{ .Values.webui.image }}
         ports:
         - containerPort: 8080
@@ -35,4 +35,4 @@ spec:
       volumes:
       - name: webui-volume
         persistentVolumeClaim:
-          claimName: ollama-webui-pvc
+          claimName: open-webui-pvc

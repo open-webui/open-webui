@@ -1,5 +1,5 @@
 resources:
-- base/ollama-namespace.yaml
+- base/open-webui.yaml
 - base/ollama-service.yaml
 - base/ollama-statefulset.yaml
 - base/webui-deployment.yaml

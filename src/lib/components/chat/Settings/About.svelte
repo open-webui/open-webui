@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getOllamaVersion } from '$lib/apis/ollama';
 	import { WEBUI_NAME, WEB_UI_VERSION } from '$lib/constants';
-	import { config } from '$lib/stores';
+	import { config, showChangelog } from '$lib/stores';
 	import { onMount } from 'svelte';
 
 	let ollamaVersion = '';
@@ -15,10 +15,25 @@
 <div class="flex flex-col h-full justify-between space-y-3 text-sm mb-6">
 	<div class=" space-y-3">
 		<div>
-			<div class=" mb-2.5 text-sm font-medium">{WEBUI_NAME} Version</div>
+			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
+				<div>
+					{WEBUI_NAME} Version
+				</div>
+			</div>
 			<div class="flex w-full">
-				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
-					{$config && $config.version ? $config.version : WEB_UI_VERSION}
+				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200 flex space-x-1.5 items-center">
+					<div>
+						v{WEB_UI_VERSION}
+					</div>
+
+					<button
+						class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
+						on:click={() => {
+							showChangelog.set(true);
+						}}
+					>
+						<div>See what's new</div>
+					</button>
 				</div>
 			</div>
 		</div>
@@ -44,10 +59,17 @@
 				/>
 			</a>
 
-			<a href="https://github.com/ollama-webui/ollama-webui" target="_blank">
+			<a href="https://twitter.com/OpenWebUI" target="_blank">
+				<img
+					alt="X (formerly Twitter) Follow"
+					src="https://img.shields.io/twitter/follow/OpenWebUI"
+				/>
+			</a>
+
+			<a href="https://github.com/open-webui/open-webui" target="_blank">
 				<img
 					alt="Github Repo"
-					src="https://img.shields.io/github/stars/ollama-webui/ollama-webui?style=social&label=Star us on Github"
+					src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
 				/>
 			</a>
 		</div>

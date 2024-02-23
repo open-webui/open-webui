@@ -334,7 +334,7 @@
 						content: $settings.system
 				  }
 				: undefined,
-			...messages
+			...messages.filter(message => !message.deleted)
 		]
 			.filter((message) => message)
 			.map((message, idx, arr) => ({
@@ -540,7 +540,7 @@
 							content: $settings.system
 					  }
 					: undefined,
-				...messages
+			...messages.filter(message => !message.deleted)
 			]
 				.filter((message) => message)
 				.map((message, idx, arr) => ({
@@ -742,6 +742,8 @@
 		if ($settings.titleAutoGenerate ?? true) {
 			const title = await generateTitle(
 				localStorage.token,
+				$settings?.titleGenerationPrompt ??
+					"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title': {{prompt}}",
 				$settings?.titleAutoGenerateModel ?? selectedModels[0],
 				userPrompt
 			);

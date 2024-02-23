@@ -16,6 +16,7 @@
 		updateChatById
 	} from '$lib/apis/chats';
 	import toast from 'svelte-french-toast';
+	import { slide } from 'svelte/transition';
 
 	let show = false;
 	let navElement;
@@ -139,11 +140,9 @@
 
 		{#if $user?.role === 'admin'}
 			<div class="px-2.5 flex justify-center mt-0.5">
-				<button
+				<a
 					class="flex-grow flex space-x-3 rounded-md px-3 py-2 hover:bg-gray-900 transition"
-					on:click={async () => {
-						goto('/modelfiles');
-					}}
+					href="/modelfiles"
 				>
 					<div class="self-center">
 						<svg
@@ -165,15 +164,13 @@
 					<div class="flex self-center">
 						<div class=" self-center font-medium text-sm">Modelfiles</div>
 					</div>
-				</button>
+				</a>
 			</div>
 
 			<div class="px-2.5 flex justify-center">
-				<button
+				<a
 					class="flex-grow flex space-x-3 rounded-md px-3 py-2 hover:bg-gray-900 transition"
-					on:click={async () => {
-						goto('/prompts');
-					}}
+					href="/prompts"
 				>
 					<div class="self-center">
 						<svg
@@ -195,15 +192,13 @@
 					<div class="flex self-center">
 						<div class=" self-center font-medium text-sm">Prompts</div>
 					</div>
-				</button>
+				</a>
 			</div>
 
 			<div class="px-2.5 flex justify-center mb-1">
-				<button
+				<a
 					class="flex-grow flex space-x-3 rounded-md px-3 py-2 hover:bg-gray-900 transition"
-					on:click={async () => {
-						goto('/documents');
-					}}
+					href="/documents"
 				>
 					<div class="self-center">
 						<svg
@@ -225,7 +220,7 @@
 					<div class="flex self-center">
 						<div class=" self-center font-medium text-sm">Documents</div>
 					</div>
-				</button>
+				</a>
 			</div>
 		{/if}
 
@@ -360,22 +355,12 @@
 					}
 				}) as chat, i}
 					<div class=" w-full pr-2 relative">
-						<button
+						<a
 							class=" w-full flex justify-between rounded-md px-3 py-2 hover:bg-gray-900 {chat.id ===
 							$chatId
 								? 'bg-gray-900'
 								: ''} transition whitespace-nowrap text-ellipsis"
-							on:click={() => {
-								// goto(`/c/${chat.id}`);
-								if (chat.id !== chatTitleEditId) {
-									chatTitleEditId = null;
-									chatTitle = '';
-								}
-
-								if (chat.id !== $chatId) {
-									loadChat(chat.id);
-								}
-							}}
+							href="/c/{chat.id}"
 						>
 							<div class=" flex self-center flex-1">
 								<div class=" self-center mr-3">
@@ -406,7 +391,7 @@
 									{/if}
 								</div>
 							</div>
-						</button>
+						</a>
 
 						{#if chat.id === $chatId}
 							<div class=" absolute right-[22px] top-[10px]">
@@ -578,6 +563,7 @@
 						<div
 							id="dropdownDots"
 							class="absolute z-40 bottom-[70px] 4.5rem rounded-lg shadow w-[240px] bg-gray-900"
+							in:slide={{ duration: 150 }}
 						>
 							<div class="py-2 w-full">
 								{#if $user.role === 'admin'}

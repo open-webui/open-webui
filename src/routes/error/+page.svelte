@@ -30,7 +30,7 @@
 						<br class=" " />
 						<a
 							class=" font-semibold underline"
-							href="https://github.com/ollama-webui/ollama-webui#how-to-install-"
+							href="https://github.com/open-webui/open-webui#how-to-install-"
 							target="_blank">See readme.md for instructions</a
 						>
 						or
