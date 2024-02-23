@@ -1,9 +1,13 @@
 <script lang="ts">
-	import Modal from './common/Modal.svelte';
-	import { Confetti } from 'svelte-confetti';
-	import { WEBUI_NAME, WEB_UI_VERSION } from '$lib/constants';
 	import { onMount } from 'svelte';
+	import { Confetti } from 'svelte-confetti';
+
+	import { config } from '$lib/stores';
+
+	import { WEBUI_NAME, WEB_UI_VERSION } from '$lib/constants';
 	import { getChangelog } from '$lib/apis';
+
+	import Modal from './common/Modal.svelte';
 
 	export let show = false;
 
@@ -79,11 +83,12 @@
 		<div class="flex justify-end pt-3 text-sm font-medium">
 			<button
 				on:click={() => {
+					localStorage.version = $config.version;
 					show = false;
 				}}
 				class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 			>
-				<span class="relative">Ok, let's go!</span>
+				<span class="relative">Okay, Let's Go!</span>
 			</button>
 		</div>
 	</div>
