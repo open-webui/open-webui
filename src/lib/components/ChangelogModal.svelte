@@ -23,7 +23,7 @@
 	<div class="px-5 py-4 dark:text-gray-300">
 		<div class="flex justify-between items-start">
 			<div class="text-xl font-bold">
-				{WEBUI_NAME}
+				What’s New in {WEBUI_NAME}
 				<!-- <Confetti x={[-1, -0.25]} y={[0, 0.5]} /> -->
 			</div>
 			<button
@@ -61,8 +61,20 @@
 						</div>
 
 						{#each Object.keys(changelog[version]).filter((section) => section !== 'date') as section}
-							<div class="text-lg">
-								<div class="font-bold capitalize">{section}</div>
+							<div class="">
+								<div
+									class="font-bold capitalize text-xs {section === 'added'
+										? 'text-white bg-blue-500'
+										: section === 'fixed'
+										? 'text-white bg-green-500'
+										: section === 'changed'
+										? 'text-white bg-yellow-500'
+										: section === 'removed'
+										? 'text-white bg-red-500'
+										: ''}  w-fit px-3 rounded-full my-3"
+								>
+									{section}
+								</div>
 
 								<div class="my-2">
 									{#each Object.keys(changelog[version][section]) as item}
