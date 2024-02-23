@@ -158,6 +158,56 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
   docker run -d -p 3000:8080 -e OLLAMA_API_BASE_URL=https://example.com/api -v open-webui:/app/backend/data --name open-webui --restart always open-webui
   ```
 
+<details>
+<summary>
+   
+#### Rootless (Podman) local-only Open WebUI with Systemd service and auto-update
+   
+</summary>
+   
+- **Important:** Consult the Docker documentation because much of the configuration and syntax is interchangeable with [Podman](https://github.com/containers/podman). See also [rootless_tutorial](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md). This example requires the [slirp4netns](https://github.com/rootless-containers/slirp4netns) network backend to facilitate server listen and Ollama communication over localhost only.
+
+1. Pull the latest image:
+   ```bash
+   podman pull ghcr.io/open-webui/open-webui:main
+   ```
+2. Create a new container using desired configuration
+   **Note:** `-p 127.0.0.1:3000:8080` ensures that we listen only on localhost, `--network slirp4netns:allow_host_loopback=true` permits the container to access Ollama when it also listens strictly on localhost. `--add-host=ollama.local:10.0.2.2 --env 'OLLAMA_API_BASE_URL=http://ollama.local:11434/api'` adds a hosts record to the container and configures open-webui to use the friendly hostname. `10.0.2.2` is the default slirp4netns address used for localhost mapping. `--env 'ANONYMIZED_TELEMETRY=False'` isn't necessary since Chroma telemetry has been disabled in the code but is included as an example.
+   ```bash
+   podman create -p 127.0.0.1:3000:8080 --network slirp4netns:allow_host_loopback=true --add-host=ollama.local:10.0.2.2 --env 'OLLAMA_API_BASE_URL=http://ollama.local:11434/api' --env 'ANONYMIZED_TELEMETRY=False' -v open-webui:/app/backend/data --label io.containers.autoupdate=registry --name open-webui ghcr.io/open-webui/open-webui:main
+   ```
+3. Perpare for systemd user service:
+   ```bash
+   mkdir -p ~/.config/systemd/user/
+   ```
+4. Generate user service with Podman:
+   ```bash
+   podman generate systemd --new open-webui > ~/.config/systemd/user/open-webui.service
+   ```
+5. Reload systemd configuration:
+   ```bash
+   systemctl --user daemon-reload
+   ```
+6. Enable and validate new service:
+   ```bash
+   systemctl --user enable open-webui.service
+   systemctl --user start open-webui.service
+   systemctl --user status open-webui.service
+   ```
+7. Enable and validate Podman auto-update:
+   ```bash
+   systemctl --user enable podman-auto-update.timer
+   systemctl --user enable podman-auto-update.service
+   systemctl --user status podman-auto-update.timer
+   ```
+   Dry run with the following command (omit `--dry-run` to force an update):
+   ```bash
+   podman auto-update --dry-run
+   ```
+   
+</details>
+
+
 ### Installing Ollama and Open WebUI Together
 
 #### Using Docker Compose
