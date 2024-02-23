@@ -21,11 +21,13 @@
 				</div>
 			</div>
 			<div class="flex w-full">
-				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
-					v{WEB_UI_VERSION}
+				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200 flex space-x-1.5 items-center">
+					<div>
+						v{WEB_UI_VERSION}
+					</div>
 
 					<button
-						class="mt-1 underline flex items-center space-x-1 text-xs text-gray-600 dark:text-gray-400"
+						class=" underline flex items-center space-x-1 text-xs text-gray-600 dark:text-gray-400"
 						on:click={() => {
 							showChangelog.set(true);
 						}}
