@@ -1,6 +1,19 @@
 {
 	"name": "open-webui",
 	"version": "0.1.102",
+	"homepage": "https://openwebui.com",
+	"bugs": {
+		"url": "https://github.com/open-webui/open-webui/issues"
+	},
+	"license": "MIT",
+	"author": {
+		"name": "Open WebUI",
+		"url": "https://openwebui.com"
+	},
+	"repository": {
+		"type": "github",
+		"url": "https://github.com/open-webui/open-webui"
+	},
 	"private": true,
 	"scripts": {
 		"dev": "vite dev --host",
@@ -30,6 +43,7 @@
 		"postcss": "^8.4.31",
 		"prettier": "^2.8.0",
 		"prettier-plugin-svelte": "^2.10.1",
+		"semantic-release": "^23.0.2",
 		"svelte": "^4.0.5",
 		"svelte-check": "^3.4.3",
 		"svelte-confetti": "^1.3.2",
@@ -52,5 +66,10 @@
 		"svelte-french-toast": "^1.2.0",
 		"tippy.js": "^6.3.7",
 		"uuid": "^9.0.1"
+	},
+	"release": {
+		"branches": ["main"],
+		"dryRun": true,
+		"ci": false
 	}
 }
