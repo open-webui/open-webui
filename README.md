@@ -57,6 +57,8 @@ Also check our sibling project, [Open WebUI Community](https://openwebui.com/), 
 
 - 🤝 **OpenAI API Integration**: Effortlessly integrate OpenAI-compatible API for versatile conversations alongside Ollama models. Customize the API Base URL to link with **LMStudio, Mistral, OpenRouter, and more**.
 
+- 🤝 **VertexAI API Integration**: Integrate VertexAI-compatible API for versatile conversations. Customize the API Base URL and API Key (Use token provided by `gcloud auth print-access-token`).
+
 - 🔄 **Regeneration History Access**: Easily revisit and explore your entire regeneration history.
 
 - 📜 **Chat History**: Effortlessly access and manage your conversation history.
