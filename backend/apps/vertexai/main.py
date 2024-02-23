@@ -63,7 +63,7 @@ async def update_vertexai_key(form_data: KeyUpdateForm, user=Depends(get_admin_u
 
 
 @app.get("/enabled")
-async def get_vertexai_enablement(user=Depends(get_admin_user)):
+async def get_vertexai_enablement(user=Depends(get_verified_user)):
     return {"ENABLE_VERTEXAI": app.state.ENABLE_VERTEXAI}
 
 

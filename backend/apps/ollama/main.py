@@ -9,7 +9,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from utils.utils import get_current_user, get_admin_user
+from utils.utils import get_current_user, get_admin_user, get_verified_user
 
 app = FastAPI()
 app.add_middleware(
@@ -34,7 +34,7 @@ class EnabledUpdateForm(BaseModel):
 
 
 @app.get("/enabled")
-async def get_ollama_enablement(user=Depends(get_admin_user)):
+async def get_ollama_enablement(user=Depends(get_verified_user)):
     return {"ENABLE_OLLAMA": app.state.ENABLE_OLLAMA}
 
 

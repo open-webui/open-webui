@@ -69,7 +69,7 @@ async def update_openai_key(form_data: KeyUpdateForm, user=Depends(get_admin_use
 
 
 @app.get("/enabled")
-async def get_openai_enablement(user=Depends(get_admin_user)):
+async def get_openai_enablement(user=Depends(get_verified_user)):
     return {"ENABLE_OPENAI": app.state.ENABLE_OPENAI}
 
 
