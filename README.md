@@ -176,7 +176,7 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
    ```bash
    podman create -p 127.0.0.1:3000:8080 --network slirp4netns:allow_host_loopback=true --add-host=ollama.local:10.0.2.2 --env 'OLLAMA_API_BASE_URL=http://ollama.local:11434/api' --env 'ANONYMIZED_TELEMETRY=False' -v open-webui:/app/backend/data --label io.containers.autoupdate=registry --name open-webui ghcr.io/open-webui/open-webui:main
    ```
-3. Perpare for systemd user service:
+3. Prepare for systemd user service:
    ```bash
    mkdir -p ~/.config/systemd/user/
    ```
