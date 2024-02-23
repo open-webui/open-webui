@@ -5,6 +5,5 @@ export default defineConfig({
 	plugins: [sveltekit()],
 	define: {
 		APP_VERSION: JSON.stringify(process.env.npm_package_version)
-	},
-	assetsInclude: ['**/*.md']
+	}
 });
