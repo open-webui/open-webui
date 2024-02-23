@@ -36,6 +36,9 @@
 	<div
 		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center z-50 overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
+		on:click={() => {
+			show = false;
+		}}
 	>
 		<div
 			class=" modal-content m-auto rounded-xl max-w-full {sizeToWidth(
