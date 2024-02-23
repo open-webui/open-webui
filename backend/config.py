@@ -187,7 +187,7 @@ DEFAULT_PROMPT_SUGGESTIONS = (
 )
 
 
-DEFAULT_USER_ROLE = "pending"
+DEFAULT_USER_ROLE = os.getenv("DEFAULT_USER_ROLE", "pending")
 USER_PERMISSIONS = {"chat": {"deletion": True}}
 
 
