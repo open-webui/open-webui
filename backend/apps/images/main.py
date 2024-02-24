@@ -49,7 +49,7 @@ async def toggle_enabled(request: Request, user=Depends(get_admin_user)):
         app.state.ENABLED = not app.state.ENABLED
         return app.state.ENABLED
     except Exception as e:
-        raise HTTPException(status_code=r.status_code, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 class UrlUpdateForm(BaseModel):
@@ -109,7 +109,7 @@ def get_models(user=Depends(get_current_user)):
         models = r.json()
         return models
     except Exception as e:
-        raise HTTPException(status_code=r.status_code, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 @app.get("/models/default")
@@ -120,7 +120,7 @@ async def get_default_model(user=Depends(get_admin_user)):
 
         return {"model": options["sd_model_checkpoint"]}
     except Exception as e:
-        raise HTTPException(status_code=r.status_code, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 class UpdateModelForm(BaseModel):
@@ -190,4 +190,4 @@ def generate_image(
         return r.json()
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=r.status_code, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
