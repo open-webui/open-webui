@@ -1,25 +1,38 @@
 <script lang="ts">
 	import toast from 'svelte-french-toast';
 	import { openDB, deleteDB } from 'idb';
-	import { onMount, tick } from 'svelte';
-	import { goto } from '$app/navigation';
-
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
+
+	import { onMount, tick } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	import { getOllamaModels, getOllamaVersion } from '$lib/apis/ollama';
 	import { getModelfiles } from '$lib/apis/modelfiles';
 	import { getPrompts } from '$lib/apis/prompts';
-
 	import { getOpenAIModels } from '$lib/apis/openai';
+	import { getDocs } from '$lib/apis/documents';
+	import { getAllChatTags } from '$lib/apis/chats';
 
-	import { user, showSettings, settings, models, modelfiles, prompts } from '$lib/stores';
+	import {
+		user,
+		showSettings,
+		settings,
+		models,
+		modelfiles,
+		prompts,
+		documents,
+		tags,
+		showChangelog,
+		config
+	} from '$lib/stores';
 	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
+	import { checkVersion } from '$lib/utils';
 
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
-	import { checkVersion } from '$lib/utils';
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
+	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 
 	let ollamaVersion = '';
 	let loaded = false;
@@ -93,11 +106,11 @@
 
 			console.log();
 			await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+
 			await modelfiles.set(await getModelfiles(localStorage.token));
-
 			await prompts.set(await getPrompts(localStorage.token));
-
-			console.log($modelfiles);
+			await documents.set(await getDocs(localStorage.token));
+			await tags.set(await getAllChatTags(localStorage.token));
 
 			modelfiles.subscribe(async () => {
 				// should fetch models
@@ -170,6 +183,10 @@
 					document.getElementById('show-shortcuts-button')?.click();
 				}
 			});
+
+			if ($user.role === 'admin') {
+				showChangelog.set(localStorage.version !== $config.version);
+			}
 
 			await tick();
 		}
@@ -257,7 +274,7 @@
 									Trouble accessing Ollama?
 									<a
 										class=" text-black dark:text-white font-semibold underline"
-										href="https://github.com/ollama-webui/ollama-webui#troubleshooting"
+										href="https://github.com/open-webui/open-webui#troubleshooting"
 										target="_blank"
 									>
 										Click here for help.
@@ -340,10 +357,11 @@
 		{/if}
 
 		<div
-			class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-800 min-h-screen overflow-auto flex flex-row"
+			class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 min-h-screen overflow-auto flex flex-row"
 		>
 			<Sidebar />
 			<SettingsModal bind:show={$showSettings} />
+			<ChangelogModal bind:show={$showChangelog} />
 			<slot />
 		</div>
 	</div>

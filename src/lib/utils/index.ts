@@ -128,6 +128,37 @@ export const findWordIndices = (text) => {
 	return matches;
 };
 
+export const removeFirstHashWord = (inputString) => {
+	// Split the string into an array of words
+	const words = inputString.split(' ');
+
+	// Find the index of the first word that starts with #
+	const index = words.findIndex((word) => word.startsWith('#'));
+
+	// Remove the first word with #
+	if (index !== -1) {
+		words.splice(index, 1);
+	}
+
+	// Join the remaining words back into a string
+	const resultString = words.join(' ');
+
+	return resultString;
+};
+
+export const transformFileName = (fileName) => {
+	// Convert to lowercase
+	const lowerCaseFileName = fileName.toLowerCase();
+
+	// Remove special characters using regular expression
+	const sanitizedFileName = lowerCaseFileName.replace(/[^\w\s]/g, '');
+
+	// Replace spaces with dashes
+	const finalFileName = sanitizedFileName.replace(/\s+/g, '-');
+
+	return finalFileName;
+};
+
 export const calculateSHA256 = async (file) => {
 	// Create a FileReader to read the file asynchronously
 	const reader = new FileReader();
@@ -160,4 +191,159 @@ export const calculateSHA256 = async (file) => {
 		console.error('Error calculating SHA-256 hash:', error);
 		throw error;
 	}
+};
+
+export const getImportOrigin = (_chats) => {
+	// Check what external service chat imports are from
+	if ('mapping' in _chats[0]) {
+		return 'openai';
+	}
+	return 'webui';
+};
+
+const convertOpenAIMessages = (convo) => {
+	// Parse OpenAI chat messages and create chat dictionary for creating new chats
+	const mapping = convo['mapping'];
+	const messages = [];
+	let currentId = '';
+	let lastId = null;
+
+	for (let message_id in mapping) {
+		const message = mapping[message_id];
+		currentId = message_id;
+		try {
+			if (
+				messages.length == 0 &&
+				(message['message'] == null ||
+					(message['message']['content']['parts']?.[0] == '' &&
+						message['message']['content']['text'] == null))
+			) {
+				// Skip chat messages with no content
+				continue;
+			} else {
+				const new_chat = {
+					id: message_id,
+					parentId: lastId,
+					childrenIds: message['children'] || [],
+					role: message['message']?.['author']?.['role'] !== 'user' ? 'assistant' : 'user',
+					content:
+						message['message']?.['content']?.['parts']?.[0] ||
+						message['message']?.['content']?.['text'] ||
+						'',
+					model: 'gpt-3.5-turbo',
+					done: true,
+					context: null
+				};
+				messages.push(new_chat);
+				lastId = currentId;
+			}
+		} catch (error) {
+			console.log('Error with', message, '\nError:', error);
+		}
+	}
+
+	let history = {};
+	messages.forEach((obj) => (history[obj.id] = obj));
+
+	const chat = {
+		history: {
+			currentId: currentId,
+			messages: history // Need to convert this to not a list and instead a json object
+		},
+		models: ['gpt-3.5-turbo'],
+		messages: messages,
+		options: {},
+		timestamp: convo['create_time'],
+		title: convo['title'] ?? 'New Chat'
+	};
+	return chat;
+};
+
+const validateChat = (chat) => {
+	// Because ChatGPT sometimes has features we can't use like DALL-E or migh have corrupted messages, need to validate
+	const messages = chat.messages;
+
+	// Check if messages array is empty
+	if (messages.length === 0) {
+		return false;
+	}
+
+	// Last message's children should be an empty array
+	const lastMessage = messages[messages.length - 1];
+	if (lastMessage.childrenIds.length !== 0) {
+		return false;
+	}
+
+	// First message's parent should be null
+	const firstMessage = messages[0];
+	if (firstMessage.parentId !== null) {
+		return false;
+	}
+
+	// Every message's content should be a string
+	for (let message of messages) {
+		if (typeof message.content !== 'string') {
+			return false;
+		}
+	}
+
+	return true;
+};
+
+export const convertOpenAIChats = (_chats) => {
+	// Create a list of dictionaries with each conversation from import
+	const chats = [];
+	let failed = 0;
+	for (let convo of _chats) {
+		const chat = convertOpenAIMessages(convo);
+
+		if (validateChat(chat)) {
+			chats.push({
+				id: convo['id'],
+				user_id: '',
+				title: convo['title'],
+				chat: chat,
+				timestamp: convo['timestamp']
+			});
+		} else {
+			failed++;
+		}
+	}
+	console.log(failed, 'Conversations could not be imported');
+	return chats;
+};
+
+export const isValidHttpUrl = (string) => {
+	let url;
+
+	try {
+		url = new URL(string);
+	} catch (_) {
+		return false;
+	}
+
+	return url.protocol === 'http:' || url.protocol === 'https:';
+};
+
+export const removeEmojis = (str) => {
+	// Regular expression to match emojis
+	const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;
+
+	// Replace emojis with an empty string
+	return str.replace(emojiRegex, '');
+};
+
+export const extractSentences = (text) => {
+	// Split the paragraph into sentences based on common punctuation marks
+	const sentences = text.split(/(?<=[.!?])/);
+
+	return sentences
+		.map((sentence) => removeEmojis(sentence.trim()))
+		.filter((sentence) => sentence !== '');
+};
+
+export const blobToFile = (blob, fileName) => {
+	// Create a new File object from the Blob
+	const file = new File([blob], fileName, { type: blob.type });
+	return file;
 };

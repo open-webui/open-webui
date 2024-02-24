@@ -7,3 +7,5 @@ uploads
 _test
 Pipfile
 data/*
+!data/config.json
+.webui_secret_key

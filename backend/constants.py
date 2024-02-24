@@ -18,6 +18,9 @@ class ERROR_MESSAGES(str, Enum):
         "Uh-oh! This username is already registered. Please choose another username."
     )
     COMMAND_TAKEN = "Uh-oh! This command is already registered. Please choose another command string."
+    FILE_EXISTS = "Uh-oh! This file is already registered. Please choose another file."
+
+    NAME_TAG_TAKEN = "Uh-oh! This name tag is already registered. Please choose another name tag string."
     INVALID_TOKEN = (
         "Your session has expired or the token is invalid. Please sign in again."
     )
@@ -39,3 +42,8 @@ class ERROR_MESSAGES(str, Enum):
     USER_NOT_FOUND = "We could not find what you're looking for :/"
     API_KEY_NOT_FOUND = "Oops! It looks like there's a hiccup. The API key is missing. Please make sure to provide a valid API key to access this feature."
     MALICIOUS = "Unusual activities detected, please try again in a few minutes."
+
+    PANDOC_NOT_INSTALLED = "Pandoc is not installed on the server. Please contact your administrator for assistance."
+    INCORRECT_FORMAT = (
+        lambda err="": f"Invalid format. Please use the correct format{err if err else ''}"
+    )

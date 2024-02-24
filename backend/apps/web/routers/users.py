@@ -1,4 +1,4 @@
-from fastapi import Response
+from fastapi import Response, Request
 from fastapi import Depends, FastAPI, HTTPException, status
 from datetime import datetime, timedelta
 from typing import List, Union, Optional
@@ -11,7 +11,7 @@ import uuid
 from apps.web.models.users import UserModel, UserUpdateForm, UserRoleUpdateForm, Users
 from apps.web.models.auths import Auths
 
-from utils.utils import get_current_user, get_password_hash
+from utils.utils import get_current_user, get_password_hash, get_admin_user
 from constants import ERROR_MESSAGES
 
 router = APIRouter()
@@ -22,13 +22,26 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[UserModel])
-async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_current_user)):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)):
     return Users.get_users(skip, limit)
+
+
+############################
+# User Permissions
+############################
+
+
+@router.get("/permissions/user")
+async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
+    return request.app.state.USER_PERMISSIONS
+
+
+@router.post("/permissions/user")
+async def update_user_permissions(
+    request: Request, form_data: dict, user=Depends(get_admin_user)
+):
+    request.app.state.USER_PERMISSIONS = form_data
+    return request.app.state.USER_PERMISSIONS
 
 
 ############################
@@ -37,22 +50,15 @@ async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_current_use
 
 
 @router.post("/update/role", response_model=Optional[UserModel])
-async def update_user_role(
-    form_data: UserRoleUpdateForm, user=Depends(get_current_user)
-):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
 
     if user.id != form_data.id:
         return Users.update_user_role_by_id(form_data.id, form_data.role)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACTION_PROHIBITED,
-        )
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+    )
 
 
 ############################
@@ -62,14 +68,8 @@ async def update_user_role(
 
 @router.post("/{user_id}/update", response_model=Optional[UserModel])
 async def update_user_by_id(
-    user_id: str, form_data: UserUpdateForm, session_user=Depends(get_current_user)
+    user_id: str, form_data: UserUpdateForm, session_user=Depends(get_admin_user)
 ):
-    if session_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
     user = Users.get_user_by_id(user_id)
 
     if user:
@@ -98,17 +98,16 @@ async def update_user_by_id(
 
         if updated_user:
             return updated_user
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(),
-            )
 
-    else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT(),
         )
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=ERROR_MESSAGES.USER_NOT_FOUND,
+    )
 
 
 ############################
@@ -117,25 +116,19 @@ async def update_user_by_id(
 
 
 @router.delete("/{user_id}", response_model=bool)
-async def delete_user_by_id(user_id: str, user=Depends(get_current_user)):
-    if user.role == "admin":
-        if user.id != user_id:
-            result = Auths.delete_auth_by_id(user_id)
+async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
+    if user.id != user_id:
+        result = Auths.delete_auth_by_id(user_id)
 
-            if result:
-                return True
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=ERROR_MESSAGES.DELETE_USER_ERROR,
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=ERROR_MESSAGES.ACTION_PROHIBITED,
-            )
-    else:
+        if result:
+            return True
+
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DELETE_USER_ERROR,
         )
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+    )

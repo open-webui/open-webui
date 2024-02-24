@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { settings, user, config, modelfiles, models } from '$lib/stores';
 
-	import Advanced from '$lib/components/chat/Settings/Advanced.svelte';
+	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import { splitStream } from '$lib/utils';
 	import { onMount, tick } from 'svelte';
 	import { createModel } from '$lib/apis/ollama';
@@ -209,12 +209,16 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 		success = false;
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		window.addEventListener('message', async (event) => {
 			if (
-				!['https://ollamahub.com', 'https://www.ollamahub.com', 'http://localhost:5173'].includes(
-					event.origin
-				)
+				![
+					'https://ollamahub.com',
+					'https://www.ollamahub.com',
+					'https://openwebui.com',
+					'https://www.openwebui.com',
+					'http://localhost:5173'
+				].includes(event.origin)
 			)
 				return;
 			const modelfile = JSON.parse(event.data);
@@ -249,11 +253,36 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 		if (window.opener ?? false) {
 			window.opener.postMessage('loaded', '*');
 		}
+
+		if (sessionStorage.modelfile) {
+			const modelfile = JSON.parse(sessionStorage.modelfile);
+			console.log(modelfile);
+			imageUrl = modelfile.imageUrl;
+			title = modelfile.title;
+			await tick();
+			tagName = modelfile.tagName;
+			desc = modelfile.desc;
+			content = modelfile.content;
+			suggestions =
+				modelfile.suggestionPrompts.length != 0
+					? modelfile.suggestionPrompts
+					: [
+							{
+								content: ''
+							}
+					  ];
+
+			for (const category of modelfile.categories) {
+				categories[category.toLowerCase()] = true;
+			}
+
+			sessionStorage.removeItem('modelfile');
+		}
 	});
 </script>
 
-<div class="min-h-screen w-full flex justify-center dark:text-white">
-	<div class=" py-2.5 flex flex-col justify-between w-full">
+<div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
+	<div class=" flex flex-col justify-between w-full overflow-y-auto">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<input
 				bind:this={filesInputElement}
@@ -474,7 +503,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 								or
 								<a
 									class=" text-gray-500 dark:text-gray-300 font-medium"
-									href="https://ollamahub.com"
+									href="https://openwebui.com"
 									target="_blank"
 								>
 									Click here to check other modelfiles.
@@ -497,7 +526,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 								To access the available model names for downloading, <a
 									class=" text-gray-500 dark:text-gray-300 font-medium"
-									href="https://ollama.ai/library"
+									href="https://ollama.com/library"
 									target="_blank">click here.</a
 								>
 							</div>
@@ -552,7 +581,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 								<div class=" text-xs font-semibold mb-2">Parameters</div>
 
 								<div>
-									<Advanced bind:options />
+									<AdvancedParams bind:options />
 								</div>
 							</div>
 						{/if}

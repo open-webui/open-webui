@@ -1,11 +1,17 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import dayjs from 'dayjs';
+
+	import { tick, createEventDispatcher } from 'svelte';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
+	import { modelfiles, settings } from '$lib/stores';
+
+	const dispatch = createEventDispatcher();
 
 	export let user;
 	export let message;
 	export let siblings;
+	export let isFirstMessage: boolean;
 
 	export let confirmEditMessage: Function;
 	export let showPreviousMessage: Function;
@@ -39,14 +45,40 @@
 		edit = false;
 		editedContent = '';
 	};
+
+	const deleteMessageHandler = async () => {
+		dispatch('delete', message.id);
+	};
 </script>
 
 <div class=" flex w-full">
-	<ProfileImage src={user?.profile_image_url ?? '/user.png'} />
+	<ProfileImage
+		src={message.user
+			? $modelfiles.find((modelfile) => modelfile.tagName === message.user)?.imageUrl ?? '/user.png'
+			: user?.profile_image_url ?? '/user.png'}
+	/>
 
 	<div class="w-full overflow-hidden">
 		<div class="user-message">
-			<Name>You</Name>
+			<Name>
+				{#if message.user}
+					{#if $modelfiles.map((modelfile) => modelfile.tagName).includes(message.user)}
+						{$modelfiles.find((modelfile) => modelfile.tagName === message.user)?.title}
+					{:else}
+						You <span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
+					{/if}
+				{:else if $settings.showUsername}
+					{user.name}
+				{:else}
+					You
+				{/if}
+
+				{#if message.timestamp}
+					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
+						{dayjs(message.timestamp * 1000).format('DD/MM/YYYY HH:mm')}
+					</span>
+				{/if}
+			</Name>
 		</div>
 
 		<div
@@ -59,8 +91,14 @@
 							{#if file.type === 'image'}
 								<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
 							{:else if file.type === 'doc'}
-								<div
-									class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
+								<button
+									class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none text-left"
+									type="button"
+									on:click={() => {
+										if (file?.url) {
+											window.open(file?.url, '_blank').focus();
+										}
+									}}
 								>
 									<div class="p-2.5 bg-red-400 text-white rounded-lg">
 										<svg
@@ -87,7 +125,36 @@
 
 										<div class=" text-gray-500 text-sm">Document</div>
 									</div>
-								</div>
+								</button>
+							{:else if file.type === 'collection'}
+								<button
+									class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none text-left"
+									type="button"
+								>
+									<div class="p-2.5 bg-red-400 text-white rounded-lg">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 24 24"
+											fill="currentColor"
+											class="w-6 h-6"
+										>
+											<path
+												d="M7.5 3.375c0-1.036.84-1.875 1.875-1.875h.375a3.75 3.75 0 0 1 3.75 3.75v1.875C13.5 8.161 14.34 9 15.375 9h1.875A3.75 3.75 0 0 1 21 12.75v3.375C21 17.16 20.16 18 19.125 18h-9.75A1.875 1.875 0 0 1 7.5 16.125V3.375Z"
+											/>
+											<path
+												d="M15 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 17.25 7.5h-1.875A.375.375 0 0 1 15 7.125V5.25ZM4.875 6H6v10.125A3.375 3.375 0 0 0 9.375 19.5H16.5v1.125c0 1.035-.84 1.875-1.875 1.875h-9.75A1.875 1.875 0 0 1 3 20.625V7.875C3 6.839 3.84 6 4.875 6Z"
+											/>
+										</svg>
+									</div>
+
+									<div class="flex flex-col justify-center -space-y-0.5">
+										<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
+											{file?.title ?? `#${file.name}`}
+										</div>
+
+										<div class=" text-gray-500 text-sm">Collection</div>
+									</div>
+								</button>
 							{/if}
 						</div>
 					{/each}
@@ -129,11 +196,11 @@
 				<div class="w-full">
 					<pre id="user-message">{message.content}</pre>
 
-					<div class=" flex justify-start space-x-1">
+					<div class=" flex justify-start space-x-1 text-gray-700 dark:text-gray-500">
 						{#if siblings.length > 1}
 							<div class="flex self-center">
 								<button
-									class="self-center"
+									class="self-center dark:hover:text-white hover:text-black transition"
 									on:click={() => {
 										showPreviousMessage(message);
 									}}
@@ -152,12 +219,12 @@
 									</svg>
 								</button>
 
-								<div class="text-xs font-bold self-center">
+								<div class="text-xs font-bold self-center dark:text-gray-100">
 									{siblings.indexOf(message.id) + 1} / {siblings.length}
 								</div>
 
 								<button
-									class="self-center"
+									class="self-center dark:hover:text-white hover:text-black transition"
 									on:click={() => {
 										showNextMessage(message);
 									}}
@@ -179,7 +246,7 @@
 						{/if}
 
 						<button
-							class="invisible group-hover:visible p-1 rounded dark:hover:bg-gray-800 transition edit-user-message-button"
+							class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition edit-user-message-button"
 							on:click={() => {
 								editMessageHandler();
 							}}
@@ -201,7 +268,7 @@
 						</button>
 
 						<button
-							class="invisible group-hover:visible p-1 rounded dark:hover:bg-gray-800 transition"
+							class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
 							on:click={() => {
 								copyToClipboard(message.content);
 							}}
@@ -221,6 +288,30 @@
 								/>
 							</svg>
 						</button>
+
+						{#if !isFirstMessage}
+							<button
+								class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
+								on:click={() => {
+									deleteMessageHandler();
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+									/>
+								</svg>
+							</button>
+						{/if}
 					</div>
 				</div>
 			{/if}

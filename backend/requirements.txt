@@ -22,6 +22,15 @@ chromadb
 sentence_transformers
 pypdf
 docx2txt
+unstructured
+markdown
+pypandoc
+pandas
+openpyxl
+pyxlsb
+xlrd
+
+faster-whisper
 
 PyJWT
 pyjwt[crypto]

@@ -61,7 +61,7 @@ async def update_ollama_api_url(
 #                     yield line
 #         except Exception as e:
 #             print(e)
-#             error_detail = "Ollama WebUI: Server Connection Error"
+#             error_detail = "Open WebUI: Server Connection Error"
 #             yield json.dumps({"error": error_detail, "message": str(e)}).encode()
 
 
@@ -110,7 +110,7 @@ async def proxy(path: str, request: Request, user=Depends(get_current_user)):
 
     except Exception as e:
         print(e)
-        error_detail = "Ollama WebUI: Server Connection Error"
+        error_detail = "Open WebUI: Server Connection Error"
 
         if response is not None:
             try:
