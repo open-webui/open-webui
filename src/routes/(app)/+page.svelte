@@ -133,6 +133,10 @@
 			selectedModels = [''];
 		}
 
+		selectedModels = selectedModels.map((modelId) =>
+			$models.map((m) => m.id).includes(modelId) ? modelId : ''
+		);
+
 		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 		settings.set({
 			..._settings
@@ -150,6 +154,10 @@
 
 	const submitPrompt = async (userPrompt, _user = null) => {
 		console.log('submitPrompt', $chatId);
+
+		selectedModels = selectedModels.map((modelId) =>
+			$models.map((m) => m.id).includes(modelId) ? modelId : ''
+		);
 
 		if (selectedModels.includes('')) {
 			toast.error('Model not selected');
@@ -282,36 +290,38 @@
 			selectedModels.map(async (modelId) => {
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
-				// Create response message
-				let responseMessageId = uuidv4();
-				let responseMessage = {
-					parentId: parentId,
-					id: responseMessageId,
-					childrenIds: [],
-					role: 'assistant',
-					content: '',
-					model: model.id,
-					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-				};
+				if (model) {
+					// Create response message
+					let responseMessageId = uuidv4();
+					let responseMessage = {
+						parentId: parentId,
+						id: responseMessageId,
+						childrenIds: [],
+						role: 'assistant',
+						content: '',
+						model: model.id,
+						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+					};
 
-				// Add message to history and Set currentId to messageId
-				history.messages[responseMessageId] = responseMessage;
-				history.currentId = responseMessageId;
+					// Add message to history and Set currentId to messageId
+					history.messages[responseMessageId] = responseMessage;
+					history.currentId = responseMessageId;
 
-				// Append messageId to childrenIds of parent message
-				if (parentId !== null) {
-					history.messages[parentId].childrenIds = [
-						...history.messages[parentId].childrenIds,
-						responseMessageId
-					];
-				}
+					// Append messageId to childrenIds of parent message
+					if (parentId !== null) {
+						history.messages[parentId].childrenIds = [
+							...history.messages[parentId].childrenIds,
+							responseMessageId
+						];
+					}
 
-				if (model?.external) {
-					await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-				} else if (model) {
-					await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+					if (model?.external) {
+						await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+					} else if (model) {
+						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+					}
 				} else {
-					toast.error(`Model ${model.id} not found`);
+					toast.error(`Model ${modelId} not found`);
 				}
 			})
 		);
