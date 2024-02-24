@@ -2,7 +2,9 @@ install:
 	@docker-compose up -d
 
 remove:
-	@docker-compose down -v
+	@chmod +x confirm_remove.sh
+	@./confirm_remove.sh
+
 
 start:
 	@docker-compose start
