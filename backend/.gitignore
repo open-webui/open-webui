@@ -6,8 +6,11 @@ uploads
 *.db
 _test
 Pipfile
-data/*
-!data/config.json
+!/data
+/data/*
+!/data/litellm
+/data/litellm/*
 !data/litellm/config.yaml
 
+!data/config.json
 .webui_secret_key
