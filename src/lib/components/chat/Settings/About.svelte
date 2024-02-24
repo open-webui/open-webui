@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { WEBUI_NAME, WEB_UI_VERSION } from '$lib/constants';
-	import { config, showChangelog } from '$lib/stores';
+	import { WEBUI_VERSION } from '$lib/constants';
+	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
 	import { onMount } from 'svelte';
 
 	let ollamaVersion = '';
@@ -17,13 +17,13 @@
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
 				<div>
-					{WEBUI_NAME} Version
+					{$WEBUI_NAME} Version
 				</div>
 			</div>
 			<div class="flex w-full">
 				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200 flex space-x-1.5 items-center">
 					<div>
-						v{WEB_UI_VERSION}
+						v{WEBUI_VERSION}
 					</div>
 
 					<button
