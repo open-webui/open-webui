@@ -13,6 +13,7 @@
 		updateAUTOMATIC1111Url,
 		updateDefaultDiffusionModel,
 		updateImageSize,
+		getImageSteps,
 		updateImageSteps
 	} from '$lib/apis/images';
 	import { getBackendConfig } from '$lib/apis';
@@ -85,6 +86,7 @@
 
 			if (enableImageGeneration && AUTOMATIC1111_BASE_URL) {
 				imageSize = await getImageSize(localStorage.token);
+				steps = await getImageSteps(localStorage.token);
 				getModels();
 			}
 		}

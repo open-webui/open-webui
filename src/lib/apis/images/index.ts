@@ -198,6 +198,38 @@ export const updateImageSize = async (token: string = '', size: string) => {
 	return res.IMAGE_SIZE;
 };
 
+export const getImageSteps = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${IMAGES_API_BASE_URL}/steps`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.IMAGE_STEPS;
+};
+
 export const updateImageSteps = async (token: string = '', steps: number) => {
 	let error = null;
 
