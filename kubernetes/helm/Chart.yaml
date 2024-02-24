@@ -1,5 +1,21 @@
 apiVersion: v2
 name: open-webui
-description: "Open WebUI: A User-Friendly Web Interface for Chat Interactions 👋"
 version: 1.0.0
+appVersion: "latest"
+
+home: https://www.openwebui.com/
 icon: https://raw.githubusercontent.com/open-webui/open-webui/main/static/favicon.png
+
+description: "Open WebUI: A User-Friendly Web Interface for Chat Interactions 👋"
+keywords:
+- llm
+- chat
+- web-ui
+
+sources:
+- https://github.com/open-webui/open-webui/tree/main/kubernetes/helm
+- https://hub.docker.com/r/ollama/ollama
+- https://github.com/open-webui/open-webui/pkgs/container/open-webui
+
+annotations:
+  licenses: MIT

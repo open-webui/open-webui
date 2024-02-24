@@ -1,13 +1,17 @@
 import os
 import chromadb
 from chromadb import Settings
-from secrets import token_bytes
 from base64 import b64encode
-from constants import ERROR_MESSAGES
+from bs4 import BeautifulSoup
+
 from pathlib import Path
 import json
 import markdown
-from bs4 import BeautifulSoup
+import requests
+import shutil
+
+from secrets import token_bytes
+from constants import ERROR_MESSAGES
 
 
 try:
@@ -17,13 +21,14 @@ try:
 except ImportError:
     print("dotenv not installed, skipping...")
 
+WEBUI_NAME = "Open WebUI"
+shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################
 # ENV (dev,test,prod)
 ####################################
 
 ENV = os.environ.get("ENV", "dev")
-
 
 try:
     with open(f"../package.json", "r") as f:
@@ -93,6 +98,36 @@ for version in soup.find_all("h2"):
 
 
 CHANGELOG = changelog_json
+
+
+####################################
+# CUSTOM_NAME
+####################################
+
+CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
+if CUSTOM_NAME:
+    try:
+        r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
+        data = r.json()
+        if r.ok:
+            if "logo" in data:
+                url = (
+                    f"https://api.openwebui.com{data['logo']}"
+                    if data["logo"][0] == "/"
+                    else data["logo"]
+                )
+
+                r = requests.get(url, stream=True)
+                if r.status_code == 200:
+                    with open("./static/favicon.png", "wb") as f:
+                        r.raw.decode_content = True
+                        shutil.copyfileobj(r.raw, f)
+
+            WEBUI_NAME = data["name"]
+    except Exception as e:
+        print(e)
+        pass
+
 
 ####################################
 # DATA/FRONTEND BUILD DIR
@@ -187,7 +222,7 @@ DEFAULT_PROMPT_SUGGESTIONS = (
 )
 
 
-DEFAULT_USER_ROLE = "pending"
+DEFAULT_USER_ROLE = os.getenv("DEFAULT_USER_ROLE", "pending")
 USER_PERMISSIONS = {"chat": {"deletion": True}}
 
 

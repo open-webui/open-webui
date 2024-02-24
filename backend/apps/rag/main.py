@@ -423,7 +423,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ] or file_ext in ["xls", "xlsx"]:
         loader = UnstructuredExcelLoader(file_path)
-    elif file_ext in known_source_ext or file_content_type.find("text/") >= 0:
+    elif file_ext in known_source_ext or (file_content_type and file_content_type.find("text/") >= 0):
         loader = TextLoader(file_path)
     else:
         loader = TextLoader(file_path)
@@ -486,8 +486,8 @@ def store_doc(
 
 @app.get("/scan")
 def scan_docs_dir(user=Depends(get_admin_user)):
-    try:
-        for path in Path(DOCS_DIR).rglob("./**/*"):
+    for path in Path(DOCS_DIR).rglob("./**/*"):
+        try:
             if path.is_file() and not path.name.startswith("."):
                 tags = extract_folders_after_data_docs(path)
                 filename = path.name
@@ -535,8 +535,8 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                             ),
                         )
 
-    except Exception as e:
-        print(e)
+        except Exception as e:
+            print(e)
 
     return True
 

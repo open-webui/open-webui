@@ -1,24 +1,43 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: ollama
-  namespace: {{ .Values.namespace }}
+  name: {{ include "ollama.name" . }}
+  labels:
+    {{- include "ollama.labels" . | nindent 4 }}
+  {{- with .Values.ollama.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-  serviceName: "ollama"
+  serviceName: {{ include "ollama.name" . }}
   replicas: {{ .Values.ollama.replicaCount }}
   selector:
     matchLabels:
-      app: ollama
+      {{- include "ollama.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: ollama
+        {{- include "ollama.labels" . | nindent 8 }}
+      {{- with .Values.ollama.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      {{- with .Values.ollama.runtimeClassName }}
+      runtimeClassName: {{ . }}
+      {{- end }}
       containers:
-      - name: ollama
-        image: {{ .Values.ollama.image }}
+      - name: {{ include "ollama.name" . }}
+        {{- with .Values.ollama.image }}
+        image: {{ .repository }}:{{ .tag }}
+        imagePullPolicy: {{ .pullPolicy }}
+        {{- end }}
+        tty: true
         ports:
-        - containerPort: {{ .Values.ollama.servicePort }}
+        - name: http
+          containerPort: {{ .Values.ollama.service.containerPort }}
         env:
         {{- if .Values.ollama.gpu.enabled }}
           - name: PATH
@@ -27,29 +46,51 @@ spec:
             value: /usr/local/nvidia/lib:/usr/local/nvidia/lib64
           - name: NVIDIA_DRIVER_CAPABILITIES
             value: compute,utility
-        {{- end}}
-        {{- if .Values.ollama.resources }}
-        resources: {{- toYaml .Values.ollama.resources | nindent 10 }}
+        {{- end }}
+        {{- with .Values.ollama.resources }}
+        resources: {{- toYaml . | nindent 10 }}
         {{- end }}
         volumeMounts:
-        - name: ollama-volume
+        - name: data
           mountPath: /root/.ollama
-        tty: true
       {{- with .Values.ollama.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.ollama.tolerations }}
       tolerations:
-        {{- if .Values.ollama.gpu.enabled }}
-        - key: nvidia.com/gpu
-          operator: Exists
-          effect: NoSchedule
-        {{- end }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+      {{- if and .Values.ollama.persistence.enabled .Values.ollama.persistence.existingClaim }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.ollama.persistence.existingClaim }}
+      {{- else if not .Values.ollama.persistence.enabled }}
+      - name: data
+        emptyDir: {}
+      {{- else if and .Values.ollama.persistence.enabled (not .Values.ollama.persistence.existingClaim) }}
+        []
   volumeClaimTemplates:
   - metadata:
-      name: ollama-volume
+      name: data
+      labels:
+        {{- include "ollama.selectorLabels" . | nindent 8 }}
+      {{- with .Values.ollama.persistence.annotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
-      accessModes: [ "ReadWriteOnce" ]
+      accessModes:
+        {{- range .Values.ollama.persistence.accessModes }}
+        - {{ . | quote }}
+        {{- end }}
       resources:
         requests:
-          storage: {{ .Values.ollama.volumeSize }}
+          storage: {{ .Values.ollama.persistence.size | quote }}
+      storageClass: {{ .Values.ollama.persistence.storageClass }}
+      {{- with .Values.ollama.persistence.selector }}
+      selector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
