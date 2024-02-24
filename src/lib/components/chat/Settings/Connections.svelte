@@ -3,7 +3,7 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	const dispatch = createEventDispatcher();
 
-	import { getOllamaAPIUrl, updateOllamaAPIUrl } from '$lib/apis/ollama';
+	import { getOllamaAPIUrl, getOllamaVersion, updateOllamaAPIUrl } from '$lib/apis/ollama';
 	import { getOpenAIKey, getOpenAIUrl, updateOpenAIKey, updateOpenAIUrl } from '$lib/apis/openai';
 	import toast from 'svelte-french-toast';
 
@@ -24,11 +24,14 @@
 
 	const updateOllamaAPIUrlHandler = async () => {
 		API_BASE_URL = await updateOllamaAPIUrl(localStorage.token, API_BASE_URL);
-		const _models = await getModels('ollama');
 
-		if (_models.length > 0) {
+		const ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
+			return null;
+		});
+
+		if (ollamaVersion) {
 			toast.success('Server connection verified');
-			await models.set(_models);
+			await models.set(await getModels());
 		}
 	};
 

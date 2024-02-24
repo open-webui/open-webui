@@ -28,31 +28,29 @@
 
 	let selectedTab = 'general';
 
-	const getModels = async (type = 'all') => {
-		const models = [];
-		models.push(
-			...(await getOllamaModels(localStorage.token).catch((error) => {
-				toast.error(error);
-				return [];
-			}))
-		);
-
-		if (type === 'all') {
-			const openAIModels = await getOpenAIModels(localStorage.token).catch((error) => {
+	const getModels = async () => {
+		let models = await Promise.all([
+			await getOllamaModels(localStorage.token).catch((error) => {
 				console.log(error);
 				return null;
-			});
-
-			models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
-
-			const liteLLMModels = await getLiteLLMModels(localStorage.token).catch((error) => {
+			}),
+			await getOpenAIModels(localStorage.token).catch((error) => {
 				console.log(error);
 				return null;
-			});
+			}),
+			await getLiteLLMModels(localStorage.token).catch((error) => {
+				console.log(error);
+				return null;
+			})
+		]);
 
-			models.push(...(liteLLMModels ? [{ name: 'hr' }, ...liteLLMModels] : []));
-		}
+		models = models
+			.filter((models) => models)
+			.reduce((a, e, i, arr) => a.concat(e, ...(i < arr.length - 1 ? [{ name: 'hr' }] : [])), []);
 
+		// models.push(...(ollamaModels ? [{ name: 'hr' }, ...ollamaModels] : []));
+		// models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
+		// models.push(...(liteLLMModels ? [{ name: 'hr' }, ...liteLLMModels] : []));
 		return models;
 	};
 </script>

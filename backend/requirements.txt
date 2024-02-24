@@ -16,7 +16,7 @@ aiohttp
 peewee
 bcrypt
 
-litellm[proxy]
+litellm
 
 langchain
 langchain-community
