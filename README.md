@@ -113,7 +113,17 @@ We offer various installation alternatives, including non-Docker methods, Docker
 
 ### Keeping Your Docker Installation Up-to-Date
 
-Stay current by following our Migration Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/).
+In case you want to update your local Docker installation to the latest version, you can do it with [Watchtower](https://containrrr.dev/watchtower/):
+
+```bash
+docker run --rm --volume /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --run-once open-webui
+```
+
+In the last part of the command, replace `open-webui` with your container name if it is different.
+
+### Moving from Ollama WebUI to Open WebUI
+
+Check our Migration Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/).
 
 ## What's Next? 🌟
 
