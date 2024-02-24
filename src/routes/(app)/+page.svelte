@@ -539,23 +539,12 @@
 				stream: true,
 				messages: [
 					$settings.system
-					? {
-							role: 'system',
-							content: $settings.system
-					  }
-					: undefined,
-				...messages.filter((message) => !message.deleted)
-			]
-				.filter((message) => message)
-				.map((message, idx, arr) => ({
-					role: message.role,
-					...(message.files?.filter((file) => file.type === 'image').length > 0 ?? false
 						? {
 								role: 'system',
 								content: $settings.system
 						  }
 						: undefined,
-					...messages
+					...messages.filter((message) => !message.deleted)
 				]
 					.filter((message) => message)
 					.map((message, idx, arr) => ({
