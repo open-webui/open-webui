@@ -17,6 +17,7 @@
 	} from '$lib/apis/chats';
 	import toast from 'svelte-french-toast';
 	import { slide } from 'svelte/transition';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	let show = false;
 	let navElement;
@@ -114,7 +115,11 @@
 			>
 				<div class="flex self-center">
 					<div class="self-center mr-1.5">
-						<img src="/favicon.png" class=" w-7 -translate-x-1.5 rounded-full" alt="logo" />
+						<img
+							src="{WEBUI_BASE_URL}/static/favicon.png"
+							class=" w-7 -translate-x-1.5 rounded-full"
+							alt="logo"
+						/>
 					</div>
 
 					<div class=" self-center font-medium text-sm">New Chat</div>

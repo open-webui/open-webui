@@ -298,7 +298,9 @@
 
 {#key message.id}
 	<div class=" flex w-full message-{message.id}">
-		<ProfileImage src={modelfiles[message.model]?.imageUrl ?? '/favicon.png'} />
+		<ProfileImage
+			src={modelfiles[message.model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+		/>
 
 		<div class="w-full overflow-hidden">
 			<Name>

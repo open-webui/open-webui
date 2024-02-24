@@ -20,7 +20,7 @@ from apps.rag.main import app as rag_app
 
 from apps.web.main import app as webui_app
 
-from config import ENV, VERSION, CHANGELOG, FRONTEND_BUILD_DIR
+from config import WEBUI_NAME, ENV, VERSION, CHANGELOG, FRONTEND_BUILD_DIR
 
 
 class SPAStaticFiles(StaticFiles):
@@ -72,6 +72,7 @@ async def get_app_config():
 
     return {
         "status": True,
+        "name": WEBUI_NAME,
         "version": VERSION,
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
@@ -82,6 +83,9 @@ async def get_app_config():
 @app.get("/api/changelog")
 async def get_app_changelog():
     return CHANGELOG
+
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 app.mount(
