@@ -12,11 +12,12 @@ stop:
 
 update:
 	# Calls the LLM update script
-	@./update_llm.sh
+	chmod +x update_ollama_models.sh
+	@./update_ollama_models.sh
 	@git pull
 	@docker-compose down
 	# Make sure the ollama-webui container is stopped before rebuilding
-	@docker stop ollama-webui || true
+	@docker stop open-webui || true
 	@docker-compose up --build -d
 	@docker-compose start
 
