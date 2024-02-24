@@ -2,7 +2,8 @@ from bs4 import BeautifulSoup
 import json
 import markdown
 import time
-
+import os
+import sys
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
+from litellm.proxy.proxy_server import ProxyConfig, initialize
 from litellm.proxy.proxy_server import app as litellm_app
 
 from apps.ollama.main import app as ollama_app
@@ -38,6 +40,21 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
+proxy_config = ProxyConfig()
+
+
+async def config():
+    router, model_list, general_settings = await proxy_config.load_config(
+        router=None, config_file_path="./data/litellm/config.yaml"
+    )
+
+    await initialize(config="./data/litellm/config.yaml", telemetry=False)
+
+
+async def startup():
+    await config()
+
+
 app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
 origins = ["*"]
@@ -49,6 +66,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def on_startup():
+    await startup()
 
 
 @app.middleware("http")
@@ -78,7 +100,6 @@ async def auth_middleware(request: Request, call_next):
 
 app.mount("/api/v1", webui_app)
 app.mount("/litellm/api", litellm_app)
-
 
 app.mount("/ollama/api", ollama_app)
 app.mount("/openai/api", openai_app)
