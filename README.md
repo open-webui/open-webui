@@ -123,7 +123,7 @@ In the last part of the command, replace `open-webui` with your container name i
 
 ### Moving from Ollama WebUI to Open WebUI
 
-Check our Migration Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/).
+Check our Migration Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/migration/).
 
 ## What's Next? 🌟
 
