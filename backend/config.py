@@ -106,23 +106,27 @@ CHANGELOG = changelog_json
 
 CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
 if CUSTOM_NAME:
-    r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
-    data = r.json()
+    try:
+        r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
+        data = r.json()
+        if r.ok:
+            if "logo" in data:
+                url = (
+                    f"https://api.openwebui.com{data['logo']}"
+                    if data["logo"][0] == "/"
+                    else data["logo"]
+                )
 
-    if "logo" in data:
-        url = (
-            f"https://api.openwebui.com{data['logo']}"
-            if data["logo"][0] == "/"
-            else data["logo"]
-        )
+                r = requests.get(url, stream=True)
+                if r.status_code == 200:
+                    with open("./static/favicon.png", "wb") as f:
+                        r.raw.decode_content = True
+                        shutil.copyfileobj(r.raw, f)
 
-        r = requests.get(url, stream=True)
-        if r.status_code == 200:
-            with open("./static/favicon.png", "wb") as f:
-                r.raw.decode_content = True
-                shutil.copyfileobj(r.raw, f)
-
-    WEBUI_NAME = data["name"]
+            WEBUI_NAME = data["name"]
+    except Exception as e:
+        print(e)
+        pass
 
 
 ####################################
