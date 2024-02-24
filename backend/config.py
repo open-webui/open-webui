@@ -22,7 +22,7 @@ except ImportError:
     print("dotenv not installed, skipping...")
 
 WEBUI_NAME = "Open WebUI"
-
+shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################
 # ENV (dev,test,prod)
