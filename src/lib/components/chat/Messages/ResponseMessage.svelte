@@ -21,6 +21,7 @@
 	import Skeleton from './Skeleton.svelte';
 	import CodeBlock from './CodeBlock.svelte';
 	import Image from '$lib/components/common/Image.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let modelfiles = [];
 	export let message;
