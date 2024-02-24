@@ -37,6 +37,7 @@
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
 	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	let stopResponseFlag = false;
 	let autoScroll = true;
@@ -335,7 +336,7 @@
 						content: $settings.system
 				  }
 				: undefined,
-			...messages
+			...messages.filter((message) => !message.deleted)
 		]
 			.filter((message) => message)
 			.map((message, idx, arr) => ({
@@ -453,7 +454,7 @@
 												: `${model}`,
 											{
 												body: responseMessage.content,
-												icon: selectedModelfile?.imageUrl ?? '/favicon.png'
+												icon: selectedModelfile?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`
 											}
 										);
 									}
@@ -538,6 +539,17 @@
 				stream: true,
 				messages: [
 					$settings.system
+					? {
+							role: 'system',
+							content: $settings.system
+					  }
+					: undefined,
+				...messages.filter((message) => !message.deleted)
+			]
+				.filter((message) => message)
+				.map((message, idx, arr) => ({
+					role: message.role,
+					...(message.files?.filter((file) => file.type === 'image').length > 0 ?? false
 						? {
 								role: 'system',
 								content: $settings.system
@@ -627,7 +639,7 @@
 				if ($settings.notificationEnabled && !document.hasFocus()) {
 					const notification = new Notification(`OpenAI ${model}`, {
 						body: responseMessage.content,
-						icon: '/favicon.png'
+						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
 				}
 

@@ -11,7 +11,7 @@
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
 
-ChatGPT-Style Web Interface for Ollama 🦙
+User-friendly WebUI for LLMs, supported LLM runners include Ollama and OpenAI-compatible APIs.
 
 ![Open WebUI Demo](./demo.gif)
 
@@ -286,6 +286,8 @@ cp -RPp .env.example .env
 # Building Frontend Using Node
 npm i
 npm run build
+# or for development (hot reload)
+# npm run dev
 
 # or Building Frontend Using Bun
 # bun install
@@ -295,6 +297,9 @@ npm run build
 cd ./backend
 pip install -r requirements.txt -U
 sh start.sh
+# or for development (hot reload)
+# npm run build must have been run once before!
+# sh dev.sh
 ```
 
 You should have Open WebUI up and running at http://localhost:8080/. Enjoy! 😄

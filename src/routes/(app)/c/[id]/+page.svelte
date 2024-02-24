@@ -37,6 +37,7 @@
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	let loaded = false;
 
@@ -348,7 +349,7 @@
 						content: $settings.system
 				  }
 				: undefined,
-			...messages
+			...messages.filter((message) => !message.deleted)
 		]
 			.filter((message) => message)
 			.map((message, idx, arr) => ({
@@ -466,7 +467,7 @@
 												: `${model}`,
 											{
 												body: responseMessage.content,
-												icon: selectedModelfile?.imageUrl ?? '/favicon.png'
+												icon: selectedModelfile?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`
 											}
 										);
 									}
@@ -555,7 +556,7 @@
 							content: $settings.system
 					  }
 					: undefined,
-				...messages
+				...messages.filter((message) => !message.deleted)
 			]
 				.filter((message) => message)
 				.map((message, idx, arr) => ({
@@ -637,7 +638,7 @@
 				if ($settings.notificationEnabled && !document.hasFocus()) {
 					const notification = new Notification(`OpenAI ${model}`, {
 						body: responseMessage.content,
-						icon: '/favicon.png'
+						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
 				}
 

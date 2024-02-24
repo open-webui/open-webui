@@ -20,6 +20,8 @@
 	import ProfileImage from './ProfileImage.svelte';
 	import Skeleton from './Skeleton.svelte';
 	import CodeBlock from './CodeBlock.svelte';
+	import Image from '$lib/components/common/Image.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let modelfiles = [];
 	export let message;
@@ -46,7 +48,6 @@
 	let speakingIdx = null;
 
 	let loadingSpeech = false;
-
 	let generatingImage = false;
 
 	$: tokens = marked.lexer(message.content);
@@ -298,7 +299,9 @@
 
 {#key message.id}
 	<div class=" flex w-full message-{message.id}">
-		<ProfileImage src={modelfiles[message.model]?.imageUrl ?? '/favicon.png'} />
+		<ProfileImage
+			src={modelfiles[message.model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+		/>
 
 		<div class="w-full overflow-hidden">
 			<Name>
@@ -323,7 +326,7 @@
 						{#each message.files as file}
 							<div>
 								{#if file.type === 'image'}
-									<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
+									<Image src={file.url} />
 								{/if}
 							</div>
 						{/each}

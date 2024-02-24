@@ -1,11 +1,17 @@
 import os
 import chromadb
 from chromadb import Settings
-from secrets import token_bytes
 from base64 import b64encode
-from constants import ERROR_MESSAGES
+from bs4 import BeautifulSoup
+
 from pathlib import Path
 import json
+import markdown
+import requests
+import shutil
+
+from secrets import token_bytes
+from constants import ERROR_MESSAGES
 
 
 try:
@@ -15,12 +21,112 @@ try:
 except ImportError:
     print("dotenv not installed, skipping...")
 
+WEBUI_NAME = "Open WebUI"
+shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################
 # ENV (dev,test,prod)
 ####################################
 
 ENV = os.environ.get("ENV", "dev")
+
+try:
+    with open(f"../package.json", "r") as f:
+        PACKAGE_DATA = json.load(f)
+except:
+    PACKAGE_DATA = {"version": "0.0.0"}
+
+VERSION = PACKAGE_DATA["version"]
+
+
+# Function to parse each section
+def parse_section(section):
+    items = []
+    for li in section.find_all("li"):
+        # Extract raw HTML string
+        raw_html = str(li)
+
+        # Extract text without HTML tags
+        text = li.get_text(separator=" ", strip=True)
+
+        # Split into title and content
+        parts = text.split(": ", 1)
+        title = parts[0].strip() if len(parts) > 1 else ""
+        content = parts[1].strip() if len(parts) > 1 else text
+
+        items.append({"title": title, "content": content, "raw": raw_html})
+    return items
+
+
+try:
+    with open("../CHANGELOG.md", "r") as file:
+        changelog_content = file.read()
+except:
+    changelog_content = ""
+
+# Convert markdown content to HTML
+html_content = markdown.markdown(changelog_content)
+
+# Parse the HTML content
+soup = BeautifulSoup(html_content, "html.parser")
+
+# Initialize JSON structure
+changelog_json = {}
+
+# Iterate over each version
+for version in soup.find_all("h2"):
+    version_number = version.get_text().strip().split(" - ")[0][1:-1]  # Remove brackets
+    date = version.get_text().strip().split(" - ")[1]
+
+    version_data = {"date": date}
+
+    # Find the next sibling that is a h3 tag (section title)
+    current = version.find_next_sibling()
+
+    print(current)
+
+    while current and current.name != "h2":
+        if current.name == "h3":
+            section_title = current.get_text().lower()  # e.g., "added", "fixed"
+            section_items = parse_section(current.find_next_sibling("ul"))
+            version_data[section_title] = section_items
+
+        # Move to the next element
+        current = current.find_next_sibling()
+
+    changelog_json[version_number] = version_data
+
+
+CHANGELOG = changelog_json
+
+
+####################################
+# CUSTOM_NAME
+####################################
+
+CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
+if CUSTOM_NAME:
+    try:
+        r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
+        data = r.json()
+        if r.ok:
+            if "logo" in data:
+                url = (
+                    f"https://api.openwebui.com{data['logo']}"
+                    if data["logo"][0] == "/"
+                    else data["logo"]
+                )
+
+                r = requests.get(url, stream=True)
+                if r.status_code == 200:
+                    with open("./static/favicon.png", "wb") as f:
+                        r.raw.decode_content = True
+                        shutil.copyfileobj(r.raw, f)
+
+            WEBUI_NAME = data["name"]
+    except Exception as e:
+        print(e)
+        pass
 
 
 ####################################
@@ -116,7 +222,7 @@ DEFAULT_PROMPT_SUGGESTIONS = (
 )
 
 
-DEFAULT_USER_ROLE = "pending"
+DEFAULT_USER_ROLE = os.getenv("DEFAULT_USER_ROLE", "pending")
 USER_PERMISSIONS = {"chat": {"deletion": True}}
 
 

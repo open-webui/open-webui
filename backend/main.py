@@ -1,4 +1,8 @@
+from bs4 import BeautifulSoup
+import json
+import markdown
 import time
+
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
@@ -18,7 +22,7 @@ from apps.rag.main import app as rag_app
 
 from apps.web.main import app as webui_app
 
-from config import ENV, FRONTEND_BUILD_DIR
+from config import WEBUI_NAME, ENV, VERSION, CHANGELOG, FRONTEND_BUILD_DIR
 
 
 class SPAStaticFiles(StaticFiles):
@@ -69,12 +73,23 @@ app.mount("/rag/api/v1", rag_app)
 
 @app.get("/api/config")
 async def get_app_config():
+
     return {
         "status": True,
+        "name": WEBUI_NAME,
+        "version": VERSION,
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
     }
+
+
+@app.get("/api/changelog")
+async def get_app_changelog():
+    return CHANGELOG
+
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 app.mount(
