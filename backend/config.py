@@ -6,6 +6,8 @@ from bs4 import BeautifulSoup
 
 from pathlib import Path
 import json
+import yaml
+
 import markdown
 import requests
 import shutil
@@ -162,6 +164,40 @@ Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
 DOCS_DIR = f"{DATA_DIR}/docs"
 Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
+
+
+####################################
+# LITELLM_CONFIG
+####################################
+
+
+def create_config_file(file_path):
+    directory = os.path.dirname(file_path)
+
+    # Check if directory exists, if not, create it
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    # Data to write into the YAML file
+    config_data = {
+        "general_settings": {},
+        "litellm_settings": {},
+        "model_list": [],
+        "router_settings": {},
+    }
+
+    # Write data to YAML file
+    with open(file_path, "w") as file:
+        yaml.dump(config_data, file)
+
+
+LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
+
+if not os.path.exists(LITELLM_CONFIG_PATH):
+    print("Config file doesn't exist. Creating...")
+    create_config_file(LITELLM_CONFIG_PATH)
+    print("Config file created successfully.")
+
 
 ####################################
 # OLLAMA_API_BASE_URL
