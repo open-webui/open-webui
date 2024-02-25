@@ -1,38 +1,62 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: open-webui-deployment
-  namespace: {{ .Values.namespace }}
+  name: {{ include "open-webui.name" . }}
+  labels:
+    {{- include "open-webui.labels" . | nindent 4 }}
+  {{- with .Values.webui.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.webui.replicaCount }}
   selector:
     matchLabels:
-      app: open-webui
+      {{- include "open-webui.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: open-webui
+        {{- include "open-webui.labels" . | nindent 8 }}
+      {{- with .Values.webui.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
       containers:
-      - name: open-webui
-        image: {{ .Values.webui.image }}
+      - name: {{ .Chart.Name }}
+        {{- with .Values.webui.image }}
+        image: {{ .repository }}:{{ .tag | default $.Chart.AppVersion }}
+        imagePullPolicy: {{ .pullPolicy }}
+        {{- end }}
         ports:
-        - containerPort: 8080
-        {{- if .Values.webui.resources }}
-        resources: {{- toYaml .Values.webui.resources | nindent 10 }}
+        - name: http
+          containerPort: {{ .Values.webui.service.containerPort }}
+        {{- with .Values.webui.resources }}
+        resources: {{- toYaml . | nindent 10 }}
         {{- end }}
         volumeMounts:
-        - name: webui-volume
+        - name: data
           mountPath: /app/backend/data
         env:
         - name: OLLAMA_API_BASE_URL
-          value: "http://ollama-service.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.ollama.servicePort }}/api"
+          value: {{ include "ollama.url" . | quote }}
         tty: true
       {{- with .Values.webui.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
-      - name: webui-volume
+      {{- if and .Values.webui.persistence.enabled .Values.webui.persistence.existingClaim }}
+      - name: data
         persistentVolumeClaim:
-          claimName: open-webui-pvc
+          claimName: {{ .Values.webui.persistence.existingClaim }}
+      {{- else if not .Values.webui.persistence.enabled }}
+      - name: data
+        emptyDir: {}
+      {{- else if and .Values.webui.persistence.enabled (not .Values.webui.persistence.existingClaim) }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "open-webui.name" . }}
+      {{- end }}

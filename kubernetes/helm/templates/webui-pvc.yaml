@@ -1,12 +1,25 @@
+{{- if and .Values.webui.persistence.enabled (not .Values.webui.persistence.existingClaim) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  name: {{ include "open-webui.name" . }}
   labels:
-    app: open-webui
-  name: open-webui-pvc
-  namespace: {{ .Values.namespace }}  
+    {{- include "open-webui.selectorLabels" . | nindent 4 }}
+  {{- with .Values.webui.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
 spec:
-  accessModes: [ "ReadWriteOnce" ]
+  accessModes:
+    {{- range .Values.webui.persistence.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
   resources:
     requests:
-      storage: {{ .Values.webui.volumeSize }}
+      storage: {{ .Values.webui.persistence.size }}
+  storageClass: {{ .Values.webui.persistence.storageClass }}
+  {{- with .Values.webui.persistence.selector }}
+  selector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
