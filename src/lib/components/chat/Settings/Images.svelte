@@ -12,7 +12,9 @@
 		toggleImageGenerationEnabledStatus,
 		updateAUTOMATIC1111Url,
 		updateDefaultDiffusionModel,
-		updateImageSize
+		updateImageSize,
+		getImageSteps,
+		updateImageSteps
 	} from '$lib/apis/images';
 	import { getBackendConfig } from '$lib/apis';
 	const dispatch = createEventDispatcher();
@@ -21,13 +23,14 @@
 
 	let loading = false;
 
-	let enableImageGeneration = true;
+	let enableImageGeneration = false;
 	let AUTOMATIC1111_BASE_URL = '';
 
 	let selectedModel = '';
 	let models = [];
 
 	let imageSize = '';
+	let steps = 50;
 
 	const getModels = async () => {
 		models = await getDiffusionModels(localStorage.token).catch((error) => {
@@ -85,6 +88,7 @@
 
 			if (enableImageGeneration && AUTOMATIC1111_BASE_URL) {
 				imageSize = await getImageSize(localStorage.token);
+				steps = await getImageSteps(localStorage.token);
 				getModels();
 			}
 		}
@@ -97,6 +101,10 @@
 		loading = true;
 		await updateDefaultDiffusionModel(localStorage.token, selectedModel);
 		await updateImageSize(localStorage.token, imageSize).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+		await updateImageSteps(localStorage.token, steps).catch((error) => {
 			toast.error(error);
 			return null;
 		});
@@ -208,6 +216,19 @@
 							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
 							placeholder="Enter Image Size (e.g. 512x512)"
 							bind:value={imageSize}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">Set Steps</div>
+				<div class="flex w-full">
+					<div class="flex-1 mr-2">
+						<input
+							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							placeholder="Enter Number of Steps (e.g. 50)"
+							bind:value={steps}
 						/>
 					</div>
 				</div>

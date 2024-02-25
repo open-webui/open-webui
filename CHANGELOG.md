@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Built-in LiteLLM Proxy**: Open WebUI now ships with LiteLLM Proxy.
 - **Image Generation Enhancements**: Advanced Settings + Image Preview Feature.
+  - Allows setting number of steps for image generation; defaults to a1111 default value.
 
 ### Fixed
 

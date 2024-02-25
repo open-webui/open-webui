@@ -35,6 +35,7 @@ app.add_middleware(
 app.state.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
 app.state.ENABLED = app.state.AUTOMATIC1111_BASE_URL != ""
 app.state.IMAGE_SIZE = "512x512"
+app.state.IMAGE_STEPS = 50
 
 
 @app.get("/enabled", response_model=bool)
@@ -99,6 +100,32 @@ async def update_image_size(
         raise HTTPException(
             status_code=400,
             detail=ERROR_MESSAGES.INCORRECT_FORMAT("  (e.g., 512x512)."),
+        )
+
+
+class ImageStepsUpdateForm(BaseModel):
+    steps: int
+
+
+@app.get("/steps")
+async def get_image_size(user=Depends(get_admin_user)):
+    return {"IMAGE_STEPS": app.state.IMAGE_STEPS}
+
+
+@app.post("/steps/update")
+async def update_image_size(
+    form_data: ImageStepsUpdateForm, user=Depends(get_admin_user)
+):
+    if form_data.steps >= 0:
+        app.state.IMAGE_STEPS = form_data.steps
+        return {
+            "IMAGE_STEPS": app.state.IMAGE_STEPS,
+            "status": True,
+        }
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=ERROR_MESSAGES.INCORRECT_FORMAT("  (e.g., 50)."),
         )
 
 
@@ -178,6 +205,9 @@ def generate_image(
             "width": width,
             "height": height,
         }
+
+        if app.state.IMAGE_STEPS != None:
+            data["steps"] = app.state.IMAGE_STEPS
 
         if form_data.negative_prompt != None:
             data["negative_prompt"] = form_data.negative_prompt
