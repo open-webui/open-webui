@@ -9,11 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🔄 Check for Updates**: Now conveniently available in Settings > About.
+- **🔄 Check for Updates**: Keep your system current by checking for updates conveniently located in Settings > About.
+- **🗑️ Automatic Tag Deletion**: Unused tags on the sidebar will now be deleted automatically with just a click.
 
 ### Changed
 
-- **🎨 Modernized Styling**: Updated for a more contemporary appearance.
+- **🎨 Modernized Styling**: Enjoy a refreshed look with updated styling for a more contemporary experience.
 
 ## [0.1.103] - 2024-02-25
 

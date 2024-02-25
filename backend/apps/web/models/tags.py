@@ -167,6 +167,27 @@ class TagTable:
             .count()
         )
 
+    def delete_tag_by_tag_name_and_user_id(self, tag_name: str, user_id: str) -> bool:
+        try:
+            query = ChatIdTag.delete().where(
+                (ChatIdTag.tag_name == tag_name) & (ChatIdTag.user_id == user_id)
+            )
+            res = query.execute()  # Remove the rows, return number of rows removed.
+            print(res)
+
+            tag_count = self.count_chat_ids_by_tag_name_and_user_id(tag_name, user_id)
+            if tag_count == 0:
+                # Remove tag item from Tag col as well
+                query = Tag.delete().where(
+                    (Tag.name == tag_name) & (Tag.user_id == user_id)
+                )
+                query.execute()  # Remove the rows, return number of rows removed.
+
+            return True
+        except Exception as e:
+            print("delete_tag", e)
+            return False
+
     def delete_tag_by_tag_name_and_chat_id_and_user_id(
         self, tag_name: str, chat_id: str, user_id: str
     ) -> bool:
