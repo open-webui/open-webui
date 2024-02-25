@@ -48,7 +48,7 @@
 				{/each}
 			</div>
 		</div>
-		<div class=" mt-2 text-2xl text-gray-800 dark:text-gray-100 font-semibold">
+		<div class=" mt-2 mb-5 text-2xl text-gray-800 dark:text-gray-100 font-semibold">
 			{#if modelfile}
 				<span class=" capitalize">
 					{modelfile.title}
