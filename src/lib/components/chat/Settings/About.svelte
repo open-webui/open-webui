@@ -8,13 +8,14 @@
 
 	let ollamaVersion = '';
 
-	let updateAvailable = false;
+	let updateAvailable = null;
 	let version = {
 		current: '',
 		latest: ''
 	};
 
 	const checkForVersionUpdates = async () => {
+		updateAvailable = null;
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
 				current: WEBUI_VERSION,
@@ -54,7 +55,11 @@
 							href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
 							target="_blank"
 						>
-							{updateAvailable ? `(v${version.latest} available!)` : '(latest)'}
+							{updateAvailable === null
+								? 'Checking for updates...'
+								: updateAvailable
+								? `(v${version.latest} available!)`
+								: '(latest)'}
 						</a>
 					</div>
 
