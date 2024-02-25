@@ -23,7 +23,7 @@
 
 	let loading = false;
 
-	let enableImageGeneration = true;
+	let enableImageGeneration = false;
 	let AUTOMATIC1111_BASE_URL = '';
 
 	let selectedModel = '';
