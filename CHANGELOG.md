@@ -5,13 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.103] - UNRELEASED
+## [0.1.103] - 2024-02-24
 
 ### Added
 
-- **Built-in LiteLLM Proxy**: Open WebUI now ships with LiteLLM Proxy.
-- **Image Generation Enhancements**: Advanced Settings + Image Preview Feature.
-  - Allows setting number of steps for image generation; defaults to a1111 default value.
+- **Built-in LiteLLM Proxy**: Open WebUI now ships with LiteLLM proxy built-in.
+  - Mount existing LiteLLM config.yaml using `-v /path/to/config.yaml:/data/litellm/config.yaml` flag
+- **🖼️ Image Generation Enhancements**: Advanced Settings + Image Preview Feature.
+  - Allows setting number of steps for image generation; defaults to A1111 default value.
 
 ### Fixed
 
@@ -20,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Ollama is no longer required to run Open WebUI.
-- Our documentation can be found here https://docs.openwebui.com/
+- Our documentation can be found here: [Open WebUI Documentation](https://docs.openwebui.com/)
 
 ## [0.1.102] - 2024-02-22
 
