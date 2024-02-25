@@ -23,7 +23,7 @@ services:
     depends_on:
       - ollama
     ports:
-      - ${OLLAMA_WEBUI_PORT-3000}:8080
+      - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
       - 'OLLAMA_API_BASE_URL=http://ollama:11434/api'
       - 'WEBUI_SECRET_KEY='
