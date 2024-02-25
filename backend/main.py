@@ -4,8 +4,9 @@ import markdown
 import time
 import os
 import sys
+import requests
 
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request, Depends, status
 from fastapi.staticfiles import StaticFiles
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
@@ -26,6 +27,8 @@ from apps.web.main import app as webui_app
 
 
 from config import WEBUI_NAME, ENV, VERSION, CHANGELOG, FRONTEND_BUILD_DIR
+from constants import ERROR_MESSAGES
+
 from utils.utils import get_http_authorization_cred, get_current_user
 
 
@@ -125,6 +128,23 @@ async def get_app_config():
 @app.get("/api/changelog")
 async def get_app_changelog():
     return CHANGELOG
+
+
+@app.get("/api/version/updates")
+async def get_app_latest_release_version():
+    try:
+        response = requests.get(
+            f"https://api.github.com/repos/open-webui/open-webui/releases/latest"
+        )
+        response.raise_for_status()
+        latest_version = response.json()["tag_name"]
+
+        return {"current": VERSION, "latest": latest_version[1:]}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
+        )
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

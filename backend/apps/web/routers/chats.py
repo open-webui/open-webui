@@ -115,9 +115,12 @@ async def get_user_chats_by_tag_name(
         for chat_id_tag in Tags.get_chat_ids_by_tag_name_and_user_id(tag_name, user.id)
     ]
 
-    print(chat_ids)
+    chats = Chats.get_chat_lists_by_chat_ids(chat_ids, skip, limit)
 
-    return Chats.get_chat_lists_by_chat_ids(chat_ids, skip, limit)
+    if len(chats) == 0:
+        Tags.delete_tag_by_tag_name_and_user_id(tag_name, user.id)
+
+    return chats
 
 
 ############################

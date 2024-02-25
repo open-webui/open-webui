@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { user } from '$lib/stores';
 	import { onMount } from 'svelte';
 
 	export let models = [];
@@ -63,7 +64,9 @@
 					</div>
 				{/if}
 			{:else}
-				How can I help you today?
+				<div class=" line-clamp-1">Hello, {$user.name}</div>
+
+				<div>How can I help you today?</div>
 			{/if}
 		</div>
 	</div>

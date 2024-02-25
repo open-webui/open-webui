@@ -13,7 +13,8 @@
 		getChatList,
 		getChatById,
 		getChatListByTagName,
-		updateChatById
+		updateChatById,
+		getAllChatTags
 	} from '$lib/apis/chats';
 	import toast from 'svelte-french-toast';
 	import { slide } from 'svelte/transition';
@@ -330,7 +331,12 @@
 						<button
 							class="px-2.5 text-xs font-medium bg-gray-900 hover:bg-gray-800 transition rounded-full"
 							on:click={async () => {
-								await chats.set(await getChatListByTagName(localStorage.token, tag.name));
+								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
+								if (chatIds.length === 0) {
+									await tags.set(await getAllChatTags(localStorage.token));
+									chatIds = await getChatList(localStorage.token);
+								}
+								await chats.set(chatIds);
 							}}
 						>
 							{tag.name}
