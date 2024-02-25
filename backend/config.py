@@ -83,8 +83,6 @@ for version in soup.find_all("h2"):
     # Find the next sibling that is a h3 tag (section title)
     current = version.find_next_sibling()
 
-    print(current)
-
     while current and current.name != "h2":
         if current.name == "h3":
             section_title = current.get_text().lower()  # e.g., "added", "fixed"

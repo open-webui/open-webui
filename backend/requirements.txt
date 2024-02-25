@@ -16,6 +16,9 @@ aiohttp
 peewee
 bcrypt
 
+litellm
+apscheduler
+
 langchain
 langchain-community
 chromadb

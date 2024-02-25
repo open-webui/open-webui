@@ -38,16 +38,18 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700" />
+		{#if ollamaVersion}
+			<hr class=" dark:border-gray-700" />
 
-		<div>
-			<div class=" mb-2.5 text-sm font-medium">Ollama Version</div>
-			<div class="flex w-full">
-				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
-					{ollamaVersion ?? 'N/A'}
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">Ollama Version</div>
+				<div class="flex w-full">
+					<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
+						{ollamaVersion ?? 'N/A'}
+					</div>
 				</div>
 			</div>
-		</div>
+		{/if}
 
 		<hr class=" dark:border-gray-700" />
 

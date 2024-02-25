@@ -128,9 +128,11 @@ export const getOllamaModels = async (token: string = '') => {
 		throw error;
 	}
 
-	return (res?.models ?? []).sort((a, b) => {
-		return a.name.localeCompare(b.name);
-	});
+	return (res?.models ?? [])
+		.map((model) => ({ id: model.model, name: model.name ?? model.model, ...model }))
+		.sort((a, b) => {
+			return a.name.localeCompare(b.name);
+		});
 };
 
 // TODO: migrate to backend

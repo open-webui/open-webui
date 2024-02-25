@@ -25,7 +25,7 @@
 
 	$: if (selectedModels.length > 0 && $models.length > 0) {
 		selectedModels = selectedModels.map((model) =>
-			$models.map((m) => m.name).includes(model) ? model : ''
+			$models.map((m) => m.id).includes(model) ? model : ''
 		);
 	}
 </script>
@@ -45,7 +45,7 @@
 					{#if model.name === 'hr'}
 						<hr />
 					{:else}
-						<option value={model.name} class="text-gray-700 text-lg"
+						<option value={model.id} class="text-gray-700 text-lg"
 							>{model.name +
 								`${model.size ? ` (${(model.size / 1024 ** 3).toFixed(1)}GB)` : ''}`}</option
 						>

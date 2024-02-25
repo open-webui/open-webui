@@ -4,6 +4,7 @@
 
 	import { getOllamaModels } from '$lib/apis/ollama';
 	import { getOpenAIModels } from '$lib/apis/openai';
+	import { getLiteLLMModels } from '$lib/apis/litellm';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -27,23 +28,29 @@
 
 	let selectedTab = 'general';
 
-	const getModels = async (type = 'all') => {
-		const models = [];
-		models.push(
-			...(await getOllamaModels(localStorage.token).catch((error) => {
-				toast.error(error);
-				return [];
-			}))
-		);
-
-		if (type === 'all') {
-			const openAIModels = await getOpenAIModels(localStorage.token).catch((error) => {
+	const getModels = async () => {
+		let models = await Promise.all([
+			await getOllamaModels(localStorage.token).catch((error) => {
 				console.log(error);
 				return null;
-			});
-			models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
-		}
+			}),
+			await getOpenAIModels(localStorage.token).catch((error) => {
+				console.log(error);
+				return null;
+			}),
+			await getLiteLLMModels(localStorage.token).catch((error) => {
+				console.log(error);
+				return null;
+			})
+		]);
 
+		models = models
+			.filter((models) => models)
+			.reduce((a, e, i, arr) => a.concat(e, ...(i < arr.length - 1 ? [{ name: 'hr' }] : [])), []);
+
+		// models.push(...(ollamaModels ? [{ name: 'hr' }, ...ollamaModels] : []));
+		// models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
+		// models.push(...(liteLLMModels ? [{ name: 'hr' }, ...liteLLMModels] : []));
 		return models;
 	};
 </script>

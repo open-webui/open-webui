@@ -32,9 +32,11 @@
 	const getModels = async () => {
 		models = await getDiffusionModels(localStorage.token).catch((error) => {
 			toast.error(error);
-			return null;
+			return [];
 		});
-		selectedModel = await getDefaultDiffusionModel(localStorage.token);
+		selectedModel = await getDefaultDiffusionModel(localStorage.token).catch((error) => {
+			return '';
+		});
 	};
 
 	const updateAUTOMATIC1111UrlHandler = async () => {
