@@ -4,6 +4,8 @@
 	import { settings } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
+	import * as Tooltip from '$lib/components/ui/tooltip';
+
 	import Prompts from './MessageInput/PromptCommands.svelte';
 	import Suggestions from './MessageInput/Suggestions.svelte';
 	import { uploadDocToVectorDB, uploadWebToVectorDB } from '$lib/apis/rag';
@@ -634,26 +636,34 @@
 					<div class=" flex">
 						{#if fileUploadEnabled}
 							<div class=" self-end mb-2 ml-1.5">
-								<button
-									class="  text-gray-600 dark:text-gray-200 transition rounded-lg p-1 ml-1"
-									type="button"
-									on:click={() => {
-										filesInputElement.click();
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-5 h-5"
+								<Tooltip.Root>
+									<Tooltip.Trigger>
+										<button
+											class="  text-gray-600 dark:text-gray-200 transition rounded-lg p-1 ml-1"
+											type="button"
+											on:click={() => {
+												filesInputElement.click();
+											}}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="w-5 h-5"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501-.002.002a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										</button>
+									</Tooltip.Trigger>
+									<Tooltip.Content
+										class="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+										>Upload File</Tooltip.Content
 									>
-										<path
-											fill-rule="evenodd"
-											d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501-.002.002a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</button>
+								</Tooltip.Root>
 							</div>
 						{/if}
 
