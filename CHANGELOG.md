@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Built-in LiteLLM Proxy**: Open WebUI now ships with LiteLLM proxy built-in.
+- **🔗 Built-in LiteLLM Proxy**: Open WebUI now ships with LiteLLM proxy built-in.
   - Mount existing LiteLLM config.yaml using `-v /path/to/config.yaml:/data/litellm/config.yaml` flag
 - **🖼️ Image Generation Enhancements**: Advanced Settings + Image Preview Feature.
   - Allows setting number of steps for image generation; defaults to A1111 default value.
