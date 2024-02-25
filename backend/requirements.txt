@@ -18,6 +18,7 @@ bcrypt
 
 litellm
 apscheduler
+google-generativeai
 
 langchain
 langchain-community
