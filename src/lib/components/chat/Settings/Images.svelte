@@ -27,7 +27,7 @@
 	let AUTOMATIC1111_BASE_URL = '';
 
 	let selectedModel = '';
-	let models = [];
+	let models = null;
 
 	let imageSize = '';
 	let steps = 50;
@@ -35,7 +35,7 @@
 	const getModels = async () => {
 		models = await getDiffusionModels(localStorage.token).catch((error) => {
 			toast.error(error);
-			return [];
+			return null;
 		});
 		selectedModel = await getDefaultDiffusionModel(localStorage.token).catch((error) => {
 			return '';
@@ -198,7 +198,7 @@
 							{#if !selectedModel}
 								<option value="" disabled selected>Select a model</option>
 							{/if}
-							{#each models as model}
+							{#each models ?? [] as model}
 								<option value={model.title} class="bg-gray-100 dark:bg-gray-700"
 									>{model.model_name}</option
 								>
