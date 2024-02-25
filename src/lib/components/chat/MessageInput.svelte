@@ -801,12 +801,12 @@
 							}}
 						/>
 
-						<div class="self-end mb-2 flex space-x-0.5 mr-1">
+						<div class="self-end mb-2 flex space-x-1 mr-1">
 							{#if messages.length == 0 || messages.at(-1).done == true}
 								{#if speechRecognitionEnabled}
 									<button
 										id="voice-input-button"
-										class=" text-gray-600 dark:text-gray-300 transition rounded-lg p-1.5 mr-0.5 self-center"
+										class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-1.5 mr-0.5 self-center"
 										type="button"
 										on:click={() => {
 											speechRecognitionHandler();
@@ -867,7 +867,7 @@
 								<button
 									class="{prompt !== ''
 										? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-										: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-full p-1 w-7 h-7 self-center"
+										: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-full p-1.5 self-center"
 									type="submit"
 									disabled={prompt === ''}
 								>
@@ -875,7 +875,7 @@
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 16 16"
 										fill="currentColor"
-										class=" mx-auto"
+										class="w-5 h-5"
 									>
 										<path
 											fill-rule="evenodd"
