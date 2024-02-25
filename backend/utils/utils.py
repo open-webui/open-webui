@@ -61,10 +61,7 @@ def extract_token_from_auth_header(auth_header: str):
 def get_http_authorization_cred(auth_header: str):
     try:
         scheme, credentials = auth_header.split(" ")
-        return {
-            "scheme": scheme,
-            "credentials": credentials,
-        }
+        return HTTPAuthorizationCredentials(scheme=scheme, credentials=credentials)
     except:
         raise ValueError(ERROR_MESSAGES.INVALID_TOKEN)
 
