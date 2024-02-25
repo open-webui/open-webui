@@ -35,6 +35,7 @@ app.add_middleware(
 app.state.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
 app.state.ENABLED = app.state.AUTOMATIC1111_BASE_URL != ""
 app.state.IMAGE_SIZE = "512x512"
+app.state.IMAGE_STEPS = 50
 
 
 @app.get("/enabled", response_model=bool)
@@ -49,7 +50,7 @@ async def toggle_enabled(request: Request, user=Depends(get_admin_user)):
         app.state.ENABLED = not app.state.ENABLED
         return app.state.ENABLED
     except Exception as e:
-        raise HTTPException(status_code=r.status_code, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 class UrlUpdateForm(BaseModel):
@@ -100,7 +101,7 @@ async def update_image_size(
             status_code=400,
             detail=ERROR_MESSAGES.INCORRECT_FORMAT("  (e.g., 512x512)."),
         )
-    
+
 
 class ImageStepsUpdateForm(BaseModel):
     steps: int
@@ -135,7 +136,7 @@ def get_models(user=Depends(get_current_user)):
         models = r.json()
         return models
     except Exception as e:
-        raise HTTPException(status_code=r.status_code, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 @app.get("/models/default")
@@ -146,7 +147,7 @@ async def get_default_model(user=Depends(get_admin_user)):
 
         return {"model": options["sd_model_checkpoint"]}
     except Exception as e:
-        raise HTTPException(status_code=r.status_code, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 class UpdateModelForm(BaseModel):
@@ -219,4 +220,4 @@ def generate_image(
         return r.json()
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=r.status_code, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
