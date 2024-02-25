@@ -28,7 +28,7 @@
 		config
 	} from '$lib/stores';
 	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
-	import { checkVersion } from '$lib/utils';
+	import { compareVersion } from '$lib/utils';
 
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -79,7 +79,7 @@
 		ollamaVersion = version;
 
 		console.log(ollamaVersion);
-		if (checkVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion)) {
+		if (compareVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion)) {
 			toast.error(`Ollama Version: ${ollamaVersion !== '' ? ollamaVersion : 'Not Detected'}`);
 		}
 	};

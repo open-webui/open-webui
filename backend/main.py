@@ -139,15 +139,11 @@ async def get_app_latest_release_version():
         response.raise_for_status()
         latest_version = response.json()["tag_name"]
 
-        # Compare versions
-        return {
-            "current": VERSION,
-            "latest": latest_version[1:],
-        }
+        return {"current": VERSION, "latest": latest_version[1:]}
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=ERROR_MESSAGES.NOT_FOUND,
+            detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
         )
 
 

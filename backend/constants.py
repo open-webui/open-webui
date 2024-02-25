@@ -47,3 +47,4 @@ class ERROR_MESSAGES(str, Enum):
     INCORRECT_FORMAT = (
         lambda err="": f"Invalid format. Please use the correct format{err if err else ''}"
     )
+    RATE_LIMIT_EXCEEDED = "API rate limit exceeded"
