@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.103] - 2024-02-25
+
+### Added
+
+- **🔗 Built-in LiteLLM Proxy**: Now includes LiteLLM proxy within Open WebUI for enhanced functionality.
+
+  - Easily integrate existing LiteLLM configurations using `-v /path/to/config.yaml:/app/backend/data/litellm/config.yaml` flag.
+  - When utilizing Docker container to run Open WebUI, ensure connections to localhost use `host.docker.internal`.
+
+- **🖼️ Image Generation Enhancements**: Introducing Advanced Settings with Image Preview Feature.
+  - Customize image generation by setting the number of steps; defaults to A1111 value.
+
+### Fixed
+
+- Resolved issue with RAG scan halting document loading upon encountering unsupported MIME types or exceptions (Issue #866).
+
+### Changed
+
+- Ollama is no longer required to run Open WebUI.
+- Access our comprehensive documentation at [Open WebUI Documentation](https://docs.openwebui.com/).
+
 ## [0.1.102] - 2024-02-22
 
 ### Added
