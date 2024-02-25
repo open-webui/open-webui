@@ -633,7 +633,7 @@
 
 					<div class=" flex">
 						{#if fileUploadEnabled}
-							<div class=" self-center ml-1">
+							<div class=" self-end mb-2 ml-1">
 								<button
 									class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
 									type="button"
@@ -801,7 +801,7 @@
 							}}
 						/>
 
-						<div class="self-end mb-2 flex space-x-0.5 mr-2">
+						<div class="self-end mb-2 flex space-x-0.5 mr-1">
 							{#if messages.length == 0 || messages.at(-1).done == true}
 								{#if speechRecognitionEnabled}
 									<button
