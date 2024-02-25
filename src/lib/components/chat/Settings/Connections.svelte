@@ -29,6 +29,7 @@
 		API_BASE_URL = await updateOllamaAPIUrl(localStorage.token, API_BASE_URL);
 
 		const ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
+			toast.error(error);
 			return null;
 		});
 
