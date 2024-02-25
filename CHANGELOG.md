@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.103] - UNRELEASED
+
+### Added
+
+- **Built-in LiteLLM Proxy**: Open WebUI now ships with LiteLLM Proxy.
+- **Image Generation Enhancements**: Advanced Settings + Image Preview Feature.
+
+### Fixed
+
+- Issue with RAG scan that stops loading documents as soon as it reaches a file with unsupported mime type (or any other exceptions). (#866)
+
+### Changed
+
+- Ollama is no longer required to run Open WebUI.
+- Our documentation can be found here https://docs.openwebui.com/
+
 ## [0.1.102] - 2024-02-22
 
 ### Added
