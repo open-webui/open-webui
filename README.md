@@ -11,11 +11,9 @@
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
 
-User-friendly WebUI for LLMs, supported LLM runners include Ollama and OpenAI-compatible APIs.
+User-friendly WebUI for LLMs, supported LLM runners include Ollama and OpenAI-compatible APIs. For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
 
 ![Open WebUI Demo](./demo.gif)
-
-Also check our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles for Ollama! 🦙🔍
 
 ## Features ⭐
 
@@ -77,56 +75,17 @@ Also check our sibling project, [Open WebUI Community](https://openwebui.com/), 
 
 ## 🔗 Also Check Out Open WebUI Community!
 
-Don't forget to explore our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Open WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with Ollama! 🚀
+Don't forget to explore our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Open WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with Open WebUI! 🚀
 
 ## How to Install 🚀
 
-🌟 **Important Note on User Roles and Privacy:**
+> [!NOTE]  
+> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Open WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
 
-- **Admin Creation:** The very first account to sign up on Open WebUI will be granted **Administrator privileges**. This account will have comprehensive control over the platform, including user management and system settings.
+### Quick Start with Docker 🐳
 
-- **User Registrations:** All subsequent users signing up will initially have their accounts set to **Pending** status by default. These accounts will require approval from the Administrator to gain access to the platform functionalities.
-
-- **Privacy and Data Security:** We prioritize your privacy and data security above all. Please be reassured that all data entered into Open WebUI is stored locally on your device. Our system is designed to be privacy-first, ensuring that no external requests are made, and your data does not leave your local environment. We are committed to maintaining the highest standards of data privacy and security, ensuring that your information remains confidential and under your control.
-
-### Steps to Install Open WebUI
-
-#### Before You Begin
-
-1. **Installing Docker:**
-
-   - **For Windows and Mac Users:**
-
-     - Download Docker Desktop from [Docker's official website](https://www.docker.com/products/docker-desktop).
-     - Follow the installation instructions provided on the website. After installation, open Docker Desktop to ensure it's running properly.
-
-   - **For Ubuntu and Other Linux Users:**
-     - Open your terminal.
-     - Set up your Docker apt repository according to the [Docker documentation](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)
-     - Update your package index:
-       ```bash
-       sudo apt-get update
-       ```
-     - Install Docker using the following command:
-       ```bash
-       sudo apt-get install docker-ce docker-ce-cli containerd.io
-       ```
-     - Verify the Docker installation with:
-       ```bash
-       sudo docker run hello-world
-       ```
-       This command downloads a test image and runs it in a container, which prints an informational message.
-
-2. **Ensure You Have the Latest Version of Ollama:**
-
-   - Download the latest version from [https://ollama.com/](https://ollama.com/).
-
-3. **Verify Ollama Installation:**
-   - After installing Ollama, check if it's working by visiting [http://127.0.0.1:11434/](http://127.0.0.1:11434/) in your web browser. Remember, the port number might be different for you.
-
-#### Installing with Docker 🐳
-
-- **Important:** When using Docker to install Open WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
+> [!IMPORTANT]
+> When using Docker to install Open WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
 
 - **If Ollama is on your computer**, use this command:
 
@@ -134,16 +93,7 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
   docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
-- **To build the container yourself**, follow these steps:
-
-  ```bash
-  docker build -t open-webui .
-  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always open-webui
-  ```
-
-- After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000).
-
-#### Using Ollama on a Different Server
+- **If Ollama is on a Different Server**, use this command:
 
 - To connect to Ollama on another server, change the `OLLAMA_API_BASE_URL` to the server's URL:
 
@@ -151,66 +101,17 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
   docker run -d -p 3000:8080 -e OLLAMA_API_BASE_URL=https://example.com/api -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
-  Or for a self-built container:
+- After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
 
-  ```bash
-  docker build -t open-webui .
-  docker run -d -p 3000:8080 -e OLLAMA_API_BASE_URL=https://example.com/api -v open-webui:/app/backend/data --name open-webui --restart always open-webui
-  ```
+#### Troubleshooting
 
-### Installing Ollama and Open WebUI Together
+Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).
 
-#### Using Docker Compose
+### Other Installation Methods
 
-- If you don't have Ollama yet, use Docker Compose for easy installation. Run this command:
+We offer various installation alternatives, including non-Docker methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
 
-  ```bash
-  docker compose up -d --build
-  ```
-
-- **For GPU Support:** Use an additional Docker Compose file:
-
-  ```bash
-  docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml up -d --build
-  ```
-
-- **To Expose Ollama API:** Use another Docker Compose file:
-
-  ```bash
-  docker compose -f docker-compose.yaml -f docker-compose.api.yaml up -d --build
-  ```
-
-#### Using `run-compose.sh` Script (Linux or Docker-Enabled WSL2 on Windows)
-
-- Give execute permission to the script:
-
-  ```bash
-  chmod +x run-compose.sh
-  ```
-
-- For CPU-only container:
-
-  ```bash
-  ./run-compose.sh
-  ```
-
-- For GPU support (read the note about GPU compatibility):
-
-  ```bash
-  ./run-compose.sh --enable-gpu
-  ```
-
-- To build the latest local version, add `--build`:
-
-  ```bash
-  ./run-compose.sh --enable-gpu --build
-  ```
-
-### Alternative Installation Methods
-
-For other ways to install, like using Kustomize or Helm, check out [INSTALLATION.md](/INSTALLATION.md). Join our [Open WebUI Discord community](https://discord.gg/5rJgQTnV4s) for more help and information.
-
-### Updating your Docker Installation
+### Keeping Your Docker Installation Up-to-Date
 
 In case you want to update your local Docker installation to the latest version, you can do it with [Watchtower](https://containrrr.dev/watchtower/):
 
@@ -222,109 +123,11 @@ In the last part of the command, replace `open-webui` with your container name i
 
 ### Moving from Ollama WebUI to Open WebUI
 
-Given recent name changes, the docker image has been renamed. Additional steps are required to update for those people that used Ollama WebUI previously and want to start using the new images.
+Check our Migration Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/migration/).
 
-#### Updating to Open WebUI without keeping your data
+## What's Next? 🌟
 
-If you want to update to the new image but don't want to keep any previous data like conversations, prompts, documents, etc. you can perform the following steps:
-
-```bash
-docker rm -f ollama-webui
-docker pull ghcr.io/open-webui/open-webui:main
-[insert the equivalent command that you used to install with the new Docker image name]
-docker volume rm ollama-webui
-```
-
-For example, for local installation it would be `docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main`. For other installation commands, check the relevant parts of this README document.
-
-#### Migrating your contents from Ollama WebUI to Open WebUI
-
-If you want to update to the new image migrating all your previous settings like conversations, prompts, documents, etc. you can perform the following steps:
-
-```bash
-docker rm -f ollama-webui
-docker pull ghcr.io/open-webui/open-webui:main
-# Creates a new volume and uses a temporary container to copy from one volume to another as per https://github.com/moby/moby/issues/31154#issuecomment-360531460
-docker volume create --name open-webui
-docker run --rm -v ollama-webui:/from -v open-webui:/to alpine ash -c "cd /from ; cp -av . /to"
-[insert the equivalent command that you used to install with the new Docker image name]
-```
-
-Once you verify that all the data has been migrated you can erase the old volumen using the following command:
-
-```bash
-docker volume rm ollama-webui
-```
-
-## How to Install Without Docker
-
-While we strongly recommend using our convenient Docker container installation for optimal support, we understand that some situations may require a non-Docker setup, especially for development purposes. Please note that non-Docker installations are not officially supported, and you might need to troubleshoot on your own.
-
-### Project Components
-
-Open WebUI consists of two primary components: the frontend and the backend (which serves as a reverse proxy, handling static frontend files, and additional features). Both need to be running concurrently for the development environment.
-
-> [!IMPORTANT]
-> The backend is required for proper functionality
-
-### Requirements 📦
-
-- 🐰 [Bun](https://bun.sh) >= 1.0.21 or 🐢 [Node.js](https://nodejs.org/en) >= 20.10
-- 🐍 [Python](https://python.org) >= 3.11
-
-### Build and Install 🛠️
-
-Run the following commands to install:
-
-```sh
-git clone https://github.com/open-webui/open-webui.git
-cd open-webui/
-
-# Copying required .env file
-cp -RPp .env.example .env
-
-# Building Frontend Using Node
-npm i
-npm run build
-# or for development (hot reload)
-# npm run dev
-
-# or Building Frontend Using Bun
-# bun install
-# bun run build
-
-# Serving Frontend with the Backend
-cd ./backend
-pip install -r requirements.txt -U
-sh start.sh
-# or for development (hot reload)
-# npm run build must have been run once before!
-# sh dev.sh
-```
-
-You should have Open WebUI up and running at http://localhost:8080/. Enjoy! 😄
-
-## Troubleshooting
-
-See [TROUBLESHOOTING.md](/TROUBLESHOOTING.md) for information on how to troubleshoot and/or join our [Open WebUI Discord community](https://discord.gg/5rJgQTnV4s).
-
-## What's Next? 🚀
-
-### Roadmap 📝
-
-Here are some exciting tasks on our roadmap:
-
-- 🔊 **Local Text-to-Speech Integration**: Seamlessly incorporate text-to-speech functionality directly within the platform, allowing for a smoother and more immersive user experience.
-- 🛡️ **Granular Permissions and User Groups**: Empower administrators to finely control access levels and group users according to their roles and responsibilities. This feature ensures robust security measures and streamlined management of user privileges, enhancing overall platform functionality.
-- 🔄 **Function Calling**: Empower your interactions by running code directly within the chat. Execute functions and commands effortlessly, enhancing the functionality of your conversations.
-- ⚙️ **Custom Python Backend Actions**: Empower your Open WebUI by creating or downloading custom Python backend actions. Unleash the full potential of your web interface with tailored actions that suit your specific needs, enhancing functionality and versatility.
-- 🔧 **Fine-tune Model (LoRA)**: Fine-tune your model directly from the user interface. This feature allows for precise customization and optimization of the chat experience to better suit your needs and preferences.
-- 🧠 **Long-Term Memory**: Witness the power of persistent memory in our agents. Enjoy conversations that feel continuous as agents remember and reference past interactions, creating a more cohesive and personalized user experience.
-- 🧪 **Research-Centric Features**: Empower researchers in the fields of LLM and HCI with a comprehensive web UI for conducting user studies. Stay tuned for ongoing feature enhancements (e.g., surveys, analytics, and participant tracking) to facilitate their research.
-- 📈 **User Study Tools**: Providing specialized tools, like heat maps and behavior tracking modules, to empower researchers in capturing and analyzing user behavior patterns with precision and accuracy.
-- 📚 **Enhanced Documentation**: Elevate your setup and customization experience with improved, comprehensive documentation.
-
-Feel free to contribute and help us make Open WebUI even better! 🙌
+Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
 
 ## Supporters ✨
 

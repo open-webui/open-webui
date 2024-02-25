@@ -136,6 +136,7 @@ def get_models(user=Depends(get_current_user)):
         models = r.json()
         return models
     except Exception as e:
+        app.state.ENABLED = False
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
@@ -147,6 +148,7 @@ async def get_default_model(user=Depends(get_admin_user)):
 
         return {"model": options["sd_model_checkpoint"]}
     except Exception as e:
+        app.state.ENABLED = False
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
