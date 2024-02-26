@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **📄 Document Selection**: Now you can select multiple documents and delete them all at once.
+- **📄 Document Selection**: Now you can select and delete multiple documents at once for easier management.
 
 ### Changed
 
-- **🏷️ Documents Pre-Tagging**: Introducing a more convenient method. Click the + button at the top, enter tag name(s) in the popup window, select files, and upload them with tagging.
+- **🏷️ Document Pre-tagging**: Simply click the "+" button at the top, enter tag names in the popup window, or select from a list of existing tags. Then, upload files with the added tags for streamlined organization.
 
 ## [0.1.104] - 2024-02-25
 
