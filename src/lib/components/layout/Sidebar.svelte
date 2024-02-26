@@ -16,7 +16,7 @@
 		updateChatById,
 		getAllChatTags
 	} from '$lib/apis/chats';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import { slide } from 'svelte/transition';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 

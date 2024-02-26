@@ -10,10 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **📄 Document Selection**: Now you can select and delete multiple documents at once for easier management.
+- **💡 Tooltips Added**: Tooltips have now been implemented on UI elements for enhanced guidance.
 
 ### Changed
 
 - **🏷️ Document Pre-tagging**: Simply click the "+" button at the top, enter tag names in the popup window, or select from a list of existing tags. Then, upload files with the added tags for streamlined organization.
+- **🆕 Fresh New Design**: We've implemented design updates to rejuvenate our user interface.
 
 ## [0.1.104] - 2024-02-25
 

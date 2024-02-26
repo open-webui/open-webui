@@ -1,5 +1,5 @@
 <script>
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
 	import { prompts } from '$lib/stores';

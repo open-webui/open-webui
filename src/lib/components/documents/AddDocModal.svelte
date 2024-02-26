@@ -1,5 +1,4 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
 	import dayjs from 'dayjs';
 	import { onMount } from 'svelte';
 
@@ -12,6 +11,8 @@
 	import { uploadDocToVectorDB } from '$lib/apis/rag';
 	import { transformFileName } from '$lib/utils';
 	import { SUPPORTED_FILE_EXTENSIONS, SUPPORTED_FILE_TYPE } from '$lib/constants';
+
+	import { toast } from 'svelte-sonner';
 
 	export let show = false;
 	export let selectedDoc;

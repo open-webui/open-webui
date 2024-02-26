@@ -3,7 +3,7 @@
 	import { models } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 	import { tick } from 'svelte';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	export let prompt = '';
 	export let user = null;

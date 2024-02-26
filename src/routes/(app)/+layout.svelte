@@ -1,5 +1,5 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -214,9 +214,7 @@
 					?
 				</button>
 			</Tooltip.Trigger>
-			<Tooltip.Content 
-				>Show Shortcuts</Tooltip.Content
-			>
+			<Tooltip.Content>Show Shortcuts</Tooltip.Content>
 		</Tooltip.Root>
 	</div>
 
