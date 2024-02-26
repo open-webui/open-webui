@@ -104,13 +104,8 @@
 			await cancelChatCompletion(localStorage.token, currentRequestId);
 			currentRequestId = null;
 		}
-
 		window.history.replaceState(history.state, '', `/`);
-
-		console.log('initNewChat');
-
 		await chatId.set('');
-		console.log($chatId);
 
 		autoScroll = true;
 
@@ -120,8 +115,6 @@
 			messages: {},
 			currentId: null
 		};
-
-		console.log($config);
 
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
@@ -732,25 +725,26 @@
 			responseMessage.done = false;
 			await tick();
 
-			const modelTag = $models.filter((m) => m.name === responseMessage.model).at(0);
+			const model = $models.filter((m) => m.id === responseMessage.model).at(0);
 
-			if (modelTag?.external) {
-				await sendPromptOpenAI(
-					responseMessage.model,
-					history.messages[responseMessage.parentId].content,
-					responseMessage.id,
-					_chatId
-				);
-			} else if (modelTag) {
-				await sendPromptOllama(
-					responseMessage.model,
-					history.messages[responseMessage.parentId].content,
-					responseMessage.id,
-					_chatId
-				);
-			} else {
-				toast.error(`Model ${model} not found`);
+			if (model) {
+				if (model?.external) {
+					await sendPromptOpenAI(
+						model,
+						history.messages[responseMessage.parentId].content,
+						responseMessage.id,
+						_chatId
+					);
+				} else
+					await sendPromptOllama(
+						model,
+						history.messages[responseMessage.parentId].content,
+						responseMessage.id,
+						_chatId
+					);
 			}
+		} else {
+			toast.error(`Model ${modelId} not found`);
 		}
 	};
 

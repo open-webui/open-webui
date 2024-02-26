@@ -13,7 +13,8 @@
 		getChatList,
 		getChatById,
 		getChatListByTagName,
-		updateChatById
+		updateChatById,
+		getAllChatTags
 	} from '$lib/apis/chats';
 	import toast from 'svelte-french-toast';
 	import { slide } from 'svelte/transition';
@@ -99,10 +100,10 @@
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-2.5 flex justify-center space-x-2">
+		<div class="px-2 flex justify-center space-x-2">
 			<button
 				id="sidebar-new-chat-button"
-				class="flex-grow flex justify-between rounded-md px-3 py-2 hover:bg-gray-900 transition"
+				class="flex-grow flex justify-between rounded-xl px-3.5 py-2 hover:bg-gray-900 transition"
 				on:click={async () => {
 					goto('/');
 
@@ -144,9 +145,9 @@
 		</div>
 
 		{#if $user?.role === 'admin'}
-			<div class="px-2.5 flex justify-center mt-0.5">
+			<div class="px-2 flex justify-center mt-0.5">
 				<a
-					class="flex-grow flex space-x-3 rounded-md px-3 py-2 hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-900 transition"
 					href="/modelfiles"
 				>
 					<div class="self-center">
@@ -172,9 +173,9 @@
 				</a>
 			</div>
 
-			<div class="px-2.5 flex justify-center">
+			<div class="px-2 flex justify-center">
 				<a
-					class="flex-grow flex space-x-3 rounded-md px-3 py-2 hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-900 transition"
 					href="/prompts"
 				>
 					<div class="self-center">
@@ -200,9 +201,9 @@
 				</a>
 			</div>
 
-			<div class="px-2.5 flex justify-center mb-1">
+			<div class="px-2 flex justify-center mb-1">
 				<a
-					class="flex-grow flex space-x-3 rounded-md px-3 py-2 hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-900 transition"
 					href="/documents"
 				>
 					<div class="self-center">
@@ -271,9 +272,9 @@
 				</div>
 			{/if}
 
-			<div class="px-2.5 mt-1 mb-2 flex justify-center space-x-2">
+			<div class="px-2 mt-1 mb-2 flex justify-center space-x-2">
 				<div class="flex w-full" id="chat-search">
-					<div class="self-center pl-3 py-2 rounded-l bg-gray-950">
+					<div class="self-center pl-3 py-2 rounded-l-xl bg-gray-950">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
@@ -289,7 +290,7 @@
 					</div>
 
 					<input
-						class="w-full rounded-r py-1.5 pl-2.5 pr-4 text-sm text-gray-300 bg-gray-950 outline-none"
+						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm text-gray-300 bg-gray-950 outline-none"
 						placeholder="Search"
 						bind:value={search}
 						on:focus={() => {
@@ -330,7 +331,12 @@
 						<button
 							class="px-2.5 text-xs font-medium bg-gray-900 hover:bg-gray-800 transition rounded-full"
 							on:click={async () => {
-								await chats.set(await getChatListByTagName(localStorage.token, tag.name));
+								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
+								if (chatIds.length === 0) {
+									await tags.set(await getAllChatTags(localStorage.token));
+									chatIds = await getChatList(localStorage.token);
+								}
+								await chats.set(chatIds);
 							}}
 						>
 							{tag.name}
@@ -339,7 +345,7 @@
 				</div>
 			{/if}
 
-			<div class="pl-2.5 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto">
+			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto">
 				{#each $chats.filter((chat) => {
 					if (search === '') {
 						return true;
@@ -361,7 +367,7 @@
 				}) as chat, i}
 					<div class=" w-full pr-2 relative">
 						<a
-							class=" w-full flex justify-between rounded-md px-3 py-2 hover:bg-gray-900 {chat.id ===
+							class=" w-full flex justify-between rounded-xl px-3 py-2 hover:bg-gray-900 {chat.id ===
 							$chatId
 								? 'bg-gray-900'
 								: ''} transition whitespace-nowrap text-ellipsis"
@@ -528,12 +534,12 @@
 		</div>
 
 		<div class="px-2.5">
-			<hr class=" border-gray-900 mb-1 w-full" />
+			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 
 			<div class="flex flex-col">
 				{#if $user !== undefined}
 					<button
-						class=" flex rounded-md py-3 px-3.5 w-full hover:bg-gray-900 transition"
+						class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-900 transition"
 						on:click={() => {
 							showDropdown = !showDropdown;
 						}}
@@ -551,7 +557,7 @@
 					{#if showDropdown}
 						<div
 							id="dropdownDots"
-							class="absolute z-40 bottom-[70px] 4.5rem rounded-lg shadow w-[240px] bg-gray-900"
+							class="absolute z-40 bottom-[70px] 4.5rem rounded-xl shadow w-[240px] bg-gray-900"
 							in:slide={{ duration: 150 }}
 						>
 							<div class="py-2 w-full">
@@ -650,36 +656,6 @@
 							</div>
 						</div>
 					{/if}
-				{:else}
-					<button
-						class=" flex rounded-md py-3 px-3.5 w-full hover:bg-gray-900 transition"
-						on:click={async () => {
-							await showSettings.set(true);
-						}}
-					>
-						<div class=" self-center mr-3">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								class="w-5 h-5"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"
-								/>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-								/>
-							</svg>
-						</div>
-						<div class=" self-center font-medium">Settings</div>
-					</button>
 				{/if}
 			</div>
 		</div>

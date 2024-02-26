@@ -150,7 +150,6 @@ export const getOpenAIModels = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
 			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
 			return [];
 		});

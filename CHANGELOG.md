@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.105] - 2024-02-25
+
+### Added
+
+- **📄 Document Selection**: Now you can select and delete multiple documents at once for easier management.
+
+### Changed
+
+- **🏷️ Document Pre-tagging**: Simply click the "+" button at the top, enter tag names in the popup window, or select from a list of existing tags. Then, upload files with the added tags for streamlined organization.
+
+## [0.1.104] - 2024-02-25
+
+### Added
+
+- **🔄 Check for Updates**: Keep your system current by checking for updates conveniently located in Settings > About.
+- **🗑️ Automatic Tag Deletion**: Unused tags on the sidebar will now be deleted automatically with just a click.
+
+### Changed
+
+- **🎨 Modernized Styling**: Enjoy a refreshed look with updated styling for a more contemporary experience.
+
 ## [0.1.103] - 2024-02-25
 
 ### Added
