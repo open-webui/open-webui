@@ -580,7 +580,7 @@
 											type="url"
 											required
 											bind:value={modelFileUrl}
-											placeholder="Type HuggingFace Resolve (Download) URL"
+											placeholder="Type Hugging Face Resolve (Download) URL"
 										/>
 									</div>
 								{/if}
