@@ -63,9 +63,6 @@
 			.filter((models) => models)
 			.reduce((a, e, i, arr) => a.concat(e, ...(i < arr.length - 1 ? [{ name: 'hr' }] : [])), []);
 
-		// models.push(...(ollamaModels ? [{ name: 'hr' }, ...ollamaModels] : []));
-		// models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
-		// models.push(...(liteLLMModels ? [{ name: 'hr' }, ...liteLLMModels] : []));
 		return models;
 	};
 
@@ -110,6 +107,10 @@
 			}
 
 			console.log();
+
+			await models.set(await getModels());
+			await tick();
+
 			await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 
 			await modelfiles.set(await getModelfiles(localStorage.token));
