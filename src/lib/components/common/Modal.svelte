@@ -41,7 +41,7 @@
 		}}
 	>
 		<div
-			class=" modal-content m-auto rounded-xl max-w-full {sizeToWidth(
+			class=" modal-content m-auto rounded-2xl max-w-full {sizeToWidth(
 				size
 			)} mx-2 bg-gray-50 dark:bg-gray-900 shadow-3xl"
 			in:fade={{ duration: 10 }}

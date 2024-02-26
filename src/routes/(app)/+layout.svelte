@@ -28,7 +28,7 @@
 		config
 	} from '$lib/stores';
 	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
-	import { checkVersion } from '$lib/utils';
+	import { compareVersion } from '$lib/utils';
 
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -63,9 +63,6 @@
 			.filter((models) => models)
 			.reduce((a, e, i, arr) => a.concat(e, ...(i < arr.length - 1 ? [{ name: 'hr' }] : [])), []);
 
-		// models.push(...(ollamaModels ? [{ name: 'hr' }, ...ollamaModels] : []));
-		// models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
-		// models.push(...(liteLLMModels ? [{ name: 'hr' }, ...liteLLMModels] : []));
 		return models;
 	};
 
@@ -79,7 +76,7 @@
 		ollamaVersion = version;
 
 		console.log(ollamaVersion);
-		if (checkVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion)) {
+		if (compareVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion)) {
 			toast.error(`Ollama Version: ${ollamaVersion !== '' ? ollamaVersion : 'Not Detected'}`);
 		}
 	};
@@ -110,6 +107,10 @@
 			}
 
 			console.log();
+
+			await models.set(await getModels());
+			await tick();
+
 			await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 
 			await modelfiles.set(await getModelfiles(localStorage.token));
