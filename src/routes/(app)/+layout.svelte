@@ -34,6 +34,7 @@
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
+	import * as Tooltip from '$lib/components/ui/tooltip';
 
 	let ollamaVersion = '';
 	let loaded = false;
@@ -200,15 +201,22 @@
 
 {#if loaded}
 	<div class=" hidden lg:flex fixed bottom-0 right-0 px-3 py-3 z-10">
-		<button
-			id="show-shortcuts-button"
-			class="text-gray-600 dark:text-gray-300 bg-gray-300/20 w-6 h-6 flex items-center justify-center text-xs rounded-full"
-			on:click={() => {
-				showShortcuts = !showShortcuts;
-			}}
-		>
-			?
-		</button>
+		<Tooltip.Root>
+			<Tooltip.Trigger>
+				<button
+					id="show-shortcuts-button"
+					class="text-gray-600 dark:text-gray-300 bg-gray-300/20 w-6 h-6 flex items-center justify-center text-xs rounded-full"
+					on:click={() => {
+						showShortcuts = !showShortcuts;
+					}}
+				>
+					?
+				</button>
+			</Tooltip.Trigger>
+			<Tooltip.Content class="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+				>Show Shortcuts</Tooltip.Content
+			>
+		</Tooltip.Root>
 	</div>
 
 	<ShortcutsModal bind:show={showShortcuts} />
