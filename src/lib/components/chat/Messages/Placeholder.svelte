@@ -3,6 +3,8 @@
 	import { user } from '$lib/stores';
 	import { onMount } from 'svelte';
 
+	import Typewriter from 'svelte-typewriter';
+
 	export let models = [];
 	export let modelfiles = [];
 
@@ -66,7 +68,9 @@
 			{:else}
 				<div class=" line-clamp-1">Hello, {$user.name}</div>
 
-				<div>How can I help you today?</div>
+				<Typewriter cursor={localStorage.theme === 'light'}>
+					<div>How can I help you today?</div>
+				</Typewriter>
 			{/if}
 		</div>
 	</div>
