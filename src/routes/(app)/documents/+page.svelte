@@ -18,7 +18,7 @@
 	import SettingsModal from '$lib/components/documents/SettingsModal.svelte';
 	import AddDocModal from '$lib/components/documents/AddDocModal.svelte';
 	import * as Tooltip from '$lib/components/ui/tooltip';
-	import TooltipContent from '$lib/components/ui/tooltip/tooltip-content.svelte';
+
 	let importFiles = '';
 
 	let inputFiles = '';
