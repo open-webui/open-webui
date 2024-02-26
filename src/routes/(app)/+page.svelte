@@ -104,13 +104,8 @@
 			await cancelChatCompletion(localStorage.token, currentRequestId);
 			currentRequestId = null;
 		}
-
 		window.history.replaceState(history.state, '', `/`);
-
-		console.log('initNewChat');
-
 		await chatId.set('');
-		console.log($chatId);
 
 		autoScroll = true;
 
@@ -120,8 +115,6 @@
 			messages: {},
 			currentId: null
 		};
-
-		console.log($config);
 
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
