@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.105] - 2024-02-25
+
+### Added
+
+- **📄 Document Selection**: Now you can select multiple documents and delete them all at once.
+
+### Changed
+
+- **🏷️ Documents Pre-Tagging**: Introducing a more convenient method. Click the + button at the top, enter tag name(s) in the popup window, select files, and upload them with tagging.
+
 ## [0.1.104] - 2024-02-25
 
 ### Added
