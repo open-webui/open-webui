@@ -9,6 +9,8 @@
 	import { error } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
 
+	import * as Tooltip from '$lib/components/ui/tooltip';
+
 	let importFiles = '';
 	let query = '';
 
@@ -67,21 +69,26 @@
 				</div>
 
 				<div>
-					<a
-						class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
-						href="/prompts/create"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-							/>
-						</svg>
-					</a>
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							<a
+								class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
+								href="/prompts/create"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+									/>
+								</svg>
+							</a>
+						</Tooltip.Trigger>
+						<Tooltip.Content>Add prompt</Tooltip.Content>
+					</Tooltip.Root>
 				</div>
 			</div>
 			<hr class=" dark:border-gray-700 my-2.5" />
@@ -122,7 +129,6 @@
 									/>
 								</svg>
 							</a>
-
 							<button
 								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 								type="button"
@@ -147,7 +153,6 @@
 									/>
 								</svg>
 							</button>
-
 							<button
 								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 								type="button"

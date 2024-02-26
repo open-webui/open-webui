@@ -214,7 +214,7 @@
 					?
 				</button>
 			</Tooltip.Trigger>
-			<Tooltip.Content class="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+			<Tooltip.Content 
 				>Show Shortcuts</Tooltip.Content
 			>
 		</Tooltip.Root>

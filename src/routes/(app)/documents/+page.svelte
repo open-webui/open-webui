@@ -17,6 +17,8 @@
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 	import SettingsModal from '$lib/components/documents/SettingsModal.svelte';
 	import AddDocModal from '$lib/components/documents/AddDocModal.svelte';
+	import * as Tooltip from '$lib/components/ui/tooltip';
+	import TooltipContent from '$lib/components/ui/tooltip/tooltip-content.svelte';
 	let importFiles = '';
 
 	let inputFiles = '';
@@ -238,23 +240,28 @@
 				</div>
 
 				<div>
-					<button
-						class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
-						on:click={() => {
-							showAddDocModal = true;
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-							/>
-						</svg>
-					</button>
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							<button
+								class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
+								on:click={() => {
+									showAddDocModal = true;
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+									/>
+								</svg>
+							</button>
+						</Tooltip.Trigger>
+						<Tooltip.Content>Add files</Tooltip.Content>
+					</Tooltip.Root>
 				</div>
 			</div>
 
