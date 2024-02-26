@@ -16,6 +16,7 @@
 	import EditDocModal from '$lib/components/documents/EditDocModal.svelte';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 	import SettingsModal from '$lib/components/documents/SettingsModal.svelte';
+	import AddDocModal from '$lib/components/documents/AddDocModal.svelte';
 	let importFiles = '';
 
 	let inputFiles = '';
@@ -24,6 +25,7 @@
 	let tags = [];
 
 	let showSettingsModal = false;
+	let showAddDocModal = false;
 	let showEditDocModal = false;
 	let selectedDoc;
 	let selectedTag = '';
@@ -171,36 +173,7 @@
 	<EditDocModal bind:show={showEditDocModal} {selectedDoc} />
 {/key}
 
-<input
-	id="upload-doc-input"
-	bind:files={inputFiles}
-	type="file"
-	multiple
-	hidden
-	on:change={async (e) => {
-		if (inputFiles && inputFiles.length > 0) {
-			for (const file of inputFiles) {
-				console.log(file, file.name.split('.').at(-1));
-				if (
-					SUPPORTED_FILE_TYPE.includes(file['type']) ||
-					SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-				) {
-					uploadDoc(file);
-				} else {
-					toast.error(
-						`Unknown File Type '${file['type']}', but accepting and treating as plain text`
-					);
-					uploadDoc(file);
-				}
-			}
-
-			inputFiles = null;
-			e.target.value = '';
-		} else {
-			toast.error(`File not found.`);
-		}
-	}}
-/>
+<AddDocModal bind:show={showAddDocModal} />
 
 <SettingsModal bind:show={showSettingsModal} />
 
@@ -268,7 +241,7 @@
 					<button
 						class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
 						on:click={() => {
-							document.getElementById('upload-doc-input')?.click();
+							showAddDocModal = true;
 						}}
 					>
 						<svg
@@ -358,15 +331,15 @@
 							</div>
 
 							<div class="flex gap-1">
-								<button
+								<!-- <button
 									class="px-2 py-0.5 space-x-1 flex h-fit items-center rounded-full transition bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:text-white"
 									on:click={async () => {
 										selectedTag = '';
 										// await chats.set(await getChatListByTagName(localStorage.token, tag.name));
 									}}
 								>
-									<div class=" text-xs font-medium self-center line-clamp-1">tag</div>
-								</button>
+									<div class=" text-xs font-medium self-center line-clamp-1">add tags</div>
+								</button> -->
 
 								<button
 									class="px-2 py-0.5 space-x-1 flex h-fit items-center rounded-full transition bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:text-white"
