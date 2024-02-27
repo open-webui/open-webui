@@ -31,6 +31,7 @@
 	let chatTitle = '';
 
 	let showDropdown = false;
+	let isEditing = false;
 
 	onMount(async () => {
 		if (window.innerWidth > 1280) {
@@ -372,7 +373,7 @@
 								? 'bg-gray-900'
 								: ''} transition whitespace-nowrap text-ellipsis"
 							href="/c/{chat.id}"
-							draggable="false"
+							draggable={isEditing ? 'false' : null}
 						>
 							<div class=" flex self-center flex-1 w-full">
 								<div
@@ -399,6 +400,7 @@
 												editChatTitle(chat.id, chatTitle);
 												chatTitleEditId = null;
 												chatTitle = '';
+												isEditing = false;
 											}}
 										>
 											<svg
@@ -486,7 +488,7 @@
 											on:click={() => {
 												chatTitle = chat.title;
 												chatTitleEditId = chat.id;
-												// editChatTitle(chat.id, 'a');
+												isEditing = true;
 											}}
 										>
 											<svg
