@@ -1,13 +1,19 @@
 import os
 import chromadb
 from chromadb import Settings
-from secrets import token_bytes
 from base64 import b64encode
-from constants import ERROR_MESSAGES
+from bs4 import BeautifulSoup
+
 from pathlib import Path
 import json
+import yaml
+
 import markdown
-from bs4 import BeautifulSoup
+import requests
+import shutil
+
+from secrets import token_bytes
+from constants import ERROR_MESSAGES
 
 
 try:
@@ -17,13 +23,14 @@ try:
 except ImportError:
     print("dotenv not installed, skipping...")
 
+WEBUI_NAME = "Open WebUI"
+shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################
 # ENV (dev,test,prod)
 ####################################
 
 ENV = os.environ.get("ENV", "dev")
-
 
 try:
     with open(f"../package.json", "r") as f:
@@ -78,8 +85,6 @@ for version in soup.find_all("h2"):
     # Find the next sibling that is a h3 tag (section title)
     current = version.find_next_sibling()
 
-    print(current)
-
     while current and current.name != "h2":
         if current.name == "h3":
             section_title = current.get_text().lower()  # e.g., "added", "fixed"
@@ -93,6 +98,36 @@ for version in soup.find_all("h2"):
 
 
 CHANGELOG = changelog_json
+
+
+####################################
+# CUSTOM_NAME
+####################################
+
+CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
+if CUSTOM_NAME:
+    try:
+        r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
+        data = r.json()
+        if r.ok:
+            if "logo" in data:
+                url = (
+                    f"https://api.openwebui.com{data['logo']}"
+                    if data["logo"][0] == "/"
+                    else data["logo"]
+                )
+
+                r = requests.get(url, stream=True)
+                if r.status_code == 200:
+                    with open("./static/favicon.png", "wb") as f:
+                        r.raw.decode_content = True
+                        shutil.copyfileobj(r.raw, f)
+
+            WEBUI_NAME = data["name"]
+    except Exception as e:
+        print(e)
+        pass
+
 
 ####################################
 # DATA/FRONTEND BUILD DIR
@@ -129,6 +164,40 @@ Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
 DOCS_DIR = f"{DATA_DIR}/docs"
 Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
+
+
+####################################
+# LITELLM_CONFIG
+####################################
+
+
+def create_config_file(file_path):
+    directory = os.path.dirname(file_path)
+
+    # Check if directory exists, if not, create it
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    # Data to write into the YAML file
+    config_data = {
+        "general_settings": {},
+        "litellm_settings": {},
+        "model_list": [],
+        "router_settings": {},
+    }
+
+    # Write data to YAML file
+    with open(file_path, "w") as file:
+        yaml.dump(config_data, file)
+
+
+LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
+
+if not os.path.exists(LITELLM_CONFIG_PATH):
+    print("Config file doesn't exist. Creating...")
+    create_config_file(LITELLM_CONFIG_PATH)
+    print("Config file created successfully.")
+
 
 ####################################
 # OLLAMA_API_BASE_URL
@@ -196,7 +265,7 @@ DEFAULT_PROMPT_SUGGESTIONS = (
 )
 
 
-DEFAULT_USER_ROLE = "pending"
+DEFAULT_USER_ROLE = os.getenv("DEFAULT_USER_ROLE", "pending")
 USER_PERMISSIONS = {"chat": {"deletion": True}}
 
 

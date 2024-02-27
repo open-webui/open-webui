@@ -1,6 +1,8 @@
+import { APP_NAME } from '$lib/constants';
 import { writable } from 'svelte/store';
 
 // Backend
+export const WEBUI_NAME = writable(APP_NAME);
 export const config = writable(undefined);
 export const user = writable(undefined);
 

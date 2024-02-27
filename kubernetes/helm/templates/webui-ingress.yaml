@@ -2,13 +2,23 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: open-webui-ingress
-  namespace: {{ .Values.namespace }}
-{{- if .Values.webui.ingress.annotations }}
+  name: {{ include "open-webui.name" . }}
+  labels:
+    {{- include "open-webui.labels" . | nindent 4 }}
+  {{- with .Values.webui.ingress.annotations }}
   annotations:
-{{ toYaml .Values.webui.ingress.annotations | trimSuffix "\n" | indent 4 }}
-{{- end }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
+  {{- with .Values.webui.ingress.class }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.webui.ingress.tls }}
+  tls:
+    - hosts:
+      - {{ .Values.webui.ingress.host | quote }}
+      secretName: {{ default (printf "%s-tls" .Release.Name) .Values.webui.ingress.existingSecret }}
+  {{- end }}
   rules:
   - host: {{ .Values.webui.ingress.host }}
     http:
@@ -17,7 +27,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: open-webui-service
+            name: {{ include "open-webui.name" . }}
             port:
-              number: {{ .Values.webui.servicePort }}
+              name: http
 {{- end }}

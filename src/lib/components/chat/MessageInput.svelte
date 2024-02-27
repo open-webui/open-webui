@@ -490,7 +490,7 @@
 					}}
 				/>
 				<form
-					class=" flex flex-col relative w-full rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-900 dark:text-gray-100"
+					class=" flex flex-col relative w-full rounded-3xl px-1.5 border border-gray-100 dark:border-gray-850 bg-white dark:bg-gray-900 dark:text-gray-100"
 					on:submit|preventDefault={() => {
 						submitPrompt(prompt, user);
 					}}
@@ -633,9 +633,9 @@
 
 					<div class=" flex">
 						{#if fileUploadEnabled}
-							<div class=" self-end mb-2 ml-1.5">
+							<div class=" self-end mb-2 ml-1">
 								<button
-									class="  text-gray-600 dark:text-gray-200 transition rounded-lg p-1 ml-1"
+									class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
 									type="button"
 									on:click={() => {
 										filesInputElement.click();
@@ -643,14 +643,12 @@
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
+										viewBox="0 0 16 16"
 										fill="currentColor"
-										class="w-5 h-5"
+										class="w-[1.2rem] h-[1.2rem]"
 									>
 										<path
-											fill-rule="evenodd"
-											d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501-.002.002a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z"
-											clip-rule="evenodd"
+											d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
 										/>
 									</svg>
 								</button>
@@ -659,7 +657,7 @@
 
 						<textarea
 							id="chat-textarea"
-							class=" dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-2 {fileUploadEnabled
+							class=" dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
 								? ''
 								: ' pl-4'} rounded-xl resize-none h-[48px]"
 							placeholder={chatInputPlaceholder !== ''
@@ -803,12 +801,12 @@
 							}}
 						/>
 
-						<div class="self-end mb-2 flex space-x-0.5 mr-2">
+						<div class="self-end mb-2 flex space-x-1 mr-1">
 							{#if messages.length == 0 || messages.at(-1).done == true}
 								{#if speechRecognitionEnabled}
 									<button
 										id="voice-input-button"
-										class=" text-gray-600 dark:text-gray-300 transition rounded-lg p-1.5 mr-0.5 self-center"
+										class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-1.5 mr-0.5 self-center"
 										type="button"
 										on:click={() => {
 											speechRecognitionHandler();
@@ -869,7 +867,7 @@
 								<button
 									class="{prompt !== ''
 										? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-										: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-lg p-1 mr-0.5 w-7 h-7 self-center"
+										: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-full p-1.5 self-center"
 									type="submit"
 									disabled={prompt === ''}
 								>
@@ -877,7 +875,7 @@
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 16 16"
 										fill="currentColor"
-										class="w-4.5 h-4.5 mx-auto"
+										class="w-5 h-5"
 									>
 										<path
 											fill-rule="evenodd"
@@ -888,7 +886,7 @@
 								</button>
 							{:else}
 								<button
-									class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-lg p-1.5"
+									class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
 									on:click={stopResponse}
 								>
 									<svg

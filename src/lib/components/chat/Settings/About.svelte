@@ -1,14 +1,40 @@
 <script lang="ts">
+	import { getVersionUpdates } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { WEBUI_NAME, WEB_UI_VERSION } from '$lib/constants';
-	import { config, showChangelog } from '$lib/stores';
+	import { WEBUI_VERSION } from '$lib/constants';
+	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
+	import { compareVersion } from '$lib/utils';
 	import { onMount } from 'svelte';
 
 	let ollamaVersion = '';
+
+	let updateAvailable = null;
+	let version = {
+		current: '',
+		latest: ''
+	};
+
+	const checkForVersionUpdates = async () => {
+		updateAvailable = null;
+		version = await getVersionUpdates(localStorage.token).catch((error) => {
+			return {
+				current: WEBUI_VERSION,
+				latest: WEBUI_VERSION
+			};
+		});
+
+		console.log(version);
+
+		updateAvailable = compareVersion(version.latest, version.current);
+		console.log(updateAvailable);
+	};
+
 	onMount(async () => {
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
 			return '';
 		});
+
+		checkForVersionUpdates();
 	});
 </script>
 
@@ -17,13 +43,24 @@
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
 				<div>
-					{WEBUI_NAME} Version
+					{$WEBUI_NAME} Version
 				</div>
 			</div>
-			<div class="flex w-full">
-				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200 flex space-x-1.5 items-center">
+			<div class="flex w-full justify-between items-center">
+				<div class="flex flex-col text-xs text-gray-700 dark:text-gray-200">
 					<div>
-						v{WEB_UI_VERSION}
+						v{WEBUI_VERSION}
+
+						<a
+							href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+							target="_blank"
+						>
+							{updateAvailable === null
+								? 'Checking for updates...'
+								: updateAvailable
+								? `(v${version.latest} available!)`
+								: '(latest)'}
+						</a>
 					</div>
 
 					<button
@@ -35,19 +72,30 @@
 						<div>See what's new</div>
 					</button>
 				</div>
+
+				<button
+					class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+					on:click={() => {
+						checkForVersionUpdates();
+					}}
+				>
+					Check for updates
+				</button>
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700" />
+		{#if ollamaVersion}
+			<hr class=" dark:border-gray-700" />
 
-		<div>
-			<div class=" mb-2.5 text-sm font-medium">Ollama Version</div>
-			<div class="flex w-full">
-				<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
-					{ollamaVersion ?? 'N/A'}
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">Ollama Version</div>
+				<div class="flex w-full">
+					<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
+						{ollamaVersion ?? 'N/A'}
+					</div>
 				</div>
 			</div>
-		</div>
+		{/if}
 
 		<hr class=" dark:border-gray-700" />
 

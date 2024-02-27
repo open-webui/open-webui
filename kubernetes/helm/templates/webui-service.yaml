@@ -1,15 +1,24 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: open-webui-service
-  namespace: {{ .Values.namespace }}
+  name: {{ include "open-webui.name" . }}
+  labels:
+    {{- include "open-webui.labels" . | nindent 4 }}
+  {{- with .Values.webui.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-  type: {{ .Values.webui.service.type }} # Default: NodePort  # Use LoadBalancer if you're on a cloud that supports it
   selector:
-    app: open-webui
+    {{- include "open-webui.selectorLabels" . | nindent 4 }}
+{{- with .Values.webui.service }}
+  type: {{ .type }}
   ports:
-    - protocol: TCP
-      port: {{ .Values.webui.servicePort }}
-      targetPort: {{ .Values.webui.servicePort }}
-      # If using NodePort, you can optionally specify the nodePort:
-      # nodePort: 30000
+  - protocol: TCP
+    name: http
+    port: {{ .port }}
+    targetPort: http
+    {{- if .nodePort }}
+    nodePort: {{ .nodePort | int }}
+    {{- end }}
+{{- end }}

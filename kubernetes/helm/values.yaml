@@ -1,44 +1,72 @@
-namespace: open-webui
+nameOverride: ""
 
 ollama:
+  annotations: {}
+  podAnnotations: {}
   replicaCount: 1
-  image: ollama/ollama:latest
-  servicePort: 11434
-  resources:
-    requests:
-      cpu: "2000m"
-      memory: "2Gi"
-    limits:
-      cpu: "4000m"
-      memory: "4Gi"
-      nvidia.com/gpu: "0"
-  volumeSize: 30Gi
+  image:
+    repository: ollama/ollama
+    tag: latest
+    pullPolicy: Always
+  resources: {}
+  persistence:
+    enabled: true
+    size: 30Gi
+    existingClaim: ""
+    accessModes:
+    - ReadWriteOnce
+    storageClass: ""
+    selector: {}
+    annotations: {}
+  nodeSelector: {}
+  # -- If using a special runtime container such as nvidia, set it here.
+  runtimeClassName: ""
+  tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  service:
+    type: ClusterIP
+    annotations: {}
+    port: 80
+    containerPort: 11434
+  gpu:
+    # -- Enable additional ENV values to help Ollama discover GPU usage
+    enabled: false
+
+webui:
+  annotations: {}
+  podAnnotations: {}
+  replicaCount: 1
+  image:
+    repository: ghcr.io/open-webui/open-webui
+    tag: ""
+    pullPolicy: Always
+  resources: {}
+  ingress:
+    enabled: false
+    class: ""
+    # -- Use appropriate annotations for your Ingress controller, e.g., for NGINX:
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    annotations: {}
+    host: ""
+    tls: false
+    existingSecret: ""
+  persistence:
+    enabled: true
+    size: 2Gi
+    existingClaim: ""
+    # -- If using multiple replicas, you must update accessModes to ReadWriteMany
+    accessModes:
+    - ReadWriteOnce
+    storageClass: ""
+    selector: {}
+    annotations: {}
   nodeSelector: {}
   tolerations: []
   service:
     type: ClusterIP
-  gpu:
-    enabled: false
-
-webui:
-  replicaCount: 1
-  image: ghcr.io/open-webui/open-webui:main
-  servicePort: 8080
-  resources:
-    requests:
-      cpu: "500m"
-      memory: "500Mi"
-    limits:
-      cpu: "1000m"
-      memory: "1Gi"
-  ingress:
-    enabled: true
-    annotations:
-    # Use appropriate annotations for your Ingress controller, e.g., for NGINX:
-      # nginx.ingress.kubernetes.io/rewrite-target: /
-    host: open-webui.minikube.local
-  volumeSize: 2Gi
-  nodeSelector: {}
-  tolerations: []
-  service:
-    type: NodePort
+    annotations: {}
+    port: 80
+    containerPort: 8080
+    nodePort: ""
