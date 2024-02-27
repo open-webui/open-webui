@@ -160,6 +160,16 @@ This project is licensed under the [MIT License](LICENSE) - see the [LICENSE](LI
 If you have any questions, suggestions, or need assistance, please open an issue or join our
 [Open WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
 
+## Star History
+
+<a href="https://star-history.com/#open-webui/open-webui&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
+  </picture>
+</a>
+
 ---
 
 Created by [Timothy J. Baek](https://github.com/tjbck) - Let's make Open Web UI even more amazing together! 💪
