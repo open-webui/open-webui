@@ -373,7 +373,7 @@
 								? 'bg-gray-900'
 								: ''} transition whitespace-nowrap text-ellipsis"
 							href="/c/{chat.id}"
-							draggable={isEditing ? 'false' : null}
+							draggable={isEditing ? 'false' : 'true'}
 						>
 							<div class=" flex self-center flex-1 w-full">
 								<div
