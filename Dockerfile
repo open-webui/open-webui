@@ -25,6 +25,10 @@ ENV OLLAMA_API_BASE_URL "/ollama/api"
 ENV OPENAI_API_BASE_URL ""
 ENV OPENAI_API_KEY ""
 
+# example https://europe-west1-aiplatform.googleapis.com/v1/projects/my-project/locations/europe-west1/publishers/google/models
+ENV VERTEXAI_API_BASE_URL ""
+ENV VERTEXAI_API_KEY ""
+
 ENV WEBUI_SECRET_KEY ""
 
 ENV SCARF_NO_ANALYTICS true

@@ -6,10 +6,8 @@
 	import { getOllamaAPIUrl, getOllamaVersion, updateOllamaAPIUrl } from '$lib/apis/ollama';
 	import { getOpenAIKey, getOpenAIUrl, updateOpenAIKey, updateOpenAIUrl } from '$lib/apis/openai';
 	import {
-		getVertexAIEnablement,
 		getVertexAIKey,
 		getVertexAIUrl,
-		updateVertexAIEnablement,
 		updateVertexAIKey,
 		updateVertexAIUrl
 	} from '$lib/apis/vertexai';
@@ -40,7 +38,6 @@
 	};
 
 	const updateVertexAIHandler = async () => {
-		ENABLE_VERTEXAI = await updateVertexAIEnablement(localStorage.token, ENABLE_VERTEXAI);
 		VERTEXAI_API_BASE_URL = await updateVertexAIUrl(localStorage.token, VERTEXAI_API_BASE_URL);
 		VERTEXAI_API_KEY = await updateVertexAIKey(localStorage.token, VERTEXAI_API_KEY);
 

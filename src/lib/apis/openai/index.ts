@@ -63,42 +63,6 @@ export const getOpenAIUrl = async (token: string = '') => {
 
 	return res.OPENAI_API_BASE_URL;
 };
-
-export const updateOpenAIEnablement = async (token: string = '', enabled: boolean) => {
-	let error = null;
-
-	const res = await fetch(`${OPENAI_API_BASE_URL}/enabled/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({
-			enabled: enabled
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res.ENABLE_OPENAI;
-};
-
 export const updateOpenAIUrl = async (token: string = '', url: string) => {
 	let error = null;
 

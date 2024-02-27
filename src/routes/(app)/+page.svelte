@@ -3,22 +3,12 @@
 	import toast from 'svelte-french-toast';
 
 	import { onMount, tick } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import {
-		models,
-		modelfiles,
-		user,
-		settings,
-		chats,
-		chatId,
-		config,
-		tags as _tags
-	} from '$lib/stores';
+	import { chatId, chats, config, modelfiles, models, settings, tags as _tags, user } from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
-	import { generateChatCompletion, cancelChatCompletion, generateTitle } from '$lib/apis/ollama';
+	import { cancelChatCompletion, generateChatCompletion, generateTitle } from '$lib/apis/ollama';
 	import { generateVertexAIChatCompletion } from '$lib/apis/vertexai';
 	import {
 		addTagById,
@@ -37,8 +27,7 @@
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
-	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	let stopResponseFlag = false;
 	let autoScroll = true;
@@ -309,18 +298,20 @@
 						];
 					}
 
-				if (model?.external) {
-					if (model.provider === 'vertexai') {
-						await sendPromptVertexAI(model, prompt, responseMessageId, _chatId);
+					console.log("Model: ", model);
+					if (model?.external) {
+						if (model.provider === 'vertexai') {
+							await sendPromptVertexAI(model, prompt, responseMessageId, _chatId);
+						} else {
+							await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+						}
+					} else if (model) {
+						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
 					} else {
-						await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+						toast.error(`Model ${modelId} not found`);
 					}
-				} else if (model) {
-					await sendPromptOllama(model, prompt, responseMessageId, _chatId);
-				} else {
-					toast.error(`Model ${modelId} not found`);
 				}
-			}})
+			})
 		);
 
 		await chats.set(await getChatList(localStorage.token));
@@ -339,9 +330,9 @@
 		const messagesBody = [
 			$settings.system
 				? {
-						role: 'system',
-						content: $settings.system
-				  }
+					role: 'system',
+					content: $settings.system
+				}
 				: undefined,
 			...messages.filter((message) => !message.deleted)
 		]
@@ -455,9 +446,9 @@
 										const notification = new Notification(
 											selectedModelfile
 												? `${
-														selectedModelfile.title.charAt(0).toUpperCase() +
-														selectedModelfile.title.slice(1)
-												  }`
+													selectedModelfile.title.charAt(0).toUpperCase() +
+													selectedModelfile.title.slice(1)
+												}`
 												: `${model}`,
 											{
 												body: responseMessage.content,
@@ -547,9 +538,9 @@
 				messages: [
 					$settings.system
 						? {
-								role: 'system',
-								content: $settings.system
-						  }
+							role: 'system',
+							content: $settings.system
+						}
 						: undefined,
 					...messages.filter((message) => !message.deleted)
 				]
@@ -558,28 +549,28 @@
 						role: message.role,
 						...(message.files?.filter((file) => file.type === 'image').length > 0 ?? false
 							? {
-									content: [
-										{
-											type: 'text',
-											text:
-												arr.length - 1 !== idx
-													? message.content
-													: message?.raContent ?? message.content
-										},
-										...message.files
-											.filter((file) => file.type === 'image')
-											.map((file) => ({
-												type: 'image_url',
-												image_url: {
-													url: file.url
-												}
-											}))
-									]
-							  }
+								content: [
+									{
+										type: 'text',
+										text:
+											arr.length - 1 !== idx
+												? message.content
+												: message?.raContent ?? message.content
+									},
+									...message.files
+										.filter((file) => file.type === 'image')
+										.map((file) => ({
+											type: 'image_url',
+											image_url: {
+												url: file.url
+											}
+										}))
+								]
+							}
 							: {
-									content:
-										arr.length - 1 !== idx ? message.content : message?.raContent ?? message.content
-							  })
+								content:
+									arr.length - 1 !== idx ? message.content : message?.raContent ?? message.content
+							})
 					})),
 				seed: $settings?.options?.seed ?? undefined,
 				stop: $settings?.options?.stop ?? undefined,
@@ -706,8 +697,7 @@
 		const responseMessage = history.messages[responseMessageId];
 		scrollToBottom();
 
-		// const token = await getVertexAIKey(localStorage.token);
-		const res = await generateVertexAIChatCompletion(localStorage.token, model, {
+		const res = await generateVertexAIChatCompletion(localStorage.token, model.id, {
 			'generation_config': {
 				temperature: $settings?.options?.temperature ?? undefined,
 				// 	topK:
@@ -903,6 +893,7 @@
 
 			const model = $models.filter((m) => m.id === responseMessage.model).at(0);
 
+			console.log("Model: ", model);
 			if (model?.external) {
 				if (model.provider === 'vertexai') {
 					await sendPromptVertexAI(
@@ -937,7 +928,7 @@
 			const title = await generateTitle(
 				localStorage.token,
 				$settings?.titleGenerationPrompt ??
-					"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title': {{prompt}}",
+				'Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word \'title\': {{prompt}}',
 				$settings?.titleAutoGenerateModel ?? selectedModels[0],
 				userPrompt
 			);
