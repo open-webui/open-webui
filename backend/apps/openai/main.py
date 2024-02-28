@@ -191,7 +191,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
             response_data = r.json()
 
-            if "openai" in app.state.OPENAI_API_BASE_URL and path == "models":
+            if "api.openai.com" in app.state.OPENAI_API_BASE_URL and path == "models":
                 response_data["data"] = list(
                     filter(lambda model: "gpt" in model["id"], response_data["data"])
                 )
