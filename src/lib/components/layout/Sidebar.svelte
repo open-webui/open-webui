@@ -366,28 +366,34 @@
 					}
 				}) as chat, i}
 					<div class=" w-full pr-2 relative">
-						<a
-							class=" w-full flex justify-between rounded-xl px-3 py-2 hover:bg-gray-900 {chat.id ===
-							$chatId
-								? 'bg-gray-900'
-								: ''} transition whitespace-nowrap text-ellipsis"
-							href="/c/{chat.id}"
-							draggable={isEditing ? 'false' : 'true'}
-						>
-							<div class=" flex self-center flex-1 w-full">
-								<div
-									class=" text-left self-center overflow-hidden {chat.id === $chatId
-										? 'w-[160px]'
-										: 'w-full'} "
-								>
-									{#if chatTitleEditId === chat.id}
-										<input bind:value={chatTitle} class=" bg-transparent w-full" />
-									{:else}
-										{chat.title}
-									{/if}
-								</div>
+						{#if chatTitleEditId === chat.id}
+							<div
+								class=" w-full flex justify-between rounded-xl px-3 py-2 hover:bg-gray-900 {chat.id ===
+								$chatId
+									? 'bg-gray-900'
+									: ''} transition whitespace-nowrap text-ellipsis"
+							>
+								<input bind:value={chatTitle} class=" bg-transparent w-full outline-none mr-10" />
 							</div>
-						</a>
+						{:else}
+							<a
+								class=" w-full flex justify-between rounded-xl px-3 py-2 hover:bg-gray-900 {chat.id ===
+								$chatId
+									? 'bg-gray-900'
+									: ''} transition whitespace-nowrap text-ellipsis"
+								href="/c/{chat.id}"
+							>
+								<div class=" flex self-center flex-1 w-full">
+									<div
+										class=" text-left self-center overflow-hidden {chat.id === $chatId
+											? 'w-[160px]'
+											: 'w-full'} "
+									>
+										{chat.title}
+									</div>
+								</div>
+							</a>
+						{/if}
 
 						{#if chat.id === $chatId}
 							<div class=" absolute right-[22px] top-[10px]">
@@ -399,7 +405,6 @@
 												editChatTitle(chat.id, chatTitle);
 												chatTitleEditId = null;
 												chatTitle = '';
-												isEditing = false;
 											}}
 										>
 											<svg
@@ -487,7 +492,6 @@
 											on:click={() => {
 												chatTitle = chat.title;
 												chatTitleEditId = chat.id;
-												isEditing = true;
 											}}
 										>
 											<svg
