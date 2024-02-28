@@ -102,17 +102,16 @@
 			: 'invisible'}"
 	>
 		<div class="px-2 flex justify-center space-x-2">
-			<button
+			<a
 				id="sidebar-new-chat-button"
 				class="flex-grow flex justify-between rounded-xl px-3.5 py-2 hover:bg-gray-900 transition"
+				href="/"
 				on:click={async () => {
-					goto('/');
-
+					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
-
-					if (newChatButton) {
-						newChatButton.click();
-					}
+					setTimeout(() => {
+						newChatButton?.click();
+					}, 0);
 				}}
 			>
 				<div class="flex self-center">
@@ -142,7 +141,7 @@
 						/>
 					</svg>
 				</div>
-			</button>
+			</a>
 		</div>
 
 		{#if $user?.role === 'admin'}

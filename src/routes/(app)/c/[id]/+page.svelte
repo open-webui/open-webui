@@ -99,6 +99,9 @@
 			if (await loadChat()) {
 				await tick();
 				loaded = true;
+
+				const chatInput = document.getElementById('chat-textarea');
+				chatInput?.focus();
 			} else {
 				await goto('/');
 			}

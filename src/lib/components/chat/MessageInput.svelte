@@ -293,6 +293,9 @@
 	};
 
 	onMount(() => {
+		const chatInput = document.getElementById('chat-textarea');
+		window.setTimeout(() => chatInput?.focus(), 0);
+
 		const dropZone = document.querySelector('body');
 
 		const onDragOver = (e) => {
