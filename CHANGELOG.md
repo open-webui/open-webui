@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.106] - 2024-02-27
+
+### Added
+
+- **👀 Enhanced User Experience**: Automatically focuses on prompt input area when initiating or opening an existing chat.
+
+### Fixed
+
+- Corrected typo from "HuggingFace" to "Hugging Face" (Issue #924).
+- Resolved bug causing errors in chat completion API calls to OpenAI due to missing "num_ctx" parameter (Issue #927).
+- Fixed issues preventing text editing, selection, and cursor retention in the input field (Issue #940).
+
 ## [0.1.105] - 2024-02-25
 
 ### Added
