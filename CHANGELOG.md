@@ -9,13 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **👀 Enhanced User Experience**: Automatically focuses on prompt input area when initiating or opening an existing chat.
+- **🎯 Auto-focus Feature**: The input area now automatically focuses when initiating or opening a chat conversation.
 
 ### Fixed
 
 - Corrected typo from "HuggingFace" to "Hugging Face" (Issue #924).
 - Resolved bug causing errors in chat completion API calls to OpenAI due to missing "num_ctx" parameter (Issue #927).
 - Fixed issues preventing text editing, selection, and cursor retention in the input field (Issue #940).
+- Fixed a bug where defining an OpenAI-compatible API server using 'OPENAI_API_BASE_URL' containing 'openai' string resulted in hiding models not containing 'gpt' string from the model menu. (Issue #930)
 
 ## [0.1.105] - 2024-02-25
 
