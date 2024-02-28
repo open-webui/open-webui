@@ -37,7 +37,7 @@
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	let loaded = false;
 
