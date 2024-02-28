@@ -31,6 +31,7 @@
 	let chatTitle = '';
 
 	let showDropdown = false;
+	let isEditing = false;
 
 	onMount(async () => {
 		if (window.innerWidth > 1280) {
@@ -101,17 +102,16 @@
 			: 'invisible'}"
 	>
 		<div class="px-2 flex justify-center space-x-2">
-			<button
+			<a
 				id="sidebar-new-chat-button"
 				class="flex-grow flex justify-between rounded-xl px-3.5 py-2 hover:bg-gray-900 transition"
+				href="/"
 				on:click={async () => {
-					goto('/');
-
+					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
-
-					if (newChatButton) {
-						newChatButton.click();
-					}
+					setTimeout(() => {
+						newChatButton?.click();
+					}, 0);
 				}}
 			>
 				<div class="flex self-center">
@@ -141,7 +141,7 @@
 						/>
 					</svg>
 				</div>
-			</button>
+			</a>
 		</div>
 
 		{#if $user?.role === 'admin'}
@@ -372,6 +372,7 @@
 								? 'bg-gray-900'
 								: ''} transition whitespace-nowrap text-ellipsis"
 							href="/c/{chat.id}"
+							draggable={isEditing ? 'false' : 'true'}
 						>
 							<div class=" flex self-center flex-1 w-full">
 								<div
@@ -398,6 +399,7 @@
 												editChatTitle(chat.id, chatTitle);
 												chatTitleEditId = null;
 												chatTitle = '';
+												isEditing = false;
 											}}
 										>
 											<svg
@@ -485,7 +487,7 @@
 											on:click={() => {
 												chatTitle = chat.title;
 												chatTitleEditId = chat.id;
-												// editChatTitle(chat.id, 'a');
+												isEditing = true;
 											}}
 										>
 											<svg
