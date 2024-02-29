@@ -6,5 +6,9 @@ export type User = {
 	profile_image_url: string;
 };
 
-export const UserRoles = {};
+export const UserRoles = {
+	pending: 'Pending',
+	admin: 'Administrator',
+	user: 'User'
+};
 export type UserRole = keyof typeof UserRoles;
