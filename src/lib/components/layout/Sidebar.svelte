@@ -346,195 +346,185 @@
 			{/if}
 
 			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto">
-				{#each $chats.filter((chat) => {
-					if (search === '') {
-						return true;
-					} else {
-						let title = chat.title.toLowerCase();
-						const query = search.toLowerCase();
-
-						let contentMatches = false;
-						// Access the messages within chat.chat.messages
-						if (chat.chat && chat.chat.messages && Array.isArray(chat.chat.messages)) {
-							contentMatches = chat.chat.messages.some((message) => {
-								// Check if message.content exists and includes the search query
-								return message.content && message.content.toLowerCase().includes(query);
-							});
-						}
-
-						return title.includes(query) || contentMatches;
-					}
-				}) as chat, i}
-					<div class=" w-full pr-2 relative">
-						{#if chatTitleEditId === chat.id}
-							<div
-								class=" w-full flex justify-between rounded-xl px-3 py-2 hover:bg-gray-900 {chat.id ===
-								$chatId
-									? 'bg-gray-900'
-									: ''} transition whitespace-nowrap text-ellipsis"
-							>
-								<input bind:value={chatTitle} class=" bg-transparent w-full outline-none mr-10" />
-							</div>
-						{:else}
-							<a
-								class=" w-full flex justify-between rounded-xl px-3 py-2 hover:bg-gray-900 {chat.id ===
-								$chatId
-									? 'bg-gray-900'
-									: ''} transition whitespace-nowrap text-ellipsis"
-								href="/c/{chat.id}"
-							>
-								<div class=" flex self-center flex-1 w-full">
-									<div
-										class=" text-left self-center overflow-hidden {chat.id === $chatId
-											? 'w-[160px]'
-											: 'w-full'} "
-									>
-										{chat.title}
-									</div>
+				{#each $chats as chat, i}
+					{@const emptySearch = search === ''}
+					{@const query = search.toLocaleLowerCase()}
+					{@const titleIncludesQuery = chat.title.toLowerCase().includes(query)}
+					{@const chatMessageContentIncludesQuery = chat.chat.messages.some(
+						(message) => message.content && message.content.toLowerCase().includes(query)
+					)}
+					{#if emptySearch || titleIncludesQuery || chatMessageContentIncludesQuery}
+						<div class=" w-full pr-2 relative">
+							{#if chatTitleEditId === chat.id}
+								<div
+									class=" w-full flex justify-between rounded-xl px-3 py-2 hover:bg-gray-900 {chat.id ===
+									$chatId
+										? 'bg-gray-900'
+										: ''} transition whitespace-nowrap text-ellipsis"
+								>
+									<input bind:value={chatTitle} class=" bg-transparent w-full outline-none mr-10" />
 								</div>
-							</a>
-						{/if}
+							{:else}
+								<a
+									class=" w-full flex justify-between rounded-xl px-3 py-2 hover:bg-gray-900 {chat.id ===
+									$chatId
+										? 'bg-gray-900'
+										: ''} transition whitespace-nowrap text-ellipsis"
+									href="/c/{chat.id}"
+								>
+									<div class=" flex self-center flex-1 w-full">
+										<div
+											class=" text-left self-center overflow-hidden {chat.id === $chatId
+												? 'w-[160px]'
+												: 'w-full'} "
+										>
+											{chat.title}
+										</div>
+									</div>
+								</a>
+							{/if}
 
-						{#if chat.id === $chatId}
-							<div class=" absolute right-[22px] top-[10px]">
-								{#if chatTitleEditId === chat.id}
-									<div class="flex self-center space-x-1.5">
-										<button
-											class=" self-center hover:text-white transition"
-											on:click={() => {
-												editChatTitle(chat.id, chatTitle);
-												chatTitleEditId = null;
-												chatTitle = '';
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-4 h-4"
+							{#if chat.id === $chatId}
+								<div class=" absolute right-[22px] top-[10px]">
+									{#if chatTitleEditId === chat.id}
+										<div class="flex self-center space-x-1.5">
+											<button
+												class=" self-center hover:text-white transition"
+												on:click={() => {
+													editChatTitle(chat.id, chatTitle);
+													chatTitleEditId = null;
+													chatTitle = '';
+												}}
 											>
-												<path
-													fill-rule="evenodd"
-													d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-													clip-rule="evenodd"
-												/>
-											</svg>
-										</button>
-										<button
-											class=" self-center hover:text-white transition"
-											on:click={() => {
-												chatTitleEditId = null;
-												chatTitle = '';
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-4 h-4"
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</button>
+											<button
+												class=" self-center hover:text-white transition"
+												on:click={() => {
+													chatTitleEditId = null;
+													chatTitle = '';
+												}}
 											>
-												<path
-													d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-												/>
-											</svg>
-										</button>
-									</div>
-								{:else if chatDeleteId === chat.id}
-									<div class="flex self-center space-x-1.5">
-										<button
-											class=" self-center hover:text-white transition"
-											on:click={() => {
-												deleteChat(chat.id);
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-4 h-4"
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+													/>
+												</svg>
+											</button>
+										</div>
+									{:else if chatDeleteId === chat.id}
+										<div class="flex self-center space-x-1.5">
+											<button
+												class=" self-center hover:text-white transition"
+												on:click={() => {
+													deleteChat(chat.id);
+												}}
 											>
-												<path
-													fill-rule="evenodd"
-													d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-													clip-rule="evenodd"
-												/>
-											</svg>
-										</button>
-										<button
-											class=" self-center hover:text-white transition"
-											on:click={() => {
-												chatDeleteId = null;
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-4 h-4"
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</button>
+											<button
+												class=" self-center hover:text-white transition"
+												on:click={() => {
+													chatDeleteId = null;
+												}}
 											>
-												<path
-													d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-												/>
-											</svg>
-										</button>
-									</div>
-								{:else}
-									<div class="flex self-center space-x-1.5">
-										<button
-											id="delete-chat-button"
-											class=" hidden"
-											on:click={() => {
-												deleteChat(chat.id);
-											}}
-										/>
-										<button
-											class=" self-center hover:text-white transition"
-											on:click={() => {
-												chatTitle = chat.title;
-												chatTitleEditId = chat.id;
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="w-4 h-4"
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+													/>
+												</svg>
+											</button>
+										</div>
+									{:else}
+										<div class="flex self-center space-x-1.5">
+											<button
+												id="delete-chat-button"
+												class=" hidden"
+												on:click={() => {
+													deleteChat(chat.id);
+												}}
+											/>
+											<button
+												class=" self-center hover:text-white transition"
+												on:click={() => {
+													chatTitle = chat.title;
+													chatTitleEditId = chat.id;
+												}}
 											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-												/>
-											</svg>
-										</button>
-										<button
-											class=" self-center hover:text-white transition"
-											on:click={() => {
-												chatDeleteId = chat.id;
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="w-4 h-4"
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="1.5"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+													/>
+												</svg>
+											</button>
+											<button
+												class=" self-center hover:text-white transition"
+												on:click={() => {
+													chatDeleteId = chat.id;
+												}}
 											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-												/>
-											</svg>
-										</button>
-									</div>
-								{/if}
-							</div>
-						{/if}
-					</div>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="1.5"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+													/>
+												</svg>
+											</button>
+										</div>
+									{/if}
+								</div>
+							{/if}
+						</div>
+					{/if}
 				{/each}
 			</div>
 		</div>
