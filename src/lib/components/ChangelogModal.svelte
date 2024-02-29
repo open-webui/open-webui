@@ -67,33 +67,35 @@
 
 							<hr class=" dark:border-gray-800 my-2" />
 
-							{#each Object.keys(changelog[version]).filter((section) => section !== 'date') as section}
-								<div class="">
-									<div
-										class="font-bold uppercase text-xs {section === 'added'
-											? 'text-white bg-blue-600'
-											: section === 'fixed'
-											? 'text-white bg-green-600'
-											: section === 'changed'
-											? 'text-white bg-yellow-600'
-											: section === 'removed'
-											? 'text-white bg-red-600'
-											: ''}  w-fit px-3 rounded-full my-2.5"
-									>
-										{section}
-									</div>
+							{#each Object.keys(changelog[version]) as section}
+								{#if section !== 'date'}
+									<div class="">
+										<div
+											class="font-bold uppercase text-xs {section === 'added'
+												? 'text-white bg-blue-600'
+												: section === 'fixed'
+												? 'text-white bg-green-600'
+												: section === 'changed'
+												? 'text-white bg-yellow-600'
+												: section === 'removed'
+												? 'text-white bg-red-600'
+												: ''}  w-fit px-3 rounded-full my-2.5"
+										>
+											{section}
+										</div>
 
-									<div class="my-2.5 px-1.5">
-										{#each Object.keys(changelog[version][section]) as item}
-											<div class="text-sm mb-2">
-												<div class="font-semibold uppercase">
-													{changelog[version][section][item].title}
+										<div class="my-2.5 px-1.5">
+											{#each Object.keys(changelog[version][section]) as item}
+												<div class="text-sm mb-2">
+													<div class="font-semibold uppercase">
+														{changelog[version][section][item].title}
+													</div>
+													<div class="mb-2 mt-1">{changelog[version][section][item].content}</div>
 												</div>
-												<div class="mb-2 mt-1">{changelog[version][section][item].content}</div>
-											</div>
-										{/each}
+											{/each}
+										</div>
 									</div>
-								</div>
+								{/if}
 							{/each}
 						</div>
 					{/each}
