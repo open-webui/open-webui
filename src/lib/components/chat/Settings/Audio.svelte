@@ -220,9 +220,12 @@
 							placeholder="Select a voice"
 						>
 							<option value="" selected>Default</option>
-							{#each voices.filter((v) => v.localService === true) as voice}
-								<option value={voice.name} class="bg-gray-100 dark:bg-gray-700">{voice.name}</option
-								>
+							{#each voices as voice}
+								{#if voice.localService === true}
+									<option value={voice.name} class="bg-gray-100 dark:bg-gray-700"
+										>{voice.name}</option
+									>
+								{/if}
 							{/each}
 						</select>
 					</div>
