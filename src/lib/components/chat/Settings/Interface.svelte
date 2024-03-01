@@ -3,7 +3,7 @@
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, models, user } from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
 
 	export let saveSettings: Function;

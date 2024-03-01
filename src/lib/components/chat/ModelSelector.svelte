@@ -2,7 +2,7 @@
 	import { setDefaultModels } from '$lib/apis/configs';
 	import { models, showSettings, settings, user } from '$lib/stores';
 	import { onMount, tick } from 'svelte';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	export let selectedModels = [''];
 	export let disabled = false;

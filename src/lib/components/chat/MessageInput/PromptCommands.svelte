@@ -2,7 +2,7 @@
 	import { prompts } from '$lib/stores';
 	import { findWordIndices } from '$lib/utils';
 	import { tick } from 'svelte';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	export let prompt = '';
 	let selectedCommandIdx = 0;
