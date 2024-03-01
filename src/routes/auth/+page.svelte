@@ -8,6 +8,7 @@
 
 	let loaded = false;
 	let mode = 'signin';
+	let isSubmitting = false;
 
 	let name = '';
 	let email = '';
@@ -42,10 +43,15 @@
 	};
 
 	const submitHandler = async () => {
-		if (mode === 'signin') {
-			await signInHandler();
-		} else {
-			await signUpHandler();
+		try {
+			isSubmitting = true;
+			if (mode === 'signin') {
+				await signInHandler();
+			} else {
+				await signUpHandler();
+			}
+		} finally {
+			isSubmitting = false;
 		}
 	};
 
@@ -66,7 +72,7 @@
 		</div>
 	</div>
 
-	<div class=" bg-white min-h-screen w-full flex justify-center font-mona">
+	<div class=" bg-white dark:bg-gray-900 min-h-screen w-full flex justify-center font-mona">
 		<!-- <div class="hidden lg:flex lg:flex-1 px-10 md:px-16 w-full bg-yellow-50 justify-center">
 			<div class=" my-auto pb-16 text-left">
 				<div>
@@ -81,7 +87,9 @@
 			</div>
 		</div> -->
 
-		<div class="w-full max-w-lg px-10 md:px-16 bg-white min-h-screen flex flex-col">
+		<div
+			class="w-full max-w-lg px-10 md:px-16 bg-white dark:bg-gray-900 min-h-screen flex flex-col"
+		>
 			<div class=" my-auto pb-10 w-full">
 				<form
 					class=" flex flex-col justify-center"
@@ -89,12 +97,12 @@
 						submitHandler();
 					}}
 				>
-					<div class=" text-xl md:text-2xl font-bold">
+					<div class=" text-xl dark:text-white md:text-2xl font-bold">
 						{mode === 'signin' ? 'Sign in' : 'Sign up'} to {$WEBUI_NAME}
 					</div>
 
 					{#if mode === 'signup'}
-						<div class=" mt-1 text-xs font-medium text-gray-500">
+						<div class=" mt-1 text-xs font-medium text-gray-300 dark:text-gray-300">
 							ⓘ {$WEBUI_NAME} does not make any external connections, and your data stays securely on
 							your locally hosted server.
 						</div>
@@ -103,26 +111,26 @@
 					<div class="flex flex-col mt-4">
 						{#if mode === 'signup'}
 							<div>
-								<div class=" text-sm font-semibold text-left mb-1">Name</div>
+								<div class=" text-sm dark:text-gray-100 font-semibold text-left mb-1">Name</div>
 								<input
 									bind:value={name}
 									type="text"
-									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+									class=" dark:border-gray-600 focus:border-gray-400 dark:bg-gray-900 dark:text-gray-100 border px-4 py-2.5 rounded-2xl w-full text-sm"
 									autocomplete="name"
 									placeholder="Enter Your Full Name"
 									required
 								/>
 							</div>
 
-							<hr class=" my-3" />
+							<hr class="  my-3 border-t-2 dark:border-gray-800" />
 						{/if}
 
 						<div class="mb-2">
-							<div class=" text-sm font-semibold text-left mb-1">Email</div>
+							<div class=" text-sm dark:text-gray-100 font-semibold text-left mb-1">Email</div>
 							<input
 								bind:value={email}
 								type="email"
-								class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+								class=" dark:border-gray-600 focus:border-gray-400 dark:bg-gray-900 dark:text-gray-100 border px-4 py-2.5 rounded-2xl w-full text-sm"
 								autocomplete="email"
 								placeholder="Enter Your Email"
 								required
@@ -130,11 +138,11 @@
 						</div>
 
 						<div>
-							<div class=" text-sm font-semibold text-left mb-1">Password</div>
+							<div class=" text-sm dark:text-gray-100 font-semibold text-left mb-1">Password</div>
 							<input
 								bind:value={password}
 								type="password"
-								class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+								class=" border dark:border-gray-600 focus:border-gray-400 dark:bg-gray-900 dark:text-gray-100 px-4 py-2.5 rounded-2xl w-full text-sm"
 								placeholder="Enter Your Password"
 								autocomplete="current-password"
 								required
@@ -144,13 +152,16 @@
 
 					<div class="mt-5">
 						<button
-							class=" bg-gray-900 hover:bg-gray-800 w-full rounded-full text-white font-semibold text-sm py-3 transition"
+							class=" {isSubmitting
+								? 'opacity-50'
+								: 'opacity-100'} bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-100 w-full rounded-full text-white font-semibold text-sm py-3 transition"
 							type="submit"
+							disabled={isSubmitting}
 						>
 							{mode === 'signin' ? 'Sign In' : 'Create Account'}
 						</button>
 
-						<div class=" mt-4 text-sm text-center">
+						<div class=" mt-4 dark:text-gray-300 text-sm text-center">
 							{mode === 'signin' ? `Don't have an account?` : `Already have an account?`}
 
 							<button
