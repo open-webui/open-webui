@@ -6,8 +6,10 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, models, user } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { addLiteLLMModel, deleteLiteLLMModel, getLiteLLMModelInfo } from '$lib/apis/litellm';
+
+	const i18n = getContext('i18n');
 
 	export let getModels: Function;
 
@@ -465,10 +467,10 @@
 							<select
 								class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 								bind:value={deleteModelTag}
-								placeholder="Select a model"
+								placeholder={$i18n.t('ModelSelectorPlaceholder')}
 							>
 								{#if !deleteModelTag}
-									<option value="" disabled selected>Select a model</option>
+									<option value="" disabled selected>{$i18n.t('ModelSelectorPlaceholder')}</option>
 								{/if}
 								{#each $models.filter((m) => m.size != null) as model}
 									<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
@@ -805,10 +807,11 @@
 								<select
 									class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={deleteLiteLLMModelId}
-									placeholder="Select a model"
+									placeholder={$i18n.t('ModelSelectorPlaceholder')}
 								>
 									{#if !deleteLiteLLMModelId}
-										<option value="" disabled selected>Select a model</option>
+										<option value="" disabled selected>{$i18n.t('ModelSelectorPlaceholder')}</option
+										>
 									{/if}
 									{#each liteLLMModelInfo as model}
 										<option value={model.model_info.id} class="bg-gray-100 dark:bg-gray-700"

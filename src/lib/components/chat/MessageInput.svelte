@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
 	import { settings } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
@@ -13,6 +13,8 @@
 	import Models from './MessageInput/Models.svelte';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import Tooltip from '../common/Tooltip.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
@@ -669,8 +671,8 @@
 							placeholder={chatInputPlaceholder !== ''
 								? chatInputPlaceholder
 								: isRecording
-								? 'Listening...'
-								: 'Send a message'}
+								? $i18n.t('ChatInputPlaceholderListening')
+								: $i18n.t('ChatInputPlaceholder')}
 							bind:value={prompt}
 							on:keypress={(e) => {
 								if (e.keyCode == 13 && !e.shiftKey) {

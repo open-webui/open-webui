@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { models, user } from '$lib/stores';
+
+	const i18n = getContext('i18n');
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 
@@ -13,6 +15,9 @@
 	// General
 	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
 	let theme = 'dark';
+	// TODO: Get these dynamically from the i18n module
+	let languages = ['en', 'fa', 'fr', 'de'];
+	let lang = $i18n.language;
 	let notificationEnabled = false;
 	let system = '';
 
@@ -145,6 +150,25 @@
 						<option value="light">Light</option>
 						<option value="rose-pine dark">Rosé Pine</option>
 						<option value="rose-pine-dawn light">Rosé Pine Dawn</option>
+					</select>
+				</div>
+			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">Language</div>
+				<div class="flex items-center relative">
+					<select
+						class="w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
+						bind:value={lang}
+						placeholder="Select a language"
+						on:change={(e) => {
+							console.log($i18n);
+							$i18n.changeLanguage(lang);
+						}}
+					>
+						{#each languages as value}
+							<option {value}>{value}</option>
+						{/each}
 					</select>
 				</div>
 			</div>

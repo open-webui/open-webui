@@ -1,0 +1,10 @@
+{
+	"NewChat": "New Chat",
+	"Modelfiles": "Modelfiles",
+	"GreetingPlaceholder": "How can I help you today?",
+	"Hello": "Hello, {{name}}",
+	"ChatInputPlaceholderListening": "Listening...",
+	"ChatInputPlaceholder": "Send a Message",
+	"ModelSelectorPlaceholder": "Select a model",
+	"SetAsDefault": "Set as default"
+}

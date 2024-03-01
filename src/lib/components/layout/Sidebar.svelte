@@ -8,6 +8,10 @@
 	import { page } from '$app/stores';
 	import { user, chats, settings, showSettings, chatId, tags } from '$lib/stores';
 	import { onMount } from 'svelte';
+	import { getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
+
 	import {
 		deleteChatById,
 		getChatList,
@@ -124,7 +128,7 @@
 						/>
 					</div>
 
-					<div class=" self-center font-medium text-sm">New Chat</div>
+					<div class=" self-center font-medium text-sm">{$i18n.t('NewChat')}</div>
 				</div>
 
 				<div class="self-center">
@@ -169,7 +173,7 @@
 					</div>
 
 					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">Modelfiles</div>
+						<div class=" self-center font-medium text-sm">{$i18n.t('Modelfiles')}</div>
 					</div>
 				</a>
 			</div>

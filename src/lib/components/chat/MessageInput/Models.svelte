@@ -2,8 +2,10 @@
 	import { generatePrompt } from '$lib/apis/ollama';
 	import { models } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
-	import { tick } from 'svelte';
+	import { tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	export let prompt = '';
 	export let user = null;

@@ -2,9 +2,11 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, models, user } from '$lib/stores';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
+
+	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
 
@@ -188,7 +190,7 @@
 					<select
 						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
 						bind:value={titleAutoGenerateModel}
-						placeholder="Select a model"
+						placeholder={$i18n.t('ModelSelectorPlaceholder')}
 					>
 						<option value="" selected>Current Model</option>
 						{#each $models as model}

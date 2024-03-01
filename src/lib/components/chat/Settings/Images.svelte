@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { config, user } from '$lib/stores';
 	import {
 		getAUTOMATIC1111Url,
@@ -18,6 +18,8 @@
 	} from '$lib/apis/images';
 	import { getBackendConfig } from '$lib/apis';
 	const dispatch = createEventDispatcher();
+
+	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
 
@@ -193,10 +195,10 @@
 						<select
 							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
 							bind:value={selectedModel}
-							placeholder="Select a model"
+							placeholder={$i18n.t('ModelSelectorPlaceholder')}
 						>
 							{#if !selectedModel}
-								<option value="" disabled selected>Select a model</option>
+								<option value="" disabled selected>{$i18n.t('ModelSelectorPlaceholder')}</option>
 							{/if}
 							{#each models ?? [] as model}
 								<option value={model.title} class="bg-gray-100 dark:bg-gray-700"
