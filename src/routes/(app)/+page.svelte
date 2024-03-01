@@ -14,6 +14,7 @@
 		chats,
 		chatId,
 		config,
+		WEBUI_NAME,
 		tags as _tags
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
@@ -38,7 +39,6 @@
 	import { RAGTemplate } from '$lib/utils/rag';
 	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
@@ -69,6 +69,7 @@
 	let tags = [];
 
 	let title = '';
+	let pageTitle = WEBUI_NAME;
 	let prompt = '';
 	let files = [];
 	let messages = [];
@@ -76,6 +77,13 @@
 		messages: {},
 		currentId: null
 	};
+
+	$: if (title) {
+		const trimmedTitle = title.length > 30 ? `${title.slice(0, 30)}...` : title;
+		pageTitle = `${trimmedTitle} | ${$WEBUI_NAME}`;
+	} else {
+		pageTitle = $WEBUI_NAME;
+	}
 
 	$: if (history.currentId !== null) {
 		let _messages = [];
@@ -808,6 +816,12 @@
 		}
 	};
 </script>
+
+<svelte:head>
+	<title>
+		{pageTitle}
+	</title>
+</svelte:head>
 
 <div class="h-screen max-h-[100dvh] w-full flex flex-col">
 	<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
