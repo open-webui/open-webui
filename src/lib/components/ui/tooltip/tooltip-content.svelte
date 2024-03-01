@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Tooltip as TooltipPrimitive } from 'bits-ui';
-	import { cn, flyAndScale } from '$lib/shadcn';
+	import { cn, flyAndScale } from '$lib/utils/svelte-shadcn';
 
 	type $$Props = TooltipPrimitive.ContentProps;
 
