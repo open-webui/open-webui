@@ -3,17 +3,19 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, prompts } from '$lib/stores';
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 	import { error } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
 
+	const i18n = getContext('i18n');
+
 	let importFiles = '';
 	let query = '';
 
 	const sharePrompt = async (prompt) => {
-		toast.success('Redirecting you to OpenWebUI Community');
+		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
 		const url = 'https://openwebui.com';
 
@@ -46,7 +48,7 @@
 	<div class="flex flex-col justify-between w-full overflow-y-auto">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<div class="mb-6 flex justify-between items-center">
-				<div class=" text-2xl font-semibold self-center">My Prompts</div>
+				<div class=" text-2xl font-semibold self-center">{$i18n.t('My Prompts')}</div>
 			</div>
 
 			<div class=" flex w-full space-x-2">
@@ -245,7 +247,7 @@
 							document.getElementById('prompts-import-input')?.click();
 						}}
 					>
-						<div class=" self-center mr-2 font-medium">Import Prompts</div>
+						<div class=" self-center mr-2 font-medium">{$i18n.t('Import Prompts')}</div>
 
 						<div class=" self-center">
 							<svg
@@ -273,7 +275,7 @@
 							saveAs(blob, `prompts-export-${Date.now()}.json`);
 						}}
 					>
-						<div class=" self-center mr-2 font-medium">Export Prompts</div>
+						<div class=" self-center mr-2 font-medium">{$i18n.t('Export Prompts')}</div>
 
 						<div class=" self-center">
 							<svg
@@ -302,7 +304,7 @@
 			</div>
 
 			<div class=" my-16">
-				<div class=" text-2xl font-semibold mb-3">Made by OpenWebUI Community</div>
+				<div class=" text-2xl font-semibold mb-3">{$i18n.t('Made by OpenWebUI Community')}</div>
 
 				<a
 					class=" flex space-x-4 cursor-pointer w-full mb-3 px-3 py-2"
@@ -329,8 +331,8 @@
 					</div>
 
 					<div class=" self-center">
-						<div class=" font-bold">Discover a prompt</div>
-						<div class=" text-sm">Discover, download, and explore custom prompts</div>
+						<div class=" font-bold">{$i18n.t('Discover a prompt')}</div>
+						<div class=" text-sm">{$i18n.t('Discover, download, and explore custom prompts')}</div>
 					</div>
 				</a>
 			</div>

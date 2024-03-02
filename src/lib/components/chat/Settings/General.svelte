@@ -91,10 +91,10 @@
 <div class="flex flex-col h-full justify-between text-sm">
 	<div class="  pr-1.5 overflow-y-scroll max-h-[20.5rem]">
 		<div class="">
-			<div class=" mb-1 text-sm font-medium">WebUI Settings</div>
+			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Theme</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<div class=" absolute right-16">
 						{#if theme === 'dark'}
@@ -146,16 +146,16 @@
 							console.log(theme);
 						}}
 					>
-						<option value="dark">Dark</option>
-						<option value="light">Light</option>
-						<option value="rose-pine dark">Rosé Pine</option>
-						<option value="rose-pine-dawn light">Rosé Pine Dawn</option>
+						<option value="dark">{$i18n.t('Dark')}</option>
+						<option value="light">{$i18n.t('Light')}</option>
+						<option value="rose-pine dark">{$i18n.t('Rosé Pine')}</option>
+						<option value="rose-pine-dawn light">{$i18n.t('Rosé Pine Dawn')}</option>
 					</select>
 				</div>
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Language</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
 						class="w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
@@ -175,7 +175,7 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">Notification</div>
+					<div class=" self-center text-xs font-medium">{$i18n.t('Notification')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -185,9 +185,9 @@
 						type="button"
 					>
 						{#if notificationEnabled === true}
-							<span class="ml-2 self-center">On</span>
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
-							<span class="ml-2 self-center">Off</span>
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
@@ -197,7 +197,7 @@
 		<hr class=" dark:border-gray-700 my-3" />
 
 		<div>
-			<div class=" my-2.5 text-sm font-medium">System Prompt</div>
+			<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 			<textarea
 				bind:value={system}
 				class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
@@ -207,7 +207,7 @@
 
 		<div class="mt-2 space-y-3 pr-1.5">
 			<div class="flex justify-between items-center text-sm">
-				<div class="  font-medium">Advanced Parameters</div>
+				<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
 				<button
 					class=" text-xs font-medium text-gray-500"
 					type="button"
@@ -223,7 +223,7 @@
 
 				<div class=" py-1 w-full justify-between">
 					<div class="flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">Keep Alive</div>
+						<div class=" self-center text-xs font-medium">{$i18n.t('Keep Alive')}</div>
 
 						<button
 							class="p-1 px-3 text-xs flex rounded transition"
@@ -233,9 +233,9 @@
 							}}
 						>
 							{#if keepAlive === null}
-								<span class="ml-2 self-center"> Default </span>
+								<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
 							{:else}
-								<span class="ml-2 self-center"> Custom </span>
+								<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
 							{/if}
 						</button>
 					</div>
@@ -254,7 +254,7 @@
 
 				<div>
 					<div class=" py-1 flex w-full justify-between">
-						<div class=" self-center text-sm font-medium">Request Mode</div>
+						<div class=" self-center text-sm font-medium">{$i18n.t('Request Mode')}</div>
 
 						<button
 							class="p-1 px-3 text-xs flex rounded transition"
@@ -263,7 +263,7 @@
 							}}
 						>
 							{#if requestFormat === ''}
-								<span class="ml-2 self-center"> Default </span>
+								<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
 							{:else if requestFormat === 'json'}
 								<!-- <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -275,7 +275,7 @@
                                 d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 001.06-1.06l-1.06-1.061a.75.75 0 10-1.06 1.06l1.06 1.06zM5.404 6.464a.75.75 0 001.06-1.06l-1.06-1.06a.75.75 0 10-1.061 1.06l1.06 1.06z"
                             />
                         </svg> -->
-								<span class="ml-2 self-center"> JSON </span>
+								<span class="ml-2 self-center"> {$i18n.t('JSON')} </span>
 							{/if}
 						</button>
 					</div>

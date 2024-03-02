@@ -3,9 +3,11 @@
 
 	import { goto } from '$app/navigation';
 	import { prompts } from '$lib/stores';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
 
 	import { createNewPrompt, getPrompts } from '$lib/apis/prompts';
+
+	const i18n = getContext('i18n');
 
 	let loading = false;
 
@@ -92,7 +94,7 @@
 <div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
 	<div class=" flex flex-col justify-between w-full overflow-y-auto">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
-			<div class=" text-2xl font-semibold mb-6">My Prompts</div>
+			<div class=" text-2xl font-semibold mb-6">{$i18n.t('My Prompts')}</div>
 
 			<button
 				class="flex space-x-1"
@@ -114,7 +116,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center font-medium text-sm">Back</div>
+				<div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
 			</button>
 			<hr class="my-3 dark:border-gray-700" />
 
@@ -125,7 +127,7 @@
 				}}
 			>
 				<div class="my-2">
-					<div class=" text-sm font-semibold mb-2">Title*</div>
+					<div class=" text-sm font-semibold mb-2">{$i18n.t('Title')}*</div>
 
 					<div>
 						<input
@@ -138,7 +140,7 @@
 				</div>
 
 				<div class="my-2">
-					<div class=" text-sm font-semibold mb-2">Command*</div>
+					<div class=" text-sm font-semibold mb-2">{$i18n.t('Command')}*</div>
 
 					<div class="flex items-center mb-1">
 						<div
@@ -168,7 +170,7 @@
 
 				<div class="my-2">
 					<div class="flex w-full justify-between">
-						<div class=" self-center text-sm font-semibold">Prompt Content*</div>
+						<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt Content')}*</div>
 					</div>
 
 					<div class="mt-2">
@@ -207,7 +209,7 @@
 						type="submit"
 						disabled={loading}
 					>
-						<div class=" self-center font-medium">Save & Create</div>
+						<div class=" self-center font-medium">{$i18n.t('Save & Create')}</div>
 
 						{#if loading}
 							<div class="ml-1.5 self-center">

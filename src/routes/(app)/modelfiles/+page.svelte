@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 
 	import { WEBUI_NAME, modelfiles, settings, user } from '$lib/stores';
 	import { createModel, deleteModel } from '$lib/apis/ollama';
@@ -14,6 +14,8 @@
 	} from '$lib/apis/modelfiles';
 	import { goto } from '$app/navigation';
 
+	const i18n = getContext('i18n');
+
 	let localModelfiles = [];
 	let importFiles;
 
@@ -23,7 +25,7 @@
 		success = await deleteModel(localStorage.token, tagName);
 
 		if (success) {
-			toast.success(`Deleted ${tagName}`);
+			toast.success($i18n.t(`Deleted {tagName}`, { tagName }));
 		}
 
 		return success;
@@ -36,7 +38,7 @@
 	};
 
 	const shareModelfile = async (modelfile) => {
-		toast.success('Redirecting you to OpenWebUI Community');
+		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
 		const url = 'https://openwebui.com';
 
@@ -78,7 +80,7 @@
 <div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
 	<div class="flex flex-col justify-between w-full overflow-y-auto">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
-			<div class=" text-2xl font-semibold mb-3">My Modelfiles</div>
+			<div class=" text-2xl font-semibold mb-3">{$i18n.t('My Modelfiles')}</div>
 
 			<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2" href="/modelfiles/create">
 				<div class=" self-center w-10">
@@ -101,8 +103,8 @@
 				</div>
 
 				<div class=" self-center">
-					<div class=" font-bold">Create a modelfile</div>
-					<div class=" text-sm">Customize Ollama models for a specific purpose</div>
+					<div class=" font-bold">{$i18n.t('Create a modelfile')}</div>
+					<div class=" text-sm">{$i18n.t('Customize Ollama models for a specific purpose')}</div>
 				</div>
 			</a>
 
@@ -266,7 +268,7 @@
 							document.getElementById('modelfiles-import-input')?.click();
 						}}
 					>
-						<div class=" self-center mr-2 font-medium">Import Modelfiles</div>
+						<div class=" self-center mr-2 font-medium">{$i18n.t('Import Modelfiles')}</div>
 
 						<div class=" self-center">
 							<svg
@@ -290,7 +292,7 @@
 							saveModelfiles($modelfiles);
 						}}
 					>
-						<div class=" self-center mr-2 font-medium">Export Modelfiles</div>
+						<div class=" self-center mr-2 font-medium">{$i18n.t('Export Modelfiles')}</div>
 
 						<div class=" self-center">
 							<svg
@@ -331,7 +333,7 @@
 									await modelfiles.set(await getModelfiles(localStorage.token));
 								}}
 							>
-								<div class=" self-center mr-2 font-medium">Sync All</div>
+								<div class=" self-center mr-2 font-medium">{$i18n.t('Sync All')}</div>
 
 								<div class=" self-center">
 									<svg
@@ -382,7 +384,7 @@
 			</div>
 
 			<div class=" my-16">
-				<div class=" text-2xl font-semibold mb-3">Made by OpenWebUI Community</div>
+				<div class=" text-2xl font-semibold mb-3">{$i18n.t('Made by OpenWebUI Community')}</div>
 
 				<a
 					class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2"
@@ -409,8 +411,8 @@
 					</div>
 
 					<div class=" self-center">
-						<div class=" font-bold">Discover a modelfile</div>
-						<div class=" text-sm">Discover, download, and explore model presets</div>
+						<div class=" font-bold">{$i18n.t('Discover a modelfile')}</div>
+						<div class=" text-sm">{$i18n.t('Discover, download, and explore model presets')}</div>
 					</div>
 				</a>
 			</div>

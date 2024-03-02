@@ -4,7 +4,9 @@
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	let ollamaVersion = '';
 
@@ -88,7 +90,7 @@
 			<hr class=" dark:border-gray-700" />
 
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">Ollama Version</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama Version')}</div>
 				<div class="flex w-full">
 					<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
 						{ollamaVersion ?? 'N/A'}

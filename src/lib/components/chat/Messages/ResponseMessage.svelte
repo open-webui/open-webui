@@ -7,7 +7,9 @@
 	import 'katex/dist/katex.min.css';
 
 	import { createEventDispatcher } from 'svelte';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
 
@@ -355,7 +357,7 @@
 											editMessageConfirmHandler();
 										}}
 									>
-										Save
+										{$i18n.t('Save')}
 									</button>
 
 									<button
@@ -364,7 +366,7 @@
 											cancelEditMessage();
 										}}
 									>
-										Cancel
+										{$i18n.t('Cancel')}
 									</button>
 								</div>
 							</div>

@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { models, user } from '$lib/stores';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { getOllamaAPIUrl, getOllamaVersion, updateOllamaAPIUrl } from '$lib/apis/ollama';
 	import { getOpenAIKey, getOpenAIUrl, updateOpenAIKey, updateOpenAIUrl } from '$lib/apis/openai';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	export let getModels: Function;
 
@@ -34,7 +36,7 @@
 		});
 
 		if (ollamaVersion) {
-			toast.success('Server connection verified');
+			toast.success($i18n.t('Server connection verified'));
 			await models.set(await getModels());
 		}
 	};
@@ -64,7 +66,7 @@
 		<div class=" space-y-3">
 			<div class="mt-2 space-y-2 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">OpenAI API</div>
+					<div class="  font-medium">{$i18n.t('OpenAI API')}</div>
 					<button
 						class=" text-xs font-medium text-gray-500"
 						type="button"
@@ -76,7 +78,7 @@
 
 				{#if showOpenAI}
 					<div>
-						<div class=" mb-2.5 text-sm font-medium">API Key</div>
+						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('API Key')}</div>
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
@@ -90,7 +92,7 @@
 					</div>
 
 					<div>
-						<div class=" mb-2.5 text-sm font-medium">API Base URL</div>
+						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('API Base URL')}</div>
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
@@ -114,7 +116,7 @@
 		<hr class=" dark:border-gray-700" />
 
 		<div>
-			<div class=" mb-2.5 text-sm font-medium">Ollama API URL</div>
+			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama API URL')}</div>
 			<div class="flex w-full">
 				<div class="flex-1 mr-2">
 					<input

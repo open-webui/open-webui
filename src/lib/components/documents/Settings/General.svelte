@@ -8,8 +8,10 @@
 		updateRAGTemplate
 	} from '$lib/apis/rag';
 	import { documents } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
 
@@ -27,7 +29,7 @@
 
 		if (res) {
 			await documents.set(await getDocs(localStorage.token));
-			toast.success('Scan complete!');
+			toast.success($i18n.t('Scan complete!'));
 		}
 	};
 
@@ -57,10 +59,12 @@
 >
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 		<div>
-			<div class=" mb-2 text-sm font-medium">General Settings</div>
+			<div class=" mb-2 text-sm font-medium">{$i18n.t('General Settings')}</div>
 
 			<div class="  flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Scan for documents from '/data/docs'</div>
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Scan for documents from {{path}}', { path: '/data/docs' })}
+				</div>
 
 				<button
 					class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded flex flex-row space-x-1 items-center {loading
@@ -73,7 +77,7 @@
 					type="button"
 					disabled={loading}
 				>
-					<div class="self-center font-medium">Scan</div>
+					<div class="self-center font-medium">{$i18n.t('Scan')}</div>
 
 					<!-- <svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -122,11 +126,11 @@
 		<hr class=" dark:border-gray-700" />
 
 		<div class=" ">
-			<div class=" text-sm font-medium">Chunk Params</div>
+			<div class=" text-sm font-medium">{$i18n.t('Chunk Params')}</div>
 
 			<div class=" flex">
 				<div class="  flex w-full justify-between">
-					<div class="self-center text-xs font-medium min-w-fit">Chunk Size</div>
+					<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('Chunk Size')}</div>
 
 					<div class="self-center p-3">
 						<input
@@ -141,7 +145,7 @@
 				</div>
 
 				<div class="flex w-full">
-					<div class=" self-center text-xs font-medium min-w-fit">Chunk Overlap</div>
+					<div class=" self-center text-xs font-medium min-w-fit">{$i18n.t('Chunk Overlap')}</div>
 
 					<div class="self-center p-3">
 						<input
@@ -157,7 +161,7 @@
 			</div>
 
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">RAG Template</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('RAG Template')}</div>
 				<textarea
 					bind:value={template}
 					class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"

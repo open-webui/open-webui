@@ -43,7 +43,7 @@
 		user = JSON.parse(JSON.stringify(model.name));
 		await tick();
 
-		chatInputPlaceholder = `'${model.name}' is thinking...`;
+		chatInputPlaceholder = $i18n.t('{{modelName}} is thinking...', { modelName: model.name });
 
 		const chatInputElement = document.getElementById('chat-textarea');
 
@@ -111,7 +111,7 @@
 					toast.error(error.error);
 				}
 			} else {
-				toast.error(`Uh-oh! There was an issue connecting to Ollama.`);
+				toast.error($i18n.t('Uh-oh! There was an issue connecting to llama.'));
 			}
 		}
 

@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
+
+	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
 
@@ -101,10 +103,10 @@
 >
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 		<div>
-			<div class=" mb-1 text-sm font-medium">STT Settings</div>
+			<div class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Speech-to-Text Engine</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
 				<div class="flex items-center relative">
 					<select
 						class="w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
@@ -119,14 +121,14 @@
 							}
 						}}
 					>
-						<option value="">Default (Web API)</option>
-						<option value="whisper-local">Whisper (Local)</option>
+						<option value="">{$i18n.t('Default (Web API)')}</option>
+						<option value="whisper-local">{$i18n.t('Whisper (Local)')}</option>
 					</select>
 				</div>
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Conversation Mode</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('Conversation Mode')}</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition"
@@ -136,15 +138,17 @@
 					type="button"
 				>
 					{#if conversationMode === true}
-						<span class="ml-2 self-center">On</span>
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
 					{:else}
-						<span class="ml-2 self-center">Off</span>
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 					{/if}
 				</button>
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Auto-send input after 3 sec.</div>
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Auto-send input after 3 sec.')}
+				</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition"
@@ -154,19 +158,19 @@
 					type="button"
 				>
 					{#if speechAutoSend === true}
-						<span class="ml-2 self-center">On</span>
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
 					{:else}
-						<span class="ml-2 self-center">Off</span>
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 					{/if}
 				</button>
 			</div>
 		</div>
 
 		<div>
-			<div class=" mb-1 text-sm font-medium">TTS Settings</div>
+			<div class=" mb-1 text-sm font-medium">{$i18n.t('TTS Settings')}</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Text-to-Speech Engine</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
 				<div class="flex items-center relative">
 					<select
 						class="w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
@@ -182,14 +186,14 @@
 							}
 						}}
 					>
-						<option value="">Default (Web API)</option>
-						<option value="openai">Open AI</option>
+						<option value="">{$i18n.t('Default (Web API)')}</option>
+						<option value="openai">{$i18n.t('Open AI')}</option>
 					</select>
 				</div>
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Auto-playback response</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('Auto-playback response')}</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition"
@@ -199,9 +203,9 @@
 					type="button"
 				>
 					{#if responseAutoPlayback === true}
-						<span class="ml-2 self-center">On</span>
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
 					{:else}
-						<span class="ml-2 self-center">Off</span>
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 					{/if}
 				</button>
 			</div>
@@ -211,7 +215,7 @@
 
 		{#if TTSEngine === ''}
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">Set Voice</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
@@ -230,7 +234,7 @@
 			</div>
 		{:else if TTSEngine === 'openai'}
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">Set Voice</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select

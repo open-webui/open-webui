@@ -7,8 +7,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { user, chats, settings, showSettings, chatId, tags } from '$lib/stores';
-	import { onMount } from 'svelte';
-	import { getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -201,7 +200,7 @@
 					</div>
 
 					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">Prompts</div>
+						<div class=" self-center font-medium text-sm">{$i18n.t('Prompts')}</div>
 					</div>
 				</a>
 			</div>
@@ -229,7 +228,7 @@
 					</div>
 
 					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">Documents</div>
+						<div class=" self-center font-medium text-sm">{$i18n.t('Documents')}</div>
 					</div>
 				</a>
 			</div>
@@ -239,7 +238,7 @@
 			{#if !($settings.saveChatHistory ?? true)}
 				<div class="absolute z-40 w-full h-full bg-black/90 flex justify-center">
 					<div class=" text-left px-5 py-2">
-						<div class=" font-medium">Chat History is off for this browser.</div>
+						<div class=" font-medium">{$i18n.t('Chat History is off for this browser.')}</div>
 						<div class="text-xs mt-2">
 							When history is turned off, new chats on this browser won't appear in your history on
 							any of your devices. <span class=" font-semibold"
@@ -596,7 +595,7 @@
 												/>
 											</svg>
 										</div>
-										<div class=" self-center font-medium">Admin Panel</div>
+										<div class=" self-center font-medium">{$i18n.t('Admin Panel')}</div>
 									</button>
 								{/if}
 
@@ -628,7 +627,7 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center font-medium">Settings</div>
+									<div class=" self-center font-medium">{$i18n.t('Settings')}</div>
 								</button>
 							</div>
 
@@ -662,7 +661,7 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center font-medium">Sign Out</div>
+									<div class=" self-center font-medium">{$i18n.t('Sign Out')}</div>
 								</button>
 							</div>
 						</div>

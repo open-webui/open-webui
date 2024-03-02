@@ -2,7 +2,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 
@@ -10,6 +10,8 @@
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
 	import SettingsModal from '$lib/components/admin/SettingsModal.svelte';
+
+	const i18n = getContext('i18n');
 
 	let loaded = false;
 	let users = [];
@@ -37,7 +39,7 @@
 		});
 		if (res) {
 			users = await getUsers(localStorage.token);
-			toast.success('Successfully updated');
+			toast.success($i18n.t('Successfully updated'));
 		}
 	};
 
@@ -115,7 +117,7 @@
 										/>
 									</svg>
 
-									<div class=" text-xs">Admin Settings</div>
+									<div class=" text-xs">{$i18n.t('Admin Settings')}</div>
 								</button>
 							</div>
 						</div>
@@ -131,10 +133,10 @@
 									class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
 								>
 									<tr>
-										<th scope="col" class="px-3 py-2"> Role </th>
-										<th scope="col" class="px-3 py-2"> Name </th>
-										<th scope="col" class="px-3 py-2"> Email </th>
-										<th scope="col" class="px-3 py-2"> Action </th>
+										<th scope="col" class="px-3 py-2"> {$i18n.t('Role')} </th>
+										<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
+										<th scope="col" class="px-3 py-2"> {$i18n.t('Email')} </th>
+										<th scope="col" class="px-3 py-2"> {$i18n.t('Action')} </th>
 									</tr>
 								</thead>
 								<tbody>

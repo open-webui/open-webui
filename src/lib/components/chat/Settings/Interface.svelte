@@ -96,11 +96,11 @@
 >
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-80">
 		<div>
-			<div class=" mb-1 text-sm font-medium">WebUI Add-ons</div>
+			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Add-ons')}</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">Title Auto-Generation</div>
+					<div class=" self-center text-xs font-medium">{$i18n.t('Title Auto-Generation')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -110,9 +110,9 @@
 						type="button"
 					>
 						{#if titleAutoGenerate === true}
-							<span class="ml-2 self-center">On</span>
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
-							<span class="ml-2 self-center">Off</span>
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
@@ -120,7 +120,7 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">Response AutoCopy to Clipboard</div>
+					<div class=" self-center text-xs font-medium">{$i18n.t('Response AutoCopy to Clipboard')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -130,9 +130,9 @@
 						type="button"
 					>
 						{#if responseAutoCopy === true}
-							<span class="ml-2 self-center">On</span>
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
-							<span class="ml-2 self-center">Off</span>
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
@@ -140,7 +140,7 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">Full Screen Mode</div>
+					<div class=" self-center text-xs font-medium">{$i18n.t('Full Screen Mode')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -150,9 +150,9 @@
 						type="button"
 					>
 						{#if fullScreenMode === true}
-							<span class="ml-2 self-center">On</span>
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
-							<span class="ml-2 self-center">Off</span>
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
@@ -172,9 +172,9 @@
 						type="button"
 					>
 						{#if showUsername === true}
-							<span class="ml-2 self-center">On</span>
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
-							<span class="ml-2 self-center">Off</span>
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
@@ -184,7 +184,7 @@
 		<hr class=" dark:border-gray-700" />
 
 		<div>
-			<div class=" mb-2.5 text-sm font-medium">Set Title Auto-Generation Model</div>
+			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Title Auto-Generation Model')}</div>
 			<div class="flex w-full">
 				<div class="flex-1 mr-2">
 					<select
@@ -227,7 +227,7 @@
 				</button>
 			</div>
 			<div class="mt-3">
-				<div class=" mb-2.5 text-sm font-medium">Title Generation Prompt</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Title Generation Prompt')}</div>
 				<textarea
 					bind:value={titleGenerationPrompt}
 					class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
@@ -241,7 +241,7 @@
 
 			<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 				<div class="flex w-full justify-between mb-2">
-					<div class=" self-center text-sm font-semibold">Default Prompt Suggestions</div>
+					<div class=" self-center text-sm font-semibold">{$i18n.t('Default Prompt Suggestions')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"

@@ -78,7 +78,7 @@
 				if (!data.success) {
 					toast.error(data.error);
 				} else {
-					toast.success(`Model '${modelName}' has been successfully downloaded.`);
+					toast.success($i18n.t(`Model '${modelName}' has been successfully downloaded.`));
 
 					const notification = new Notification($WEBUI_NAME, {
 						body: `Model '${modelName}' has been successfully downloaded.`,
@@ -243,7 +243,7 @@
 		});
 
 		if (res) {
-			toast.success(`Deleted ${deleteModelTag}`);
+			toast.success($i18n.t(`Deleted ${deleteModelTag}`));
 		}
 
 		deleteModelTag = '';
@@ -372,7 +372,7 @@
 				<div>
 					<div class=" mb-2 text-sm font-medium">Manage Ollama Models</div>
 
-					<div class=" mb-2 text-sm font-medium">Pull a model from Ollama.com</div>
+					<div class=" mb-2 text-sm font-medium">{$i18n.t('Pull a model from Ollama.com')}</div>
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
 							<input
@@ -436,7 +436,7 @@
 						To access the available model names for downloading, <a
 							class=" text-gray-500 dark:text-gray-300 font-medium underline"
 							href="https://ollama.com/library"
-							target="_blank">click here.</a
+							target="_blank">{$i18n.t('click here.')}</a
 						>
 					</div>
 
@@ -461,7 +461,7 @@
 				</div>
 
 				<div>
-					<div class=" mb-2 text-sm font-medium">Delete a model</div>
+					<div class=" mb-2 text-sm font-medium">{$i18n.t('Delete a model')}</div>
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
 							<select
@@ -503,7 +503,7 @@
 
 				<div>
 					<div class="flex justify-between items-center text-xs">
-						<div class=" text-sm font-medium">Experimental</div>
+						<div class=" text-sm font-medium">{$i18n.t('Experimental')}</div>
 						<button
 							class=" text-xs font-medium text-gray-500"
 							type="button"
@@ -521,7 +521,7 @@
 						}}
 					>
 						<div class=" mb-2 flex w-full justify-between">
-							<div class="  text-sm font-medium">Upload a GGUF model</div>
+							<div class="  text-sm font-medium">{$i18n.t('Upload a GGUF model')}</div>
 
 							<button
 								class="p-1 px-3 text-xs flex rounded transition"
@@ -535,9 +535,9 @@
 								type="button"
 							>
 								{#if modelUploadMode === 'file'}
-									<span class="ml-2 self-center">File Mode</span>
+									<span class="ml-2 self-center">{$i18n.t('File Mode')}</span>
 								{:else}
-									<span class="ml-2 self-center">URL Mode</span>
+									<span class="ml-2 self-center">{$i18n.t('URL Mode')}</span>
 								{/if}
 							</button>
 						</div>
@@ -642,7 +642,7 @@
 						{#if (modelUploadMode === 'file' && modelInputFile && modelInputFile.length > 0) || (modelUploadMode === 'url' && modelFileUrl !== '')}
 							<div>
 								<div>
-									<div class=" my-2.5 text-sm font-medium">Modelfile Content</div>
+									<div class=" my-2.5 text-sm font-medium">{$i18n.t('Modelfile Content')}</div>
 									<textarea
 										bind:value={modelFileContent}
 										class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
@@ -655,13 +655,13 @@
 							To access the GGUF models available for downloading, <a
 								class=" text-gray-500 dark:text-gray-300 font-medium underline"
 								href="https://huggingface.co/models?search=gguf"
-								target="_blank">click here.</a
+								target="_blank">{$i18n.t('click here.')}</a
 							>
 						</div>
 
 						{#if uploadProgress !== null}
 							<div class="mt-2">
-								<div class=" mb-2 text-xs">Upload Progress</div>
+								<div class=" mb-2 text-xs">{$i18n.t('Upload Progress')}</div>
 
 								<div class="w-full rounded-full dark:bg-gray-800">
 									<div
@@ -685,11 +685,11 @@
 		<div class=" space-y-3">
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div>
-					<div class=" mb-2 text-sm font-medium">Manage LiteLLM Models</div>
+					<div class=" mb-2 text-sm font-medium">{$i18n.t('Manage LiteLLM Models')}</div>
 
 					<div>
 						<div class="flex justify-between items-center text-xs">
-							<div class=" text-sm font-medium">Add a model</div>
+							<div class=" text-sm font-medium">{$i18n.t('Add a model')}</div>
 							<button
 								class=" text-xs font-medium text-gray-500"
 								type="button"
@@ -732,7 +732,7 @@
 
 						{#if showLiteLLMParams}
 							<div>
-								<div class=" mb-1.5 text-sm font-medium">Model Name</div>
+								<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Model Name')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
@@ -746,7 +746,7 @@
 							</div>
 
 							<div>
-								<div class=" mb-1.5 text-sm font-medium">API Base URL</div>
+								<div class=" mb-1.5 text-sm font-medium">{$i18n.t('API Base URL')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
@@ -760,7 +760,7 @@
 							</div>
 
 							<div>
-								<div class=" mb-1.5 text-sm font-medium">API Key</div>
+								<div class=" mb-1.5 text-sm font-medium">{$i18n.t('API Key')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
@@ -774,7 +774,7 @@
 							</div>
 
 							<div>
-								<div class="mb-1.5 text-sm font-medium">API RPM</div>
+								<div class="mb-1.5 text-sm font-medium">{$i18n.t('API RPM')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
@@ -801,7 +801,7 @@
 					</div>
 
 					<div>
-						<div class=" mb-2.5 text-sm font-medium">Delete a model</div>
+						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Delete a model')}</div>
 						<div class="flex w-full">
 							<div class="flex-1 mr-2">
 								<select
@@ -810,8 +810,7 @@
 									placeholder={$i18n.t('Select a model')}
 								>
 									{#if !deleteLiteLLMModelId}
-										<option value="" disabled selected>{$i18n.t('Select a model')}</option
-										>
+										<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 									{/if}
 									{#each liteLLMModelInfo as model}
 										<option value={model.model_info.id} class="bg-gray-100 dark:bg-gray-700"
@@ -846,7 +845,7 @@
 
 			<!-- <div class="mt-2 space-y-3 pr-1.5">
 				<div>
-					<div class=" mb-2.5 text-sm font-medium">Add LiteLLM Model</div>
+					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Add LiteLLM Model')}</div>
 					<div class="flex w-full mb-2">
 						<div class="flex-1">
 							<input
@@ -859,7 +858,7 @@
 					</div>
 
 					<div class="flex justify-between items-center text-sm">
-						<div class="  font-medium">Advanced Model Params</div>
+						<div class="  font-medium">{$i18n.t('Advanced Model Params')}</div>
 						<button
 							class=" text-xs font-medium text-gray-500"
 							type="button"
@@ -871,7 +870,7 @@
 
 					{#if showLiteLLMParams}
 						<div>
-							<div class=" mb-2.5 text-sm font-medium">LiteLLM API Key</div>
+							<div class=" mb-2.5 text-sm font-medium">{$i18n.t('LiteLLM API Key')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
@@ -885,7 +884,7 @@
 						</div>
 
 						<div>
-							<div class=" mb-2.5 text-sm font-medium">LiteLLM API Base URL</div>
+							<div class=" mb-2.5 text-sm font-medium">{$i18n.t('LiteLLM API Base URL')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
@@ -899,7 +898,7 @@
 						</div>
 
 						<div>
-							<div class=" mb-2.5 text-sm font-medium">LiteLLM API RPM</div>
+							<div class=" mb-2.5 text-sm font-medium">{$i18n.t('LiteLLM API RPM')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input

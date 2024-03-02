@@ -58,7 +58,7 @@
 			await getModels();
 
 			if (models) {
-				toast.success('Server connection verified');
+				toast.success($i18n.t('Server connection verified'));
 			}
 		} else {
 			AUTOMATIC1111_BASE_URL = await getAUTOMATIC1111Url(localStorage.token);
@@ -117,11 +117,13 @@
 >
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[20.5rem]">
 		<div>
-			<div class=" mb-1 text-sm font-medium">Image Settings</div>
+			<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">Image Generation (Experimental)</div>
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Image Generation (Experimental)')}
+					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -131,9 +133,9 @@
 						type="button"
 					>
 						{#if enableImageGeneration === true}
-							<span class="ml-2 self-center">On</span>
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
-							<span class="ml-2 self-center">Off</span>
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
@@ -141,7 +143,7 @@
 		</div>
 		<hr class=" dark:border-gray-700" />
 
-		<div class=" mb-2.5 text-sm font-medium">AUTOMATIC1111 Base URL</div>
+		<div class=" mb-2.5 text-sm font-medium">{$i18n.t('AUTOMATIC1111 Base URL')}</div>
 		<div class="flex w-full">
 			<div class="flex-1 mr-2">
 				<input
@@ -189,7 +191,7 @@
 			<hr class=" dark:border-gray-700" />
 
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">Set Default Model</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Default Model')}</div>
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<select
@@ -211,7 +213,7 @@
 			</div>
 
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">Set Image Size</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Image Size')}</div>
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<input
@@ -224,7 +226,7 @@
 			</div>
 
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">Set Steps</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Steps')}</div>
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<input

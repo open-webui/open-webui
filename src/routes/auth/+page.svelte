@@ -3,8 +3,10 @@
 	import { userSignIn, userSignUp } from '$lib/apis/auths';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	let loaded = false;
 	let mode = 'signin';
@@ -16,7 +18,7 @@
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
-			toast.success(`You're now logged in.`);
+			toast.success($i18n.t(`You're now logged in.`));
 			localStorage.token = sessionUser.token;
 			await user.set(sessionUser);
 			goto('/');
@@ -109,7 +111,7 @@
 					<div class="flex flex-col mt-4">
 						{#if mode === 'signup'}
 							<div>
-								<div class=" text-sm font-semibold text-left mb-1">Name</div>
+								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Name')}</div>
 								<input
 									bind:value={name}
 									type="text"
@@ -124,7 +126,7 @@
 						{/if}
 
 						<div class="mb-2">
-							<div class=" text-sm font-semibold text-left mb-1">Email</div>
+							<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Email')}</div>
 							<input
 								bind:value={email}
 								type="email"
@@ -136,7 +138,7 @@
 						</div>
 
 						<div>
-							<div class=" text-sm font-semibold text-left mb-1">Password</div>
+							<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
 							<input
 								bind:value={password}
 								type="password"
