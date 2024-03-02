@@ -120,7 +120,9 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Response AutoCopy to Clipboard')}</div>
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Response AutoCopy to Clipboard')}
+					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -190,7 +192,7 @@
 					<select
 						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
 						bind:value={titleAutoGenerateModel}
-						placeholder={$i18n.t('Select a Model')}
+						placeholder={$i18n.t('Select a model')}
 					>
 						<option value="" selected>Current Model</option>
 						{#each $models as model}
@@ -241,7 +243,9 @@
 
 			<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 				<div class="flex w-full justify-between mb-2">
-					<div class=" self-center text-sm font-semibold">{$i18n.t('Default Prompt Suggestions')}</div>
+					<div class=" self-center text-sm font-semibold">
+						{$i18n.t('Default Prompt Suggestions')}
+					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
