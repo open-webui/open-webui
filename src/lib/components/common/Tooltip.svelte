@@ -10,18 +10,19 @@
 
 	$: if (tooltipElement && content) {
 		if (tooltipInstance) {
-			tooltipInstance[0]?.destroy();
+			tooltipInstance.setContent(content);
+		} else {
+			tooltipInstance = tippy(tooltipElement, {
+				content: content,
+				placement: placement,
+				allowHTML: true
+			});
 		}
-		tooltipInstance = tippy(tooltipElement, {
-			content: content,
-			placement: placement,
-			allowHTML: true
-		});
 	}
 
 	onDestroy(() => {
 		if (tooltipInstance) {
-			tooltipInstance[0]?.destroy();
+			tooltipInstance.destroy();
 		}
 	});
 </script>
