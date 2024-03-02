@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.107] - 2024-03-01
+
+### Added
+
+- **🚀 Makefile and LLM Update Script**: Included Makefile and a script for LLM updates in the repository.
+
+### Fixed
+
+- Corrected issue where links in the settings modal didn't appear clickable (#960).
+- Fixed problem with web UI port not taking effect due to incorrect environment variable name in run-compose.sh (#996).
+- Enhanced user experience by displaying chat in browser title and enabling automatic scrolling to the bottom (#992).
+
+### Changed
+
+- Upgraded toast library from `svelte-french-toast` to `svelte-sonner` for a more polished UI.
+- Enhanced accessibility with the addition of dark mode on the authentication page.
+
 ## [0.1.106] - 2024-02-27
 
 ### Added

@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { config, user, theme, WEBUI_NAME } from '$lib/stores';
 	import { goto } from '$app/navigation';
-	import toast, { Toaster } from 'svelte-french-toast';
+	import { Toaster, toast } from 'svelte-sonner';
 
 	import { getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
@@ -68,4 +68,4 @@
 	<slot />
 {/if}
 
-<Toaster />
+<Toaster richColors position="top-center" />

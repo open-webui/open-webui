@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -14,6 +14,7 @@
 		chats,
 		chatId,
 		config,
+		WEBUI_NAME,
 		tags as _tags
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream, convertMessagesToHistory } from '$lib/utils';
@@ -100,6 +101,7 @@
 				await tick();
 				loaded = true;
 
+				window.setTimeout(() => scrollToBottom(), 0);
 				const chatInput = document.getElementById('chat-textarea');
 				chatInput?.focus();
 			} else {
@@ -822,6 +824,14 @@
 		}
 	});
 </script>
+
+<svelte:head>
+	<title>
+		{title
+			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} | ${$WEBUI_NAME}`
+			: `${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
 
 {#if loaded}
 	<div class="min-h-screen max-h-screen w-full flex flex-col">

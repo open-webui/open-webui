@@ -1,11 +1,11 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
 	import { onMount } from 'svelte';
 
-	import { modelfiles, settings, user } from '$lib/stores';
+	import { WEBUI_NAME, modelfiles, settings, user } from '$lib/stores';
 	import { createModel, deleteModel } from '$lib/apis/ollama';
 	import {
 		createNewModelfile,
@@ -68,6 +68,12 @@
 		}
 	});
 </script>
+
+<svelte:head>
+	<title>
+		{`Modelfiles | ${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
 
 <div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
 	<div class="flex flex-col justify-between w-full overflow-y-auto">

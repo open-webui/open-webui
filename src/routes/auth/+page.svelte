@@ -4,7 +4,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { onMount } from 'svelte';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	let loaded = false;
 	let mode = 'signin';
@@ -57,6 +57,12 @@
 	});
 </script>
 
+<svelte:head>
+	<title>
+		{`${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
+
 {#if loaded}
 	<div class="fixed m-10 z-50">
 		<div class="flex space-x-2">
@@ -66,7 +72,7 @@
 		</div>
 	</div>
 
-	<div class=" bg-white min-h-screen w-full flex justify-center font-mona">
+	<div class=" bg-white dark:bg-gray-900 min-h-screen w-full flex justify-center font-mona">
 		<!-- <div class="hidden lg:flex lg:flex-1 px-10 md:px-16 w-full bg-yellow-50 justify-center">
 			<div class=" my-auto pb-16 text-left">
 				<div>
@@ -81,15 +87,15 @@
 			</div>
 		</div> -->
 
-		<div class="w-full max-w-lg px-10 md:px-16 bg-white min-h-screen flex flex-col">
+		<div class="w-full sm:max-w-lg px-4 min-h-screen flex flex-col">
 			<div class=" my-auto pb-10 w-full">
 				<form
-					class=" flex flex-col justify-center"
+					class=" flex flex-col justify-center bg-white py-6 sm:py-16 px-6 sm:px-16 rounded-2xl"
 					on:submit|preventDefault={() => {
 						submitHandler();
 					}}
 				>
-					<div class=" text-xl md:text-2xl font-bold">
+					<div class=" text-xl sm:text-2xl font-bold">
 						{mode === 'signin' ? 'Sign in' : 'Sign up'} to {$WEBUI_NAME}
 					</div>
 

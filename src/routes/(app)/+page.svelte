@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -14,6 +14,7 @@
 		chats,
 		chatId,
 		config,
+		WEBUI_NAME,
 		tags as _tags
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
@@ -38,7 +39,6 @@
 	import { RAGTemplate } from '$lib/utils/rag';
 	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
@@ -808,6 +808,14 @@
 		}
 	};
 </script>
+
+<svelte:head>
+	<title>
+		{title
+			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} | ${$WEBUI_NAME}`
+			: `${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
 
 <div class="h-screen max-h-[100dvh] w-full flex flex-col">
 	<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />

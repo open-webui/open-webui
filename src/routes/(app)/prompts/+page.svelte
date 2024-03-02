@@ -1,10 +1,10 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
 	import { onMount } from 'svelte';
-	import { prompts } from '$lib/stores';
+	import { WEBUI_NAME, prompts } from '$lib/stores';
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 	import { error } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
@@ -35,6 +35,12 @@
 		await prompts.set(await getPrompts(localStorage.token));
 	};
 </script>
+
+<svelte:head>
+	<title>
+		{`Prompts | ${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
 
 <div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
 	<div class="flex flex-col justify-between w-full overflow-y-auto">

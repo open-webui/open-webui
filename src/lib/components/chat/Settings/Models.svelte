@@ -1,6 +1,6 @@
 <script lang="ts">
 	import queue from 'async/queue';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	import { createModel, deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -432,7 +432,7 @@
 
 					<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
 						To access the available model names for downloading, <a
-							class=" text-gray-500 dark:text-gray-300 font-medium"
+							class=" text-gray-500 dark:text-gray-300 font-medium underline"
 							href="https://ollama.com/library"
 							target="_blank">click here.</a
 						>
@@ -651,7 +651,7 @@
 						{/if}
 						<div class=" mt-1 text-xs text-gray-400 dark:text-gray-500">
 							To access the GGUF models available for downloading, <a
-								class=" text-gray-500 dark:text-gray-300 font-medium"
+								class=" text-gray-500 dark:text-gray-300 font-medium underline"
 								href="https://huggingface.co/models?search=gguf"
 								target="_blank">click here.</a
 							>
@@ -790,7 +790,7 @@
 					<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
 						Not sure what to add?
 						<a
-							class=" text-gray-300 font-medium"
+							class=" text-gray-300 font-medium underline"
 							href="https://litellm.vercel.app/docs/proxy/configs#quick-start"
 							target="_blank"
 						>
@@ -913,7 +913,7 @@
 					<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 						Not sure what to add?
 						<a
-							class=" text-gray-300 font-medium"
+							class=" text-gray-300 font-medium underline"
 							href="https://litellm.vercel.app/docs/proxy/configs#quick-start"
 							target="_blank"
 						>
