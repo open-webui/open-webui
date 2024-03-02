@@ -4,7 +4,7 @@
 	import { chats, config, modelfiles, settings, user } from '$lib/stores';
 	import { tick } from 'svelte';
 
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
 
 	import UserMessage from './Messages/UserMessage.svelte';

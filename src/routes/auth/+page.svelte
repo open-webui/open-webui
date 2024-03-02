@@ -4,7 +4,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { onMount } from 'svelte';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	let loaded = false;
 	let mode = 'signin';

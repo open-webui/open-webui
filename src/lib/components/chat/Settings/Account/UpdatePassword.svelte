@@ -1,5 +1,5 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import { updateUserPassword } from '$lib/apis/auths';
 
 	let show = false;

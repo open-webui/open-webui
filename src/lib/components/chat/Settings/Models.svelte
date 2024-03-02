@@ -1,6 +1,6 @@
 <script lang="ts">
 	import queue from 'async/queue';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	import { createModel, deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';

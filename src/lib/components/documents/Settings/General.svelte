@@ -9,7 +9,7 @@
 	} from '$lib/apis/rag';
 	import { documents } from '$lib/stores';
 	import { onMount } from 'svelte';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	export let saveHandler: Function;
 

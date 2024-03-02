@@ -1,5 +1,5 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
 
 	import { user } from '$lib/stores';

@@ -4,7 +4,7 @@
 	import { documents } from '$lib/stores';
 	import { removeFirstHashWord, isValidHttpUrl } from '$lib/utils';
 	import { tick } from 'svelte';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	export let prompt = '';
 
