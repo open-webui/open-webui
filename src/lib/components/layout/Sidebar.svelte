@@ -19,6 +19,7 @@
 	import { toast } from 'svelte-sonner';
 	import { slide } from 'svelte/transition';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import Tooltip from '../common/Tooltip.svelte';
 
 	let show = false;
 	let navElement;
@@ -670,30 +671,32 @@
 	<div
 		class="fixed left-0 top-[50dvh] z-40 -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
 	>
-		<button
-			id="sidebar-toggle-button"
-			class=" group"
-			on:click={() => {
-				show = !show;
-			}}
-			><span class="" data-state="closed"
-				><div
-					class="flex h-[72px] w-8 items-center justify-center opacity-20 group-hover:opacity-100 transition"
-				>
-					<div class="flex h-6 w-6 flex-col items-center">
-						<div
-							class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {show
-								? 'group-hover:rotate-[15deg]'
-								: 'group-hover:rotate-[-15deg]'}"
-						/>
-						<div
-							class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {show
-								? 'group-hover:rotate-[-15deg]'
-								: 'group-hover:rotate-[15deg]'}"
-						/>
+		<Tooltip placement="right" content={`${show ? 'Close' : 'Open'} sidebar`}>
+			<button
+				id="sidebar-toggle-button"
+				class=" group"
+				on:click={() => {
+					show = !show;
+				}}
+				><span class="" data-state="closed"
+					><div
+						class="flex h-[72px] w-8 items-center justify-center opacity-20 group-hover:opacity-100 transition"
+					>
+						<div class="flex h-6 w-6 flex-col items-center">
+							<div
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {show
+									? 'group-hover:rotate-[15deg]'
+									: 'group-hover:rotate-[-15deg]'}"
+							/>
+							<div
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {show
+									? 'group-hover:rotate-[-15deg]'
+									: 'group-hover:rotate-[15deg]'}"
+							/>
+						</div>
 					</div>
-				</div>
-			</span>
-		</button>
+				</span>
+			</button>
+		</Tooltip>
 	</div>
 </div>
