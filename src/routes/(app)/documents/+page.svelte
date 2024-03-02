@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount } from 'svelte';
-	import { documents } from '$lib/stores';
+	import { WEBUI_NAME, documents } from '$lib/stores';
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
@@ -147,6 +147,12 @@
 			(query === '' || doc.name.includes(query))
 	);
 </script>
+
+<svelte:head>
+	<title>
+		{`Documents | ${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
 
 {#if dragged}
 	<div

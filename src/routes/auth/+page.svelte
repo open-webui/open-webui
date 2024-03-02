@@ -57,6 +57,12 @@
 	});
 </script>
 
+<svelte:head>
+	<title>
+		{`${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
+
 {#if loaded}
 	<div class="fixed m-10 z-50">
 		<div class="flex space-x-2">

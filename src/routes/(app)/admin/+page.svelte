@@ -1,6 +1,6 @@
 <script>
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { config, user } from '$lib/stores';
+	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
@@ -60,6 +60,12 @@
 		loaded = true;
 	});
 </script>
+
+<svelte:head>
+	<title>
+		{`Admin Panel | ${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
 
 {#key selectedUser}
 	<EditUserModal
