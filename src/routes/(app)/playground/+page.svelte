@@ -8,7 +8,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, models } from '$lib/stores';
 
-	import { cancelChatCompletion, generateTextCompletion } from '$lib/apis/ollama';
+	import { cancelChatCompletion, generateChatCompletion } from '$lib/apis/ollama';
 	import { splitStream } from '$lib/utils';
 
 	let mode = 'complete';
@@ -44,7 +44,15 @@
 		if (selectedModel) {
 			loading = true;
 
-			const res = await generateTextCompletion(localStorage.token, selectedModel, text);
+			const [res, controller] = await generateChatCompletion(localStorage.token, {
+				model: selectedModel,
+				messages: [
+					{
+						role: 'assistant',
+						content: text
+					}
+				]
+			});
 
 			if (res && res.ok) {
 				const reader = res.body
@@ -80,7 +88,7 @@
 									currentRequestId = data.id;
 								} else {
 									if (data.done == false) {
-										text += data.response;
+										text += data.message.content;
 									} else {
 										console.log('done');
 									}
