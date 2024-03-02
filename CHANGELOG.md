@@ -19,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Migrated from svelte-toast to svelte-sonner for improved functionality.
+- Upgraded toast library from `svelte-french-toast` to `svelte-sonner` for a more polished UI.
+- Enhanced accessibility with the addition of dark mode on the authentication page.
 
 ## [0.1.106] - 2024-02-27
 
