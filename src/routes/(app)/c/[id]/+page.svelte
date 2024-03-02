@@ -72,7 +72,6 @@
 	let tags = [];
 
 	let title = '';
-	let pageTitle = WEBUI_NAME;
 	let prompt = '';
 	let files = [];
 
@@ -81,13 +80,6 @@
 		messages: {},
 		currentId: null
 	};
-
-	$: if (title) {
-		const trimmedTitle = title.length > 30 ? `${title.slice(0, 30)}...` : title;
-		pageTitle = `${trimmedTitle} | ${$WEBUI_NAME}`;
-	} else {
-		pageTitle = $WEBUI_NAME;
-	}
 
 	$: if (history.currentId !== null) {
 		let _messages = [];
@@ -834,7 +826,11 @@
 </script>
 
 <svelte:head>
-	<title>{pageTitle}</title>
+	<title>
+		{title
+			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} | ${$WEBUI_NAME}`
+			: `${$WEBUI_NAME}`}
+	</title>
 </svelte:head>
 
 {#if loaded}
