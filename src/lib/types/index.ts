@@ -1,15 +1,11 @@
+export type { Chat, ChatHistory, ChatOptions, Conversation, Message } from './Chat';
 export type { Config } from './Config';
 export type { Document, DocumentContent, DocumentContentTag } from './Document';
-export { type Model } from './Model';
-export {
-	TTSEngines,
-	Voices,
-	type AudioSettings,
-	type Options,
-	type Settings,
-	type TTSEngine,
-	type Voice
-} from './Settings';
+export type { Model } from './Model';
+export type { Prompt } from './Prompt';
+export { TTSEngines, Voices } from './Settings';
+export type { AudioSettings, Options, Settings, TTSEngine, Voice } from './Settings';
+export type { Tag } from './Tag';
 export { Themes, type Theme } from './Theme';
 export { UserRoles, type User, type UserRole } from './User';
-
+export type { Modelfile } from './Modelfile';
