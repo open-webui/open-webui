@@ -217,6 +217,32 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 	return res;
 };
 
+export const generateTextCompletion = async (token: string = '', model: string, text: string) => {
+	let error = null;
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/generate`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'text/event-stream',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			prompt: text,
+			stream: true
+		})
+	}).catch((err) => {
+		error = err;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const generateChatCompletion = async (token: string = '', body: object) => {
 	let controller = new AbortController();
 	let error = null;

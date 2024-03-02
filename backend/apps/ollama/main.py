@@ -91,7 +91,13 @@ async def proxy(path: str, request: Request, user=Depends(get_current_user)):
 
             def stream_content():
                 try:
-                    if path in ["chat"]:
+                    if path == "generate":
+                        data = json.loads(body.decode("utf-8"))
+
+                        if not ("stream" in data and data["stream"] == False):
+                            yield json.dumps({"id": request_id, "done": False}) + "\n"
+
+                    elif path == "chat":
                         yield json.dumps({"id": request_id, "done": False}) + "\n"
 
                     for chunk in r.iter_content(chunk_size=8192):
@@ -103,7 +109,8 @@ async def proxy(path: str, request: Request, user=Depends(get_current_user)):
                 finally:
                     if hasattr(r, "close"):
                         r.close()
-                        REQUEST_POOL.remove(request_id)
+                        if request_id in REQUEST_POOL:
+                            REQUEST_POOL.remove(request_id)
 
             r = requests.request(
                 method=request.method,
