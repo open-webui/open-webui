@@ -271,6 +271,16 @@ async def delete_all_chat_tags_by_id(id: str, user=Depends(get_current_user)):
 
 
 @router.delete("/", response_model=bool)
-async def delete_all_user_chats(user=Depends(get_current_user)):
+async def delete_all_user_chats(request: Request, user=Depends(get_current_user)):
+
+    if (
+        user.role == "user"
+        and not request.app.state.USER_PERMISSIONS["chat"]["deletion"]
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     result = Chats.delete_chats_by_user_id(user.id)
     return result

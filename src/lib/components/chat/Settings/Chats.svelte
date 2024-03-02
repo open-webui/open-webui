@@ -75,7 +75,9 @@
 
 	const deleteChats = async () => {
 		await goto('/');
-		await deleteAllChats(localStorage.token);
+		await deleteAllChats(localStorage.token).catch((error) => {
+			toast.error(error);
+		});
 		await chats.set(await getChatList(localStorage.token));
 	};
 
