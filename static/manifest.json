@@ -1,6 +1,6 @@
 {
-	"name": "Open WebUI",
-	"short_name": "Open WebUI",
+	"name": "EDI 837 ClaimFlow Assistant Chatbot",
+	"short_name": "EDI 837 ClaimFlow Assistant Chatbot",
 	"start_url": "/",
 	"display": "standalone",
 	"background_color": "#343541",

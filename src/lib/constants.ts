@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 // import { version } from '../../package.json';
 
-export const APP_NAME = 'Open WebUI';
+export const APP_NAME = 'EDI 837 ClaimFlow Assistant Chatbot';
 export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
 
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;

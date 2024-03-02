@@ -25,7 +25,7 @@ try:
 except ImportError:
     log.warning("dotenv not installed, skipping...")
 
-WEBUI_NAME = "Open WebUI"
+WEBUI_NAME = "EDI 837 ClaimFlow Assistant Chatbot"
 shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################

@@ -2,7 +2,9 @@
 	"name": "open-webui",
 	"version": "0.1.115",
 	"private": true,
+	"main": "main.cjs",
 	"scripts": {
+		"start": "electron main.cjs",
 		"dev": "vite dev --host",
 		"build": "vite build",
 		"preview": "vite preview",
@@ -25,6 +27,7 @@
 		"@typescript-eslint/eslint-plugin": "^6.17.0",
 		"@typescript-eslint/parser": "^6.17.0",
 		"autoprefixer": "^10.4.16",
+		"electron": "^29.1.0",
 		"eslint": "^8.56.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-plugin-svelte": "^2.30.0",
