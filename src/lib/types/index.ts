@@ -1,5 +1,5 @@
 export type { Config } from './Config';
-export type { Document } from './Document';
+export type { Document, DocumentContent, DocumentContentTag } from './Document';
 export { type Model } from './Model';
 export {
 	TTSEngines,
