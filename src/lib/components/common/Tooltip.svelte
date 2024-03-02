@@ -4,6 +4,7 @@
 
 	export let placement = 'top';
 	export let content = `I'm a tooltip!`;
+	export let touch = true;
 
 	let tooltipElement;
 	let tooltipInstance;
@@ -15,7 +16,8 @@
 			tooltipInstance = tippy(tooltipElement, {
 				content: content,
 				placement: placement,
-				allowHTML: true
+				allowHTML: true,
+				touch: touch
 			});
 		}
 	}
