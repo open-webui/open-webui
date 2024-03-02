@@ -36,7 +36,7 @@ ol > li {
 	min-height: 28px;
 }
 
-ol > li::before {
+.prose ol > li::before {
 	content: counters(list-number, '.') '.';
 	padding-right: 0.5rem;
 	color: var(--tw-prose-counters);
