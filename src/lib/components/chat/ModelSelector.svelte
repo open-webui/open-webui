@@ -42,7 +42,7 @@
 				{disabled}
 			>
 				<option class=" text-gray-700" value="" selected disabled
-					>{$i18n.t('ModelSelectorPlaceholder')}</option
+					>{$i18n.t('Select a model')}</option
 				>
 
 				{#each $models as model}
@@ -137,5 +137,5 @@
 </div>
 
 <div class="text-left mt-1.5 text-xs text-gray-500">
-	<button on:click={saveDefaultModel}> {$i18n.t('SetAsDefault')}</button>
+	<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 </div>

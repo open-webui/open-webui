@@ -1,10 +1,10 @@
 {
-	"NewChat": "چت جدید",
+	"New Chat": "چت جدید",
 	"Modelfiles": "فایل‌های مدل",
-	"GreetingPlaceholder": "امروز چطور می توانم کمک تان کنم؟",
-	"Hello": "سلام، {{name}}",
-	"ChatInputPlaceholderListening": "در حال گوش دادن...",
-	"ChatInputPlaceholder": "یک پیام ارسال کنید",
-	"ModelSelectorPlaceholder": "یک مدل انتخاب کنید",
-	"SetAsDefault": "تنظیم به عنوان پیشفرض"
+	"How can I help you today?": "امروز چطور می توانم کمک تان کنم؟",
+	"Hello, {{name}}": "سلام، {{name}}",
+	"Listening...": "در حال گوش دادن...",
+	"Send a Message": "یک پیام ارسال کنید",
+	"Select a model": "یک مدل انتخاب کنید",
+	"Set as default": "تنظیم به عنوان پیشفرض"
 }

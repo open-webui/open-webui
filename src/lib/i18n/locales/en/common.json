@@ -1,10 +1,10 @@
 {
-	"NewChat": "New Chat",
+	"New Chat": "New Chat",
 	"Modelfiles": "Modelfiles",
-	"GreetingPlaceholder": "How can I help you today?",
-	"Hello": "Hello, {{name}}",
-	"ChatInputPlaceholderListening": "Listening...",
-	"ChatInputPlaceholder": "Send a Message",
-	"ModelSelectorPlaceholder": "Select a model",
-	"SetAsDefault": "Set as default"
+	"How can I help you today?": "How can I help you today?",
+	"Hello, {{name}}": "Hello, {{name}}",
+	"Listenin...": "Listening...",
+	"Send a Message": "Send a Message",
+	"Select a model": "Select a model",
+	"Set as default": "Set as default"
 }

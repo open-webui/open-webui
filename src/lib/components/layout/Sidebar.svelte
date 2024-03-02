@@ -128,7 +128,7 @@
 						/>
 					</div>
 
-					<div class=" self-center font-medium text-sm">{$i18n.t('NewChat')}</div>
+					<div class=" self-center font-medium text-sm">{$i18n.t('New Chat')}</div>
 				</div>
 
 				<div class="self-center">

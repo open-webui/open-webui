@@ -190,7 +190,7 @@
 					<select
 						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
 						bind:value={titleAutoGenerateModel}
-						placeholder={$i18n.t('ModelSelectorPlaceholder')}
+						placeholder={$i18n.t('Select a Model')}
 					>
 						<option value="" selected>Current Model</option>
 						{#each $models as model}

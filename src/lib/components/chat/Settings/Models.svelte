@@ -467,10 +467,10 @@
 							<select
 								class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 								bind:value={deleteModelTag}
-								placeholder={$i18n.t('ModelSelectorPlaceholder')}
+								placeholder={$i18n.t('Select a model')}
 							>
 								{#if !deleteModelTag}
-									<option value="" disabled selected>{$i18n.t('ModelSelectorPlaceholder')}</option>
+									<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 								{/if}
 								{#each $models.filter((m) => m.size != null) as model}
 									<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
@@ -807,10 +807,10 @@
 								<select
 									class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={deleteLiteLLMModelId}
-									placeholder={$i18n.t('ModelSelectorPlaceholder')}
+									placeholder={$i18n.t('Select a model')}
 								>
 									{#if !deleteLiteLLMModelId}
-										<option value="" disabled selected>{$i18n.t('ModelSelectorPlaceholder')}</option
+										<option value="" disabled selected>{$i18n.t('Select a model')}</option
 										>
 									{/if}
 									{#each liteLLMModelInfo as model}

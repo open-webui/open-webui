@@ -195,10 +195,10 @@
 						<select
 							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
 							bind:value={selectedModel}
-							placeholder={$i18n.t('ModelSelectorPlaceholder')}
+							placeholder={$i18n.t('Select a Model')}
 						>
 							{#if !selectedModel}
-								<option value="" disabled selected>{$i18n.t('ModelSelectorPlaceholder')}</option>
+								<option value="" disabled selected>{$i18n.t('Select a Model')}</option>
 							{/if}
 							{#each models ?? [] as model}
 								<option value={model.title} class="bg-gray-100 dark:bg-gray-700"
