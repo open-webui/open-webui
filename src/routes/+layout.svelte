@@ -68,4 +68,4 @@
 	<slot />
 {/if}
 
-<Toaster richColors position="top-right" />
+<Toaster richColors position="top-center" />
