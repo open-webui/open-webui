@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { goto } from '$app/navigation';
 
 	import { onMount, tick } from 'svelte';
@@ -21,7 +21,6 @@
 
 	let mode = 'chat';
 	let loaded = false;
-
 	let text = '';
 
 	let selectedModelId = '';
@@ -29,6 +28,9 @@
 	let loading = false;
 	let currentRequestId;
 	let stopResponseFlag = false;
+
+	let messagesContainerElement: HTMLDivElement;
+	let textCompletionAreaElement: HTMLTextAreaElement;
 
 	let system = '';
 	let messages = [
@@ -39,13 +41,7 @@
 	];
 
 	const scrollToBottom = () => {
-		let element;
-
-		if (mode === 'chat') {
-			element = document.getElementById('messages-container');
-		} else {
-			element = document.getElementById('text-completion-textarea');
-		}
+		const element = mode === 'chat' ? messagesContainerElement : textCompletionAreaElement;
 
 		if (element) {
 			element.scrollTop = element?.scrollHeight;
@@ -417,12 +413,14 @@
 				<div
 					class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 					id="messages-container"
+					bind:this={messagesContainerElement}
 				>
 					<div class=" h-full w-full flex flex-col">
 						<div class="flex-1 p-1">
 							{#if mode === 'complete'}
 								<textarea
 									id="text-completion-textarea"
+									bind:this={textCompletionAreaElement}
 									class="w-full h-full p-3 bg-transparent outline outline-1 outline-gray-200 dark:outline-gray-800 resize-none rounded-lg text-sm"
 									bind:value={text}
 									placeholder="You're a helpful assistant."
