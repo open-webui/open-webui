@@ -2,10 +2,9 @@
 	import { onMount } from 'svelte';
 
 	export let messages = [];
-
+	let textareaElement: HTMLTextAreaElement;
 	onMount(() => {
 		messages.forEach((message, idx) => {
-			let textareaElement = document.getElementById(`${message.role}-${idx}-textarea`);
 			textareaElement.style.height = '';
 			textareaElement.style.height = textareaElement.scrollHeight + 'px';
 		});
@@ -27,16 +26,17 @@
 			<div class="flex-1">
 				<textarea
 					id="{message.role}-{idx}-textarea"
+					bind:this={textareaElement}
 					class="w-full bg-transparent outline-none rounded-lg p-2 text-sm resize-none overflow-hidden"
 					placeholder="Enter {message.role === 'user' ? 'a user' : 'an assistant'} message here"
 					rows="1"
 					on:input={(e) => {
-						e.target.style.height = '';
-						e.target.style.height = e.target.scrollHeight + 'px';
+						textareaElement.style.height = '';
+						textareaElement.style.height = textareaElement.scrollHeight + 'px';
 					}}
 					on:focus={(e) => {
-						e.target.style.height = '';
-						e.target.style.height = e.target.scrollHeight + 'px';
+						textareaElement.style.height = '';
+						textareaElement.style.height = textareaElement.scrollHeight + 'px';
 
 						// e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 					}}
