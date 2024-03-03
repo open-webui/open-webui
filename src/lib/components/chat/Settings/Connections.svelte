@@ -114,12 +114,12 @@
 		<hr class=" dark:border-gray-700" />
 
 		<div>
-			<div class=" mb-2.5 text-sm font-medium">Ollama API URL</div>
+			<div class=" mb-2.5 text-sm font-medium">Ollama Base URL</div>
 			<div class="flex w-full">
 				<div class="flex-1 mr-2">
 					<input
 						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-						placeholder="Enter URL (e.g. http://localhost:11434/api)"
+						placeholder="Enter URL (e.g. http://localhost:11434)"
 						bind:value={API_BASE_URL}
 					/>
 				</div>

@@ -1,14 +1,21 @@
 <script>
 	import { goto } from '$app/navigation';
 
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import {
+		LITELLM_API_BASE_URL,
+		OLLAMA_API_BASE_URL,
+		OPENAI_API_BASE_URL,
+		WEBUI_API_BASE_URL
+	} from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
 	import { cancelChatCompletion, generateChatCompletion } from '$lib/apis/ollama';
+	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+
 	import { splitStream } from '$lib/utils';
 
 	let mode = 'chat';
@@ -16,18 +23,28 @@
 
 	let text = '';
 
-	let selectedModel = '';
+	let selectedModelId = '';
 
 	let loading = false;
 	let currentRequestId;
 	let stopResponseFlag = false;
 
 	let system = '';
-	let messages = [];
+	let messages = [
+		{
+			role: 'user',
+			content: ''
+		}
+	];
 
 	const scrollToBottom = () => {
-		const element = document.getElementById('text-completion-textarea');
-		element.scrollTop = element.scrollHeight;
+		// const element = document.getElementById('text-completion-textarea');
+
+		const element = document.getElementById('messages-container');
+
+		if (element) {
+			element.scrollTop = element?.scrollHeight;
+		}
 	};
 
 	// const cancelHandler = async () => {
@@ -43,67 +60,216 @@
 		console.log('stopResponse');
 	};
 
-	const submitHandler = async () => {
-		if (selectedModel) {
-			loading = true;
+	const textCompletionHandler = async () => {
+		const [res, controller] = await generateChatCompletion(localStorage.token, {
+			model: selectedModelId,
+			messages: [
+				{
+					role: 'assistant',
+					content: text
+				}
+			]
+		});
 
-			const [res, controller] = await generateChatCompletion(localStorage.token, {
-				model: selectedModel,
-				messages: [
-					{
-						role: 'assistant',
-						content: text
-					}
-				]
-			});
+		if (res && res.ok) {
+			const reader = res.body
+				.pipeThrough(new TextDecoderStream())
+				.pipeThrough(splitStream('\n'))
+				.getReader();
 
-			if (res && res.ok) {
-				const reader = res.body
-					.pipeThrough(new TextDecoderStream())
-					.pipeThrough(splitStream('\n'))
-					.getReader();
-
-				while (true) {
-					const { value, done } = await reader.read();
-					if (done || stopResponseFlag) {
-						if (stopResponseFlag) {
-							await cancelChatCompletion(localStorage.token, currentRequestId);
-						}
-
-						currentRequestId = null;
-						break;
+			while (true) {
+				const { value, done } = await reader.read();
+				if (done || stopResponseFlag) {
+					if (stopResponseFlag) {
+						await cancelChatCompletion(localStorage.token, currentRequestId);
 					}
 
-					try {
-						let lines = value.split('\n');
+					currentRequestId = null;
+					break;
+				}
 
-						for (const line of lines) {
-							if (line !== '') {
-								console.log(line);
-								let data = JSON.parse(line);
+				try {
+					let lines = value.split('\n');
 
-								if ('detail' in data) {
-									throw data;
-								}
+					for (const line of lines) {
+						if (line !== '') {
+							console.log(line);
+							let data = JSON.parse(line);
 
-								if ('id' in data) {
-									console.log(data);
-									currentRequestId = data.id;
+							if ('detail' in data) {
+								throw data;
+							}
+
+							if ('id' in data) {
+								console.log(data);
+								currentRequestId = data.id;
+							} else {
+								if (data.done == false) {
+									text += data.message.content;
 								} else {
-									if (data.done == false) {
-										text += data.message.content;
-									} else {
-										console.log('done');
-									}
+									console.log('done');
 								}
 							}
 						}
-					} catch (error) {
-						console.log(error);
 					}
-
-					scrollToBottom();
+				} catch (error) {
+					console.log(error);
 				}
+
+				scrollToBottom();
+			}
+		}
+	};
+
+	const chatCompletionHandler = async () => {
+		const model = $models.find((model) => model.id === selectedModelId);
+
+		const res = await generateOpenAIChatCompletion(
+			localStorage.token,
+			{
+				model: model.id,
+				stream: true,
+				messages: [
+					system
+						? {
+								role: 'system',
+								content: system
+						  }
+						: undefined,
+					...messages
+				].filter((message) => message)
+			},
+			model.external
+				? model.source === 'litellm'
+					? `${LITELLM_API_BASE_URL}/v1`
+					: `${OPENAI_API_BASE_URL}`
+				: `${OLLAMA_API_BASE_URL}/v1`
+		);
+
+		// const [res, controller] = await generateChatCompletion(localStorage.token, {
+		// 	model: selectedModelId,
+		// 	messages: [
+		// 		{
+		// 			role: 'assistant',
+		// 			content: text
+		// 		}
+		// 	]
+		// });
+
+		let responseMessage;
+		if (messages.at(-1)?.role === 'assistant') {
+			responseMessage = messages.at(-1);
+		} else {
+			responseMessage = {
+				role: 'assistant',
+				content: ''
+			};
+			messages.push(responseMessage);
+			messages = messages;
+		}
+
+		await tick();
+		const textareaElement = document.getElementById(`assistant-${messages.length - 1}-textarea`);
+
+		if (res && res.ok) {
+			const reader = res.body
+				.pipeThrough(new TextDecoderStream())
+				.pipeThrough(splitStream('\n'))
+				.getReader();
+
+			while (true) {
+				const { value, done } = await reader.read();
+				if (done || stopResponseFlag) {
+					break;
+				}
+
+				try {
+					let lines = value.split('\n');
+
+					for (const line of lines) {
+						if (line !== '') {
+							console.log(line);
+							if (line === 'data: [DONE]') {
+								// responseMessage.done = true;
+								messages = messages;
+							} else {
+								let data = JSON.parse(line.replace(/^data: /, ''));
+								console.log(data);
+
+								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
+									continue;
+								} else {
+									textareaElement.style.height = textareaElement.scrollHeight + 'px';
+
+									responseMessage.content += data.choices[0].delta.content ?? '';
+									messages = messages;
+
+									textareaElement.style.height = textareaElement.scrollHeight + 'px';
+
+									await tick();
+								}
+							}
+						}
+					}
+				} catch (error) {
+					console.log(error);
+				}
+
+				scrollToBottom();
+			}
+
+			// while (true) {
+			// 	const { value, done } = await reader.read();
+			// 	if (done || stopResponseFlag) {
+			// 		if (stopResponseFlag) {
+			// 			await cancelChatCompletion(localStorage.token, currentRequestId);
+			// 		}
+
+			// 		currentRequestId = null;
+			// 		break;
+			// 	}
+
+			// 	try {
+			// 		let lines = value.split('\n');
+
+			// 		for (const line of lines) {
+			// 			if (line !== '') {
+			// 				console.log(line);
+			// 				let data = JSON.parse(line);
+
+			// 				if ('detail' in data) {
+			// 					throw data;
+			// 				}
+
+			// 				if ('id' in data) {
+			// 					console.log(data);
+			// 					currentRequestId = data.id;
+			// 				} else {
+			// 					if (data.done == false) {
+			// 						text += data.message.content;
+			// 					} else {
+			// 						console.log('done');
+			// 					}
+			// 				}
+			// 			}
+			// 		}
+			// 	} catch (error) {
+			// 		console.log(error);
+			// 	}
+
+			// 	scrollToBottom();
+			// }
+		}
+	};
+
+	const submitHandler = async () => {
+		if (selectedModelId) {
+			loading = true;
+
+			if (mode === 'complete') {
+				await textCompletionHandler();
+			} else if (mode === 'chat') {
+				await chatCompletionHandler();
 			}
 
 			loading = false;
@@ -118,11 +284,11 @@
 		}
 
 		if ($settings?.models) {
-			selectedModel = $settings?.models[0];
+			selectedModelId = $settings?.models[0];
 		} else if ($config?.default_models) {
-			selectedModel = $config?.default_models.split(',')[0];
+			selectedModelId = $config?.default_models.split(',')[0];
 		} else {
-			selectedModel = '';
+			selectedModelId = '';
 		}
 		loaded = true;
 	});
@@ -185,7 +351,7 @@
 						<select
 							id="models"
 							class="outline-none bg-transparent text-sm font-medium rounded-lg w-full placeholder-gray-400"
-							bind:value={selectedModel}
+							bind:value={selectedModelId}
 						>
 							<option class=" text-gray-800" value="" selected disabled>Select a model</option>
 
@@ -234,10 +400,11 @@
 						<div class="p-3 outline outline-1 outline-gray-200 dark:outline-gray-800 rounded-lg">
 							<div class=" text-sm font-medium">System</div>
 							<textarea
-								id="text-completion-textarea"
+								id="system-textarea"
 								class="w-full h-full bg-transparent resize-none outline-none text-sm"
 								bind:value={system}
 								placeholder="You're a helpful assistant."
+								rows="4"
 							/>
 						</div>
 					</div>
@@ -271,8 +438,8 @@
 
 											<div class="flex-1">
 												<textarea
-													id="text-completion-textarea"
-													class="w-full bg-transparent outline-none rounded-lg p-2 text-sm resize-none"
+													id="{message.role}-{idx}-textarea"
+													class="w-full bg-transparent outline-none rounded-lg p-2 text-sm resize-none overflow-hidden"
 													placeholder="Enter {message.role === 'user'
 														? 'a user'
 														: 'an assistant'} message here"
@@ -320,7 +487,7 @@
 									{/each}
 
 									<button
-										class="flex items-center gap-2"
+										class="flex items-center gap-2 px-2 py-1"
 										on:click={() => {
 											console.log(messages.at(-1));
 											messages.push({
