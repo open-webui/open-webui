@@ -40,7 +40,7 @@
 
 	let edit = false;
 	let editedContent = '';
-
+	let editElement: HTMLTextAreaElement;
 	let tooltipInstance = null;
 
 	let sentencesAudio = {};
@@ -247,7 +247,6 @@
 		editedContent = message.content;
 
 		await tick();
-		const editElement = document.getElementById(`message-edit-${message.id}`);
 
 		editElement.style.height = '';
 		editElement.style.height = `${editElement.scrollHeight}px`;
@@ -341,6 +340,7 @@
 							<div class=" w-full">
 								<textarea
 									id="message-edit-{message.id}"
+									bind:this={editElement}
 									class=" bg-transparent outline-none w-full resize-none"
 									bind:value={editedContent}
 									on:input={(e) => {
