@@ -223,32 +223,22 @@
 		}, 100);
 	};
 
-	// TODO: change delete behaviour
-	// const deleteMessageAndDescendants = async (messageId: string) => {
-	// 	if (history.messages[messageId]) {
-	// 		history.messages[messageId].deleted = true;
-
-	// 		for (const childId of history.messages[messageId].childrenIds) {
-	// 			await deleteMessageAndDescendants(childId);
-	// 		}
-	// 	}
-	// };
-
-	// const triggerDeleteMessageRecursive = async (messageId: string) => {
-	// 	await deleteMessageAndDescendants(messageId);
-	// 	await updateChatById(localStorage.token, chatId, { history });
-	// 	await chats.set(await getChatList(localStorage.token));
-	// };
-
 	const messageDeleteHandler = async (messageId) => {
-		if (history.messages[messageId]) {
-			history.messages[messageId].deleted = true;
+		const messageParentId = history.messages[messageId]?.parentId;
 
-			for (const childId of history.messages[messageId].childrenIds) {
-				history.messages[childId].deleted = true;
-			}
+		if (messageParentId !== null) {
+			history.messages[messageParentId].childrenIds = []
 		}
-		await updateChatById(localStorage.token, chatId, { history });
+
+		delete history.messages[messageId];
+		history.currentId = messageParentId;
+
+		await tick();
+
+		await updateChatById(localStorage.token, chatId, {
+			messages: messages,
+			history: history
+		});
 	};
 </script>
 
@@ -258,57 +248,55 @@
 	<div class=" pb-10">
 		{#key chatId}
 			{#each messages as message, messageIdx}
-				{#if !message.deleted}
-					<div class=" w-full">
-						<div
-							class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
-								? 'max-w-full'
-								: 'max-w-3xl'} mx-auto rounded-lg group"
-						>
-							{#if message.role === 'user'}
-								<UserMessage
-									on:delete={() => messageDeleteHandler(message.id)}
-									user={$user}
-									{message}
-									isFirstMessage={messageIdx === 0}
-									siblings={message.parentId !== null
-										? history.messages[message.parentId]?.childrenIds ?? []
-										: Object.values(history.messages)
-												.filter((message) => message.parentId === null)
-												.map((message) => message.id) ?? []}
-									{confirmEditMessage}
-									{showPreviousMessage}
-									{showNextMessage}
-									{copyToClipboard}
-								/>
-							{:else}
-								<ResponseMessage
-									{message}
-									modelfiles={selectedModelfiles}
-									siblings={history.messages[message.parentId]?.childrenIds ?? []}
-									isLastMessage={messageIdx + 1 === messages.length}
-									{confirmEditResponseMessage}
-									{showPreviousMessage}
-									{showNextMessage}
-									{rateMessage}
-									{copyToClipboard}
-									{continueGeneration}
-									{regenerateResponse}
-									on:save={async (e) => {
-										console.log('save', e);
+				<div class=" w-full">
+					<div
+						class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
+							? 'max-w-full'
+							: 'max-w-3xl'} mx-auto rounded-lg group"
+					>
+						{#if message.role === 'user'}
+							<UserMessage
+								on:delete={() => messageDeleteHandler(message.id)}
+								user={$user}
+								{message}
+								isFirstMessage={messageIdx === 0}
+								siblings={message.parentId !== null
+									? history.messages[message.parentId]?.childrenIds ?? []
+									: Object.values(history.messages)
+											.filter((message) => message.parentId === null)
+											.map((message) => message.id) ?? []}
+								{confirmEditMessage}
+								{showPreviousMessage}
+								{showNextMessage}
+								{copyToClipboard}
+							/>
+						{:else}
+							<ResponseMessage
+								{message}
+								modelfiles={selectedModelfiles}
+								siblings={history.messages[message.parentId]?.childrenIds ?? []}
+								isLastMessage={messageIdx + 1 === messages.length}
+								{confirmEditResponseMessage}
+								{showPreviousMessage}
+								{showNextMessage}
+								{rateMessage}
+								{copyToClipboard}
+								{continueGeneration}
+								{regenerateResponse}
+								on:save={async (e) => {
+									console.log('save', e);
 
-										const message = e.detail;
-										history.messages[message.id] = message;
-										await updateChatById(localStorage.token, chatId, {
-											messages: messages,
-											history: history
-										});
-									}}
-								/>
-							{/if}
-						</div>
+									const message = e.detail;
+									history.messages[message.id] = message;
+									await updateChatById(localStorage.token, chatId, {
+										messages: messages,
+										history: history
+									});
+								}}
+							/>
+						{/if}
 					</div>
-				{/if}
+				</div>
 			{/each}
 
 			{#if bottomPadding}
