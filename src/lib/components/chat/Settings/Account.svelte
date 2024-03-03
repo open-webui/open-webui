@@ -15,6 +15,7 @@
 	let name = '';
 	let showJWTToken = false;
 	let JWTTokenCopied = false;
+	let profileImageInputElement: HTMLInputElement;
 
 	const submitHandler = async () => {
 		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
@@ -40,11 +41,12 @@
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 		<input
 			id="profile-image-input"
+			bind:this={profileImageInputElement}
 			type="file"
 			hidden
 			accept="image/*"
 			on:change={(e) => {
-				const files = e?.target?.files ?? [];
+				const files = profileImageInputElement.files ?? [];
 				let reader = new FileReader();
 				reader.onload = (event) => {
 					let originalImageUrl = `${event.target.result}`;
@@ -86,7 +88,7 @@
 						// Display the compressed image
 						profileImageUrl = compressedSrc;
 
-						e.target.files = null;
+						profileImageInputElement.files = null;
 					};
 				};
 
@@ -107,9 +109,7 @@
 					<button
 						class="relative rounded-full dark:bg-gray-700"
 						type="button"
-						on:click={() => {
-							document.getElementById('profile-image-input')?.click();
-						}}
+						on:click={profileImageInputElement.click}
 					>
 						<img
 							src={profileImageUrl !== '' ? profileImageUrl : '/user.png'}
