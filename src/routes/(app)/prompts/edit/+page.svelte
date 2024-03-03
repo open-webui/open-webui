@@ -36,7 +36,9 @@
 				await goto('/prompts');
 			}
 		} else {
-			toast.error('Only alphanumeric characters and hyphens are allowed in the command string.');
+			toast.error(
+				$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
+			);
 		}
 
 		loading = false;

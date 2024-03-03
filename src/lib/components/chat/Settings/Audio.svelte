@@ -115,7 +115,11 @@
 						on:change={(e) => {
 							if (e.target.value !== '') {
 								navigator.mediaDevices.getUserMedia({ audio: true }).catch(function (err) {
-									toast.error(`Permission denied when accessing microphone: ${err}`);
+									toast.error(
+										$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
+											error: err
+										})
+									);
 									STTEngine = '';
 								});
 							}

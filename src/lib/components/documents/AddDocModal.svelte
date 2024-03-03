@@ -73,7 +73,7 @@
 			inputFiles = null;
 			document.getElementById('upload-doc-input').value = '';
 		} else {
-			toast.error(`File not found.`);
+			toast.error($i18n.t(`File not found.`));
 		}
 
 		show = false;

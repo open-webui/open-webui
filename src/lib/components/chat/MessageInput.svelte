@@ -216,7 +216,7 @@
 					// Event triggered when an error occurs
 					speechRecognition.onerror = function (event) {
 						console.log(event);
-						toast.error(`Speech recognition error: ${event.error}`);
+						toast.error($i18n.t(`Speech recognition error: {{error}}`, { error: event.error }));
 						isRecording = false;
 					};
 				} else {

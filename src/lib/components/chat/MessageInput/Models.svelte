@@ -111,7 +111,9 @@
 					toast.error(error.error);
 				}
 			} else {
-				toast.error($i18n.t('Uh-oh! There was an issue connecting to llama.'));
+				toast.error(
+					$i18n.t('Uh-oh! There was an issue connecting to {{provider}}.', { provider: 'llama' })
+				);
 			}
 		}
 

@@ -79,7 +79,7 @@
 			}
 		} else {
 			enableImageGeneration = false;
-			toast.error('AUTOMATIC1111_BASE_URL not provided');
+			toast.error($i18n.t('{{item}} not provided', { item: 'AUTOMATIC1111_BASE_URL' }));
 		}
 	};
 

@@ -56,11 +56,17 @@
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = modelTag.trim();
 		if (modelDownloadStatus[sanitizedModelTag]) {
-			toast.error(`Model '${sanitizedModelTag}' is already in queue for downloading.`);
+			toast.error(
+				$i18n.t(`Model '{{modelTag}}' is already in queue for downloading.`, {
+					modelTag: sanitizedModelTag
+				})
+			);
 			return;
 		}
 		if (Object.keys(modelDownloadStatus).length === 3) {
-			toast.error('Maximum of 3 models can be downloaded simultaneously. Please try again later.');
+			toast.error(
+				$i18n.t('Maximum of 3 models can be downloaded simultaneously. Please try again later.')
+			);
 			return;
 		}
 
@@ -78,10 +84,10 @@
 				if (!data.success) {
 					toast.error(data.error);
 				} else {
-					toast.success($i18n.t(`Model '${modelName}' has been successfully downloaded.`));
+					toast.success($i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, {modelName}));
 
 					const notification = new Notification($WEBUI_NAME, {
-						body: `Model '${modelName}' has been successfully downloaded.`,
+						body: $i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, {modelName}),
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
 
@@ -243,7 +249,7 @@
 		});
 
 		if (res) {
-			toast.success($i18n.t(`Deleted ${deleteModelTag}`));
+			toast.success($i18n.t(`Deleted {{deleteModelTag}}`, {deleteModelTag}));
 		}
 
 		deleteModelTag = '';
@@ -327,7 +333,7 @@
 				}
 			}
 		} else {
-			toast.error(`Model ${liteLLMModelName} already exists.`);
+			toast.error($i18n.t(`Model {{modelName}} already exists.`, { modelName: liteLLMModelName }));
 		}
 
 		liteLLMModelName = '';

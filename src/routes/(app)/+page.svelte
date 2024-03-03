@@ -156,7 +156,7 @@
 		);
 
 		if (selectedModels.includes('')) {
-			toast.error('Model not selected');
+			toast.error($i18n.t('Model not selected'));
 		} else if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
 			console.log('wait');
@@ -166,7 +166,7 @@
 		) {
 			// Upload not done
 			toast.error(
-				`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
+				$i18n.t(`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`)
 			);
 		} else {
 			// Reset chat message textarea height
@@ -317,7 +317,7 @@
 						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
 					}
 				} else {
-					toast.error(`Model ${modelId} not found`);
+					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
 			})
 		);
@@ -511,12 +511,12 @@
 					responseMessage.content = error.error;
 				}
 			} else {
-				toast.error(`Uh-oh! There was an issue connecting to Ollama.`);
-				responseMessage.content = `Uh-oh! There was an issue connecting to Ollama.`;
+				toast.error($i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: 'Ollama'}));
+				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: 'Ollama'});
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = `Uh-oh! There was an issue connecting to Ollama.`;
+			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: 'Ollama'});
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -678,12 +678,12 @@
 					}
 				}
 			} else {
-				toast.error(`Uh-oh! There was an issue connecting to ${model}.`);
-				responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
+				toast.error($i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: model}));
+				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: model}});
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
+			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: model});
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -747,7 +747,7 @@
 					);
 			}
 		} else {
-			toast.error(`Model ${modelId} not found`);
+			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 		}
 	};
 

@@ -241,7 +241,7 @@
 										location.href = '/';
 									}}
 								>
-									Check Again
+									{$i18n.t('Check Again')}
 								</button>
 
 								<button
