@@ -230,7 +230,6 @@
 			history.messages[messageParentId].childrenIds = []
 		}
 
-		delete history.messages[messageId];
 		history.currentId = messageParentId;
 
 		await tick();
