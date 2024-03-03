@@ -61,15 +61,26 @@
 	};
 
 	const textCompletionHandler = async () => {
-		const [res, controller] = await generateChatCompletion(localStorage.token, {
-			model: selectedModelId,
-			messages: [
-				{
-					role: 'assistant',
-					content: text
-				}
-			]
-		});
+		const model = $models.find((model) => model.id === selectedModelId);
+
+		const res = await generateOpenAIChatCompletion(
+			localStorage.token,
+			{
+				model: model.id,
+				stream: true,
+				messages: [
+					{
+						role: 'assistant',
+						content: text
+					}
+				]
+			},
+			model.external
+				? model.source === 'litellm'
+					? `${LITELLM_API_BASE_URL}/v1`
+					: `${OPENAI_API_BASE_URL}`
+				: `${OLLAMA_API_BASE_URL}/v1`
+		);
 
 		if (res && res.ok) {
 			const reader = res.body
@@ -80,10 +91,6 @@
 			while (true) {
 				const { value, done } = await reader.read();
 				if (done || stopResponseFlag) {
-					if (stopResponseFlag) {
-						await cancelChatCompletion(localStorage.token, currentRequestId);
-					}
-
 					currentRequestId = null;
 					break;
 				}
@@ -93,22 +100,14 @@
 
 					for (const line of lines) {
 						if (line !== '') {
-							console.log(line);
-							let data = JSON.parse(line);
-
-							if ('detail' in data) {
-								throw data;
-							}
-
-							if ('id' in data) {
-								console.log(data);
-								currentRequestId = data.id;
+							if (line === 'data: [DONE]') {
+								// responseMessage.done = true;
+								console.log('done');
 							} else {
-								if (data.done == false) {
-									text += data.message.content;
-								} else {
-									console.log('done');
-								}
+								let data = JSON.parse(line.replace(/^data: /, ''));
+								console.log(data);
+
+								text += data.choices[0].delta.content ?? '';
 							}
 						}
 					}
