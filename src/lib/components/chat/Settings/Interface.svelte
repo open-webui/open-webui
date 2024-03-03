@@ -82,8 +82,7 @@
 		fullScreenMode = settings.fullScreenMode ?? false;
 		titleAutoGenerateModel = settings.titleAutoGenerateModel ?? '';
 		titleGenerationPrompt =
-			settings.titleGenerationPrompt ??
-			`Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title': {{prompt}}`;
+			settings.titleGenerationPrompt ?? $i18n.t('Default titleGenerationPromt') + ' {{prompt}}';
 	});
 </script>
 
@@ -163,7 +162,7 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
-						Display the username instead of "You" in the Chat
+						{$i18n.t('Display the username instead of You in the Chat')}
 					</div>
 
 					<button
@@ -194,7 +193,7 @@
 						bind:value={titleAutoGenerateModel}
 						placeholder={$i18n.t('Select a model')}
 					>
-						<option value="" selected>Current Model</option>
+						<option value="" selected>{$i18n.t('Current Model')}</option>
 						{#each $models as model}
 							{#if model.size != null}
 								<option value={model.name} class="bg-gray-100 dark:bg-gray-700">

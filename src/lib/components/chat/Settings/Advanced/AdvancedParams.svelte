@@ -45,7 +45,7 @@
 				<input
 					class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
 					type="text"
-					placeholder="Enter Stop Sequence"
+					placeholder={$i18n.t('Enter stop sequence')}
 					bind:value={options.stop}
 					autocomplete="off"
 				/>
@@ -111,9 +111,9 @@
 				}}
 			>
 				{#if options.mirostat === ''}
-					<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{/if}
 			</button>
 		</div>
@@ -157,9 +157,9 @@
 				}}
 			>
 				{#if options.mirostat_eta === ''}
-					<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{/if}
 			</button>
 		</div>
@@ -203,9 +203,9 @@
 				}}
 			>
 				{#if options.mirostat_tau === ''}
-					<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 				{/if}
 			</button>
 		</div>
@@ -249,9 +249,9 @@
 				}}
 			>
 				{#if options.top_k === ''}
-					<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{/if}
 			</button>
 		</div>
@@ -295,9 +295,9 @@
 				}}
 			>
 				{#if options.top_p === ''}
-					<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{/if}
 			</button>
 		</div>
@@ -341,9 +341,9 @@
 				}}
 			>
 				{#if options.repeat_penalty === ''}
-					<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{/if}
 			</button>
 		</div>
@@ -387,9 +387,9 @@
 				}}
 			>
 				{#if options.repeat_last_n === ''}
-					<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{/if}
 			</button>
 		</div>
@@ -433,9 +433,9 @@
 				}}
 			>
 				{#if options.tfs_z === ''}
-					<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{/if}
 			</button>
 		</div>
@@ -479,9 +479,9 @@
 				}}
 			>
 				{#if options.num_ctx === ''}
-					<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{/if}
 			</button>
 		</div>
@@ -524,9 +524,9 @@
 				}}
 			>
 				{#if options.num_predict === ''}
-					<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{/if}
 			</button>
 		</div>

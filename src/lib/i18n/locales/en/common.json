@@ -146,7 +146,7 @@
 	"Name Tag": "Name Tag",
 	"New Chat": "New Chat",
 	"New Password": "New Password",
-	"Notification": "Notification",
+	"Desktop Notifications": "Notification",
 	"Not sure what to write? Switch to": "Not sure what to write? Switch to",
 	"Off": "Off",
 	"Okay, Let's Go!": "Okay, Let's Go!",
@@ -245,5 +245,12 @@
 	"WebUI Settings": "WebUI Settings",
 	"Web": "Web",
 	"Whisper (Local)": "Whisper (Local)",
-	"You're now logged in.": "You're now logged in."
+	"You're now logged in.": "You're now logged in.",
+	"Hide": "Hide",
+	"Show": "Shop",
+	"Enter stop sequence": "Enter stop sequence",
+	"Enter OpenAI API Key": "Enter OpenAI API Key",
+	"Current Model": "Current Model",
+	"Display the username instead of You in the Chat": "Display the username instead of 'You' in the Chat",
+	"Default titleGenerationPromt": "Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
 }

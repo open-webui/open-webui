@@ -175,7 +175,7 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Notification')}</div>
+					<div class=" self-center text-xs font-medium">{$i18n.t('Desktop Notifications')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -213,7 +213,7 @@
 					type="button"
 					on:click={() => {
 						showAdvanced = !showAdvanced;
-					}}>{showAdvanced ? 'Hide' : 'Show'}</button
+					}}>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button
 				>
 			</div>
 

@@ -146,7 +146,7 @@
 	"Name Tag": "Name Tag",
 	"New Chat": "گپ جدید",
 	"New Password": "رمز عبور جدید",
-	"Notification": "اعلان",
+	"Desktop Notifications": "اعلان",
 	"Not sure what to write? Switch to": "مطمئن نیستید چه بنویسید؟ تغییر به",
 	"Off": "خاموش",
 	"Okay, Let's Go!": "Okay, Let's Go!",
@@ -245,5 +245,12 @@
 	"WebUI Settings": "تنظیمات WebUI",
 	"Web": "وب",
 	"Whisper (Local)": "Whisper (Local)",
-	"You're now logged in.": "شما اکنون وارد شده‌اید."
+	"You're now logged in.": "شما اکنون وارد شده‌اید.",
+	"Hide": "Hide",
+	"Show": "Shop",
+	"Enter stop sequence": "Enter stop sequence",
+	"Enter OpenAI API Key": "Enter OpenAI API Key",
+	"Current Model": "Current Model",
+	"Display the username instead of You in the Chat": "Display the username instead of 'You' in the Chat",
+	"Default titleGenerationPromt": "Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
 }

@@ -72,7 +72,7 @@
 						type="button"
 						on:click={() => {
 							showOpenAI = !showOpenAI;
-						}}>{showOpenAI ? 'Hide' : 'Show'}</button
+						}}>{showOpenAI ? $i18n.t('Hide') : $i18n.t('Show')}</button
 					>
 				</div>
 
@@ -83,7 +83,7 @@
 							<div class="flex-1">
 								<input
 									class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-									placeholder="Enter OpenAI API Key"
+									placeholder={$i18n.t('Enter OpenAI API Key')}
 									bind:value={OPENAI_API_KEY}
 									autocomplete="off"
 								/>
