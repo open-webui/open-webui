@@ -35,7 +35,7 @@
 	let isEditing = false;
 
 	onMount(async () => {
-		if (window.innerWidth > 1280) {
+		if (window.innerWidth > 1024) {
 			show = true;
 		}
 		await chats.set(await getChatList(localStorage.token));
@@ -383,6 +383,11 @@
 									? 'bg-gray-900'
 									: ''} transition whitespace-nowrap text-ellipsis"
 								href="/c/{chat.id}"
+								on:click={() => {
+									if (window.innerWidth < 1024) {
+										show = false;
+									}
+								}}
 							>
 								<div class=" flex self-center flex-1 w-full">
 									<div
