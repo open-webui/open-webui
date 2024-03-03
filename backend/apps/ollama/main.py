@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import decode_token, get_current_user, get_admin_user
-from config import OLLAMA_API_BASE_URL, WEBUI_AUTH
+from config import OLLAMA_BASE_URL, WEBUI_AUTH
 
 app = FastAPI()
 app.add_middleware(
@@ -22,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.state.OLLAMA_API_BASE_URL = OLLAMA_API_BASE_URL
+app.state.OLLAMA_BASE_URL = OLLAMA_BASE_URL
 
 # TARGET_SERVER_URL = OLLAMA_API_BASE_URL
 
@@ -32,7 +32,7 @@ REQUEST_POOL = []
 
 @app.get("/url")
 async def get_ollama_api_url(user=Depends(get_admin_user)):
-    return {"OLLAMA_API_BASE_URL": app.state.OLLAMA_API_BASE_URL}
+    return {"OLLAMA_BASE_URL": app.state.OLLAMA_BASE_URL}
 
 
 class UrlUpdateForm(BaseModel):
@@ -41,8 +41,8 @@ class UrlUpdateForm(BaseModel):
 
 @app.post("/url/update")
 async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin_user)):
-    app.state.OLLAMA_API_BASE_URL = form_data.url
-    return {"OLLAMA_API_BASE_URL": app.state.OLLAMA_API_BASE_URL}
+    app.state.OLLAMA_BASE_URL = form_data.url
+    return {"OLLAMA_BASE_URL": app.state.OLLAMA_BASE_URL}
 
 
 @app.get("/cancel/{request_id}")
@@ -57,7 +57,7 @@ async def cancel_ollama_request(request_id: str, user=Depends(get_current_user))
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy(path: str, request: Request, user=Depends(get_current_user)):
-    target_url = f"{app.state.OLLAMA_API_BASE_URL}/{path}"
+    target_url = f"{app.state.OLLAMA_BASE_URL}/{path}"
 
     body = await request.body()
     headers = dict(request.headers)
@@ -91,7 +91,13 @@ async def proxy(path: str, request: Request, user=Depends(get_current_user)):
 
             def stream_content():
                 try:
-                    if path in ["chat"]:
+                    if path == "generate":
+                        data = json.loads(body.decode("utf-8"))
+
+                        if not ("stream" in data and data["stream"] == False):
+                            yield json.dumps({"id": request_id, "done": False}) + "\n"
+
+                    elif path == "chat":
                         yield json.dumps({"id": request_id, "done": False}) + "\n"
 
                     for chunk in r.iter_content(chunk_size=8192):
@@ -103,7 +109,8 @@ async def proxy(path: str, request: Request, user=Depends(get_current_user)):
                 finally:
                     if hasattr(r, "close"):
                         r.close()
-                        REQUEST_POOL.remove(request_id)
+                        if request_id in REQUEST_POOL:
+                            REQUEST_POOL.remove(request_id)
 
             r = requests.request(
                 method=request.method,

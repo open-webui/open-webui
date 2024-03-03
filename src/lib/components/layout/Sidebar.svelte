@@ -19,6 +19,7 @@
 	import { toast } from 'svelte-sonner';
 	import { slide } from 'svelte/transition';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import Tooltip from '../common/Tooltip.svelte';
 
 	let show = false;
 	let navElement;
@@ -34,7 +35,7 @@
 	let isEditing = false;
 
 	onMount(async () => {
-		if (window.innerWidth > 1280) {
+		if (window.innerWidth > 1024) {
 			show = true;
 		}
 		await chats.set(await getChatList(localStorage.token));
@@ -382,6 +383,11 @@
 									? 'bg-gray-900'
 									: ''} transition whitespace-nowrap text-ellipsis"
 								href="/c/{chat.id}"
+								on:click={() => {
+									if (window.innerWidth < 1024) {
+										show = false;
+									}
+								}}
 							>
 								<div class=" flex self-center flex-1 w-full">
 									<div
@@ -593,6 +599,32 @@
 										</div>
 										<div class=" self-center font-medium">Admin Panel</div>
 									</button>
+
+									<button
+										class="flex py-2.5 px-3.5 w-full hover:bg-gray-800 transition"
+										on:click={() => {
+											goto('/playground');
+											showDropdown = false;
+										}}
+									>
+										<div class=" self-center mr-3">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="1.5"
+												stroke="currentColor"
+												class="w-5 h-5"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z"
+												/>
+											</svg>
+										</div>
+										<div class=" self-center font-medium">Playground</div>
+									</button>
 								{/if}
 
 								<button
@@ -670,30 +702,32 @@
 	<div
 		class="fixed left-0 top-[50dvh] z-40 -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
 	>
-		<button
-			id="sidebar-toggle-button"
-			class=" group"
-			on:click={() => {
-				show = !show;
-			}}
-			><span class="" data-state="closed"
-				><div
-					class="flex h-[72px] w-8 items-center justify-center opacity-20 group-hover:opacity-100 transition"
-				>
-					<div class="flex h-6 w-6 flex-col items-center">
-						<div
-							class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {show
-								? 'group-hover:rotate-[15deg]'
-								: 'group-hover:rotate-[-15deg]'}"
-						/>
-						<div
-							class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {show
-								? 'group-hover:rotate-[-15deg]'
-								: 'group-hover:rotate-[15deg]'}"
-						/>
+		<Tooltip placement="right" content={`${show ? 'Close' : 'Open'} sidebar`} touch={false}>
+			<button
+				id="sidebar-toggle-button"
+				class=" group"
+				on:click={() => {
+					show = !show;
+				}}
+				><span class="" data-state="closed"
+					><div
+						class="flex h-[72px] w-8 items-center justify-center opacity-20 group-hover:opacity-100 transition"
+					>
+						<div class="flex h-6 w-6 flex-col items-center">
+							<div
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {show
+									? 'group-hover:rotate-[15deg]'
+									: 'group-hover:rotate-[-15deg]'}"
+							/>
+							<div
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {show
+									? 'group-hover:rotate-[-15deg]'
+									: 'group-hover:rotate-[15deg]'}"
+							/>
+						</div>
 					</div>
-				</div>
-			</span>
-		</button>
+				</span>
+			</button>
+		</Tooltip>
 	</div>
 </div>

@@ -211,6 +211,17 @@ if ENV == "prod":
     if OLLAMA_API_BASE_URL == "/ollama/api":
         OLLAMA_API_BASE_URL = "http://host.docker.internal:11434/api"
 
+
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
+
+if OLLAMA_BASE_URL == "":
+    OLLAMA_BASE_URL = (
+        OLLAMA_API_BASE_URL[:-4]
+        if OLLAMA_API_BASE_URL.endswith("/api")
+        else OLLAMA_API_BASE_URL
+    )
+
+
 ####################################
 # OPENAI_API
 ####################################
@@ -226,7 +237,7 @@ if OPENAI_API_BASE_URL == "":
 # WEBUI
 ####################################
 
-ENABLE_SIGNUP = os.environ.get("ENABLE_SIGNUP", True)
+ENABLE_SIGNUP = os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
 DEFAULT_MODELS = os.environ.get("DEFAULT_MODELS", None)
 
 

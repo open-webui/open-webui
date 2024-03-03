@@ -79,14 +79,18 @@
 								throw data;
 							}
 
-							if (data.done == false) {
-								if (prompt == '' && data.response == '\n') {
-									continue;
-								} else {
-									prompt += data.response;
-									console.log(data.response);
-									chatInputElement.scrollTop = chatInputElement.scrollHeight;
-									await tick();
+							if ('id' in data) {
+								console.log(data);
+							} else {
+								if (data.done == false) {
+									if (prompt == '' && data.response == '\n') {
+										continue;
+									} else {
+										prompt += data.response;
+										console.log(data.response);
+										chatInputElement.scrollTop = chatInputElement.scrollHeight;
+										await tick();
+									}
 								}
 							}
 						}
