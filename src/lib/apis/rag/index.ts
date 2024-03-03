@@ -85,17 +85,49 @@ export const getRAGTemplate = async (token: string) => {
 	return res?.template ?? '';
 };
 
-export const updateRAGTemplate = async (token: string, template: string) => {
+export const getQuerySettings = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/template/update`, {
+	const res = await fetch(`${RAG_API_BASE_URL}/query/settings`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+type QuerySettings = {
+	k: number | null;
+	template: string | null;
+};
+
+export const updateQuerySettings = async (token: string, settings: QuerySettings) => {
+	let error = null;
+
+	const res = await fetch(`${RAG_API_BASE_URL}/query/settings/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			template: template
+			...settings
 		})
 	})
 		.then(async (res) => {
@@ -183,7 +215,7 @@ export const queryDoc = async (
 	token: string,
 	collection_name: string,
 	query: string,
-	k: number
+	k: number | null = null
 ) => {
 	let error = null;
 
