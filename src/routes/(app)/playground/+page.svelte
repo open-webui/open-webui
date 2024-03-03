@@ -461,10 +461,6 @@
 </div>
 
 <style>
-	.font-mona {
-		font-family: 'Mona Sans';
-	}
-
 	.scrollbar-hidden::-webkit-scrollbar {
 		display: none; /* for Chrome, Safari and Opera */
 	}
