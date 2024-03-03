@@ -6,12 +6,12 @@
 	import { toast } from 'svelte-sonner';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user, models } from '$lib/stores';
+	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
 	import { cancelChatCompletion, generateChatCompletion } from '$lib/apis/ollama';
 	import { splitStream } from '$lib/utils';
 
-	let mode = 'complete';
+	let mode = 'chat';
 	let loaded = false;
 
 	let text = '';
@@ -21,6 +21,9 @@
 	let loading = false;
 	let currentRequestId;
 	let stopResponseFlag = false;
+
+	let system = '';
+	let messages = [];
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('text-completion-textarea');
@@ -114,6 +117,13 @@
 			await goto('/');
 		}
 
+		if ($settings?.models) {
+			selectedModel = $settings?.models[0];
+		} else if ($config?.default_models) {
+			selectedModel = $config?.default_models.split(',')[0];
+		} else {
+			selectedModel = '';
+		}
 		loaded = true;
 	});
 </script>
@@ -128,14 +138,16 @@
 	<div class=" flex flex-col justify-between w-full overflow-y-auto h-[100dvh]">
 		<div class="max-w-2xl mx-auto w-full px-3 p-3 md:px-0 h-full">
 			<div class=" flex flex-col h-full">
-				<div class="flex flex-col sm:flex-row justify-between mb-2.5 gap-1">
-					<div class="flex items-center gap-2">
-						<div class=" text-2xl font-semibold self-center">Playground</div>
+				<div class="flex flex-col justify-between mb-2.5 gap-1">
+					<div class="flex justify-between items-center gap-2">
+						<div class=" text-2xl font-semibold self-center flex">
+							Playground <span class=" text-xs text-gray-500 self-center ml-1">(Beta)</span>
+						</div>
 
 						<div>
 							<button
-								class=" flex items-center gap-2 text-xs px-3 py-0.5 rounded-lg {mode === 'chat' &&
-									'text-sky-600 dark:text-sky-200 bg-sky-200/30'} {mode === 'complete' &&
+								class=" flex items-center gap-0.5 text-xs px-2.5 py-0.5 rounded-lg {mode ===
+									'chat' && 'text-sky-600 dark:text-sky-200 bg-sky-200/30'} {mode === 'complete' &&
 									'text-green-600 dark:text-green-200 bg-green-200/30'} "
 								on:click={() => {
 									if (mode === 'complete') {
@@ -145,29 +157,43 @@
 									}
 								}}
 							>
-								<div
-									class="w-1 h-1 rounded-full {mode === 'chat' &&
-										'bg-sky-600 dark:bg-sky-300'} {mode === 'complete' &&
-										'bg-green-600 dark:bg-green-300'} "
-								/>
-								{mode}</button
-							>
+								{#if mode === 'complete'}
+									Text Completion
+								{:else if mode === 'chat'}
+									Chat
+								{/if}
+
+								<div>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="w-3 h-3"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M5.22 10.22a.75.75 0 0 1 1.06 0L8 11.94l1.72-1.72a.75.75 0 1 1 1.06 1.06l-2.25 2.25a.75.75 0 0 1-1.06 0l-2.25-2.25a.75.75 0 0 1 0-1.06ZM10.78 5.78a.75.75 0 0 1-1.06 0L8 4.06 6.28 5.78a.75.75 0 0 1-1.06-1.06l2.25-2.25a.75.75 0 0 1 1.06 0l2.25 2.25a.75.75 0 0 1 0 1.06Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</div>
+							</button>
 						</div>
 					</div>
 
-					<div class=" sm:self-center flex gap-1">
+					<div class="  flex gap-1 px-1">
 						<select
 							id="models"
-							class="outline-none bg-transparent text-xs font-medium rounded-lg w-full placeholder-gray-400"
+							class="outline-none bg-transparent text-sm font-medium rounded-lg w-full placeholder-gray-400"
 							bind:value={selectedModel}
 						>
-							<option class=" text-gray-700" value="" selected disabled>Select a model</option>
+							<option class=" text-gray-800" value="" selected disabled>Select a model</option>
 
 							{#each $models as model}
 								{#if model.name === 'hr'}
 									<hr />
-								{:else if !(model?.external ?? false)}
-									<option value={model.id} class="text-gray-700 text-lg"
+								{:else}
+									<option value={model.id} class="text-gray-800 text-lg"
 										>{model.name +
 											`${model.size ? ` (${(model.size / 1024 ** 3).toFixed(1)}GB)` : ''}`}</option
 									>
@@ -175,7 +201,7 @@
 							{/each}
 						</select>
 
-						<button
+						<!-- <button
 							class=" self-center dark:hover:text-gray-300"
 							id="open-settings-button"
 							on:click={async () => {}}
@@ -199,40 +225,157 @@
 									d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
 								/>
 							</svg>
-						</button>
+						</button> -->
 					</div>
 				</div>
 
-				<div class="flex-1 flex flex-col space-y-2.5">
-					<div class="flex-1">
-						<textarea
-							id="text-completion-textarea"
-							class="w-full h-full p-3 bg-transparent outline outline-1 outline-gray-200 dark:outline-gray-700 resize-none rounded-lg"
-							bind:value={text}
-						/>
+				{#if mode === 'chat'}
+					<div class="p-1">
+						<div class="p-3 outline outline-1 outline-gray-200 dark:outline-gray-800 rounded-lg">
+							<div class=" text-sm font-medium">System</div>
+							<textarea
+								id="text-completion-textarea"
+								class="w-full h-full bg-transparent resize-none outline-none text-sm"
+								bind:value={system}
+								placeholder="You're a helpful assistant."
+							/>
+						</div>
 					</div>
+				{/if}
 
-					<div>
-						{#if !loading}
-							<button
-								class="px-3 py-1.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-gray-50 transition rounded-lg"
-								on:click={() => {
-									submitHandler();
-								}}
-							>
-								Submit
-							</button>
-						{:else}
-							<button
-								class="px-3 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-900 transition rounded-lg"
-								on:click={() => {
-									stopResponse();
-								}}
-							>
-								Cancel
-							</button>
-						{/if}
+				<div
+					class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+					id="messages-container"
+				>
+					<div class=" h-full w-full flex flex-col">
+						<div class="flex-1 p-1">
+							{#if mode === 'complete'}
+								<textarea
+									id="text-completion-textarea"
+									class="w-full h-full p-3 bg-transparent outline outline-1 outline-gray-200 dark:outline-gray-800 resize-none rounded-lg text-sm"
+									bind:value={text}
+									placeholder="You're a helpful assistant."
+								/>
+							{:else if mode === 'chat'}
+								<div class="py-3 space-y-3">
+									{#each messages as message, idx}
+										<div class="flex gap-2 group">
+											<div class="flex items-start pt-1">
+												<button
+													class="px-2 py-1 text-sm font-semibold uppercase min-w-[6rem] text-left dark:group-hover:bg-gray-800 rounded-lg transition"
+													on:click={() => {
+														message.role = message.role === 'user' ? 'assistant' : 'user';
+													}}>{message.role}</button
+												>
+											</div>
+
+											<div class="flex-1">
+												<textarea
+													id="text-completion-textarea"
+													class="w-full bg-transparent outline-none rounded-lg p-2 text-sm resize-none"
+													placeholder="Enter {message.role === 'user'
+														? 'a user'
+														: 'an assistant'} message here"
+													rows="1"
+													on:input={(e) => {
+														e.target.style.height = '';
+														e.target.style.height = e.target.scrollHeight + 'px';
+													}}
+													on:focus={(e) => {
+														e.target.style.height = '';
+														e.target.style.height = e.target.scrollHeight + 'px';
+
+														// e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+													}}
+													bind:value={message.content}
+												/>
+											</div>
+
+											<div class=" pt-1">
+												<button
+													class=" group-hover:text-gray-500 dark:text-gray-900 dark:hover:text-gray-300 transition"
+													on:click={() => {
+														messages = messages.filter((message, messageIdx) => messageIdx !== idx);
+													}}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="2"
+														stroke="currentColor"
+														class="w-5 h-5"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+														/>
+													</svg>
+												</button>
+											</div>
+										</div>
+
+										<hr class=" dark:border-gray-800" />
+									{/each}
+
+									<button
+										class="flex items-center gap-2"
+										on:click={() => {
+											console.log(messages.at(-1));
+											messages.push({
+												role:
+													(messages.at(-1)?.role ?? 'assistant') === 'user' ? 'assistant' : 'user',
+												content: ''
+											});
+											messages = messages;
+										}}
+									>
+										<div>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="1.5"
+												stroke="currentColor"
+												class="w-5 h-5"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+												/>
+											</svg>
+										</div>
+
+										<div class=" text-sm font-medium">Add message</div>
+									</button>
+								</div>
+							{/if}
+						</div>
 					</div>
+				</div>
+
+				<div class="pb-2">
+					{#if !loading}
+						<button
+							class="px-3 py-1.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-gray-50 transition rounded-lg"
+							on:click={() => {
+								submitHandler();
+							}}
+						>
+							Submit
+						</button>
+					{:else}
+						<button
+							class="px-3 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-900 transition rounded-lg"
+							on:click={() => {
+								stopResponse();
+							}}
+						>
+							Cancel
+						</button>
+					{/if}
 				</div>
 			</div>
 		</div>
