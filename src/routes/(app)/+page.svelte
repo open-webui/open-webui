@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -39,6 +39,9 @@
 	import { RAGTemplate } from '$lib/utils/rag';
 	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+
+	const i18n = getContext('i18n');
+
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
@@ -166,7 +169,9 @@
 		) {
 			// Upload not done
 			toast.error(
-				$i18n.t(`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`)
+				$i18n.t(
+					`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
+				)
 			);
 		} else {
 			// Reset chat message textarea height
@@ -511,12 +516,18 @@
 					responseMessage.content = error.error;
 				}
 			} else {
-				toast.error($i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: 'Ollama'}));
-				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: 'Ollama'});
+				toast.error(
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: 'Ollama' })
+				);
+				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+					provider: 'Ollama'
+				});
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: 'Ollama'});
+			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+				provider: 'Ollama'
+			});
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -678,12 +689,18 @@
 					}
 				}
 			} else {
-				toast.error($i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: model}));
-				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: model}});
+				toast.error(
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: model })
+				);
+				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+					provider: model
+				});
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {provider: model});
+			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+				provider: model
+			});
 			responseMessage.done = true;
 			messages = messages;
 		}
