@@ -3,7 +3,7 @@
 	"(e.g. `sh webui.sh --api`)": "(z.B. `sh webui.sh --api`)",
 	"{{item}} not provided": "{{item}} nicht angegeben",
 	"{{modelName}} is thinking...": "{{modelName}} denkt nach...",
-	"{{webui_name}} Backend Required": "{{webui_name}}-Backend erforderlich",
+	"{{webUIName}} Backend Required": "{{webUIName}}-Backend erforderlich",
 	"About": "Über",
 	"Account": "Account",
 	"Action": "Aktion",

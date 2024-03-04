@@ -22,7 +22,7 @@
 			<div class="m-auto pb-44 flex flex-col justify-center">
 				<div class="max-w-md">
 					<div class="text-center text-2xl font-medium z-50">
-						{$i18n.t('{{webui_name}} Backend Required', { webui_name: $WEBUI_NAME })}
+						{$i18n.t('{{webUIName}} Backend Required', { webUIName: $WEBUI_NAME })}
 					</div>
 
 					<div class=" mt-4 text-center text-sm w-full">
