@@ -224,15 +224,35 @@
 	};
 
 	const messageDeleteHandler = async (messageId) => {
-		const messageParentId = history.messages[messageId]?.parentId;
+		const messageToDelete = history.messages[messageId];
+		const messageParentId = messageToDelete.parentId;
+		const messageChildrenIds = messageToDelete.childrenIds ?? [];
 
-		if (messageParentId !== null) {
-			history.messages[messageParentId].childrenIds = []
-		}
+		messageChildrenIds.forEach((childId) => {
+			const child = history.messages[childId];
+			if (child && child.childrenIds) {
+				if (child.childrenIds.length == 0) { // if last prompt/response pair
+					history.messages[messageParentId].childrenIds = []
+					history.currentId = messageParentId;
+				}
+				else {
+					child.childrenIds.forEach((grandChildId) => {
+						if (history.messages[grandChildId]) {
+							history.messages[grandChildId].parentId = messageParentId;
+							history.messages[messageParentId].childrenIds.push(grandChildId);
+						}
+					});
+				}
+			}
 
-		history.currentId = messageParentId;
+			// remove response
+			history.messages[messageParentId].childrenIds = history.messages[messageParentId].childrenIds
+				.filter((id) => id !== childId);
+		});
 
-		await tick();
+		// remove prompt
+		history.messages[messageParentId].childrenIds = history.messages[messageParentId].childrenIds
+			.filter((id) => id !== messageId);
 
 		await updateChatById(localStorage.token, chatId, {
 			messages: messages,
