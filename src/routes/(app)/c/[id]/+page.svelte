@@ -263,19 +263,17 @@
 			let relevantContexts = await Promise.all(
 				docs.map(async (doc) => {
 					if (doc.type === 'collection') {
-						return await queryCollection(localStorage.token, doc.collection_names, query, 4).catch(
+						return await queryCollection(localStorage.token, doc.collection_names, query).catch(
 							(error) => {
 								console.log(error);
 								return null;
 							}
 						);
 					} else {
-						return await queryDoc(localStorage.token, doc.collection_name, query, 4).catch(
-							(error) => {
-								console.log(error);
-								return null;
-							}
-						);
+						return await queryDoc(localStorage.token, doc.collection_name, query).catch((error) => {
+							console.log(error);
+							return null;
+						});
 					}
 				})
 			);
