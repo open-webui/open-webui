@@ -84,10 +84,12 @@
 				if (!data.success) {
 					toast.error(data.error);
 				} else {
-					toast.success($i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, {modelName}));
+					toast.success(
+						$i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, { modelName })
+					);
 
 					const notification = new Notification($WEBUI_NAME, {
-						body: $i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, {modelName}),
+						body: $i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, { modelName }),
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
 
@@ -249,7 +251,7 @@
 		});
 
 		if (res) {
-			toast.success($i18n.t(`Deleted {{deleteModelTag}}`, {deleteModelTag}));
+			toast.success($i18n.t(`Deleted {{deleteModelTag}}`, { deleteModelTag }));
 		}
 
 		deleteModelTag = '';
@@ -376,7 +378,7 @@
 		{#if ollamaVersion}
 			<div class="space-y-2 pr-1.5">
 				<div>
-					<div class=" mb-2 text-sm font-medium">Manage Ollama Models</div>
+					<div class=" mb-2 text-sm font-medium">{$i18n.t('Manage Ollama Models')}</div>
 
 					<div class=" mb-2 text-sm font-medium">{$i18n.t('Pull a model from Ollama.com')}</div>
 					<div class="flex w-full">
@@ -439,7 +441,8 @@
 					</div>
 
 					<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
-						To access the available model names for downloading, <a
+						{$i18n.t('To access the available model names for downloading,')}
+						<a
 							class=" text-gray-500 dark:text-gray-300 font-medium underline"
 							href="https://ollama.com/library"
 							target="_blank">{$i18n.t('click here.')}</a
@@ -515,7 +518,7 @@
 							type="button"
 							on:click={() => {
 								showExperimentalOllama = !showExperimentalOllama;
-							}}>{showExperimentalOllama ? 'Show' : 'Hide'}</button
+							}}>{showExperimentalOllama ? $i18n.t('Show') : $i18n.t('Hide')}</button
 						>
 					</div>
 				</div>
@@ -701,7 +704,7 @@
 								type="button"
 								on:click={() => {
 									showLiteLLMParams = !showLiteLLMParams;
-								}}>{showLiteLLMParams ? 'Advanced' : 'Default'}</button
+								}}>{showLiteLLMParams ? $i18n.t('Advanced') : $i18n.t('Default')}</button
 							>
 						</div>
 					</div>
@@ -796,13 +799,13 @@
 					</div>
 
 					<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
-						Not sure what to add?
+						{$i18n.t('Not sure what to add?')}
 						<a
 							class=" text-gray-300 font-medium underline"
 							href="https://litellm.vercel.app/docs/proxy/configs#quick-start"
 							target="_blank"
 						>
-							Click here for help.
+							{$i18n.t('Click here for help')}
 						</a>
 					</div>
 

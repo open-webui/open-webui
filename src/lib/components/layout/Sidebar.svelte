@@ -240,9 +240,11 @@
 					<div class=" text-left px-5 py-2">
 						<div class=" font-medium">{$i18n.t('Chat History is off for this browser.')}</div>
 						<div class="text-xs mt-2">
-							When history is turned off, new chats on this browser won't appear in your history on
-							any of your devices. <span class=" font-semibold"
-								>This setting does not sync across browsers or devices.</span
+							{$i18n.t(
+								"When history is turned off, new chats on this browser won't appear in your history on any of your devices."
+							)}
+							<span class=" font-semibold"
+								>{$i18n.t('This setting does not sync across browsers or devices.')}</span
 							>
 						</div>
 
@@ -269,7 +271,7 @@
 									/>
 								</svg>
 
-								<div>Enable Chat History</div>
+								<div>{$i18n.t('Enable Chat History')}</div>
 							</button>
 						</div>
 					</div>
@@ -295,7 +297,7 @@
 
 					<input
 						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm text-gray-300 bg-gray-950 outline-none"
-						placeholder="Search"
+						placeholder={$i18n.t('Search')}
 						bind:value={search}
 						on:focus={() => {
 							enrichChatsWithContent($chats);

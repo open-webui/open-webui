@@ -58,9 +58,9 @@
 							target="_blank"
 						>
 							{updateAvailable === null
-								? 'Checking for updates...'
+								? $i18n.t('Checking for updates...')
 								: updateAvailable
-								? `(v${version.latest} available!)`
+								? `(v${version.latest} ${$i18n.t('available!')})`
 								: '(latest)'}
 						</a>
 					</div>
@@ -71,7 +71,7 @@
 							showChangelog.set(true);
 						}}
 					>
-						<div>See what's new</div>
+						<div>{$i18n.t("See what's new")}</div>
 					</button>
 				</div>
 
@@ -81,7 +81,7 @@
 						checkForVersionUpdates();
 					}}
 				>
-					Check for updates
+					{$i18n.t('Check for updates')}
 				</button>
 			</div>
 		</div>
@@ -125,7 +125,8 @@
 		</div>
 
 		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-			Created by <a
+			{$i18n.t('Created by')}
+			<a
 				class=" text-gray-500 dark:text-gray-300 font-medium"
 				href="https://github.com/tjbck"
 				target="_blank">Timothy J. Baek</a

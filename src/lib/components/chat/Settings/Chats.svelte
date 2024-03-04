@@ -154,7 +154,7 @@
 			</div>
 
 			<div class="text-xs text-left w-full font-medium mt-0.5">
-				This setting does not sync across browsers or devices.
+				{$i18n.t('This setting does not sync across browsers or devices.')}
 			</div>
 		</div>
 

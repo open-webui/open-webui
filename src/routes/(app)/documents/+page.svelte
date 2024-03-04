@@ -219,7 +219,7 @@
 					</div>
 				</div>
 				<div class=" text-gray-500 text-xs mt-1">
-					ⓘ Use '#' in the prompt input to load and select your documents.
+					ⓘ {$i18n.t("Use '#' in the prompt input to load and select your documents.")}
 				</div>
 			</div>
 
@@ -242,7 +242,7 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
 						bind:value={query}
-						placeholder="Search Document"
+						placeholder={$i18n.t('Search Documents')}
 					/>
 				</div>
 

@@ -148,13 +148,13 @@
 			</div>
 
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				Trouble accessing Ollama?
+				{$i18n.t('Trouble accessing Ollama?')}
 				<a
 					class=" text-gray-300 font-medium"
 					href="https://github.com/open-webui/open-webui#troubleshooting"
 					target="_blank"
 				>
-					Click here for help.
+					{$i18n.t('Click here for help')}
 				</a>
 			</div>
 		</div>
@@ -165,7 +165,7 @@
 			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 			type="submit"
 		>
-			Save
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </form>

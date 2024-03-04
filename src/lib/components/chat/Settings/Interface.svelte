@@ -317,7 +317,7 @@
 
 				{#if promptSuggestions.length > 0}
 					<div class="text-xs text-left w-full mt-2">
-						Adjusting these settings will apply changes universally to all users.
+						{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
 					</div>
 				{/if}
 			</div>
@@ -329,7 +329,7 @@
 			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 			type="submit"
 		>
-			Save
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </form>
