@@ -324,7 +324,7 @@
 						<div>
 							<input
 								class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-								placeholder="Name your modelfile"
+								placeholder={$i18n.t('Name your modelfile')}
 								bind:value={title}
 								required
 							/>
@@ -337,7 +337,7 @@
 						<div>
 							<input
 								class="px-3 py-1.5 text-sm w-full bg-transparent disabled:text-gray-500 border dark:border-gray-600 outline-none rounded-lg"
-								placeholder="Add a model tag name"
+								placeholder={$i18n.t('Add a model tag name')}
 								value={tagName}
 								disabled
 								required
@@ -352,7 +352,7 @@
 					<div>
 						<input
 							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-							placeholder="Add a short description about what this modelfile does"
+							placeholder={$i18n.t('Add a short description about what this modelfile does')}
 							bind:value={desc}
 							required
 						/>
@@ -411,7 +411,7 @@
 							<div class=" flex border dark:border-gray-600 rounded-lg">
 								<input
 									class="px-3 py-1.5 text-sm w-full bg-transparent outline-none border-r dark:border-gray-600"
-									placeholder="Write a prompt suggestion (e.g. Who are you?)"
+									placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
 									bind:value={prompt.content}
 								/>
 

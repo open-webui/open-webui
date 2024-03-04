@@ -85,7 +85,8 @@
 							<div class=" self-center capitalize font-semibold">{selectedUser.name}</div>
 
 							<div class="text-xs text-gray-500">
-								Created at {dayjs(selectedUser.timestamp * 1000).format('MMMM DD, YYYY')}
+								{$i18n.t('Created at')}
+								{dayjs(selectedUser.timestamp * 1000).format($i18n.t('MMMM DD, YYYY'))}
 							</div>
 						</div>
 					</div>
@@ -141,7 +142,7 @@
 							class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 							type="submit"
 						>
-							Save
+							{$i18n.t('Save')}
 						</button>
 					</div>
 				</form>

@@ -67,17 +67,18 @@
 					{#if $modelfiles.map((modelfile) => modelfile.tagName).includes(message.user)}
 						{$modelfiles.find((modelfile) => modelfile.tagName === message.user)?.title}
 					{:else}
-						You <span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
+						{$i18n.t('Sie')}
+						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
 					{/if}
 				{:else if $settings.showUsername}
 					{user.name}
 				{:else}
-					You
+					{$i18n.t('Sie')}
 				{/if}
 
 				{#if message.timestamp}
 					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
-						{dayjs(message.timestamp * 1000).format('DD/MM/YYYY HH:mm')}
+						{dayjs(message.timestamp * 1000).format($i18n.t('DD/MM/YYYY HH:mm'))}
 					</span>
 				{/if}
 			</Name>

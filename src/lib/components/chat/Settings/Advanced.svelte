@@ -74,9 +74,9 @@
 					}}
 				>
 					{#if keepAlive === null}
-						<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{:else}
-						<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 					{/if}
 				</button>
 			</div>
@@ -86,7 +86,7 @@
 					<input
 						class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
 						type="text"
-						placeholder={`e.g.) "30s","10m". Valid time units are "s", "m", "h".`}
+						placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
 						bind:value={keepAlive}
 					/>
 				</div>

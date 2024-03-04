@@ -134,7 +134,7 @@
 					<div>
 						<input
 							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-							placeholder="Add a short title for this prompt"
+							placeholder={$i18n.t('Add a short title for this prompt')}
 							bind:value={title}
 							required
 						/>
@@ -152,21 +152,22 @@
 						</div>
 						<input
 							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-r-lg"
-							placeholder="short-summary"
+							placeholder={$i18n.t('short-summary')}
 							bind:value={command}
 							required
 						/>
 					</div>
 
 					<div class="text-xs text-gray-400 dark:text-gray-500">
-						Only <span class=" text-gray-600 dark:text-gray-300 font-medium"
-							>alphanumeric characters and hyphens</span
+						{$i18n.t('Only')}
+						<span class=" text-gray-600 dark:text-gray-300 font-medium"
+							>{$i18n.t('alphanumeric characters and hyphens')}</span
 						>
-						are allowed; Activate this command by typing "<span
+						{$i18n.t('are allowed - Activate this command by typing')}&nbsp;"<span
 							class=" text-gray-600 dark:text-gray-300 font-medium"
 						>
 							/{command}
-						</span>" to chat input.
+						</span>" &nbsp;{$i18n.t('to chat input.')}
 					</div>
 				</div>
 
@@ -179,7 +180,9 @@
 						<div>
 							<textarea
 								class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-								placeholder={`Write a summary in 50 words that summarizes [topic or keyword].`}
+								placeholder={$i18n.t(
+									'Write a summary in 50 words that summarizes [topic or keyword]'
+								)}
 								rows="6"
 								bind:value={content}
 								required
@@ -187,18 +190,20 @@
 						</div>
 
 						<div class="text-xs text-gray-400 dark:text-gray-500">
-							ⓘ Format your variables using square brackets like this: <span
-								class=" text-gray-600 dark:text-gray-300 font-medium">[variable]</span
-							>
-							. Make sure to enclose them with
+							ⓘ {$i18n.t('Format your variables using square brackets like this:')}&nbsp;<span
+								class=" text-gray-600 dark:text-gray-300 font-medium">[{$i18n.t('variable')}]</span
+							>.
+							{$i18n.t('Make sure to enclose them with')}
 							<span class=" text-gray-600 dark:text-gray-300 font-medium">'['</span>
-							and <span class=" text-gray-600 dark:text-gray-300 font-medium">']'</span>.
+							{$i18n.t('and')}
+							<span class=" text-gray-600 dark:text-gray-300 font-medium">']'</span>.
 						</div>
 
 						<div class="text-xs text-gray-400 dark:text-gray-500">
-							Utilize <span class=" text-gray-600 dark:text-gray-300 font-medium"
-								>{`{{CLIPBOARD}}`}</span
-							> variable to have them replaced with clipboard content.
+							{$i18n.t('Utilize')}<span class=" text-gray-600 dark:text-gray-300 font-medium">
+								{` {{CLIPBOARD}}`}</span
+							>
+							{$i18n.t('variable to have them replaced with clipboard content.')}
 						</div>
 					</div>
 				</div>
