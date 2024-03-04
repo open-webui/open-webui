@@ -308,5 +308,8 @@
 	"Utilize": "Utilize",
 	"variable to have them replaced with clipboard content.": "variable to have them replaced with clipboard content.",
 	"short-summary": "short-summary",
-	"Add a short title for this prompt": "Add a short title for this prompt"
+	"Add a short title for this prompt": "Add a short title for this prompt",
+	"Open": "Open",
+	"Close": "Close",
+	"sidebar": "sidebar"
 }

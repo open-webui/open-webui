@@ -707,7 +707,11 @@
 	<div
 		class="fixed left-0 top-[50dvh] z-40 -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
 	>
-		<Tooltip placement="right" content={`${show ? 'Close' : 'Open'} sidebar`} touch={false}>
+		<Tooltip
+			placement="right"
+			content={`${show ? $i18n.t('Close') : $i18n.t('Open')} ${$i18n.t('sidebar')}`}
+			touch={false}
+		>
 			<button
 				id="sidebar-toggle-button"
 				class=" group"
