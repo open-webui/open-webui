@@ -39,7 +39,7 @@
 		});
 		if (res) {
 			users = await getUsers(localStorage.token);
-			toast.success($i18n.t('Successfully updated'));
+			toast.success($i18n.t('Successfully updated.'));
 		}
 	};
 
