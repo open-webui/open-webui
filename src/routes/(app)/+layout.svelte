@@ -37,7 +37,7 @@
 
 	let ollamaVersion = '';
 	let loaded = false;
-	let showShortcutsButton:HTMLButtonElement
+	let showShortcutsButtonElement:HTMLButtonElement
 	let DB = null;
 	let localDBChats = [];
 
@@ -184,7 +184,7 @@
 				if (isCtrlPressed && event.key === '/') {
 					event.preventDefault();
 					console.log('showShortcuts');
-					showShortcutsButton.click();
+					showShortcutsButtonElement.click();
 				}
 			});
 
@@ -203,7 +203,7 @@
 	<div class=" hidden lg:flex fixed bottom-0 right-0 px-3 py-3 z-10">
 		<button
 			id="show-shortcuts-button"
-			bind:this={showShortcutsButton}
+			bind:this={showShortcutsButtonElement}
 			class="text-gray-600 dark:text-gray-300 bg-gray-300/20 w-6 h-6 flex items-center justify-center text-xs rounded-full"
 			on:click={() => {
 				showShortcuts = !showShortcuts;

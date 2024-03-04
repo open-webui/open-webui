@@ -19,7 +19,7 @@
 
 	export let suggestionPrompts = [];
 	export let autoScroll = true;
-	let chatTextArea:HTMLTextAreaElement
+	let chatTextAreaElement:HTMLTextAreaElement
 	let filesInputElement;
 
 	let promptsElement;
@@ -43,9 +43,9 @@
 	let speechRecognition;
 
 	$: if (prompt) {
-		if (chatTextArea) {
-			chatTextArea.style.height = '';
-			chatTextArea.style.height = Math.min(chatTextArea.scrollHeight, 200) + 'px';
+		if (chatTextAreaElement) {
+			chatTextAreaElement.style.height = '';
+			chatTextAreaElement.style.height = Math.min(chatTextAreaElement.scrollHeight, 200) + 'px';
 		}
 	}
 
@@ -84,7 +84,7 @@
 			if (res) {
 				prompt = res.text;
 				await tick();
-				chatTextArea?.focus();
+				chatTextAreaElement?.focus();
 
 				if (prompt !== '' && $settings?.speechAutoSend === true) {
 					submitPrompt(prompt, user);
@@ -187,7 +187,7 @@
 						prompt = `${prompt}${transcript}`;
 
 						await tick();
-						chatTextArea?.focus();
+						chatTextAreaElement?.focus();
 
 						// Restart the inactivity timeout
 						timeoutId = setTimeout(() => {
@@ -289,7 +289,7 @@
 	};
 
 	onMount(() => {
-		window.setTimeout(() => chatTextArea?.focus(), 0);
+		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
 
@@ -657,7 +657,7 @@
 
 						<textarea
 							id="chat-textarea"
-							bind:this={chatTextArea}
+							bind:this={chatTextAreaElement}
 							class=" dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
 								? ''
 								: ' pl-4'} rounded-xl resize-none h-[48px]"
