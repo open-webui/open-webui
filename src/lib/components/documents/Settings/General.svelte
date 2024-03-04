@@ -2,14 +2,14 @@
 	import { getDocs } from '$lib/apis/documents';
 	import {
 		getChunkParams,
-		getRAGTemplate,
+		getQuerySettings,
 		scanDocs,
 		updateChunkParams,
-		updateRAGTemplate
+		updateQuerySettings
 	} from '$lib/apis/rag';
 	import { documents } from '$lib/stores';
 	import { onMount } from 'svelte';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	export let saveHandler: Function;
 
@@ -18,7 +18,10 @@
 	let chunkSize = 0;
 	let chunkOverlap = 0;
 
-	let template = '';
+	let querySettings = {
+		template: '',
+		k: 4
+	};
 
 	const scanHandler = async () => {
 		loading = true;
@@ -33,7 +36,7 @@
 
 	const submitHandler = async () => {
 		const res = await updateChunkParams(localStorage.token, chunkSize, chunkOverlap);
-		await updateRAGTemplate(localStorage.token, template);
+		querySettings = await updateQuerySettings(localStorage.token, querySettings);
 	};
 
 	onMount(async () => {
@@ -44,7 +47,7 @@
 			chunkOverlap = res.chunk_overlap;
 		}
 
-		template = await getRAGTemplate(localStorage.token);
+		querySettings = await getQuerySettings(localStorage.token);
 	});
 </script>
 
@@ -156,10 +159,44 @@
 				</div>
 			</div>
 
+			<div class=" text-sm font-medium">Query Params</div>
+
+			<div class=" flex">
+				<div class="  flex w-full justify-between">
+					<div class="self-center text-xs font-medium flex-1">Top K</div>
+
+					<div class="self-center p-3">
+						<input
+							class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+							type="number"
+							placeholder="Enter Top K"
+							bind:value={querySettings.k}
+							autocomplete="off"
+							min="0"
+						/>
+					</div>
+				</div>
+
+				<!-- <div class="flex w-full">
+					<div class=" self-center text-xs font-medium min-w-fit">Chunk Overlap</div>
+
+					<div class="self-center p-3">
+						<input
+							class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+							type="number"
+							placeholder="Enter Chunk Overlap"
+							bind:value={chunkOverlap}
+							autocomplete="off"
+							min="0"
+						/>
+					</div>
+				</div> -->
+			</div>
+
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">RAG Template</div>
 				<textarea
-					bind:value={template}
+					bind:value={querySettings.template}
 					class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
 					rows="4"
 				/>

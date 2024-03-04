@@ -1,5 +1,5 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { config, user } from '$lib/stores';
@@ -12,7 +12,9 @@
 		toggleImageGenerationEnabledStatus,
 		updateAUTOMATIC1111Url,
 		updateDefaultDiffusionModel,
-		updateImageSize
+		updateImageSize,
+		getImageSteps,
+		updateImageSteps
 	} from '$lib/apis/images';
 	import { getBackendConfig } from '$lib/apis';
 	const dispatch = createEventDispatcher();
@@ -21,20 +23,23 @@
 
 	let loading = false;
 
-	let enableImageGeneration = true;
+	let enableImageGeneration = false;
 	let AUTOMATIC1111_BASE_URL = '';
 
 	let selectedModel = '';
-	let models = [];
+	let models = null;
 
 	let imageSize = '';
+	let steps = 50;
 
 	const getModels = async () => {
 		models = await getDiffusionModels(localStorage.token).catch((error) => {
 			toast.error(error);
 			return null;
 		});
-		selectedModel = await getDefaultDiffusionModel(localStorage.token);
+		selectedModel = await getDefaultDiffusionModel(localStorage.token).catch((error) => {
+			return '';
+		});
 	};
 
 	const updateAUTOMATIC1111UrlHandler = async () => {
@@ -83,6 +88,7 @@
 
 			if (enableImageGeneration && AUTOMATIC1111_BASE_URL) {
 				imageSize = await getImageSize(localStorage.token);
+				steps = await getImageSteps(localStorage.token);
 				getModels();
 			}
 		}
@@ -98,12 +104,16 @@
 			toast.error(error);
 			return null;
 		});
+		await updateImageSteps(localStorage.token, steps).catch((error) => {
+			toast.error(error);
+			return null;
+		});
 
 		dispatch('save');
 		loading = false;
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[21rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[20.5rem]">
 		<div>
 			<div class=" mb-1 text-sm font-medium">Image Settings</div>
 
@@ -188,7 +198,7 @@
 							{#if !selectedModel}
 								<option value="" disabled selected>Select a model</option>
 							{/if}
-							{#each models as model}
+							{#each models ?? [] as model}
 								<option value={model.title} class="bg-gray-100 dark:bg-gray-700"
 									>{model.model_name}</option
 								>
@@ -206,6 +216,19 @@
 							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
 							placeholder="Enter Image Size (e.g. 512x512)"
 							bind:value={imageSize}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">Set Steps</div>
+				<div class="flex w-full">
+					<div class="flex-1 mr-2">
+						<input
+							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							placeholder="Enter Number of Steps (e.g. 50)"
+							bind:value={steps}
 						/>
 					</div>
 				</div>

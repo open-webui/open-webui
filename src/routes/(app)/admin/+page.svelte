@@ -1,10 +1,10 @@
 <script>
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { config, user } from '$lib/stores';
+	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
@@ -61,6 +61,12 @@
 	});
 </script>
 
+<svelte:head>
+	<title>
+		{`Admin Panel | ${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
+
 {#key selectedUser}
 	<EditUserModal
 		bind:show={showEditUserModal}
@@ -74,13 +80,11 @@
 
 <SettingsModal bind:show={showSettingsModal} />
 
-<div
-	class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white bg-white dark:bg-gray-900 font-mona"
->
+<div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white font-mona">
 	{#if loaded}
-		<div class="overflow-y-auto w-full flex justify-center">
-			<div class="w-full max-w-3xl px-6 md:px-16 flex flex-col">
-				<div class="py-10 w-full">
+		<div class=" flex flex-col justify-between w-full overflow-y-auto">
+			<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
+				<div class="w-full">
 					<div class=" flex flex-col justify-center">
 						<div class=" flex justify-between items-center">
 							<div class="flex items-center text-2xl font-semibold">

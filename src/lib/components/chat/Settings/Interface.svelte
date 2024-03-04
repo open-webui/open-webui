@@ -3,7 +3,7 @@
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, models, user } from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
 
 	export let saveSettings: Function;
@@ -191,10 +191,12 @@
 						placeholder="Select a model"
 					>
 						<option value="" selected>Current Model</option>
-						{#each $models.filter((m) => m.size != null) as model}
-							<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
-								>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
-							>
+						{#each $models as model}
+							{#if model.size != null}
+								<option value={model.name} class="bg-gray-100 dark:bg-gray-700">
+									{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}
+								</option>
+							{/if}
 						{/each}
 					</select>
 				</div>

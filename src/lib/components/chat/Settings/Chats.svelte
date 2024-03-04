@@ -15,7 +15,7 @@
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
 	export let saveSettings: Function;
 	// Chats
@@ -75,7 +75,9 @@
 
 	const deleteChats = async () => {
 		await goto('/');
-		await deleteAllChats(localStorage.token);
+		await deleteAllChats(localStorage.token).catch((error) => {
+			toast.error(error);
+		});
 		await chats.set(await getChatList(localStorage.token));
 	};
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount } from 'svelte';
 	const dispatch = createEventDispatcher();
 
@@ -84,7 +84,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class="  pr-1.5 overflow-y-scroll max-h-[21rem]">
+	<div class="  pr-1.5 overflow-y-scroll max-h-[20.5rem]">
 		<div class="">
 			<div class=" mb-1 text-sm font-medium">WebUI Settings</div>
 

@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.1.102",
+	"version": "0.1.108",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev --host",
@@ -49,7 +49,7 @@
 		"js-sha256": "^0.10.1",
 		"katex": "^0.16.9",
 		"marked": "^9.1.0",
-		"svelte-french-toast": "^1.2.0",
+		"svelte-sonner": "^0.3.19",
 		"tippy.js": "^6.3.7",
 		"uuid": "^9.0.1"
 	}

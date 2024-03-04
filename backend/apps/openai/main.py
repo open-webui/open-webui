@@ -146,6 +146,13 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                 body["max_tokens"] = 4000
             print("Modified body_dict:", body)
 
+        # Fix for ChatGPT calls failing because the num_ctx key is in body
+        if "num_ctx" in body:
+            # If 'num_ctx' is in the dictionary, delete it
+            # Leaving it there generates an error with the
+            # OpenAI API (Feb 2024)
+            del body["num_ctx"]
+
         # Convert the modified body back to JSON
         body = json.dumps(body)
     except json.JSONDecodeError as e:
@@ -184,7 +191,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
             response_data = r.json()
 
-            if "openai" in app.state.OPENAI_API_BASE_URL and path == "models":
+            if "api.openai.com" in app.state.OPENAI_API_BASE_URL and path == "models":
                 response_data["data"] = list(
                     filter(lambda model: "gpt" in model["id"], response_data["data"])
                 )
