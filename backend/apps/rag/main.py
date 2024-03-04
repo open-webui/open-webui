@@ -118,6 +118,10 @@ def store_data_in_vector_db(data, collection_name) -> bool:
     metadatas = [doc.metadata for doc in docs]
 
     try:
+        for collection in CHROMA_CLIENT.list_collections():
+            if collection_name == collection.name:
+                CHROMA_CLIENT.delete_collection(name=collection_name)
+
         collection = CHROMA_CLIENT.create_collection(
             name=collection_name,
             embedding_function=app.state.sentence_transformer_ef,
