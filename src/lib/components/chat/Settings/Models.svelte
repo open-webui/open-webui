@@ -13,7 +13,7 @@
 
 	let showLiteLLM = false;
 	let showLiteLLMParams = false;
-
+	let modelUploadInputElement: HTMLInputElement;
 	let liteLLMModelInfo = [];
 
 	let liteLLMModel = '';
@@ -546,6 +546,7 @@
 									<div class="flex-1 {modelInputFile && modelInputFile.length > 0 ? 'mr-2' : ''}">
 										<input
 											id="model-upload-input"
+											bind:this={modelUploadInputElement}
 											type="file"
 											bind:files={modelInputFile}
 											on:change={() => {
@@ -559,9 +560,7 @@
 										<button
 											type="button"
 											class="w-full rounded text-left py-2 px-4 dark:text-gray-300 dark:bg-gray-850"
-											on:click={() => {
-												document.getElementById('model-upload-input').click();
-											}}
+											on:click={modelUploadInputElement.click}
 										>
 											{#if modelInputFile && modelInputFile.length > 0}
 												{modelInputFile[0].name}

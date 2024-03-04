@@ -45,7 +45,7 @@
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
-
+	let messagesContainerElement: HTMLDivElement;
 	let currentRequestId = null;
 
 	// let chatId = $page.params.id;
@@ -160,8 +160,7 @@
 	};
 
 	const scrollToBottom = () => {
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollHeight;
+		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 	};
 
 	//////////////////////////
@@ -852,8 +851,11 @@
 			<div
 				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 				id="messages-container"
+				bind:this={messagesContainerElement}
 				on:scroll={(e) => {
-					autoScroll = e.target.scrollHeight - e.target.scrollTop <= e.target.clientHeight + 50;
+					autoScroll =
+						messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+						messagesContainerElement.clientHeight + 50;
 				}}
 			>
 				<div
