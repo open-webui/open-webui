@@ -104,7 +104,7 @@ async def auth_middleware(request: Request, call_next):
 app.mount("/api/v1", webui_app)
 app.mount("/litellm/api", litellm_app)
 
-app.mount("/ollama/api", ollama_app)
+app.mount("/ollama", ollama_app)
 app.mount("/openai/api", openai_app)
 
 app.mount("/images/api/v1", images_app)
