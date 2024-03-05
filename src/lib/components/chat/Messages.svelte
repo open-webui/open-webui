@@ -228,10 +228,12 @@
 		const messageParentId = messageToDelete.parentId;
 		const messageChildrenIds = messageToDelete.childrenIds ?? [];
 
+		const hasSibling = messageChildrenIds.some(childId => history.messages[childId]?.childrenIds?.length > 0);
+
 		messageChildrenIds.forEach((childId) => {
 			const child = history.messages[childId];
 			if (child && child.childrenIds) {
-				if (child.childrenIds.length == 0) { // if last prompt/response pair
+				if (child.childrenIds.length === 0 && !hasSibling) { // if last prompt/response pair				
 					history.messages[messageParentId].childrenIds = []
 					history.currentId = messageParentId;
 				}
