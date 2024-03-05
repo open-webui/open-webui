@@ -863,10 +863,7 @@
 						? 'max-w-full'
 						: 'max-w-2xl md:px-0'} mx-auto w-full px-4"
 				>
-					<ModelSelector
-						bind:selectedModels
-						disabled={messages.length > 0 && !selectedModels.includes('')}
-					/>
+					<ModelSelector bind:selectedModels />
 				</div>
 
 				<div class=" h-full w-full flex flex-col py-8">
