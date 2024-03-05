@@ -109,7 +109,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={STTEngine}
 						placeholder="Select a mode"
 						on:change={(e) => {
@@ -177,7 +177,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+						class=" dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={TTSEngine}
 						placeholder="Select a mode"
 						on:change={(e) => {
