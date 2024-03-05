@@ -37,6 +37,11 @@ app.state.MODELS = {}
 REQUEST_POOL = []
 
 
+# TODO: Implement a more intelligent load balancing mechanism for distributing requests among multiple backend instances.
+# Current implementation uses a simple round-robin approach (random.choice). Consider incorporating algorithms like weighted round-robin,
+# least connections, or least response time for better resource utilization and performance optimization.
+
+
 @app.middleware("http")
 async def check_url(request: Request, call_next):
     if len(app.state.MODELS) == 0:
@@ -761,7 +766,7 @@ async def generate_completion(
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
-async def proxy(path: str, request: Request, user=Depends(get_current_user)):
+async def deprecated_proxy(path: str, request: Request, user=Depends(get_current_user)):
     url = app.state.OLLAMA_BASE_URLS[0]
     target_url = f"{url}/{path}"
 
