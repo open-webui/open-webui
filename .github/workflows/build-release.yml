@@ -19,24 +19,34 @@ jobs:
           echo "No changes to package.json"
           exit 1
         }
-
+    
     - name: Get version number from package.json
       id: get_version
       run: |
         VERSION=$(jq -r '.version' package.json)
         echo "::set-output name=version::$VERSION"
 
+    - name: Extract latest CHANGELOG entry
+      id: changelog
+      run: |
+        CHANGELOG_CONTENT=$(awk '/^## \[/{n++} n==1' CHANGELOG.md)
+        echo "CHANGELOG_CONTENT<<EOF" 
+        echo "$CHANGELOG_CONTENT"
+        echo "EOF" 
+        echo "::set-output name=content::${CHANGELOG_CONTENT}"
+
     - name: Create GitHub release
       uses: actions/github-script@v5
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
+          const changelog = `${{ steps.changelog.outputs.content }}`;
           const release = await github.rest.repos.createRelease({
             owner: context.repo.owner,
             repo: context.repo.repo,
             tag_name: `v${{ steps.get_version.outputs.version }}`,
             name: `v${{ steps.get_version.outputs.version }}`,
-            body: 'Automatically created new release',
+            body: changelog,
           })
           console.log(`Created release ${release.data.html_url}`)
 
