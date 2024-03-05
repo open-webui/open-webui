@@ -152,9 +152,7 @@
 </script>
 
 <svelte:head>
-	<title>
-		{`Documents | ${$WEBUI_NAME}`}
-	</title>
+	<title>{$i18n.t('Documents')} | {$WEBUI_NAME}</title>
 </svelte:head>
 
 {#if dragged}

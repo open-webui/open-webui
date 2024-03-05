@@ -628,7 +628,7 @@
 												/>
 											</svg>
 										</div>
-										<div class=" self-center font-medium">Playground</div>
+										<div class=" self-center font-medium">{$i18n.t('Playground')}</div>
 									</button>
 								{/if}
 

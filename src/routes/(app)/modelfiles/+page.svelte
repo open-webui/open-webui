@@ -73,7 +73,7 @@
 
 <svelte:head>
 	<title>
-		{`Modelfiles | ${$WEBUI_NAME}`}
+		{$i18n.t('Modelfiles')} | {$WEBUI_NAME}
 	</title>
 </svelte:head>
 

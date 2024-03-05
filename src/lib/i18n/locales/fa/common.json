@@ -310,5 +310,17 @@
 	"Add a short title for this prompt": "یک عنوان کوتاه برای این درخواست اضافه کنید",
 	"Open": "باز",
 	"Close": "بسته",
-	"sidebar": "نوار کناری"
+	"sidebar": "نوار کناری",
+	"Playground": "Playground",
+	"Submit": "Submit",
+	"(Beta)": "(Beta)",
+	"Text Completion": "Text Completion",
+	"Chat": "Chat",
+	"You're a helpful assistant.": "You're a helpful assistant.",
+	"System": "System",
+	"assistant": "Assistant",
+	"Add message": "Add message",
+	"Enter a user message here": "Enter a user message here",
+	"Enter an assistant message here": "Enter an assistant message here",
+	"Drop any files here to add to the conversation": "Drop any files here to add to the conversation"
 }

@@ -40,7 +40,7 @@
 
 <svelte:head>
 	<title>
-		{`Prompts | ${$WEBUI_NAME}`}
+		{$i18n.t('Prompts')} | {$WEBUI_NAME}
 	</title>
 </svelte:head>
 

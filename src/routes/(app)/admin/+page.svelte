@@ -64,7 +64,7 @@
 </script>
 
 <svelte:head>
-	<title>{$i18n.t('Admin Panel')} | `${$WEBUI_NAME}`</title>
+	<title>{$i18n.t('Admin Panel')} | ${$WEBUI_NAME}</title>
 </svelte:head>
 
 {#key selectedUser}
