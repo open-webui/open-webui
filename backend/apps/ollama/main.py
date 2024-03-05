@@ -207,9 +207,12 @@ async def pull_model(
     form_data: ModelNameForm, url_idx: int = 0, user=Depends(get_admin_user)
 ):
     url = app.state.OLLAMA_BASE_URLS[url_idx]
+    print(url)
+
     r = None
 
-    def get_request(url):
+    def get_request():
+        nonlocal url
         nonlocal r
         try:
 
@@ -235,7 +238,7 @@ async def pull_model(
             raise e
 
     try:
-        return await run_in_threadpool(get_request(url))
+        return await run_in_threadpool(get_request)
     except Exception as e:
         print(e)
         error_detail = "Open WebUI: Server Connection Error"
@@ -454,6 +457,7 @@ async def delete_model(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
+    print(url)
 
     try:
         r = requests.request(
