@@ -29,6 +29,6 @@
 	});
 </script>
 
-<div bind:this={tooltipElement}>
+<div bind:this={tooltipElement} aria-label={content}>
 	<slot />
 </div>

@@ -42,7 +42,7 @@
 
 	let edit = false;
 	let editedContent = '';
-
+	let editTextAreaElement: HTMLTextAreaElement;
 	let tooltipInstance = null;
 
 	let sentencesAudio = {};
@@ -249,10 +249,9 @@
 		editedContent = message.content;
 
 		await tick();
-		const editElement = document.getElementById(`message-edit-${message.id}`);
 
-		editElement.style.height = '';
-		editElement.style.height = `${editElement.scrollHeight}px`;
+		editTextAreaElement.style.height = '';
+		editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
 	};
 
 	const editMessageConfirmHandler = async () => {
@@ -343,6 +342,7 @@
 							<div class=" w-full">
 								<textarea
 									id="message-edit-{message.id}"
+									bind:this={editTextAreaElement}
 									class=" bg-transparent outline-none w-full resize-none"
 									bind:value={editedContent}
 									on:input={(e) => {

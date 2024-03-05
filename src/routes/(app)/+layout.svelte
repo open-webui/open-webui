@@ -34,12 +34,13 @@
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
 	let ollamaVersion = '';
 	let loaded = false;
-
+	let showShortcutsButtonElement: HTMLButtonElement;
 	let DB = null;
 	let localDBChats = [];
 
@@ -186,7 +187,7 @@
 				if (isCtrlPressed && event.key === '/') {
 					event.preventDefault();
 					console.log('showShortcuts');
-					document.getElementById('show-shortcuts-button')?.click();
+					showShortcutsButtonElement.click();
 				}
 			});
 
@@ -203,15 +204,18 @@
 
 {#if loaded}
 	<div class=" hidden lg:flex fixed bottom-0 right-0 px-3 py-3 z-10">
-		<button
-			id="show-shortcuts-button"
-			class="text-gray-600 dark:text-gray-300 bg-gray-300/20 w-6 h-6 flex items-center justify-center text-xs rounded-full"
-			on:click={() => {
-				showShortcuts = !showShortcuts;
-			}}
-		>
-			?
-		</button>
+		<Tooltip content="help" placement="left">
+			<button
+				id="show-shortcuts-button"
+				bind:this={showShortcutsButtonElement}
+				class="text-gray-600 dark:text-gray-300 bg-gray-300/20 w-6 h-6 flex items-center justify-center text-xs rounded-full"
+				on:click={() => {
+					showShortcuts = !showShortcuts;
+				}}
+			>
+				?
+			</button>
+		</Tooltip>
 	</div>
 
 	<ShortcutsModal bind:show={showShortcuts} />

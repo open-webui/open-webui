@@ -13,7 +13,7 @@
 
 	let importFiles = '';
 	let query = '';
-
+	let promptsImportInputElement: HTMLInputElement;
 	const sharePrompt = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
@@ -210,6 +210,7 @@
 				<div class="flex space-x-2">
 					<input
 						id="prompts-import-input"
+						bind:this={promptsImportInputElement}
 						bind:files={importFiles}
 						type="file"
 						accept=".json"
@@ -243,9 +244,7 @@
 
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-						on:click={async () => {
-							document.getElementById('prompts-import-input')?.click();
-						}}
+						on:click={promptsImportInputElement.click}
 					>
 						<div class=" self-center mr-2 font-medium">{$i18n.t('Import Prompts')}</div>
 
@@ -268,7 +267,7 @@
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 						on:click={async () => {
-							// document.getElementById('modelfiles-import-input')?.click();
+							// promptsImportInputElement.click();
 							let blob = new Blob([JSON.stringify($prompts)], {
 								type: 'application/json'
 							});

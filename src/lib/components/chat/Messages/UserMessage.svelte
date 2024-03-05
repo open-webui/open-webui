@@ -22,18 +22,17 @@
 
 	let edit = false;
 	let editedContent = '';
-
+	let messageEditTextAreaElement: HTMLTextAreaElement;
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message.content;
 
 		await tick();
-		const editElement = document.getElementById(`message-edit-${message.id}`);
 
-		editElement.style.height = '';
-		editElement.style.height = `${editElement.scrollHeight}px`;
+		messageEditTextAreaElement.style.height = '';
+		messageEditTextAreaElement.style.height = `${messageEditTextAreaElement.scrollHeight}px`;
 
-		editElement?.focus();
+		messageEditTextAreaElement?.focus();
 	};
 
 	const editMessageConfirmHandler = async () => {
@@ -168,10 +167,11 @@
 				<div class=" w-full">
 					<textarea
 						id="message-edit-{message.id}"
+						bind:this={messageEditTextAreaElement}
 						class=" bg-transparent outline-none w-full resize-none"
 						bind:value={editedContent}
 						on:input={(e) => {
-							e.target.style.height = `${e.target.scrollHeight}px`;
+							messageEditTextAreaElement.style.height = `${messageEditTextAreaElement.scrollHeight}px`;
 						}}
 					/>
 
