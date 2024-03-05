@@ -16,7 +16,7 @@
 	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
 	let theme = 'dark';
 	// TODO: Get these dynamically from the i18n module
-	let languages = ['en', 'fa', 'fr', 'de'];
+	let languages = ['en', 'fa', 'fr', 'de', 'ua'];
 	let lang = $i18n.language;
 	let notificationEnabled = false;
 	let system = '';
