@@ -116,7 +116,7 @@
 					<div>
 						<input
 							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-							placeholder="Add a short title for this prompt"
+							placeholder={$i18n.t('Add a short title for this prompt')}
 							bind:value={title}
 							required
 						/>
@@ -163,7 +163,9 @@
 						<div>
 							<textarea
 								class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-								placeholder={`Write a summary in 50 words that summarizes [topic or keyword].`}
+								placeholder={$i18n.t(
+									`Write a summary in 50 words that summarizes [topic or keyword].`
+								)}
 								rows="6"
 								bind:value={content}
 								required

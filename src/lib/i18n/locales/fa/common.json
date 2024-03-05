@@ -251,7 +251,7 @@
 	"Enter OpenAI API Key": "کلید OpenAI API را وارد کنید",
 	"Current Model": "مدل فعلی",
 	"Display the username instead of You in the Chat": "نمایش نام کاربری به جای «شما» در چت",
-	"Default titleGenerationPromt": "یک عبارت مختصر و ۳ تا ۵ کلمه ای را به عنوان سرفصل برای پرس و جو زیر ایجاد کنید، به شدت محدودیت ۳-۵ کلمه را رعایت کنید و از استفاده از کلمه 'عنوان' خودداری کنید:",
+	"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':": "یک عبارت مختصر و ۳ تا ۵ کلمه ای را به عنوان سرفصل برای پرس و جو زیر ایجاد کنید، به شدت محدودیت ۳-۵ کلمه را رعایت کنید و از استفاده از کلمه 'عنوان' خودداری کنید:",
 	"Search": "جستجو",
 	"Search Documents": "جستجوی اسناد",
 	"Use '#' in the prompt input to load and select your documents.": "در پرامپت از '#' برای لود و انتخاب اسناد خود استفاده کنید.",

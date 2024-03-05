@@ -87,7 +87,7 @@
 	"Default (Web API)": "Standard (Web-API)",
 	"Default model updated": "Standardmodell aktualisiert",
 	"Default Prompt Suggestions": "Standard-Prompt-Vorschläge",
-	"Default titleGenerationPromt": "Erstelle einen prägnanten Satz mit 3-5 Wörtern als Überschrift für die folgende Abfrage. Halte dich dabei strikt an die 3-5-Wort-Grenze und vermeide die Verwendung des Wortes Titel:",
+	"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':": "Erstelle einen prägnanten Satz mit 3-5 Wörtern als Überschrift für die folgende Abfrage. Halte dich dabei strikt an die 3-5-Wort-Grenze und vermeide die Verwendung des Wortes Titel:",
 	"Default User Role": "Standardbenutzerrolle",
 	"delete": "löschen",
 	"Delete a model": "Ein Modell löschen",
