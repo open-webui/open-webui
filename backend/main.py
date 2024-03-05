@@ -125,6 +125,14 @@ async def get_app_config():
     }
 
 
+@app.get("/api/version")
+async def get_app_config():
+
+    return {
+        "version": VERSION,
+    }
+
+
 @app.get("/api/changelog")
 async def get_app_changelog():
     return CHANGELOG

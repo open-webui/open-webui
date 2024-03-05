@@ -1,9 +1,9 @@
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
 
-export const getOllamaAPIUrl = async (token: string = '') => {
+export const getOllamaUrls = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/url`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/urls`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -29,13 +29,13 @@ export const getOllamaAPIUrl = async (token: string = '') => {
 		throw error;
 	}
 
-	return res.OLLAMA_BASE_URL;
+	return res.OLLAMA_BASE_URLS;
 };
 
-export const updateOllamaAPIUrl = async (token: string = '', url: string) => {
+export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/url/update`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/urls/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -43,7 +43,7 @@ export const updateOllamaAPIUrl = async (token: string = '', url: string) => {
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			url: url
+			urls: urls
 		})
 	})
 		.then(async (res) => {
@@ -64,7 +64,7 @@ export const updateOllamaAPIUrl = async (token: string = '', url: string) => {
 		throw error;
 	}
 
-	return res.OLLAMA_BASE_URL;
+	return res.OLLAMA_BASE_URLS;
 };
 
 export const getOllamaVersion = async (token: string = '') => {
@@ -151,7 +151,8 @@ export const generateTitle = async (
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/generate`, {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'text/event-stream',
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
@@ -189,7 +190,8 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/generate`, {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'text/event-stream',
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
@@ -223,7 +225,8 @@ export const generateTextCompletion = async (token: string = '', model: string, 
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/generate`, {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'text/event-stream',
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
@@ -251,7 +254,8 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 		signal: controller.signal,
 		method: 'POST',
 		headers: {
-			'Content-Type': 'text/event-stream',
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify(body)
@@ -294,7 +298,8 @@ export const createModel = async (token: string, tagName: string, content: strin
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/create`, {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'text/event-stream',
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
@@ -319,7 +324,8 @@ export const deleteModel = async (token: string, tagName: string) => {
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/delete`, {
 		method: 'DELETE',
 		headers: {
-			'Content-Type': 'text/event-stream',
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
@@ -336,7 +342,12 @@ export const deleteModel = async (token: string, tagName: string) => {
 		})
 		.catch((err) => {
 			console.log(err);
-			error = err.error;
+			error = err;
+
+			if ('detail' in err) {
+				error = err.detail;
+			}
+
 			return null;
 		});
 
@@ -353,7 +364,8 @@ export const pullModel = async (token: string, tagName: string) => {
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/pull`, {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'text/event-stream',
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
