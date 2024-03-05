@@ -267,7 +267,7 @@ async def push_model(
         else:
             raise HTTPException(
                 status_code=400,
-                detail="error_detail",
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
@@ -399,7 +399,7 @@ async def copy_model(
         else:
             raise HTTPException(
                 status_code=400,
-                detail="error_detail",
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.source),
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
@@ -445,7 +445,7 @@ async def delete_model(
         else:
             raise HTTPException(
                 status_code=400,
-                detail="error_detail",
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
@@ -483,7 +483,7 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_current_use
     if form_data.name not in app.state.MODELS:
         raise HTTPException(
             status_code=400,
-            detail="error_detail",
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
         )
 
     url_idx = random.choice(app.state.MODELS[form_data.name]["urls"])
@@ -535,7 +535,7 @@ async def generate_embeddings(
         else:
             raise HTTPException(
                 status_code=400,
-                detail="error_detail",
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
@@ -691,7 +691,7 @@ async def generate_completion(
         else:
             raise HTTPException(
                 status_code=400,
-                detail="error_detail",
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
