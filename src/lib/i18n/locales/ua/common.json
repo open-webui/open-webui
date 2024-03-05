@@ -311,5 +311,16 @@
 	"Whisper (Local)": "Шепіт (локально)",
 	"Write a prompt suggestion (e.g. Who are you?)": "Напишіть запит (напр. Хто ти?)",
 	"Write a summary in 50 words that summarizes [topic or keyword]": "Напишіть стислий зміст у 50 слів, який узагальнює [тему або ключове слово]",
-	"You're now logged in.": "Ви увійшли в систему."
+	"You're now logged in.": "Ви увійшли в систему.",
+	"You": "Ви",
+	"Playground": "Майданчик",
+	"Add message": "Додати повідомлення",
+	"Enter a user message here": "Введіть тут повідомлення користувача",
+	"Enter an assistant message here": "Введіть тут повідомлення асистента",
+	"Drop any files here to add to the conversation": "Перетягніть сюди файли, щоб додати до розмови",
+	"You're a helpful assistant.": "Ви корисний асистент.",
+	"assistant": "асистент",
+	"Submit": "Надіслати",
+	"Chat": "Чат",
+	"Text Completion": "Завершення тексту"
 }

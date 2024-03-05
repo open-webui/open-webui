@@ -67,13 +67,13 @@
 					{#if $modelfiles.map((modelfile) => modelfile.tagName).includes(message.user)}
 						{$modelfiles.find((modelfile) => modelfile.tagName === message.user)?.title}
 					{:else}
-						{$i18n.t('Sie')}
+						{$i18n.t('You')}
 						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
 					{/if}
 				{:else if $settings.showUsername}
 					{user.name}
 				{:else}
-					{$i18n.t('Sie')}
+					{$i18n.t('You')}
 				{/if}
 
 				{#if message.timestamp}

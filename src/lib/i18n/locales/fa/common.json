@@ -322,5 +322,6 @@
 	"Add message": "Add message",
 	"Enter a user message here": "Enter a user message here",
 	"Enter an assistant message here": "Enter an assistant message here",
-	"Drop any files here to add to the conversation": "Drop any files here to add to the conversation"
+	"Drop any files here to add to the conversation": "Drop any files here to add to the conversation",
+	"You": "You"
 }
