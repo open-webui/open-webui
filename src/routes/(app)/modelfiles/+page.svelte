@@ -20,7 +20,10 @@
 	const deleteModelHandler = async (tagName) => {
 		let success = null;
 
-		success = await deleteModel(localStorage.token, tagName);
+		success = await deleteModel(localStorage.token, tagName).catch((err) => {
+			toast.error(err);
+			return null;
+		});
 
 		if (success) {
 			toast.success(`Deleted ${tagName}`);
