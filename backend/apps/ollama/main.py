@@ -279,6 +279,7 @@ async def push_model(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
+    print(url)
 
     r = None
 
@@ -340,6 +341,8 @@ async def create_model(
 ):
     print(form_data)
     url = app.state.OLLAMA_BASE_URLS[url_idx]
+    print(url)
+
     r = None
 
     def get_request():
@@ -411,6 +414,7 @@ async def copy_model(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
+    print(url)
 
     try:
         r = requests.request(
@@ -497,6 +501,7 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_current_use
 
     url_idx = random.choice(app.state.MODELS[form_data.name]["urls"])
     url = app.state.OLLAMA_BASE_URLS[url_idx]
+    print(url)
 
     try:
         r = requests.request(
@@ -548,6 +553,7 @@ async def generate_embeddings(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
+    print(url)
 
     try:
         r = requests.request(
@@ -607,6 +613,7 @@ async def generate_completion(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
+    print(url)
 
     r = None
 
@@ -704,6 +711,7 @@ async def generate_chat_completion(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
+    print(url)
 
     r = None
 
@@ -802,6 +810,7 @@ async def generate_openai_chat_completion(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
+    print(url)
 
     r = None
 
