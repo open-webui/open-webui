@@ -39,7 +39,7 @@
 		});
 		if (res) {
 			users = await getUsers(localStorage.token);
-			toast.success($i18n.t('Successfully updated.'));
+			toast.success($i18n.t('Successfully updated'));
 		}
 	};
 
@@ -64,9 +64,7 @@
 </script>
 
 <svelte:head>
-	<title>
-		{`Admin Panel | ${$WEBUI_NAME}`}
-	</title>
+	<title>{$i18n.t('Admin Panel')} | `${$WEBUI_NAME}`</title>
 </svelte:head>
 
 {#key selectedUser}
@@ -165,7 +163,7 @@
 															'bg-green-600 dark:bg-green-300'} {user.role === 'pending' &&
 															'bg-gray-600 dark:bg-gray-300'}"
 													/>
-													{user.role}</button
+													{$i18n.t(user.role)}</button
 												>
 											</td>
 											<td class="px-3 py-2 font-medium text-gray-900 dark:text-white w-max">
