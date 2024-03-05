@@ -83,7 +83,7 @@
 	"Default (Web API)": "За замовчуванням (Web API)",
 	"Default model updated": "Модель за замовчуванням оновлено",
 	"Default Prompt Suggestions": "Запропоновані запити за замовчуванням",
-	"Default titleGenerationPromt": "Створіть стислий, 3-5 слів заголовок для наступного запиту, суворо дотримуючись 3-5 слів обмеження та уникаючи використання слова 'заголовок':",
+	"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':": "Створіть стислий, 3-5 слів заголовок для наступного запиту, суворо дотримуючись 3-5 слів обмеження та уникаючи використання слова 'заголовок':",
 	"Default User Role": "Роль користувача за замовчуванням",
 	"delete": "видалити",
 	"Delete a model": "Видалити модель",

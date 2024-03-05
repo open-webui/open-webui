@@ -82,7 +82,7 @@
 		fullScreenMode = settings.fullScreenMode ?? false;
 		titleAutoGenerateModel = settings.titleAutoGenerateModel ?? '';
 		titleGenerationPrompt =
-			settings.titleGenerationPrompt ?? $i18n.t('Default titleGenerationPromt') + ' {{prompt}}';
+			settings.titleGenerationPrompt ?? $i18n.t("Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':") + ' {{prompt}}';
 	});
 </script>
 
