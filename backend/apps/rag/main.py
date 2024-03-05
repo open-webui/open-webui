@@ -419,7 +419,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
     ]
 
     if file_ext == "pdf":
-        loader = PyPDFLoader(file_path)
+        loader = PyPDFLoader(file_path, extract_images=True)
     elif file_ext == "csv":
         loader = CSVLoader(file_path)
     elif file_ext == "rst":
