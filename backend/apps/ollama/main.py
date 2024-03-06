@@ -15,7 +15,7 @@ import asyncio
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import decode_token, get_current_user, get_admin_user
-from config import OLLAMA_BASE_URL, WEBUI_AUTH
+from config import OLLAMA_BASE_URLS
 
 from typing import Optional, List, Union
 
@@ -29,8 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.state.OLLAMA_BASE_URL = OLLAMA_BASE_URL
-app.state.OLLAMA_BASE_URLS = [OLLAMA_BASE_URL]
+app.state.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.MODELS = {}
 
 

@@ -20,7 +20,7 @@ FROM python:3.11-slim-bookworm as base
 ENV ENV=prod
 ENV PORT ""
 
-ENV OLLAMA_API_BASE_URL "/ollama/api"
+ENV OLLAMA_BASE_URL "/ollama"
 
 ENV OPENAI_API_BASE_URL ""
 ENV OPENAI_API_KEY ""
