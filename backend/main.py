@@ -104,7 +104,7 @@ async def auth_middleware(request: Request, call_next):
 app.mount("/api/v1", webui_app)
 app.mount("/litellm/api", litellm_app)
 
-app.mount("/ollama/api", ollama_app)
+app.mount("/ollama", ollama_app)
 app.mount("/openai/api", openai_app)
 
 app.mount("/images/api/v1", images_app)
@@ -122,6 +122,14 @@ async def get_app_config():
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
+    }
+
+
+@app.get("/api/version")
+async def get_app_config():
+
+    return {
+        "version": VERSION,
     }
 
 

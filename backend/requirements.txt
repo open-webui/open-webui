@@ -22,6 +22,7 @@ google-generativeai
 
 langchain
 langchain-community
+fake_useragent
 chromadb
 sentence_transformers
 pypdf
@@ -33,6 +34,7 @@ pandas
 openpyxl
 pyxlsb
 xlrd
+rapidocr-onnxruntime
 
 faster-whisper
 

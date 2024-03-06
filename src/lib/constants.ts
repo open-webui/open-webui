@@ -7,7 +7,7 @@ export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 
 export const LITELLM_API_BASE_URL = `${WEBUI_BASE_URL}/litellm/api`;
-export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama/api`;
+export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;
 export const OPENAI_API_BASE_URL = `${WEBUI_BASE_URL}/openai/api`;
 export const AUDIO_API_BASE_URL = `${WEBUI_BASE_URL}/audio/api/v1`;
 export const IMAGES_API_BASE_URL = `${WEBUI_BASE_URL}/images/api/v1`;
@@ -90,8 +90,3 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 // This feature, akin to $env/static/private, exclusively incorporates environment variables
 // that are prefixed with config.kit.env.publicPrefix (usually set to PUBLIC_).
 // Consequently, these variables can be securely exposed to client-side code.
-
-// Example of the .env configuration:
-// OLLAMA_API_BASE_URL="http://localhost:11434/api"
-// # Public
-// PUBLIC_API_BASE_URL=$OLLAMA_API_BASE_URL

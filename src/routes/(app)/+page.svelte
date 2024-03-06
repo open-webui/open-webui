@@ -42,7 +42,7 @@
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
-
+	let messagesContainerElement: HTMLDivElement;
 	let currentRequestId = null;
 
 	let selectedModels = [''];
@@ -140,8 +140,7 @@
 	};
 
 	const scrollToBottom = () => {
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollHeight;
+		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 	};
 
 	//////////////////////////
@@ -340,7 +339,7 @@
 						content: $settings.system
 				  }
 				: undefined,
-			...messages.filter((message) => !message.deleted)
+			...messages
 		]
 			.filter((message) => message)
 			.map((message, idx, arr) => ({
@@ -548,7 +547,7 @@
 								content: $settings.system
 						  }
 						: undefined,
-					...messages.filter((message) => !message.deleted)
+					...messages
 				]
 					.filter((message) => message)
 					.map((message, idx, arr) => ({
@@ -821,8 +820,11 @@
 		<div
 			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 			id="messages-container"
+			bind:this={messagesContainerElement}
 			on:scroll={(e) => {
-				autoScroll = e.target.scrollHeight - e.target.scrollTop <= e.target.clientHeight + 50;
+				autoScroll =
+					messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+					messagesContainerElement.clientHeight + 50;
 			}}
 		>
 			<div
@@ -830,10 +832,7 @@
 					? 'max-w-full'
 					: 'max-w-2xl md:px-0'} mx-auto w-full px-4"
 			>
-				<ModelSelector
-					bind:selectedModels
-					disabled={messages.length > 0 && !selectedModels.includes('')}
-				/>
+				<ModelSelector bind:selectedModels />
 			</div>
 
 			<div class=" h-full w-full flex flex-col py-8">
