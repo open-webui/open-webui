@@ -224,7 +224,7 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != "" else OLLAMA_BASE_URL
 
-OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(",")]
+OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(";")]
 
 
 ####################################
