@@ -34,6 +34,7 @@ pandas
 openpyxl
 pyxlsb
 xlrd
+rapidocr-onnxruntime
 
 faster-whisper
 
