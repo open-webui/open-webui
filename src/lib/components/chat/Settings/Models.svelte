@@ -507,7 +507,7 @@
 									{#if !deleteModelTag}
 										<option value="" disabled selected>Select a model</option>
 									{/if}
-									{#each $models.filter((m) => m.size != null) as model}
+									{#each $models.filter((m) => m.size != null && (selectedOllamaUrlIdx === null ? true : (m?.urls ?? []).includes(selectedOllamaUrlIdx))) as model}
 										<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
 											>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
 										>
