@@ -224,25 +224,79 @@
 	};
 
 	const messageDeleteHandler = async (messageId) => {
-		const message = history.messages[messageId];
-		const parentId = message.parentId;
-		const childrenIds = message.childrenIds ?? [];
-		const grandchildrenIds = [];
-
-		// Iterate through childrenIds to find grandchildrenIds
-		for (const childId of childrenIds) {
-			const childMessage = history.messages[childId];
-			const grandChildrenIds = childMessage.childrenIds ?? [];
-			grandchildrenIds.push(...grandChildrenIds);
-		}
-
-		history.messages[parentId].childrenIds.push(...grandchildrenIds);
-		history.messages[parentId].childrenIds = history.messages[parentId].childrenIds.filter(
-			(id) => id !== messageId
+		const messageToDelete = history.messages[messageId];
+		const messageParentId = messageToDelete.parentId;
+		const messageChildrenIds = messageToDelete.childrenIds ?? [];
+		const hasSibling = messageChildrenIds.some(
+			(childId) => history.messages[childId]?.childrenIds?.length > 0
 		);
-
-		await updateChatById(localStorage.token, chatId, { messages, history });
+		messageChildrenIds.forEach((childId) => {
+			const child = history.messages[childId];
+			if (child && child.childrenIds) {
+				if (child.childrenIds.length === 0 && !hasSibling) {
+					// if last prompt/response pair
+					history.messages[messageParentId].childrenIds = [];
+					history.currentId = messageParentId;
+				} else {
+					child.childrenIds.forEach((grandChildId) => {
+						if (history.messages[grandChildId]) {
+							history.messages[grandChildId].parentId = messageParentId;
+							history.messages[messageParentId].childrenIds.push(grandChildId);
+						}
+					});
+				}
+			}
+			// remove response
+			history.messages[messageParentId].childrenIds = history.messages[
+				messageParentId
+			].childrenIds.filter((id) => id !== childId);
+		});
+		// remove prompt
+		history.messages[messageParentId].childrenIds = history.messages[
+			messageParentId
+		].childrenIds.filter((id) => id !== messageId);
+		await updateChatById(localStorage.token, chatId, {
+			messages: messages,
+			history: history
+		});
 	};
+
+	// const messageDeleteHandler = async (messageId) => {
+	// 	const message = history.messages[messageId];
+	// 	const parentId = message.parentId;
+	// 	const childrenIds = message.childrenIds ?? [];
+	// 	const grandchildrenIds = [];
+
+	// 	// Iterate through childrenIds to find grandchildrenIds
+	// 	for (const childId of childrenIds) {
+	// 		const childMessage = history.messages[childId];
+	// 		const grandChildrenIds = childMessage.childrenIds ?? [];
+
+	// 		for (const grandchildId of grandchildrenIds) {
+	// 			const childMessage = history.messages[grandchildId];
+	// 			childMessage.parentId = parentId;
+	// 		}
+	// 		grandchildrenIds.push(...grandChildrenIds);
+	// 	}
+
+	// 	history.messages[parentId].childrenIds.push(...grandchildrenIds);
+	// 	history.messages[parentId].childrenIds = history.messages[parentId].childrenIds.filter(
+	// 		(id) => id !== messageId
+	// 	);
+
+	// 	// Select latest message
+	// 	let currentMessageId = grandchildrenIds.at(-1);
+	// 	if (currentMessageId) {
+	// 		let messageChildrenIds = history.messages[currentMessageId].childrenIds;
+	// 		while (messageChildrenIds.length !== 0) {
+	// 			currentMessageId = messageChildrenIds.at(-1);
+	// 			messageChildrenIds = history.messages[currentMessageId].childrenIds;
+	// 		}
+	// 		history.currentId = currentMessageId;
+	// 	}
+
+	// 	await updateChatById(localStorage.token, chatId, { messages, history });
+	// };
 </script>
 
 {#if messages.length == 0}
