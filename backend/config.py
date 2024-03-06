@@ -200,7 +200,7 @@ if not os.path.exists(LITELLM_CONFIG_PATH):
 
 
 ####################################
-# OLLAMA_API_BASE_URL
+# OLLAMA_BASE_URL
 ####################################
 
 OLLAMA_API_BASE_URL = os.environ.get(
