@@ -54,7 +54,7 @@
 	let modelUploadMode = 'file';
 	let modelInputFile = '';
 	let modelFileUrl = '';
-	let modelFileContent = `TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSSISTANT:"`;
+	let modelFileContent = `TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`;
 	let modelFileDigest = '';
 	let uploadProgress = null;
 
