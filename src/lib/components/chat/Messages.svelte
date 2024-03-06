@@ -224,42 +224,24 @@
 	};
 
 	const messageDeleteHandler = async (messageId) => {
-		const messageToDelete = history.messages[messageId];
-		const messageParentId = messageToDelete.parentId;
-		const messageChildrenIds = messageToDelete.childrenIds ?? [];
+		const message = history.messages[messageId];
+		const parentId = message.parentId;
+		const childrenIds = message.childrenIds ?? [];
+		const grandchildrenIds = [];
 
-		const hasSibling = messageChildrenIds.some(childId => history.messages[childId]?.childrenIds?.length > 0);
+		// Iterate through childrenIds to find grandchildrenIds
+		for (const childId of childrenIds) {
+			const childMessage = history.messages[childId];
+			const grandChildrenIds = childMessage.childrenIds ?? [];
+			grandchildrenIds.push(...grandChildrenIds);
+		}
 
-		messageChildrenIds.forEach((childId) => {
-			const child = history.messages[childId];
-			if (child && child.childrenIds) {
-				if (child.childrenIds.length === 0 && !hasSibling) { // if last prompt/response pair				
-					history.messages[messageParentId].childrenIds = []
-					history.currentId = messageParentId;
-				}
-				else {
-					child.childrenIds.forEach((grandChildId) => {
-						if (history.messages[grandChildId]) {
-							history.messages[grandChildId].parentId = messageParentId;
-							history.messages[messageParentId].childrenIds.push(grandChildId);
-						}
-					});
-				}
-			}
+		history.messages[parentId].childrenIds.push(...grandchildrenIds);
+		history.messages[parentId].childrenIds = history.messages[parentId].childrenIds.filter(
+			(id) => id !== messageId
+		);
 
-			// remove response
-			history.messages[messageParentId].childrenIds = history.messages[messageParentId].childrenIds
-				.filter((id) => id !== childId);
-		});
-
-		// remove prompt
-		history.messages[messageParentId].childrenIds = history.messages[messageParentId].childrenIds
-			.filter((id) => id !== messageId);
-
-		await updateChatById(localStorage.token, chatId, {
-			messages: messages,
-			history: history
-		});
+		await updateChatById(localStorage.token, chatId, { messages, history });
 	};
 </script>
 
