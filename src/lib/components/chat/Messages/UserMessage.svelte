@@ -168,7 +168,8 @@
 						class=" bg-transparent outline-none w-full resize-none"
 						bind:value={editedContent}
 						on:input={(e) => {
-							messageEditTextAreaElement.style.height = `${messageEditTextAreaElement.scrollHeight}px`;
+							e.target.style.height = '';
+							e.target.style.height = `${e.target.scrollHeight}px`;
 						}}
 					/>
 
