@@ -222,7 +222,7 @@ async def pull_model(
             r = requests.request(
                 method="POST",
                 url=f"{url}/api/pull",
-                data=form_data.model_dump_json(exclude_none=True),
+                data=form_data.model_dump_json(exclude_none=True).encode(),
                 stream=True,
             )
 
@@ -294,7 +294,7 @@ async def push_model(
             r = requests.request(
                 method="POST",
                 url=f"{url}/api/push",
-                data=form_data.model_dump_json(exclude_none=True),
+                data=form_data.model_dump_json(exclude_none=True).encode(),
             )
 
             r.raise_for_status()
@@ -356,7 +356,7 @@ async def create_model(
             r = requests.request(
                 method="POST",
                 url=f"{url}/api/create",
-                data=form_data.model_dump_json(exclude_none=True),
+                data=form_data.model_dump_json(exclude_none=True).encode(),
                 stream=True,
             )
 
@@ -419,7 +419,7 @@ async def copy_model(
         r = requests.request(
             method="POST",
             url=f"{url}/api/copy",
-            data=form_data.model_dump_json(exclude_none=True),
+            data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
 
@@ -466,7 +466,7 @@ async def delete_model(
         r = requests.request(
             method="DELETE",
             url=f"{url}/api/delete",
-            data=form_data.model_dump_json(exclude_none=True),
+            data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
 
@@ -506,7 +506,7 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_current_use
         r = requests.request(
             method="POST",
             url=f"{url}/api/show",
-            data=form_data.model_dump_json(exclude_none=True),
+            data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
 
@@ -558,7 +558,7 @@ async def generate_embeddings(
         r = requests.request(
             method="POST",
             url=f"{url}/api/embeddings",
-            data=form_data.model_dump_json(exclude_none=True),
+            data=form_data.model_dump_json(exclude_none=True).encode(),
         )
         r.raise_for_status()
 
@@ -644,7 +644,7 @@ async def generate_completion(
             r = requests.request(
                 method="POST",
                 url=f"{url}/api/generate",
-                data=form_data.model_dump_json(exclude_none=True),
+                data=form_data.model_dump_json(exclude_none=True).encode(),
                 stream=True,
             )
 
@@ -714,7 +714,7 @@ async def generate_chat_completion(
 
     r = None
 
-    print(form_data.model_dump_json(exclude_none=True))
+    print(form_data.model_dump_json(exclude_none=True).encode())
 
     def get_request():
         nonlocal form_data
@@ -744,7 +744,7 @@ async def generate_chat_completion(
             r = requests.request(
                 method="POST",
                 url=f"{url}/api/chat",
-                data=form_data.model_dump_json(exclude_none=True),
+                data=form_data.model_dump_json(exclude_none=True).encode(),
                 stream=True,
             )
 
@@ -756,6 +756,7 @@ async def generate_chat_completion(
                 headers=dict(r.headers),
             )
         except Exception as e:
+            print(e)
             raise e
 
     try:
@@ -843,7 +844,7 @@ async def generate_openai_chat_completion(
             r = requests.request(
                 method="POST",
                 url=f"{url}/v1/chat/completions",
-                data=form_data.model_dump_json(exclude_none=True),
+                data=form_data.model_dump_json(exclude_none=True).encode(),
                 stream=True,
             )
 

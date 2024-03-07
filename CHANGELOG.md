@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.110] - 2024-03-06
+
+### Added
+
+- **🌐 Multiple OpenAI Servers Support**: Enjoy seamless integration with multiple OpenAI-compatible APIs, now supported natively.
+
+### Fixed
+
+- **🔍 OCR Issue**: Resolved PDF parsing issue caused by OCR malfunction.
+- **🚫 RAG Issue**: Fixed the RAG functionality, ensuring it operates smoothly.
+- **📄 "Add Docs" Model Button**: Addressed the non-functional behavior of the "Add Docs" model button.
+
 ## [0.1.109] - 2024-03-06
 
 ### Added

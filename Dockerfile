@@ -53,6 +53,8 @@ WORKDIR /app/backend
 # install python dependencies
 COPY ./backend/requirements.txt ./requirements.txt
 
+RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
+
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir
 RUN pip3 install -r requirements.txt --no-cache-dir
 
