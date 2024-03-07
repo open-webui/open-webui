@@ -59,8 +59,9 @@ i18next
 		}
 	});
 
-export const languages = (await import(`./locales/languages.json`)).default;
 const i18n = createI18nStore(i18next);
 const isLoadingStore = createIsLoadingStore(i18next);
+
+export const languages = (await import(`./locales/languages.json`)).default;
 export default i18n;
 export const isLoading = isLoadingStore;
