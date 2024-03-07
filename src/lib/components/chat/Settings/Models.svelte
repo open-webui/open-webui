@@ -548,13 +548,13 @@
 
 					<div class="pt-1">
 						<div class="flex justify-between items-center text-xs">
-							<div class=" text-sm font-medium">Experimental</div>
+							<div class=" text-sm font-medium">{$i18n.t('Experimental')}</div>
 							<button
 								class=" text-xs font-medium text-gray-500"
 								type="button"
 								on:click={() => {
 									showExperimentalOllama = !showExperimentalOllama;
-								}}>{showExperimentalOllama ? 'Hide' : 'Show'}</button
+								}}>{showExperimentalOllama ? $i18n.t('Hide') : $i18n.t('Show')}</button
 							>
 						</div>
 					</div>
@@ -566,7 +566,7 @@
 							}}
 						>
 							<div class=" mb-2 flex w-full justify-between">
-								<div class="  text-sm font-medium">Upload a GGUF model</div>
+								<div class="  text-sm font-medium">{$i18n.t('Upload a GGUF model')}</div>
 
 								<button
 									class="p-1 px-3 text-xs flex rounded transition"
@@ -580,9 +580,9 @@
 									type="button"
 								>
 									{#if modelUploadMode === 'file'}
-										<span class="ml-2 self-center">File Mode</span>
+										<span class="ml-2 self-center">{$i18n.t('File Mode')}</span>
 									{:else}
-										<span class="ml-2 self-center">URL Mode</span>
+										<span class="ml-2 self-center">{$i18n.t('URL Mode')}</span>
 									{/if}
 								</button>
 							</div>
@@ -686,7 +686,7 @@
 							{#if (modelUploadMode === 'file' && modelInputFile && modelInputFile.length > 0) || (modelUploadMode === 'url' && modelFileUrl !== '')}
 								<div>
 									<div>
-										<div class=" my-2.5 text-sm font-medium">Modelfile Content</div>
+										<div class=" my-2.5 text-sm font-medium">{$i18n.t('Modelfile Content')}</div>
 										<textarea
 											bind:value={modelFileContent}
 											class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
@@ -696,16 +696,17 @@
 								</div>
 							{/if}
 							<div class=" mt-1 text-xs text-gray-400 dark:text-gray-500">
-								To access the GGUF models available for downloading, <a
+								{$i18n.t('To access the GGUF models available for downloading,')}
+								<a
 									class=" text-gray-500 dark:text-gray-300 font-medium underline"
 									href="https://huggingface.co/models?search=gguf"
-									target="_blank">click here.</a
+									target="_blank">{$i18n.t('click here.')}</a
 								>
 							</div>
 
 							{#if uploadProgress !== null}
 								<div class="mt-2">
-									<div class=" mb-2 text-xs">Upload Progress</div>
+									<div class=" mb-2 text-xs">{$i18n.t('Upload Progress')}</div>
 
 									<div class="w-full rounded-full dark:bg-gray-800">
 										<div
@@ -740,7 +741,10 @@
 								type="button"
 								on:click={() => {
 									showLiteLLMParams = !showLiteLLMParams;
-								}}>{showLiteLLMParams ? 'Hide Additional Params' : 'Show Additional Params'}</button
+								}}
+								>{showLiteLLMParams
+									? $i18n.t('Hide Additional Params')
+									: $i18n.t('Show Additional Params')}</button
 							>
 						</div>
 					</div>

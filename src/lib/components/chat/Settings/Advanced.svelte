@@ -104,7 +104,7 @@
 					}}
 				>
 					{#if requestFormat === ''}
-						<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+						<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
 					{:else if requestFormat === 'json'}
 						<!-- <svg
                             xmlns="http://www.w3.org/2000/svg"
