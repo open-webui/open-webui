@@ -45,7 +45,7 @@ i18next
 	)
 	.use(LanguageDetector)
 	.init({
-		debug: true,
+		debug: false,
 		detection: {
 			order: ['querystring', 'localStorage', 'navigator'],
 			caches: ['localStorage'],
