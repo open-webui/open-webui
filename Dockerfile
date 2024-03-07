@@ -20,7 +20,7 @@ FROM python:3.11-slim-bookworm as base
 ENV ENV=prod
 ENV PORT ""
 
-ENV OLLAMA_API_BASE_URL "/ollama/api"
+ENV OLLAMA_BASE_URL "/ollama"
 
 ENV OPENAI_API_BASE_URL ""
 ENV OPENAI_API_KEY ""
@@ -52,6 +52,8 @@ WORKDIR /app/backend
 
 # install python dependencies
 COPY ./backend/requirements.txt ./requirements.txt
+
+RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
 
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir
 RUN pip3 install -r requirements.txt --no-cache-dir

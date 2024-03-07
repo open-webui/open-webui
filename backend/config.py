@@ -200,26 +200,31 @@ if not os.path.exists(LITELLM_CONFIG_PATH):
 
 
 ####################################
-# OLLAMA_API_BASE_URL
+# OLLAMA_BASE_URL
 ####################################
 
 OLLAMA_API_BASE_URL = os.environ.get(
     "OLLAMA_API_BASE_URL", "http://localhost:11434/api"
 )
 
-if ENV == "prod":
-    if OLLAMA_API_BASE_URL == "/ollama/api":
-        OLLAMA_API_BASE_URL = "http://host.docker.internal:11434/api"
-
-
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
 
-if OLLAMA_BASE_URL == "":
+if ENV == "prod":
+    if OLLAMA_BASE_URL == "/ollama":
+        OLLAMA_BASE_URL = "http://host.docker.internal:11434"
+
+
+if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     OLLAMA_BASE_URL = (
         OLLAMA_API_BASE_URL[:-4]
         if OLLAMA_API_BASE_URL.endswith("/api")
         else OLLAMA_API_BASE_URL
     )
+
+OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
+OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != "" else OLLAMA_BASE_URL
+
+OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(";")]
 
 
 ####################################
@@ -229,8 +234,24 @@ if OLLAMA_BASE_URL == "":
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 
+if OPENAI_API_KEY == "":
+    OPENAI_API_KEY = "none"
+
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+
+OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
+OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
+
+OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(";")]
+
+
+OPENAI_API_BASE_URLS = os.environ.get("OPENAI_API_BASE_URLS", "")
+OPENAI_API_BASE_URLS = (
+    OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != "" else OPENAI_API_BASE_URL
+)
+
+OPENAI_API_BASE_URLS = [url.strip() for url in OPENAI_API_BASE_URL.split(";")]
 
 
 ####################################

@@ -4,7 +4,12 @@
 	const dispatch = createEventDispatcher();
 
 	import { getOllamaUrls, getOllamaVersion, updateOllamaUrls } from '$lib/apis/ollama';
-	import { getOpenAIKey, getOpenAIUrl, updateOpenAIKey, updateOpenAIUrl } from '$lib/apis/openai';
+	import {
+		getOpenAIKeys,
+		getOpenAIUrls,
+		updateOpenAIKeys,
+		updateOpenAIUrls
+	} from '$lib/apis/openai';
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
@@ -18,12 +23,14 @@
 	let OPENAI_API_KEY = '';
 	let OPENAI_API_BASE_URL = '';
 
+	let OPENAI_API_KEYS = [''];
+	let OPENAI_API_BASE_URLS = [''];
+
 	let showOpenAI = false;
-	let showLiteLLM = false;
 
 	const updateOpenAIHandler = async () => {
-		OPENAI_API_BASE_URL = await updateOpenAIUrl(localStorage.token, OPENAI_API_BASE_URL);
-		OPENAI_API_KEY = await updateOpenAIKey(localStorage.token, OPENAI_API_KEY);
+		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
+		OPENAI_API_KEYS = await updateOpenAIKeys(localStorage.token, OPENAI_API_KEYS);
 
 		await models.set(await getModels());
 	};
@@ -45,8 +52,8 @@
 	onMount(async () => {
 		if ($user.role === 'admin') {
 			OLLAMA_BASE_URLS = await getOllamaUrls(localStorage.token);
-			OPENAI_API_BASE_URL = await getOpenAIUrl(localStorage.token);
-			OPENAI_API_KEY = await getOpenAIKey(localStorage.token);
+			OPENAI_API_BASE_URLS = await getOpenAIUrls(localStorage.token);
+			OPENAI_API_KEYS = await getOpenAIKeys(localStorage.token);
 		}
 	});
 </script>
@@ -73,37 +80,74 @@
 				</div>
 
 				{#if showOpenAI}
-					<div>
-						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('API Key')}</div>
-						<div class="flex w-full">
-							<div class="flex-1">
-								<input
-									class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-									placeholder={$i18n.t('Enter OpenAI API Key')}
-									bind:value={OPENAI_API_KEY}
-									autocomplete="off"
-								/>
-							</div>
-						</div>
-					</div>
+					<div class="flex flex-col gap-1">
+						{#each OPENAI_API_BASE_URLS as url, idx}
+							<div class="flex w-full gap-2">
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										placeholder={$i18n.t('API Base URL')}
+										bind:value={url}
+										autocomplete="off"
+									/>
+								</div>
 
-					<div>
-						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('API Base URL')}</div>
-						<div class="flex w-full">
-							<div class="flex-1">
-								<input
-									class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-									placeholder="Enter OpenAI API Base URL"
-									bind:value={OPENAI_API_BASE_URL}
-									autocomplete="off"
-								/>
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										placeholder={$i18n.t('API Key')}
+										bind:value={OPENAI_API_KEYS[idx]}
+										autocomplete="off"
+									/>
+								</div>
+								<div class="self-center flex items-center">
+									{#if idx === 0}
+										<button
+											class="px-1"
+											on:click={() => {
+												OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, ''];
+												OPENAI_API_KEYS = [...OPENAI_API_KEYS, ''];
+											}}
+											type="button"
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+												/>
+											</svg>
+										</button>
+									{:else}
+										<button
+											class="px-1"
+											on:click={() => {
+												OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.filter(
+													(url, urlIdx) => idx !== urlIdx
+												);
+												OPENAI_API_KEYS = OPENAI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
+											}}
+											type="button"
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path d="M3.75 7.25a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Z" />
+											</svg>
+										</button>
+									{/if}
+								</div>
 							</div>
-						</div>
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-							WebUI will make requests to <span class=" text-gray-200"
-								>'{OPENAI_API_BASE_URL}/chat'</span
-							>
-						</div>
+							<div class=" mb-1 text-xs text-gray-400 dark:text-gray-500">
+								WebUI will make requests to <span class=" text-gray-200">'{url}/models'</span>
+							</div>
+						{/each}
 					</div>
 				{/if}
 			</div>

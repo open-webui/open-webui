@@ -35,6 +35,9 @@ openpyxl
 pyxlsb
 xlrd
 
+opencv-python-headless
+rapidocr-onnxruntime
+
 faster-whisper
 
 PyJWT

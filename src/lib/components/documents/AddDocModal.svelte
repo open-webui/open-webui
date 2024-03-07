@@ -140,7 +140,9 @@
 						<button
 							class="w-full text-sm font-medium py-3 bg-gray-850 hover:bg-gray-800 text-center rounded-xl"
 							type="button"
-							on:click={uploadDocInputElement.click}
+							on:click={() => {
+								uploadDocInputElement.click();
+							}}
 						>
 							{#if inputFiles}
 								{inputFiles.length > 0 ? `${inputFiles.length}` : ''} document(s) selected.
