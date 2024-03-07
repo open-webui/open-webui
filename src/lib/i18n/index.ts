@@ -50,13 +50,16 @@ i18next
 			lookupQuerystring: 'lang',
 			lookupLocalStorage: 'locale'
 		},
-		fallbackLng: 'en',
-		ns: 'common',
+		fallbackLng: {
+			default: ['en-US']
+		},
+		ns: 'translation',
 		interpolation: {
 			escapeValue: false // not needed for svelte as it escapes by default
 		}
 	});
 
+export const languages = (await import(`./locales/languages.json`)).default;
 const i18n = createI18nStore(i18next);
 const isLoadingStore = createIsLoadingStore(i18next);
 export default i18n;

@@ -1,0 +1,22 @@
+[
+	{
+		"title": "English",
+		"code": "en-US"
+	},
+	{
+		"title": "فارسی",
+		"code": "fa"
+	},
+	{
+		"title": "Deutsch",
+		"code": "de"
+	},
+	{
+		"title": "French",
+		"code": "fr"
+	},
+	{
+		"title": "Ukrainian",
+		"code": "uk"
+	}
+]

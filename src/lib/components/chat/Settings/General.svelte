@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { languages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
 	import { models, user } from '$lib/stores';
@@ -16,7 +17,6 @@
 	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
 	let theme = 'dark';
 	// TODO: Get these dynamically from the i18n module
-	let languages = ['en', 'fa', 'fr', 'de', 'ua'];
 	let lang = $i18n.language;
 	let notificationEnabled = false;
 	let system = '';
@@ -134,12 +134,11 @@
 						bind:value={lang}
 						placeholder="Select a language"
 						on:change={(e) => {
-							console.log($i18n);
 							$i18n.changeLanguage(lang);
 						}}
 					>
-						{#each languages as value}
-							<option {value}>{value}</option>
+						{#each languages as language}
+							<option value={language['code']}>{language['title']}</option>
 						{/each}
 					</select>
 				</div>
