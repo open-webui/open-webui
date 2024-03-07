@@ -149,7 +149,7 @@
 				<br />
 				{$i18n.t('You can help us translate the WebUI.')}
 				<a
-					class=" text-gray-300 font-medium"
+					class=" text-gray-300 font-medium underline"
 					href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
 					target="_blank"
 				>
