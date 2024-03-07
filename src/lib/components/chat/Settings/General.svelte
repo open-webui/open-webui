@@ -160,7 +160,7 @@
 			{/if}
 
 			<div>
-				<div class=" py-0.5 flex w-full justify-between">
+				<div class=" mt-2 py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Desktop Notifications')}</div>
 
 					<button
