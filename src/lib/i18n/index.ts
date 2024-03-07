@@ -4,7 +4,7 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import type { i18n as i18nType } from 'i18next';
 import { writable } from 'svelte/store';
 
-const createI18nStore = (i18n: i18n) => {
+const createI18nStore = (i18n: i18nType) => {
 	const i18nWritable = writable(i18n);
 
 	i18n.on('initialized', () => {
@@ -20,7 +20,7 @@ const createI18nStore = (i18n: i18n) => {
 	return i18nWritable;
 };
 
-const createIsLoadingStore = (i18n: i18n) => {
+const createIsLoadingStore = (i18n: i18nType) => {
 	const isLoading = writable(false);
 
 	// if loaded resources are empty || {}, set loading to true
@@ -39,7 +39,9 @@ const createIsLoadingStore = (i18n: i18n) => {
 
 i18next
 	.use(
-		resourcesToBackend((language, namespace) => import(`./locales/${language}/${namespace}.json`))
+		resourcesToBackend(
+			(language: string, namespace: string) => import(`./locales/${language}/${namespace}.json`)
+		)
 	)
 	.use(LanguageDetector)
 	.init({
