@@ -99,9 +99,9 @@
 							updateDefaultUserRoleHandler(e.target.value);
 						}}
 					>
-						<option value="pending">{$i18n.t('Pending')}</option>
-						<option value="user">{$i18n.t('User')}</option>
-						<option value="admin">{$i18n.t('Admin')}</option>
+						<option value="pending">{$i18n.t('pending')}</option>
+						<option value="user">{$i18n.t('user')}</option>
+						<option value="admin">{$i18n.t('admin')}</option>
 					</select>
 				</div>
 			</div>
