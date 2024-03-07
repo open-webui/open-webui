@@ -35,6 +35,7 @@ openpyxl
 pyxlsb
 xlrd
 rapidocr-onnxruntime
+opencv-python-headless
 
 faster-whisper
 
