@@ -1,9 +1,9 @@
 import { OPENAI_API_BASE_URL } from '$lib/constants';
 
-export const getOpenAIUrl = async (token: string = '') => {
+export const getOpenAIUrls = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/url`, {
+	const res = await fetch(`${OPENAI_API_BASE_URL}/urls`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -29,13 +29,13 @@ export const getOpenAIUrl = async (token: string = '') => {
 		throw error;
 	}
 
-	return res.OPENAI_API_BASE_URL;
+	return res.OPENAI_API_BASE_URLS;
 };
 
-export const updateOpenAIUrl = async (token: string = '', url: string) => {
+export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/url/update`, {
+	const res = await fetch(`${OPENAI_API_BASE_URL}/urls/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -43,7 +43,7 @@ export const updateOpenAIUrl = async (token: string = '', url: string) => {
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			url: url
+			urls: urls
 		})
 	})
 		.then(async (res) => {
@@ -64,13 +64,13 @@ export const updateOpenAIUrl = async (token: string = '', url: string) => {
 		throw error;
 	}
 
-	return res.OPENAI_API_BASE_URL;
+	return res.OPENAI_API_BASE_URLS;
 };
 
-export const getOpenAIKey = async (token: string = '') => {
+export const getOpenAIKeys = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/key`, {
+	const res = await fetch(`${OPENAI_API_BASE_URL}/keys`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -96,13 +96,13 @@ export const getOpenAIKey = async (token: string = '') => {
 		throw error;
 	}
 
-	return res.OPENAI_API_KEY;
+	return res.OPENAI_API_KEYS;
 };
 
-export const updateOpenAIKey = async (token: string = '', key: string) => {
+export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/key/update`, {
+	const res = await fetch(`${OPENAI_API_BASE_URL}/keys/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -110,7 +110,7 @@ export const updateOpenAIKey = async (token: string = '', key: string) => {
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			key: key
+			keys: keys
 		})
 	})
 		.then(async (res) => {
@@ -131,7 +131,7 @@ export const updateOpenAIKey = async (token: string = '', key: string) => {
 		throw error;
 	}
 
-	return res.OPENAI_API_KEY;
+	return res.OPENAI_API_KEYS;
 };
 
 export const getOpenAIModels = async (token: string = '') => {

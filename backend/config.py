@@ -237,6 +237,19 @@ OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
+OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
+OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
+
+OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(";")]
+
+
+OPENAI_API_BASE_URLS = os.environ.get("OPENAI_API_BASE_URLS", "")
+OPENAI_API_BASE_URLS = (
+    OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != "" else OPENAI_API_BASE_URL
+)
+
+OPENAI_API_BASE_URLS = [url.strip() for url in OPENAI_API_BASE_URL.split(";")]
+
 
 ####################################
 # WEBUI

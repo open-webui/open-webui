@@ -97,14 +97,11 @@
 					if (localDBChats.length === 0) {
 						await deleteDB('Chats');
 					}
-
-					console.log('localdb', localDBChats);
 				}
 
 				console.log(DB);
 			} catch (error) {
 				// IndexedDB Not Found
-				console.log('IDB Not Found');
 			}
 
 			console.log();
