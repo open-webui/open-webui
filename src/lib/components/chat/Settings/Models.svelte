@@ -589,7 +589,7 @@
 												on:change={() => {
 													console.log(modelInputFile);
 												}}
-												accept=".gguf",".safetensors"
+												accept=".gguf,.safetensors"
 												required
 												hidden
 											/>
