@@ -10,13 +10,15 @@ export default {
 	contextSeparator: '_',
 	createOldCatalogs: false,
 	defaultNamespace: 'translation',
-	defaultValue: '',
+	defaultValue: function (locale, namespace, key, value) {
+		return key;
+	},
 	indentation: 2,
 	keepRemoved: false,
 	keySeparator: false,
 	lexers: {
 		svelte: ['JavascriptLexer'],
-		js: ['JavascriptLexer'], // if you're writing jsx inside .js files, change this to JsxLexer
+		js: ['JavascriptLexer'],
 		ts: ['JavascriptLexer'],
 
 		default: ['JavascriptLexer']

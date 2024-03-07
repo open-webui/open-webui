@@ -21,7 +21,7 @@
 
 	export let suggestionPrompts = [];
 	export let autoScroll = true;
-	let chatTextAreaElement:HTMLTextAreaElement
+	let chatTextAreaElement: HTMLTextAreaElement;
 	let filesInputElement;
 
 	let promptsElement;
