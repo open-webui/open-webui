@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ollama
+  name: deployment-ollama
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+      name: deployment-ollama
+    spec:
+      initContainers:
+      - name: init-data
+        image: ghcr.io/open-webui/open-webui:main
+        command: ["/bin/bash", "-c", "if [ ! -f /data/config.json ]; then echo 'Cloning default data folder...'; cp -Rv /app/backend/data/* /data/; echo 'Finished'; else echo 'Exists...'; fi"]
+        volumeMounts:
+          - name: open-webui-data
+            mountPath: "/data"
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          ports:
+          - containerPort: 11434
+            protocol: TCP
+            name: http
+          volumeMounts:
+            - name: ollama-data
+              mountPath: "/root/.ollama"
+        - name: ollama-webui
+          image: ghcr.io/open-webui/open-webui:main
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+            name: http
+          volumeMounts:
+            - name: open-webui-data
+              mountPath: "/app/backend/data"
+          env:
+            - name: OLLAMA_BASE_URL
+              value: "http://localhost:11434/api"
+            - name: WEBUI_SECRET_KEY
+              valueFrom: 
+                secretKeyRef:
+                  name: webui-secret-key
+                  key: WEBUI_SECRET_KEY
+            - name: SCARF_NO_ANALYTICS
+              value: "true"
+            - name: DO_NOT_TRACK
+              value: "true"
+      volumes:
+        - name: ollama-data
+          persistentVolumeClaim:
+            claimName: pvc-ollama
+        - name: open-webui-data
+          persistentVolumeClaim:
+            claimName: pvc-open-webui
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-service
+  namespace: default
+  labels:
+    name: ollama-service
+spec:
+  type: ClusterIP
+  ports:
+    - name: api
+      port: 11434
+      targetPort: 11434
+      protocol: TCP
+    - name: ui
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: ollama

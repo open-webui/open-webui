@@ -103,6 +103,24 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 
 - After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
 
+### K8s Setup
+
+There is a trick with K8s you need to have a init container condition your volume if it's a blank vol.
+
+Something like this should do the trick for you. (NOTE: Make sure you use the same image as you use in your pod spec.)
+
+```yaml
+initContainers:
+- name: init-data
+  image: ghcr.io/open-webui/open-webui:main
+  command: ["/bin/bash", "-c", "if [ ! -f /data/config.json ]; then echo 'Cloning default data folder...'; cp -Rv /app/backend/data/* /data/; echo 'Finished'; else echo 'Exists...'; fi"]
+  volumeMounts:
+    - name: your-pvc-name
+      mountPath: "/data"
+```
+
+See the example config [K8s.yaml](K8s.yaml) for a full example.
+
 #### Open WebUI: Server Connection Error
 
 If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
