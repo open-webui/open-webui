@@ -175,8 +175,7 @@ async def get_all_models():
         for idx, url in enumerate(app.state.OPENAI_API_BASE_URLS)
     ]
     responses = await asyncio.gather(*tasks)
-    responses = list(filter(lambda x: x is not None, responses))
-
+    responses = list(filter(lambda x: x is not None and "error" not in x, responses))
     models = {
         "data": merge_models_lists(
             list(map(lambda response: response["data"], responses))
