@@ -55,7 +55,6 @@
 	"Chunk Overlap": "Chunk Overlap",
 	"Chunk Params": "Chunk Parameter",
 	"Chunk Size": "Chunk Size",
-	"Click here for a contribution guide.": "Klicke hier für eine Anleitung dazu.",
 	"Click here for help": "Klicke hier für Hilfe",
 	"Click here to check other modelfiles.": "Klicke hier, um andere Modelfiles zu überprüfen.",
 	"click here.": "hier klicken.",
@@ -96,7 +95,6 @@
 	"Deleted {tagName}": "{tagName} gelöscht",
 	"Description": "Beschreibung",
 	"Desktop Notifications": "Desktop-Benachrichtigungen",
-	"Didn't find your language?": "Deine Sprache nicht vorhanden?",
 	"Disabled": "Deaktiviert",
 	"Discover a modelfile": "Eine Modelfiles entdecken",
 	"Discover a prompt": "Einen Prompt entdecken",
@@ -318,6 +316,5 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Schreibe eine kurze Zusammenfassung in 50 Wörtern, die [Thema oder Schlüsselwort] zusammenfasst.",
 	"You": "Du",
 	"You're a helpful assistant.": "Du bist ein hilfreicher Assistent.",
-	"You're now logged in.": "Du bist nun eingeloggt.",
-	"You can help us translate the WebUI.": "Du kannst uns bei der Übersetzung der WebUI helfen."
+	"You're now logged in.": "Du bist nun eingeloggt."
 }

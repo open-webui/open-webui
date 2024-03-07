@@ -144,18 +144,20 @@
 					</select>
 				</div>
 			</div>
-			<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
-				{$i18n.t("Didn't find your language?")}
-				<br />
-				{$i18n.t('You can help us translate the WebUI.')}
-				<a
-					class=" text-gray-300 font-medium underline"
-					href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
-					target="_blank"
-				>
-					{$i18n.t('Click here for a contribution guide.')}
-				</a>
-			</div>
+			{#if $i18n.language === 'en'}
+				<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
+					{$i18n.t("Didn't find your language?")}
+					<br />
+					{$i18n.t('You can help us translate the WebUI.')}
+					<a
+						class=" text-gray-300 font-medium underline"
+						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
+						target="_blank"
+					>
+						{$i18n.t('Click here for a contribution guide.')}
+					</a>
+				</div>
+			{/if}
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
