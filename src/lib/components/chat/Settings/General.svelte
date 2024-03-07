@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { languages } from '$lib/i18n';
+	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
 	import { models, user } from '$lib/stores';
@@ -16,7 +16,7 @@
 	// General
 	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
 	let theme = 'dark';
-	// TODO: Get these dynamically from the i18n module
+	let languages = [];
 	let lang = $i18n.language;
 	let notificationEnabled = false;
 	let system = '';
@@ -69,6 +69,7 @@
 
 	onMount(async () => {
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+		languages = await getLanguages();
 
 		theme = localStorage.theme ?? 'dark';
 		notificationEnabled = settings.notificationEnabled ?? false;

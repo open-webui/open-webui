@@ -1,22 +1,22 @@
 [
 	{
-		"title": "English",
-		"code": "en-US"
+		"code": "en",
+		"title": "English"
 	},
 	{
-		"title": "فارسی",
-		"code": "fa"
+		"code": "fa",
+		"title": "فارسی"
 	},
 	{
-		"title": "Deutsch",
-		"code": "de"
+		"code": "de",
+		"title": "Deutsch"
 	},
 	{
-		"title": "French",
-		"code": "fr"
+		"code": "fr",
+		"title": "French"
 	},
 	{
-		"title": "Ukrainian",
-		"code": "uk"
+		"code": "uk",
+		"title": "Ukrainian"
 	}
 ]

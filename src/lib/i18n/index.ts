@@ -51,7 +51,7 @@ i18next
 			lookupLocalStorage: 'locale'
 		},
 		fallbackLng: {
-			default: ['en-US']
+			default: ['en']
 		},
 		ns: 'translation',
 		interpolation: {
@@ -62,6 +62,9 @@ i18next
 const i18n = createI18nStore(i18next);
 const isLoadingStore = createIsLoadingStore(i18next);
 
-export const languages = (await import(`./locales/languages.json`)).default;
+export const getLanguages = async () => {
+	const languages = (await import(`./locales/languages.json`)).default;
+	return languages;
+};
 export default i18n;
 export const isLoading = isLoadingStore;
