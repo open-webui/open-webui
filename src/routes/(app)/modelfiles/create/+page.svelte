@@ -562,9 +562,9 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 								}}
 							>
 								{#if advanced}
-									<span class="ml-2 self-center">{$i18n.t(' Custom ')}</span>
+									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 								{:else}
-									<span class="ml-2 self-center">{$i18n.t(' Default ')}</span>
+									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 								{/if}
 							</button>
 						</div>
