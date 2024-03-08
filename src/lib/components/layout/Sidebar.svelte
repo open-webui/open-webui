@@ -398,7 +398,7 @@
 									<div
 										class=" text-left self-center overflow-hidden {chat.id === $chatId
 											? 'w-[160px]'
-											: 'w-full'} "
+											: 'w-full'}  h-[20px]"
 									>
 										{chat.title}
 									</div>
