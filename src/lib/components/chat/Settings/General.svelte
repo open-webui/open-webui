@@ -176,7 +176,7 @@
 			<div class=" my-2.5 text-sm font-medium">System Prompt</div>
 			<textarea
 				bind:value={system}
-				class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
+				class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
 				rows="4"
 			/>
 		</div>
