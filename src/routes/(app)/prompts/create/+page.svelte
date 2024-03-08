@@ -167,7 +167,8 @@
 							class=" text-gray-600 dark:text-gray-300 font-medium"
 						>
 							/{command}
-						</span>" &nbsp;{$i18n.t('to chat input.')}
+						</span>" &nbsp;
+						{$i18n.t('to chat input.')}
 					</div>
 				</div>
 

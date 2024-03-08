@@ -293,6 +293,7 @@
 	"to": "به",
 	"To access the available model names for downloading,": "برای دسترسی به نام مدل های موجود برای دانلود،",
 	"To access the GGUF models available for downloading,": "برای دسترسی به مدل\u200cهای GGUF موجود برای دانلود،",
+	"to chat input.": "در ورودی گپ.",
 	"Toggle settings": "نمایش/عدم نمایش تنظیمات",
 	"Toggle sidebar": "نمایش/عدم نمایش نوار کناری",
 	"Top K": "Top K",
