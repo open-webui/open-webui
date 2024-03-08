@@ -348,6 +348,7 @@
 		liteLLMAPIBase = '';
 		liteLLMAPIKey = '';
 		liteLLMRPM = '';
+		liteLLMMaxTokens = '';
 
 		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
 		models.set(await getModels());
