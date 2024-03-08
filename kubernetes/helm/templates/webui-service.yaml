@@ -4,6 +4,9 @@ metadata:
   name: {{ include "open-webui.name" . }}
   labels:
     {{- include "open-webui.labels" . | nindent 4 }}
+    {{- with .Values.webui.service.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
   {{- with .Values.webui.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -11,14 +14,16 @@ metadata:
 spec:
   selector:
     {{- include "open-webui.selectorLabels" . | nindent 4 }}
-{{- with .Values.webui.service }}
-  type: {{ .type }}
+  type: {{ .Values.webui.service.type | default "ClusterIP" }}
   ports:
   - protocol: TCP
     name: http
-    port: {{ .port }}
+    port: {{ .Values.webui.service.port }}
     targetPort: http
-    {{- if .nodePort }}
-    nodePort: {{ .nodePort | int }}
+    {{- if .Values.webui.service.nodePort }}
+    nodePort: {{ .Values.webui.service.nodePort | int }}
     {{- end }}
-{{- end }}
+  {{- if .Values.webui.service.loadBalancerClass }}
+  loadBalancerClass: {{ .Values.webui.service.loadBalancerClass | quote }}
+  {{- end }}
+
