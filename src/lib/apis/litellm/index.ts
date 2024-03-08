@@ -77,6 +77,7 @@ type AddLiteLLMModelForm = {
 	api_base: string;
 	api_key: string;
 	rpm: string;
+	max_tokens: string;
 };
 
 export const addLiteLLMModel = async (token: string = '', payload: AddLiteLLMModelForm) => {
@@ -95,7 +96,8 @@ export const addLiteLLMModel = async (token: string = '', payload: AddLiteLLMMod
 				model: payload.model,
 				...(payload.api_base === '' ? {} : { api_base: payload.api_base }),
 				...(payload.api_key === '' ? {} : { api_key: payload.api_key }),
-				...(isNaN(parseInt(payload.rpm)) ? {} : { rpm: parseInt(payload.rpm) })
+				...(isNaN(parseInt(payload.rpm)) ? {} : { rpm: parseInt(payload.rpm) }),
+				...(payload.max_tokens === '' ? {} : { max_tokens: payload.max_tokens })
 			}
 		})
 	})

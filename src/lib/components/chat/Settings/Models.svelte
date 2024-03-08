@@ -27,6 +27,7 @@
 	let liteLLMAPIBase = '';
 	let liteLLMAPIKey = '';
 	let liteLLMRPM = '';
+	let liteLLMMaxTokens = '';
 
 	let deleteLiteLLMModelId = '';
 
@@ -326,7 +327,8 @@
 				model: liteLLMModel,
 				api_base: liteLLMAPIBase,
 				api_key: liteLLMAPIKey,
-				rpm: liteLLMRPM
+				rpm: liteLLMRPM,
+				max_tokens: liteLLMMaxTokens
 			}).catch((error) => {
 				toast.error(error);
 				return null;
@@ -816,6 +818,22 @@
 											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 											placeholder="Enter LiteLLM API RPM (litellm_params.rpm)"
 											bind:value={liteLLMRPM}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div>
+								<div class="mb-1.5 text-sm font-medium">Max Tokens</div>
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+											placeholder="Enter Max Tokens (litellm_params.max_tokens)"
+											bind:value={liteLLMMaxTokens}
+											type="number"
+											min="1"
 											autocomplete="off"
 										/>
 									</div>
