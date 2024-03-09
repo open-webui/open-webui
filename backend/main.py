@@ -62,8 +62,12 @@ async def on_startup():
 class RAGMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
 
+        "chat/completions" in request.url.path
+
         print(request.url.path)
-        if request.method == "POST":
+        if request.method == "POST" and (
+            "/api/chat" in request.url.path or "/chat/completions" in request.url.path
+        ):
             # Read the original request body
             body = await request.body()
             # Decode body to string
