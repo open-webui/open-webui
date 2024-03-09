@@ -600,7 +600,9 @@
 											<button
 												type="button"
 												class="w-full rounded-lg text-left py-2 px-4 dark:text-gray-300 dark:bg-gray-850"
-												on:click={modelUploadInputElement.click}
+												on:click={() => {
+													modelUploadInputElement.click();
+												}}
 											>
 												{#if modelInputFile && modelInputFile.length > 0}
 													{modelInputFile[0].name}

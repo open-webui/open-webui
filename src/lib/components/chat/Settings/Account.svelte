@@ -109,7 +109,9 @@
 					<button
 						class="relative rounded-full dark:bg-gray-700"
 						type="button"
-						on:click={profileImageInputElement.click}
+						on:click={() => {
+							profileImageInputElement.click();
+						}}
 					>
 						<img
 							src={profileImageUrl !== '' ? profileImageUrl : '/user.png'}
