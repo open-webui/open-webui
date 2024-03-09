@@ -32,7 +32,7 @@
 
 	function applyTheme(theme: string) {
 		localStorage.theme = theme;
-		const themeClassList = document.documentElement.classList;
+
 		if (theme === 'system') {
 			updateSystemTheme();
 			return;
