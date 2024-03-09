@@ -18,6 +18,41 @@
 
 	let showAdvanced = false;
 
+	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+		if (theme === 'system') {
+			updateSystemTheme();
+		}
+	});
+
+	function updateSystemTheme() {
+		const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		const systemTheme = isDarkMode ? 'dark' : 'light';
+		applyTheme(systemTheme);
+	}
+
+	function applyTheme(theme: string) {
+		localStorage.theme = theme;
+		const themeClassList = document.documentElement.classList;
+		if (theme === 'system') {
+			updateSystemTheme();
+			return;
+		}
+
+		themes
+			.filter((e) => e !== theme)
+			.forEach((e) => {
+				e.split(' ').forEach((e) => {
+					document.documentElement.classList.remove(e);
+				});
+			});
+
+		theme.split(' ').forEach((e) => {
+			document.documentElement.classList.add(e);
+		});
+
+		console.log(theme)
+	}
+
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
 
@@ -123,24 +158,9 @@
 						class="w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
 						bind:value={theme}
 						placeholder="Select a theme"
-						on:change={(e) => {
-							localStorage.theme = theme;
-
-							themes
-								.filter((e) => e !== theme)
-								.forEach((e) => {
-									e.split(' ').forEach((e) => {
-										document.documentElement.classList.remove(e);
-									});
-								});
-
-							theme.split(' ').forEach((e) => {
-								document.documentElement.classList.add(e);
-							});
-
-							console.log(theme);
-						}}
+						on:change="{() => applyTheme(theme)}"
 					>
+						<option value="system">System</option>
 						<option value="dark">Dark</option>
 						<option value="light">Light</option>
 						<option value="rose-pine dark">Rosé Pine</option>
