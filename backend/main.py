@@ -108,20 +108,26 @@ class RAGMiddleware(BaseHTTPMiddleware):
 
                 for doc in docs:
                     context = None
-                    if doc["type"] == "collection":
-                        context = query_collection(
-                            collection_names=doc["collection_names"],
-                            query=query,
-                            k=rag_app.state.TOP_K,
-                            embedding_function=rag_app.state.sentence_transformer_ef,
-                        )
-                    else:
-                        context = query_doc(
-                            collection_name=doc["collection_name"],
-                            query=query,
-                            k=rag_app.state.TOP_K,
-                            embedding_function=rag_app.state.sentence_transformer_ef,
-                        )
+
+                    try:
+                        if doc["type"] == "collection":
+                            context = query_collection(
+                                collection_names=doc["collection_names"],
+                                query=query,
+                                k=rag_app.state.TOP_K,
+                                embedding_function=rag_app.state.sentence_transformer_ef,
+                            )
+                        else:
+                            context = query_doc(
+                                collection_name=doc["collection_name"],
+                                query=query,
+                                k=rag_app.state.TOP_K,
+                                embedding_function=rag_app.state.sentence_transformer_ef,
+                            )
+                    except Exception as e:
+                        print(e)
+                        context = None
+
                     relevant_contexts.append(context)
 
                 context_string = ""
