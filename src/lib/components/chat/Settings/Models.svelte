@@ -422,7 +422,9 @@
 							<div class="flex-1 mr-2">
 								<input
 									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-									placeholder="Enter model tag (e.g. mistral:7b)"
+									placeholder={$i18n.t('Enter model tag (e.g. {{modelTag}})', {
+										modelTag: 'mistral:7b'
+									})}
 									bind:value={modelTag}
 								/>
 							</div>
@@ -478,10 +480,11 @@
 						</div>
 
 						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
-							To access the available model names for downloading, <a
+							{$i18n.t('To access the available model names for downloading,')}
+							<a
 								class=" text-gray-500 dark:text-gray-300 font-medium underline"
 								href="https://ollama.com/library"
-								target="_blank">click here.</a
+								target="_blank">{$i18n.t('click here.')}</a
 							>
 						</div>
 
@@ -506,16 +509,16 @@
 					</div>
 
 					<div>
-						<div class=" mb-2 text-sm font-medium">Delete a model</div>
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('Delete a model')}</div>
 						<div class="flex w-full">
 							<div class="flex-1 mr-2">
 								<select
 									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={deleteModelTag}
-									placeholder="Select a model"
+									placeholder={$i18n.t('Select a model')}
 								>
 									{#if !deleteModelTag}
-										<option value="" disabled selected>Select a model</option>
+										<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 									{/if}
 									{#each $models.filter((m) => m.size != null && (selectedOllamaUrlIdx === null ? true : (m?.urls ?? []).includes(selectedOllamaUrlIdx))) as model}
 										<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
@@ -612,7 +615,7 @@
 												{#if modelInputFile && modelInputFile.length > 0}
 													{modelInputFile[0].name}
 												{:else}
-													Click here to select
+													{$i18n.t('Click here to select')}
 												{/if}
 											</button>
 										</div>
@@ -626,7 +629,7 @@
 												type="url"
 												required
 												bind:value={modelFileUrl}
-												placeholder="Type Hugging Face Resolve (Download) URL"
+												placeholder={$i18n.t('Type Hugging Face Resolve (Download) URL')}
 											/>
 										</div>
 									{/if}

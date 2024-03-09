@@ -156,7 +156,7 @@
 		<hr class=" dark:border-gray-700" />
 
 		<div>
-			<div class=" mb-2.5 text-sm font-medium">Ollama Base URL</div>
+			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama Base URL')}</div>
 			<div class="flex w-full gap-1.5">
 				<div class="flex-1 flex flex-col gap-2">
 					{#each OLLAMA_BASE_URLS as url, idx}

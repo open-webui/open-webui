@@ -250,7 +250,7 @@
 									on:click={async () => {
 										localStorage.removeItem('token');
 										location.href = '/auth';
-									}}>Sign Out</button
+									}}>{$i18n.t('Sign Out')}</button
 								>
 							</div>
 						</div>
@@ -302,7 +302,7 @@
 									class="text-xs text-center w-full mt-2 text-gray-400 underline"
 									on:click={async () => {
 										localDBChats = [];
-									}}>Close</button
+									}}>{$i18n.t('Close')}</button
 								>
 							</div>
 						</div>

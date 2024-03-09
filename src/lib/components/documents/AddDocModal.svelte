@@ -147,7 +147,7 @@
 							{#if inputFiles}
 								{inputFiles.length > 0 ? `${inputFiles.length}` : ''} document(s) selected.
 							{:else}
-								Click here to select documents.
+								{$i18n.t('Click here to select documents.')}
 							{/if}
 						</button>
 					</div>

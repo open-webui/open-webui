@@ -227,7 +227,7 @@
 							bind:value={speaker}
 							placeholder="Select a voice"
 						>
-							<option value="" selected>Default</option>
+							<option value="" selected>{$i18n.t('Default')}</option>
 							{#each voices.filter((v) => v.localService === true) as voice}
 								<option value={voice.name} class="bg-gray-100 dark:bg-gray-700">{voice.name}</option
 								>

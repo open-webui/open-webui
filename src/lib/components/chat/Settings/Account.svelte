@@ -143,7 +143,7 @@
 						const url = await getGravatarUrl($user.email);
 
 						profileImageUrl = url;
-					}}>Use Gravatar</button
+					}}>{$i18n.t('Use Gravatar')}</button
 				>
 			</div>
 

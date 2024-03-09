@@ -232,7 +232,7 @@
 							clip-rule="evenodd"
 						/>
 					</svg>
-					<span>Are you sure?</span>
+					<span>{$i18n.t('Are you sure?')}</span>
 				</div>
 
 				<div class="flex space-x-1.5 items-center">

@@ -139,7 +139,7 @@
 						<input
 							class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
 							type="number"
-							placeholder="Enter Chunk Size"
+							placeholder={$i18n.t('Enter Chunk Size')}
 							bind:value={chunkSize}
 							autocomplete="off"
 							min="0"
@@ -154,7 +154,7 @@
 						<input
 							class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
 							type="number"
-							placeholder="Enter Chunk Overlap"
+							placeholder={$i18n.t('Enter Chunk Overlap')}
 							bind:value={chunkOverlap}
 							autocomplete="off"
 							min="0"
@@ -163,17 +163,17 @@
 				</div>
 			</div>
 
-			<div class=" text-sm font-medium">Query Params</div>
+			<div class=" text-sm font-medium">{$i18n.t('Query Params')}</div>
 
 			<div class=" flex">
 				<div class="  flex w-full justify-between">
-					<div class="self-center text-xs font-medium flex-1">Top K</div>
+					<div class="self-center text-xs font-medium flex-1">{$i18n.t('Top K')}</div>
 
 					<div class="self-center p-3">
 						<input
 							class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
 							type="number"
-							placeholder="Enter Top K"
+							placeholder={$i18n.t('Enter Top K')}
 							bind:value={querySettings.k}
 							autocomplete="off"
 							min="0"
