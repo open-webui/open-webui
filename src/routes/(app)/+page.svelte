@@ -336,7 +336,7 @@
 			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
-			docs: docs
+			docs: docs.length > 0 ? docs : undefined
 		});
 
 		if (res && res.ok) {
@@ -503,6 +503,8 @@
 			)
 			.flat(1);
 
+		console.log(docs);
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -552,7 +554,7 @@
 				num_ctx: $settings?.options?.num_ctx ?? undefined,
 				frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
 				max_tokens: $settings?.options?.num_predict ?? undefined,
-				docs: docs
+				docs: docs.length > 0 ? docs : undefined
 			},
 			model.source === 'litellm' ? `${LITELLM_API_BASE_URL}/v1` : `${OPENAI_API_BASE_URL}`
 		);

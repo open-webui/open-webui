@@ -123,8 +123,6 @@ class RAGMiddleware(BaseHTTPMiddleware):
                 data["messages"][last_user_message_idx] = new_user_message
                 del data["docs"]
 
-            print("DATAAAAAAAAAAAAAAAAAA")
-            print(data)
             modified_body_bytes = json.dumps(data).encode("utf-8")
 
             # Create a new request with the modified body
