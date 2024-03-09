@@ -165,6 +165,9 @@
 							if (imageGenerationEngine === '' && AUTOMATIC1111_BASE_URL === '') {
 								toast.error('AUTOMATIC1111 Base URL is required.');
 								enableImageGeneration = false;
+							} else if (imageGenerationEngine === 'openai' && OPENAI_API_KEY === '') {
+								toast.error('OpenAI API Key is required.');
+								enableImageGeneration = false;
 							} else {
 								enableImageGeneration = !enableImageGeneration;
 							}
