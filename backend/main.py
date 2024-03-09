@@ -121,6 +121,7 @@ async def get_app_latest_release_version():
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/cache", StaticFiles(directory="data/cache"), name="cache")
 
 
 app.mount(

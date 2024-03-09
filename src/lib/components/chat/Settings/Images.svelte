@@ -14,7 +14,9 @@
 		updateAUTOMATIC1111Url,
 		updateImageSize,
 		getImageSteps,
-		updateImageSteps
+		updateImageSteps,
+		getOpenAIKey,
+		updateOpenAIKey
 	} from '$lib/apis/images';
 	import { getBackendConfig } from '$lib/apis';
 	const dispatch = createEventDispatcher();
@@ -27,6 +29,7 @@
 	let enableImageGeneration = false;
 
 	let AUTOMATIC1111_BASE_URL = '';
+	let OPENAI_API_KEY = '';
 
 	let selectedModel = '';
 	let models = null;
@@ -97,6 +100,7 @@
 				enableImageGeneration = res.enabled;
 			}
 			AUTOMATIC1111_BASE_URL = await getAUTOMATIC1111Url(localStorage.token);
+			OPENAI_API_KEY = await getOpenAIKey(localStorage.token);
 
 			imageSize = await getImageSize(localStorage.token);
 			steps = await getImageSteps(localStorage.token);
@@ -112,6 +116,10 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
 		loading = true;
+		await updateOpenAIKey(localStorage.token, OPENAI_API_KEY);
+
+		await updateDefaultImageGenerationModel(localStorage.token, selectedModel);
+
 		await updateDefaultImageGenerationModel(localStorage.token, selectedModel);
 		await updateImageSize(localStorage.token, imageSize).catch((error) => {
 			toast.error(error);
@@ -156,10 +164,12 @@
 						on:click={() => {
 							if (imageGenerationEngine === '' && AUTOMATIC1111_BASE_URL === '') {
 								toast.error('AUTOMATIC1111 Base URL is required.');
+								enableImageGeneration = false;
 							} else {
 								enableImageGeneration = !enableImageGeneration;
-								updateImageGeneration();
 							}
+
+							updateImageGeneration();
 						}}
 						type="button"
 					>
@@ -172,21 +182,20 @@
 				</div>
 			</div>
 		</div>
+		<hr class=" dark:border-gray-700" />
 
 		{#if imageGenerationEngine === ''}
-			<hr class=" dark:border-gray-700" />
-
 			<div class=" mb-2.5 text-sm font-medium">AUTOMATIC1111 Base URL</div>
 			<div class="flex w-full">
 				<div class="flex-1 mr-2">
 					<input
-						class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						placeholder="Enter URL (e.g. http://127.0.0.1:7860/)"
 						bind:value={AUTOMATIC1111_BASE_URL}
 					/>
 				</div>
 				<button
-					class="px-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-700 rounded transition"
+					class="px-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-700 rounded-lg transition"
 					type="button"
 					on:click={() => {
 						// updateOllamaAPIUrlHandler();
@@ -219,6 +228,17 @@
 					(e.g. `sh webui.sh --api`)
 				</a>
 			</div>
+		{:else if imageGenerationEngine === 'openai'}
+			<div class=" mb-2.5 text-sm font-medium">OpenAI API Key</div>
+			<div class="flex w-full">
+				<div class="flex-1 mr-2">
+					<input
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						placeholder="Enter API Key"
+						bind:value={OPENAI_API_KEY}
+					/>
+				</div>
+			</div>
 		{/if}
 
 		{#if enableImageGeneration}
@@ -229,7 +249,7 @@
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<select
-							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={selectedModel}
 							placeholder="Select a model"
 						>
@@ -249,7 +269,7 @@
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<input
-							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder="Enter Image Size (e.g. 512x512)"
 							bind:value={imageSize}
 						/>
@@ -262,7 +282,7 @@
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<input
-							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder="Enter Number of Steps (e.g. 50)"
 							bind:value={steps}
 						/>
