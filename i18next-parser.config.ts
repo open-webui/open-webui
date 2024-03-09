@@ -10,9 +10,7 @@ export default {
 	contextSeparator: '_',
 	createOldCatalogs: false,
 	defaultNamespace: 'translation',
-	defaultValue: function (locale, namespace, key, value) {
-		return key;
-	},
+	defaultValue: '',
 	indentation: 2,
 	keepRemoved: false,
 	keySeparator: false,

@@ -56,6 +56,7 @@ i18next
 			default: ['en']
 		},
 		ns: 'translation',
+		returnEmptyString: false,
 		interpolation: {
 			escapeValue: false // not needed for svelte as it escapes by default
 		}
