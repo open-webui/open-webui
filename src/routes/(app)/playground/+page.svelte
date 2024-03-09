@@ -267,7 +267,7 @@
 
 <div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
 	<div class=" flex flex-col justify-between w-full overflow-y-auto h-[100dvh]">
-		<div class="max-w-2xl mx-auto w-full px-3 p-3 md:px-0 h-full">
+		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10 h-full">
 			<div class=" flex flex-col h-full">
 				<div class="flex flex-col justify-between mb-2.5 gap-1">
 					<div class="flex justify-between items-center gap-2">
