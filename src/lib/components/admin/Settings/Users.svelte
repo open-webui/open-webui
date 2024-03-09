@@ -7,9 +7,7 @@
 	export let saveHandler: Function;
 
 	let whitelistEnabled = false;
-	let whitelistModels = [];
-	let selectedModelId = '';
-
+	let whitelistModels = [''];
 	let permissions = {
 		chat: {
 			deletion: true
@@ -102,46 +100,72 @@
 
 					{#if whitelistEnabled}
 						<div>
-							<div class="flex justify-between items-center text-xs">
+							<div class=" space-y-1.5">
+								{#each whitelistModels as modelId, modelIdx}
+									<div class="flex w-full">
+										<div class="flex-1 mr-2">
+											<select
+												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+												bind:value={modelId}
+												placeholder="Select a model"
+											>
+												<option value="" disabled selected>Select a model</option>
+												{#each $models.filter((model) => model.id) as model}
+													<option value={model.id} class="bg-gray-100 dark:bg-gray-700"
+														>{model.name}</option
+													>
+												{/each}
+											</select>
+										</div>
+
+										{#if modelIdx === 0}
+											<button
+												class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-white rounded-lg transition"
+												type="button"
+												on:click={() => {
+													if (whitelistModels.at(-1) !== '') {
+														whitelistModels = [...whitelistModels, ''];
+													}
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 16 16"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+													/>
+												</svg>
+											</button>
+										{:else}
+											<button
+												class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-white rounded-lg transition"
+												type="button"
+												on:click={() => {
+													whitelistModels.splice(modelIdx, 1);
+													whitelistModels = whitelistModels;
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 16 16"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path d="M3.75 7.25a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Z" />
+												</svg>
+											</button>
+										{/if}
+									</div>
+								{/each}
+							</div>
+
+							<div class="flex justify-end items-center text-xs mt-1.5 text-right">
 								<div class=" text-xs font-medium">
 									{whitelistModels.length} Model(s) Whitelisted
 								</div>
-							</div>
-
-							<div class="flex w-full">
-								<div class="flex-1 mr-2">
-									<select
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-										bind:value={selectedModelId}
-										placeholder="Select a model"
-									>
-										<option value="" disabled selected>Select a model</option>
-										{#each $models.filter((model) => model.id) as model}
-											<option value={model.id} class="bg-gray-100 dark:bg-gray-700"
-												>{model.name}</option
-											>
-										{/each}
-									</select>
-								</div>
-								<button
-									class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-white rounded-lg transition"
-									on:click={() => {
-										if (!whitelistModels.includes(selectedModelId)) {
-											whitelistModels.push(selectedModelId);
-										}
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-										/>
-									</svg>
-								</button>
 							</div>
 						</div>
 					{/if}
