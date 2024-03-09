@@ -1,3 +1,4 @@
+import re
 from typing import List
 
 from config import CHROMA_CLIENT
@@ -87,3 +88,10 @@ def query_collection(
             pass
 
     return merge_and_sort_query_results(results, k)
+
+
+def rag_template(template: str, context: str, query: str):
+    template = re.sub(r"\[context\]", context, template)
+    template = re.sub(r"\[query\]", query, template)
+
+    return template
