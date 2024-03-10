@@ -14,7 +14,7 @@
 		"lint:backend": "pylint backend/",
 		"format": "prettier --plugin-search-dir --write '**/*.{js,ts,svelte,css,md,html,json}'",
 		"format:backend": "yapf --recursive backend -p -i",
-		"i18n:parser": "i18next --config i18next-parser.config.ts && prettier --write 'src/lib/i18n/**/*.{js,json}'"
+		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write 'src/lib/i18n/**/*.{js,json}'"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^2.0.0",

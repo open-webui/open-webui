@@ -409,7 +409,7 @@
 						<select
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={selectedOllamaUrlIdx}
-							placeholder="Select an Ollama instance"
+							placeholder={$i18n.t('Select an Ollama instance')}
 						>
 							{#each OLLAMA_URLS as url, idx}
 								<option value={idx} class="bg-gray-100 dark:bg-gray-700">{url}</option>
@@ -755,14 +755,16 @@
 					{#if showLiteLLM}
 						<div>
 							<div class="flex justify-between items-center text-xs">
-								<div class=" text-sm font-medium">Add a model</div>
+								<div class=" text-sm font-medium">{$i18n.t('Add a model')}</div>
 								<button
 									class=" text-xs font-medium text-gray-500"
 									type="button"
 									on:click={() => {
 										showLiteLLMParams = !showLiteLLMParams;
 									}}
-									>{showLiteLLMParams ? $i18n.t('Hide Additional Params') : $i18n.t('Show Additional Params')}</button
+									>{showLiteLLMParams
+										? $i18n.t('Hide Additional Params')
+										: $i18n.t('Show Additional Params')}</button
 								>
 							</div>
 						</div>
@@ -772,7 +774,7 @@
 								<div class="flex-1 mr-2">
 									<input
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-										placeholder="Enter LiteLLM Model (litellm_params.model)"
+										placeholder={$i18n.t('Enter LiteLLM Model (litellm_params.model)')}
 										bind:value={liteLLMModel}
 										autocomplete="off"
 									/>
@@ -813,12 +815,14 @@
 								</div>
 
 								<div>
-									<div class=" mb-1.5 text-sm font-medium">API Base URL</div>
+									<div class=" mb-1.5 text-sm font-medium">{$i18n.t('API Base URL')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter LiteLLM API Base URL (litellm_params.api_base)"
+												placeholder={$i18n.t(
+													'Enter LiteLLM API Base URL (litellm_params.api_base)'
+												)}
 												bind:value={liteLLMAPIBase}
 												autocomplete="off"
 											/>
@@ -827,12 +831,12 @@
 								</div>
 
 								<div>
-									<div class=" mb-1.5 text-sm font-medium">API Key</div>
+									<div class=" mb-1.5 text-sm font-medium">{$i18n.t('API Key')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter LiteLLM API Key (litellm_params.api_key)"
+												placeholder={$i18n.t('Enter LiteLLM API Key (litellm_params.api_key)')}
 												bind:value={liteLLMAPIKey}
 												autocomplete="off"
 											/>
@@ -841,12 +845,12 @@
 								</div>
 
 								<div>
-									<div class="mb-1.5 text-sm font-medium">API RPM</div>
+									<div class="mb-1.5 text-sm font-medium">{$i18n.t('API RPM')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter LiteLLM API RPM (litellm_params.rpm)"
+												placeholder={$i18n.t('Enter LiteLLM API RPM (litellm_params.rpm)')}
 												bind:value={liteLLMRPM}
 												autocomplete="off"
 											/>
@@ -855,12 +859,12 @@
 								</div>
 
 								<div>
-									<div class="mb-1.5 text-sm font-medium">Max Tokens</div>
+									<div class="mb-1.5 text-sm font-medium">{$i18n.t('Max Tokens')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter Max Tokens (litellm_params.max_tokens)"
+												placeholder={$i18n.t('Enter Max Tokens (litellm_params.max_tokens)')}
 												bind:value={liteLLMMaxTokens}
 												type="number"
 												min="1"
@@ -873,27 +877,27 @@
 						</div>
 
 						<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
-							Not sure what to add?
+							{$i18n.t('Not sure what to add?')}
 							<a
 								class=" text-gray-300 font-medium underline"
 								href="https://litellm.vercel.app/docs/proxy/configs#quick-start"
 								target="_blank"
 							>
-								Click here for help.
+								{$i18n.t('Click here for help.')}
 							</a>
 						</div>
 
 						<div>
-							<div class=" mb-2.5 text-sm font-medium">Delete a model</div>
+							<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Delete a model')}</div>
 							<div class="flex w-full">
 								<div class="flex-1 mr-2">
 									<select
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={deleteLiteLLMModelId}
-										placeholder="Select a model"
+										placeholder={$i18n.t('Select a model')}
 									>
 										{#if !deleteLiteLLMModelId}
-											<option value="" disabled selected>Select a model</option>
+											<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 										{/if}
 										{#each liteLLMModelInfo as model}
 											<option value={model.model_info.id} class="bg-gray-100 dark:bg-gray-700"

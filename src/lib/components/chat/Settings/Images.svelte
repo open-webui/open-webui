@@ -141,18 +141,18 @@
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Image Generation Engine</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('Image Generation Engine')}</div>
 				<div class="flex items-center relative">
 					<select
 						class="w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={imageGenerationEngine}
-						placeholder="Select a mode"
+						placeholder={$i18n.t("Select a mode")}
 						on:change={async () => {
 							await updateImageGeneration();
 						}}
 					>
-						<option value="">Default (Automatic1111)</option>
-						<option value="openai">Open AI (Dall-E)</option>
+						<option value="">{$i18n.t('Default (Automatic1111)')}</option>
+						<option value="openai">{$i18n.t('Open AI (Dall-E)'}</option>
 					</select>
 				</div>
 			</div>
@@ -167,10 +167,10 @@
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							if (imageGenerationEngine === '' && AUTOMATIC1111_BASE_URL === '') {
-								toast.error('AUTOMATIC1111 Base URL is required.');
+								toast.error($i18n.t('AUTOMATIC1111 Base URL is required.'));
 								enableImageGeneration = false;
 							} else if (imageGenerationEngine === 'openai' && OPENAI_API_KEY === '') {
-								toast.error('OpenAI API Key is required.');
+								toast.error($i18n.t('OpenAI API Key is required.'));
 								enableImageGeneration = false;
 							} else {
 								enableImageGeneration = !enableImageGeneration;
@@ -197,7 +197,7 @@
 				<div class="flex-1 mr-2">
 					<input
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						placeholder="Enter URL (e.g. http://127.0.0.1:7860/)"
+						placeholder={$i18n.t("Enter URL (e.g. http://127.0.0.1:7860/)")}
 						bind:value={AUTOMATIC1111_BASE_URL}
 					/>
 				</div>
@@ -226,22 +226,22 @@
 			</div>
 
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				Include `--api` flag when running stable-diffusion-webui
+				{$i18n.t('Include `--api` flag when running stable-diffusion-webui')}
 				<a
 					class=" text-gray-300 font-medium"
 					href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734"
 					target="_blank"
 				>
-					(e.g. `sh webui.sh --api`)
+					{$i18n.t('(e.g. `sh webui.sh --api`)')}
 				</a>
 			</div>
 		{:else if imageGenerationEngine === 'openai'}
-			<div class=" mb-2.5 text-sm font-medium">OpenAI API Key</div>
+			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('OpenAI API Key')}</div>
 			<div class="flex w-full">
 				<div class="flex-1 mr-2">
 					<input
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						placeholder="Enter API Key"
+						placeholder={$i18n.t('Enter API Key')}
 						bind:value={OPENAI_API_KEY}
 					/>
 				</div>
@@ -277,7 +277,7 @@
 					<div class="flex-1 mr-2">
 						<input
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder="Enter Image Size (e.g. 512x512)"
+							placeholder={$i18n.t("Enter Image Size (e.g. 512x512)")}
 							bind:value={imageSize}
 						/>
 					</div>
@@ -290,7 +290,7 @@
 					<div class="flex-1 mr-2">
 						<input
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder="Enter Number of Steps (e.g. 50)"
+							placeholder={$i18n.t("Enter Number of Steps (e.g. 50)")}
 							bind:value={steps}
 						/>
 					</div>

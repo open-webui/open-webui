@@ -241,7 +241,7 @@
 					href="https://github.com/open-webui/open-webui#troubleshooting"
 					target="_blank"
 				>
-					{$i18n.t('Click here for help')}
+					{$i18n.t('Click here for help.')}
 				</a>
 			</div>
 		</div>
