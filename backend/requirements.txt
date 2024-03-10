@@ -17,7 +17,7 @@ peewee
 bcrypt
 
 litellm
-argon2
+argon2-cffi
 apscheduler
 google-generativeai
 
