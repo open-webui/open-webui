@@ -172,7 +172,9 @@
 			/>
 			<button
 				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-				on:click={chatImportInputElement.click}
+				on:click={() => {
+					chatImportInputElement.click();
+				}}
 			>
 				<div class=" self-center mr-3">
 					<svg

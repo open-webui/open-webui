@@ -252,7 +252,7 @@ export const queryCollection = async (
 	token: string,
 	collection_names: string,
 	query: string,
-	k: number
+	k: number | null = null
 ) => {
 	let error = null;
 

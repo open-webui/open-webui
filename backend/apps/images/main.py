@@ -250,7 +250,7 @@ class GenerateImageForm(BaseModel):
     model: Optional[str] = None
     prompt: str
     n: int = 1
-    size: str = "512x512"
+    size: Optional[str] = None
     negative_prompt: Optional[str] = None
 
 
@@ -278,8 +278,7 @@ def generate_image(
     user=Depends(get_current_user),
 ):
 
-    print(form_data)
-
+    r = None
     try:
         if app.state.ENGINE == "openai":
 
@@ -291,10 +290,9 @@ def generate_image(
                 "model": app.state.MODEL if app.state.MODEL != "" else "dall-e-2",
                 "prompt": form_data.prompt,
                 "n": form_data.n,
-                "size": form_data.size,
+                "size": form_data.size if form_data.size else app.state.IMAGE_SIZE,
                 "response_format": "b64_json",
             }
-
             r = requests.post(
                 url=f"https://api.openai.com/v1/images/generations",
                 json=data,
@@ -359,4 +357,6 @@ def generate_image(
 
     except Exception as e:
         print(e)
+        if r:
+            print(r.json())
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
