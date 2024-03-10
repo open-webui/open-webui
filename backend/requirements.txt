@@ -44,3 +44,4 @@ PyJWT
 pyjwt[crypto]
 
 black
+argon2-cffi
