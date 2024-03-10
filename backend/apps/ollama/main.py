@@ -135,11 +135,14 @@ async def get_ollama_tags(
 ):
     if url_idx == None:
         models = await get_all_models()
+
         if app.state.MODEL_FILTER_ENABLED:
             if user.role == "user":
-                models["models"] = filter(
-                    lambda model: model["name"] in app.state.MODEL_LIST,
-                    models["models"],
+                models["models"] = list(
+                    filter(
+                        lambda model: model["name"] in app.state.MODEL_LIST,
+                        models["models"],
+                    )
                 )
                 return models
         return models

@@ -196,9 +196,11 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
         models = await get_all_models()
         if app.state.MODEL_FILTER_ENABLED:
             if user.role == "user":
-                models["data"] = filter(
-                    lambda model: model["id"] in app.state.MODEL_LIST,
-                    models["data"],
+                models["data"] = list(
+                    filter(
+                        lambda model: model["id"] in app.state.MODEL_LIST,
+                        models["data"],
+                    )
                 )
                 return models
         return models

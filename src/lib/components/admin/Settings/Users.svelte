@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getModelFilterConfig, updateModelFilterConfig } from '$lib/apis';
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import { getUserPermissions, updateUserPermissions } from '$lib/apis/users';
 	import { models } from '$lib/stores';
@@ -16,6 +17,13 @@
 
 	onMount(async () => {
 		permissions = await getUserPermissions(localStorage.token);
+
+		const res = await getModelFilterConfig(localStorage.token);
+		if (res) {
+			whitelistEnabled = res.enabled;
+
+			whitelistModels = res.models.length > 0 ? res.models : [''];
+		}
 	});
 </script>
 
@@ -24,6 +32,8 @@
 	on:submit|preventDefault={async () => {
 		// console.log('submit');
 		await updateUserPermissions(localStorage.token, permissions);
+
+		await updateModelFilterConfig(localStorage.token, whitelistEnabled, whitelistModels);
 		saveHandler();
 	}}
 >
