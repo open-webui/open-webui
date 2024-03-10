@@ -176,7 +176,7 @@
 			<div class=" my-2.5 text-sm font-medium">System Prompt</div>
 			<textarea
 				bind:value={system}
-				class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
+				class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
 				rows="4"
 			/>
 		</div>
@@ -262,7 +262,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
+			class="  px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			on:click={() => {
 				saveSettings({
 					system: system !== '' ? system : undefined,

@@ -9,27 +9,37 @@ import requests
 from fastapi import FastAPI, Request, Depends, status
 from fastapi.staticfiles import StaticFiles
 from fastapi import HTTPException
-from fastapi.responses import JSONResponse
 from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
 
-
-from litellm.proxy.proxy_server import ProxyConfig, initialize
-from litellm.proxy.proxy_server import app as litellm_app
 
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
+from apps.litellm.main import app as litellm_app, startup as litellm_app_startup
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
 from apps.web.main import app as webui_app
 
+from pydantic import BaseModel
+from typing import List
 
-from config import WEBUI_NAME, ENV, VERSION, CHANGELOG, FRONTEND_BUILD_DIR
+
+from utils.utils import get_admin_user
+from apps.rag.utils import query_doc, query_collection, rag_template
+
+from config import (
+    WEBUI_NAME,
+    ENV,
+    VERSION,
+    CHANGELOG,
+    FRONTEND_BUILD_DIR,
+    MODEL_FILTER_ENABLED,
+    MODEL_FILTER_LIST,
+)
 from constants import ERROR_MESSAGES
-
-from utils.utils import get_http_authorization_cred, get_current_user
 
 
 class SPAStaticFiles(StaticFiles):
@@ -43,22 +53,10 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-proxy_config = ProxyConfig()
-
-
-async def config():
-    router, model_list, general_settings = await proxy_config.load_config(
-        router=None, config_file_path="./data/litellm/config.yaml"
-    )
-
-    await initialize(config="./data/litellm/config.yaml", telemetry=False)
-
-
-async def startup():
-    await config()
-
-
 app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
+
+app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
+app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 origins = ["*"]
 
@@ -73,7 +71,127 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def on_startup():
-    await startup()
+    await litellm_app_startup()
+
+
+class RAGMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "POST" and (
+            "/api/chat" in request.url.path or "/chat/completions" in request.url.path
+        ):
+            print(request.url.path)
+
+            # Read the original request body
+            body = await request.body()
+            # Decode body to string
+            body_str = body.decode("utf-8")
+            # Parse string to JSON
+            data = json.loads(body_str) if body_str else {}
+
+            # Example: Add a new key-value pair or modify existing ones
+            # data["modified"] = True  # Example modification
+            if "docs" in data:
+                docs = data["docs"]
+                print(docs)
+
+                last_user_message_idx = None
+                for i in range(len(data["messages"]) - 1, -1, -1):
+                    if data["messages"][i]["role"] == "user":
+                        last_user_message_idx = i
+                        break
+
+                user_message = data["messages"][last_user_message_idx]
+
+                if isinstance(user_message["content"], list):
+                    # Handle list content input
+                    content_type = "list"
+                    query = ""
+                    for content_item in user_message["content"]:
+                        if content_item["type"] == "text":
+                            query = content_item["text"]
+                            break
+                elif isinstance(user_message["content"], str):
+                    # Handle text content input
+                    content_type = "text"
+                    query = user_message["content"]
+                else:
+                    # Fallback in case the input does not match expected types
+                    content_type = None
+                    query = ""
+
+                relevant_contexts = []
+
+                for doc in docs:
+                    context = None
+
+                    try:
+                        if doc["type"] == "collection":
+                            context = query_collection(
+                                collection_names=doc["collection_names"],
+                                query=query,
+                                k=rag_app.state.TOP_K,
+                                embedding_function=rag_app.state.sentence_transformer_ef,
+                            )
+                        else:
+                            context = query_doc(
+                                collection_name=doc["collection_name"],
+                                query=query,
+                                k=rag_app.state.TOP_K,
+                                embedding_function=rag_app.state.sentence_transformer_ef,
+                            )
+                    except Exception as e:
+                        print(e)
+                        context = None
+
+                    relevant_contexts.append(context)
+
+                context_string = ""
+                for context in relevant_contexts:
+                    if context:
+                        context_string += " ".join(context["documents"][0]) + "\n"
+
+                ra_content = rag_template(
+                    template=rag_app.state.RAG_TEMPLATE,
+                    context=context_string,
+                    query=query,
+                )
+
+                if content_type == "list":
+                    new_content = []
+                    for content_item in user_message["content"]:
+                        if content_item["type"] == "text":
+                            # Update the text item's content with ra_content
+                            new_content.append({"type": "text", "text": ra_content})
+                        else:
+                            # Keep other types of content as they are
+                            new_content.append(content_item)
+                    new_user_message = {**user_message, "content": new_content}
+                else:
+                    new_user_message = {
+                        **user_message,
+                        "content": ra_content,
+                    }
+
+                data["messages"][last_user_message_idx] = new_user_message
+                del data["docs"]
+
+                print(data["messages"])
+
+            modified_body_bytes = json.dumps(data).encode("utf-8")
+
+            # Create a new request with the modified body
+            scope = request.scope
+            scope["body"] = modified_body_bytes
+            request = Request(scope, receive=lambda: self._receive(modified_body_bytes))
+
+        response = await call_next(request)
+        return response
+
+    async def _receive(self, body: bytes):
+        return {"type": "http.request", "body": body, "more_body": False}
+
+
+app.add_middleware(RAGMiddleware)
 
 
 @app.middleware("http")
@@ -83,21 +201,6 @@ async def check_url(request: Request, call_next):
     process_time = int(time.time()) - start_time
     response.headers["X-Process-Time"] = str(process_time)
 
-    return response
-
-
-@litellm_app.middleware("http")
-async def auth_middleware(request: Request, call_next):
-    auth_header = request.headers.get("Authorization", "")
-
-    if ENV != "dev":
-        try:
-            user = get_current_user(get_http_authorization_cred(auth_header))
-            print(user)
-        except Exception as e:
-            return JSONResponse(status_code=400, content={"detail": str(e)})
-
-    response = await call_next(request)
     return response
 
 
@@ -122,6 +225,39 @@ async def get_app_config():
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
+    }
+
+
+@app.get("/api/config/model/filter")
+async def get_model_filter_config(user=Depends(get_admin_user)):
+    return {
+        "enabled": app.state.MODEL_FILTER_ENABLED,
+        "models": app.state.MODEL_FILTER_LIST,
+    }
+
+
+class ModelFilterConfigForm(BaseModel):
+    enabled: bool
+    models: List[str]
+
+
+@app.post("/api/config/model/filter")
+async def get_model_filter_config(
+    form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
+):
+
+    app.state.MODEL_FILTER_ENABLED = form_data.enabled
+    app.state.MODEL_FILTER_LIST = form_data.models
+
+    ollama_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    ollama_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
+
+    openai_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    openai_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
+
+    return {
+        "enabled": app.state.MODEL_FILTER_ENABLED,
+        "models": app.state.MODEL_FILTER_LIST,
     }
 
 
@@ -156,6 +292,7 @@ async def get_app_latest_release_version():
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/cache", StaticFiles(directory="data/cache"), name="cache")
 
 
 app.mount(

@@ -1,9 +1,9 @@
 import { RAG_API_BASE_URL } from '$lib/constants';
 
-export const getChunkParams = async (token: string) => {
+export const getRAGConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/chunk`, {
+	const res = await fetch(`${RAG_API_BASE_URL}/config`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -27,18 +27,27 @@ export const getChunkParams = async (token: string) => {
 	return res;
 };
 
-export const updateChunkParams = async (token: string, size: number, overlap: number) => {
+type ChunkConfigForm = {
+	chunk_size: number;
+	chunk_overlap: number;
+};
+
+type RAGConfigForm = {
+	pdf_extract_images: boolean;
+	chunk: ChunkConfigForm;
+};
+
+export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/chunk/update`, {
+	const res = await fetch(`${RAG_API_BASE_URL}/config/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			chunk_size: size,
-			chunk_overlap: overlap
+			...payload
 		})
 	})
 		.then(async (res) => {
@@ -252,7 +261,7 @@ export const queryCollection = async (
 	token: string,
 	collection_names: string,
 	query: string,
-	k: number
+	k: number | null = null
 ) => {
 	let error = null;
 

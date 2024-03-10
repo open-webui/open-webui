@@ -6,6 +6,7 @@
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
 
+	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, tick } from 'svelte';
 
@@ -276,13 +277,15 @@
 
 	const generateImage = async (message) => {
 		generatingImage = true;
-		const res = await imageGenerations(localStorage.token, message.content);
+		const res = await imageGenerations(localStorage.token, message.content).catch((error) => {
+			toast.error(error);
+		});
 		console.log(res);
 
 		if (res) {
-			message.files = res.images.map((image) => ({
+			message.files = res.map((image) => ({
 				type: 'image',
-				url: `data:image/png;base64,${image}`
+				url: `${image.url}`
 			}));
 
 			dispatch('save', message);
@@ -477,7 +480,7 @@
 													xmlns="http://www.w3.org/2000/svg"
 													fill="none"
 													viewBox="0 0 24 24"
-													stroke-width="1.5"
+													stroke-width="2"
 													stroke="currentColor"
 													class="w-4 h-4"
 												>
@@ -503,7 +506,7 @@
 													xmlns="http://www.w3.org/2000/svg"
 													fill="none"
 													viewBox="0 0 24 24"
-													stroke-width="1.5"
+													stroke-width="2"
 													stroke="currentColor"
 													class="w-4 h-4"
 												>
@@ -622,7 +625,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="1.5"
+														stroke-width="2"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -637,7 +640,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="1.5"
+														stroke-width="2"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -703,7 +706,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															fill="none"
 															viewBox="0 0 24 24"
-															stroke-width="1.5"
+															stroke-width="2"
 															stroke="currentColor"
 															class="w-4 h-4"
 														>
@@ -733,7 +736,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="1.5"
+														stroke-width="2"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -762,7 +765,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="1.5"
+														stroke-width="2"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -792,7 +795,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="1.5"
+														stroke-width="2"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>

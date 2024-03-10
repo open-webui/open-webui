@@ -251,7 +251,7 @@ OPENAI_API_BASE_URLS = (
     OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != "" else OPENAI_API_BASE_URL
 )
 
-OPENAI_API_BASE_URLS = [url.strip() for url in OPENAI_API_BASE_URL.split(";")]
+OPENAI_API_BASE_URLS = [url.strip() for url in OPENAI_API_BASE_URLS.split(";")]
 
 
 ####################################
@@ -290,6 +290,11 @@ DEFAULT_PROMPT_SUGGESTIONS = (
 
 DEFAULT_USER_ROLE = os.getenv("DEFAULT_USER_ROLE", "pending")
 USER_PERMISSIONS = {"chat": {"deletion": True}}
+
+
+MODEL_FILTER_ENABLED = os.environ.get("MODEL_FILTER_ENABLED", False)
+MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
+MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 
 
 ####################################

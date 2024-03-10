@@ -18,7 +18,13 @@ from utils.utils import (
     get_verified_user,
     get_admin_user,
 )
-from config import OPENAI_API_BASE_URLS, OPENAI_API_KEYS, CACHE_DIR
+from config import (
+    OPENAI_API_BASE_URLS,
+    OPENAI_API_KEYS,
+    CACHE_DIR,
+    MODEL_FILTER_ENABLED,
+    MODEL_FILTER_LIST,
+)
 from typing import List, Optional
 
 
@@ -33,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
+app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.OPENAI_API_KEYS = OPENAI_API_KEYS
@@ -186,12 +195,21 @@ async def get_all_models():
     return models
 
 
-# , user=Depends(get_current_user)
 @app.get("/models")
 @app.get("/models/{url_idx}")
-async def get_models(url_idx: Optional[int] = None):
+async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_user)):
     if url_idx == None:
-        return await get_all_models()
+        models = await get_all_models()
+        if app.state.MODEL_FILTER_ENABLED:
+            if user.role == "user":
+                models["data"] = list(
+                    filter(
+                        lambda model: model["id"] in app.state.MODEL_FILTER_LIST,
+                        models["data"],
+                    )
+                )
+                return models
+        return models
     else:
         url = app.state.OPENAI_API_BASE_URLS[url_idx]
         try:
