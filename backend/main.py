@@ -23,7 +23,11 @@ from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
 from apps.web.main import app as webui_app
 
+from pydantic import BaseModel
+from typing import List
 
+
+from utils.utils import get_admin_user
 from apps.rag.utils import query_doc, query_collection, rag_template
 
 from config import WEBUI_NAME, ENV, VERSION, CHANGELOG, FRONTEND_BUILD_DIR
@@ -42,6 +46,9 @@ class SPAStaticFiles(StaticFiles):
 
 
 app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
+
+app.state.MODEL_FILTER_ENABLED = False
+app.state.MODEL_LIST = []
 
 origins = ["*"]
 
@@ -211,6 +218,33 @@ async def get_app_config():
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
     }
+
+
+@app.get("/api/config/model/filter")
+async def get_model_filter_config(user=Depends(get_admin_user)):
+    return {"enabled": app.state.MODEL_FILTER_ENABLED, "models": app.state.MODEL_LIST}
+
+
+class ModelFilterConfigForm(BaseModel):
+    enabled: bool
+    models: List[str]
+
+
+@app.post("/api/config/model/filter")
+async def get_model_filter_config(
+    form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
+):
+
+    app.state.MODEL_FILTER_ENABLED = form_data.enabled
+    app.state.MODEL_LIST = form_data.models
+
+    ollama_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    ollama_app.state.MODEL_LIST = app.state.MODEL_LIST
+
+    openai_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    openai_app.state.MODEL_LIST = app.state.MODEL_LIST
+
+    return {"enabled": app.state.MODEL_FILTER_ENABLED, "models": app.state.MODEL_LIST}
 
 
 @app.get("/api/version")
