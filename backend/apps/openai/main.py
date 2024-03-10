@@ -18,7 +18,13 @@ from utils.utils import (
     get_verified_user,
     get_admin_user,
 )
-from config import OPENAI_API_BASE_URLS, OPENAI_API_KEYS, CACHE_DIR
+from config import (
+    OPENAI_API_BASE_URLS,
+    OPENAI_API_KEYS,
+    CACHE_DIR,
+    MODEL_FILTER_ENABLED,
+    MODEL_FILTER_LIST,
+)
 from typing import List, Optional
 
 
@@ -34,8 +40,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.state.MODEL_FILTER_ENABLED = False
-app.state.MODEL_LIST = []
+app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
+app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.OPENAI_API_KEYS = OPENAI_API_KEYS
@@ -198,7 +204,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
             if user.role == "user":
                 models["data"] = list(
                     filter(
-                        lambda model: model["id"] in app.state.MODEL_LIST,
+                        lambda model: model["id"] in app.state.MODEL_FILTER_LIST,
                         models["data"],
                     )
                 )

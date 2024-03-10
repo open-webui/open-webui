@@ -30,7 +30,15 @@ from typing import List
 from utils.utils import get_admin_user
 from apps.rag.utils import query_doc, query_collection, rag_template
 
-from config import WEBUI_NAME, ENV, VERSION, CHANGELOG, FRONTEND_BUILD_DIR
+from config import (
+    WEBUI_NAME,
+    ENV,
+    VERSION,
+    CHANGELOG,
+    FRONTEND_BUILD_DIR,
+    MODEL_FILTER_ENABLED,
+    MODEL_FILTER_LIST,
+)
 from constants import ERROR_MESSAGES
 
 
@@ -47,8 +55,8 @@ class SPAStaticFiles(StaticFiles):
 
 app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
-app.state.MODEL_FILTER_ENABLED = False
-app.state.MODEL_LIST = []
+app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
+app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 origins = ["*"]
 
@@ -222,7 +230,10 @@ async def get_app_config():
 
 @app.get("/api/config/model/filter")
 async def get_model_filter_config(user=Depends(get_admin_user)):
-    return {"enabled": app.state.MODEL_FILTER_ENABLED, "models": app.state.MODEL_LIST}
+    return {
+        "enabled": app.state.MODEL_FILTER_ENABLED,
+        "models": app.state.MODEL_FILTER_LIST,
+    }
 
 
 class ModelFilterConfigForm(BaseModel):
@@ -236,15 +247,18 @@ async def get_model_filter_config(
 ):
 
     app.state.MODEL_FILTER_ENABLED = form_data.enabled
-    app.state.MODEL_LIST = form_data.models
+    app.state.MODEL_FILTER_LIST = form_data.models
 
     ollama_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
-    ollama_app.state.MODEL_LIST = app.state.MODEL_LIST
+    ollama_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
     openai_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
-    openai_app.state.MODEL_LIST = app.state.MODEL_LIST
+    openai_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
-    return {"enabled": app.state.MODEL_FILTER_ENABLED, "models": app.state.MODEL_LIST}
+    return {
+        "enabled": app.state.MODEL_FILTER_ENABLED,
+        "models": app.state.MODEL_FILTER_LIST,
+    }
 
 
 @app.get("/api/version")
