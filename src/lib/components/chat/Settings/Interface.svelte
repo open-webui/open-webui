@@ -63,6 +63,7 @@
 		}
 
 		saveSettings({
+			titleAutoGenerateModel: titleAutoGenerateModel !== '' ? titleAutoGenerateModel : undefined,
 			titleGenerationPrompt: titleGenerationPrompt ? titleGenerationPrompt : undefined
 		});
 	};
@@ -200,31 +201,8 @@
 						{/each}
 					</select>
 				</div>
-				<button
-					class="px-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-					on:click={() => {
-						saveSettings({
-							titleAutoGenerateModel:
-								titleAutoGenerateModel !== '' ? titleAutoGenerateModel : undefined
-						});
-					}}
-					type="button"
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 16 16"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</button>
 			</div>
-			<div class="mt-3">
+			<div class="mt-3 mr-2">
 				<div class=" mb-2.5 text-sm font-medium">Title Generation Prompt</div>
 				<textarea
 					bind:value={titleGenerationPrompt}
@@ -321,7 +299,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
+			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			type="submit"
 		>
 			Save
