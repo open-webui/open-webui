@@ -29,6 +29,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+app.state.MODEL_FILTER_ENABLED = False
+app.state.MODEL_LIST = []
+
 app.state.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.MODELS = {}
 
@@ -129,9 +133,16 @@ async def get_all_models():
 async def get_ollama_tags(
     url_idx: Optional[int] = None, user=Depends(get_current_user)
 ):
-
     if url_idx == None:
-        return await get_all_models()
+        models = await get_all_models()
+        if app.state.MODEL_FILTER_ENABLED:
+            if user.role == "user":
+                models["models"] = filter(
+                    lambda model: model["name"] in app.state.MODEL_LIST,
+                    models["models"],
+                )
+                return models
+        return models
     else:
         url = app.state.OLLAMA_BASE_URLS[url_idx]
         try:

@@ -34,6 +34,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.state.MODEL_FILTER_ENABLED = False
+app.state.MODEL_LIST = []
+
 app.state.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.OPENAI_API_KEYS = OPENAI_API_KEYS
 
@@ -186,12 +189,19 @@ async def get_all_models():
     return models
 
 
-# , user=Depends(get_current_user)
 @app.get("/models")
 @app.get("/models/{url_idx}")
-async def get_models(url_idx: Optional[int] = None):
+async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_user)):
     if url_idx == None:
-        return await get_all_models()
+        models = await get_all_models()
+        if app.state.MODEL_FILTER_ENABLED:
+            if user.role == "user":
+                models["data"] = filter(
+                    lambda model: model["id"] in app.state.MODEL_LIST,
+                    models["data"],
+                )
+                return models
+        return models
     else:
         url = app.state.OPENAI_API_BASE_URLS[url_idx]
         try:
