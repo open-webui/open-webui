@@ -179,20 +179,26 @@ def merge_models_lists(model_lists):
 
 async def get_all_models():
     print("get_all_models")
-    tasks = [
-        fetch_url(f"{url}/models", app.state.OPENAI_API_KEYS[idx])
-        for idx, url in enumerate(app.state.OPENAI_API_BASE_URLS)
-    ]
-    responses = await asyncio.gather(*tasks)
-    responses = list(filter(lambda x: x is not None and "error" not in x, responses))
-    models = {
-        "data": merge_models_lists(
-            list(map(lambda response: response["data"], responses))
-        )
-    }
-    app.state.MODELS = {model["id"]: model for model in models["data"]}
 
-    return models
+    if len(app.state.OPENAI_API_KEYS) == 1 and app.state.OPENAI_API_KEYS[0] == "":
+        models = {"data": []}
+    else:
+        tasks = [
+            fetch_url(f"{url}/models", app.state.OPENAI_API_KEYS[idx])
+            for idx, url in enumerate(app.state.OPENAI_API_BASE_URLS)
+        ]
+        responses = await asyncio.gather(*tasks)
+        responses = list(
+            filter(lambda x: x is not None and "error" not in x, responses)
+        )
+        models = {
+            "data": merge_models_lists(
+                list(map(lambda response: response["data"], responses))
+            )
+        }
+        app.state.MODELS = {model["id"]: model for model in models["data"]}
+
+        return models
 
 
 @app.get("/models")
