@@ -146,13 +146,13 @@
 					<select
 						class="w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={imageGenerationEngine}
-						placeholder={$i18n.t("Select a mode")}
+						placeholder={$i18n.t('Select a mode')}
 						on:change={async () => {
 							await updateImageGeneration();
 						}}
 					>
 						<option value="">{$i18n.t('Default (Automatic1111)')}</option>
-						<option value="openai">{$i18n.t('Open AI (Dall-E)'}</option>
+						<option value="openai">{$i18n.t('Open AI (Dall-E)')}</option>
 					</select>
 				</div>
 			</div>
@@ -197,7 +197,7 @@
 				<div class="flex-1 mr-2">
 					<input
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						placeholder={$i18n.t("Enter URL (e.g. http://127.0.0.1:7860/)")}
+						placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
 						bind:value={AUTOMATIC1111_BASE_URL}
 					/>
 				</div>
@@ -277,7 +277,7 @@
 					<div class="flex-1 mr-2">
 						<input
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t("Enter Image Size (e.g. 512x512)")}
+							placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
 							bind:value={imageSize}
 						/>
 					</div>
@@ -290,7 +290,7 @@
 					<div class="flex-1 mr-2">
 						<input
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t("Enter Number of Steps (e.g. 50)")}
+							placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
 							bind:value={steps}
 						/>
 					</div>
