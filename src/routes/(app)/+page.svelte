@@ -140,7 +140,9 @@
 	};
 
 	const scrollToBottom = () => {
-		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		if (messagesContainerElement) {
+			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		}
 	};
 
 	//////////////////////////
