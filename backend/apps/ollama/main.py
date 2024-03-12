@@ -182,8 +182,6 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
         responses = await asyncio.gather(*tasks)
         responses = list(filter(lambda x: x is not None, responses))
 
-        print(responses)
-
         if len(responses) > 0:
             lowest_version = min(
                 responses, key=lambda x: tuple(map(int, x["version"].split(".")))
