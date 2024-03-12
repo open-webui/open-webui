@@ -293,6 +293,7 @@ def generate_image(
                 "size": form_data.size if form_data.size else app.state.IMAGE_SIZE,
                 "response_format": "b64_json",
             }
+
             r = requests.post(
                 url=f"https://api.openai.com/v1/images/generations",
                 json=data,
@@ -300,7 +301,6 @@ def generate_image(
             )
 
             r.raise_for_status()
-
             res = r.json()
 
             images = []
@@ -356,7 +356,10 @@ def generate_image(
             return images
 
     except Exception as e:
-        print(e)
-        if r:
-            print(r.json())
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+        error = e
+
+        if r != None:
+            data = r.json()
+            if "error" in data:
+                error = data["error"]["message"]
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(error))
