@@ -45,7 +45,8 @@
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
 				<div>
-					{$WEBUI_NAME} Version
+					{$WEBUI_NAME}
+					{$i18n.t('Version')}
 				</div>
 			</div>
 			<div class="flex w-full justify-between items-center">

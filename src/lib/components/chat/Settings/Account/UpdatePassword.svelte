@@ -49,7 +49,7 @@
 			type="button"
 			on:click={() => {
 				show = !show;
-			}}>{show ? 'Hide' : 'Show'}</button
+			}}>{show ? $i18n.t('Hide') : $i18n.t('Show')}</button
 		>
 	</div>
 
@@ -102,7 +102,7 @@
 			<button
 				class=" px-4 py-2 text-xs bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-800 text-gray-100 transition rounded-md font-medium"
 			>
-				Update password
+				{$i18n.t('Update password')}
 			</button>
 		</div>
 	{/if}

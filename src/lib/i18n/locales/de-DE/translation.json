@@ -347,5 +347,12 @@
 	"You": "Du",
 	"You're a helpful assistant.": "Du bist ein hilfreicher Assistent.",
 	"You're now logged in.": "Du bist nun eingeloggt.",
-	"PDF Extract Images (OCR)": "Text von Bilder aus PDFs extrahieren (OCR)"
+	"PDF Extract Images (OCR)": "Text von Bilder aus PDFs extrahieren (OCR)",
+	"Update password": "Passwort aktualisieren",
+	"Settings saved successfully!": "Einstellungen erfolgreich gespeichert!",
+	"WebUI will make requests to": "Wenn aktiviert sendet WebUI externe Anfragen an",
+	"Add a tag": "Tag hinzugügen",
+	"Version": "Version",
+	"Enter a user message here": "Gib hier eine Benutzernachricht ein",
+	"Enter an assistant message here": "Gib hier eine Assistentennachricht ein"
 }

@@ -329,7 +329,7 @@
 						{getModels}
 						{saveSettings}
 						on:save={() => {
-							toast.success('Settings saved successfully!');
+							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'models'}
@@ -338,28 +338,28 @@
 					<Connections
 						{getModels}
 						on:save={() => {
-							toast.success('Settings saved successfully!');
+							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'interface'}
 					<Interface
 						{saveSettings}
 						on:save={() => {
-							toast.success('Settings saved successfully!');
+							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'audio'}
 					<Audio
 						{saveSettings}
 						on:save={() => {
-							toast.success('Settings saved successfully!');
+							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'images'}
 					<Images
 						{saveSettings}
 						on:save={() => {
-							toast.success('Settings saved successfully!');
+							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'chats'}
@@ -367,7 +367,7 @@
 				{:else if selectedTab === 'account'}
 					<Account
 						saveHandler={() => {
-							toast.success('Settings saved successfully!');
+							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'about'}

@@ -347,5 +347,12 @@
 	"You": "You",
 	"You're a helpful assistant.": "You're a helpful assistant.",
 	"You're now logged in.": "You're now logged in.",
-	"PDF Extract Images (OCR)": "PDF Extract Images (OCR)"
+	"PDF Extract Images (OCR)": "PDF Extract Images (OCR)",
+	"Update password": "Update password",
+	"Settings saved successfully!": "Settings saved successfully!",
+	"WebUI will make requests to": "WebUI will make requests to",
+	"Add a tag": "Add a tag",
+	"Version": "Version",
+	"Enter a user message here": "Enter a user message here",
+	"Enter an assistant message here": "Enter an assistant message here"
 }
