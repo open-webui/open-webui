@@ -17,8 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.111] - 2024-03-10
 
-0.1.112
-
 ### Added
 
 - 🛡️ **Model Whitelisting**: Admins now have the ability to whitelist models for users with the 'user' role.
