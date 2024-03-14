@@ -62,7 +62,7 @@
 								? $i18n.t('Checking for updates...')
 								: updateAvailable
 								? `(v${version.latest} ${$i18n.t('available!')})`
-								: '(latest)'}
+								: $i18n.t('(latest)')}
 						</a>
 					</div>
 

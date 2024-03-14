@@ -122,7 +122,7 @@
 												bind:value={modelId}
 												placeholder="Select a model"
 											>
-												<option value="" disabled selected>Select a model</option>
+												<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 												{#each $models.filter((model) => model.id) as model}
 													<option value={model.id} class="bg-gray-100 dark:bg-gray-700"
 														>{model.name}</option
@@ -177,7 +177,8 @@
 
 							<div class="flex justify-end items-center text-xs mt-1.5 text-right">
 								<div class=" text-xs font-medium">
-									{whitelistModels.length} Model(s) Whitelisted
+									{whitelistModels.length}
+									{$i18n.t('Model(s) Whitelisted')}
 								</div>
 							</div>
 						</div>
