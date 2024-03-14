@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- 🔒 **Dark background on select fields**: Added dark background to select fields, as this caused bad readability on some browsers/devices.
+- 🖥️ **Dark background on select fields**: Added dark background to select fields, as this caused bad readability on some browsers/devices.
 
 ## [0.1.111] - 2024-03-10
 
