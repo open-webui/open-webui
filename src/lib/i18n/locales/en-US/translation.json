@@ -354,5 +354,7 @@
 	"Add a tag": "Add a tag",
 	"Version": "Version",
 	"Enter a user message here": "Enter a user message here",
-	"Enter an assistant message here": "Enter an assistant message here"
+	"Enter an assistant message here": "Enter an assistant message here",
+	"Model Whitelisting": "Model Whitelisting",
+	"Manage Models": "Manage Models"
 }

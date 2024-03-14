@@ -354,5 +354,7 @@
 	"Add a tag": "Tag hinzugügen",
 	"Version": "Version",
 	"Enter a user message here": "Gib hier eine Benutzernachricht ein",
-	"Enter an assistant message here": "Gib hier eine Assistentennachricht ein"
+	"Enter an assistant message here": "Gib hier eine Assistentennachricht ein",
+	"Model Whitelisting": "Modell-Whitelisting",
+	"Manage Models": "Modelle verwalten"
 }

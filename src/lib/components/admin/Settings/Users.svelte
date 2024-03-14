@@ -92,21 +92,21 @@
 			<div>
 				<div class="mb-2">
 					<div class="flex justify-between items-center text-xs">
-						<div class=" text-sm font-medium">Manage Models</div>
+						<div class=" text-sm font-medium">{$i18n.t('Manage Models')}</div>
 					</div>
 				</div>
 
 				<div class=" space-y-3">
 					<div>
 						<div class="flex justify-between items-center text-xs">
-							<div class=" text-xs font-medium">Model Whitelisting</div>
+							<div class=" text-xs font-medium">{$i18n.t('Model Whitelisting')}</div>
 
 							<button
 								class=" text-xs font-medium text-gray-500"
 								type="button"
 								on:click={() => {
 									whitelistEnabled = !whitelistEnabled;
-								}}>{whitelistEnabled ? 'On' : 'Off'}</button
+								}}>{whitelistEnabled ? $i18n.t('On') : $i18n.t('Off')}</button
 							>
 						</div>
 					</div>
