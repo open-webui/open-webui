@@ -32,6 +32,10 @@
   background-color: var(--background-dark);
 }
 
+.oled-dark .py-2\.5.my-auto.flex.flex-col.justify-between.h-screen {
+  background: #000000;
+}
+
 .oled-dark .bg-white.dark\:bg-gray-800 {
   background: var(--accent-1);
 }
@@ -147,172 +151,189 @@
   color: var(--secondary);
 }
 
-#models {
+.oled-dark #models {
   color: white;
 }
 
-/* Button and 2nd div */
 .oled-dark button.rounded-xl {
   background-color: var(--accent-3);
+}
+
+.oled-dark .bg-gray-900 {
+  background-color: var(--black);
+}
+
+.oled-dark button.text-gray-800 {
+  color: var(--black);
+}
+
+.oled-dark button.bg-black {
+  background-color: var(--black);
+}
+
+.oled-dark textarea.rounded-lg {
+  background-color: #000000;
+  border: 1px solid #fff;
+}
+
+.oled-dark input.rounded {
+  background-color: #000000;
+  border: 1px solid #fff;
+}
+
+.oled-dark .rounded-l-lg {
+  color: white;
+}
+
+.oled-dark button.bg-gray-100 {
+  background-color: #4CAF50;
+}
+
+.oled-dark button.bg-gray-50 {
+  background-color: #4CAF50;
+}
+
+.oled-dark button.bg-gray-50 svg {
+  fill: white;
+}
+
+.oled-dark .text-lg {
+  color: var(--black);
+}
+
+.oled-dark select.py-2 {
+  background-color: var(--black);
+  color: var(--white);
+  border: 1.0px solid #fff;
+}
+
+.oled-dark .rounded-r-lg {
+  background-color: var(--black);
+  border: 1.0px solid #fff;
+}
+
+.oled-dark .bg-gray-200 {
+  background-color: var(--black);
+}
+
+.oled-dark .dark\:text-gray-300 {
+  color: var(--white);
 }
 
 .oled-dark div.bg-white:nth-child(2) {
   background-color: var(--accent-4);
 }
 
-/* OLED black for form.flex > div:nth-child(1) */
 .oled-dark form.flex{
   background-color: var(--black);
 }
 
-.bg-gray-900 {
-  background-color: var(--black);
-}
-
-button.text-gray-800 {
+.oled-dark div.self-end:nth-child(3) > div:nth-child(2) {
   color: var(--black);
 }
 
-div.self-end:nth-child(3) > div:nth-child(2) {
+.oled-dark div.self-end:nth-child(1) > div:nth-child(1) {
   color: var(--black);
 }
 
-div.self-end:nth-child(1) > div:nth-child(1) {
-  color: var(--black);
-}
-
-button.bg-black {
-  background-color: var(--black);
-}
-
-div.hidden:nth-child(4) {
+.oled-dark div.hidden:nth-child(4) {
   color: var(--black);
   background-color: var(--black);
 }
 
-div.hidden:nth-child(4) > button:nth-child(1) {
+.oled-dark div.hidden:nth-child(3) > button:nth-child(1) {
   color: var(--black);
   background-color: var(--black);
 }
 
-div.basis-full:nth-child(1) {
+.oled-dark div.hidden:nth-child(4) > button:nth-child(1) {
   color: var(--black);
   background-color: var(--black);
 }
 
-div.basis-full:nth-child(2) > button:nth-child(1) {
+.oled-dark div.basis-full:nth-child(1) {
   color: var(--black);
   background-color: var(--black);
 }
 
-div.hidden:nth-child(3) > button:nth-child(1) {
+.oled-dark div.basis-full:nth-child(2) > button:nth-child(1) {
   color: var(--black);
   background-color: var(--black);
 }
 
-div.basis-full:nth-child(1) > button:nth-child(1) {
+.oled-dark div.basis-full:nth-child(1) > button:nth-child(1) {
   color: var(--black);
   background-color: var(--black);
 }
 
-div.bg-white:nth-child(2) > div:nth-child(1) {
+.oled-dark div.bg-white:nth-child(2) > div:nth-child(1) {
   background-color: var(--black);
 }
 
-tr.bg-white:nth-child(1) > td:nth-child(1) {
+.oled-dark tr.bg-white:nth-child(1) > td:nth-child(1) {
   color: var(--text-color, black);
   background-color: var(--bg-color-secondary, #000000);
 }
 
-tr.bg-white:nth-child(1) > td:nth-child(2) {
+.oled-dark tr.bg-white:nth-child(1) > td:nth-child(2) {
   color: var(--text-color, white);
   background-color: var(--bg-color-primary, #000000);
 }
 
-tr.bg-white:nth-child(1) > td:nth-child(3) {
+.oled-dark tr.bg-white:nth-child(1) > td:nth-child(3) {
   color: var(--text-color, white);
   background-color: var(--bg-color-tertiary, #000000);
 }
 
-tr.bg-white:nth-child(1) > td:nth-child(4) {
+.oled-dark tr.bg-white:nth-child(1) > td:nth-child(4) {
   color: var(--text-color, white);
   background-color: var(--bg-color-quaternary, #000000);
 }
 
-tr.bg-white:nth-child(2) > td:nth-child(1) {
+.oled-dark tr.bg-white:nth-child(2) > td:nth-child(1) {
   color: var(--text-color, white);
   background-color: var(--bg-color-secondary, #000000);
 }
 
-tr.bg-white:nth-child(2) > td:nth-child(2) {
+.oled-dark tr.bg-white:nth-child(2) > td:nth-child(2) {
   color: var(--text-color, white);
   background-color: var(--bg-color-primary, #000000);
 }
 
-tr.bg-white:nth-child(2) > td:nth-child(3) {
+.oled-dark tr.bg-white:nth-child(2) > td:nth-child(3) {
   color: var(--text-color, white);
   background-color: var(--bg-color-tertiary, #000000);
 }
 
-tr.bg-white:nth-child(2) > td:nth-child(4) {
+.oled-dark tr.bg-white:nth-child(2) > td:nth-child(4) {
   color: var(--text-color, white);
   background-color: var(--bg-color-tertiary, #000000);
 }
 
-div.flex-col:nth-child(3) {
+.oled-dark div.flex-col:nth-child(3) {
   background-color: rgba(0, 0, 0, 1); /* Solid black */
 }
 
-textarea.rounded-lg {
+.oled-dark div.space-y-3:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1) {
   background-color: #000000;
-  border: 1px solid #fff;
 }
 
-input.rounded {
+.oled-dark div.space-y-3:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1) {
   background-color: #000000;
-  border: 1px solid #fff;
 }
 
-.rounded-l-lg {
+.oled-dark input.w-full:nth-child(1) {
   color: white;
 }
 
-div.space-y-3:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1) {
-  background-color: #000000;
-}
-
-div.space-y-3:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1) {
-  background-color: #000000;
-}
-
-input.w-full:nth-child(1) {
-  color: white;
-}
-
-button.bg-gray-100 {
-  background-color: #4CAF50;
-}
-
-button.cursor-pointer:nth-child(2) {
+.oled-dark button.cursor-pointer:nth-child(2) {
   background-color: black;
   border: 1px solid #1E90FF;
   color: white;
 }
 
-button.cursor-pointer:nth-child(2) > div:nth-child(1) > svg:nth-child(1) {
+.oled-dark button.cursor-pointer:nth-child(2) > div:nth-child(1) > svg:nth-child(1) {
   fill: #1E90FF;
-}
-
-button.bg-gray-50 {
-  background-color: #4CAF50;
-}
-
-button.bg-gray-50 svg {
-  fill: white;
-}
-
-.oled-dark .text-lg {
-  color: var(--black);
 }
 
 .oled-dark input.w-full:nth-child(1) {
@@ -334,12 +355,6 @@ button.bg-gray-50 svg {
 
 .oled-dark div.space-y-2:nth-child(2) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > select:nth-child(1) {
   color: white;
-}
-
-.oled-dark select.py-2 {
-  background-color: var(--black);
-  color: var(--white);
-  border: 1.0px solid #fff;
 }
 
 .oled-dark div.dark\:text-gray-300 > button:nth-child(2) > svg > path {
@@ -370,19 +385,6 @@ button.bg-gray-50 svg {
 .oled-dark div.mt-2:nth-child(1) > div:nth-child(1) > div:nth-child(5) > div:nth-child(2) > button:nth-child(2) > svg:nth-child(1) > path:nth-child(1) {
   stroke: white;
   fill: transparent;
-}
-
-.oled-dark .rounded-r-lg {
-  background-color: var(--black);
-  border: 1.0px solid #fff;
-}
-
-.oled-dark .bg-gray-200 {
-  background-color: var(--black);
-}
-
-.oled-dark .dark\:text-gray-300 {
-  color: var(--white);
 }
 
 .oled-dark div.text-left:nth-child(2) > button:nth-child(1) {
