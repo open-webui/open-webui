@@ -53,7 +53,7 @@ i18next
 			lookupLocalStorage: 'locale'
 		},
 		fallbackLng: {
-			default: ['en']
+			default: ['en-US']
 		},
 		ns: 'translation',
 		returnEmptyString: false,

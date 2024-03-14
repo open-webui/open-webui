@@ -1,26 +1,30 @@
 [
 	{
-		"code": "en",
-		"title": "English"
+		"code": "en-US",
+		"title": "English (US)"
 	},
 	{
-		"code": "fa",
-		"title": "فارسی"
+		"code": "fa-IR",
+		"title": "فارسی (Farsi)"
 	},
 	{
-		"code": "de",
+		"code": "de-DE",
 		"title": "Deutsch"
 	},
 	{
-		"code": "fr",
-		"title": "French"
+		"code": "fr-FR",
+		"title": "French (France)"
 	},
 	{
-		"code": "uk",
+		"code": "uk-UA",
 		"title": "Ukrainian"
 	},
 	{
-		"code": "zh",
-		"title": "Chinese"
+		"code": "zh-TW",
+		"title": "Chinese (Traditional)"
+	},
+	{
+		"code": "zh-CN",
+		"title": "Chinese (Simplified)"
 	}
 ]
