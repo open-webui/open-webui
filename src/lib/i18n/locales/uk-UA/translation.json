@@ -214,7 +214,7 @@
 	"Okay, Let's Go!": "Гаразд, давайте почнемо!",
 	"Ollama Base URL": "Основна URL-адреса Ollama",
 	"Ollama Version": "Версія Ollama",
-	"Open WebUI Version": "Версія Open WebUI",
+	"Version": "Версія",
 	"On": "Увімк",
 	"Only": "Тільки",
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "У рядку команди дозволено використовувати лише алфавітно-цифрові символи та дефіси.",
