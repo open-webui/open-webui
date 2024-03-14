@@ -77,6 +77,7 @@ from constants import ERROR_MESSAGES
 
 app = FastAPI()
 
+app.state.PDF_EXTRACT_IMAGES = False
 app.state.CHUNK_SIZE = CHUNK_SIZE
 app.state.CHUNK_OVERLAP = CHUNK_OVERLAP
 app.state.RAG_TEMPLATE = RAG_TEMPLATE
@@ -184,12 +185,15 @@ async def update_embedding_model(
     }
 
 
-@app.get("/chunk")
-async def get_chunk_params(user=Depends(get_admin_user)):
+@app.get("/config")
+async def get_rag_config(user=Depends(get_admin_user)):
     return {
         "status": True,
-        "chunk_size": app.state.CHUNK_SIZE,
-        "chunk_overlap": app.state.CHUNK_OVERLAP,
+        "pdf_extract_images": app.state.PDF_EXTRACT_IMAGES,
+        "chunk": {
+            "chunk_size": app.state.CHUNK_SIZE,
+            "chunk_overlap": app.state.CHUNK_OVERLAP,
+        },
     }
 
 
@@ -198,17 +202,24 @@ class ChunkParamUpdateForm(BaseModel):
     chunk_overlap: int
 
 
-@app.post("/chunk/update")
-async def update_chunk_params(
-    form_data: ChunkParamUpdateForm, user=Depends(get_admin_user)
-):
-    app.state.CHUNK_SIZE = form_data.chunk_size
-    app.state.CHUNK_OVERLAP = form_data.chunk_overlap
+class ConfigUpdateForm(BaseModel):
+    pdf_extract_images: bool
+    chunk: ChunkParamUpdateForm
+
+
+@app.post("/config/update")
+async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_user)):
+    app.state.PDF_EXTRACT_IMAGES = form_data.pdf_extract_images
+    app.state.CHUNK_SIZE = form_data.chunk.chunk_size
+    app.state.CHUNK_OVERLAP = form_data.chunk.chunk_overlap
 
     return {
         "status": True,
-        "chunk_size": app.state.CHUNK_SIZE,
-        "chunk_overlap": app.state.CHUNK_OVERLAP,
+        "pdf_extract_images": app.state.PDF_EXTRACT_IMAGES,
+        "chunk": {
+            "chunk_size": app.state.CHUNK_SIZE,
+            "chunk_overlap": app.state.CHUNK_OVERLAP,
+        },
     }
 
 
@@ -364,7 +375,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
     ]
 
     if file_ext == "pdf":
-        loader = PyPDFLoader(file_path, extract_images=True)
+        loader = PyPDFLoader(file_path, extract_images=app.state.PDF_EXTRACT_IMAGES)
     elif file_ext == "csv":
         loader = CSVLoader(file_path)
     elif file_ext == "rst":

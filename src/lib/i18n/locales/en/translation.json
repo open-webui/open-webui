@@ -236,7 +236,7 @@
 	"Prompts": "Prompts",
 	"Pull a model from Ollama.com": "Pull a model from Ollama.com",
 	"Pull Progress": "Pull Progress",
-	"Query Params": "",
+	"Query Params": "Query Params",
 	"RAG Template": "RAG Template",
 	"Raw Format": "Raw Format",
 	"Record voice": "Record voice",
@@ -346,5 +346,6 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Write a summary in 50 words that summarizes [topic or keyword].",
 	"You": "You",
 	"You're a helpful assistant.": "You're a helpful assistant.",
-	"You're now logged in.": "You're now logged in."
+	"You're now logged in.": "You're now logged in.",
+	"PDF Extract Images (OCR)": "PDF Extract Images (OCR)"
 }

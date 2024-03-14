@@ -14,6 +14,7 @@
 	import { splitStream } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { addLiteLLMModel, deleteLiteLLMModel, getLiteLLMModelInfo } from '$lib/apis/litellm';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -39,6 +40,10 @@
 
 	let OLLAMA_URLS = [];
 	let selectedOllamaUrlIdx: string | null = null;
+
+	let updateModelId = null;
+	let updateProgress = null;
+
 	let showExperimentalOllama = false;
 	let ollamaVersion = '';
 	const MAX_PARALLEL_DOWNLOADS = 3;
@@ -62,6 +67,71 @@
 	let uploadProgress = null;
 
 	let deleteModelTag = '';
+
+	const updateModelsHandler = async () => {
+		for (const model of $models.filter(
+			(m) =>
+				m.size != null &&
+				(selectedOllamaUrlIdx === null ? true : (m?.urls ?? []).includes(selectedOllamaUrlIdx))
+		)) {
+			console.log(model);
+
+			updateModelId = model.id;
+			const res = await pullModel(localStorage.token, model.id, selectedOllamaUrlIdx).catch(
+				(error) => {
+					toast.error(error);
+					return null;
+				}
+			);
+
+			if (res) {
+				const reader = res.body
+					.pipeThrough(new TextDecoderStream())
+					.pipeThrough(splitStream('\n'))
+					.getReader();
+
+				while (true) {
+					try {
+						const { value, done } = await reader.read();
+						if (done) break;
+
+						let lines = value.split('\n');
+
+						for (const line of lines) {
+							if (line !== '') {
+								let data = JSON.parse(line);
+
+								console.log(data);
+								if (data.error) {
+									throw data.error;
+								}
+								if (data.detail) {
+									throw data.detail;
+								}
+								if (data.status) {
+									if (data.digest) {
+										updateProgress = 0;
+										if (data.completed) {
+											updateProgress = Math.round((data.completed / data.total) * 1000) / 10;
+										} else {
+											updateProgress = 100;
+										}
+									} else {
+										toast.success(data.status);
+									}
+								}
+							}
+						}
+					} catch (error) {
+						console.log(error);
+					}
+				}
+			}
+		}
+
+		updateModelId = null;
+		updateProgress = null;
+	};
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = modelTag.trim();
@@ -389,7 +459,7 @@
 			return [];
 		});
 
-		if (OLLAMA_URLS.length > 1) {
+		if (OLLAMA_URLS.length > 0) {
 			selectedOllamaUrlIdx = 0;
 		}
 
@@ -404,18 +474,51 @@
 			<div class="space-y-2 pr-1.5">
 				<div class="text-sm font-medium">{$i18n.t('Manage Ollama Models')}</div>
 
-				{#if OLLAMA_URLS.length > 1}
-					<div class="flex-1 pb-1">
-						<select
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={selectedOllamaUrlIdx}
-							placeholder={$i18n.t('Select an Ollama instance')}
-						>
-							{#each OLLAMA_URLS as url, idx}
-								<option value={idx} class="bg-gray-100 dark:bg-gray-700">{url}</option>
-							{/each}
-						</select>
+				{#if OLLAMA_URLS.length > 0}
+					<div class="flex gap-2">
+						<div class="flex-1 pb-1">
+							<select
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								bind:value={selectedOllamaUrlIdx}
+								placeholder="Select an Ollama instance"
+							>
+								{#each OLLAMA_URLS as url, idx}
+									<option value={idx} class="bg-gray-100 dark:bg-gray-700">{url}</option>
+								{/each}
+							</select>
+						</div>
+
+						<div>
+							<div class="flex w-full justify-end">
+								<Tooltip content="Update All Models" placement="top">
+									<button
+										class="p-2.5 flex gap-2 items-center bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+										on:click={() => {
+											updateModelsHandler();
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												d="M7 1a.75.75 0 0 1 .75.75V6h-1.5V1.75A.75.75 0 0 1 7 1ZM6.25 6v2.94L5.03 7.72a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06L7.75 8.94V6H10a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2.25Z"
+											/>
+											<path
+												d="M4.268 14A2 2 0 0 0 6 15h6a2 2 0 0 0 2-2v-3a2 2 0 0 0-1-1.732V11a3 3 0 0 1-3 3H4.268Z"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+							</div>
+						</div>
 					</div>
+
+					{#if updateModelId}
+						Updating "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}
+					{/if}
 				{/if}
 
 				<div class="space-y-2">
