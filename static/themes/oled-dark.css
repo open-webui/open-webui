@@ -33,7 +33,7 @@
 }
 
 .oled-dark .py-2\.5.my-auto.flex.flex-col.justify-between.h-screen {
-  background: #000000;
+  background: var(--black);
 }
 
 .oled-dark .bg-white.dark\:bg-gray-800 {
@@ -152,7 +152,7 @@
 }
 
 .oled-dark #models {
-  color: white;
+  color: var(--white);
 }
 
 .oled-dark button.rounded-xl {
@@ -172,17 +172,17 @@
 }
 
 .oled-dark textarea.rounded-lg {
-  background-color: #000000;
+  background-color: var(--black);
   border: 1px solid #fff;
 }
 
 .oled-dark input.rounded {
-  background-color: #000000;
+  background-color: var(--black);
   border: 1px solid #fff;
 }
 
 .oled-dark .rounded-l-lg {
-  color: white;
+  color: var(--white);
 }
 
 .oled-dark button.bg-gray-100 {
@@ -194,11 +194,11 @@
 }
 
 .oled-dark button.bg-gray-50 svg {
-  fill: white;
+  fill: var(--white);
 }
 
 .oled-dark .text-lg {
-  color: var(--black);
+  color: var(--white);
 }
 
 .oled-dark select.py-2 {
@@ -315,21 +315,17 @@
 }
 
 .oled-dark div.space-y-3:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1) {
-  background-color: #000000;
+  background-color: var(--black);
 }
 
 .oled-dark div.space-y-3:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > input:nth-child(1) {
-  background-color: #000000;
-}
-
-.oled-dark input.w-full:nth-child(1) {
-  color: white;
+  background-color: var(--black);
 }
 
 .oled-dark button.cursor-pointer:nth-child(2) {
-  background-color: black;
+  background-color: var(--black);
   border: 1px solid #1E90FF;
-  color: white;
+  color: var(--white);
 }
 
 .oled-dark button.cursor-pointer:nth-child(2) > div:nth-child(1) > svg:nth-child(1) {
@@ -337,6 +333,7 @@
 }
 
 .oled-dark input.w-full:nth-child(1) {
+  color: var(--white);
   background-color: var(--black);
   border: 1px solid #fff;
 }
@@ -346,15 +343,11 @@
 }
 
 .oled-dark div.space-y-2:nth-child(2) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > select:nth-child(1) {
-  color: black;
+  color: var(--black);
 }
 
 .oled-dark div.space-y-2:nth-child(2) > div:nth-child(2) {
-  background-color: black;
-}
-
-.oled-dark div.space-y-2:nth-child(2) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > select:nth-child(1) {
-  color: white;
+  background-color: var(--black);
 }
 
 .oled-dark div.dark\:text-gray-300 > button:nth-child(2) > svg > path {
@@ -363,30 +356,102 @@
 }
 
 .oled-dark div.space-y-2:nth-child(2) > div:nth-child(2) > div:nth-child(2) > button:nth-child(2) > svg:nth-child(1) > path:nth-child(1) {
-  stroke: white;
+  stroke: var(--white);
   fill: transparent;
 }
 
 .oled-dark div.space-y-2:nth-child(2) > div:nth-child(1) > div:nth-child(2) > button:nth-child(2) > svg:nth-child(1) > path:nth-child(1) {
-  stroke: white;
+  stroke: var(--white);
   fill: transparent;
 }
 
 .oled-dark button.bg-gray-200:nth-child(2) > svg:nth-child(1) > path:nth-child(1) {
-  stroke: white;
+  stroke: var(--white);
   fill: transparent;
 }
 
 .oled-dark .mb-1\.5 > button:nth-child(2) > svg:nth-child(1) > path:nth-child(1) {
-  stroke: white;
+  stroke: var(--white);
   fill: transparent;
 }
 
 .oled-dark div.mt-2:nth-child(1) > div:nth-child(1) > div:nth-child(5) > div:nth-child(2) > button:nth-child(2) > svg:nth-child(1) > path:nth-child(1) {
-  stroke: white;
+  stroke: var(--white);
   fill: transparent;
 }
 
 .oled-dark div.text-left:nth-child(2) > button:nth-child(1) {
   color: var(--white);
+}
+
+.oled-dark .space-x-1 > svg:nth-child(1) > path:nth-child(1) {
+  color: var(--white);
+  fill: transparent;
+}
+
+.oled-dark button.text-xs:nth-child(2) > div:nth-child(2) > svg:nth-child(1) {
+  color: var(--white);
+  fill: transparent;
+}
+
+.oled-dark button.flex:nth-child(3) > div:nth-child(2) > svg:nth-child(1) > path:nth-child(1) {
+  color: var(--white);
+  fill: transparent;
+}
+
+.oled-dark .modal-content > div:nth-child(1) {
+  background-color: var(--black);
+}
+
+.oled-dark div.text-lg {
+  background-color: var(--black);
+}
+
+.oled-dark div.space-y-2:nth-child(2) > div:nth-child(1) > div:nth-child(2) > button:nth-child(2) > svg:nth-child(1) {
+  color: var(--white);
+  fill: transparent;
+}
+
+.oled-dark div.px-2:nth-child(2) > a:nth-child(1) > div:nth-child(1) > svg:nth-child(1) {
+  fill: transparent;
+}
+
+.oled-dark div.px-2:nth-child(3) > a:nth-child(1) > div:nth-child(1) > svg:nth-child(1) {
+  fill: transparent;
+}
+
+.oled-dark div.px-2:nth-child(4) > a:nth-child(1) > div:nth-child(1) > svg:nth-child(1) > path:nth-child(1) {
+  fill: transparent;
+}
+
+.oled-dark button.hover\:text-white:nth-child(2):hover > svg:nth-child(1) {
+  fill: var(--white);
+}
+
+.oled-dark button.hover\:text-white:nth-child(3):hover > svg:nth-child(1) {
+  fill: var(--white);
+}
+
+.oled-dark button.bg-white > svg:nth-child(1) > path:nth-child(1) {
+  fill: var(--black);
+}
+
+.oled-dark button.bg-white {
+  background-color: var(--black);
+}
+
+.oled-dark div.fixed:nth-child(2) {
+  background-color: transparent;
+}
+
+.oled-dark div.fixed:nth-child(2) > div:nth-child(1) {
+  background-color: var(--black);
+}
+
+.oled-dark #new-chat-button > div:nth-child(1) > svg:nth-child(1) {
+  fill: transparent;
+}
+
+.oled-dark #new-chat-button > div:nth-child(1) > svg:nth-child(1) > path:nth-child(2) {
+  fill: var(--white);
 }
