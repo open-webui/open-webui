@@ -1,14 +1,14 @@
 # syntax=docker/dockerfile:1
 
 ######## WebUI frontend ########
-FROM node:21-bullseye-slim as build
+FROM node:21-bookworm-slim as build
 
 WORKDIR /app
 
-RUN apt-get update \ 
-    && apt-get install -y --no-install-recommends wget \ 
-    # cleanup
-    && rm -rf /var/lib/apt/lists/*
+#RUN apt-get update \ 
+#    && apt-get install -y --no-install-recommends wget \ 
+#    # cleanup
+#    && rm -rf /var/lib/apt/lists/*
 
 # wget embedding model weight from alpine (does not exist from slim-buster)
 #RUN wget "https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz" -O - | \
