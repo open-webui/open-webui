@@ -75,7 +75,7 @@ async def download_file_stream(url, file_path, file_name, chunk_size=1024 * 1024
                     hashed = calculate_sha256(file)
                     file.seek(0)
 
-                    url = f"{OLLAMA_BASE_URLS[0]}/blobs/sha256:{hashed}"
+                    url = f"{OLLAMA_BASE_URLS[0]}/api/blobs/sha256:{hashed}"
                     response = requests.post(url, data=file)
 
                     if response.ok:
