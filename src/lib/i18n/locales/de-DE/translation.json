@@ -121,8 +121,6 @@
 	"Enable Chat History": "Chat-Verlauf aktivieren",
 	"Enable New Sign Ups": "Neue Anmeldungen aktivieren",
 	"Enabled": "Aktiviert",
-	"Enter a user message here": "Gib hier eine Benutzernachricht ein",
-	"Enter an assistant message here": "Gib hier eine Assistentennachricht ein",
 	"Enter API Key": "",
 	"Enter Chunk Overlap": "",
 	"Enter Chunk Size": "",

@@ -480,7 +480,7 @@
 							<select
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 								bind:value={selectedOllamaUrlIdx}
-								placeholder="Select an Ollama instance"
+								placeholder={$i18n.t('Select an Ollama instance')}
 							>
 								{#each OLLAMA_URLS as url, idx}
 									<option value={idx} class="bg-gray-100 dark:bg-gray-700">{url}</option>
