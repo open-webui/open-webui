@@ -160,7 +160,9 @@
 	};
 
 	const scrollToBottom = () => {
-		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		if (messagesContainerElement) {
+			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		}
 	};
 
 	//////////////////////////
@@ -321,7 +323,7 @@
 					.map((file) => file.url.slice(file.url.indexOf(',') + 1));
 
 				// Add images array only if it contains elements
-				if (imageUrls && imageUrls.length > 0) {
+				if (imageUrls && imageUrls.length > 0 && message.role === 'user') {
 					baseMessage.images = imageUrls;
 				}
 
@@ -545,7 +547,8 @@
 					.filter((message) => message)
 					.map((message, idx, arr) => ({
 						role: message.role,
-						...(message.files?.filter((file) => file.type === 'image').length > 0 ?? false
+						...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
+						message.role === 'user'
 							? {
 									content: [
 										{
@@ -688,7 +691,12 @@
 
 		if (messages.length == 2) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			await setChatTitle(_chatId, userPrompt);
+
+			if ($settings?.titleAutoGenerateModel) {
+				await generateChatTitle(_chatId, userPrompt);
+			} else {
+				await setChatTitle(_chatId, userPrompt);
+			}
 		}
 	};
 

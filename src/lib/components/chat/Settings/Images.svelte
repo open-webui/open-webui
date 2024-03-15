@@ -116,11 +116,13 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
 		loading = true;
-		await updateOpenAIKey(localStorage.token, OPENAI_API_KEY);
+
+		if (imageGenerationEngine === 'openai') {
+			await updateOpenAIKey(localStorage.token, OPENAI_API_KEY);
+		}
 
 		await updateDefaultImageGenerationModel(localStorage.token, selectedModel);
 
-		await updateDefaultImageGenerationModel(localStorage.token, selectedModel);
 		await updateImageSize(localStorage.token, imageSize).catch((error) => {
 			toast.error(error);
 			return null;
