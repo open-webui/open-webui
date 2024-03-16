@@ -97,7 +97,7 @@
 		dispatch('save');
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-80">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[22rem]">
 		<div>
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Add-ons')}</div>
 
@@ -306,7 +306,7 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end text-sm font-medium">
 		<button
 			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			type="submit"

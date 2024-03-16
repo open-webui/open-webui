@@ -101,7 +101,7 @@
 	});
 </script>
 
-<div class="flex flex-col h-full justify-between space-y-3 text-sm">
+<div class="flex flex-col h-full justify-between space-y-3 text-sm max-h-[22rem]">
 	<div class=" space-y-2">
 		<div
 			class="flex flex-col justify-between rounded-md items-center py-2 px-3.5 w-full transition"

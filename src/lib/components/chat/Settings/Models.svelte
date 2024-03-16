@@ -469,7 +469,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-[23rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-[24rem]">
 		{#if ollamaVersion}
 			<div class="space-y-2 pr-1.5">
 				<div class="text-sm font-medium">{$i18n.t('Manage Ollama Models')}</div>
