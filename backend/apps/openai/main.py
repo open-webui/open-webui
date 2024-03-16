@@ -144,7 +144,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 except:
                     error_detail = f"External: {e}"
 
-            raise HTTPException(status_code=r.status_code, detail=error_detail)
+            raise HTTPException(
+                status_code=r.status_code if r else 500, detail=error_detail
+            )
 
     except ValueError:
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
@@ -328,4 +330,6 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             except:
                 error_detail = f"External: {e}"
 
-        raise HTTPException(status_code=r.status_code, detail=error_detail)
+        raise HTTPException(
+            status_code=r.status_code if r else 500, detail=error_detail
+        )
