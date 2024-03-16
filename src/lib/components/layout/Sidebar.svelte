@@ -7,7 +7,10 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { user, chats, settings, showSettings, chatId, tags } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
+
 	import {
 		deleteChatById,
 		getChatList,
@@ -135,7 +138,7 @@
 						/>
 					</div>
 
-					<div class=" self-center font-medium text-sm">New Chat</div>
+					<div class=" self-center font-medium text-sm">{$i18n.t('New Chat')}</div>
 				</div>
 
 				<div class="self-center">
@@ -180,7 +183,7 @@
 					</div>
 
 					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">Modelfiles</div>
+						<div class=" self-center font-medium text-sm">{$i18n.t('Modelfiles')}</div>
 					</div>
 				</a>
 			</div>
@@ -208,7 +211,7 @@
 					</div>
 
 					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">Prompts</div>
+						<div class=" self-center font-medium text-sm">{$i18n.t('Prompts')}</div>
 					</div>
 				</a>
 			</div>
@@ -236,7 +239,7 @@
 					</div>
 
 					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">Documents</div>
+						<div class=" self-center font-medium text-sm">{$i18n.t('Documents')}</div>
 					</div>
 				</a>
 			</div>
@@ -246,11 +249,13 @@
 			{#if !($settings.saveChatHistory ?? true)}
 				<div class="absolute z-40 w-full h-full bg-black/90 flex justify-center">
 					<div class=" text-left px-5 py-2">
-						<div class=" font-medium">Chat History is off for this browser.</div>
+						<div class=" font-medium">{$i18n.t('Chat History is off for this browser.')}</div>
 						<div class="text-xs mt-2">
-							When history is turned off, new chats on this browser won't appear in your history on
-							any of your devices. <span class=" font-semibold"
-								>This setting does not sync across browsers or devices.</span
+							{$i18n.t(
+								"When history is turned off, new chats on this browser won't appear in your history on any of your devices."
+							)}
+							<span class=" font-semibold"
+								>{$i18n.t('This setting does not sync across browsers or devices.')}</span
 							>
 						</div>
 
@@ -277,7 +282,7 @@
 									/>
 								</svg>
 
-								<div>Enable Chat History</div>
+								<div>{$i18n.t('Enable Chat History')}</div>
 							</button>
 						</div>
 					</div>
@@ -303,7 +308,7 @@
 
 					<input
 						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm text-gray-300 bg-gray-950 outline-none"
-						placeholder="Search"
+						placeholder={$i18n.t('Search')}
 						bind:value={search}
 						on:focus={() => {
 							enrichChatsWithContent($chats);
@@ -595,7 +600,7 @@
 												/>
 											</svg>
 										</div>
-										<div class=" self-center font-medium">Admin Panel</div>
+										<div class=" self-center font-medium">{$i18n.t('Admin Panel')}</div>
 									</button>
 
 									<button
@@ -621,7 +626,7 @@
 												/>
 											</svg>
 										</div>
-										<div class=" self-center font-medium">Playground</div>
+										<div class=" self-center font-medium">{$i18n.t('Playground')}</div>
 									</button>
 								{/if}
 
@@ -653,7 +658,7 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center font-medium">Settings</div>
+									<div class=" self-center font-medium">{$i18n.t('Settings')}</div>
 								</button>
 							</div>
 
@@ -687,7 +692,7 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center font-medium">Sign Out</div>
+									<div class=" self-center font-medium">{$i18n.t('Sign Out')}</div>
 								</button>
 							</div>
 						</div>
@@ -700,7 +705,11 @@
 	<div
 		class="fixed left-0 top-[50dvh] z-40 -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
 	>
-		<Tooltip placement="right" content={`${show ? 'Close' : 'Open'} sidebar`} touch={false}>
+		<Tooltip
+			placement="right"
+			content={`${show ? $i18n.t('Close') : $i18n.t('Open')} ${$i18n.t('sidebar')}`}
+			touch={false}
+		>
 			<button
 				id="sidebar-toggle-button"
 				class=" group"

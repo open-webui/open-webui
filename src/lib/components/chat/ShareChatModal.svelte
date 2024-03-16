@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import Modal from '../common/Modal.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let downloadChat: Function;
 	export let shareChat: Function;
@@ -17,11 +20,11 @@
 				show = false;
 			}}
 		>
-			Share to OpenWebUI Community
+			{$i18n.t('Share to OpenWebUI Community')}
 		</button>
 
 		<div class="flex justify-center space-x-1 mt-1.5">
-			<div class=" self-center text-gray-400 text-xs font-medium">or</div>
+			<div class=" self-center text-gray-400 text-xs font-medium">{$i18n.t('or')}</div>
 
 			<button
 				class=" self-center rounded-full text-xs font-medium text-gray-700 dark:text-gray-500 underline"
@@ -31,7 +34,7 @@
 					show = false;
 				}}
 			>
-				Download as a File
+				{$i18n.t('Download as a File')}
 			</button>
 		</div>
 	</div>

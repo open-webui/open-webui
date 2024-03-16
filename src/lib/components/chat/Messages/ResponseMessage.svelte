@@ -8,7 +8,9 @@
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
 
@@ -316,7 +318,7 @@
 
 				{#if message.timestamp}
 					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
-						{dayjs(message.timestamp * 1000).format('DD/MM/YYYY HH:mm')}
+						{dayjs(message.timestamp * 1000).format($i18n.t('DD/MM/YYYY HH:mm'))}
 					</span>
 				{/if}
 			</Name>
@@ -360,7 +362,7 @@
 											editMessageConfirmHandler();
 										}}
 									>
-										Save
+										{$i18n.t('Save')}
 									</button>
 
 									<button
@@ -369,7 +371,7 @@
 											cancelEditMessage();
 										}}
 									>
-										Cancel
+										{$i18n.t('Cancel')}
 									</button>
 								</div>
 							</div>

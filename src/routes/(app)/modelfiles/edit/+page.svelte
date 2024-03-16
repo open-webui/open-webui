@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { page } from '$app/stores';
 
 	import { settings, user, config, modelfiles } from '$lib/stores';
@@ -13,6 +13,8 @@
 	import { getModelfiles, updateModelfileByTagName } from '$lib/apis/modelfiles';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
+
+	const i18n = getContext('i18n');
 
 	let loading = false;
 
@@ -248,7 +250,7 @@
 				}}
 			/>
 
-			<div class=" text-2xl font-semibold mb-6">My Modelfiles</div>
+			<div class=" text-2xl font-semibold mb-6">{$i18n.t('My Modelfiles')}</div>
 
 			<button
 				class="flex space-x-1"
@@ -270,7 +272,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center font-medium text-sm">Back</div>
+				<div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
 			</button>
 			<hr class="my-3 dark:border-gray-700" />
 
@@ -317,12 +319,12 @@
 
 				<div class="my-2 flex space-x-2">
 					<div class="flex-1">
-						<div class=" text-sm font-semibold mb-2">Name*</div>
+						<div class=" text-sm font-semibold mb-2">{$i18n.t('Name')}*</div>
 
 						<div>
 							<input
 								class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-								placeholder="Name your modelfile"
+								placeholder={$i18n.t('Name your modelfile')}
 								bind:value={title}
 								required
 							/>
@@ -330,12 +332,12 @@
 					</div>
 
 					<div class="flex-1">
-						<div class=" text-sm font-semibold mb-2">Model Tag Name*</div>
+						<div class=" text-sm font-semibold mb-2">{$i18n.t('Model Tag Name')}*</div>
 
 						<div>
 							<input
 								class="px-3 py-1.5 text-sm w-full bg-transparent disabled:text-gray-500 border dark:border-gray-600 outline-none rounded-lg"
-								placeholder="Add a model tag name"
+								placeholder={$i18n.t('Add a model tag name')}
 								value={tagName}
 								disabled
 								required
@@ -345,12 +347,12 @@
 				</div>
 
 				<div class="my-2">
-					<div class=" text-sm font-semibold mb-2">Description*</div>
+					<div class=" text-sm font-semibold mb-2">{$i18n.t('Description')}*</div>
 
 					<div>
 						<input
 							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-							placeholder="Add a short description about what this modelfile does"
+							placeholder={$i18n.t('Add a short description about what this modelfile does')}
 							bind:value={desc}
 							required
 						/>
@@ -359,13 +361,13 @@
 
 				<div class="my-2">
 					<div class="flex w-full justify-between">
-						<div class=" self-center text-sm font-semibold">Modelfile</div>
+						<div class=" self-center text-sm font-semibold">{$i18n.t('Modelfile')}</div>
 					</div>
 
 					<!-- <div class=" text-sm font-semibold mb-2"></div> -->
 
 					<div class="mt-2">
-						<div class=" text-xs font-semibold mb-2">Content*</div>
+						<div class=" text-xs font-semibold mb-2">{$i18n.t('Content')}*</div>
 
 						<div>
 							<textarea
@@ -381,7 +383,7 @@
 
 				<div class="my-2">
 					<div class="flex w-full justify-between mb-2">
-						<div class=" self-center text-sm font-semibold">Prompt suggestions</div>
+						<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt suggestions')}</div>
 
 						<button
 							class="p-1 px-3 text-xs flex rounded transition"
@@ -409,7 +411,7 @@
 							<div class=" flex border dark:border-gray-600 rounded-lg">
 								<input
 									class="px-3 py-1.5 text-sm w-full bg-transparent outline-none border-r dark:border-gray-600"
-									placeholder="Write a prompt suggestion (e.g. Who are you?)"
+									placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
 									bind:value={prompt.content}
 								/>
 
@@ -438,7 +440,7 @@
 				</div>
 
 				<div class="my-2">
-					<div class=" text-sm font-semibold mb-2">Categories</div>
+					<div class=" text-sm font-semibold mb-2">{$i18n.t('Categories')}</div>
 
 					<div class="grid grid-cols-4">
 						{#each Object.keys(categories) as category}
@@ -453,7 +455,7 @@
 
 				{#if pullProgress !== null}
 					<div class="my-2">
-						<div class=" text-sm font-semibold mb-2">Pull Progress</div>
+						<div class=" text-sm font-semibold mb-2">{$i18n.t('Pull Progress')}</div>
 						<div class="w-full rounded-full dark:bg-gray-800">
 							<div
 								class="dark:bg-gray-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
@@ -476,7 +478,7 @@
 						type="submit"
 						disabled={loading}
 					>
-						<div class=" self-center font-medium">Save & Update</div>
+						<div class=" self-center font-medium">{$i18n.t('Save & Update')}</div>
 
 						{#if loading}
 							<div class="ml-1.5 self-center">

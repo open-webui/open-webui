@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.113] - 2024-03-XX
+
+### Added
+
+- 🌍 **Localization**: You can now change the UI language in Settings -> General. We support Ukrainian, German, Farsi (Persian), Traditional and Simplified Chinese and French translations. You can help us to translate the UI into your language! More info in our [CONTRIBUTION.md](https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization).
+
+### Fixed
+
+- 🌑 **Dark background on select fields**: Added dark background to select fields, as this caused bad readability on some browsers/devices.
+
 ## [0.1.112] - 2024-03-15
 
 ### Fixed

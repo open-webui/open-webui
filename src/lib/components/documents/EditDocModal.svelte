@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 
 	import { getDocs, tagDocByName, updateDocByName } from '$lib/apis/documents';
 	import Modal from '../common/Modal.svelte';
@@ -9,6 +9,8 @@
 	import TagInput from '../common/Tags/TagInput.svelte';
 	import Tags from '../common/Tags.svelte';
 	import { addTagById } from '$lib/apis/chats';
+
+	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let selectedDoc;
@@ -74,7 +76,7 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
-			<div class=" text-lg font-medium self-center">Edit Doc</div>
+			<div class=" text-lg font-medium self-center">{$i18n.t('Edit Doc')}</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -105,7 +107,7 @@
 				>
 					<div class=" flex flex-col space-y-1.5">
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">Name Tag</div>
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name Tag')}</div>
 
 							<div class="flex flex-1">
 								<div
@@ -134,7 +136,7 @@
 						</div>
 
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">Title</div>
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Title')}</div>
 
 							<div class="flex-1">
 								<input
@@ -148,7 +150,7 @@
 						</div>
 
 						<div class="flex flex-col w-full">
-							<div class=" mb-1.5 text-xs text-gray-500">Tags</div>
+							<div class=" mb-1.5 text-xs text-gray-500">{$i18n.t('Tags')}</div>
 
 							<Tags {tags} addTag={addTagHandler} deleteTag={deleteTagHandler} />
 						</div>
@@ -159,7 +161,7 @@
 							class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 							type="submit"
 						>
-							Save
+							{$i18n.t('Save')}
 						</button>
 					</div>
 				</form>
