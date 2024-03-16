@@ -91,9 +91,8 @@ def query_collection(
 
 
 def rag_template(template: str, context: str, query: str):
-    template = re.sub(r"\[context\]", context, template)
-    template = re.sub(r"\[query\]", query, template)
-
+    template = template.replace("[context]", context)
+    template = template.replace("[query]", query)
     return template
 
 

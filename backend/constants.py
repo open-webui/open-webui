@@ -52,3 +52,4 @@ class ERROR_MESSAGES(str, Enum):
 
     MODEL_NOT_FOUND = lambda name="": f"Model '{name}' was not found"
     OPENAI_NOT_FOUND = lambda name="": f"OpenAI API was not found"
+    OLLAMA_NOT_FOUND = "WebUI could not connect to Ollama"

@@ -123,6 +123,7 @@ async def get_all_models():
             map(lambda response: response["models"], responses)
         )
     }
+
     app.state.MODELS = {model["model"]: model for model in models["models"]}
 
     return models
@@ -181,11 +182,17 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
         responses = await asyncio.gather(*tasks)
         responses = list(filter(lambda x: x is not None, responses))
 
-        lowest_version = min(
-            responses, key=lambda x: tuple(map(int, x["version"].split(".")))
-        )
+        if len(responses) > 0:
+            lowest_version = min(
+                responses, key=lambda x: tuple(map(int, x["version"].split(".")))
+            )
 
-        return {"version": lowest_version["version"]}
+            return {"version": lowest_version["version"]}
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=ERROR_MESSAGES.OLLAMA_NOT_FOUND,
+            )
     else:
         url = app.state.OLLAMA_BASE_URLS[url_idx]
         try:
