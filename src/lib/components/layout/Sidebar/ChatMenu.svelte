@@ -4,13 +4,16 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let renameHandler: Function;
 	export let deleteHandler: Function;
 </script>
 
 <Dropdown>
-	<slot />
+	<Tooltip content="More">
+		<slot />
+	</Tooltip>
 
 	<div slot="content">
 		<DropdownMenu.Content
