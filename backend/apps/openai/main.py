@@ -111,6 +111,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEYS[idx]}"
         headers["Content-Type"] = "application/json"
 
+        r = None
         try:
             r = requests.post(
                 url=f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech",
@@ -218,6 +219,9 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
         return models
     else:
         url = app.state.OPENAI_API_BASE_URLS[url_idx]
+
+        r = None
+
         try:
             r = requests.request(method="GET", url=f"{url}/models")
             r.raise_for_status()
@@ -289,6 +293,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     headers = {}
     headers["Authorization"] = f"Bearer {key}"
     headers["Content-Type"] = "application/json"
+
+    r = None
 
     try:
         r = requests.request(
