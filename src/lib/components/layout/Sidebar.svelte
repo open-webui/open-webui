@@ -520,6 +520,9 @@
 										deleteHandler={() => {
 											chatDeleteId = chat.id;
 										}}
+										onClose={() => {
+											selectedChatId = null;
+										}}
 									>
 										<button
 											aria-label="Chat Menu"

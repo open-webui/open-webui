@@ -8,9 +8,17 @@
 
 	export let renameHandler: Function;
 	export let deleteHandler: Function;
+
+	export let onClose: Function;
 </script>
 
-<Dropdown>
+<Dropdown
+	on:change={(e) => {
+		if (e.detail === false) {
+			onClose();
+		}
+	}}
+>
 	<Tooltip content="More">
 		<slot />
 	</Tooltip>

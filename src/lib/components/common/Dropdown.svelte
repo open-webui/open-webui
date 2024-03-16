@@ -1,8 +1,15 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
+	import { createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 </script>
 
-<DropdownMenu.Root>
+<DropdownMenu.Root
+	onOpenChange={(state) => {
+		dispatch('change', state);
+	}}
+>
 	<DropdownMenu.Trigger>
 		<slot />
 	</DropdownMenu.Trigger>
