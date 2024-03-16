@@ -201,7 +201,7 @@
 
 {#if loaded}
 	<div class=" hidden lg:flex fixed bottom-0 right-0 px-3 py-3 z-10">
-		<Tooltip content="help" placement="left">
+		<Tooltip content="Help" placement="left">
 			<button
 				id="show-shortcuts-button"
 				bind:this={showShortcutsButtonElement}
