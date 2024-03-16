@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 ######## WebUI frontend ########
-FROM node:21-bookworm-slim as build
+FROM node:21-alpine3.19 as build
 
 WORKDIR /app
 
