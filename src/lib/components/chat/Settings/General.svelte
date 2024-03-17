@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount } from 'svelte';
+	import { theme, setTheme } from '../../../stores/index';
 	const dispatch = createEventDispatcher();
 
 	import { models, user } from '$lib/stores';
-
+ 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 
 	export let saveSettings: Function;
@@ -12,46 +13,34 @@
 
 	// General
 	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
-	let theme = 'dark';
+	let selectedTheme = 'system';
+	let actualTheme: string;
+	$: actualTheme = $theme;
 	let notificationEnabled = false;
 	let system = '';
 
 	let showAdvanced = false;
 
-	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-		if (theme === 'system') {
-			updateSystemTheme();
-		}
-	});
+	function applyTheme(theme: string) { // only apply visually
+        let themeToApply = theme;
+        if (theme === 'system') {
+            themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
 
-	function updateSystemTheme() {
-		const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-		const systemTheme = isDarkMode ? 'dark' : 'light';
-		applyTheme(systemTheme);
-	}
+        themes
+            .filter((e) => e !== themeToApply)
+            .forEach((e) => {
+                e.split(' ').forEach((e) => {
+                    document.documentElement.classList.remove(e);
+                });
+            });
 
-	function applyTheme(theme: string) {
-		localStorage.theme = theme;
-
-		if (theme === 'system') {
-			updateSystemTheme();
-			return;
-		}
-
-		themes
-			.filter((e) => e !== theme)
-			.forEach((e) => {
-				e.split(' ').forEach((e) => {
-					document.documentElement.classList.remove(e);
-				});
-			});
-
-		theme.split(' ').forEach((e) => {
-			document.documentElement.classList.add(e);
-		});
+        themeToApply.split(' ').forEach((e) => {
+            document.documentElement.classList.add(e);
+        });
 
 		console.log(theme)
-	}
+    }
 
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
@@ -98,9 +87,11 @@
 	};
 
 	onMount(async () => {
+		selectedTheme = localStorage.getItem('theme') ?? 'system';
+		applyTheme(selectedTheme);
+
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 
-		theme = localStorage.theme ?? 'dark';
 		notificationEnabled = settings.notificationEnabled ?? false;
 		system = settings.system ?? '';
 
@@ -116,6 +107,13 @@
 		options = { ...options, ...settings.options };
 		options.stop = (settings?.options?.stop ?? []).join(',');
 	});
+
+	function handleThemeChange(newTheme: string) {
+        selectedTheme = newTheme;
+        setTheme(newTheme); // Update the store
+        localStorage.setItem('theme', newTheme); // Persist the theme selection
+        applyTheme(newTheme); // Apply the selected theme
+    }
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
@@ -127,7 +125,7 @@
 				<div class=" self-center text-xs font-medium">Theme</div>
 				<div class="flex items-center relative">
 					<div class=" absolute right-16">
-						{#if theme === 'dark'}
+						{#if actualTheme === 'dark'}
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"
@@ -140,7 +138,7 @@
 									clip-rule="evenodd"
 								/>
 							</svg>
-						{:else if theme === 'light'}
+						{:else if actualTheme === 'light'}
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"
@@ -156,9 +154,9 @@
 
 					<select
 						class="w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
-						bind:value={theme}
+						bind:value={selectedTheme}
 						placeholder="Select a theme"
-						on:change="{() => applyTheme(theme)}"
+						on:change="{() => handleThemeChange(selectedTheme)}"
 					>
 						<option value="system">System</option>
 						<option value="dark">Dark</option>
