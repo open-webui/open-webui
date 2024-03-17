@@ -1,5 +1,5 @@
 <script>
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, setContext } from 'svelte';
 	import { config, user, setTheme, WEBUI_NAME } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { Toaster, toast } from 'svelte-sonner';
