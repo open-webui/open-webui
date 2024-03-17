@@ -117,9 +117,9 @@
 
 	function handleThemeChange(newTheme: string) {
         selectedTheme = newTheme;
-        setTheme(newTheme); // Update the store
-        localStorage.setItem('theme', newTheme); // Persist the theme selection
-        applyTheme(newTheme); // Apply the selected theme
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+        applyTheme(newTheme);
     }
 </script>
 
@@ -133,7 +133,7 @@
 				<div class="flex items-center relative">
 					<select
 						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
-						bind:value={theme}
+						bind:value={selectedTheme}
 						placeholder="Select a theme"
 						on:change="{() => handleThemeChange(selectedTheme)}"
 					>
