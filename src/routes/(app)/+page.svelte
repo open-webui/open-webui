@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -39,6 +39,9 @@
 	import { RAGTemplate } from '$lib/utils/rag';
 	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+
+	const i18n = getContext('i18n');
+
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
@@ -140,7 +143,9 @@
 	};
 
 	const scrollToBottom = () => {
-		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		if (messagesContainerElement) {
+			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		}
 	};
 
 	//////////////////////////
@@ -155,7 +160,7 @@
 		);
 
 		if (selectedModels.includes('')) {
-			toast.error('Model not selected');
+			toast.error($i18n.t('Model not selected'));
 		} else if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
 			console.log('wait');
@@ -165,7 +170,9 @@
 		) {
 			// Upload not done
 			toast.error(
-				`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
+				$i18n.t(
+					`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
+				)
 			);
 		} else {
 			// Reset chat message textarea height
@@ -201,7 +208,7 @@
 				if ($settings.saveChatHistory ?? true) {
 					chat = await createNewChat(localStorage.token, {
 						id: $chatId,
-						title: 'New Chat',
+						title: $i18n.t('New Chat'),
 						models: selectedModels,
 						system: $settings.system ?? undefined,
 						options: {
@@ -267,7 +274,7 @@
 						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
 					}
 				} else {
-					toast.error(`Model ${modelId} not found`);
+					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
 			})
 		);
@@ -308,7 +315,7 @@
 					.map((file) => file.url.slice(file.url.indexOf(',') + 1));
 
 				// Add images array only if it contains elements
-				if (imageUrls && imageUrls.length > 0) {
+				if (imageUrls && imageUrls.length > 0 && message.role === 'user') {
 					baseMessage.images = imageUrls;
 				}
 
@@ -479,12 +486,18 @@
 					responseMessage.content = error.error;
 				}
 			} else {
-				toast.error(`Uh-oh! There was an issue connecting to Ollama.`);
-				responseMessage.content = `Uh-oh! There was an issue connecting to Ollama.`;
+				toast.error(
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: 'Ollama' })
+				);
+				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+					provider: 'Ollama'
+				});
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = `Uh-oh! There was an issue connecting to Ollama.`;
+			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+				provider: 'Ollama'
+			});
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -532,7 +545,8 @@
 					.filter((message) => message)
 					.map((message, idx, arr) => ({
 						role: message.role,
-						...(message.files?.filter((file) => file.type === 'image').length > 0 ?? false
+						...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
+						message.role === 'user'
 							? {
 									content: [
 										{
@@ -656,12 +670,18 @@
 					}
 				}
 			} else {
-				toast.error(`Uh-oh! There was an issue connecting to ${model}.`);
-				responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
+				toast.error(
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: model })
+				);
+				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+					provider: model
+				});
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
+			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+				provider: model
+			});
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -675,7 +695,12 @@
 
 		if (messages.length == 2) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			await setChatTitle(_chatId, userPrompt);
+
+			if ($settings?.titleAutoGenerateModel) {
+				await generateChatTitle(_chatId, userPrompt);
+			} else {
+				await setChatTitle(_chatId, userPrompt);
+			}
 		}
 	};
 
@@ -725,7 +750,7 @@
 					);
 			}
 		} else {
-			toast.error(`Model ${modelId} not found`);
+			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 		}
 	};
 
@@ -734,7 +759,9 @@
 			const title = await generateTitle(
 				localStorage.token,
 				$settings?.titleGenerationPrompt ??
-					"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title': {{prompt}}",
+					$i18n.t(
+						"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
+					) + ' {{prompt}}',
 				$settings?.titleAutoGenerateModel ?? selectedModels[0],
 				userPrompt
 			);

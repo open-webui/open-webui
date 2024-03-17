@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.113] - 2024-03-XX
+
+### Added
+
+- 🌍 **Localization**: You can now change the UI language in Settings -> General. We support Ukrainian, German, Farsi (Persian), Traditional and Simplified Chinese and French translations. You can help us to translate the UI into your language! More info in our [CONTRIBUTION.md](https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization).
+
+### Fixed
+
+- 🌑 **Dark background on select fields**: Added dark background to select fields, as this caused bad readability on some browsers/devices.
+
+## [0.1.112] - 2024-03-15
+
+### Fixed
+
+- 🗨️ Resolved chat malfunction after image generation.
+- 🎨 Fixed various RAG issues.
+- 🧪 Rectified experimental broken GGUF upload logic.
+
+## [0.1.111] - 2024-03-10
+
+### Added
+
+- 🛡️ **Model Whitelisting**: Admins now have the ability to whitelist models for users with the 'user' role.
+- 🔄 **Update All Models**: Added a convenient button to update all models at once.
+- 📄 **Toggle PDF OCR**: Users can now toggle PDF OCR option for improved parsing performance.
+- 🎨 **DALL-E Integration**: Introduced DALL-E integration for image generation alongside automatic1111.
+- 🛠️ **RAG API Refactoring**: Refactored RAG logic and exposed its API, with additional documentation to follow.
+
+### Fixed
+
+- 🔒 **Max Token Settings**: Added max token settings for anthropic/claude-3-sonnet-20240229 (Issue #1094).
+- 🔧 **Misalignment Issue**: Corrected misalignment of Edit and Delete Icons when Chat Title is Empty (Issue #1104).
+- 🔄 **Context Loss Fix**: Resolved RAG losing context on model response regeneration with Groq models via API key (Issue #1105).
+- 📁 **File Handling Bug**: Addressed File Not Found Notification when Dropping a Conversation Element (Issue #1098).
+- 🖱️ **Dragged File Styling**: Fixed dragged file layover styling issue.
+
 ## [0.1.110] - 2024-03-06
 
 ### Added

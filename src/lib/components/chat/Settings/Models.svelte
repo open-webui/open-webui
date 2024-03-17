@@ -12,8 +12,11 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, models, user } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { addLiteLLMModel, deleteLiteLLMModel, getLiteLLMModelInfo } from '$lib/apis/litellm';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let getModels: Function;
 
@@ -37,6 +40,10 @@
 
 	let OLLAMA_URLS = [];
 	let selectedOllamaUrlIdx: string | null = null;
+
+	let updateModelId = null;
+	let updateProgress = null;
+
 	let showExperimentalOllama = false;
 	let ollamaVersion = '';
 	const MAX_PARALLEL_DOWNLOADS = 3;
@@ -61,14 +68,85 @@
 
 	let deleteModelTag = '';
 
+	const updateModelsHandler = async () => {
+		for (const model of $models.filter(
+			(m) =>
+				m.size != null &&
+				(selectedOllamaUrlIdx === null ? true : (m?.urls ?? []).includes(selectedOllamaUrlIdx))
+		)) {
+			console.log(model);
+
+			updateModelId = model.id;
+			const res = await pullModel(localStorage.token, model.id, selectedOllamaUrlIdx).catch(
+				(error) => {
+					toast.error(error);
+					return null;
+				}
+			);
+
+			if (res) {
+				const reader = res.body
+					.pipeThrough(new TextDecoderStream())
+					.pipeThrough(splitStream('\n'))
+					.getReader();
+
+				while (true) {
+					try {
+						const { value, done } = await reader.read();
+						if (done) break;
+
+						let lines = value.split('\n');
+
+						for (const line of lines) {
+							if (line !== '') {
+								let data = JSON.parse(line);
+
+								console.log(data);
+								if (data.error) {
+									throw data.error;
+								}
+								if (data.detail) {
+									throw data.detail;
+								}
+								if (data.status) {
+									if (data.digest) {
+										updateProgress = 0;
+										if (data.completed) {
+											updateProgress = Math.round((data.completed / data.total) * 1000) / 10;
+										} else {
+											updateProgress = 100;
+										}
+									} else {
+										toast.success(data.status);
+									}
+								}
+							}
+						}
+					} catch (error) {
+						console.log(error);
+					}
+				}
+			}
+		}
+
+		updateModelId = null;
+		updateProgress = null;
+	};
+
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = modelTag.trim();
 		if (modelDownloadStatus[sanitizedModelTag]) {
-			toast.error(`Model '${sanitizedModelTag}' is already in queue for downloading.`);
+			toast.error(
+				$i18n.t(`Model '{{modelTag}}' is already in queue for downloading.`, {
+					modelTag: sanitizedModelTag
+				})
+			);
 			return;
 		}
 		if (Object.keys(modelDownloadStatus).length === 3) {
-			toast.error('Maximum of 3 models can be downloaded simultaneously. Please try again later.');
+			toast.error(
+				$i18n.t('Maximum of 3 models can be downloaded simultaneously. Please try again later.')
+			);
 			return;
 		}
 
@@ -86,10 +164,12 @@
 				if (!data.success) {
 					toast.error(data.error);
 				} else {
-					toast.success(`Model '${modelName}' has been successfully downloaded.`);
+					toast.success(
+						$i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, { modelName })
+					);
 
 					const notification = new Notification($WEBUI_NAME, {
-						body: `Model '${modelName}' has been successfully downloaded.`,
+						body: $i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, { modelName }),
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
 
@@ -253,7 +333,7 @@
 		);
 
 		if (res) {
-			toast.success(`Deleted ${deleteModelTag}`);
+			toast.success($i18n.t(`Deleted {{deleteModelTag}}`, { deleteModelTag }));
 		}
 
 		deleteModelTag = '';
@@ -340,7 +420,7 @@
 				}
 			}
 		} else {
-			toast.error(`Model ${liteLLMModelName} already exists.`);
+			toast.error($i18n.t(`Model {{modelName}} already exists.`, { modelName: liteLLMModelName }));
 		}
 
 		liteLLMModelName = '';
@@ -379,7 +459,7 @@
 			return [];
 		});
 
-		if (OLLAMA_URLS.length > 1) {
+		if (OLLAMA_URLS.length > 0) {
 			selectedOllamaUrlIdx = 0;
 		}
 
@@ -389,33 +469,68 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-[23rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-[24rem]">
 		{#if ollamaVersion}
 			<div class="space-y-2 pr-1.5">
-				<div class="text-sm font-medium">Manage Ollama Models</div>
+				<div class="text-sm font-medium">{$i18n.t('Manage Ollama Models')}</div>
 
-				{#if OLLAMA_URLS.length > 1}
-					<div class="flex-1 pb-1">
-						<select
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={selectedOllamaUrlIdx}
-							placeholder="Select an Ollama instance"
-						>
-							{#each OLLAMA_URLS as url, idx}
-								<option value={idx} class="bg-gray-100 dark:bg-gray-700">{url}</option>
-							{/each}
-						</select>
+				{#if OLLAMA_URLS.length > 0}
+					<div class="flex gap-2">
+						<div class="flex-1 pb-1">
+							<select
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								bind:value={selectedOllamaUrlIdx}
+								placeholder={$i18n.t('Select an Ollama instance')}
+							>
+								{#each OLLAMA_URLS as url, idx}
+									<option value={idx} class="bg-gray-100 dark:bg-gray-700">{url}</option>
+								{/each}
+							</select>
+						</div>
+
+						<div>
+							<div class="flex w-full justify-end">
+								<Tooltip content="Update All Models" placement="top">
+									<button
+										class="p-2.5 flex gap-2 items-center bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+										on:click={() => {
+											updateModelsHandler();
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												d="M7 1a.75.75 0 0 1 .75.75V6h-1.5V1.75A.75.75 0 0 1 7 1ZM6.25 6v2.94L5.03 7.72a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06L7.75 8.94V6H10a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2.25Z"
+											/>
+											<path
+												d="M4.268 14A2 2 0 0 0 6 15h6a2 2 0 0 0 2-2v-3a2 2 0 0 0-1-1.732V11a3 3 0 0 1-3 3H4.268Z"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+							</div>
+						</div>
 					</div>
+
+					{#if updateModelId}
+						Updating "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}
+					{/if}
 				{/if}
 
 				<div class="space-y-2">
 					<div>
-						<div class=" mb-2 text-sm font-medium">Pull a model from Ollama.com</div>
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('Pull a model from Ollama.com')}</div>
 						<div class="flex w-full">
 							<div class="flex-1 mr-2">
 								<input
 									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-									placeholder="Enter model tag (e.g. mistral:7b)"
+									placeholder={$i18n.t('Enter model tag (e.g. {{modelTag}})', {
+										modelTag: 'mistral:7b'
+									})}
 									bind:value={modelTag}
 								/>
 							</div>
@@ -471,10 +586,11 @@
 						</div>
 
 						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
-							To access the available model names for downloading, <a
+							{$i18n.t('To access the available model names for downloading,')}
+							<a
 								class=" text-gray-500 dark:text-gray-300 font-medium underline"
 								href="https://ollama.com/library"
-								target="_blank">click here.</a
+								target="_blank">{$i18n.t('click here.')}</a
 							>
 						</div>
 
@@ -499,16 +615,16 @@
 					</div>
 
 					<div>
-						<div class=" mb-2 text-sm font-medium">Delete a model</div>
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('Delete a model')}</div>
 						<div class="flex w-full">
 							<div class="flex-1 mr-2">
 								<select
 									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={deleteModelTag}
-									placeholder="Select a model"
+									placeholder={$i18n.t('Select a model')}
 								>
 									{#if !deleteModelTag}
-										<option value="" disabled selected>Select a model</option>
+										<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 									{/if}
 									{#each $models.filter((m) => m.size != null && (selectedOllamaUrlIdx === null ? true : (m?.urls ?? []).includes(selectedOllamaUrlIdx))) as model}
 										<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
@@ -541,13 +657,13 @@
 
 					<div class="pt-1">
 						<div class="flex justify-between items-center text-xs">
-							<div class=" text-sm font-medium">Experimental</div>
+							<div class=" text-sm font-medium">{$i18n.t('Experimental')}</div>
 							<button
 								class=" text-xs font-medium text-gray-500"
 								type="button"
 								on:click={() => {
 									showExperimentalOllama = !showExperimentalOllama;
-								}}>{showExperimentalOllama ? 'Hide' : 'Show'}</button
+								}}>{showExperimentalOllama ? $i18n.t('Hide') : $i18n.t('Show')}</button
 							>
 						</div>
 					</div>
@@ -559,7 +675,7 @@
 							}}
 						>
 							<div class=" mb-2 flex w-full justify-between">
-								<div class="  text-sm font-medium">Upload a GGUF model</div>
+								<div class="  text-sm font-medium">{$i18n.t('Upload a GGUF model')}</div>
 
 								<button
 									class="p-1 px-3 text-xs flex rounded transition"
@@ -573,9 +689,9 @@
 									type="button"
 								>
 									{#if modelUploadMode === 'file'}
-										<span class="ml-2 self-center">File Mode</span>
+										<span class="ml-2 self-center">{$i18n.t('File Mode')}</span>
 									{:else}
-										<span class="ml-2 self-center">URL Mode</span>
+										<span class="ml-2 self-center">{$i18n.t('URL Mode')}</span>
 									{/if}
 								</button>
 							</div>
@@ -607,7 +723,7 @@
 												{#if modelInputFile && modelInputFile.length > 0}
 													{modelInputFile[0].name}
 												{:else}
-													Click here to select
+													{$i18n.t('Click here to select')}
 												{/if}
 											</button>
 										</div>
@@ -621,7 +737,7 @@
 												type="url"
 												required
 												bind:value={modelFileUrl}
-												placeholder="Type Hugging Face Resolve (Download) URL"
+												placeholder={$i18n.t('Type Hugging Face Resolve (Download) URL')}
 											/>
 										</div>
 									{/if}
@@ -681,7 +797,7 @@
 							{#if (modelUploadMode === 'file' && modelInputFile && modelInputFile.length > 0) || (modelUploadMode === 'url' && modelFileUrl !== '')}
 								<div>
 									<div>
-										<div class=" my-2.5 text-sm font-medium">Modelfile Content</div>
+										<div class=" my-2.5 text-sm font-medium">{$i18n.t('Modelfile Content')}</div>
 										<textarea
 											bind:value={modelFileContent}
 											class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
@@ -691,16 +807,17 @@
 								</div>
 							{/if}
 							<div class=" mt-1 text-xs text-gray-400 dark:text-gray-500">
-								To access the GGUF models available for downloading, <a
+								{$i18n.t('To access the GGUF models available for downloading,')}
+								<a
 									class=" text-gray-500 dark:text-gray-300 font-medium underline"
 									href="https://huggingface.co/models?search=gguf"
-									target="_blank">click here.</a
+									target="_blank">{$i18n.t('click here.')}</a
 								>
 							</div>
 
 							{#if uploadProgress !== null}
 								<div class="mt-2">
-									<div class=" mb-2 text-xs">Upload Progress</div>
+									<div class=" mb-2 text-xs">{$i18n.t('Upload Progress')}</div>
 
 									<div class="w-full rounded-full dark:bg-gray-800">
 										<div
@@ -727,13 +844,13 @@
 				<div>
 					<div class="mb-2">
 						<div class="flex justify-between items-center text-xs">
-							<div class=" text-sm font-medium">Manage LiteLLM Models</div>
+							<div class=" text-sm font-medium">{$i18n.t('Manage LiteLLM Models')}</div>
 							<button
 								class=" text-xs font-medium text-gray-500"
 								type="button"
 								on:click={() => {
 									showLiteLLM = !showLiteLLM;
-								}}>{showLiteLLM ? 'Hide' : 'Show'}</button
+								}}>{showLiteLLM ? $i18n.t('Hide') : $i18n.t('Show')}</button
 							>
 						</div>
 					</div>
@@ -741,14 +858,16 @@
 					{#if showLiteLLM}
 						<div>
 							<div class="flex justify-between items-center text-xs">
-								<div class=" text-sm font-medium">Add a model</div>
+								<div class=" text-sm font-medium">{$i18n.t('Add a model')}</div>
 								<button
 									class=" text-xs font-medium text-gray-500"
 									type="button"
 									on:click={() => {
 										showLiteLLMParams = !showLiteLLMParams;
 									}}
-									>{showLiteLLMParams ? 'Hide Additional Params' : 'Show Additional Params'}</button
+									>{showLiteLLMParams
+										? $i18n.t('Hide Additional Params')
+										: $i18n.t('Show Additional Params')}</button
 								>
 							</div>
 						</div>
@@ -758,7 +877,7 @@
 								<div class="flex-1 mr-2">
 									<input
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-										placeholder="Enter LiteLLM Model (litellm_params.model)"
+										placeholder={$i18n.t('Enter LiteLLM Model (litellm_params.model)')}
 										bind:value={liteLLMModel}
 										autocomplete="off"
 									/>
@@ -785,7 +904,7 @@
 
 							{#if showLiteLLMParams}
 								<div>
-									<div class=" mb-1.5 text-sm font-medium">Model Name</div>
+									<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Model Name')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
@@ -799,12 +918,14 @@
 								</div>
 
 								<div>
-									<div class=" mb-1.5 text-sm font-medium">API Base URL</div>
+									<div class=" mb-1.5 text-sm font-medium">{$i18n.t('API Base URL')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter LiteLLM API Base URL (litellm_params.api_base)"
+												placeholder={$i18n.t(
+													'Enter LiteLLM API Base URL (litellm_params.api_base)'
+												)}
 												bind:value={liteLLMAPIBase}
 												autocomplete="off"
 											/>
@@ -813,12 +934,12 @@
 								</div>
 
 								<div>
-									<div class=" mb-1.5 text-sm font-medium">API Key</div>
+									<div class=" mb-1.5 text-sm font-medium">{$i18n.t('API Key')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter LiteLLM API Key (litellm_params.api_key)"
+												placeholder={$i18n.t('Enter LiteLLM API Key (litellm_params.api_key)')}
 												bind:value={liteLLMAPIKey}
 												autocomplete="off"
 											/>
@@ -827,12 +948,12 @@
 								</div>
 
 								<div>
-									<div class="mb-1.5 text-sm font-medium">API RPM</div>
+									<div class="mb-1.5 text-sm font-medium">{$i18n.t('API RPM')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter LiteLLM API RPM (litellm_params.rpm)"
+												placeholder={$i18n.t('Enter LiteLLM API RPM (litellm_params.rpm)')}
 												bind:value={liteLLMRPM}
 												autocomplete="off"
 											/>
@@ -841,12 +962,12 @@
 								</div>
 
 								<div>
-									<div class="mb-1.5 text-sm font-medium">Max Tokens</div>
+									<div class="mb-1.5 text-sm font-medium">{$i18n.t('Max Tokens')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter Max Tokens (litellm_params.max_tokens)"
+												placeholder={$i18n.t('Enter Max Tokens (litellm_params.max_tokens)')}
 												bind:value={liteLLMMaxTokens}
 												type="number"
 												min="1"
@@ -859,27 +980,27 @@
 						</div>
 
 						<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
-							Not sure what to add?
+							{$i18n.t('Not sure what to add?')}
 							<a
 								class=" text-gray-300 font-medium underline"
 								href="https://litellm.vercel.app/docs/proxy/configs#quick-start"
 								target="_blank"
 							>
-								Click here for help.
+								{$i18n.t('Click here for help.')}
 							</a>
 						</div>
 
 						<div>
-							<div class=" mb-2.5 text-sm font-medium">Delete a model</div>
+							<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Delete a model')}</div>
 							<div class="flex w-full">
 								<div class="flex-1 mr-2">
 									<select
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={deleteLiteLLMModelId}
-										placeholder="Select a model"
+										placeholder={$i18n.t('Select a model')}
 									>
 										{#if !deleteLiteLLMModelId}
-											<option value="" disabled selected>Select a model</option>
+											<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 										{/if}
 										{#each liteLLMModelInfo as model}
 											<option value={model.model_info.id} class="bg-gray-100 dark:bg-gray-700"
@@ -912,88 +1033,6 @@
 					{/if}
 				</div>
 			</div>
-
-			<!-- <div class="mt-2 space-y-3 pr-1.5">
-				<div>
-					<div class=" mb-2.5 text-sm font-medium">Add LiteLLM Model</div>
-					<div class="flex w-full mb-2">
-						<div class="flex-1">
-							<input
-								class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-								placeholder="Enter LiteLLM Model (e.g. ollama/mistral)"
-								bind:value={liteLLMModel}
-								autocomplete="off"
-							/>
-						</div>
-					</div>
-
-					<div class="flex justify-between items-center text-sm">
-						<div class="  font-medium">Advanced Model Params</div>
-						<button
-							class=" text-xs font-medium text-gray-500"
-							type="button"
-							on:click={() => {
-								showLiteLLMParams = !showLiteLLMParams;
-							}}>{showLiteLLMParams ? 'Hide' : 'Show'}</button
-						>
-					</div>
-
-					{#if showLiteLLMParams}
-						<div>
-							<div class=" mb-2.5 text-sm font-medium">LiteLLM API Key</div>
-							<div class="flex w-full">
-								<div class="flex-1">
-									<input
-										class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-										placeholder="Enter LiteLLM API Key (e.g. os.environ/AZURE_API_KEY_CA)"
-										bind:value={liteLLMAPIKey}
-										autocomplete="off"
-									/>
-								</div>
-							</div>
-						</div>
-
-						<div>
-							<div class=" mb-2.5 text-sm font-medium">LiteLLM API Base URL</div>
-							<div class="flex w-full">
-								<div class="flex-1">
-									<input
-										class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-										placeholder="Enter LiteLLM API Base URL"
-										bind:value={liteLLMAPIBase}
-										autocomplete="off"
-									/>
-								</div>
-							</div>
-						</div>
-
-						<div>
-							<div class=" mb-2.5 text-sm font-medium">LiteLLM API RPM</div>
-							<div class="flex w-full">
-								<div class="flex-1">
-									<input
-										class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-										placeholder="Enter LiteLLM API RPM"
-										bind:value={liteLLMRPM}
-										autocomplete="off"
-									/>
-								</div>
-							</div>
-						</div>
-					{/if}
-
-					<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-						Not sure what to add?
-						<a
-							class=" text-gray-300 font-medium underline"
-							href="https://litellm.vercel.app/docs/proxy/configs#quick-start"
-							target="_blank"
-						>
-							Click here for help.
-						</a>
-					</div>
-				</div>
-			</div> -->
 		</div>
 	</div>
 </div>

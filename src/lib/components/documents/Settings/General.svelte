@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { getDocs } from '$lib/apis/documents';
 	import {
-		getChunkParams,
+		getRAGConfig,
+		updateRAGConfig,
 		getQuerySettings,
 		scanDocs,
-		updateChunkParams,
 		updateQuerySettings
 	} from '$lib/apis/rag';
 	import { documents } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
 
@@ -17,6 +19,7 @@
 
 	let chunkSize = 0;
 	let chunkOverlap = 0;
+	let pdfExtractImages = true;
 
 	let querySettings = {
 		template: '',
@@ -30,21 +33,29 @@
 
 		if (res) {
 			await documents.set(await getDocs(localStorage.token));
-			toast.success('Scan complete!');
+			toast.success($i18n.t('Scan complete!'));
 		}
 	};
 
 	const submitHandler = async () => {
-		const res = await updateChunkParams(localStorage.token, chunkSize, chunkOverlap);
+		const res = await updateRAGConfig(localStorage.token, {
+			pdf_extract_images: pdfExtractImages,
+			chunk: {
+				chunk_overlap: chunkOverlap,
+				chunk_size: chunkSize
+			}
+		});
 		querySettings = await updateQuerySettings(localStorage.token, querySettings);
 	};
 
 	onMount(async () => {
-		const res = await getChunkParams(localStorage.token);
+		const res = await getRAGConfig(localStorage.token);
 
 		if (res) {
-			chunkSize = res.chunk_size;
-			chunkOverlap = res.chunk_overlap;
+			pdfExtractImages = res.pdf_extract_images;
+
+			chunkSize = res.chunk.chunk_size;
+			chunkOverlap = res.chunk.chunk_overlap;
 		}
 
 		querySettings = await getQuerySettings(localStorage.token);
@@ -60,10 +71,12 @@
 >
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 		<div>
-			<div class=" mb-2 text-sm font-medium">General Settings</div>
+			<div class=" mb-2 text-sm font-medium">{$i18n.t('General Settings')}</div>
 
 			<div class="  flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Scan for documents from '/data/docs'</div>
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Scan for documents from {{path}}', { path: '/data/docs' })}
+				</div>
 
 				<button
 					class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded flex flex-row space-x-1 items-center {loading
@@ -76,7 +89,7 @@
 					type="button"
 					disabled={loading}
 				>
-					<div class="self-center font-medium">Scan</div>
+					<div class="self-center font-medium">{$i18n.t('Scan')}</div>
 
 					<!-- <svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -125,17 +138,17 @@
 		<hr class=" dark:border-gray-700" />
 
 		<div class=" ">
-			<div class=" text-sm font-medium">Chunk Params</div>
+			<div class=" text-sm font-medium">{$i18n.t('Chunk Params')}</div>
 
 			<div class=" flex">
 				<div class="  flex w-full justify-between">
-					<div class="self-center text-xs font-medium min-w-fit">Chunk Size</div>
+					<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('Chunk Size')}</div>
 
 					<div class="self-center p-3">
 						<input
 							class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
 							type="number"
-							placeholder="Enter Chunk Size"
+							placeholder={$i18n.t('Enter Chunk Size')}
 							bind:value={chunkSize}
 							autocomplete="off"
 							min="0"
@@ -144,13 +157,13 @@
 				</div>
 
 				<div class="flex w-full">
-					<div class=" self-center text-xs font-medium min-w-fit">Chunk Overlap</div>
+					<div class=" self-center text-xs font-medium min-w-fit">{$i18n.t('Chunk Overlap')}</div>
 
 					<div class="self-center p-3">
 						<input
 							class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
 							type="number"
-							placeholder="Enter Chunk Overlap"
+							placeholder={$i18n.t('Enter Chunk Overlap')}
 							bind:value={chunkOverlap}
 							autocomplete="off"
 							min="0"
@@ -159,17 +172,33 @@
 				</div>
 			</div>
 
-			<div class=" text-sm font-medium">Query Params</div>
+			<div>
+				<div class="flex justify-between items-center text-xs">
+					<div class=" text-xs font-medium">{$i18n.t('PDF Extract Images (OCR)')}</div>
+
+					<button
+						class=" text-xs font-medium text-gray-500"
+						type="button"
+						on:click={() => {
+							pdfExtractImages = !pdfExtractImages;
+						}}>{pdfExtractImages ? $i18n.t('On') : $i18n.t('Off')}</button
+					>
+				</div>
+			</div>
+		</div>
+
+		<div>
+			<div class=" text-sm font-medium">{$i18n.t('Query Params')}</div>
 
 			<div class=" flex">
 				<div class="  flex w-full justify-between">
-					<div class="self-center text-xs font-medium flex-1">Top K</div>
+					<div class="self-center text-xs font-medium flex-1">{$i18n.t('Top K')}</div>
 
 					<div class="self-center p-3">
 						<input
 							class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
 							type="number"
-							placeholder="Enter Top K"
+							placeholder={$i18n.t('Enter Top K')}
 							bind:value={querySettings.k}
 							autocomplete="off"
 							min="0"
@@ -178,23 +207,23 @@
 				</div>
 
 				<!-- <div class="flex w-full">
-					<div class=" self-center text-xs font-medium min-w-fit">Chunk Overlap</div>
-
-					<div class="self-center p-3">
-						<input
-							class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
-							type="number"
-							placeholder="Enter Chunk Overlap"
-							bind:value={chunkOverlap}
-							autocomplete="off"
-							min="0"
-						/>
-					</div>
-				</div> -->
+						<div class=" self-center text-xs font-medium min-w-fit">Chunk Overlap</div>
+	
+						<div class="self-center p-3">
+							<input
+								class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+								type="number"
+								placeholder="Enter Chunk Overlap"
+								bind:value={chunkOverlap}
+								autocomplete="off"
+								min="0"
+							/>
+						</div>
+					</div> -->
 			</div>
 
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">RAG Template</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('RAG Template')}</div>
 				<textarea
 					bind:value={querySettings.template}
 					class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
@@ -209,7 +238,7 @@
 			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 			type="submit"
 		>
-			Save
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </form>

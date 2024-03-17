@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -8,6 +9,8 @@
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import TagInput from '../common/Tags/TagInput.svelte';
 	import Tags from '../common/Tags.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let initNewChat: Function;
 	export let title: string = $WEBUI_NAME;
@@ -26,7 +29,7 @@
 		const chat = (await getChatById(localStorage.token, $chatId)).chat;
 		console.log('share', chat);
 
-		toast.success('Redirecting you to OpenWebUI Community');
+		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 		const url = 'https://openwebui.com';
 		// const url = 'http://localhost:5173';
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { models, user } from '$lib/stores';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { getOllamaUrls, getOllamaVersion, updateOllamaUrls } from '$lib/apis/ollama';
@@ -11,6 +11,8 @@
 		updateOpenAIUrls
 	} from '$lib/apis/openai';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	export let getModels: Function;
 
@@ -42,7 +44,7 @@
 		});
 
 		if (ollamaVersion) {
-			toast.success('Server connection verified');
+			toast.success($i18n.t('Server connection verified'));
 			await models.set(await getModels());
 		}
 	};
@@ -63,17 +65,17 @@
 		dispatch('save');
 	}}
 >
-	<div class="  pr-1.5 overflow-y-scroll max-h-[20.5rem] space-y-3">
+	<div class="  pr-1.5 overflow-y-scroll max-h-[22rem] space-y-3">
 		<div class=" space-y-3">
 			<div class="mt-2 space-y-2 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">OpenAI API</div>
+					<div class="  font-medium">{$i18n.t('OpenAI API')}</div>
 					<button
 						class=" text-xs font-medium text-gray-500"
 						type="button"
 						on:click={() => {
 							showOpenAI = !showOpenAI;
-						}}>{showOpenAI ? 'Hide' : 'Show'}</button
+						}}>{showOpenAI ? $i18n.t('Hide') : $i18n.t('Show')}</button
 					>
 				</div>
 
@@ -84,7 +86,7 @@
 								<div class="flex-1">
 									<input
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-										placeholder="API Base URL"
+										placeholder={$i18n.t('API Base URL')}
 										bind:value={url}
 										autocomplete="off"
 									/>
@@ -93,7 +95,7 @@
 								<div class="flex-1">
 									<input
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-										placeholder="API Key"
+										placeholder={$i18n.t('API Key')}
 										bind:value={OPENAI_API_KEYS[idx]}
 										autocomplete="off"
 									/>
@@ -143,7 +145,8 @@
 								</div>
 							</div>
 							<div class=" mb-1 text-xs text-gray-400 dark:text-gray-500">
-								WebUI will make requests to <span class=" text-gray-200">'{url}/models'</span>
+								{$i18n.t('WebUI will make requests to')}
+								<span class=" text-gray-200">'{url}/models'</span>
 							</div>
 						{/each}
 					</div>
@@ -154,7 +157,7 @@
 		<hr class=" dark:border-gray-700" />
 
 		<div>
-			<div class=" mb-2.5 text-sm font-medium">Ollama Base URL</div>
+			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama Base URL')}</div>
 			<div class="flex w-full gap-1.5">
 				<div class="flex-1 flex flex-col gap-2">
 					{#each OLLAMA_BASE_URLS as url, idx}
@@ -233,13 +236,13 @@
 			</div>
 
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				Trouble accessing Ollama?
+				{$i18n.t('Trouble accessing Ollama?')}
 				<a
-					class=" text-gray-300 font-medium"
+					class=" text-gray-300 font-medium underline"
 					href="https://github.com/open-webui/open-webui#troubleshooting"
 					target="_blank"
 				>
-					Click here for help.
+					{$i18n.t('Click here for help.')}
 				</a>
 			</div>
 		</div>
@@ -247,10 +250,10 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
+			class="  px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			type="submit"
 		>
-			Save
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </form>

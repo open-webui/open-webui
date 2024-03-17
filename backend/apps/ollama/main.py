@@ -15,7 +15,7 @@ import asyncio
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import decode_token, get_current_user, get_admin_user
-from config import OLLAMA_BASE_URLS
+from config import OLLAMA_BASE_URLS, MODEL_FILTER_ENABLED, MODEL_FILTER_LIST
 
 from typing import Optional, List, Union
 
@@ -28,6 +28,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
+app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.MODELS = {}
@@ -119,6 +123,7 @@ async def get_all_models():
             map(lambda response: response["models"], responses)
         )
     }
+
     app.state.MODELS = {model["model"]: model for model in models["models"]}
 
     return models
@@ -129,9 +134,19 @@ async def get_all_models():
 async def get_ollama_tags(
     url_idx: Optional[int] = None, user=Depends(get_current_user)
 ):
-
     if url_idx == None:
-        return await get_all_models()
+        models = await get_all_models()
+
+        if app.state.MODEL_FILTER_ENABLED:
+            if user.role == "user":
+                models["models"] = list(
+                    filter(
+                        lambda model: model["name"] in app.state.MODEL_FILTER_LIST,
+                        models["models"],
+                    )
+                )
+                return models
+        return models
     else:
         url = app.state.OLLAMA_BASE_URLS[url_idx]
         try:
@@ -167,11 +182,17 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
         responses = await asyncio.gather(*tasks)
         responses = list(filter(lambda x: x is not None, responses))
 
-        lowest_version = min(
-            responses, key=lambda x: tuple(map(int, x["version"].split(".")))
-        )
+        if len(responses) > 0:
+            lowest_version = min(
+                responses, key=lambda x: tuple(map(int, x["version"].split(".")))
+            )
 
-        return {"version": lowest_version["version"]}
+            return {"version": lowest_version["version"]}
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=ERROR_MESSAGES.OLLAMA_NOT_FOUND,
+            )
     else:
         url = app.state.OLLAMA_BASE_URLS[url_idx]
         try:

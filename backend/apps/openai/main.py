@@ -18,7 +18,13 @@ from utils.utils import (
     get_verified_user,
     get_admin_user,
 )
-from config import OPENAI_API_BASE_URLS, OPENAI_API_KEYS, CACHE_DIR
+from config import (
+    OPENAI_API_BASE_URLS,
+    OPENAI_API_KEYS,
+    CACHE_DIR,
+    MODEL_FILTER_ENABLED,
+    MODEL_FILTER_LIST,
+)
 from typing import List, Optional
 
 
@@ -33,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
+app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.OPENAI_API_KEYS = OPENAI_API_KEYS
@@ -102,6 +111,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEYS[idx]}"
         headers["Content-Type"] = "application/json"
 
+        r = None
         try:
             r = requests.post(
                 url=f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech",
@@ -134,7 +144,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 except:
                     error_detail = f"External: {e}"
 
-            raise HTTPException(status_code=r.status_code, detail=error_detail)
+            raise HTTPException(
+                status_code=r.status_code if r else 500, detail=error_detail
+            )
 
     except ValueError:
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
@@ -170,30 +182,48 @@ def merge_models_lists(model_lists):
 
 async def get_all_models():
     print("get_all_models")
-    tasks = [
-        fetch_url(f"{url}/models", app.state.OPENAI_API_KEYS[idx])
-        for idx, url in enumerate(app.state.OPENAI_API_BASE_URLS)
-    ]
-    responses = await asyncio.gather(*tasks)
-    responses = list(filter(lambda x: x is not None and "error" not in x, responses))
-    models = {
-        "data": merge_models_lists(
-            list(map(lambda response: response["data"], responses))
+
+    if len(app.state.OPENAI_API_KEYS) == 1 and app.state.OPENAI_API_KEYS[0] == "":
+        models = {"data": []}
+    else:
+        tasks = [
+            fetch_url(f"{url}/models", app.state.OPENAI_API_KEYS[idx])
+            for idx, url in enumerate(app.state.OPENAI_API_BASE_URLS)
+        ]
+        responses = await asyncio.gather(*tasks)
+        responses = list(
+            filter(lambda x: x is not None and "error" not in x, responses)
         )
-    }
-    app.state.MODELS = {model["id"]: model for model in models["data"]}
+        models = {
+            "data": merge_models_lists(
+                list(map(lambda response: response["data"], responses))
+            )
+        }
+        app.state.MODELS = {model["id"]: model for model in models["data"]}
 
-    return models
+        return models
 
 
-# , user=Depends(get_current_user)
 @app.get("/models")
 @app.get("/models/{url_idx}")
-async def get_models(url_idx: Optional[int] = None):
+async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_user)):
     if url_idx == None:
-        return await get_all_models()
+        models = await get_all_models()
+        if app.state.MODEL_FILTER_ENABLED:
+            if user.role == "user":
+                models["data"] = list(
+                    filter(
+                        lambda model: model["id"] in app.state.MODEL_FILTER_LIST,
+                        models["data"],
+                    )
+                )
+                return models
+        return models
     else:
         url = app.state.OPENAI_API_BASE_URLS[url_idx]
+
+        r = None
+
         try:
             r = requests.request(method="GET", url=f"{url}/models")
             r.raise_for_status()
@@ -266,6 +296,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     headers["Authorization"] = f"Bearer {key}"
     headers["Content-Type"] = "application/json"
 
+    r = None
+
     try:
         r = requests.request(
             method=request.method,
@@ -298,4 +330,6 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             except:
                 error_detail = f"External: {e}"
 
-        raise HTTPException(status_code=r.status_code, detail=error_detail)
+        raise HTTPException(
+            status_code=r.status_code if r else 500, detail=error_detail
+        )

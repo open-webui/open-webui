@@ -209,10 +209,6 @@ OLLAMA_API_BASE_URL = os.environ.get(
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
 
-if ENV == "prod":
-    if OLLAMA_BASE_URL == "/ollama":
-        OLLAMA_BASE_URL = "http://host.docker.internal:11434"
-
 
 if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     OLLAMA_BASE_URL = (
@@ -220,6 +216,11 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
         if OLLAMA_API_BASE_URL.endswith("/api")
         else OLLAMA_API_BASE_URL
     )
+
+if ENV == "prod":
+    if OLLAMA_BASE_URL == "/ollama":
+        OLLAMA_BASE_URL = "http://host.docker.internal:11434"
+
 
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != "" else OLLAMA_BASE_URL
@@ -234,8 +235,6 @@ OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(";")]
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 
-if OPENAI_API_KEY == "":
-    OPENAI_API_KEY = "none"
 
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
@@ -290,6 +289,11 @@ DEFAULT_PROMPT_SUGGESTIONS = (
 
 DEFAULT_USER_ROLE = os.getenv("DEFAULT_USER_ROLE", "pending")
 USER_PERMISSIONS = {"chat": {"deletion": True}}
+
+
+MODEL_FILTER_ENABLED = os.environ.get("MODEL_FILTER_ENABLED", False)
+MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
+MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 
 
 ####################################

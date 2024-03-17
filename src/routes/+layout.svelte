@@ -11,6 +11,9 @@
 	import '../tailwind.css';
 	import 'tippy.js/dist/tippy.css';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import i18n from '$lib/i18n';
+
+	setContext('i18n', i18n);
 
 	let loaded = false;
 
