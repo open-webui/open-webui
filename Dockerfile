@@ -8,7 +8,7 @@ WORKDIR /app
 RUN wget "https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz" -O - | \
     tar -xzf - -C /app
 
-COPY package.json package-lock.json ./
+COPY package.json ./
 RUN npm ci
 
 COPY . .
