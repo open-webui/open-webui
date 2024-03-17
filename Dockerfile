@@ -9,7 +9,7 @@ RUN wget "https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.
     tar -xzf - -C /app
 
 COPY package.json ./
-RUN npm ci
+RUN npm i
 
 COPY . .
 RUN npm run build
