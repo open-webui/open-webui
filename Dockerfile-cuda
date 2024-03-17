@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1
+ARG CUDA_VERSION=12.3.2
 
 ######## WebUI frontend ########
 FROM node:21-alpine3.19 as build
@@ -23,8 +24,8 @@ RUN npm run build
 #RUN OPENWEBUI_CPU_TARGET="cpu_avx2" sh gen_linux.sh
 
 ######## CUDA WebUI backend ########
-ARG CUDA_VERSION=12.3.2
-FROM --platform=linux/amd64 nvidia/cuda:$CUDA_VERSION-devel-ubuntu22.04 AS cuda-build-amd64
+FROM --platform=linux/amd64 nvidia/cuda:"$CUDA_VERSION"-devel-ubuntu22.04 AS cuda-build-amd64
+
 # Set environment variables for NVIDIA Container Toolkit
 ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64 \
     NVIDIA_DRIVER_CAPABILITIES=all \
