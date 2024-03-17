@@ -24,7 +24,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
 	});
 });
 
-export function setTheme(theme){
+export function setTheme(theme) {
 	rawThemeSetting.set(theme);
 	localStorage.setItem('theme', theme);
 }

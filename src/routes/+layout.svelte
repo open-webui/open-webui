@@ -18,7 +18,7 @@
 	let loaded = false;
 
 	onMount(async () => {
-		setTheme(localStorage.theme)
+		setTheme(localStorage.theme);
 		// Check Backend Status
 		const backendConfig = await getBackendConfig();
 

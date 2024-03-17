@@ -21,8 +21,7 @@
 				} else if (localStorage.theme && localStorage.theme === 'system') {
 					systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
 					document.documentElement.classList.add(systemTheme ? 'dark' : 'light');
-				}
-				else {
+				} else {
 					document.documentElement.classList.add('dark');
 				}
 
@@ -36,7 +35,7 @@
 							document.documentElement.classList.remove('dark');
 						}
 					}
-				});		
+				});
 			})();
 		</script>
 

@@ -19,7 +19,7 @@
 	let selectedTheme = 'system';
 	let actualTheme: string;
 	$: actualTheme = $theme;
-  
+
 	let languages = [];
 	let lang = $i18n.language;
 	let notificationEnabled = false;
@@ -27,26 +27,26 @@
 
 	let showAdvanced = false;
 
-	function applyTheme(theme: string) { // only apply visually
-        let themeToApply = theme;
-        if (theme === 'system') {
-            themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
+	function applyTheme(theme: string) {
+		let themeToApply = theme;
+		if (theme === 'system') {
+			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		}
 
-        themes
-            .filter((e) => e !== themeToApply)
-            .forEach((e) => {
-                e.split(' ').forEach((e) => {
-                    document.documentElement.classList.remove(e);
-                });
-            });
+		themes
+			.filter((e) => e !== themeToApply)
+			.forEach((e) => {
+				e.split(' ').forEach((e) => {
+					document.documentElement.classList.remove(e);
+				});
+			});
 
-        themeToApply.split(' ').forEach((e) => {
-            document.documentElement.classList.add(e);
-        });
+		themeToApply.split(' ').forEach((e) => {
+			document.documentElement.classList.add(e);
+		});
 
-		console.log(theme)
-    }
+		console.log(theme);
+	}
 
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
@@ -116,11 +116,11 @@
 	});
 
 	function handleThemeChange(newTheme: string) {
-        selectedTheme = newTheme;
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        applyTheme(newTheme);
-    }
+		selectedTheme = newTheme;
+		setTheme(newTheme);
+		localStorage.setItem('theme', newTheme);
+		applyTheme(newTheme);
+	}
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
@@ -135,7 +135,7 @@
 						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
 						bind:value={selectedTheme}
 						placeholder="Select a theme"
-						on:change="{() => handleThemeChange(selectedTheme)}"
+						on:change={() => handleThemeChange(selectedTheme)}
 					>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
 						<option value="dark">🌑 {$i18n.t('Dark')}</option>
