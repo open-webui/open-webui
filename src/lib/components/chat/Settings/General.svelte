@@ -4,7 +4,7 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, user } from '$lib/stores';
+	import { models, user, theme } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -15,7 +15,8 @@
 
 	// General
 	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
-	let theme = 'dark';
+	let selectedTheme = 'system';
+
 	let languages = [];
 	let lang = $i18n.language;
 	let notificationEnabled = false;
@@ -68,10 +69,11 @@
 	};
 
 	onMount(async () => {
+		selectedTheme = localStorage.theme ?? 'system';
+
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 		languages = await getLanguages();
 
-		theme = localStorage.theme ?? 'dark';
 		notificationEnabled = settings.notificationEnabled ?? false;
 		system = settings.system ?? '';
 
@@ -87,6 +89,35 @@
 		options = { ...options, ...settings.options };
 		options.stop = (settings?.options?.stop ?? []).join(',');
 	});
+
+	const applyTheme = (_theme: string) => {
+		let themeToApply = _theme;
+
+		if (_theme === 'system') {
+			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		}
+
+		themes
+			.filter((e) => e !== themeToApply)
+			.forEach((e) => {
+				e.split(' ').forEach((e) => {
+					document.documentElement.classList.remove(e);
+				});
+			});
+
+		themeToApply.split(' ').forEach((e) => {
+			document.documentElement.classList.add(e);
+		});
+
+		console.log(_theme);
+	};
+
+	const themeChangeHandler = (_theme: string) => {
+		theme.set(_theme);
+		localStorage.setItem('theme', _theme);
+
+		applyTheme(_theme);
+	};
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
@@ -99,26 +130,11 @@
 				<div class="flex items-center relative">
 					<select
 						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
-						bind:value={theme}
+						bind:value={selectedTheme}
 						placeholder="Select a theme"
-						on:change={(e) => {
-							localStorage.theme = theme;
-
-							themes
-								.filter((e) => e !== theme)
-								.forEach((e) => {
-									e.split(' ').forEach((e) => {
-										document.documentElement.classList.remove(e);
-									});
-								});
-
-							theme.split(' ').forEach((e) => {
-								document.documentElement.classList.add(e);
-							});
-
-							console.log(theme);
-						}}
+						on:change={() => themeChangeHandler(selectedTheme)}
 					>
+						<option value="system">⚙️ {$i18n.t('System')}</option>
 						<option value="dark">🌑 {$i18n.t('Dark')}</option>
 						<option value="light">☀️ {$i18n.t('Light')}</option>
 						<option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>

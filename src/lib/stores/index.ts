@@ -7,7 +7,7 @@ export const config = writable(undefined);
 export const user = writable(undefined);
 
 // Frontend
-export const theme = writable('dark');
+export const theme = writable('system');
 
 export const chatId = writable('');
 
