@@ -16,8 +16,6 @@
 	// General
 	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
 	let selectedTheme = 'system';
-	let actualTheme: string;
-	$: actualTheme = $theme;
 
 	let languages = [];
 	let lang = $i18n.language;
@@ -72,7 +70,6 @@
 
 	onMount(async () => {
 		selectedTheme = localStorage.getItem('theme') ?? 'system';
-		applyTheme(selectedTheme);
 
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 		languages = await getLanguages();
