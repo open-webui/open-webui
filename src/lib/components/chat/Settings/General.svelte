@@ -69,7 +69,7 @@
 	};
 
 	onMount(async () => {
-		selectedTheme = localStorage.getItem('theme') ?? 'system';
+		selectedTheme = localStorage.theme ?? 'system';
 
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 		languages = await getLanguages();
