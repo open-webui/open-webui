@@ -16,12 +16,14 @@ aiohttp
 peewee
 bcrypt
 
-litellm
+litellm==1.30.7
+argon2-cffi
 apscheduler
 google-generativeai
 
 langchain
 langchain-community
+fake_useragent
 chromadb
 sentence_transformers
 pypdf
@@ -33,6 +35,9 @@ pandas
 openpyxl
 pyxlsb
 xlrd
+
+opencv-python-headless
+rapidocr-onnxruntime
 
 faster-whisper
 

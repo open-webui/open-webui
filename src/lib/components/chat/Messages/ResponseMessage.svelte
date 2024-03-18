@@ -6,6 +6,7 @@
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
 
+	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, tick } from 'svelte';
 
@@ -22,6 +23,7 @@
 	import CodeBlock from './CodeBlock.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let modelfiles = [];
 	export let message;
@@ -40,7 +42,7 @@
 
 	let edit = false;
 	let editedContent = '';
-
+	let editTextAreaElement: HTMLTextAreaElement;
 	let tooltipInstance = null;
 
 	let sentencesAudio = {};
@@ -247,10 +249,9 @@
 		editedContent = message.content;
 
 		await tick();
-		const editElement = document.getElementById(`message-edit-${message.id}`);
 
-		editElement.style.height = '';
-		editElement.style.height = `${editElement.scrollHeight}px`;
+		editTextAreaElement.style.height = '';
+		editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
 	};
 
 	const editMessageConfirmHandler = async () => {
@@ -276,13 +277,15 @@
 
 	const generateImage = async (message) => {
 		generatingImage = true;
-		const res = await imageGenerations(localStorage.token, message.content);
+		const res = await imageGenerations(localStorage.token, message.content).catch((error) => {
+			toast.error(error);
+		});
 		console.log(res);
 
 		if (res) {
-			message.files = res.images.map((image) => ({
+			message.files = res.map((image) => ({
 				type: 'image',
-				url: `data:image/png;base64,${image}`
+				url: `${image.url}`
 			}));
 
 			dispatch('save', message);
@@ -341,9 +344,11 @@
 							<div class=" w-full">
 								<textarea
 									id="message-edit-{message.id}"
+									bind:this={editTextAreaElement}
 									class=" bg-transparent outline-none w-full resize-none"
 									bind:value={editedContent}
 									on:input={(e) => {
+										e.target.style.height = '';
 										e.target.style.height = `${e.target.scrollHeight}px`;
 									}}
 								/>
@@ -462,189 +467,125 @@
 											</div>
 										{/if}
 
-										<button
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												editMessageHandler();
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-												/>
-											</svg>
-										</button>
-
-										<button
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition copy-response-button"
-											on:click={() => {
-												copyToClipboard(message.content);
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
-												/>
-											</svg>
-										</button>
-
-										<button
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1 rounded {message.rating === 1
-												? 'bg-gray-100 dark:bg-gray-800'
-												: ''} dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												rateMessage(message.id, 1);
-											}}
-										>
-											<svg
-												stroke="currentColor"
-												fill="none"
-												stroke-width="2"
-												viewBox="0 0 24 24"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												class="w-4 h-4"
-												xmlns="http://www.w3.org/2000/svg"
-												><path
-													d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-												/></svg
-											>
-										</button>
-										<button
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1 rounded {message.rating === -1
-												? 'bg-gray-100 dark:bg-gray-800'
-												: ''} dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												rateMessage(message.id, -1);
-											}}
-										>
-											<svg
-												stroke="currentColor"
-												fill="none"
-												stroke-width="2"
-												viewBox="0 0 24 24"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												class="w-4 h-4"
-												xmlns="http://www.w3.org/2000/svg"
-												><path
-													d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
-												/></svg
-											>
-										</button>
-
-										<button
-											id="speak-button-{message.id}"
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												if (!loadingSpeech) {
-													toggleSpeakMessage(message);
-												}
-											}}
-										>
-											{#if loadingSpeech}
-												<svg
-													class=" w-4 h-4"
-													fill="currentColor"
-													viewBox="0 0 24 24"
-													xmlns="http://www.w3.org/2000/svg"
-													><style>
-														.spinner_S1WN {
-															animation: spinner_MGfb 0.8s linear infinite;
-															animation-delay: -0.8s;
-														}
-														.spinner_Km9P {
-															animation-delay: -0.65s;
-														}
-														.spinner_JApP {
-															animation-delay: -0.5s;
-														}
-														@keyframes spinner_MGfb {
-															93.75%,
-															100% {
-																opacity: 0.2;
-															}
-														}
-													</style><circle class="spinner_S1WN" cx="4" cy="12" r="3" /><circle
-														class="spinner_S1WN spinner_Km9P"
-														cx="12"
-														cy="12"
-														r="3"
-													/><circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" /></svg
-												>
-											{:else if speaking}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="1.5"
-													stroke="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
-													/>
-												</svg>
-											{:else}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="1.5"
-													stroke="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
-													/>
-												</svg>
-											{/if}
-										</button>
-
-										{#if $config.images}
+										<Tooltip content="Edit" placement="bottom">
 											<button
 												class="{isLastMessage
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
 												on:click={() => {
-													if (!generatingImage) {
-														generateImage(message);
+													editMessageHandler();
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="2"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
+
+										<Tooltip content="Copy" placement="bottom">
+											<button
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition copy-response-button"
+												on:click={() => {
+													copyToClipboard(message.content);
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="2"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
+
+										<Tooltip content="Good Response" placement="bottom">
+											<button
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1 rounded {message.rating === 1
+													? 'bg-gray-100 dark:bg-gray-800'
+													: ''} dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													rateMessage(message.id, 1);
+												}}
+											>
+												<svg
+													stroke="currentColor"
+													fill="none"
+													stroke-width="2"
+													viewBox="0 0 24 24"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													class="w-4 h-4"
+													xmlns="http://www.w3.org/2000/svg"
+													><path
+														d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
+													/></svg
+												>
+											</button>
+										</Tooltip>
+
+										<Tooltip content="Bad Response" placement="bottom">
+											<button
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1 rounded {message.rating === -1
+													? 'bg-gray-100 dark:bg-gray-800'
+													: ''} dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													rateMessage(message.id, -1);
+												}}
+											>
+												<svg
+													stroke="currentColor"
+													fill="none"
+													stroke-width="2"
+													viewBox="0 0 24 24"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													class="w-4 h-4"
+													xmlns="http://www.w3.org/2000/svg"
+													><path
+														d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
+													/></svg
+												>
+											</button>
+										</Tooltip>
+
+										<Tooltip content="Read Aloud" placement="bottom">
+											<button
+												id="speak-button-{message.id}"
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													if (!loadingSpeech) {
+														toggleSpeakMessage(message);
 													}
 												}}
 											>
-												{#if generatingImage}
+												{#if loadingSpeech}
 													<svg
 														class=" w-4 h-4"
 														fill="currentColor"
@@ -679,105 +620,193 @@
 															r="3"
 														/></svg
 													>
-												{:else}
+												{:else if speaking}
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="1.5"
+														stroke-width="2"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
 														<path
 															stroke-linecap="round"
 															stroke-linejoin="round"
-															d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+															d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
+														/>
+													</svg>
+												{:else}
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="2"
+														stroke="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
 														/>
 													</svg>
 												{/if}
 											</button>
+										</Tooltip>
+
+										{#if $config.images}
+											<Tooltip content="Generate Image" placement="bottom">
+												<button
+													class="{isLastMessage
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
+													on:click={() => {
+														if (!generatingImage) {
+															generateImage(message);
+														}
+													}}
+												>
+													{#if generatingImage}
+														<svg
+															class=" w-4 h-4"
+															fill="currentColor"
+															viewBox="0 0 24 24"
+															xmlns="http://www.w3.org/2000/svg"
+															><style>
+																.spinner_S1WN {
+																	animation: spinner_MGfb 0.8s linear infinite;
+																	animation-delay: -0.8s;
+																}
+																.spinner_Km9P {
+																	animation-delay: -0.65s;
+																}
+																.spinner_JApP {
+																	animation-delay: -0.5s;
+																}
+																@keyframes spinner_MGfb {
+																	93.75%,
+																	100% {
+																		opacity: 0.2;
+																	}
+																}
+															</style><circle class="spinner_S1WN" cx="4" cy="12" r="3" /><circle
+																class="spinner_S1WN spinner_Km9P"
+																cx="12"
+																cy="12"
+																r="3"
+															/><circle
+																class="spinner_S1WN spinner_JApP"
+																cx="20"
+																cy="12"
+																r="3"
+															/></svg
+														>
+													{:else}
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke-width="2"
+															stroke="currentColor"
+															class="w-4 h-4"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+															/>
+														</svg>
+													{/if}
+												</button>
+											</Tooltip>
 										{/if}
 
 										{#if message.info}
-											<button
-												class=" {isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
-												on:click={() => {
-													console.log(message);
-												}}
-												id="info-{message.id}"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="1.5"
-													stroke="currentColor"
-													class="w-4 h-4"
+											<Tooltip content="Generation Info" placement="bottom">
+												<button
+													class=" {isLastMessage
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
+													on:click={() => {
+														console.log(message);
+													}}
+													id="info-{message.id}"
 												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
-													/>
-												</svg>
-											</button>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="2"
+														stroke="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
 										{/if}
 
 										{#if isLastMessage}
-											<button
-												type="button"
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition regenerate-response-button"
-												on:click={() => {
-													continueGeneration();
-												}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="1.5"
-													stroke="currentColor"
-													class="w-4 h-4"
+											<Tooltip content="Continue Response" placement="bottom">
+												<button
+													type="button"
+													class="{isLastMessage
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition regenerate-response-button"
+													on:click={() => {
+														continueGeneration();
+													}}
 												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-													/>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z"
-													/>
-												</svg>
-											</button>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="2"
+														stroke="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+														/>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
 
-											<button
-												type="button"
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition regenerate-response-button"
-												on:click={regenerateResponse}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="1.5"
-													stroke="currentColor"
-													class="w-4 h-4"
+											<Tooltip content="Regenerate" placement="bottom">
+												<button
+													type="button"
+													class="{isLastMessage
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition regenerate-response-button"
+													on:click={regenerateResponse}
 												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-													/>
-												</svg>
-											</button>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="2"
+														stroke="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
 										{/if}
 									</div>
 								{/if}

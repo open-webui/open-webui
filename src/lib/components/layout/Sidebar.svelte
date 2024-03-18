@@ -61,12 +61,16 @@
 	};
 
 	const editChatTitle = async (id, _title) => {
-		title = _title;
+		if (_title === '') {
+			toast.error('Title cannot be an empty string.');
+		} else {
+			title = _title;
 
-		await updateChatById(localStorage.token, id, {
-			title: _title
-		});
-		await chats.set(await getChatList(localStorage.token));
+			await updateChatById(localStorage.token, id, {
+				title: _title
+			});
+			await chats.set(await getChatList(localStorage.token));
+		}
 	};
 
 	const deleteChat = async (id) => {
@@ -388,12 +392,13 @@
 										show = false;
 									}
 								}}
+								draggable="false"
 							>
 								<div class=" flex self-center flex-1 w-full">
 									<div
 										class=" text-left self-center overflow-hidden {chat.id === $chatId
 											? 'w-[160px]'
-											: 'w-full'} "
+											: 'w-full'}  h-[20px]"
 									>
 										{chat.title}
 									</div>

@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { goto } from '$app/navigation';
 
 	import { onMount, tick } from 'svelte';
@@ -21,14 +21,16 @@
 
 	let mode = 'chat';
 	let loaded = false;
-
 	let text = '';
 
 	let selectedModelId = '';
 
 	let loading = false;
-	let currentRequestId;
+	let currentRequestId = null;
 	let stopResponseFlag = false;
+
+	let messagesContainerElement: HTMLDivElement;
+	let textCompletionAreaElement: HTMLTextAreaElement;
 
 	let system = '';
 	let messages = [
@@ -39,13 +41,7 @@
 	];
 
 	const scrollToBottom = () => {
-		let element;
-
-		if (mode === 'chat') {
-			element = document.getElementById('messages-container');
-		} else {
-			element = document.getElementById('text-completion-textarea');
-		}
+		const element = mode === 'chat' ? messagesContainerElement : textCompletionAreaElement;
 
 		if (element) {
 			element.scrollTop = element?.scrollHeight;
@@ -96,6 +92,10 @@
 			while (true) {
 				const { value, done } = await reader.read();
 				if (done || stopResponseFlag) {
+					if (stopResponseFlag) {
+						await cancelChatCompletion(localStorage.token, currentRequestId);
+					}
+
 					currentRequestId = null;
 					break;
 				}
@@ -112,7 +112,11 @@
 								let data = JSON.parse(line.replace(/^data: /, ''));
 								console.log(data);
 
-								text += data.choices[0].delta.content ?? '';
+								if ('request_id' in data) {
+									currentRequestId = data.request_id;
+								} else {
+									text += data.choices[0].delta.content ?? '';
+								}
 							}
 						}
 					}
@@ -150,16 +154,6 @@
 				: `${OLLAMA_API_BASE_URL}/v1`
 		);
 
-		// const [res, controller] = await generateChatCompletion(localStorage.token, {
-		// 	model: selectedModelId,
-		// 	messages: [
-		// 		{
-		// 			role: 'assistant',
-		// 			content: text
-		// 		}
-		// 	]
-		// });
-
 		let responseMessage;
 		if (messages.at(-1)?.role === 'assistant') {
 			responseMessage = messages.at(-1);
@@ -184,6 +178,11 @@
 			while (true) {
 				const { value, done } = await reader.read();
 				if (done || stopResponseFlag) {
+					if (stopResponseFlag) {
+						await cancelChatCompletion(localStorage.token, currentRequestId);
+					}
+
+					currentRequestId = null;
 					break;
 				}
 
@@ -200,17 +199,21 @@
 								let data = JSON.parse(line.replace(/^data: /, ''));
 								console.log(data);
 
-								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
-									continue;
+								if ('request_id' in data) {
+									currentRequestId = data.request_id;
 								} else {
-									textareaElement.style.height = textareaElement.scrollHeight + 'px';
+									if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
+										continue;
+									} else {
+										textareaElement.style.height = textareaElement.scrollHeight + 'px';
 
-									responseMessage.content += data.choices[0].delta.content ?? '';
-									messages = messages;
+										responseMessage.content += data.choices[0].delta.content ?? '';
+										messages = messages;
 
-									textareaElement.style.height = textareaElement.scrollHeight + 'px';
+										textareaElement.style.height = textareaElement.scrollHeight + 'px';
 
-									await tick();
+										await tick();
+									}
 								}
 							}
 						}
@@ -221,48 +224,6 @@
 
 				scrollToBottom();
 			}
-
-			// while (true) {
-			// 	const { value, done } = await reader.read();
-			// 	if (done || stopResponseFlag) {
-			// 		if (stopResponseFlag) {
-			// 			await cancelChatCompletion(localStorage.token, currentRequestId);
-			// 		}
-
-			// 		currentRequestId = null;
-			// 		break;
-			// 	}
-
-			// 	try {
-			// 		let lines = value.split('\n');
-
-			// 		for (const line of lines) {
-			// 			if (line !== '') {
-			// 				console.log(line);
-			// 				let data = JSON.parse(line);
-
-			// 				if ('detail' in data) {
-			// 					throw data;
-			// 				}
-
-			// 				if ('id' in data) {
-			// 					console.log(data);
-			// 					currentRequestId = data.id;
-			// 				} else {
-			// 					if (data.done == false) {
-			// 						text += data.message.content;
-			// 					} else {
-			// 						console.log('done');
-			// 					}
-			// 				}
-			// 			}
-			// 		}
-			// 	} catch (error) {
-			// 		console.log(error);
-			// 	}
-
-			// 	scrollToBottom();
-			// }
 		}
 	};
 
@@ -306,7 +267,7 @@
 
 <div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
 	<div class=" flex flex-col justify-between w-full overflow-y-auto h-[100dvh]">
-		<div class="max-w-2xl mx-auto w-full px-3 p-3 md:px-0 h-full">
+		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10 h-full">
 			<div class=" flex flex-col h-full">
 				<div class="flex flex-col justify-between mb-2.5 gap-1">
 					<div class="flex justify-between items-center gap-2">
@@ -417,12 +378,14 @@
 				<div
 					class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 					id="messages-container"
+					bind:this={messagesContainerElement}
 				>
 					<div class=" h-full w-full flex flex-col">
 						<div class="flex-1 p-1">
 							{#if mode === 'complete'}
 								<textarea
 									id="text-completion-textarea"
+									bind:this={textCompletionAreaElement}
 									class="w-full h-full p-3 bg-transparent outline outline-1 outline-gray-200 dark:outline-gray-800 resize-none rounded-lg text-sm"
 									bind:value={text}
 									placeholder="You're a helpful assistant."

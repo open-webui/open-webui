@@ -15,7 +15,7 @@
 
 	export let show = false;
 	export let selectedDoc;
-
+	let uploadDocInputElement: HTMLInputElement;
 	let inputFiles;
 	let tags = [];
 
@@ -69,7 +69,7 @@
 			}
 
 			inputFiles = null;
-			document.getElementById('upload-doc-input').value = '';
+			uploadDocInputElement.value = '';
 		} else {
 			toast.error(`File not found.`);
 		}
@@ -126,13 +126,20 @@
 					}}
 				>
 					<div class="mb-3 w-full">
-						<input id="upload-doc-input" hidden bind:files={inputFiles} type="file" multiple />
+						<input
+							id="upload-doc-input"
+							bind:this={uploadDocInputElement}
+							hidden
+							bind:files={inputFiles}
+							type="file"
+							multiple
+						/>
 
 						<button
 							class="w-full text-sm font-medium py-3 bg-gray-850 hover:bg-gray-800 text-center rounded-xl"
 							type="button"
 							on:click={() => {
-								document.getElementById('upload-doc-input')?.click();
+								uploadDocInputElement.click();
 							}}
 						>
 							{#if inputFiles}
