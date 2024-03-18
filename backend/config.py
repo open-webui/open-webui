@@ -250,8 +250,10 @@ OPENAI_API_BASE_URLS = (
     OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != "" else OPENAI_API_BASE_URL
 )
 
-OPENAI_API_BASE_URLS = [url.strip() for url in OPENAI_API_BASE_URLS.split(";")]
-
+OPENAI_API_BASE_URLS = [
+    url.strip() if url != "" else "https://api.openai.com/v1"
+    for url in OPENAI_API_BASE_URLS.split(";")
+]
 
 ####################################
 # WEBUI
