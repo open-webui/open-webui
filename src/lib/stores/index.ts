@@ -7,27 +7,7 @@ export const config = writable(undefined);
 export const user = writable(undefined);
 
 // Frontend
-const rawThemeSetting = writable('system');
-export const theme = derived(rawThemeSetting, ($rawThemeSetting) => {
-	if ($rawThemeSetting === 'system') {
-		return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-	}
-	return $rawThemeSetting;
-});
-
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-	rawThemeSetting.update((currentTheme) => {
-		if (currentTheme === 'system') {
-			return e.matches ? 'dark' : 'light';
-		}
-		return currentTheme;
-	});
-});
-
-export function setTheme(theme) {
-	rawThemeSetting.set(theme);
-	localStorage.setItem('theme', theme);
-}
+export const theme = writable('system');
 
 export const chatId = writable('');
 

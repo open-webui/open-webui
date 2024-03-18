@@ -4,8 +4,7 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, user } from '$lib/stores';
-	import { theme, setTheme } from '../../../stores/index';
+	import { models, user, theme } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -26,27 +25,6 @@
 	let system = '';
 
 	let showAdvanced = false;
-
-	function applyTheme(theme: string) {
-		let themeToApply = theme;
-		if (theme === 'system') {
-			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-		}
-
-		themes
-			.filter((e) => e !== themeToApply)
-			.forEach((e) => {
-				e.split(' ').forEach((e) => {
-					document.documentElement.classList.remove(e);
-				});
-			});
-
-		themeToApply.split(' ').forEach((e) => {
-			document.documentElement.classList.add(e);
-		});
-
-		console.log(theme);
-	}
 
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
@@ -115,12 +93,34 @@
 		options.stop = (settings?.options?.stop ?? []).join(',');
 	});
 
-	function handleThemeChange(newTheme: string) {
-		selectedTheme = newTheme;
-		setTheme(newTheme);
-		localStorage.setItem('theme', newTheme);
-		applyTheme(newTheme);
-	}
+	const applyTheme = (_theme: string) => {
+		let themeToApply = _theme;
+
+		if (_theme === 'system') {
+			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		}
+
+		themes
+			.filter((e) => e !== themeToApply)
+			.forEach((e) => {
+				e.split(' ').forEach((e) => {
+					document.documentElement.classList.remove(e);
+				});
+			});
+
+		themeToApply.split(' ').forEach((e) => {
+			document.documentElement.classList.add(e);
+		});
+
+		console.log(_theme);
+	};
+
+	const themeChangeHandler = (_theme: string) => {
+		theme.set(_theme);
+		localStorage.setItem('theme', _theme);
+
+		applyTheme(_theme);
+	};
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
@@ -135,7 +135,7 @@
 						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
 						bind:value={selectedTheme}
 						placeholder="Select a theme"
-						on:change={() => handleThemeChange(selectedTheme)}
+						on:change={() => themeChangeHandler(selectedTheme)}
 					>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
 						<option value="dark">🌑 {$i18n.t('Dark')}</option>

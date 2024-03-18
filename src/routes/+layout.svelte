@@ -1,6 +1,6 @@
 <script>
 	import { onMount, tick, setContext } from 'svelte';
-	import { config, user, setTheme, WEBUI_NAME } from '$lib/stores';
+	import { config, user, theme, WEBUI_NAME } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { Toaster, toast } from 'svelte-sonner';
 
@@ -18,7 +18,7 @@
 	let loaded = false;
 
 	onMount(async () => {
-		setTheme(localStorage.theme);
+		theme.set(localStorage.theme);
 		// Check Backend Status
 		const backendConfig = await getBackendConfig();
 
