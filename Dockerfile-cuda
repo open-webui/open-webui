@@ -14,9 +14,11 @@ RUN npm run build
 
 ######## CPU-only WebUI backend ########
 # To support both CPU and GPU backend, we need to keep the ability to build the CPU-only image.
-#FROM python:3.11-slim-bookworm as base
-FROM --platform=linux/amd64 cgr.dev/chainguard/python:latest-dev AS cpu-build-amd64
+#FROM --platform=linux/amd64 python:3.11-slim-bookworm as base
 #FROM --platform=linux/amd64 ubuntu:22.04 AS cpu-builder-amd64
+#FROM --platform=linux/amd64 cgr.dev/chainguard/python:latest-dev AS cpu-build-amd64
+# device type for whisper tts and embedding models - "cpu" (default), "cuda" (NVIDIA GPU and CUDA required), or "mps" (apple silicon) - choosing this right can lead to better performance
+#ENV RAG_EMBEDDING_MODEL_DEVICE_TYPE="cpu"
 
 #FROM --platform=linux/amd64 cpu-builder-amd64 AS cpu-build-amd64
 #RUN OPENWEBUI_CPU_TARGET="cpu" sh gen_linux.sh
@@ -28,7 +30,7 @@ FROM --platform=linux/amd64 cgr.dev/chainguard/python:latest-dev AS cpu-build-am
 #RUN OPENWEBUI_CPU_TARGET="cpu_avx2" sh gen_linux.sh
 
 ######## CUDA WebUI backend ########
-#FROM --platform=linux/amd64 nvidia/cuda:"$CUDA_VERSION"-devel-ubuntu22.04 AS cuda-build-amd64
+FROM --platform=linux/amd64 nvidia/cuda:"$CUDA_VERSION"-devel-ubuntu22.04 AS cuda-build-amd64
 #FROM --platform=linux/amd64 cgr.dev/chainguard/pytorch-cuda12:latest AS cuda-build-amd64 # fails with python requirements conflicts
 
 # Set environment variables for NVIDIA Container Toolkit
@@ -60,8 +62,6 @@ ENV WHISPER_MODEL="base" \
 # for better performance and multilangauge support use "intfloat/multilingual-e5-large" (~2.5GB) or "intfloat/multilingual-e5-base" (~1.5GB)
 # IMPORTANT: If you change the default model (all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
 ENV RAG_EMBEDDING_MODEL="all-MiniLM-L6-v2" \
-    # device type for whisper tts and embedding models - "cpu" (default), "cuda" (NVIDIA GPU and CUDA required), or "mps" (apple silicon) - choosing this right can lead to better performance
-    RAG_EMBEDDING_MODEL_DEVICE_TYPE="cuda" \
     RAG_EMBEDDING_MODEL_DIR="/app/backend/data/cache/embedding/models" \
     SENTENCE_TRANSFORMERS_HOME=$RAG_EMBEDDING_MODEL_DIR
 
