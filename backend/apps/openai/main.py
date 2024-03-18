@@ -198,7 +198,9 @@ async def get_all_models():
                 list(
                     map(
                         lambda response: (
-                            response["data"] if "data" in response else None
+                            response["data"]
+                            if response and "data" in response
+                            else None
                         ),
                         responses,
                     )
