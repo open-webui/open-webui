@@ -832,7 +832,7 @@
 			on:scroll={(e) => {
 				autoScroll =
 					messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-					messagesContainerElement.clientHeight + 50;
+					messagesContainerElement.clientHeight + 5;
 			}}
 		>
 			<div
