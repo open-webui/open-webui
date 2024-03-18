@@ -197,7 +197,9 @@ async def get_all_models():
             "data": merge_models_lists(
                 list(
                     map(
-                        lambda response: response["data"] if response else None,
+                        lambda response: (
+                            response["data"] if "data" in response else None
+                        ),
                         responses,
                     )
                 )
