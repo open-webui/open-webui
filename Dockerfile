@@ -54,7 +54,7 @@ ENV RAG_EMBEDDING_MODEL="all-MiniLM-L6-v2" \
     # Important:
     #  If you want to use CUDA you need to install the nvidia-container-toolkit (https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) 
     #  you can set this to "cuda" but its recomended to use --build-arg CUDA_ENABLED=true flag when building the image
-    RAG_EMBEDDING_MODEL_DEVICE_TYPE="cuda"
+    RAG_EMBEDDING_MODEL_DEVICE_TYPE="cpu"
 # device type for whisper tts and embbeding models - "cpu" (default), "cuda" (nvidia gpu and CUDA required) or "mps" (apple silicon) - choosing this right can lead to better performance
 #### Preloaded models ##########################################################
 
