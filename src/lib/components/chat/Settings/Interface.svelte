@@ -2,9 +2,11 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, models, user } from '$lib/stores';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
+
+	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
 
@@ -82,7 +84,9 @@
 		titleAutoGenerateModel = settings.titleAutoGenerateModel ?? '';
 		titleGenerationPrompt =
 			settings.titleGenerationPrompt ??
-			`Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title': {{prompt}}`;
+			$i18n.t(
+				"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
+			) + ' {{prompt}}';
 	});
 </script>
 
@@ -93,13 +97,13 @@
 		dispatch('save');
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-80">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[22rem]">
 		<div>
-			<div class=" mb-1 text-sm font-medium">WebUI Add-ons</div>
+			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Add-ons')}</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">Title Auto-Generation</div>
+					<div class=" self-center text-xs font-medium">{$i18n.t('Title Auto-Generation')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -109,9 +113,9 @@
 						type="button"
 					>
 						{#if titleAutoGenerate === true}
-							<span class="ml-2 self-center">On</span>
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
-							<span class="ml-2 self-center">Off</span>
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
@@ -119,7 +123,9 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">Response AutoCopy to Clipboard</div>
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Response AutoCopy to Clipboard')}
+					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -129,9 +135,9 @@
 						type="button"
 					>
 						{#if responseAutoCopy === true}
-							<span class="ml-2 self-center">On</span>
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
-							<span class="ml-2 self-center">Off</span>
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
@@ -139,7 +145,7 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">Full Screen Mode</div>
+					<div class=" self-center text-xs font-medium">{$i18n.t('Full Screen Mode')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -149,9 +155,9 @@
 						type="button"
 					>
 						{#if fullScreenMode === true}
-							<span class="ml-2 self-center">On</span>
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
-							<span class="ml-2 self-center">Off</span>
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
@@ -160,7 +166,7 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
-						Display the username instead of "You" in the Chat
+						{$i18n.t('Display the username instead of You in the Chat')}
 					</div>
 
 					<button
@@ -171,9 +177,9 @@
 						type="button"
 					>
 						{#if showUsername === true}
-							<span class="ml-2 self-center">On</span>
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
-							<span class="ml-2 self-center">Off</span>
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
@@ -183,15 +189,15 @@
 		<hr class=" dark:border-gray-700" />
 
 		<div>
-			<div class=" mb-2.5 text-sm font-medium">Set Title Auto-Generation Model</div>
+			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Title Auto-Generation Model')}</div>
 			<div class="flex w-full">
 				<div class="flex-1 mr-2">
 					<select
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						bind:value={titleAutoGenerateModel}
-						placeholder="Select a model"
+						placeholder={$i18n.t('Select a model')}
 					>
-						<option value="" selected>Current Model</option>
+						<option value="" selected>{$i18n.t('Current Model')}</option>
 						{#each $models as model}
 							{#if model.size != null}
 								<option value={model.name} class="bg-gray-100 dark:bg-gray-700">
@@ -202,8 +208,9 @@
 					</select>
 				</div>
 			</div>
+
 			<div class="mt-3 mr-2">
-				<div class=" mb-2.5 text-sm font-medium">Title Generation Prompt</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Title Generation Prompt')}</div>
 				<textarea
 					bind:value={titleGenerationPrompt}
 					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
@@ -217,7 +224,9 @@
 
 			<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 				<div class="flex w-full justify-between mb-2">
-					<div class=" self-center text-sm font-semibold">Default Prompt Suggestions</div>
+					<div class=" self-center text-sm font-semibold">
+						{$i18n.t('Default Prompt Suggestions')}
+					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
@@ -290,19 +299,19 @@
 
 				{#if promptSuggestions.length > 0}
 					<div class="text-xs text-left w-full mt-2">
-						Adjusting these settings will apply changes universally to all users.
+						{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
 					</div>
 				{/if}
 			</div>
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end text-sm font-medium">
 		<button
 			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			type="submit"
 		>
-			Save
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </form>

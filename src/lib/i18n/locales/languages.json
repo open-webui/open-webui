@@ -1,0 +1,30 @@
+[
+	{
+		"code": "en-US",
+		"title": "English (US)"
+	},
+	{
+		"code": "fa-IR",
+		"title": "فارسی (Farsi)"
+	},
+	{
+		"code": "de-DE",
+		"title": "Deutsch"
+	},
+	{
+		"code": "fr-FR",
+		"title": "French (France)"
+	},
+	{
+		"code": "uk-UA",
+		"title": "Ukrainian"
+	},
+	{
+		"code": "zh-TW",
+		"title": "Chinese (Traditional)"
+	},
+	{
+		"code": "zh-CN",
+		"title": "Chinese (Simplified)"
+	}
+]

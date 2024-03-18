@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { setDefaultModels } from '$lib/apis/configs';
 	import { models, showSettings, settings, user } from '$lib/stores';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	export let selectedModels = [''];
 	export let disabled = false;
@@ -10,7 +12,7 @@
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
 		if (hasEmptyModel.length) {
-			toast.error('Choose a model before saving...');
+			toast.error($i18n.t('Choose a model before saving...'));
 			return;
 		}
 		settings.set({ ...$settings, models: selectedModels });
@@ -20,7 +22,7 @@
 			console.log('setting default models globally');
 			await setDefaultModels(localStorage.token, selectedModels.join(','));
 		}
-		toast.success('Default model updated');
+		toast.success($i18n.t('Default model updated'));
 	};
 
 	$: if (selectedModels.length > 0 && $models.length > 0) {
@@ -39,7 +41,9 @@
 				bind:value={selectedModel}
 				{disabled}
 			>
-				<option class=" text-gray-700" value="" selected disabled>Select a model</option>
+				<option class=" text-gray-700" value="" selected disabled
+					>{$i18n.t('Select a model')}</option
+				>
 
 				{#each $models as model}
 					{#if model.name === 'hr'}
@@ -133,5 +137,5 @@
 </div>
 
 <div class="text-left mt-1.5 text-xs text-gray-500">
-	<button on:click={saveDefaultModel}> Set as default</button>
+	<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 </div>

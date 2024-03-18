@@ -1,7 +1,9 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { WEBUI_NAME, config } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	let loaded = false;
 
@@ -19,22 +21,25 @@
 		<div class="absolute rounded-xl w-full h-full backdrop-blur flex justify-center">
 			<div class="m-auto pb-44 flex flex-col justify-center">
 				<div class="max-w-md">
-					<div class="text-center text-2xl font-medium z-50">{$WEBUI_NAME} Backend Required</div>
+					<div class="text-center text-2xl font-medium z-50">
+						{$i18n.t('{{webUIName}} Backend Required', { webUIName: $WEBUI_NAME })}
+					</div>
 
 					<div class=" mt-4 text-center text-sm w-full">
-						Oops! You're using an unsupported method (frontend only). Please serve the WebUI from
-						the backend.
+						{$i18n.t(
+							"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend."
+						)}
 
 						<br class=" " />
 						<br class=" " />
 						<a
 							class=" font-semibold underline"
 							href="https://github.com/open-webui/open-webui#how-to-install-"
-							target="_blank">See readme.md for instructions</a
+							target="_blank">{$i18n.t('See readme.md for instructions')}</a
 						>
-						or
+						{$i18n.t('or')}
 						<a class=" font-semibold underline" href="https://discord.gg/5rJgQTnV4s" target="_blank"
-							>join our Discord for help.</a
+							>{$i18n.t('join our Discord for help.')}</a
 						>
 					</div>
 
@@ -45,7 +50,7 @@
 								location.href = '/';
 							}}
 						>
-							Check Again
+							{$i18n.t('Check Again')}
 						</button>
 					</div>
 				</div>
