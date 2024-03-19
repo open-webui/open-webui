@@ -3,7 +3,9 @@
 
 	import { goto } from '$app/navigation';
 	import { prompts } from '$lib/stores';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	import { getPrompts, updatePromptByCommand } from '$lib/apis/prompts';
 	import { page } from '$app/stores';
@@ -34,7 +36,9 @@
 				await goto('/prompts');
 			}
 		} else {
-			toast.error('Only alphanumeric characters and hyphens are allowed in the command string.');
+			toast.error(
+				$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
+			);
 		}
 
 		loading = false;
@@ -74,7 +78,7 @@
 <div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
 	<div class="flex flex-col justify-between w-full overflow-y-auto">
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
-			<div class=" text-2xl font-semibold mb-6">My Prompts</div>
+			<div class=" text-2xl font-semibold mb-6">{$i18n.t('My Prompts')}</div>
 
 			<button
 				class="flex space-x-1"
@@ -96,7 +100,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center font-medium text-sm">Back</div>
+				<div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
 			</button>
 			<hr class="my-3 dark:border-gray-700" />
 
@@ -107,12 +111,12 @@
 				}}
 			>
 				<div class="my-2">
-					<div class=" text-sm font-semibold mb-2">Title*</div>
+					<div class=" text-sm font-semibold mb-2">{$i18n.t('Title')}*</div>
 
 					<div>
 						<input
 							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-							placeholder="Add a short title for this prompt"
+							placeholder={$i18n.t('Add a short title for this prompt')}
 							bind:value={title}
 							required
 						/>
@@ -120,7 +124,7 @@
 				</div>
 
 				<div class="my-2">
-					<div class=" text-sm font-semibold mb-2">Command*</div>
+					<div class=" text-sm font-semibold mb-2">{$i18n.t('Command')}*</div>
 
 					<div class="flex items-center mb-1">
 						<div
@@ -138,27 +142,31 @@
 					</div>
 
 					<div class="text-xs text-gray-400 dark:text-gray-500">
-						Only <span class=" text-gray-600 dark:text-gray-300 font-medium"
-							>alphanumeric characters and hyphens</span
+						{$i18n.t('Only')}
+						<span class=" text-gray-600 dark:text-gray-300 font-medium"
+							>{$i18n.t('alphanumeric characters and hyphens')}</span
 						>
-						are allowed; Activate this command by typing "<span
+						{$i18n.t('are allowed - Activate this command by typing')}&nbsp;"<span
 							class=" text-gray-600 dark:text-gray-300 font-medium"
 						>
 							/{command}
-						</span>" to chat input.
+						</span>" &nbsp;
+						{$i18n.t('to chat input.')}
 					</div>
 				</div>
 
 				<div class="my-2">
 					<div class="flex w-full justify-between">
-						<div class=" self-center text-sm font-semibold">Prompt Content*</div>
+						<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt Content')}*</div>
 					</div>
 
 					<div class="mt-2">
 						<div>
 							<textarea
 								class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-								placeholder={`Write a summary in 50 words that summarizes [topic or keyword].`}
+								placeholder={$i18n.t(
+									`Write a summary in 50 words that summarizes [topic or keyword].`
+								)}
 								rows="6"
 								bind:value={content}
 								required
@@ -166,12 +174,20 @@
 						</div>
 
 						<div class="text-xs text-gray-400 dark:text-gray-500">
-							Format your variables using square brackets like this: <span
-								class=" text-gray-600 dark:text-gray-300 font-medium">[variable]</span
-							>
-							. Make sure to enclose them with
+							ⓘ {$i18n.t('Format your variables using square brackets like this:')}&nbsp;<span
+								class=" text-gray-600 dark:text-gray-300 font-medium">[{$i18n.t('variable')}]</span
+							>.
+							{$i18n.t('Make sure to enclose them with')}
 							<span class=" text-gray-600 dark:text-gray-300 font-medium">'['</span>
-							and <span class=" text-gray-600 dark:text-gray-300 font-medium">']'</span> .
+							{$i18n.t('and')}
+							<span class=" text-gray-600 dark:text-gray-300 font-medium">']'</span>.
+						</div>
+
+						<div class="text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Utilize')}<span class=" text-gray-600 dark:text-gray-300 font-medium">
+								{` {{CLIPBOARD}}`}</span
+							>
+							{$i18n.t('variable to have them replaced with clipboard content.')}
 						</div>
 					</div>
 				</div>
@@ -184,7 +200,7 @@
 						type="submit"
 						disabled={loading}
 					>
-						<div class=" self-center font-medium">Save & Update</div>
+						<div class=" self-center font-medium">{$i18n.t('Save & Update')}</div>
 
 						{#if loading}
 							<div class="ml-1.5 self-center">

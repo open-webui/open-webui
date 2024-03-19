@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { user } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	export let models = [];
 	export let modelfiles = [];
@@ -64,9 +66,9 @@
 					</div>
 				{/if}
 			{:else}
-				<div class=" line-clamp-1">Hello, {$user.name}</div>
+				<div class=" line-clamp-1">{$i18n.t('Hello, {{name}}', { name: $user.name })}</div>
 
-				<div>How can I help you today?</div>
+				<div>{$i18n.t('How can I help you today?')}</div>
 			{/if}
 		</div>
 	</div>

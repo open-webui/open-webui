@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { downloadDatabase } from '$lib/apis/utils';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
 
@@ -17,10 +19,10 @@
 >
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 		<div>
-			<div class=" mb-2 text-sm font-medium">Database</div>
+			<div class=" mb-2 text-sm font-medium">{$i18n.t('Database')}</div>
 
 			<div class="  flex w-full justify-between">
-				<!-- <div class=" self-center text-xs font-medium">Allow Chat Deletion</div> -->
+				<!-- <div class=" self-center text-xs font-medium">{$i18n.t('Allow Chat Deletion')}</div> -->
 
 				<button
 					class=" flex rounded-md py-1.5 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
@@ -46,7 +48,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center text-sm font-medium">Download Database</div>
+					<div class=" self-center text-sm font-medium">{$i18n.t('Download Database')}</div>
 				</button>
 			</div>
 		</div>

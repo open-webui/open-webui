@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -39,6 +39,8 @@
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
 	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+
+	const i18n = getContext('i18n');
 
 	let loaded = false;
 
@@ -173,7 +175,7 @@
 		console.log('submitPrompt', $chatId);
 
 		if (selectedModels.includes('')) {
-			toast.error('Model not selected');
+			toast.error($i18n.t('Model not selected'));
 		} else if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
 			console.log('wait');
@@ -219,7 +221,7 @@
 				if ($settings.saveChatHistory ?? true) {
 					chat = await createNewChat(localStorage.token, {
 						id: $chatId,
-						title: 'New Chat',
+						title: $i18n.t('New Chat'),
 						models: selectedModels,
 						system: $settings.system ?? undefined,
 						options: {
@@ -282,7 +284,7 @@
 						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
 					}
 				} else {
-					toast.error(`Model ${modelId} not found`);
+					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
 			})
 		);
@@ -494,12 +496,18 @@
 					responseMessage.content = error.error;
 				}
 			} else {
-				toast.error(`Uh-oh! There was an issue connecting to Ollama.`);
-				responseMessage.content = `Uh-oh! There was an issue connecting to Ollama.`;
+				toast.error(
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: 'Ollama' })
+				);
+				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+					provider: 'Ollama'
+				});
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = `Uh-oh! There was an issue connecting to Ollama.`;
+			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+				provider: 'Ollama'
+			});
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -672,12 +680,18 @@
 					}
 				}
 			} else {
-				toast.error(`Uh-oh! There was an issue connecting to ${model}.`);
-				responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
+				toast.error(
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: model })
+				);
+				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+					provider: model
+				});
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
+			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+				provider: model
+			});
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -733,7 +747,7 @@
 					);
 			}
 		} else {
-			toast.error(`Model ${modelId} not found`);
+			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 		}
 	};
 
@@ -755,7 +769,9 @@
 			const title = await generateTitle(
 				localStorage.token,
 				$settings?.titleGenerationPrompt ??
-					"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title': {{prompt}}",
+					$i18n.t(
+						"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
+					) + ' {{prompt}}',
 				$settings?.titleAutoGenerateModel ?? selectedModels[0],
 				userPrompt
 			);
@@ -845,7 +861,7 @@
 				on:scroll={(e) => {
 					autoScroll =
 						messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-						messagesContainerElement.clientHeight + 50;
+						messagesContainerElement.clientHeight + 5;
 				}}
 			>
 				<div

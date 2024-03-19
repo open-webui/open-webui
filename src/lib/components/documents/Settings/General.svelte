@@ -8,8 +8,10 @@
 		updateQuerySettings
 	} from '$lib/apis/rag';
 	import { documents } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
 
@@ -31,7 +33,7 @@
 
 		if (res) {
 			await documents.set(await getDocs(localStorage.token));
-			toast.success('Scan complete!');
+			toast.success($i18n.t('Scan complete!'));
 		}
 	};
 
@@ -69,10 +71,12 @@
 >
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 		<div>
-			<div class=" mb-2 text-sm font-medium">General Settings</div>
+			<div class=" mb-2 text-sm font-medium">{$i18n.t('General Settings')}</div>
 
 			<div class="  flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Scan for documents from '/data/docs'</div>
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Scan for documents from {{path}}', { path: '/data/docs' })}
+				</div>
 
 				<button
 					class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded flex flex-row space-x-1 items-center {loading
@@ -85,7 +89,7 @@
 					type="button"
 					disabled={loading}
 				>
-					<div class="self-center font-medium">Scan</div>
+					<div class="self-center font-medium">{$i18n.t('Scan')}</div>
 
 					<!-- <svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -133,77 +137,76 @@
 
 		<hr class=" dark:border-gray-700" />
 
-		<div class=" space-y-3">
-			<div class=" space-y-3">
-				<div class=" text-sm font-medium">Chunk Params</div>
+		<div class=" ">
+			<div class=" text-sm font-medium">{$i18n.t('Chunk Params')}</div>
 
-				<div class=" flex gap-2">
-					<div class="  flex w-full justify-between gap-2">
-						<div class="self-center text-xs font-medium min-w-fit">Chunk Size</div>
+			<div class=" flex">
+				<div class="  flex w-full justify-between">
+					<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('Chunk Size')}</div>
 
-						<div class="self-center">
-							<input
-								class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
-								type="number"
-								placeholder="Enter Chunk Size"
-								bind:value={chunkSize}
-								autocomplete="off"
-								min="0"
-							/>
-						</div>
-					</div>
-
-					<div class="flex w-full gap-2">
-						<div class=" self-center text-xs font-medium min-w-fit">Chunk Overlap</div>
-
-						<div class="self-center">
-							<input
-								class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
-								type="number"
-								placeholder="Enter Chunk Overlap"
-								bind:value={chunkOverlap}
-								autocomplete="off"
-								min="0"
-							/>
-						</div>
+					<div class="self-center p-3">
+						<input
+							class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+							type="number"
+							placeholder={$i18n.t('Enter Chunk Size')}
+							bind:value={chunkSize}
+							autocomplete="off"
+							min="0"
+						/>
 					</div>
 				</div>
 
-				<div>
-					<div class="flex justify-between items-center text-xs">
-						<div class=" text-xs font-medium">PDF Extract Images (OCR)</div>
+				<div class="flex w-full">
+					<div class=" self-center text-xs font-medium min-w-fit">{$i18n.t('Chunk Overlap')}</div>
 
-						<button
-							class=" text-xs font-medium text-gray-500"
-							type="button"
-							on:click={() => {
-								pdfExtractImages = !pdfExtractImages;
-							}}>{pdfExtractImages ? 'On' : 'Off'}</button
-						>
+					<div class="self-center p-3">
+						<input
+							class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+							type="number"
+							placeholder={$i18n.t('Enter Chunk Overlap')}
+							bind:value={chunkOverlap}
+							autocomplete="off"
+							min="0"
+						/>
 					</div>
 				</div>
 			</div>
 
 			<div>
-				<div class=" text-sm font-medium">Query Params</div>
+				<div class="flex justify-between items-center text-xs">
+					<div class=" text-xs font-medium">{$i18n.t('PDF Extract Images (OCR)')}</div>
 
-				<div class=" flex py-2">
-					<div class="  flex w-full justify-between gap-2">
-						<div class="self-center text-xs font-medium flex-1">Top K</div>
+					<button
+						class=" text-xs font-medium text-gray-500"
+						type="button"
+						on:click={() => {
+							pdfExtractImages = !pdfExtractImages;
+						}}>{pdfExtractImages ? $i18n.t('On') : $i18n.t('Off')}</button
+					>
+				</div>
+			</div>
+		</div>
 
-						<div class="self-center">
-							<input
-								class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
-								type="number"
-								placeholder="Enter Top K"
-								bind:value={querySettings.k}
-								autocomplete="off"
-								min="0"
-							/>
-						</div>
+		<div>
+			<div class=" text-sm font-medium">{$i18n.t('Query Params')}</div>
+
+			<div class=" flex">
+				<div class="  flex w-full justify-between">
+					<div class="self-center text-xs font-medium flex-1">{$i18n.t('Top K')}</div>
+
+					<div class="self-center p-3">
+						<input
+							class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+							type="number"
+							placeholder={$i18n.t('Enter Top K')}
+							bind:value={querySettings.k}
+							autocomplete="off"
+							min="0"
+						/>
 					</div>
+				</div>
 
-					<!-- <div class="flex w-full">
+				<!-- <div class="flex w-full">
 						<div class=" self-center text-xs font-medium min-w-fit">Chunk Overlap</div>
 	
 						<div class="self-center p-3">
@@ -217,16 +220,15 @@
 							/>
 						</div>
 					</div> -->
-				</div>
+			</div>
 
-				<div>
-					<div class=" mb-2.5 text-sm font-medium">RAG Template</div>
-					<textarea
-						bind:value={querySettings.template}
-						class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
-						rows="4"
-					/>
-				</div>
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('RAG Template')}</div>
+				<textarea
+					bind:value={querySettings.template}
+					class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
+					rows="4"
+				/>
 			</div>
 		</div>
 	</div>
@@ -236,7 +238,7 @@
 			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 			type="submit"
 		>
-			Save
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </form>

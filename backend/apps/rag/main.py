@@ -400,9 +400,9 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
     elif file_ext in known_source_ext or (
         file_content_type and file_content_type.find("text/") >= 0
     ):
-        loader = TextLoader(file_path)
+        loader = TextLoader(file_path, autodetect_encoding=True)
     else:
-        loader = TextLoader(file_path)
+        loader = TextLoader(file_path, autodetect_encoding=True)
         known_type = False
 
     return loader, known_type

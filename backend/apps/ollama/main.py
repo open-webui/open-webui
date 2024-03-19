@@ -98,13 +98,14 @@ def merge_models_lists(model_lists):
     merged_models = {}
 
     for idx, model_list in enumerate(model_lists):
-        for model in model_list:
-            digest = model["digest"]
-            if digest not in merged_models:
-                model["urls"] = [idx]
-                merged_models[digest] = model
-            else:
-                merged_models[digest]["urls"].append(idx)
+        if model_list is not None:
+            for model in model_list:
+                digest = model["digest"]
+                if digest not in merged_models:
+                    model["urls"] = [idx]
+                    merged_models[digest] = model
+                else:
+                    merged_models[digest]["urls"].append(idx)
 
     return list(merged_models.values())
 
@@ -116,11 +117,10 @@ async def get_all_models():
     print("get_all_models")
     tasks = [fetch_url(f"{url}/api/tags") for url in app.state.OLLAMA_BASE_URLS]
     responses = await asyncio.gather(*tasks)
-    responses = list(filter(lambda x: x is not None, responses))
 
     models = {
         "models": merge_models_lists(
-            map(lambda response: response["models"], responses)
+            map(lambda response: response["models"] if response else None, responses)
         )
     }
 

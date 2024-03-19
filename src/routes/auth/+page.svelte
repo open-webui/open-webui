@@ -3,8 +3,10 @@
 	import { userSignIn, userSignUp } from '$lib/apis/auths';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	let loaded = false;
 	let mode = 'signin';
@@ -16,7 +18,7 @@
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
-			toast.success(`You're now logged in.`);
+			toast.success($i18n.t(`You're now logged in.`));
 			localStorage.token = sessionUser.token;
 			await user.set(sessionUser);
 			goto('/');
@@ -96,26 +98,30 @@
 					}}
 				>
 					<div class=" text-xl sm:text-2xl font-bold">
-						{mode === 'signin' ? 'Sign in' : 'Sign up'} to {$WEBUI_NAME}
+						{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Sign up')}
+						{$i18n.t('to')}
+						{$WEBUI_NAME}
 					</div>
 
 					{#if mode === 'signup'}
 						<div class=" mt-1 text-xs font-medium text-gray-500">
-							ⓘ {$WEBUI_NAME} does not make any external connections, and your data stays securely on
-							your locally hosted server.
+							ⓘ {$WEBUI_NAME}
+							{$i18n.t(
+								'does not make any external connections, and your data stays securely on your locally hosted server.'
+							)}
 						</div>
 					{/if}
 
 					<div class="flex flex-col mt-4">
 						{#if mode === 'signup'}
 							<div>
-								<div class=" text-sm font-semibold text-left mb-1">Name</div>
+								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Name')}</div>
 								<input
 									bind:value={name}
 									type="text"
 									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
 									autocomplete="name"
-									placeholder="Enter Your Full Name"
+									placeholder={$i18n.t('Enter Your Full Name')}
 									required
 								/>
 							</div>
@@ -124,24 +130,24 @@
 						{/if}
 
 						<div class="mb-2">
-							<div class=" text-sm font-semibold text-left mb-1">Email</div>
+							<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Email')}</div>
 							<input
 								bind:value={email}
 								type="email"
 								class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
 								autocomplete="email"
-								placeholder="Enter Your Email"
+								placeholder={$i18n.t('Enter Your Email')}
 								required
 							/>
 						</div>
 
 						<div>
-							<div class=" text-sm font-semibold text-left mb-1">Password</div>
+							<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
 							<input
 								bind:value={password}
 								type="password"
 								class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
-								placeholder="Enter Your Password"
+								placeholder={$i18n.t('Enter Your Password')}
 								autocomplete="current-password"
 								required
 							/>
@@ -153,11 +159,13 @@
 							class=" bg-gray-900 hover:bg-gray-800 w-full rounded-full text-white font-semibold text-sm py-3 transition"
 							type="submit"
 						>
-							{mode === 'signin' ? 'Sign In' : 'Create Account'}
+							{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
 						</button>
 
 						<div class=" mt-4 text-sm text-center">
-							{mode === 'signin' ? `Don't have an account?` : `Already have an account?`}
+							{mode === 'signin'
+								? $i18n.t("Don't have an account?")
+								: $i18n.t('Already have an account?')}
 
 							<button
 								class=" font-medium underline"
@@ -170,7 +178,7 @@
 									}
 								}}
 							>
-								{mode === 'signin' ? `Sign up` : `Sign In`}
+								{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
 							</button>
 						</div>
 					</div>

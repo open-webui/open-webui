@@ -3,8 +3,10 @@
 
 	import { documents } from '$lib/stores';
 	import { removeFirstHashWord, isValidHttpUrl } from '$lib/utils';
-	import { tick } from 'svelte';
+	import { tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	export let prompt = '';
 
@@ -117,7 +119,7 @@
 									{doc?.title ?? `#${doc.name}`}
 								</div>
 
-								<div class=" text-xs text-gray-600 line-clamp-1">Collection</div>
+								<div class=" text-xs text-gray-600 line-clamp-1">{$i18n.t('Collection')}</div>
 							{:else}
 								<div class=" font-medium text-black line-clamp-1">
 									#{doc.name} ({doc.filename})
@@ -140,7 +142,9 @@
 									confirmSelectWeb(url);
 								} else {
 									toast.error(
-										'Oops! Looks like the URL is invalid. Please double-check and try again.'
+										$i18n.t(
+											'Oops! Looks like the URL is invalid. Please double-check and try again.'
+										)
 									);
 								}
 							}}
@@ -149,7 +153,7 @@
 								{prompt.split(' ')?.at(0)?.substring(1)}
 							</div>
 
-							<div class=" text-xs text-gray-600 line-clamp-1">Web</div>
+							<div class=" text-xs text-gray-600 line-clamp-1">{$i18n.t('Web')}</div>
 						</button>
 					{/if}
 				</div>

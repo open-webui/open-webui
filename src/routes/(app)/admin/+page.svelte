@@ -2,7 +2,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 
@@ -10,6 +10,8 @@
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
 	import SettingsModal from '$lib/components/admin/SettingsModal.svelte';
+
+	const i18n = getContext('i18n');
 
 	let loaded = false;
 	let users = [];
@@ -37,7 +39,7 @@
 		});
 		if (res) {
 			users = await getUsers(localStorage.token);
-			toast.success('Successfully updated');
+			toast.success($i18n.t('Successfully updated.'));
 		}
 	};
 
@@ -62,9 +64,7 @@
 </script>
 
 <svelte:head>
-	<title>
-		{`Admin Panel | ${$WEBUI_NAME}`}
-	</title>
+	<title>{$i18n.t('Admin Panel')} | {$WEBUI_NAME}</title>
 </svelte:head>
 
 {#key selectedUser}
@@ -88,7 +88,7 @@
 					<div class=" flex flex-col justify-center">
 						<div class=" flex justify-between items-center">
 							<div class="flex items-center text-2xl font-semibold">
-								All Users
+								{$i18n.t('All Users')}
 								<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
 								<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
 									>{users.length}</span
@@ -115,12 +115,12 @@
 										/>
 									</svg>
 
-									<div class=" text-xs">Admin Settings</div>
+									<div class=" text-xs">{$i18n.t('Admin Settings')}</div>
 								</button>
 							</div>
 						</div>
 						<div class=" text-gray-500 text-xs mt-1">
-							ⓘ Click on the user role button to change a user's role.
+							ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 						</div>
 
 						<hr class=" my-3 dark:border-gray-600" />
@@ -131,10 +131,10 @@
 									class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
 								>
 									<tr>
-										<th scope="col" class="px-3 py-2"> Role </th>
-										<th scope="col" class="px-3 py-2"> Name </th>
-										<th scope="col" class="px-3 py-2"> Email </th>
-										<th scope="col" class="px-3 py-2"> Action </th>
+										<th scope="col" class="px-3 py-2"> {$i18n.t('Role')} </th>
+										<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
+										<th scope="col" class="px-3 py-2"> {$i18n.t('Email')} </th>
+										<th scope="col" class="px-3 py-2"> {$i18n.t('Action')} </th>
 									</tr>
 								</thead>
 								<tbody>
@@ -163,7 +163,7 @@
 															'bg-green-600 dark:bg-green-300'} {user.role === 'pending' &&
 															'bg-gray-600 dark:bg-gray-300'}"
 													/>
-													{user.role}</button
+													{$i18n.t(user.role)}</button
 												>
 											</td>
 											<td class="px-3 py-2 font-medium text-gray-900 dark:text-white w-max">

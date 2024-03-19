@@ -111,6 +111,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEYS[idx]}"
         headers["Content-Type"] = "application/json"
 
+        r = None
         try:
             r = requests.post(
                 url=f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech",
@@ -143,7 +144,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 except:
                     error_detail = f"External: {e}"
 
-            raise HTTPException(status_code=r.status_code, detail=error_detail)
+            raise HTTPException(
+                status_code=r.status_code if r else 500, detail=error_detail
+            )
 
     except ValueError:
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
@@ -165,14 +168,15 @@ def merge_models_lists(model_lists):
     merged_list = []
 
     for idx, models in enumerate(model_lists):
-        merged_list.extend(
-            [
-                {**model, "urlIdx": idx}
-                for model in models
-                if "api.openai.com" not in app.state.OPENAI_API_BASE_URLS[idx]
-                or "gpt" in model["id"]
-            ]
-        )
+        if models is not None and "error" not in models:
+            merged_list.extend(
+                [
+                    {**model, "urlIdx": idx}
+                    for model in models
+                    if "api.openai.com" not in app.state.OPENAI_API_BASE_URLS[idx]
+                    or "gpt" in model["id"]
+                ]
+            )
 
     return merged_list
 
@@ -187,15 +191,24 @@ async def get_all_models():
             fetch_url(f"{url}/models", app.state.OPENAI_API_KEYS[idx])
             for idx, url in enumerate(app.state.OPENAI_API_BASE_URLS)
         ]
+
         responses = await asyncio.gather(*tasks)
-        responses = list(
-            filter(lambda x: x is not None and "error" not in x, responses)
-        )
         models = {
             "data": merge_models_lists(
-                list(map(lambda response: response["data"], responses))
+                list(
+                    map(
+                        lambda response: (
+                            response["data"]
+                            if response and "data" in response
+                            else None
+                        ),
+                        responses,
+                    )
+                )
             )
         }
+
+        print(models)
         app.state.MODELS = {model["id"]: model for model in models["data"]}
 
         return models
@@ -218,6 +231,9 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
         return models
     else:
         url = app.state.OPENAI_API_BASE_URLS[url_idx]
+
+        r = None
+
         try:
             r = requests.request(method="GET", url=f"{url}/models")
             r.raise_for_status()
@@ -290,6 +306,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     headers["Authorization"] = f"Bearer {key}"
     headers["Content-Type"] = "application/json"
 
+    r = None
+
     try:
         r = requests.request(
             method=request.method,
@@ -322,4 +340,6 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             except:
                 error_detail = f"External: {e}"
 
-        raise HTTPException(status_code=r.status_code, detail=error_detail)
+        raise HTTPException(
+            status_code=r.status_code if r else 500, detail=error_detail
+        )
