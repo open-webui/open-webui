@@ -673,7 +673,7 @@
 								? chatInputPlaceholder
 								: isRecording
 								? $i18n.t('Listening...')
-								: $i18n.t('Send a Messsage')}
+								: $i18n.t('Send a Message')}
 							bind:value={prompt}
 							on:keypress={(e) => {
 								if (e.keyCode == 13 && !e.shiftKey) {
