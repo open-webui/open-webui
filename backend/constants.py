@@ -46,7 +46,7 @@ class ERROR_MESSAGES(str, Enum):
 
     PANDOC_NOT_INSTALLED = "Pandoc is not installed on the server. Please contact your administrator for assistance."
     INCORRECT_FORMAT = (
-        lambda err="": f"Invalid format. Please use the correct format{err if err else ''}"
+        lambda err="": f"Invalid format. Please use the correct format{err}"
     )
     RATE_LIMIT_EXCEEDED = "API rate limit exceeded"
 

@@ -290,7 +290,12 @@ DEFAULT_PROMPT_SUGGESTIONS = (
 
 
 DEFAULT_USER_ROLE = os.getenv("DEFAULT_USER_ROLE", "pending")
-USER_PERMISSIONS = {"chat": {"deletion": True}}
+
+USER_PERMISSIONS_CHAT_DELETION = (
+    os.environ.get("USER_PERMISSIONS_CHAT_DELETION", "True").lower() == "true"
+)
+
+USER_PERMISSIONS = {"chat": {"deletion": USER_PERMISSIONS_CHAT_DELETION}}
 
 
 MODEL_FILTER_ENABLED = os.environ.get("MODEL_FILTER_ENABLED", False)
