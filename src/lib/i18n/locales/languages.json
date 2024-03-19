@@ -16,6 +16,10 @@
 		"title": "French (France)"
 	},
 	{
+		"code": "fr-CA",
+		"title": "French (Canada)"
+	},
+	{
 		"code": "ru-RU",
 		"title": "Russian (Russia)"
 	},
