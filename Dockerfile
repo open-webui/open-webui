@@ -1,4 +1,7 @@
 # syntax=docker/dockerfile:1
+# Initialize device type args
+ARG USE_CUDA=false
+ARG USE_MPS=false
 
 ######## WebUI frontend ########
 FROM node:21-alpine3.19 as build
@@ -22,6 +25,10 @@ RUN npm run build
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm as base
+
+# Use args
+ARG USE_CUDA
+ARG USE_MPS
 
 ## Basis ##
 ENV ENV=prod \
@@ -54,7 +61,8 @@ ENV RAG_EMBEDDING_MODEL="all-MiniLM-L6-v2" \
     # Important:
     #  If you want to use CUDA you need to install the nvidia-container-toolkit (https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) 
     #  you can set this to "cuda" but its recomended to use --build-arg CUDA_ENABLED=true flag when building the image
-    RAG_EMBEDDING_MODEL_DEVICE_TYPE="cpu"
+    RAG_EMBEDDING_MODEL_DEVICE_TYPE="cpu" \
+    DEVICE_COMPUTE_TYPE="int8"
 # device type for whisper tts and embbeding models - "cpu" (default), "cuda" (nvidia gpu and CUDA required) or "mps" (apple silicon) - choosing this right can lead to better performance
 #### Preloaded models ##########################################################
 
@@ -62,18 +70,23 @@ WORKDIR /app/backend
 # install python dependencies
 COPY ./backend/requirements.txt ./requirements.txt
 
-RUN pip3 install -r requirements.txt --no-cache-dir
-
-RUN if [ "$RAG_EMBEDDING_MODEL_DEVICE_TYPE" = "cuda" ]; then \
-        echo "CUDA enabled" && \
-        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117 --no-cache-dir; \
-    else \
+RUN if [ "$USE_CUDA" = "true" ]; then \
+        export DEVICE_TYPE="cuda" && \
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117 --no-cache-dir && \
+        pip3 install -r requirements.txt --no-cache-dir; \
+    elif [ "$USE_MPS" = "true" ]; then \
+        export DEVICE_TYPE="mps" && \
         pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-        python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device=os.environ['RAG_EMBEDDING_MODEL_DEVICE_TYPE'])"; \
+        pip3 install -r requirements.txt --no-cache-dir && \
+        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+        python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device=os.environ['DEVICE_TYPE'])"; \
+    else \
+        export DEVICE_TYPE="cpu" && \
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
+        pip3 install -r requirements.txt --no-cache-dir && \
+        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+        python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device=os.environ['DEVICE_TYPE'])"; \
     fi
-
-# preload tts model
-RUN python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='auto', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"
 
 #  install required packages
 RUN apt-get update \

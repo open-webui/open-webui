@@ -21,7 +21,11 @@ from utils.utils import (
 )
 from utils.misc import calculate_sha256
 
-from config import CACHE_DIR, UPLOAD_DIR, WHISPER_MODEL, WHISPER_MODEL_DIR
+from config import CACHE_DIR, UPLOAD_DIR, WHISPER_MODEL, WHISPER_MODEL_DIR, DEVICE_TYPE
+
+if DEVICE_TYPE != "cuda":
+    whisper_device_type = "cpu"
+
 
 app = FastAPI()
 app.add_middleware(
@@ -56,7 +60,7 @@ def transcribe(
 
         model = WhisperModel(
             WHISPER_MODEL,
-            device="auto",
+            device=whisper_device_type,
             compute_type="int8",
             download_root=WHISPER_MODEL_DIR,
         )

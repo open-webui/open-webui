@@ -57,7 +57,7 @@ from config import (
     UPLOAD_DIR,
     DOCS_DIR,
     RAG_EMBEDDING_MODEL,
-    RAG_EMBEDDING_MODEL_DEVICE_TYPE,
+    DEVICE_TYPE,
     CHROMA_CLIENT,
     CHUNK_SIZE,
     CHUNK_OVERLAP,
@@ -87,7 +87,7 @@ app.state.TOP_K = 4
 app.state.sentence_transformer_ef = (
     embedding_functions.SentenceTransformerEmbeddingFunction(
         model_name=app.state.RAG_EMBEDDING_MODEL,
-        device=RAG_EMBEDDING_MODEL_DEVICE_TYPE,
+        device=DEVICE_TYPE,
     )
 )
 
@@ -175,7 +175,7 @@ async def update_embedding_model(
     app.state.sentence_transformer_ef = (
         embedding_functions.SentenceTransformerEmbeddingFunction(
             model_name=app.state.RAG_EMBEDDING_MODEL,
-            device=RAG_EMBEDDING_MODEL_DEVICE_TYPE,
+            device=DEVICE_TYPE,
         )
     )
 
