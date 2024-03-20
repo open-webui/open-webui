@@ -26,5 +26,9 @@
 	{
 		"code": "zh-CN",
 		"title": "Chinese (Simplified)"
-	}
+	},
+        {
+                "code": "vi-VN",
+                "title": "Tiếng Việt"
+        }
 ]
