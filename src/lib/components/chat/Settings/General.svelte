@@ -14,7 +14,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
+	let themes = ['oled-dark', 'dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
 	let selectedTheme = 'system';
 
 	let languages = [];
@@ -134,6 +134,7 @@
 						placeholder="Select a theme"
 						on:change={() => themeChangeHandler(selectedTheme)}
 					>
+						<option value="oled-dark">🌌 {$i18n.t('OLED Dark')}</option>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
 						<option value="dark">🌑 {$i18n.t('Dark')}</option>
 						<option value="light">☀️ {$i18n.t('Light')}</option>
