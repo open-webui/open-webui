@@ -1,10 +1,15 @@
+import logging
+
 from litellm.proxy.proxy_server import ProxyConfig, initialize
 from litellm.proxy.proxy_server import app
 
 from fastapi import FastAPI, Request, Depends, status
 from fastapi.responses import JSONResponse
 from utils.utils import get_http_authorization_cred, get_current_user
-from config import ENV
+from config import SRC_LOG_LEVELS, ENV
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["LITELLM"])
 
 proxy_config = ProxyConfig()
 
@@ -33,7 +38,7 @@ async def auth_middleware(request: Request, call_next):
     if ENV != "dev":
         try:
             user = get_current_user(get_http_authorization_cred(auth_header))
-            print(user)
+            log.debug(f"user: {user}")
         except Exception as e:
             return JSONResponse(status_code=400, content={"detail": str(e)})
 

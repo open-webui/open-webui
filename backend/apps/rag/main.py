@@ -8,7 +8,7 @@ from fastapi import (
     Form,
 )
 from fastapi.middleware.cors import CORSMiddleware
-import os, shutil
+import os, shutil, logging
 
 from pathlib import Path
 from typing import List
@@ -54,6 +54,7 @@ from utils.misc import (
 )
 from utils.utils import get_current_user, get_admin_user
 from config import (
+    SRC_LOG_LEVELS,
     UPLOAD_DIR,
     DOCS_DIR,
     RAG_EMBEDDING_MODEL,
@@ -65,6 +66,9 @@ from config import (
 )
 
 from constants import ERROR_MESSAGES
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 #
 # if RAG_EMBEDDING_MODEL:
@@ -124,7 +128,7 @@ def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> b
         if overwrite:
             for collection in CHROMA_CLIENT.list_collections():
                 if collection_name == collection.name:
-                    print(f"deleting existing collection {collection_name}")
+                    log.info(f"deleting existing collection {collection_name}")
                     CHROMA_CLIENT.delete_collection(name=collection_name)
 
         collection = CHROMA_CLIENT.create_collection(
@@ -137,7 +141,7 @@ def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> b
         )
         return True
     except Exception as e:
-        print(e)
+        log.exception(e)
         if e.__class__.__name__ == "UniqueConstraintError":
             return True
 
@@ -274,7 +278,7 @@ def query_doc_handler(
             embedding_function=app.state.sentence_transformer_ef,
         )
     except Exception as e:
-        print(e)
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
@@ -318,7 +322,7 @@ def store_web(form_data: StoreWebForm, user=Depends(get_current_user)):
             "filename": form_data.url,
         }
     except Exception as e:
-        print(e)
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
@@ -416,7 +420,7 @@ def store_doc(
 ):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
 
-    print(file.content_type)
+    log.info(f"file.content_type: {file.content_type}")
     try:
         filename = file.filename
         file_path = f"{UPLOAD_DIR}/{filename}"
@@ -447,7 +451,7 @@ def store_doc(
                 detail=ERROR_MESSAGES.DEFAULT(),
             )
     except Exception as e:
-        print(e)
+        log.exception(e)
         if "No pandoc was found" in str(e):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -512,7 +516,7 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                         )
 
         except Exception as e:
-            print(e)
+            log.exception(e)
 
     return True
 
@@ -533,11 +537,11 @@ def reset(user=Depends(get_admin_user)) -> bool:
             elif os.path.isdir(file_path):
                 shutil.rmtree(file_path)
         except Exception as e:
-            print("Failed to delete %s. Reason: %s" % (file_path, e))
+            log.error("Failed to delete %s. Reason: %s" % (file_path, e))
 
     try:
         CHROMA_CLIENT.reset()
     except Exception as e:
-        print(e)
+        log.exception(e)
 
     return True
