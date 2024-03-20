@@ -32,6 +32,7 @@ RUN npm run build
 ######## CUDA WebUI backend ########
 FROM --platform=linux/amd64 nvidia/cuda:"$CUDA_VERSION"-devel-ubuntu22.04 AS cuda-build-amd64
 #FROM --platform=linux/amd64 cgr.dev/chainguard/pytorch-cuda12:latest AS cuda-build-amd64 # fails with python requirements conflicts
+ENV RAG_EMBEDDING_MODEL_DEVICE_TYPE="cuda"
 
 # Set environment variables for NVIDIA Container Toolkit
 ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64 \
