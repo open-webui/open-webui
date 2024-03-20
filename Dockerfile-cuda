@@ -86,7 +86,7 @@ RUN apk update && \
     apk del /var/cache/apk/*.tbz2
 
 COPY ./backend/requirements.txt ./requirements.txt
-RUN pip3 install torch torchvision torchaudio --no-cache-dir && \
+RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir && \
     pip3 install -r requirements.txt --no-cache-dir
 
 # copy built frontend files
