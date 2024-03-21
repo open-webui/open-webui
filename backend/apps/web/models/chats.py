@@ -95,20 +95,6 @@ class ChatTable:
         except:
             return None
 
-    def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
-        try:
-            query = Chat.update(
-                chat=json.dumps(chat),
-                title=chat["title"] if "title" in chat else "New Chat",
-                timestamp=int(time.time()),
-            ).where(Chat.id == id)
-            query.execute()
-
-            chat = Chat.get(Chat.id == id)
-            return ChatModel(**model_to_dict(chat))
-        except:
-            return None
-
     def get_chat_lists_by_user_id(
         self, user_id: str, skip: int = 0, limit: int = 50
     ) -> List[ChatModel]:
