@@ -41,6 +41,7 @@ from config import (
     MODEL_FILTER_LIST,
     GLOBAL_LOG_LEVEL,
     SRC_LOG_LEVELS,
+    WEBHOOK_URL,
 )
 from constants import ERROR_MESSAGES
 
@@ -63,6 +64,9 @@ app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
 app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+
+app.state.WEBHOOK_URL = WEBHOOK_URL
+
 
 origins = ["*"]
 
@@ -184,7 +188,7 @@ class ModelFilterConfigForm(BaseModel):
 
 
 @app.post("/api/config/model/filter")
-async def get_model_filter_config(
+async def update_model_filter_config(
     form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
 ):
 
@@ -200,6 +204,28 @@ async def get_model_filter_config(
     return {
         "enabled": app.state.MODEL_FILTER_ENABLED,
         "models": app.state.MODEL_FILTER_LIST,
+    }
+
+
+@app.get("/api/webhook")
+async def get_webhook_url(user=Depends(get_admin_user)):
+    return {
+        "url": app.state.WEBHOOK_URL,
+    }
+
+
+class UrlForm(BaseModel):
+    url: str
+
+
+@app.post("/api/webhook")
+async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
+    app.state.WEBHOOK_URL = form_data.url
+
+    webui_app.state.WEBHOOK_URL = app.state.WEBHOOK_URL
+
+    return {
+        "url": app.state.WEBHOOK_URL,
     }
 
 

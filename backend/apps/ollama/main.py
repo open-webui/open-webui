@@ -712,7 +712,7 @@ class GenerateChatCompletionForm(BaseModel):
     format: Optional[str] = None
     options: Optional[dict] = None
     template: Optional[str] = None
-    stream: Optional[bool] = True
+    stream: Optional[bool] = None
     keep_alive: Optional[Union[int, str]] = None
 
 
