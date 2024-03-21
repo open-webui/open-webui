@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getWebhookUrl, updateWebhookUrl } from '$lib/apis';
 	import {
 		getDefaultUserRole,
 		getJWTExpiresDuration,
@@ -16,6 +17,8 @@
 	let defaultUserRole = 'pending';
 	let JWTExpiresIn = '';
 
+	let webhookUrl = '';
+
 	const toggleSignUpEnabled = async () => {
 		signUpEnabled = await toggleSignUpEnabledStatus(localStorage.token);
 	};
@@ -28,18 +31,23 @@
 		JWTExpiresIn = await updateJWTExpiresDuration(localStorage.token, duration);
 	};
 
+	const updateWebhookUrlHandler = async () => {
+		webhookUrl = await updateWebhookUrl(localStorage.token, webhookUrl);
+	};
+
 	onMount(async () => {
 		signUpEnabled = await getSignUpEnabledStatus(localStorage.token);
 		defaultUserRole = await getDefaultUserRole(localStorage.token);
 		JWTExpiresIn = await getJWTExpiresDuration(localStorage.token);
+		webhookUrl = await getWebhookUrl(localStorage.token);
 	});
 </script>
 
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
-		// console.log('submit');
 		updateJWTExpiresDurationHandler(JWTExpiresIn);
+		updateWebhookUrlHandler();
 		saveHandler();
 	}}
 >
@@ -103,6 +111,23 @@
 						<option value="user">{$i18n.t('user')}</option>
 						<option value="admin">{$i18n.t('admin')}</option>
 					</select>
+				</div>
+			</div>
+
+			<hr class=" dark:border-gray-700 my-3" />
+
+			<div class=" w-full justify-between">
+				<div class="flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Webhook URL')}</div>
+				</div>
+
+				<div class="flex mt-2 space-x-2">
+					<input
+						class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+						type="text"
+						placeholder={`https://example.com/webhook`}
+						bind:value={webhookUrl}
+					/>
 				</div>
 			</div>
 
