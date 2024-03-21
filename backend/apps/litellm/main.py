@@ -67,19 +67,14 @@ class ModifyModelsResponseMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         user = request.state.user
 
-        # Check if the request is for the `/models` route
         if "/models" in request.url.path:
-            # Ensure the response is a StreamingResponse
             if isinstance(response, StreamingResponse):
                 # Read the content of the streaming response
                 body = b""
                 async for chunk in response.body_iterator:
                     body += chunk
 
-                # Modify the content as needed
                 data = json.loads(body.decode("utf-8"))
-
-                print(data)
 
                 if app.state.MODEL_FILTER_ENABLED:
                     if user and user.role == "user":
@@ -91,14 +86,11 @@ class ModifyModelsResponseMiddleware(BaseHTTPMiddleware):
                             )
                         )
 
-                # Example modification: Add a new key-value pair
+                # Modified Flag
                 data["modified"] = True
-
-                # Return a new JSON response with the modified content
                 return JSONResponse(content=data)
 
         return response
 
 
-# Add the middleware to the app
 app.add_middleware(ModifyModelsResponseMiddleware)
