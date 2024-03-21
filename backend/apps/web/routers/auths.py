@@ -159,6 +159,7 @@ async def signup(request: Request, form_data: SignupForm):
             if request.app.state.WEBHOOK_URL:
                 post_webhook(
                     request.app.state.WEBHOOK_URL,
+                    WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                     {
                         "action": "signup",
                         "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
