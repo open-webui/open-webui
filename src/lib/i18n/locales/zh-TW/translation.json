@@ -2,7 +2,7 @@
 	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s', 'm', 'h', 'd', 'w' 或 '-1' 表示無期限。",
 	"(Beta)": "(測試版)",
 	"(e.g. `sh webui.sh --api`)": "(例如 `sh webui.sh --api`)",
-	"(latest)": "",
+	"(latest)": "(最新版)",
 	"{{modelName}} is thinking...": "{{modelName}} 正在思考...",
 	"{{webUIName}} Backend Required": "需要 {{webUIName}} 後台",
 	"a user": "",
