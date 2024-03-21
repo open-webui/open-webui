@@ -1,5 +1,9 @@
 [
 	{
+		"code": "bg-BG",
+		"title": "Bulgarian (BG)"
+	},
+	{
 		"code": "en-US",
 		"title": "English (US)"
 	},
