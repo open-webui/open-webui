@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🎉 Webhook Feature**: You can now subscribe to new user sign-up events by adding a webhook URL. Access it through the admin panel > admin settings > webhook URL.
-- **🌍 Language Support**: Spanish, Catalan, and Vietnamese languages have been added, with enhancements made to existing languages.
+- **🔗 Webhook Integration**: Now you can subscribe to new user sign-up events via webhook. Simply navigate to the admin panel > admin settings > webhook URL.
+- **🛡️ Enhanced Model Filtering**: Alongside Ollama, OpenAI proxy model whitelisting, we've added model filtering functionality for LiteLLM proxy.
+- **🌍 Expanded Language Support**: Spanish, Catalan, and Vietnamese languages are now available, with improvements made to others.
 
 ### Fixed
 
