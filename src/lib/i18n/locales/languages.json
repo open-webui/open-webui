@@ -12,8 +12,20 @@
 		"title": "Deutsch"
 	},
 	{
+		"code": "es-ES",
+		"title": "Spanish"
+	},
+	{
 		"code": "fr-FR",
 		"title": "French (France)"
+	},
+	{
+		"code": "fr-CA",
+		"title": "French (Canada)"
+	},
+	{
+		"code": "ru-RU",
+		"title": "Russian (Russia)"
 	},
 	{
 		"code": "uk-UA",
@@ -27,8 +39,12 @@
 		"code": "zh-CN",
 		"title": "Chinese (Simplified)"
 	},
-        {
-                "code": "vi-VN",
-                "title": "Tiếng Việt"
-        }
+  {
+    "code": "vi-VN",
+    "title": "Tiếng Việt"
+  },
+	{
+		"code": "ca-ES",
+		"title": "Catalan"
+	}
 ]

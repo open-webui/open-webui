@@ -27,7 +27,8 @@ from utils.utils import (
     create_token,
 )
 from utils.misc import parse_duration, validate_email_format
-from constants import ERROR_MESSAGES
+from utils.webhook import post_webhook
+from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 
 router = APIRouter()
 
@@ -154,6 +155,17 @@ async def signup(request: Request, form_data: SignupForm):
                 expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
             )
             # response.set_cookie(key='token', value=token, httponly=True)
+
+            if request.app.state.WEBHOOK_URL:
+                post_webhook(
+                    request.app.state.WEBHOOK_URL,
+                    WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                    {
+                        "action": "signup",
+                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        "user": user.model_dump_json(exclude_none=True),
+                    },
+                )
 
             return {
                 "token": token,
