@@ -47,13 +47,12 @@ async def auth_middleware(request: Request, call_next):
     auth_header = request.headers.get("Authorization", "")
     request.state.user = None
 
-    if ENV != "dev":
-        try:
-            user = get_current_user(get_http_authorization_cred(auth_header))
-            print(user)
-            request.state.user = user
-        except Exception as e:
-            return JSONResponse(status_code=400, content={"detail": str(e)})
+    try:
+        user = get_current_user(get_http_authorization_cred(auth_header))
+        print(user)
+        request.state.user = user
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"detail": str(e)})
 
     response = await call_next(request)
     return response
