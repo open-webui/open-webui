@@ -203,7 +203,7 @@
 
 					<div class=" flex justify-start space-x-1 text-gray-700 dark:text-gray-500">
 						{#if siblings.length > 1}
-							<div class="flex self-center">
+							<div class="flex self-center -mt-1">
 								<button
 									class="self-center dark:hover:text-white hover:text-black transition"
 									on:click={() => {
