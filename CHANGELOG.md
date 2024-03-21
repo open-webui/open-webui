@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.114] - 2024-03-20
+
+### Added
+
+- **🎉 Webhook Feature**: You can now subscribe to new user sign-up events by adding a webhook URL. Access it through the admin panel > admin settings > webhook URL.
+- **🌍 Language Support**: Spanish, Catalan, and Vietnamese languages have been added, with enhancements made to existing languages.
+
+### Fixed
+
+- **🔧 Input Field Spelling**: Resolved issue with spelling mistakes in input fields.
+- **🖊️ Light Mode Styling**: Fixed styling issue with light mode in document adding.
+
+### Changed
+
+- **🔄 Language Sorting**: Languages are now sorted alphabetically by their code for improved organization.
+
 ## [0.1.113] - 2024-03-18
 
 ### Added
