@@ -208,7 +208,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
-INCLUDE_OLLAMA = os.environ.get("OLLAMA_BASE_URL", "false")
+INCLUDE_OLLAMA = os.environ.get("INCLUDE_OLLAMA", "false")
 
 
 if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
@@ -220,7 +220,7 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
 
 if ENV == "prod":
     if OLLAMA_BASE_URL == "/ollama":
-        if INCLUDE_OLLAMA:
+        if INCLUDE_OLLAMA == "true":
             # if you use all-in-one docker container (Open WebUI + Ollama) 
             # with the docker build arg INCLUDE_OLLAMA=true (--build-arg="INCLUDE_OLLAMA=true") this only works with http://localhost:11434
             OLLAMA_BASE_URL = "http://localhost:11434"
