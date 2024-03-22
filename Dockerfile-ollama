@@ -64,7 +64,7 @@ RUN pip3 install -r requirements.txt --no-cache-dir
 # Install pandoc and netcat
 # RUN python -c "import pypandoc; pypandoc.download_pandoc()"
 RUN apt-get update \
-    && apt-get install -y pandoc netcat-openbsd \
+    && apt-get install -y pandoc netcat-openbsd curl \
     && rm -rf /var/lib/apt/lists/*
 
 # preload embedding model

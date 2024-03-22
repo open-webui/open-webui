@@ -2,6 +2,7 @@
 # Initialize device type args
 ARG USE_CUDA=false
 ARG USE_MPS=false
+ARG INCLUDE_OLLAMA=false
 
 ######## WebUI frontend ########
 FROM node:21-alpine3.19 as build
@@ -29,10 +30,12 @@ FROM python:3.11-slim-bookworm as base
 # Use args
 ARG USE_CUDA
 ARG USE_MPS
+ARG INCLUDE_OLLAMA
 
 ## Basis ##
 ENV ENV=prod \
-    PORT=8080
+    PORT=8080 \
+    INCLUDE_OLLAMA_ENV=${INCLUDE_OLLAMA}
 
 ## Basis URL Config ##
 ENV OLLAMA_BASE_URL="/ollama" \
@@ -88,14 +91,28 @@ RUN if [ "$USE_CUDA" = "true" ]; then \
         python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device=os.environ['DEVICE_TYPE'])"; \
     fi
 
-#  install required packages
-RUN apt-get update \
-    # Install pandoc and netcat
-    && apt-get install -y --no-install-recommends pandoc netcat-openbsd \
-    # for RAG OCR
-    && apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 \
-    # cleanup
-    && rm -rf /var/lib/apt/lists/*
+
+RUN if [ "$INCLUDE_OLLAMA" = "true" ]; then \
+        apt-get update && \
+        # Install pandoc and netcat
+        apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
+        # for RAG OCR
+        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+        # install helper tools
+        apt-get install -y --no-install-recommends curl && \
+        # install ollama
+        curl -fsSL https://ollama.com/install.sh | sh && \
+        # cleanup
+        rm -rf /var/lib/apt/lists/*; \
+    else \
+        apt-get update && \
+        # Install pandoc and netcat
+        apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
+        # for RAG OCR
+        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+        # cleanup
+        rm -rf /var/lib/apt/lists/*; \
+    fi
 
 
 

@@ -208,6 +208,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
+INCLUDE_OLLAMA = os.environ.get("OLLAMA_BASE_URL", "false")
 
 
 if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
@@ -219,7 +220,10 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
 
 if ENV == "prod":
     if OLLAMA_BASE_URL == "/ollama":
-        OLLAMA_BASE_URL = "http://host.docker.internal:11434"
+        if INCLUDE_OLLAMA:
+            OLLAMA_BASE_URL = "http://localhost:11434"
+        else:    
+            OLLAMA_BASE_URL = "http://host.docker.internal:11434"
 
 
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")

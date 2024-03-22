@@ -81,9 +81,14 @@ WORKDIR /app/backend
 #    apk del /var/cache/apk/*.tbz2
 
 # Install only the dependencies in the container, python will come from the base image used
-RUN apk update && \
-    apk add --no-install-recommends ffmpeg libsm6 libxext6 pandoc netcat-openbsd && \
-    apk del /var/cache/apk/*.tbz2
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 pandoc netcat-openbsd && \
+    rm -rf /var/cache/apk/*.tbz2
+
+# Install python and pip
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip && \
+    rm -rf /var/cache/apk/*.tbz2
 
 COPY ./backend/requirements.txt ./requirements.txt
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir && \
