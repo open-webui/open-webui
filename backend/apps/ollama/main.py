@@ -963,6 +963,9 @@ async def download_file_stream(
 
                     done = current_size == total_size
                     progress = round((current_size / total_size) * 100, 2)
+
+                    print(progress)
+
                     yield f'data: {{"progress": {progress}, "completed": {current_size}, "total": {total_size}}}\n\n'
 
                 if done:
@@ -986,6 +989,11 @@ async def download_file_stream(
                         raise "Ollama: Could not create blob, Please try again."
 
 
+# def number_generator():
+#     for i in range(1, 101):
+#         yield f"data: {i}\n"
+
+
 # url = "https://huggingface.co/TheBloke/stablelm-zephyr-3b-GGUF/resolve/main/stablelm-zephyr-3b.Q2_K.gguf"
 @app.post("/models/download")
 @app.post("/models/download/{url_idx}")
@@ -1002,9 +1010,8 @@ async def download_model(
 
     if file_name:
         file_path = f"{UPLOAD_DIR}/{file_name}"
-
         return StreamingResponse(
-            download_file_stream(url, form_data.url, file_path, file_name)
+            download_file_stream(url, form_data.url, file_path, file_name),
         )
     else:
         return None
