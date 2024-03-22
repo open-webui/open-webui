@@ -80,3 +80,12 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:mps
           build-args: USE_MPS=true
+
+      - name: Build and push Docker image with Ollama
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:with-ollama
+          build-args: INCLUDE_OLLAMA=true
