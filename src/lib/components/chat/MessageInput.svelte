@@ -680,6 +680,7 @@
 									e.preventDefault();
 								}
 								if (prompt !== '' && e.keyCode == 13 && !e.shiftKey) {
+									console.log("xxxx" + prompt)
 									submitPrompt(prompt, user);
 								}
 							}}
