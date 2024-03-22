@@ -67,6 +67,8 @@
 
 	let deleteModelTag = '';
 
+	let modelsList = ["gemma","llama2","mistral","mixtral","llava","neural-chat","codellama","dolphin-mixtral","qwen","llama2-uncensored","mistral-openorca","deepseek-coder","nous-hermes2","phi","orca-mini","dolphin-mistral","wizard-vicuna-uncensored","vicuna","tinydolphin","llama2-chinese","openhermes","zephyr","nomic-embed-text","tinyllama","openchat","wizardcoder","phind-codellama","starcoder","yi","orca2","starcoder2","falcon","wizard-math","dolphin-phi","nous-hermes","starling-lm","stable-code","medllama2","bakllava","codeup","wizardlm-uncensored","solar","everythinglm","sqlcoder","nous-hermes2-mixtral","stable-beluga","yarn-mistral","stablelm2","samantha-mistral","meditron","stablelm-zephyr","magicoder","yarn-llama2","wizard-vicuna","llama-pro","deepseek-llm","dolphincoder","codebooga","mistrallite","nexusraven","open-orca-platypus2","all-minilm","goliath","notux","alfred","megadolphin","xwinlm","wizardlm","duckdb-nsql","notus"];
+
 	const updateModelsHandler = async () => {
 		for (const model of $models.filter(
 			(m) =>
@@ -571,7 +573,13 @@
 										modelTag: 'mistral:7b'
 									})}
 									bind:value={modelTag}
+									list="model-tags"
 								/>
+								<datalist id="model-tags">
+									{#each modelsList as model}
+										<option value={model}></option>
+									{/each}
+								</datalist>
 							</div>
 							<button
 								class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
