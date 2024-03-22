@@ -66,7 +66,9 @@
 	let modelFileUrl = '';
 	let modelFileContent = `TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`;
 	let modelFileDigest = '';
+
 	let uploadProgress = null;
+	let uploadMessage = '';
 
 	let deleteModelTag = '';
 
@@ -186,7 +188,6 @@
 
 	const uploadModelHandler = async () => {
 		modelTransferring = true;
-		uploadProgress = 0;
 
 		let uploaded = false;
 		let fileResponse = null;
@@ -196,6 +197,8 @@
 			const file = modelInputFile ? modelInputFile[0] : null;
 
 			if (file) {
+				uploadMessage = 'Uploading...';
+
 				fileResponse = await uploadModel(localStorage.token, file, selectedOllamaUrlIdx).catch(
 					(error) => {
 						toast.error(error);
@@ -204,6 +207,7 @@
 				);
 			}
 		} else {
+			uploadProgress = 0;
 			fileResponse = await downloadModel(
 				localStorage.token,
 				modelFileUrl,
@@ -232,6 +236,9 @@
 							let data = JSON.parse(line.replace(/^data: /, ''));
 
 							if (data.progress) {
+								if (uploadMessage) {
+									uploadMessage = '';
+								}
 								uploadProgress = data.progress;
 							}
 
@@ -816,7 +823,23 @@
 								>
 							</div>
 
-							{#if uploadProgress !== null}
+							{#if uploadMessage}
+								<div class="mt-2">
+									<div class=" mb-2 text-xs">{$i18n.t('Upload Progress')}</div>
+
+									<div class="w-full rounded-full dark:bg-gray-800">
+										<div
+											class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
+											style="width: 100%"
+										>
+											{uploadMessage}
+										</div>
+									</div>
+									<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
+										{modelFileDigest}
+									</div>
+								</div>
+							{:else if uploadProgress !== null}
 								<div class="mt-2">
 									<div class=" mb-2 text-xs">{$i18n.t('Upload Progress')}</div>
 

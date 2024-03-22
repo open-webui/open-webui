@@ -16,6 +16,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict
 
 import os
+import copy
 import random
 import requests
 import json
@@ -1080,6 +1081,42 @@ def upload_model(file: UploadFile = File(...), url_idx: Optional[int] = None):
             yield f"data: {json.dumps(res)}\n\n"
 
     return StreamingResponse(file_process_stream(), media_type="text/event-stream")
+
+
+# async def upload_model(file: UploadFile = File(), url_idx: Optional[int] = None):
+#     if url_idx == None:
+#         url_idx = 0
+#     url = app.state.OLLAMA_BASE_URLS[url_idx]
+
+#     file_location = os.path.join(UPLOAD_DIR, file.filename)
+#     total_size = file.size
+
+#     async def file_upload_generator(file):
+#         print(file)
+#         try:
+#             async with aiofiles.open(file_location, "wb") as f:
+#                 completed_size = 0
+#                 while True:
+#                     chunk = await file.read(1024*1024)
+#                     if not chunk:
+#                         break
+#                     await f.write(chunk)
+#                     completed_size += len(chunk)
+#                     progress = (completed_size / total_size) * 100
+
+#                     print(progress)
+#                     yield f'data: {json.dumps({"status": "uploading", "percentage": progress, "total": total_size, "completed": completed_size, "done": False})}\n'
+#         except Exception as e:
+#             print(e)
+#             yield f"data: {json.dumps({'status': 'error', 'message': str(e)})}\n"
+#         finally:
+#             await file.close()
+#             print("done")
+#             yield f'data: {json.dumps({"status": "completed", "percentage": 100, "total": total_size, "completed": completed_size, "done": True})}\n'
+
+#     return StreamingResponse(
+#         file_upload_generator(copy.deepcopy(file)), media_type="text/event-stream"
+#     )
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
