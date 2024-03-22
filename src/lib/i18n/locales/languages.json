@@ -4,8 +4,8 @@
 		"title": "English (US)"
 	},
 	{
-		"code": "fa-IR",
-		"title": "فارسی (Farsi)"
+		"code": "ca-ES",
+		"title": "Catalan"
 	},
 	{
 		"code": "de-DE",
@@ -16,12 +16,16 @@
 		"title": "Spanish"
 	},
 	{
-		"code": "fr-FR",
-		"title": "French (France)"
+		"code": "fa-IR",
+		"title": "فارسی (Farsi)"
 	},
 	{
 		"code": "fr-CA",
 		"title": "French (Canada)"
+	},
+	{
+		"code": "fr-FR",
+		"title": "French (France)"
 	},
 	{
 		"code": "ru-RU",
@@ -32,19 +36,15 @@
 		"title": "Ukrainian"
 	},
 	{
-		"code": "zh-TW",
-		"title": "Chinese (Traditional)"
+		"code": "vi-VN",
+		"title": "Tiếng Việt"
 	},
 	{
 		"code": "zh-CN",
 		"title": "Chinese (Simplified)"
 	},
-  {
-    "code": "vi-VN",
-    "title": "Tiếng Việt"
-  },
 	{
-		"code": "ca-ES",
-		"title": "Catalan"
+		"code": "zh-TW",
+		"title": "Chinese (Traditional)"
 	}
 ]
