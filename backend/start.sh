@@ -2,7 +2,7 @@
 
 # Get the INCLUDE_OLLAMA_ENV environment variable which is set in the Dockerfile
 # This includes the ollama in the image
-INCLUDE_OLLAMA=${INCLUDE_OLLAMA_ENV:-false}
+INCLUDE_OLLAMA=${INCLUDE_OLLAMA_DOCKER}
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit

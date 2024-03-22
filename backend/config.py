@@ -208,7 +208,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
-INCLUDE_OLLAMA = os.environ.get("INCLUDE_OLLAMA", "false")
+INCLUDE_OLLAMA = os.environ.get("INCLUDE_OLLAMA_ENV", "false")
 
 
 if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
@@ -220,7 +220,7 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
 
 if ENV == "prod":
     if OLLAMA_BASE_URL == "/ollama":
-        if INCLUDE_OLLAMA == "true":
+        if INCLUDE_OLLAMA.lower() == "true":
             # if you use all-in-one docker container (Open WebUI + Ollama) 
             # with the docker build arg INCLUDE_OLLAMA=true (--build-arg="INCLUDE_OLLAMA=true") this only works with http://localhost:11434
             OLLAMA_BASE_URL = "http://localhost:11434"
@@ -336,9 +336,20 @@ CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (all-MiniLM-L6-v2)
 RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 # device type ebbeding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
-DEVICE_TYPE = os.environ.get(
-    "DEVICE_TYPE", "cpu"
-)
+USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
+USE_MPS = os.environ.get("USE_MPS_DOCKER", "false")
+
+if USE_CUDA.lower() == "true" and USE_MPS.lower() == "true":
+    print("Both USE_CUDA and USE_MPS cannot be set to true. Defaulting to CPU.")
+    DEVICE_TYPE = "cpu"
+elif USE_CUDA.lower() == "true":
+    DEVICE_TYPE = "cuda"
+elif USE_MPS.lower() == "true":
+    DEVICE_TYPE = "mps"
+else:
+    DEVICE_TYPE = "cpu"
+
+
 CHROMA_CLIENT = chromadb.PersistentClient(
     path=CHROMA_DATA_PATH,
     settings=Settings(allow_reset=True, anonymized_telemetry=False),
