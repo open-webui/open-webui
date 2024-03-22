@@ -1060,7 +1060,7 @@ def upload_model(file: UploadFile = File(...), url_idx: Optional[int] = None):
                     hashed = calculate_sha256(f)
                     f.seek(0)
 
-                    url = f"{ollama_url}/blobs/sha256:{hashed}"
+                    url = f"{ollama_url}/api/blobs/sha256:{hashed}"
                     response = requests.post(url, data=f)
 
                     if response.ok:
