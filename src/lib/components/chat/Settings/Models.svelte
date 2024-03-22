@@ -5,9 +5,11 @@
 	import {
 		createModel,
 		deleteModel,
+		downloadModel,
 		getOllamaUrls,
 		getOllamaVersion,
-		pullModel
+		pullModel,
+		uploadModel
 	} from '$lib/apis/ollama';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, models, user } from '$lib/stores';
@@ -60,7 +62,7 @@
 	let pullProgress = null;
 
 	let modelUploadMode = 'file';
-	let modelInputFile = '';
+	let modelInputFile: File[] | null = null;
 	let modelFileUrl = '';
 	let modelFileContent = `TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`;
 	let modelFileDigest = '';
@@ -191,30 +193,23 @@
 		let name = '';
 
 		if (modelUploadMode === 'file') {
-			const file = modelInputFile[0];
-			const formData = new FormData();
-			formData.append('file', file);
+			const file = modelInputFile ? modelInputFile[0] : null;
 
-			fileResponse = await fetch(`${WEBUI_API_BASE_URL}/utils/upload`, {
-				method: 'POST',
-				headers: {
-					...($user && { Authorization: `Bearer ${localStorage.token}` })
-				},
-				body: formData
-			}).catch((error) => {
-				console.log(error);
-				return null;
-			});
+			if (file) {
+				fileResponse = uploadModel(localStorage.token, file, selectedOllamaUrlIdx).catch(
+					(error) => {
+						toast.error(error);
+						return null;
+					}
+				);
+			}
 		} else {
-			fileResponse = await fetch(`${WEBUI_API_BASE_URL}/utils/download?url=${modelFileUrl}`, {
-				method: 'GET',
-				headers: {
-					...($user && { Authorization: `Bearer ${localStorage.token}` })
+			fileResponse = downloadModel(localStorage.token, modelFileUrl, selectedOllamaUrlIdx).catch(
+				(error) => {
+					toast.error(error);
+					return null;
 				}
-			}).catch((error) => {
-				console.log(error);
-				return null;
-			});
+			);
 		}
 
 		if (fileResponse && fileResponse.ok) {
@@ -318,7 +313,8 @@
 		}
 
 		modelFileUrl = '';
-		modelInputFile = '';
+		modelUploadInputElement.value = '';
+		modelInputFile = null;
 		modelTransferring = false;
 		uploadProgress = null;
 
