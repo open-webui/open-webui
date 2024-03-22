@@ -964,8 +964,6 @@ async def download_file_stream(
                     done = current_size == total_size
                     progress = round((current_size / total_size) * 100, 2)
 
-                    print(progress)
-
                     yield f'data: {{"progress": {progress}, "completed": {current_size}, "total": {total_size}}}\n\n'
 
                 if done:
