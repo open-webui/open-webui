@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Get the INCLUDE_OLLAMA_ENV environment variable whcih is set in the Dockerfile
+# Get the INCLUDE_OLLAMA_ENV environment variable which is set in the Dockerfile
 # This includes the ollama in the image
 INCLUDE_OLLAMA=${INCLUDE_OLLAMA_ENV:-false}
 

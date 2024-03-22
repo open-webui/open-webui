@@ -221,8 +221,8 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
 if ENV == "prod":
     if OLLAMA_BASE_URL == "/ollama":
         if INCLUDE_OLLAMA:
-            # If you use all in one Docker container (WEbUI + Ollama) 
-            # with the docker build arg INCLUDE_OLLAMA=true (--build-arg="INCLUDE_OLLAMA=true") this only works with http://localhost:11434
+            # if you use all-in-one docker container (Open WebUI + Ollama) 
+            # with the ocker build arg INCLUDE_OLLAMA=true (--build-arg="INCLUDE_OLLAMA=true") this only works with http://localhost:11434
             OLLAMA_BASE_URL = "http://localhost:11434"
         else:    
             OLLAMA_BASE_URL = "http://host.docker.internal:11434"
