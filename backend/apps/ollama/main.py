@@ -1018,69 +1018,68 @@ async def download_model(
 
 @app.post("/models/upload")
 @app.post("/models/upload/{url_idx}")
-def upload_model(file: UploadFile = File(...), url_idx: Optional[int] = None):
-    if url_idx == None:
+async def upload_model(background_tasks: BackgroundTasks, file: UploadFile = File(...), url_idx: Optional[int] = None):
+    if url_idx is None:
         url_idx = 0
     ollama_url = app.state.OLLAMA_BASE_URLS[url_idx]
 
     file_path = f"{UPLOAD_DIR}/{file.filename}"
 
     # Save file in chunks
-    with open(file_path, "wb+") as f:
+    with open(file_path, "wb") as f:
         for chunk in file.file:
             f.write(chunk)
 
-    def file_process_stream():
-        nonlocal ollama_url
-        total_size = os.path.getsize(file_path)
-        chunk_size = 1024 * 1024
-        try:
-            with open(file_path, "rb") as f:
-                total = 0
-                done = False
+    # Process the file in the background
+    background_tasks.add_task(process_file, file_path, ollama_url, file.filename)
 
-                while not done:
-                    chunk = f.read(chunk_size)
-                    if not chunk:
-                        done = True
-                        continue
+    return StreamingResponse(process_file(file_path, ollama_url, file.filename), media_type="text/event-stream")
 
-                    total += len(chunk)
-                    progress = round((total / total_size) * 100, 2)
+async def process_file(file_path, ollama_url, file_name):
+    chunk_size = 1024 * 1024
+    total_size = os.path.getsize(file_path)
 
-                    res = {
-                        "progress": progress,
-                        "total": total_size,
-                        "completed": total,
-                    }
-                    yield f"data: {json.dumps(res)}\n\n"
+    with open(file_path, "rb") as f:
+        total = 0
+        done = False
 
-                if done:
-                    f.seek(0)
-                    hashed = calculate_sha256(f)
-                    f.seek(0)
+        while not done:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                done = True
+                continue
 
-                    url = f"{ollama_url}/api/blobs/sha256:{hashed}"
-                    response = requests.post(url, data=f)
+            total += len(chunk)
+            progress = round((total / total_size) * 100, 2)
 
-                    if response.ok:
-                        res = {
-                            "done": done,
-                            "blob": f"sha256:{hashed}",
-                            "name": file.filename,
-                        }
-                        os.remove(file_path)
-                        yield f"data: {json.dumps(res)}\n\n"
-                    else:
-                        raise Exception(
-                            "Ollama: Could not create blob, Please try again."
-                        )
-
-        except Exception as e:
-            res = {"error": str(e)}
+            res = {
+                "progress": progress,
+                "total": total_size,
+                "completed": total,
+            }
             yield f"data: {json.dumps(res)}\n\n"
 
-    return StreamingResponse(file_process_stream(), media_type="text/event-stream")
+        if done:
+            f.seek(0)
+            hashed = calculate_sha256(f)
+            f.seek(0)
+
+            url = f"{ollama_url}/api/blobs/sha256:{hashed}"
+            response = requests.post(url, data=f)
+
+            if response.ok:
+                res = {
+                    "done": done,
+                    "blob": f"sha256:{hashed}",
+                    "name": file_name,
+                }
+                os.remove(file_path)
+                yield f"data: {json.dumps(res)}\n\n"
+            else:
+                error_message = "Ollama: Could not create blob, Please try again."
+                res = {"error": error_message}
+                yield f"data: {json.dumps(res)}\n\n"
+                raise Exception(error_message)
 
 
 # async def upload_model(file: UploadFile = File(), url_idx: Optional[int] = None):
