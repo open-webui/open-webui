@@ -1,17 +1,19 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
+	import { getContext } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
 	import { getChatById } from '$lib/apis/chats';
-	import { chatId, modelfiles, settings } from '$lib/stores';
+	import { WEBUI_NAME, chatId, modelfiles, settings } from '$lib/stores';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import TagInput from '../common/Tags/TagInput.svelte';
 	import Tags from '../common/Tags.svelte';
-	import { WEBUI_NAME } from '$lib/constants';
+
+	const i18n = getContext('i18n');
 
 	export let initNewChat: Function;
-	export let title: string = WEBUI_NAME;
+	export let title: string = $WEBUI_NAME;
 	export let shareEnabled: boolean = false;
 
 	export let tags = [];
@@ -27,7 +29,7 @@
 		const chat = (await getChatById(localStorage.token, $chatId)).chat;
 		console.log('share', chat);
 
-		toast.success('Redirecting you to OpenWebUI Community');
+		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 		const url = 'https://openwebui.com';
 		// const url = 'http://localhost:5173';
 
@@ -102,7 +104,7 @@
 			</div>
 			<div class=" flex-1 self-center font-medium line-clamp-1">
 				<div>
-					{title != '' ? title : WEBUI_NAME}
+					{title != '' ? title : $WEBUI_NAME}
 				</div>
 			</div>
 

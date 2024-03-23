@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks
 from fastapi import Depends, HTTPException, status
-from starlette.responses import StreamingResponse
+from starlette.responses import StreamingResponse, FileResponse
+
 
 from pydantic import BaseModel
 
@@ -9,9 +10,11 @@ import os
 import aiohttp
 import json
 
+
+from utils.utils import get_admin_user
 from utils.misc import calculate_sha256, get_gravatar_url
 
-from config import OLLAMA_API_BASE_URL, DATA_DIR, UPLOAD_DIR
+from config import OLLAMA_BASE_URLS, DATA_DIR, UPLOAD_DIR
 from constants import ERROR_MESSAGES
 
 
@@ -72,7 +75,7 @@ async def download_file_stream(url, file_path, file_name, chunk_size=1024 * 1024
                     hashed = calculate_sha256(file)
                     file.seek(0)
 
-                    url = f"{OLLAMA_API_BASE_URL}/blobs/sha256:{hashed}"
+                    url = f"{OLLAMA_BASE_URLS[0]}/api/blobs/sha256:{hashed}"
                     response = requests.post(url, data=file)
 
                     if response.ok:
@@ -144,7 +147,7 @@ def upload(file: UploadFile = File(...)):
                     hashed = calculate_sha256(f)
                     f.seek(0)
 
-                    url = f"{OLLAMA_API_BASE_URL}/blobs/sha256:{hashed}"
+                    url = f"{OLLAMA_BASE_URLS[0]}/blobs/sha256:{hashed}"
                     response = requests.post(url, data=f)
 
                     if response.ok:
@@ -172,3 +175,13 @@ async def get_gravatar(
     email: str,
 ):
     return get_gravatar_url(email)
+
+
+@router.get("/db/download")
+async def download_db(user=Depends(get_admin_user)):
+
+    return FileResponse(
+        f"{DATA_DIR}/webui.db",
+        media_type="application/octet-stream",
+        filename="webui.db",
+    )

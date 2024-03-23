@@ -1,20 +1,24 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
+	import { getContext } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	import { models, settings, user } from '$lib/stores';
 
 	import { getOllamaModels } from '$lib/apis/ollama';
 	import { getOpenAIModels } from '$lib/apis/openai';
+	import { getLiteLLMModels } from '$lib/apis/litellm';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
-	import Advanced from './Settings/Advanced.svelte';
 	import About from './Settings/About.svelte';
 	import Models from './Settings/Models.svelte';
 	import General from './Settings/General.svelte';
-	import External from './Settings/External.svelte';
 	import Interface from './Settings/Interface.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import Chats from './Settings/Chats.svelte';
+	import Connections from './Settings/Connections.svelte';
+	import Images from './Settings/Images.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let show = false;
 
@@ -27,23 +31,29 @@
 
 	let selectedTab = 'general';
 
-	const getModels = async (type = 'all') => {
-		const models = [];
-		models.push(
-			...(await getOllamaModels(localStorage.token).catch((error) => {
-				toast.error(error);
-				return [];
-			}))
-		);
-
-		if (type === 'all') {
-			const openAIModels = await getOpenAIModels(localStorage.token).catch((error) => {
+	const getModels = async () => {
+		let models = await Promise.all([
+			await getOllamaModels(localStorage.token).catch((error) => {
 				console.log(error);
 				return null;
-			});
-			models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
-		}
+			}),
+			await getOpenAIModels(localStorage.token).catch((error) => {
+				console.log(error);
+				return null;
+			}),
+			await getLiteLLMModels(localStorage.token).catch((error) => {
+				console.log(error);
+				return null;
+			})
+		]);
 
+		models = models
+			.filter((models) => models)
+			.reduce((a, e, i, arr) => a.concat(e, ...(i < arr.length - 1 ? [{ name: 'hr' }] : [])), []);
+
+		// models.push(...(ollamaModels ? [{ name: 'hr' }, ...ollamaModels] : []));
+		// models.push(...(openAIModels ? [{ name: 'hr' }, ...openAIModels] : []));
+		// models.push(...(liteLLMModels ? [{ name: 'hr' }, ...liteLLMModels] : []));
 		return models;
 	};
 </script>
@@ -51,7 +61,7 @@
 <Modal bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
-			<div class=" text-lg font-medium self-center">Settings</div>
+			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -99,34 +109,34 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">General</div>
-				</button>
-
-				<button
-					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-					'advanced'
-						? 'bg-gray-200 dark:bg-gray-700'
-						: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
-					on:click={() => {
-						selectedTab = 'advanced';
-					}}
-				>
-					<div class=" self-center mr-2">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M17 2.75a.75.75 0 00-1.5 0v5.5a.75.75 0 001.5 0v-5.5zM17 15.75a.75.75 0 00-1.5 0v1.5a.75.75 0 001.5 0v-1.5zM3.75 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5a.75.75 0 01.75-.75zM4.5 2.75a.75.75 0 00-1.5 0v5.5a.75.75 0 001.5 0v-5.5zM10 11a.75.75 0 01.75.75v5.5a.75.75 0 01-1.5 0v-5.5A.75.75 0 0110 11zM10.75 2.75a.75.75 0 00-1.5 0v1.5a.75.75 0 001.5 0v-1.5zM10 6a2 2 0 100 4 2 2 0 000-4zM3.75 10a2 2 0 100 4 2 2 0 000-4zM16.25 10a2 2 0 100 4 2 2 0 000-4z"
-							/>
-						</svg>
-					</div>
-					<div class=" self-center">Advanced</div>
+					<div class=" self-center">{$i18n.t('General')}</div>
 				</button>
 
 				{#if $user?.role === 'admin'}
+					<button
+						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+						'connections'
+							? 'bg-gray-200 dark:bg-gray-700'
+							: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+						on:click={() => {
+							selectedTab = 'connections';
+						}}
+					>
+						<div class=" self-center mr-2">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									d="M1 9.5A3.5 3.5 0 0 0 4.5 13H12a3 3 0 0 0 .917-5.857 2.503 2.503 0 0 0-3.198-3.019 3.5 3.5 0 0 0-6.628 2.171A3.5 3.5 0 0 0 1 9.5Z"
+								/>
+							</svg>
+						</div>
+						<div class=" self-center">{$i18n.t('Connections')}</div>
+					</button>
+
 					<button
 						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 						'models'
@@ -150,31 +160,7 @@
 								/>
 							</svg>
 						</div>
-						<div class=" self-center">Models</div>
-					</button>
-
-					<button
-						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-						'external'
-							? 'bg-gray-200 dark:bg-gray-700'
-							: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
-						on:click={() => {
-							selectedTab = 'external';
-						}}
-					>
-						<div class=" self-center mr-2">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-4 h-4"
-							>
-								<path
-									d="M1 9.5A3.5 3.5 0 0 0 4.5 13H12a3 3 0 0 0 .917-5.857 2.503 2.503 0 0 0-3.198-3.019 3.5 3.5 0 0 0-6.628 2.171A3.5 3.5 0 0 0 1 9.5Z"
-								/>
-							</svg>
-						</div>
-						<div class=" self-center">External</div>
+						<div class=" self-center">{$i18n.t('Models')}</div>
 					</button>
 				{/if}
 
@@ -196,12 +182,12 @@
 						>
 							<path
 								fill-rule="evenodd"
-								d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+								d="M2 4.25A2.25 2.25 0 0 1 4.25 2h7.5A2.25 2.25 0 0 1 14 4.25v5.5A2.25 2.25 0 0 1 11.75 12h-1.312c.1.128.21.248.328.36a.75.75 0 0 1 .234.545v.345a.75.75 0 0 1-.75.75h-4.5a.75.75 0 0 1-.75-.75v-.345a.75.75 0 0 1 .234-.545c.118-.111.228-.232.328-.36H4.25A2.25 2.25 0 0 1 2 9.75v-5.5Zm2.25-.75a.75.75 0 0 0-.75.75v4.5c0 .414.336.75.75.75h7.5a.75.75 0 0 0 .75-.75v-4.5a.75.75 0 0 0-.75-.75h-7.5Z"
 								clip-rule="evenodd"
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">Interface</div>
+					<div class=" self-center">{$i18n.t('Interface')}</div>
 				</button>
 
 				<button
@@ -228,8 +214,36 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">Audio</div>
+					<div class=" self-center">{$i18n.t('Audio')}</div>
 				</button>
+
+				{#if $user.role === 'admin'}
+					<button
+						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+						'images'
+							? 'bg-gray-200 dark:bg-gray-700'
+							: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+						on:click={() => {
+							selectedTab = 'images';
+						}}
+					>
+						<div class=" self-center mr-2">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</div>
+						<div class=" self-center">{$i18n.t('Images')}</div>
+					</button>
+				{/if}
 
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
@@ -254,7 +268,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">Chats</div>
+					<div class=" self-center">{$i18n.t('Chats')}</div>
 				</button>
 
 				<button
@@ -280,7 +294,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">Account</div>
+					<div class=" self-center">{$i18n.t('Account')}</div>
 				</button>
 
 				<button
@@ -306,46 +320,46 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">About</div>
+					<div class=" self-center">{$i18n.t('About')}</div>
 				</button>
 			</div>
-			<div class="flex-1 md:min-h-[380px]">
+			<div class="flex-1 md:min-h-[25rem]">
 				{#if selectedTab === 'general'}
 					<General
 						{getModels}
 						{saveSettings}
 						on:save={() => {
-							show = false;
+							toast.success($i18n.t('Settings saved successfully!'));
 						}}
-					/>
-				{:else if selectedTab === 'advanced'}
-					<Advanced
-						on:save={() => {
-							show = false;
-						}}
-						{saveSettings}
 					/>
 				{:else if selectedTab === 'models'}
 					<Models {getModels} />
-				{:else if selectedTab === 'external'}
-					<External
+				{:else if selectedTab === 'connections'}
+					<Connections
 						{getModels}
 						on:save={() => {
-							show = false;
+							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'interface'}
 					<Interface
 						{saveSettings}
 						on:save={() => {
-							show = false;
+							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'audio'}
 					<Audio
 						{saveSettings}
 						on:save={() => {
-							show = false;
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{:else if selectedTab === 'images'}
+					<Images
+						{saveSettings}
+						on:save={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'chats'}
@@ -353,7 +367,7 @@
 				{:else if selectedTab === 'account'}
 					<Account
 						saveHandler={() => {
-							show = false;
+							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'about'}

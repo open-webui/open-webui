@@ -5,6 +5,13 @@ class MESSAGES(str, Enum):
     DEFAULT = lambda msg="": f"{msg if msg else ''}"
 
 
+class WEBHOOK_MESSAGES(str, Enum):
+    DEFAULT = lambda msg="": f"{msg if msg else ''}"
+    USER_SIGNUP = lambda username="": (
+        f"New user signed up: {username}" if username else "New user signed up"
+    )
+
+
 class ERROR_MESSAGES(str, Enum):
     def __str__(self) -> str:
         return super().__str__()
@@ -41,6 +48,15 @@ class ERROR_MESSAGES(str, Enum):
     NOT_FOUND = "We could not find what you're looking for :/"
     USER_NOT_FOUND = "We could not find what you're looking for :/"
     API_KEY_NOT_FOUND = "Oops! It looks like there's a hiccup. The API key is missing. Please make sure to provide a valid API key to access this feature."
+
     MALICIOUS = "Unusual activities detected, please try again in a few minutes."
 
     PANDOC_NOT_INSTALLED = "Pandoc is not installed on the server. Please contact your administrator for assistance."
+    INCORRECT_FORMAT = (
+        lambda err="": f"Invalid format. Please use the correct format{err}"
+    )
+    RATE_LIMIT_EXCEEDED = "API rate limit exceeded"
+
+    MODEL_NOT_FOUND = lambda name="": f"Model '{name}' was not found"
+    OPENAI_NOT_FOUND = lambda name="": f"OpenAI API was not found"
+    OLLAMA_NOT_FOUND = "WebUI could not connect to Ollama"

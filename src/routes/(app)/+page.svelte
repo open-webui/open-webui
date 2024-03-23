@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -14,6 +14,7 @@
 		chats,
 		chatId,
 		config,
+		WEBUI_NAME,
 		tags as _tags
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
@@ -36,11 +37,15 @@
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
+	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL } from '$lib/constants';
+
+	const i18n = getContext('i18n');
 
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
-
+	let messagesContainerElement: HTMLDivElement;
 	let currentRequestId = null;
 
 	let selectedModels = [''];
@@ -102,13 +107,8 @@
 			await cancelChatCompletion(localStorage.token, currentRequestId);
 			currentRequestId = null;
 		}
-
 		window.history.replaceState(history.state, '', `/`);
-
-		console.log('initNewChat');
-
 		await chatId.set('');
-		console.log($chatId);
 
 		autoScroll = true;
 
@@ -118,8 +118,6 @@
 			messages: {},
 			currentId: null
 		};
-
-		console.log($config);
 
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
@@ -131,15 +129,23 @@
 			selectedModels = [''];
 		}
 
+		selectedModels = selectedModels.map((modelId) =>
+			$models.map((m) => m.id).includes(modelId) ? modelId : ''
+		);
+
 		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 		settings.set({
 			..._settings
 		});
+
+		const chatInput = document.getElementById('chat-textarea');
+		setTimeout(() => chatInput?.focus(), 0);
 	};
 
 	const scrollToBottom = () => {
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollHeight;
+		if (messagesContainerElement) {
+			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+		}
 	};
 
 	//////////////////////////
@@ -149,8 +155,12 @@
 	const submitPrompt = async (userPrompt, _user = null) => {
 		console.log('submitPrompt', $chatId);
 
+		selectedModels = selectedModels.map((modelId) =>
+			$models.map((m) => m.id).includes(modelId) ? modelId : ''
+		);
+
 		if (selectedModels.includes('')) {
-			toast.error('Model not selected');
+			toast.error($i18n.t('Model not selected'));
 		} else if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
 			console.log('wait');
@@ -160,7 +170,9 @@
 		) {
 			// Upload not done
 			toast.error(
-				`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
+				$i18n.t(
+					`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
+				)
 			);
 		} else {
 			// Reset chat message textarea height
@@ -196,7 +208,7 @@
 				if ($settings.saveChatHistory ?? true) {
 					chat = await createNewChat(localStorage.token, {
 						id: $chatId,
-						title: 'New Chat',
+						title: $i18n.t('New Chat'),
 						models: selectedModels,
 						system: $settings.system ?? undefined,
 						options: {
@@ -227,86 +239,42 @@
 	const sendPrompt = async (prompt, parentId) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
-		const docs = messages
-			.filter((message) => message?.files ?? null)
-			.map((message) =>
-				message.files.filter((item) => item.type === 'doc' || item.type === 'collection')
-			)
-			.flat(1);
-
-		console.log(docs);
-		if (docs.length > 0) {
-			processing = 'Reading';
-			const query = history.messages[parentId].content;
-
-			let relevantContexts = await Promise.all(
-				docs.map(async (doc) => {
-					if (doc.type === 'collection') {
-						return await queryCollection(localStorage.token, doc.collection_names, query, 4).catch(
-							(error) => {
-								console.log(error);
-								return null;
-							}
-						);
-					} else {
-						return await queryDoc(localStorage.token, doc.collection_name, query, 4).catch(
-							(error) => {
-								console.log(error);
-								return null;
-							}
-						);
-					}
-				})
-			);
-			relevantContexts = relevantContexts.filter((context) => context);
-
-			const contextString = relevantContexts.reduce((a, context, i, arr) => {
-				return `${a}${context.documents.join(' ')}\n`;
-			}, '');
-
-			console.log(contextString);
-
-			history.messages[parentId].raContent = RAGTemplate(contextString, query);
-			history.messages[parentId].contexts = relevantContexts;
-			await tick();
-			processing = '';
-		}
-
 		await Promise.all(
-			selectedModels.map(async (model) => {
-				console.log(model);
-				const modelTag = $models.filter((m) => m.name === model).at(0);
+			selectedModels.map(async (modelId) => {
+				const model = $models.filter((m) => m.id === modelId).at(0);
 
-				// Create response message
-				let responseMessageId = uuidv4();
-				let responseMessage = {
-					parentId: parentId,
-					id: responseMessageId,
-					childrenIds: [],
-					role: 'assistant',
-					content: '',
-					model: model,
-					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-				};
+				if (model) {
+					// Create response message
+					let responseMessageId = uuidv4();
+					let responseMessage = {
+						parentId: parentId,
+						id: responseMessageId,
+						childrenIds: [],
+						role: 'assistant',
+						content: '',
+						model: model.id,
+						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+					};
 
-				// Add message to history and Set currentId to messageId
-				history.messages[responseMessageId] = responseMessage;
-				history.currentId = responseMessageId;
+					// Add message to history and Set currentId to messageId
+					history.messages[responseMessageId] = responseMessage;
+					history.currentId = responseMessageId;
 
-				// Append messageId to childrenIds of parent message
-				if (parentId !== null) {
-					history.messages[parentId].childrenIds = [
-						...history.messages[parentId].childrenIds,
-						responseMessageId
-					];
-				}
+					// Append messageId to childrenIds of parent message
+					if (parentId !== null) {
+						history.messages[parentId].childrenIds = [
+							...history.messages[parentId].childrenIds,
+							responseMessageId
+						];
+					}
 
-				if (modelTag?.external) {
-					await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-				} else if (modelTag) {
-					await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+					if (model?.external) {
+						await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+					} else if (model) {
+						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+					}
 				} else {
-					toast.error(`Model ${model} not found`);
+					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
 			})
 		);
@@ -315,6 +283,7 @@
 	};
 
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
+		model = model.id;
 		const responseMessage = history.messages[responseMessageId];
 
 		// Wait until history/message have been updated
@@ -333,15 +302,25 @@
 			...messages
 		]
 			.filter((message) => message)
-			.map((message, idx, arr) => ({
-				role: message.role,
-				content: arr.length - 2 !== idx ? message.content : message?.raContent ?? message.content,
-				...(message.files && {
-					images: message.files
-						.filter((file) => file.type === 'image')
-						.map((file) => file.url.slice(file.url.indexOf(',') + 1))
-				})
-			}));
+			.map((message, idx, arr) => {
+				// Prepare the base message object
+				const baseMessage = {
+					role: message.role,
+					content: arr.length - 2 !== idx ? message.content : message?.raContent ?? message.content
+				};
+
+				// Extract and format image URLs if any exist
+				const imageUrls = message.files
+					?.filter((file) => file.type === 'image')
+					.map((file) => file.url.slice(file.url.indexOf(',') + 1));
+
+				// Add images array only if it contains elements
+				if (imageUrls && imageUrls.length > 0 && message.role === 'user') {
+					baseMessage.images = imageUrls;
+				}
+
+				return baseMessage;
+			});
 
 		let lastImageIndex = -1;
 
@@ -359,6 +338,13 @@
 			}
 		});
 
+		const docs = messages
+			.filter((message) => message?.files ?? null)
+			.map((message) =>
+				message.files.filter((item) => item.type === 'doc' || item.type === 'collection')
+			)
+			.flat(1);
+
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
 			model: model,
 			messages: messagesBody,
@@ -366,7 +352,8 @@
 				...($settings.options ?? {})
 			},
 			format: $settings.requestFormat ?? undefined,
-			keep_alive: $settings.keepAlive ?? undefined
+			keep_alive: $settings.keepAlive ?? undefined,
+			docs: docs.length > 0 ? docs : undefined
 		});
 
 		if (res && res.ok) {
@@ -448,7 +435,7 @@
 												: `${model}`,
 											{
 												body: responseMessage.content,
-												icon: selectedModelfile?.imageUrl ?? '/favicon.png'
+												icon: selectedModelfile?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`
 											}
 										);
 									}
@@ -499,12 +486,18 @@
 					responseMessage.content = error.error;
 				}
 			} else {
-				toast.error(`Uh-oh! There was an issue connecting to Ollama.`);
-				responseMessage.content = `Uh-oh! There was an issue connecting to Ollama.`;
+				toast.error(
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: 'Ollama' })
+				);
+				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+					provider: 'Ollama'
+				});
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = `Uh-oh! There was an issue connecting to Ollama.`;
+			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+				provider: 'Ollama'
+			});
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -526,54 +519,69 @@
 		const responseMessage = history.messages[responseMessageId];
 		scrollToBottom();
 
-		const res = await generateOpenAIChatCompletion(localStorage.token, {
-			model: model,
-			stream: true,
-			messages: [
-				$settings.system
-					? {
-							role: 'system',
-							content: $settings.system
-					  }
-					: undefined,
-				...messages
-			]
-				.filter((message) => message)
-				.map((message, idx, arr) => ({
-					role: message.role,
-					...(message.files?.filter((file) => file.type === 'image').length > 0 ?? false
+		const docs = messages
+			.filter((message) => message?.files ?? null)
+			.map((message) =>
+				message.files.filter((item) => item.type === 'doc' || item.type === 'collection')
+			)
+			.flat(1);
+
+		console.log(docs);
+
+		const res = await generateOpenAIChatCompletion(
+			localStorage.token,
+			{
+				model: model.id,
+				stream: true,
+				messages: [
+					$settings.system
 						? {
-								content: [
-									{
-										type: 'text',
-										text:
-											arr.length - 1 !== idx
-												? message.content
-												: message?.raContent ?? message.content
-									},
-									...message.files
-										.filter((file) => file.type === 'image')
-										.map((file) => ({
-											type: 'image_url',
-											image_url: {
-												url: file.url
-											}
-										}))
-								]
+								role: 'system',
+								content: $settings.system
 						  }
-						: {
-								content:
-									arr.length - 1 !== idx ? message.content : message?.raContent ?? message.content
-						  })
-				})),
-			seed: $settings?.options?.seed ?? undefined,
-			stop: $settings?.options?.stop ?? undefined,
-			temperature: $settings?.options?.temperature ?? undefined,
-			top_p: $settings?.options?.top_p ?? undefined,
-			num_ctx: $settings?.options?.num_ctx ?? undefined,
-			frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
-			max_tokens: $settings?.options?.num_predict ?? undefined
-		});
+						: undefined,
+					...messages
+				]
+					.filter((message) => message)
+					.map((message, idx, arr) => ({
+						role: message.role,
+						...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
+						message.role === 'user'
+							? {
+									content: [
+										{
+											type: 'text',
+											text:
+												arr.length - 1 !== idx
+													? message.content
+													: message?.raContent ?? message.content
+										},
+										...message.files
+											.filter((file) => file.type === 'image')
+											.map((file) => ({
+												type: 'image_url',
+												image_url: {
+													url: file.url
+												}
+											}))
+									]
+							  }
+							: {
+									content:
+										arr.length - 1 !== idx ? message.content : message?.raContent ?? message.content
+							  })
+					})),
+				seed: $settings?.options?.seed ?? undefined,
+				stop: $settings?.options?.stop ?? undefined,
+				temperature: $settings?.options?.temperature ?? undefined,
+				top_p: $settings?.options?.top_p ?? undefined,
+				num_ctx: $settings?.options?.num_ctx ?? undefined,
+				frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
+				max_tokens: $settings?.options?.num_predict ?? undefined,
+				docs: docs.length > 0 ? docs : undefined
+			},
+			model.source === 'litellm' ? `${LITELLM_API_BASE_URL}/v1` : `${OPENAI_API_BASE_URL}`
+		);
 
 		if (res && res.ok) {
 			const reader = res.body
@@ -618,7 +626,7 @@
 				if ($settings.notificationEnabled && !document.hasFocus()) {
 					const notification = new Notification(`OpenAI ${model}`, {
 						body: responseMessage.content,
-						icon: '/favicon.png'
+						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
 				}
 
@@ -662,12 +670,18 @@
 					}
 				}
 			} else {
-				toast.error(`Uh-oh! There was an issue connecting to ${model}.`);
-				responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
+				toast.error(
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: model })
+				);
+				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+					provider: model
+				});
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
+			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+				provider: model
+			});
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -681,7 +695,12 @@
 
 		if (messages.length == 2) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			await setChatTitle(_chatId, userPrompt);
+
+			if ($settings?.titleAutoGenerateModel) {
+				await generateChatTitle(_chatId, userPrompt);
+			} else {
+				await setChatTitle(_chatId, userPrompt);
+			}
 		}
 	};
 
@@ -712,25 +731,26 @@
 			responseMessage.done = false;
 			await tick();
 
-			const modelTag = $models.filter((m) => m.name === responseMessage.model).at(0);
+			const model = $models.filter((m) => m.id === responseMessage.model).at(0);
 
-			if (modelTag?.external) {
-				await sendPromptOpenAI(
-					responseMessage.model,
-					history.messages[responseMessage.parentId].content,
-					responseMessage.id,
-					_chatId
-				);
-			} else if (modelTag) {
-				await sendPromptOllama(
-					responseMessage.model,
-					history.messages[responseMessage.parentId].content,
-					responseMessage.id,
-					_chatId
-				);
-			} else {
-				toast.error(`Model ${model} not found`);
+			if (model) {
+				if (model?.external) {
+					await sendPromptOpenAI(
+						model,
+						history.messages[responseMessage.parentId].content,
+						responseMessage.id,
+						_chatId
+					);
+				} else
+					await sendPromptOllama(
+						model,
+						history.messages[responseMessage.parentId].content,
+						responseMessage.id,
+						_chatId
+					);
 			}
+		} else {
+			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 		}
 	};
 
@@ -738,6 +758,10 @@
 		if ($settings.titleAutoGenerate ?? true) {
 			const title = await generateTitle(
 				localStorage.token,
+				$settings?.titleGenerationPrompt ??
+					$i18n.t(
+						"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
+					) + ' {{prompt}}',
 				$settings?.titleAutoGenerateModel ?? selectedModels[0],
 				userPrompt
 			);
@@ -790,14 +814,25 @@
 	};
 </script>
 
+<svelte:head>
+	<title>
+		{title
+			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} | ${$WEBUI_NAME}`
+			: `${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
+
 <div class="h-screen max-h-[100dvh] w-full flex flex-col">
 	<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
 	<div class="flex flex-col flex-auto">
 		<div
 			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 			id="messages-container"
+			bind:this={messagesContainerElement}
 			on:scroll={(e) => {
-				autoScroll = e.target.scrollHeight - e.target.scrollTop <= e.target.clientHeight + 50;
+				autoScroll =
+					messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+					messagesContainerElement.clientHeight + 5;
 			}}
 		>
 			<div
@@ -805,10 +840,7 @@
 					? 'max-w-full'
 					: 'max-w-2xl md:px-0'} mx-auto w-full px-4"
 			>
-				<ModelSelector
-					bind:selectedModels
-					disabled={messages.length > 0 && !selectedModels.includes('')}
-				/>
+				<ModelSelector bind:selectedModels />
 			</div>
 
 			<div class=" h-full w-full flex flex-col py-8">

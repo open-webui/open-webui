@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { user } from '$lib/stores';
+	import { onMount, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	export let models = [];
 	export let modelfiles = [];
@@ -27,14 +31,16 @@
 					>
 						{#if model in modelfiles}
 							<img
-								src={modelfiles[model]?.imageUrl ?? './favicon.png'}
+								src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
 								alt="modelfile"
 								class=" w-14 rounded-full border-[1px] border-gray-200 dark:border-none"
 								draggable="false"
 							/>
 						{:else}
 							<img
-								src={models.length === 1 ? '/favicon.png' : '/favicon.png'}
+								src={models.length === 1
+									? `${WEBUI_BASE_URL}/static/favicon.png`
+									: `${WEBUI_BASE_URL}/static/favicon.png`}
 								class=" w-14 rounded-full border-[1px] border-gray-200 dark:border-none"
 								alt="logo"
 								draggable="false"
@@ -44,7 +50,7 @@
 				{/each}
 			</div>
 		</div>
-		<div class=" mt-2 text-2xl text-gray-800 dark:text-gray-100 font-semibold">
+		<div class=" mt-2 mb-5 text-2xl text-gray-800 dark:text-gray-100 font-semibold">
 			{#if modelfile}
 				<span class=" capitalize">
 					{modelfile.title}
@@ -60,7 +66,9 @@
 					</div>
 				{/if}
 			{:else}
-				How can I help you today?
+				<div class=" line-clamp-1">{$i18n.t('Hello, {{name}}', { name: $user.name })}</div>
+
+				<div>{$i18n.t('How can I help you today?')}</div>
 			{/if}
 		</div>
 	</div>

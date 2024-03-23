@@ -1,6 +1,6 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
-	import { onMount, tick } from 'svelte';
+	import { toast } from 'svelte-sonner';
+	import { onMount, tick, getContext } from 'svelte';
 	import { settings } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
@@ -12,13 +12,16 @@
 	import Documents from './MessageInput/Documents.svelte';
 	import Models from './MessageInput/Models.svelte';
 	import { transcribeAudio } from '$lib/apis/audio';
+	import Tooltip from '../common/Tooltip.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
 
 	export let suggestionPrompts = [];
 	export let autoScroll = true;
-
+	let chatTextAreaElement: HTMLTextAreaElement;
 	let filesInputElement;
 
 	let promptsElement;
@@ -42,11 +45,9 @@
 	let speechRecognition;
 
 	$: if (prompt) {
-		const chatInput = document.getElementById('chat-textarea');
-
-		if (chatInput) {
-			chatInput.style.height = '';
-			chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
+		if (chatTextAreaElement) {
+			chatTextAreaElement.style.height = '';
+			chatTextAreaElement.style.height = Math.min(chatTextAreaElement.scrollHeight, 200) + 'px';
 		}
 	}
 
@@ -85,9 +86,7 @@
 			if (res) {
 				prompt = res.text;
 				await tick();
-
-				const inputElement = document.getElementById('chat-textarea');
-				inputElement?.focus();
+				chatTextAreaElement?.focus();
 
 				if (prompt !== '' && $settings?.speechAutoSend === true) {
 					submitPrompt(prompt, user);
@@ -190,8 +189,7 @@
 						prompt = `${prompt}${transcript}`;
 
 						await tick();
-						const inputElement = document.getElementById('chat-textarea');
-						inputElement?.focus();
+						chatTextAreaElement?.focus();
 
 						// Restart the inactivity timeout
 						timeoutId = setTimeout(() => {
@@ -213,11 +211,11 @@
 					// Event triggered when an error occurs
 					speechRecognition.onerror = function (event) {
 						console.log(event);
-						toast.error(`Speech recognition error: ${event.error}`);
+						toast.error($i18n.t(`Speech recognition error: {{error}}`, { error: event.error }));
 						isRecording = false;
 					};
 				} else {
-					toast.error('SpeechRecognition API is not supported in this browser.');
+					toast.error($i18n.t('SpeechRecognition API is not supported in this browser.'));
 				}
 			}
 		}
@@ -293,6 +291,8 @@
 	};
 
 	onMount(() => {
+		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
+
 		const dropZone = document.querySelector('body');
 
 		const onDragOver = (e) => {
@@ -335,12 +335,15 @@
 						uploadDoc(file);
 					} else {
 						toast.error(
-							`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+							$i18n.t(
+								`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
+								{ file_type: file['type'] }
+							)
 						);
 						uploadDoc(file);
 					}
 				} else {
-					toast.error(`File not found.`);
+					toast.error($i18n.t(`File not found.`));
 				}
 			}
 
@@ -361,12 +364,12 @@
 
 {#if dragged}
 	<div
-		class="fixed w-full h-full flex z-50 touch-none pointer-events-none"
+		class="fixed lg:w-[calc(100%-260px)] w-full h-full flex z-50 touch-none pointer-events-none"
 		id="dropzone"
 		role="region"
 		aria-label="Drag and Drop Container"
 	>
-		<div class="absolute rounded-xl w-full h-full backdrop-blur bg-gray-800/40 flex justify-center">
+		<div class="absolute w-full h-full backdrop-blur bg-gray-800/40 flex justify-center">
 			<div class="m-auto pt-64 flex flex-col justify-center">
 				<div class="max-w-md">
 					<AddFilesPlaceholder />
@@ -479,18 +482,21 @@
 								filesInputElement.value = '';
 							} else {
 								toast.error(
-									`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+									$i18n.t(
+										`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
+										{ file_type: file['type'] }
+									)
 								);
 								uploadDoc(file);
 								filesInputElement.value = '';
 							}
 						} else {
-							toast.error(`File not found.`);
+							toast.error($i18n.t(`File not found.`));
 						}
 					}}
 				/>
 				<form
-					class=" flex flex-col relative w-full rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-900 dark:text-gray-100"
+					class=" flex flex-col relative w-full rounded-3xl px-1.5 border border-gray-100 dark:border-gray-850 bg-white dark:bg-gray-900 dark:text-gray-100"
 					on:submit|preventDefault={() => {
 						submitPrompt(prompt, user);
 					}}
@@ -572,7 +578,7 @@
 													{file.name}
 												</div>
 
-												<div class=" text-gray-500 text-sm">Document</div>
+												<div class=" text-gray-500 text-sm">{$i18n.t('Document')}</div>
 											</div>
 										</div>
 									{:else if file.type === 'collection'}
@@ -600,7 +606,7 @@
 													{file?.title ?? `#${file.name}`}
 												</div>
 
-												<div class=" text-gray-500 text-sm">Collection</div>
+												<div class=" text-gray-500 text-sm">{$i18n.t('Collection')}</div>
 											</div>
 										</div>
 									{/if}
@@ -633,40 +639,41 @@
 
 					<div class=" flex">
 						{#if fileUploadEnabled}
-							<div class=" self-end mb-2 ml-1.5">
-								<button
-									class="  text-gray-600 dark:text-gray-200 transition rounded-lg p-1 ml-1"
-									type="button"
-									on:click={() => {
-										filesInputElement.click();
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-5 h-5"
+							<div class=" self-end mb-2 ml-1">
+								<Tooltip content={$i18n.t('Upload files')}>
+									<button
+										class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+										type="button"
+										on:click={() => {
+											filesInputElement.click();
+										}}
 									>
-										<path
-											fill-rule="evenodd"
-											d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501-.002.002a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</button>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-[1.2rem] h-[1.2rem]"
+										>
+											<path
+												d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
 							</div>
 						{/if}
 
 						<textarea
 							id="chat-textarea"
-							class=" dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-2 {fileUploadEnabled
+							bind:this={chatTextAreaElement}
+							class=" dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
 								? ''
 								: ' pl-4'} rounded-xl resize-none h-[48px]"
 							placeholder={chatInputPlaceholder !== ''
 								? chatInputPlaceholder
 								: isRecording
-								? 'Listening...'
-								: 'Send a message'}
+								? $i18n.t('Listening...')
+								: $i18n.t('Send a Message')}
 							bind:value={prompt}
 							on:keypress={(e) => {
 								if (e.keyCode == 13 && !e.shiftKey) {
@@ -803,92 +810,102 @@
 							}}
 						/>
 
-						<div class="self-end mb-2 flex space-x-0.5 mr-2">
+						<div class="self-end mb-2 flex space-x-1 mr-1">
 							{#if messages.length == 0 || messages.at(-1).done == true}
-								{#if speechRecognitionEnabled}
+								<Tooltip content={$i18n.t('Record voice')}>
+									{#if speechRecognitionEnabled}
+										<button
+											id="voice-input-button"
+											class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-1.5 mr-0.5 self-center"
+											type="button"
+											on:click={() => {
+												speechRecognitionHandler();
+											}}
+										>
+											{#if isRecording}
+												<svg
+													class=" w-5 h-5 translate-y-[0.5px]"
+													fill="currentColor"
+													viewBox="0 0 24 24"
+													xmlns="http://www.w3.org/2000/svg"
+													><style>
+														.spinner_qM83 {
+															animation: spinner_8HQG 1.05s infinite;
+														}
+														.spinner_oXPr {
+															animation-delay: 0.1s;
+														}
+														.spinner_ZTLf {
+															animation-delay: 0.2s;
+														}
+														@keyframes spinner_8HQG {
+															0%,
+															57.14% {
+																animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
+																transform: translate(0);
+															}
+															28.57% {
+																animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
+																transform: translateY(-6px);
+															}
+															100% {
+																transform: translate(0);
+															}
+														}
+													</style><circle class="spinner_qM83" cx="4" cy="12" r="2.5" /><circle
+														class="spinner_qM83 spinner_oXPr"
+														cx="12"
+														cy="12"
+														r="2.5"
+													/><circle
+														class="spinner_qM83 spinner_ZTLf"
+														cx="20"
+														cy="12"
+														r="2.5"
+													/></svg
+												>
+											{:else}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-5 h-5 translate-y-[0.5px]"
+												>
+													<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+													<path
+														d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
+													/>
+												</svg>
+											{/if}
+										</button>
+									{/if}
+								</Tooltip>
+
+								<Tooltip content={$i18n.t('Send message')}>
 									<button
-										id="voice-input-button"
-										class=" text-gray-600 dark:text-gray-300 transition rounded-lg p-1.5 mr-0.5 self-center"
-										type="button"
-										on:click={() => {
-											speechRecognitionHandler();
-										}}
+										class="{prompt !== ''
+											? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+											: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-full p-1.5 self-center"
+										type="submit"
+										disabled={prompt === ''}
 									>
-										{#if isRecording}
-											<svg
-												class=" w-5 h-5 translate-y-[0.5px]"
-												fill="currentColor"
-												viewBox="0 0 24 24"
-												xmlns="http://www.w3.org/2000/svg"
-												><style>
-													.spinner_qM83 {
-														animation: spinner_8HQG 1.05s infinite;
-													}
-													.spinner_oXPr {
-														animation-delay: 0.1s;
-													}
-													.spinner_ZTLf {
-														animation-delay: 0.2s;
-													}
-													@keyframes spinner_8HQG {
-														0%,
-														57.14% {
-															animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-															transform: translate(0);
-														}
-														28.57% {
-															animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-															transform: translateY(-6px);
-														}
-														100% {
-															transform: translate(0);
-														}
-													}
-												</style><circle class="spinner_qM83" cx="4" cy="12" r="2.5" /><circle
-													class="spinner_qM83 spinner_oXPr"
-													cx="12"
-													cy="12"
-													r="2.5"
-												/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="2.5" /></svg
-											>
-										{:else}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-5 h-5 translate-y-[0.5px]"
-											>
-												<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-												<path
-													d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
-												/>
-											</svg>
-										{/if}
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-5 h-5"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
 									</button>
-								{/if}
-								<button
-									class="{prompt !== ''
-										? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-										: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-lg p-1 mr-0.5 w-7 h-7 self-center"
-									type="submit"
-									disabled={prompt === ''}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="w-4.5 h-4.5 mx-auto"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</button>
+								</Tooltip>
 							{:else}
 								<button
-									class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-lg p-1.5"
+									class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
 									on:click={stopResponse}
 								>
 									<svg
@@ -910,7 +927,7 @@
 				</form>
 
 				<div class="mt-1.5 text-xs text-gray-500 text-center">
-					LLMs can make mistakes. Verify important information.
+					{$i18n.t('LLMs can make mistakes. Verify important information.')}
 				</div>
 			</div>
 		</div>

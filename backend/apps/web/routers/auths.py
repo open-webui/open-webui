@@ -7,6 +7,7 @@ from fastapi import APIRouter, status
 from pydantic import BaseModel
 import time
 import uuid
+import re
 
 from apps.web.models.auths import (
     SigninForm,
@@ -25,8 +26,9 @@ from utils.utils import (
     get_admin_user,
     create_token,
 )
-from utils.misc import get_gravatar_url, validate_email_format
-from constants import ERROR_MESSAGES
+from utils.misc import parse_duration, validate_email_format
+from utils.webhook import post_webhook
+from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 
 router = APIRouter()
 
@@ -95,10 +97,13 @@ async def update_password(
 
 
 @router.post("/signin", response_model=SigninResponse)
-async def signin(form_data: SigninForm):
+async def signin(request: Request, form_data: SigninForm):
     user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
     if user:
-        token = create_token(data={"id": user.id})
+        token = create_token(
+            data={"id": user.id},
+            expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
+        )
 
         return {
             "token": token,
@@ -145,8 +150,22 @@ async def signup(request: Request, form_data: SignupForm):
         )
 
         if user:
-            token = create_token(data={"id": user.id})
+            token = create_token(
+                data={"id": user.id},
+                expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
+            )
             # response.set_cookie(key='token', value=token, httponly=True)
+
+            if request.app.state.WEBHOOK_URL:
+                post_webhook(
+                    request.app.state.WEBHOOK_URL,
+                    WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                    {
+                        "action": "signup",
+                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        "user": user.model_dump_json(exclude_none=True),
+                    },
+                )
 
             return {
                 "token": token,
@@ -200,3 +219,33 @@ async def update_default_user_role(
     if form_data.role in ["pending", "user", "admin"]:
         request.app.state.DEFAULT_USER_ROLE = form_data.role
     return request.app.state.DEFAULT_USER_ROLE
+
+
+############################
+# JWT Expiration
+############################
+
+
+@router.get("/token/expires")
+async def get_token_expires_duration(request: Request, user=Depends(get_admin_user)):
+    return request.app.state.JWT_EXPIRES_IN
+
+
+class UpdateJWTExpiresDurationForm(BaseModel):
+    duration: str
+
+
+@router.post("/token/expires/update")
+async def update_token_expires_duration(
+    request: Request,
+    form_data: UpdateJWTExpiresDurationForm,
+    user=Depends(get_admin_user),
+):
+    pattern = r"^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$"
+
+    # Check if the input string matches the pattern
+    if re.match(pattern, form_data.duration):
+        request.app.state.JWT_EXPIRES_IN = form_data.duration
+        return request.app.state.JWT_EXPIRES_IN
+    else:
+        return request.app.state.JWT_EXPIRES_IN

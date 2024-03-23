@@ -1,28 +1,34 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 
-	import { modelfiles, settings, user } from '$lib/stores';
+	import { WEBUI_NAME, modelfiles, settings, user } from '$lib/stores';
 	import { createModel, deleteModel } from '$lib/apis/ollama';
 	import {
 		createNewModelfile,
 		deleteModelfileByTagName,
 		getModelfiles
 	} from '$lib/apis/modelfiles';
+	import { goto } from '$app/navigation';
+
+	const i18n = getContext('i18n');
 
 	let localModelfiles = [];
 	let importFiles;
-
+	let modelfilesImportInputElement: HTMLInputElement;
 	const deleteModelHandler = async (tagName) => {
 		let success = null;
 
-		success = await deleteModel(localStorage.token, tagName);
+		success = await deleteModel(localStorage.token, tagName).catch((err) => {
+			toast.error(err);
+			return null;
+		});
 
 		if (success) {
-			toast.success(`Deleted ${tagName}`);
+			toast.success($i18n.t(`Deleted {tagName}`, { tagName }));
 		}
 
 		return success;
@@ -35,7 +41,7 @@
 	};
 
 	const shareModelfile = async (modelfile) => {
-		toast.success('Redirecting you to OpenWebUI Community');
+		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
 		const url = 'https://openwebui.com';
 
@@ -68,12 +74,18 @@
 	});
 </script>
 
-<div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
-	<div class=" py-2.5 flex flex-col justify-between w-full overflow-y-auto">
-		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
-			<div class=" text-2xl font-semibold mb-6">My Modelfiles</div>
+<svelte:head>
+	<title>
+		{$i18n.t('Modelfiles')} | {$WEBUI_NAME}
+	</title>
+</svelte:head>
 
-			<a class=" flex space-x-4 cursor-pointer w-full mb-3" href="/modelfiles/create">
+<div class="min-h-screen max-h-[100dvh] w-full flex justify-center dark:text-white">
+	<div class="flex flex-col justify-between w-full overflow-y-auto">
+		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
+			<div class=" text-2xl font-semibold mb-3">{$i18n.t('My Modelfiles')}</div>
+
+			<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2" href="/modelfiles/create">
 				<div class=" self-center w-10">
 					<div
 						class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
@@ -94,113 +106,141 @@
 				</div>
 
 				<div class=" self-center">
-					<div class=" font-bold">Create a modelfile</div>
-					<div class=" text-sm">Customize Ollama models for a specific purpose</div>
+					<div class=" font-bold">{$i18n.t('Create a modelfile')}</div>
+					<div class=" text-sm">{$i18n.t('Customize Ollama models for a specific purpose')}</div>
 				</div>
 			</a>
 
-			{#each $modelfiles as modelfile}
-				<hr class=" dark:border-gray-700 my-2.5" />
-				<div class=" flex space-x-4 cursor-pointer w-full mb-3">
-					<a
-						class=" flex flex-1 space-x-4 cursor-pointer w-full"
-						href={`/?models=${encodeURIComponent(modelfile.tagName)}`}
+			<hr class=" dark:border-gray-700" />
+
+			<div class=" my-2 mb-5">
+				{#each $modelfiles as modelfile}
+					<div
+						class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 					>
-						<div class=" self-center w-10">
-							<div class=" rounded-full bg-stone-700">
-								<img
-									src={modelfile.imageUrl ?? '/user.png'}
-									alt="modelfile profile"
-									class=" rounded-full w-full h-auto object-cover"
-								/>
-							</div>
-						</div>
-
-						<div class=" flex-1 self-center">
-							<div class=" font-bold capitalize">{modelfile.title}</div>
-							<div class=" text-sm overflow-hidden text-ellipsis line-clamp-2">
-								{modelfile.desc}
-							</div>
-						</div>
-					</a>
-					<div class="flex flex-row space-x-1 self-center">
 						<a
-							class="self-center w-fit text-sm px-2 py-2 border dark:border-gray-600 rounded-xl"
-							type="button"
-							href={`/modelfiles/edit?tag=${encodeURIComponent(modelfile.tagName)}`}
+							class=" flex flex-1 space-x-4 cursor-pointer w-full"
+							href={`/?models=${encodeURIComponent(modelfile.tagName)}`}
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								class="w-4 h-4"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-								/>
-							</svg>
+							<div class=" self-center w-10">
+								<div class=" rounded-full bg-stone-700">
+									<img
+										src={modelfile.imageUrl ?? '/user.png'}
+										alt="modelfile profile"
+										class=" rounded-full w-full h-auto object-cover"
+									/>
+								</div>
+							</div>
+
+							<div class=" flex-1 self-center">
+								<div class=" font-bold capitalize">{modelfile.title}</div>
+								<div class=" text-sm overflow-hidden text-ellipsis line-clamp-1">
+									{modelfile.desc}
+								</div>
+							</div>
 						</a>
-
-						<button
-							class="self-center w-fit text-sm px-2 py-2 border dark:border-gray-600 rounded-xl"
-							type="button"
-							on:click={() => {
-								shareModelfile(modelfile);
-							}}
-						>
-							<!-- TODO: update to share icon -->
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								class="w-4 h-4"
+						<div class="flex flex-row space-x-1 self-center">
+							<a
+								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								type="button"
+								href={`/modelfiles/edit?tag=${encodeURIComponent(modelfile.tagName)}`}
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"
-								/>
-							</svg>
-						</button>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+									/>
+								</svg>
+							</a>
 
-						<button
-							class="self-center w-fit text-sm px-2 py-2 border dark:border-gray-600 rounded-xl"
-							type="button"
-							on:click={() => {
-								deleteModelfile(modelfile.tagName);
-							}}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								class="w-4 h-4"
+							<button
+								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								type="button"
+								on:click={() => {
+									// console.log(modelfile);
+									sessionStorage.modelfile = JSON.stringify(modelfile);
+									goto('/modelfiles/create');
+								}}
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-								/>
-							</svg>
-						</button>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
+									/>
+								</svg>
+							</button>
+
+							<button
+								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								type="button"
+								on:click={() => {
+									shareModelfile(modelfile);
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"
+									/>
+								</svg>
+							</button>
+
+							<button
+								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								type="button"
+								on:click={() => {
+									deleteModelfile(modelfile.tagName);
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+									/>
+								</svg>
+							</button>
+						</div>
 					</div>
-				</div>
-			{/each}
+				{/each}
+			</div>
 
-			<hr class=" dark:border-gray-700 my-2.5" />
-
-			<div class=" flex justify-between w-full mb-3">
+			<div class=" flex justify-end w-full mb-3">
 				<div class="flex space-x-1">
 					<input
 						id="modelfiles-import-input"
+						bind:this={modelfilesImportInputElement}
 						bind:files={importFiles}
 						type="file"
 						accept=".json"
@@ -227,12 +267,12 @@
 					/>
 
 					<button
-						class="self-center w-fit text-sm px-3 py-1 border dark:border-gray-600 rounded-xl flex"
-						on:click={async () => {
-							document.getElementById('modelfiles-import-input')?.click();
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+						on:click={() => {
+							modelfilesImportInputElement.click();
 						}}
 					>
-						<div class=" self-center mr-2 font-medium">Import Modelfiles</div>
+						<div class=" self-center mr-2 font-medium">{$i18n.t('Import Modelfiles')}</div>
 
 						<div class=" self-center">
 							<svg
@@ -251,12 +291,12 @@
 					</button>
 
 					<button
-						class="self-center w-fit text-sm px-3 py-1 border dark:border-gray-600 rounded-xl flex"
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 						on:click={async () => {
 							saveModelfiles($modelfiles);
 						}}
 					>
-						<div class=" self-center mr-2 font-medium">Export Modelfiles</div>
+						<div class=" self-center mr-2 font-medium">{$i18n.t('Export Modelfiles')}</div>
 
 						<div class=" self-center">
 							<svg
@@ -297,7 +337,7 @@
 									await modelfiles.set(await getModelfiles(localStorage.token));
 								}}
 							>
-								<div class=" self-center mr-2 font-medium">Sync All</div>
+								<div class=" self-center mr-2 font-medium">{$i18n.t('Sync All')}</div>
 
 								<div class=" self-center">
 									<svg
@@ -348,10 +388,10 @@
 			</div>
 
 			<div class=" my-16">
-				<div class=" text-2xl font-semibold mb-6">Made by OpenWebUI Community</div>
+				<div class=" text-2xl font-semibold mb-3">{$i18n.t('Made by OpenWebUI Community')}</div>
 
 				<a
-					class=" flex space-x-4 cursor-pointer w-full mb-3"
+					class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2"
 					href="https://openwebui.com/"
 					target="_blank"
 				>
@@ -375,8 +415,8 @@
 					</div>
 
 					<div class=" self-center">
-						<div class=" font-bold">Discover a modelfile</div>
-						<div class=" text-sm">Discover, download, and explore Ollama Modelfiles</div>
+						<div class=" font-bold">{$i18n.t('Discover a modelfile')}</div>
+						<div class=" text-sm">{$i18n.t('Discover, download, and explore model presets')}</div>
 					</div>
 				</a>
 			</div>

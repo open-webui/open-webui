@@ -1,17 +1,23 @@
 <script lang="ts">
-	import toast from 'svelte-french-toast';
-	import { onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
+	import { onMount, getContext } from 'svelte';
 
 	import { user } from '$lib/stores';
 	import { updateUserProfile } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
+	import { copyToClipboard } from '$lib/utils';
+
+	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
 
 	let profileImageUrl = '';
 	let name = '';
+	let showJWTToken = false;
+	let JWTTokenCopied = false;
+	let profileImageInputElement: HTMLInputElement;
 
 	const submitHandler = async () => {
 		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
@@ -34,14 +40,15 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[22rem]">
 		<input
 			id="profile-image-input"
+			bind:this={profileImageInputElement}
 			type="file"
 			hidden
 			accept="image/*"
 			on:change={(e) => {
-				const files = e?.target?.files ?? [];
+				const files = profileImageInputElement.files ?? [];
 				let reader = new FileReader();
 				reader.onload = (event) => {
 					let originalImageUrl = `${event.target.result}`;
@@ -83,7 +90,7 @@
 						// Display the compressed image
 						profileImageUrl = compressedSrc;
 
-						e.target.files = null;
+						profileImageInputElement.files = null;
 					};
 				};
 
@@ -96,7 +103,7 @@
 			}}
 		/>
 
-		<div class=" mb-2.5 text-sm font-medium">Profile</div>
+		<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Profile')}</div>
 
 		<div class="flex space-x-5">
 			<div class="flex flex-col">
@@ -105,7 +112,7 @@
 						class="relative rounded-full dark:bg-gray-700"
 						type="button"
 						on:click={() => {
-							document.getElementById('profile-image-input')?.click();
+							profileImageInputElement.click();
 						}}
 					>
 						<img
@@ -138,13 +145,13 @@
 						const url = await getGravatarUrl($user.email);
 
 						profileImageUrl = url;
-					}}>Use Gravatar</button
+					}}>{$i18n.t('Use Gravatar')}</button
 				>
 			</div>
 
 			<div class="flex-1">
 				<div class="flex flex-col w-full">
-					<div class=" mb-1 text-xs text-gray-500">Name</div>
+					<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
 
 					<div class="flex-1">
 						<input
@@ -160,11 +167,113 @@
 
 		<hr class=" dark:border-gray-700 my-4" />
 		<UpdatePassword />
+
+		<hr class=" dark:border-gray-700 my-4" />
+
+		<div class=" w-full justify-between">
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('JWT Token')}</div>
+			</div>
+
+			<div class="flex mt-2">
+				<div class="flex w-full">
+					<input
+						class="w-full rounded-l-lg py-1.5 pl-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+						type={showJWTToken ? 'text' : 'password'}
+						value={localStorage.token}
+						disabled
+					/>
+
+					<button
+						class="dark:bg-gray-800 px-2 transition rounded-r-lg"
+						on:click={() => {
+							showJWTToken = !showJWTToken;
+						}}
+					>
+						{#if showJWTToken}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l10.5 10.5a.75.75 0 1 0 1.06-1.06l-1.322-1.323a7.012 7.012 0 0 0 2.16-3.11.87.87 0 0 0 0-.567A7.003 7.003 0 0 0 4.82 3.76l-1.54-1.54Zm3.196 3.195 1.135 1.136A1.502 1.502 0 0 1 9.45 8.389l1.136 1.135a3 3 0 0 0-4.109-4.109Z"
+									clip-rule="evenodd"
+								/>
+								<path
+									d="m7.812 10.994 1.816 1.816A7.003 7.003 0 0 1 1.38 8.28a.87.87 0 0 1 0-.566 6.985 6.985 0 0 1 1.113-2.039l2.513 2.513a3 3 0 0 0 2.806 2.806Z"
+								/>
+							</svg>
+						{:else}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+								<path
+									fill-rule="evenodd"
+									d="M1.38 8.28a.87.87 0 0 1 0-.566 7.003 7.003 0 0 1 13.238.006.87.87 0 0 1 0 .566A7.003 7.003 0 0 1 1.379 8.28ZM11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						{/if}
+					</button>
+				</div>
+
+				<button
+					class="ml-1.5 px-1.5 py-1 hover:bg-gray-800 transition rounded-lg"
+					on:click={() => {
+						copyToClipboard(localStorage.token);
+						JWTTokenCopied = true;
+						setTimeout(() => {
+							JWTTokenCopied = false;
+						}, 2000);
+					}}
+				>
+					{#if JWTTokenCopied}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					{:else}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z"
+								clip-rule="evenodd"
+							/>
+							<path
+								fill-rule="evenodd"
+								d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					{/if}
+				</button>
+			</div>
+		</div>
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
+			class="  px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			on:click={async () => {
 				const res = await submitHandler();
 
@@ -173,7 +282,7 @@
 				}
 			}}
 		>
-			Save
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </div>

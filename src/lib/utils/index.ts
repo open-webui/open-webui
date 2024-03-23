@@ -101,11 +101,10 @@ export const copyToClipboard = (text) => {
 	);
 };
 
-export const checkVersion = (required, current) => {
-	// Returns true when current version is below required
+export const compareVersion = (latest, current) => {
 	return current === '0.0.0'
 		? false
-		: current.localeCompare(required, undefined, {
+		: current.localeCompare(latest, undefined, {
 				numeric: true,
 				sensitivity: 'case',
 				caseFirst: 'upper'

@@ -1,8 +1,12 @@
 <script>
+	import { getContext } from 'svelte';
 	import Modal from '../common/Modal.svelte';
+	import Database from './Settings/Database.svelte';
 
 	import General from './Settings/General.svelte';
 	import Users from './Settings/Users.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let show = false;
 
@@ -12,7 +16,7 @@
 <Modal bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
-			<div class=" text-lg font-medium self-center">Admin Settings</div>
+			<div class=" text-lg font-medium self-center">{$i18n.t('Admin Settings')}</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -60,7 +64,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">General</div>
+					<div class=" self-center">{$i18n.t('General')}</div>
 				</button>
 
 				<button
@@ -84,7 +88,35 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">Users</div>
+					<div class=" self-center">{$i18n.t('Users')}</div>
+				</button>
+
+				<button
+					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+					'db'
+						? 'bg-gray-200 dark:bg-gray-700'
+						: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+					on:click={() => {
+						selectedTab = 'db';
+					}}
+				>
+					<div class=" self-center mr-2">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path d="M8 7c3.314 0 6-1.343 6-3s-2.686-3-6-3-6 1.343-6 3 2.686 3 6 3Z" />
+							<path
+								d="M8 8.5c1.84 0 3.579-.37 4.914-1.037A6.33 6.33 0 0 0 14 6.78V8c0 1.657-2.686 3-6 3S2 9.657 2 8V6.78c.346.273.72.5 1.087.683C4.42 8.131 6.16 8.5 8 8.5Z"
+							/>
+							<path
+								d="M8 12.5c1.84 0 3.579-.37 4.914-1.037.366-.183.74-.41 1.086-.684V12c0 1.657-2.686 3-6 3s-6-1.343-6-3v-1.22c.346.273.72.5 1.087.683C4.42 12.131 6.16 12.5 8 12.5Z"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center">{$i18n.t('Database')}</div>
 				</button>
 			</div>
 			<div class="flex-1 md:min-h-[380px]">
@@ -96,6 +128,12 @@
 					/>
 				{:else if selectedTab === 'users'}
 					<Users
+						saveHandler={() => {
+							show = false;
+						}}
+					/>
+				{:else if selectedTab === 'db'}
+					<Database
 						saveHandler={() => {
 							show = false;
 						}}

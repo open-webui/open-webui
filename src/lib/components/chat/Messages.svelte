@@ -2,15 +2,18 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { chats, config, modelfiles, settings, user } from '$lib/stores';
-	import { tick } from 'svelte';
+	import { tick, getContext } from 'svelte';
 
-	import toast from 'svelte-french-toast';
+	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
 
 	import UserMessage from './Messages/UserMessage.svelte';
 	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { imageGenerations } from '$lib/apis/images';
+
+	const i18n = getContext('i18n');
 
 	export let chatId = '';
 	export let sendPrompt: Function;
@@ -66,7 +69,7 @@
 		navigator.clipboard.writeText(text).then(
 			function () {
 				console.log('Async: Copying to clipboard was successful!');
-				toast.success('Copying to clipboard was successful!');
+				toast.success($i18n.t('Copying to clipboard was successful!'));
 			},
 			function (err) {
 				console.error('Async: Could not copy text: ', err);
@@ -221,6 +224,81 @@
 			scrollToBottom();
 		}, 100);
 	};
+
+	const messageDeleteHandler = async (messageId) => {
+		const messageToDelete = history.messages[messageId];
+		const messageParentId = messageToDelete.parentId;
+		const messageChildrenIds = messageToDelete.childrenIds ?? [];
+		const hasSibling = messageChildrenIds.some(
+			(childId) => history.messages[childId]?.childrenIds?.length > 0
+		);
+		messageChildrenIds.forEach((childId) => {
+			const child = history.messages[childId];
+			if (child && child.childrenIds) {
+				if (child.childrenIds.length === 0 && !hasSibling) {
+					// if last prompt/response pair
+					history.messages[messageParentId].childrenIds = [];
+					history.currentId = messageParentId;
+				} else {
+					child.childrenIds.forEach((grandChildId) => {
+						if (history.messages[grandChildId]) {
+							history.messages[grandChildId].parentId = messageParentId;
+							history.messages[messageParentId].childrenIds.push(grandChildId);
+						}
+					});
+				}
+			}
+			// remove response
+			history.messages[messageParentId].childrenIds = history.messages[
+				messageParentId
+			].childrenIds.filter((id) => id !== childId);
+		});
+		// remove prompt
+		history.messages[messageParentId].childrenIds = history.messages[
+			messageParentId
+		].childrenIds.filter((id) => id !== messageId);
+		await updateChatById(localStorage.token, chatId, {
+			messages: messages,
+			history: history
+		});
+	};
+
+	// const messageDeleteHandler = async (messageId) => {
+	// 	const message = history.messages[messageId];
+	// 	const parentId = message.parentId;
+	// 	const childrenIds = message.childrenIds ?? [];
+	// 	const grandchildrenIds = [];
+
+	// 	// Iterate through childrenIds to find grandchildrenIds
+	// 	for (const childId of childrenIds) {
+	// 		const childMessage = history.messages[childId];
+	// 		const grandChildrenIds = childMessage.childrenIds ?? [];
+
+	// 		for (const grandchildId of grandchildrenIds) {
+	// 			const childMessage = history.messages[grandchildId];
+	// 			childMessage.parentId = parentId;
+	// 		}
+	// 		grandchildrenIds.push(...grandChildrenIds);
+	// 	}
+
+	// 	history.messages[parentId].childrenIds.push(...grandchildrenIds);
+	// 	history.messages[parentId].childrenIds = history.messages[parentId].childrenIds.filter(
+	// 		(id) => id !== messageId
+	// 	);
+
+	// 	// Select latest message
+	// 	let currentMessageId = grandchildrenIds.at(-1);
+	// 	if (currentMessageId) {
+	// 		let messageChildrenIds = history.messages[currentMessageId].childrenIds;
+	// 		while (messageChildrenIds.length !== 0) {
+	// 			currentMessageId = messageChildrenIds.at(-1);
+	// 			messageChildrenIds = history.messages[currentMessageId].childrenIds;
+	// 		}
+	// 		history.currentId = currentMessageId;
+	// 	}
+
+	// 	await updateChatById(localStorage.token, chatId, { messages, history });
+	// };
 </script>
 
 {#if messages.length == 0}
@@ -237,8 +315,10 @@
 					>
 						{#if message.role === 'user'}
 							<UserMessage
+								on:delete={() => messageDeleteHandler(message.id)}
 								user={$user}
 								{message}
+								isFirstMessage={messageIdx === 0}
 								siblings={message.parentId !== null
 									? history.messages[message.parentId]?.childrenIds ?? []
 									: Object.values(history.messages)
@@ -249,52 +329,6 @@
 								{showNextMessage}
 								{copyToClipboard}
 							/>
-
-							{#if messages.length - 1 === messageIdx && processing !== ''}
-								<div class="flex my-2.5 ml-12 items-center w-fit space-x-2.5">
-									<div class=" dark:text-blue-100">
-										<svg
-											class=" w-4 h-4 translate-y-[0.5px]"
-											fill="currentColor"
-											viewBox="0 0 24 24"
-											xmlns="http://www.w3.org/2000/svg"
-											><style>
-												.spinner_qM83 {
-													animation: spinner_8HQG 1.05s infinite;
-												}
-												.spinner_oXPr {
-													animation-delay: 0.1s;
-												}
-												.spinner_ZTLf {
-													animation-delay: 0.2s;
-												}
-												@keyframes spinner_8HQG {
-													0%,
-													57.14% {
-														animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-														transform: translate(0);
-													}
-													28.57% {
-														animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-														transform: translateY(-6px);
-													}
-													100% {
-														transform: translate(0);
-													}
-												}
-											</style><circle class="spinner_qM83" cx="4" cy="12" r="2.5" /><circle
-												class="spinner_qM83 spinner_oXPr"
-												cx="12"
-												cy="12"
-												r="2.5"
-											/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="2.5" /></svg
-										>
-									</div>
-									<div class=" text-sm font-medium">
-										{processing}
-									</div>
-								</div>
-							{/if}
 						{:else}
 							<ResponseMessage
 								{message}
@@ -308,6 +342,16 @@
 								{copyToClipboard}
 								{continueGeneration}
 								{regenerateResponse}
+								on:save={async (e) => {
+									console.log('save', e);
+
+									const message = e.detail;
+									history.messages[message.id] = message;
+									await updateChatById(localStorage.token, chatId, {
+										messages: messages,
+										history: history
+									});
+								}}
 							/>
 						{/if}
 					</div>
