@@ -32,17 +32,21 @@
 		"title": "French (France)"
 	},
 	{
-        	"code": "it-IT",
-        	"title": "Italian"
-    	},
-	{
-    		"code": "ja-JP",
-    		"title": "Japanese"
+		"code": "it-IT",
+		"title": "Italian"
 	},
 	{
-    		"code": "pt-PT",
-    		"title": "Portuguese (Portugal)"
-  	},
+		"code": "ja-JP",
+		"title": "Japanese"
+	},
+	{
+		"code": "nl-NL",
+		"title": "Dutch (Netherlands)"
+	},
+	{
+		"code": "pt-PT",
+		"title": "Portuguese (Portugal)"
+	},
 	{
 		"code": "ru-RU",
 		"title": "Russian (Russia)"
@@ -62,9 +66,5 @@
 	{
 		"code": "zh-TW",
 		"title": "Chinese (Traditional)"
-	},
-	{
-		"code": "nl-NL",
-		"title": "Dutch (Netherlands)"
 	}
 ]
