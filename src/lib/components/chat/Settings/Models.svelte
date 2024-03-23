@@ -5,10 +5,12 @@
 	import {
 		createModel,
 		deleteModel,
+		downloadModel,
 		getOllamaUrls,
 		getOllamaVersion,
 		pullModel,
-		cancelOllamaRequest
+		cancelOllamaRequest,
+		uploadModel
 	} from '$lib/apis/ollama';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, models, user } from '$lib/stores';
@@ -61,11 +63,13 @@
 	let pullProgress = null;
 
 	let modelUploadMode = 'file';
-	let modelInputFile = '';
+	let modelInputFile: File[] | null = null;
 	let modelFileUrl = '';
 	let modelFileContent = `TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`;
 	let modelFileDigest = '';
+
 	let uploadProgress = null;
+	let uploadMessage = '';
 
 	let deleteModelTag = '';
 
@@ -185,35 +189,32 @@
 
 	const uploadModelHandler = async () => {
 		modelTransferring = true;
-		uploadProgress = 0;
 
 		let uploaded = false;
 		let fileResponse = null;
 		let name = '';
 
 		if (modelUploadMode === 'file') {
-			const file = modelInputFile[0];
-			const formData = new FormData();
-			formData.append('file', file);
+			const file = modelInputFile ? modelInputFile[0] : null;
 
-			fileResponse = await fetch(`${WEBUI_API_BASE_URL}/utils/upload`, {
-				method: 'POST',
-				headers: {
-					...($user && { Authorization: `Bearer ${localStorage.token}` })
-				},
-				body: formData
-			}).catch((error) => {
-				console.log(error);
-				return null;
-			});
+			if (file) {
+				uploadMessage = 'Uploading...';
+
+				fileResponse = await uploadModel(localStorage.token, file, selectedOllamaUrlIdx).catch(
+					(error) => {
+						toast.error(error);
+						return null;
+					}
+				);
+			}
 		} else {
-			fileResponse = await fetch(`${WEBUI_API_BASE_URL}/utils/download?url=${modelFileUrl}`, {
-				method: 'GET',
-				headers: {
-					...($user && { Authorization: `Bearer ${localStorage.token}` })
-				}
-			}).catch((error) => {
-				console.log(error);
+			uploadProgress = 0;
+			fileResponse = await downloadModel(
+				localStorage.token,
+				modelFileUrl,
+				selectedOllamaUrlIdx
+			).catch((error) => {
+				toast.error(error);
 				return null;
 			});
 		}
@@ -236,6 +237,9 @@
 							let data = JSON.parse(line.replace(/^data: /, ''));
 
 							if (data.progress) {
+								if (uploadMessage) {
+									uploadMessage = '';
+								}
 								uploadProgress = data.progress;
 							}
 
@@ -319,7 +323,11 @@
 		}
 
 		modelFileUrl = '';
-		modelInputFile = '';
+
+		if (modelUploadInputElement) {
+			modelUploadInputElement.value = '';
+		}
+		modelInputFile = null;
 		modelTransferring = false;
 		uploadProgress = null;
 
@@ -821,7 +829,7 @@
 
 								{#if (modelUploadMode === 'file' && modelInputFile && modelInputFile.length > 0) || (modelUploadMode === 'url' && modelFileUrl !== '')}
 									<button
-										class="px-3 text-gray-100 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded transition"
+										class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg disabled:bg-gray-700 disabled:cursor-not-allowed transition"
 										type="submit"
 										disabled={modelTransferring}
 									>
@@ -876,7 +884,7 @@
 										<div class=" my-2.5 text-sm font-medium">{$i18n.t('Modelfile Content')}</div>
 										<textarea
 											bind:value={modelFileContent}
-											class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-100 dark:text-gray-100 dark:bg-gray-850 outline-none resize-none"
 											rows="6"
 										/>
 									</div>
@@ -891,7 +899,23 @@
 								>
 							</div>
 
-							{#if uploadProgress !== null}
+							{#if uploadMessage}
+								<div class="mt-2">
+									<div class=" mb-2 text-xs">{$i18n.t('Upload Progress')}</div>
+
+									<div class="w-full rounded-full dark:bg-gray-800">
+										<div
+											class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
+											style="width: 100%"
+										>
+											{uploadMessage}
+										</div>
+									</div>
+									<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
+										{modelFileDigest}
+									</div>
+								</div>
+							{:else if uploadProgress !== null}
 								<div class="mt-2">
 									<div class=" mb-2 text-xs">{$i18n.t('Upload Progress')}</div>
 

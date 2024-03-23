@@ -1,23 +1,39 @@
-from fastapi import FastAPI, Request, Response, HTTPException, Depends, status
+from fastapi import (
+    FastAPI,
+    Request,
+    Response,
+    HTTPException,
+    Depends,
+    status,
+    UploadFile,
+    File,
+    BackgroundTasks,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 
 from pydantic import BaseModel, ConfigDict
 
+import os
+import copy
 import random
 import requests
 import json
 import uuid
 import aiohttp
 import asyncio
+from urllib.parse import urlparse
+from typing import Optional, List, Union
+
 
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import decode_token, get_current_user, get_admin_user
-from config import OLLAMA_BASE_URLS, MODEL_FILTER_ENABLED, MODEL_FILTER_LIST
+from utils.misc import calculate_sha256
 
-from typing import Optional, List, Union
+
+from config import OLLAMA_BASE_URLS, MODEL_FILTER_ENABLED, MODEL_FILTER_LIST, UPLOAD_DIR
 
 
 app = FastAPI()
@@ -911,6 +927,211 @@ async def generate_openai_chat_completion(
             status_code=r.status_code if r else 500,
             detail=error_detail,
         )
+
+
+class UrlForm(BaseModel):
+    url: str
+
+
+class UploadBlobForm(BaseModel):
+    filename: str
+
+
+def parse_huggingface_url(hf_url):
+    try:
+        # Parse the URL
+        parsed_url = urlparse(hf_url)
+
+        # Get the path and split it into components
+        path_components = parsed_url.path.split("/")
+
+        # Extract the desired output
+        user_repo = "/".join(path_components[1:3])
+        model_file = path_components[-1]
+
+        return model_file
+    except ValueError:
+        return None
+
+
+async def download_file_stream(
+    ollama_url, file_url, file_path, file_name, chunk_size=1024 * 1024
+):
+    done = False
+
+    if os.path.exists(file_path):
+        current_size = os.path.getsize(file_path)
+    else:
+        current_size = 0
+
+    headers = {"Range": f"bytes={current_size}-"} if current_size > 0 else {}
+
+    timeout = aiohttp.ClientTimeout(total=600)  # Set the timeout
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(file_url, headers=headers) as response:
+            total_size = int(response.headers.get("content-length", 0)) + current_size
+
+            with open(file_path, "ab+") as file:
+                async for data in response.content.iter_chunked(chunk_size):
+                    current_size += len(data)
+                    file.write(data)
+
+                    done = current_size == total_size
+                    progress = round((current_size / total_size) * 100, 2)
+
+                    yield f'data: {{"progress": {progress}, "completed": {current_size}, "total": {total_size}}}\n\n'
+
+                if done:
+                    file.seek(0)
+                    hashed = calculate_sha256(file)
+                    file.seek(0)
+
+                    url = f"{ollama_url}/api/blobs/sha256:{hashed}"
+                    response = requests.post(url, data=file)
+
+                    if response.ok:
+                        res = {
+                            "done": done,
+                            "blob": f"sha256:{hashed}",
+                            "name": file_name,
+                        }
+                        os.remove(file_path)
+
+                        yield f"data: {json.dumps(res)}\n\n"
+                    else:
+                        raise "Ollama: Could not create blob, Please try again."
+
+
+# def number_generator():
+#     for i in range(1, 101):
+#         yield f"data: {i}\n"
+
+
+# url = "https://huggingface.co/TheBloke/stablelm-zephyr-3b-GGUF/resolve/main/stablelm-zephyr-3b.Q2_K.gguf"
+@app.post("/models/download")
+@app.post("/models/download/{url_idx}")
+async def download_model(
+    form_data: UrlForm,
+    url_idx: Optional[int] = None,
+):
+
+    if url_idx == None:
+        url_idx = 0
+    url = app.state.OLLAMA_BASE_URLS[url_idx]
+
+    file_name = parse_huggingface_url(form_data.url)
+
+    if file_name:
+        file_path = f"{UPLOAD_DIR}/{file_name}"
+        return StreamingResponse(
+            download_file_stream(url, form_data.url, file_path, file_name),
+        )
+    else:
+        return None
+
+
+@app.post("/models/upload")
+@app.post("/models/upload/{url_idx}")
+def upload_model(file: UploadFile = File(...), url_idx: Optional[int] = None):
+    if url_idx == None:
+        url_idx = 0
+    ollama_url = app.state.OLLAMA_BASE_URLS[url_idx]
+
+    file_path = f"{UPLOAD_DIR}/{file.filename}"
+
+    # Save file in chunks
+    with open(file_path, "wb+") as f:
+        for chunk in file.file:
+            f.write(chunk)
+
+    def file_process_stream():
+        nonlocal ollama_url
+        total_size = os.path.getsize(file_path)
+        chunk_size = 1024 * 1024
+        try:
+            with open(file_path, "rb") as f:
+                total = 0
+                done = False
+
+                while not done:
+                    chunk = f.read(chunk_size)
+                    if not chunk:
+                        done = True
+                        continue
+
+                    total += len(chunk)
+                    progress = round((total / total_size) * 100, 2)
+
+                    res = {
+                        "progress": progress,
+                        "total": total_size,
+                        "completed": total,
+                    }
+                    yield f"data: {json.dumps(res)}\n\n"
+
+                if done:
+                    f.seek(0)
+                    hashed = calculate_sha256(f)
+                    f.seek(0)
+
+                    url = f"{ollama_url}/api/blobs/sha256:{hashed}"
+                    response = requests.post(url, data=f)
+
+                    if response.ok:
+                        res = {
+                            "done": done,
+                            "blob": f"sha256:{hashed}",
+                            "name": file.filename,
+                        }
+                        os.remove(file_path)
+                        yield f"data: {json.dumps(res)}\n\n"
+                    else:
+                        raise Exception(
+                            "Ollama: Could not create blob, Please try again."
+                        )
+
+        except Exception as e:
+            res = {"error": str(e)}
+            yield f"data: {json.dumps(res)}\n\n"
+
+    return StreamingResponse(file_process_stream(), media_type="text/event-stream")
+
+
+# async def upload_model(file: UploadFile = File(), url_idx: Optional[int] = None):
+#     if url_idx == None:
+#         url_idx = 0
+#     url = app.state.OLLAMA_BASE_URLS[url_idx]
+
+#     file_location = os.path.join(UPLOAD_DIR, file.filename)
+#     total_size = file.size
+
+#     async def file_upload_generator(file):
+#         print(file)
+#         try:
+#             async with aiofiles.open(file_location, "wb") as f:
+#                 completed_size = 0
+#                 while True:
+#                     chunk = await file.read(1024*1024)
+#                     if not chunk:
+#                         break
+#                     await f.write(chunk)
+#                     completed_size += len(chunk)
+#                     progress = (completed_size / total_size) * 100
+
+#                     print(progress)
+#                     yield f'data: {json.dumps({"status": "uploading", "percentage": progress, "total": total_size, "completed": completed_size, "done": False})}\n'
+#         except Exception as e:
+#             print(e)
+#             yield f"data: {json.dumps({'status': 'error', 'message': str(e)})}\n"
+#         finally:
+#             await file.close()
+#             print("done")
+#             yield f'data: {json.dumps({"status": "completed", "percentage": 100, "total": total_size, "completed": completed_size, "done": True})}\n'
+
+#     return StreamingResponse(
+#         file_upload_generator(copy.deepcopy(file)), media_type="text/event-stream"
+#     )
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])

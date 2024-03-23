@@ -390,6 +390,73 @@ export const pullModel = async (token: string, tagName: string, urlIdx: string |
 	return res;
 };
 
+export const downloadModel = async (
+	token: string,
+	download_url: string,
+	urlIdx: string | null = null
+) => {
+	let error = null;
+
+	const res = await fetch(
+		`${OLLAMA_API_BASE_URL}/models/download${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({
+				url: download_url
+			})
+		}
+	).catch((err) => {
+		console.log(err);
+		error = err;
+
+		if ('detail' in err) {
+			error = err.detail;
+		}
+
+		return null;
+	});
+	if (error) {
+		throw error;
+	}
+	return res;
+};
+
+export const uploadModel = async (token: string, file: File, urlIdx: string | null = null) => {
+	let error = null;
+
+	const formData = new FormData();
+	formData.append('file', file);
+
+	const res = await fetch(
+		`${OLLAMA_API_BASE_URL}/models/upload${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		{
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${token}`
+			},
+			body: formData
+		}
+	).catch((err) => {
+		console.log(err);
+		error = err;
+
+		if ('detail' in err) {
+			error = err.detail;
+		}
+
+		return null;
+	});
+	if (error) {
+		throw error;
+	}
+	return res;
+};
+
 // export const pullModel = async (token: string, tagName: string) => {
 // 	return await fetch(`${OLLAMA_API_BASE_URL}/pull`, {
 // 		method: 'POST',
