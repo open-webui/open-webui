@@ -36,6 +36,10 @@
         	"title": "Italian"
     	},
 	{
+    		"code": "ja-JP",
+    		"title": "Japanese"
+	},
+	{
     		"code": "pt-PT",
     		"title": "Portuguese (Portugal)"
   	},
