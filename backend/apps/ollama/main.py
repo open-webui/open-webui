@@ -23,7 +23,6 @@ import json
 import uuid
 import aiohttp
 import asyncio
-import aiofiles
 from urllib.parse import urlparse
 from typing import Optional, List, Union
 
