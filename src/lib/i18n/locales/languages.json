@@ -46,5 +46,9 @@
 	{
 		"code": "zh-TW",
 		"title": "Chinese (Traditional)"
+	},
+	{
+		"code": "nl-NL",
+		"title": "Dutch (Netherlands)"
 	}
 ]
