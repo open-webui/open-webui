@@ -159,7 +159,7 @@
 				// Remove the downloaded model
 				delete modelDownloadStatus[modelName];
 
-				modelDownloadStatus = {...modelDownloadStatus}
+				modelDownloadStatus = { ...modelDownloadStatus };
 
 				if (!data.success) {
 					toast.error(data.error);
@@ -467,17 +467,15 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
 	});
-	const deleteModelPull = async(model: string) => {
-		const {reader} = modelDownloadStatus[model];
-		if(reader){
+	const deleteModelPull = async (model: string) => {
+		const { reader } = modelDownloadStatus[model];
+		if (reader) {
 			await reader.cancel();
 			delete modelDownloadStatus[model];
 			await deleteModel(localStorage.token, model);
 			toast.success(`${model} download has been canceled`);
-			
 		}
-
-	}
+	};
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
@@ -611,25 +609,38 @@
 								<div class="flex flex-col">
 									<div class="font-medium mb-1">{model}</div>
 									<div class="">
-										<div class="flex flex-row space-x-4">
-										<div
-											class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
-											style="width: {Math.max(15, modelDownloadStatus[model].pullProgress ?? 0)}%"
-										>
-											{modelDownloadStatus[model].pullProgress ?? 0}%
+										<div class="flex flex-row space-x-4 pr-2">
+											<div
+												class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
+												style="width: {Math.max(15, modelDownloadStatus[model].pullProgress ?? 0)}%"
+											>
+												{modelDownloadStatus[model].pullProgress ?? 0}%
+											</div>
+											<button
+												class="text-gray-800 dark:text-gray-100"
+												on:click={() => {
+													deleteModelPull(model);
+												}}
+											>
+												<svg
+													class="w-4 h-4 text-gray-800 dark:text-white"
+													aria-hidden="true"
+													xmlns="http://www.w3.org/2000/svg"
+													width="24"
+													height="24"
+													fill="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														stroke="currentColor"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M6 18 17.94 6M18 18 6.06 6"
+													/>
+												</svg>
+											</button>
 										</div>
-										<button
-										class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-                                        					on:click={() => {
-                                        						deleteModelPull(model);
-                                        					}}
-                                        				>
-														<svg class="w-4 h-4 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-															<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 17.94 6M18 18 6.06 6"/>
-														  </svg>
-														  
-                                        				</button>
-														</div>
 										<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
 											{modelDownloadStatus[model].digest}
 										</div>
