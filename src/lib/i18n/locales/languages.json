@@ -36,6 +36,10 @@
         	"title": "Italian"
     	},
 	{
+    		"code": "pt-PT",
+    		"title": "Portuguese (Portugal)"
+  	},
+	{
 		"code": "ru-RU",
 		"title": "Russian (Russia)"
 	},
