@@ -723,7 +723,7 @@
 
 											<button
 												type="button"
-												class="w-full rounded-lg text-left py-2 px-4 dark:text-gray-300 dark:bg-gray-850"
+												class="w-full rounded-lg text-left py-2 px-4 bg-white dark:text-gray-300 dark:bg-gray-850"
 												on:click={() => {
 													modelUploadInputElement.click();
 												}}
@@ -738,7 +738,7 @@
 									{:else}
 										<div class="flex-1 {modelFileUrl !== '' ? 'mr-2' : ''}">
 											<input
-												class="w-full rounded-lg text-left py-2 px-4 dark:text-gray-300 dark:bg-gray-850 outline-none {modelFileUrl !==
+												class="w-full rounded-lg text-left py-2 px-4 bg-white dark:text-gray-300 dark:bg-gray-850 outline-none {modelFileUrl !==
 												''
 													? 'mr-2'
 													: ''}"
@@ -753,7 +753,7 @@
 
 								{#if (modelUploadMode === 'file' && modelInputFile && modelInputFile.length > 0) || (modelUploadMode === 'url' && modelFileUrl !== '')}
 									<button
-										class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg disabled:bg-gray-700 disabled:cursor-not-allowed transition"
+										class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg disabled:cursor-not-allowed transition"
 										type="submit"
 										disabled={modelTransferring}
 									>
