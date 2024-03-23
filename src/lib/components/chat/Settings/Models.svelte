@@ -473,8 +473,10 @@
 		const {reader} = modelDownloadStatus[model];
 		if(reader){
 			await reader.cancel();
-			toast.success(`${model} download has been canceled`);
 			delete modelDownloadStatus[model];
+			await deleteModel(localStorage.token, model);
+			toast.success(`${model} download has been canceled`);
+			
 		}
 
 	}
@@ -611,6 +613,7 @@
 								<div class="flex flex-col">
 									<div class="font-medium mb-1">{model}</div>
 									<div class="">
+										<div class="flex flex-row space-x-4">
 										<div
 											class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
 											style="width: {Math.max(15, modelDownloadStatus[model].pullProgress ?? 0)}%"
@@ -618,24 +621,17 @@
 											{modelDownloadStatus[model].pullProgress ?? 0}%
 										</div>
 										<button
-                                        					class="px-3 bg-red-700 hover:bg-red-800 text-gray-100 rounded transition"
+										class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
                                         					on:click={() => {
                                         						deleteModelPull(model);
                                         					}}
                                         				>
-                                        					<svg
-                                        						xmlns="http://www.w3.org/2000/svg"
-                                        						viewBox="0 0 16 16"
-                                        						fill="currentColor"
-                                        						class="w-4 h-4"
-                                        					>
-                                        						<path
-                                        							fill-rule="evenodd"
-                                        							d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z"
-                                        							clip-rule="evenodd"
-                                        						/>
-                                        					</svg>
+														<svg class="w-4 h-4 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+															<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 17.94 6M18 18 6.06 6"/>
+														  </svg>
+														  
                                         				</button>
+														</div>
 										<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
 											{modelDownloadStatus[model].digest}
 										</div>
