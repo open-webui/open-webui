@@ -161,8 +161,6 @@
 
 				modelDownloadStatus = {...modelDownloadStatus}
 
-				console.log('Cleaned:',modelDownloadStatus);
-
 				if (!data.success) {
 					toast.error(data.error);
 				} else {
