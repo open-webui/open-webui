@@ -26,7 +26,7 @@ import uuid
 import base64
 import json
 
-from config import CACHE_DIR, AUTOMATIC1111_BASE_URL
+from config import CACHE_DIR, AUTOMATIC1111_BASE_URL, COMFYUI_BASE_URL
 
 
 IMAGE_CACHE_DIR = Path(CACHE_DIR).joinpath("./image/generations/")
@@ -49,6 +49,8 @@ app.state.MODEL = ""
 
 
 app.state.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
+app.state.COMFYUI_BASE_URL = COMFYUI_BASE_URL
+
 
 app.state.IMAGE_SIZE = "512x512"
 app.state.IMAGE_STEPS = 50
@@ -71,32 +73,43 @@ async def update_config(form_data: ConfigUpdateForm, user=Depends(get_admin_user
     return {"engine": app.state.ENGINE, "enabled": app.state.ENABLED}
 
 
-class UrlUpdateForm(BaseModel):
-    url: str
+class EngineUrlUpdateForm(BaseModel):
+    AUTOMATIC1111_BASE_URL: Optional[str] = None
+    COMFYUI_BASE_URL: Optional[str] = None
 
 
 @app.get("/url")
-async def get_automatic1111_url(user=Depends(get_admin_user)):
-    return {"AUTOMATIC1111_BASE_URL": app.state.AUTOMATIC1111_BASE_URL}
+async def get_engine_url(user=Depends(get_admin_user)):
+    return {
+        "AUTOMATIC1111_BASE_URL": app.state.AUTOMATIC1111_BASE_URL,
+        "COMFYUI_BASE_URL": app.state.COMFYUI_BASE_URL,
+    }
 
 
 @app.post("/url/update")
-async def update_automatic1111_url(
-    form_data: UrlUpdateForm, user=Depends(get_admin_user)
+async def update_engine_url(
+    form_data: EngineUrlUpdateForm, user=Depends(get_admin_user)
 ):
 
-    if form_data.url == "":
+    if form_data.AUTOMATIC1111_BASE_URL == None:
         app.state.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
     else:
-        url = form_data.url.strip("/")
+        url = form_data.AUTOMATIC1111_BASE_URL.strip("/")
         try:
             r = requests.head(url)
             app.state.AUTOMATIC1111_BASE_URL = url
         except Exception as e:
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
+    if form_data.COMFYUI_BASE_URL == None:
+        app.state.COMFYUI_BASE_URL = COMFYUI_BASE_URL
+    else:
+        url = form_data.COMFYUI_BASE_URL.strip("/")
+        app.state.COMFYUI_BASE_URL = url
+
     return {
         "AUTOMATIC1111_BASE_URL": app.state.AUTOMATIC1111_BASE_URL,
+        "COMFYUI_BASE_URL": app.state.COMFYUI_BASE_URL,
         "status": True,
     }
 
@@ -186,6 +199,18 @@ def get_models(user=Depends(get_current_user)):
                 {"id": "dall-e-2", "name": "DALL·E 2"},
                 {"id": "dall-e-3", "name": "DALL·E 3"},
             ]
+        elif app.state.ENGINE == "comfyui":
+
+            r = requests.get(url=f"{app.state.COMFYUI_BASE_URL}/object_info")
+            info = r.json()
+
+            return list(
+                map(
+                    lambda model: {"id": model, "name": model},
+                    info["CheckpointLoaderSimple"]["input"]["required"]["ckpt_name"][0],
+                )
+            )
+
         else:
             r = requests.get(
                 url=f"{app.state.AUTOMATIC1111_BASE_URL}/sdapi/v1/sd-models"
