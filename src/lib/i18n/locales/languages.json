@@ -32,6 +32,10 @@
 		"title": "French (France)"
 	},
 	{
+        	"code": "it-IT",
+        	"title": "Italian"
+    	},
+	{
 		"code": "ru-RU",
 		"title": "Russian (Russia)"
 	},
