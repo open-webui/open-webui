@@ -20,12 +20,10 @@
 		getAllChatTags
 	} from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
-	import { slide } from 'svelte/transition';
+	import { fade, slide } from 'svelte/transition';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '../common/Tooltip.svelte';
-	import Dropdown from '../common/Dropdown.svelte';
 	import ChatMenu from './Sidebar/ChatMenu.svelte';
-	import { flyAndScale } from '$lib/utils/transitions';
 
 	let show = false;
 	let navElement;
@@ -578,7 +576,7 @@
 						<div
 							id="dropdownDots"
 							class="absolute z-40 bottom-[70px] 4.5rem rounded-xl shadow w-[240px] bg-white dark:bg-gray-900"
-							in:flyAndScale={{ y: 5 }}
+							transition:fade|slide={{ duration: 100 }}
 						>
 							<div class="py-2 w-full">
 								{#if $user.role === 'admin'}
