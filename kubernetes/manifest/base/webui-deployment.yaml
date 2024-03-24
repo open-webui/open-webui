@@ -35,4 +35,4 @@ spec:
       volumes:
       - name: webui-volume
         persistentVolumeClaim:
-          claimName: ollama-webui-pvc          
+          claimName: open-webui-pvc          
