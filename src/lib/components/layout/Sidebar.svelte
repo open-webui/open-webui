@@ -176,7 +176,7 @@
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
 							viewBox="0 0 24 24"
-							stroke-width="1.5"
+							stroke-width="2"
 							stroke="currentColor"
 							class="w-4 h-4"
 						>
@@ -208,7 +208,7 @@
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
 							viewBox="0 0 24 24"
-							stroke-width="1.5"
+							stroke-width="2"
 							stroke="currentColor"
 							class="w-4 h-4"
 						>
@@ -240,7 +240,7 @@
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
 							viewBox="0 0 24 24"
-							stroke-width="1.5"
+							stroke-width="2"
 							stroke="currentColor"
 							class="w-4 h-4"
 						>
@@ -261,7 +261,7 @@
 
 		<div class="relative flex flex-col flex-1 overflow-y-auto">
 			{#if !($settings.saveChatHistory ?? true)}
-				<div class="absolute z-40 w-full h-full dark:bg-black/90 flex justify-center">
+				<div class="absolute z-40 w-full h-full bg-gray-50/90 dark:bg-black/90 flex justify-center">
 					<div class=" text-left px-5 py-2">
 						<div class=" font-medium">{$i18n.t('Chat History is off for this browser.')}</div>
 						<div class="text-xs mt-2">
