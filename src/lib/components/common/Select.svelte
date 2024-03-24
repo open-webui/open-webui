@@ -69,9 +69,12 @@
 					label={item.label}
 				>
 					{item.label}
-					<Select.ItemIndicator class="ml-auto" asChild={false}>
-						<Check />
-					</Select.ItemIndicator>
+
+					{#if value === item.value}
+						<div class="ml-auto">
+							<Check />
+						</div>
+					{/if}
 				</Select.Item>
 			{:else}
 				<span class="block px-5 py-2 text-sm text-gray-700 dark:text-gray-100">
