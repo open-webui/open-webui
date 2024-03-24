@@ -108,7 +108,7 @@
 	bind:this={navElement}
 	class="h-screen max-h-[100dvh] min-h-screen {show
 		? 'lg:relative w-[260px]'
-		: '-translate-x-[260px] w-[0px]'}  bg-black text-gray-200 shadow-2xl text-sm transition z-40 fixed top-0 left-0
+		: '-translate-x-[260px] w-[0px]'} bg-gray-50 dark:bg-gray-950 dark:text-gray-200 text-sm transition z-40 fixed top-0 left-0
         "
 >
 	<div
@@ -119,7 +119,7 @@
 		<div class="px-2 flex justify-center space-x-2">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex-grow flex justify-between rounded-xl px-3.5 py-2 hover:bg-gray-900 transition"
+				class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
 				href="/"
 				on:click={async () => {
 					selectedChatId = null;
@@ -135,7 +135,7 @@
 					<div class="self-center mr-1.5">
 						<img
 							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" w-7 -translate-x-1.5 rounded-full"
+							class=" size-6 -translate-x-1.5 rounded-full"
 							alt="logo"
 						/>
 					</div>
@@ -164,7 +164,7 @@
 		{#if $user?.role === 'admin'}
 			<div class="px-2 flex justify-center mt-0.5">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
 					href="/modelfiles"
 					on:click={() => {
 						selectedChatId = null;
@@ -196,7 +196,7 @@
 
 			<div class="px-2 flex justify-center">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
 					href="/prompts"
 					on:click={() => {
 						selectedChatId = null;
@@ -228,7 +228,7 @@
 
 			<div class="px-2 flex justify-center mb-1">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
 					href="/documents"
 					on:click={() => {
 						selectedChatId = null;
@@ -261,7 +261,7 @@
 
 		<div class="relative flex flex-col flex-1 overflow-y-auto">
 			{#if !($settings.saveChatHistory ?? true)}
-				<div class="absolute z-40 w-full h-full bg-black/90 flex justify-center">
+				<div class="absolute z-40 w-full h-full dark:bg-black/90 flex justify-center">
 					<div class=" text-left px-5 py-2">
 						<div class=" font-medium">{$i18n.t('Chat History is off for this browser.')}</div>
 						<div class="text-xs mt-2">
@@ -305,7 +305,7 @@
 
 			<div class="px-2 mt-1 mb-2 flex justify-center space-x-2">
 				<div class="flex w-full" id="chat-search">
-					<div class="self-center pl-3 py-2 rounded-l-xl bg-gray-950">
+					<div class="self-center pl-3 py-2 rounded-l-xl bg-white dark:bg-gray-950">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
@@ -321,7 +321,7 @@
 					</div>
 
 					<input
-						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm text-gray-300 bg-gray-950 outline-none"
+						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm dark:text-gray-300 dark:bg-gray-950 outline-none"
 						placeholder={$i18n.t('Search')}
 						bind:value={search}
 						on:focus={() => {
@@ -334,7 +334,7 @@
 			{#if $tags.length > 0}
 				<div class="px-2.5 mt-0.5 mb-2 flex gap-1 flex-wrap">
 					<button
-						class="px-2.5 text-xs font-medium bg-gray-900 hover:bg-gray-800 transition rounded-full"
+						class="px-2.5 text-xs font-medium bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 						on:click={async () => {
 							await chats.set(await getChatList(localStorage.token));
 						}}
@@ -343,7 +343,7 @@
 					</button>
 					{#each $tags as tag}
 						<button
-							class="px-2.5 text-xs font-medium bg-gray-900 hover:bg-gray-800 transition rounded-full"
+							class="px-2.5 text-xs font-medium bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 							on:click={async () => {
 								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
 								if (chatIds.length === 0) {
@@ -385,10 +385,10 @@
 								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
 								chat.id === chatTitleEditId ||
 								chat.id === chatDeleteId
-									? 'bg-gray-900'
+									? 'bg-gray-300 dark:bg-gray-900'
 									: chat.id === selectedChatId
-									? 'bg-gray-950'
-									: 'group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+									? 'bg-gray-100 dark:bg-gray-950'
+									: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 							>
 								<input bind:value={chatTitle} class=" bg-transparent w-full outline-none mr-10" />
 							</div>
@@ -397,10 +397,10 @@
 								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
 								chat.id === chatTitleEditId ||
 								chat.id === chatDeleteId
-									? 'bg-gray-900'
+									? 'bg-gray-300 dark:bg-gray-900'
 									: chat.id === selectedChatId
-									? 'bg-gray-950'
-									: 'group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+									? 'bg-gray-100 dark:bg-gray-950'
+									: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 								href="/c/{chat.id}"
 								on:click={() => {
 									selectedChatId = chat.id;
@@ -422,10 +422,10 @@
 							class="
 							
 							{chat.id === $chatId || chat.id === chatTitleEditId || chat.id === chatDeleteId
-								? ' from-gray-900'
+								? 'from-gray-300 dark:from-gray-900'
 								: chat.id === selectedChatId
-								? 'from-gray-950'
-								: 'invisible group-hover:visible from-gray-950'}
+								? 'from-gray-100 dark:from-gray-950'
+								: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
 								absolute right-[10px] top-[10px] pr-2 pl-5 bg-gradient-to-l from-80%
 								
 								  to-transparent"
@@ -433,7 +433,7 @@
 							{#if chatTitleEditId === chat.id}
 								<div class="flex self-center space-x-1.5 z-10">
 									<button
-										class=" self-center hover:text-white transition"
+										class=" self-center dark:hover:text-white transition"
 										on:click={() => {
 											editChatTitle(chat.id, chatTitle);
 											chatTitleEditId = null;
@@ -454,7 +454,7 @@
 										</svg>
 									</button>
 									<button
-										class=" self-center hover:text-white transition"
+										class=" self-center dark:hover:text-white transition"
 										on:click={() => {
 											chatTitleEditId = null;
 											chatTitle = '';
@@ -475,7 +475,7 @@
 							{:else if chatDeleteId === chat.id}
 								<div class="flex self-center space-x-1.5 z-10">
 									<button
-										class=" self-center hover:text-white transition"
+										class=" self-center dark:hover:text-white transition"
 										on:click={() => {
 											deleteChat(chat.id);
 										}}
@@ -494,7 +494,7 @@
 										</svg>
 									</button>
 									<button
-										class=" self-center hover:text-white transition"
+										class=" self-center dark:hover:text-white transition"
 										on:click={() => {
 											chatDeleteId = null;
 										}}
@@ -527,7 +527,7 @@
 									>
 										<button
 											aria-label="Chat Menu"
-											class=" self-center hover:text-white transition"
+											class=" self-center dark:hover:text-white transition"
 											on:click={() => {
 												selectedChatId = chat.id;
 											}}
@@ -558,7 +558,7 @@
 			<div class="flex flex-col">
 				{#if $user !== undefined}
 					<button
-						class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-900 transition"
+						class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-900 transition"
 						on:click={() => {
 							showDropdown = !showDropdown;
 						}}
@@ -576,13 +576,13 @@
 					{#if showDropdown}
 						<div
 							id="dropdownDots"
-							class="absolute z-40 bottom-[70px] 4.5rem rounded-xl shadow w-[240px] bg-gray-900"
+							class="absolute z-40 bottom-[70px] 4.5rem rounded-xl shadow w-[240px] bg-white dark:bg-gray-900"
 							in:slide={{ duration: 150 }}
 						>
 							<div class="py-2 w-full">
 								{#if $user.role === 'admin'}
 									<button
-										class="flex py-2.5 px-3.5 w-full hover:bg-gray-800 transition"
+										class="flex py-2.5 px-3.5 w-full dark:hover:bg-gray-800 transition"
 										on:click={() => {
 											goto('/admin');
 											showDropdown = false;
@@ -608,7 +608,7 @@
 									</button>
 
 									<button
-										class="flex py-2.5 px-3.5 w-full hover:bg-gray-800 transition"
+										class="flex py-2.5 px-3.5 w-full dark:hover:bg-gray-800 transition"
 										on:click={() => {
 											goto('/playground');
 											showDropdown = false;
@@ -635,7 +635,7 @@
 								{/if}
 
 								<button
-									class="flex py-2.5 px-3.5 w-full hover:bg-gray-800 transition"
+									class="flex py-2.5 px-3.5 w-full dark:hover:bg-gray-800 transition"
 									on:click={async () => {
 										await showSettings.set(true);
 										showDropdown = false;
@@ -666,11 +666,11 @@
 								</button>
 							</div>
 
-							<hr class=" border-gray-700 m-0 p-0" />
+							<hr class=" dark:border-gray-700 m-0 p-0" />
 
 							<div class="py-2 w-full">
 								<button
-									class="flex py-2.5 px-3.5 w-full hover:bg-gray-800 transition"
+									class="flex py-2.5 px-3.5 w-full dark:hover:bg-gray-800 transition"
 									on:click={() => {
 										localStorage.removeItem('token');
 										location.href = '/auth';
@@ -722,7 +722,7 @@
 				}}
 				><span class="" data-state="closed"
 					><div
-						class="flex h-[72px] w-8 items-center justify-center opacity-20 group-hover:opacity-100 transition"
+						class="flex h-[72px] w-8 items-center justify-center opacity-50 group-hover:opacity-100 transition"
 					>
 						<div class="flex h-6 w-6 flex-col items-center">
 							<div
