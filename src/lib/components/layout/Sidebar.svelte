@@ -25,6 +25,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 	import ChatMenu from './Sidebar/ChatMenu.svelte';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	let show = false;
 	let navElement;
@@ -577,7 +578,7 @@
 						<div
 							id="dropdownDots"
 							class="absolute z-40 bottom-[70px] 4.5rem rounded-xl shadow w-[240px] bg-white dark:bg-gray-900"
-							in:slide={{ duration: 150 }}
+							in:flyAndScale={{ y: 5 }}
 						>
 							<div class="py-2 w-full">
 								{#if $user.role === 'admin'}
