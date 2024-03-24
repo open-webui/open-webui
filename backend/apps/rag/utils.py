@@ -137,6 +137,8 @@ def rag_messages(docs, messages, template, k, embedding_function):
                     k=k,
                     embedding_function=embedding_function,
                 )
+            elif doc["type"] == "text":
+                context = doc["content"]
             else:
                 context = query_doc(
                     collection_name=doc["collection_name"],
