@@ -32,6 +32,22 @@
 		"title": "French (France)"
 	},
 	{
+		"code": "it-IT",
+		"title": "Italian"
+	},
+	{
+		"code": "ja-JP",
+		"title": "Japanese"
+	},
+	{
+		"code": "nl-NL",
+		"title": "Dutch (Netherlands)"
+	},
+	{
+		"code": "pt-PT",
+		"title": "Portuguese (Portugal)"
+	},
+	{
 		"code": "ru-RU",
 		"title": "Russian (Russia)"
 	},

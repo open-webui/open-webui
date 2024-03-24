@@ -69,10 +69,7 @@
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} {downloadChat} {shareChat} />
-<nav
-	id="nav"
-	class=" sticky py-2.5 top-0 flex flex-row justify-center bg-white/95 dark:bg-gray-900/90 dark:text-gray-200 backdrop-blur-xl z-30"
->
+<nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div
 		class=" flex {$settings?.fullScreenMode ?? null
 			? 'max-w-full'
@@ -113,7 +110,7 @@
 					<Tags {tags} {deleteTag} {addTag} />
 
 					<button
-						class=" cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-lg transition border dark:border-gray-600"
+						class=" cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-lg transition"
 						on:click={async () => {
 							showShareChatModal = !showShareChatModal;
 
