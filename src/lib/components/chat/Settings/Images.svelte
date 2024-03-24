@@ -4,14 +4,14 @@
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { config, user } from '$lib/stores';
 	import {
-		getAUTOMATIC1111Url,
 		getImageGenerationModels,
 		getDefaultImageGenerationModel,
 		updateDefaultImageGenerationModel,
 		getImageSize,
 		getImageGenerationConfig,
 		updateImageGenerationConfig,
-		updateAUTOMATIC1111Url,
+		getImageGenerationEngineUrls,
+		updateImageGenerationEngineUrls,
 		updateImageSize,
 		getImageSteps,
 		updateImageSteps,
@@ -31,6 +31,8 @@
 	let enableImageGeneration = false;
 
 	let AUTOMATIC1111_BASE_URL = '';
+	let COMFYUI_BASE_URL = '';
+
 	let OPENAI_API_KEY = '';
 
 	let selectedModel = '';
@@ -49,24 +51,47 @@
 		});
 	};
 
-	const updateAUTOMATIC1111UrlHandler = async () => {
-		const res = await updateAUTOMATIC1111Url(localStorage.token, AUTOMATIC1111_BASE_URL).catch(
-			(error) => {
+	const updateUrlHandler = async () => {
+		if (imageGenerationEngine === 'comfyui') {
+			const res = await updateImageGenerationEngineUrls(localStorage.token, {
+				COMFYUI_BASE_URL: COMFYUI_BASE_URL
+			}).catch((error) => {
 				toast.error(error);
+
+				console.log(error);
 				return null;
-			}
-		);
+			});
 
-		if (res) {
-			AUTOMATIC1111_BASE_URL = res;
+			if (res) {
+				COMFYUI_BASE_URL = res.COMFYUI_BASE_URL;
 
-			await getModels();
+				await getModels();
 
-			if (models) {
-				toast.success($i18n.t('Server connection verified'));
+				if (models) {
+					toast.success($i18n.t('Server connection verified'));
+				}
+			} else {
+				({ COMFYUI_BASE_URL } = await getImageGenerationEngineUrls(localStorage.token));
 			}
 		} else {
-			AUTOMATIC1111_BASE_URL = await getAUTOMATIC1111Url(localStorage.token);
+			const res = await updateImageGenerationEngineUrls(localStorage.token, {
+				AUTOMATIC1111_BASE_URL: AUTOMATIC1111_BASE_URL
+			}).catch((error) => {
+				toast.error(error);
+				return null;
+			});
+
+			if (res) {
+				AUTOMATIC1111_BASE_URL = res.AUTOMATIC1111_BASE_URL;
+
+				await getModels();
+
+				if (models) {
+					toast.success($i18n.t('Server connection verified'));
+				}
+			} else {
+				({ AUTOMATIC1111_BASE_URL } = await getImageGenerationEngineUrls(localStorage.token));
+			}
 		}
 	};
 	const updateImageGeneration = async () => {
@@ -101,7 +126,11 @@
 				imageGenerationEngine = res.engine;
 				enableImageGeneration = res.enabled;
 			}
-			AUTOMATIC1111_BASE_URL = await getAUTOMATIC1111Url(localStorage.token);
+			const URLS = await getImageGenerationEngineUrls(localStorage.token);
+
+			AUTOMATIC1111_BASE_URL = URLS.AUTOMATIC1111_BASE_URL;
+			COMFYUI_BASE_URL = URLS.COMFYUI_BASE_URL;
+
 			OPENAI_API_KEY = await getOpenAIKey(localStorage.token);
 
 			imageSize = await getImageSize(localStorage.token);
@@ -154,6 +183,7 @@
 						}}
 					>
 						<option value="">{$i18n.t('Default (Automatic1111)')}</option>
+						<option value="comfyui">{$i18n.t('ComfyUI')}</option>
 						<option value="openai">{$i18n.t('Open AI (Dall-E)')}</option>
 					</select>
 				</div>
@@ -170,6 +200,9 @@
 						on:click={() => {
 							if (imageGenerationEngine === '' && AUTOMATIC1111_BASE_URL === '') {
 								toast.error($i18n.t('AUTOMATIC1111 Base URL is required.'));
+								enableImageGeneration = false;
+							} else if (imageGenerationEngine === 'comfyui' && COMFYUI_BASE_URL === '') {
+								toast.error($i18n.t('ComfyUI Base URL is required.'));
 								enableImageGeneration = false;
 							} else if (imageGenerationEngine === 'openai' && OPENAI_API_KEY === '') {
 								toast.error($i18n.t('OpenAI API Key is required.'));
@@ -204,12 +237,10 @@
 					/>
 				</div>
 				<button
-					class="px-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-700 rounded-lg transition"
+					class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 					type="button"
 					on:click={() => {
-						// updateOllamaAPIUrlHandler();
-
-						updateAUTOMATIC1111UrlHandler();
+						updateUrlHandler();
 					}}
 				>
 					<svg
@@ -237,6 +268,37 @@
 					{$i18n.t('(e.g. `sh webui.sh --api`)')}
 				</a>
 			</div>
+		{:else if imageGenerationEngine === 'comfyui'}
+			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('ComfyUI Base URL')}</div>
+			<div class="flex w-full">
+				<div class="flex-1 mr-2">
+					<input
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
+						bind:value={COMFYUI_BASE_URL}
+					/>
+				</div>
+				<button
+					class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+					type="button"
+					on:click={() => {
+						updateUrlHandler();
+					}}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="w-4 h-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</button>
+			</div>
 		{:else if imageGenerationEngine === 'openai'}
 			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('OpenAI API Key')}</div>
 			<div class="flex w-full">
@@ -261,6 +323,7 @@
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={selectedModel}
 							placeholder={$i18n.t('Select a model')}
+							required
 						>
 							{#if !selectedModel}
 								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
