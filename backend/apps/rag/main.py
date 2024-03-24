@@ -303,14 +303,14 @@ def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> b
 
 
 def store_text_in_vector_db(
-    text, name, collection_name, overwrite: bool = False
+    text, metadata, collection_name, overwrite: bool = False
 ) -> bool:
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.CHUNK_SIZE,
         chunk_overlap=app.state.CHUNK_OVERLAP,
         add_start_index=True,
     )
-    docs = text_splitter.create_documents([text], metadatas=[{"name": name}])
+    docs = text_splitter.create_documents([text], metadatas=[metadata])
     return store_docs_in_vector_db(docs, collection_name, overwrite)
 
 
@@ -493,7 +493,11 @@ def store_text(
     if collection_name == None:
         collection_name = calculate_sha256_string(form_data.content)
 
-    result = store_text_in_vector_db(form_data.content, form_data.name, collection_name)
+    result = store_text_in_vector_db(
+        form_data.content,
+        metadata={"name": form_data.name, "created_by": user.id},
+        collection_name=collection_name,
+    )
 
     if result:
         return {"status": True, "collection_name": collection_name}
