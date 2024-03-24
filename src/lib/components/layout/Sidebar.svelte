@@ -108,7 +108,7 @@
 	bind:this={navElement}
 	class="h-screen max-h-[100dvh] min-h-screen {show
 		? 'lg:relative w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} bg-gray-50 dark:bg-gray-950 dark:text-gray-200 text-sm transition z-40 fixed top-0 left-0
+		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition z-40 fixed top-0 left-0
         "
 >
 	<div
