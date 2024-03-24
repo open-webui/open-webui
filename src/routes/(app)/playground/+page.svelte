@@ -13,7 +13,7 @@
 	} from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
-	import { cancelChatCompletion, generateChatCompletion } from '$lib/apis/ollama';
+	import { cancelOllamaRequest, generateChatCompletion } from '$lib/apis/ollama';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
@@ -52,7 +52,7 @@
 
 	// const cancelHandler = async () => {
 	// 	if (currentRequestId) {
-	// 		const res = await cancelChatCompletion(localStorage.token, currentRequestId);
+	// 		const res = await cancelOllamaRequest(localStorage.token, currentRequestId);
 	// 		currentRequestId = null;
 	// 		loading = false;
 	// 	}
@@ -95,7 +95,7 @@
 				const { value, done } = await reader.read();
 				if (done || stopResponseFlag) {
 					if (stopResponseFlag) {
-						await cancelChatCompletion(localStorage.token, currentRequestId);
+						await cancelOllamaRequest(localStorage.token, currentRequestId);
 					}
 
 					currentRequestId = null;
@@ -181,7 +181,7 @@
 				const { value, done } = await reader.read();
 				if (done || stopResponseFlag) {
 					if (stopResponseFlag) {
-						await cancelChatCompletion(localStorage.token, currentRequestId);
+						await cancelOllamaRequest(localStorage.token, currentRequestId);
 					}
 
 					currentRequestId = null;

@@ -250,11 +250,26 @@ async def pull_model(
     def get_request():
         nonlocal url
         nonlocal r
+
+        request_id = str(uuid.uuid4())
         try:
+            REQUEST_POOL.append(request_id)
 
             def stream_content():
-                for chunk in r.iter_content(chunk_size=8192):
-                    yield chunk
+                try:
+                    yield json.dumps({"id": request_id, "done": False}) + "\n"
+
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if request_id in REQUEST_POOL:
+                            yield chunk
+                        else:
+                            print("User: canceled request")
+                            break
+                finally:
+                    if hasattr(r, "close"):
+                        r.close()
+                        if request_id in REQUEST_POOL:
+                            REQUEST_POOL.remove(request_id)
 
             r = requests.request(
                 method="POST",
@@ -275,6 +290,7 @@ async def pull_model(
 
     try:
         return await run_in_threadpool(get_request)
+
     except Exception as e:
         print(e)
         error_detail = "Open WebUI: Server Connection Error"
