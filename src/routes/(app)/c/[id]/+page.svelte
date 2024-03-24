@@ -19,7 +19,7 @@
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream, convertMessagesToHistory } from '$lib/utils';
 
-	import { generateChatCompletion, generateTitle, cancelChatCompletion } from '$lib/apis/ollama';
+	import { generateChatCompletion, generateTitle, cancelOllamaRequest } from '$lib/apis/ollama';
 	import {
 		addTagById,
 		createNewChat,
@@ -382,7 +382,7 @@
 
 					if (stopResponseFlag) {
 						controller.abort('User: Stop Response');
-						await cancelChatCompletion(localStorage.token, currentRequestId);
+						await cancelOllamaRequest(localStorage.token, currentRequestId);
 					}
 
 					currentRequestId = null;
@@ -843,7 +843,7 @@
 			shareEnabled={messages.length > 0}
 			initNewChat={async () => {
 				if (currentRequestId !== null) {
-					await cancelChatCompletion(localStorage.token, currentRequestId);
+					await cancelOllamaRequest(localStorage.token, currentRequestId);
 					currentRequestId = null;
 				}
 

@@ -45,3 +45,4 @@ PyJWT
 pyjwt[crypto]
 
 black
+langfuse
