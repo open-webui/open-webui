@@ -1,7 +1,11 @@
 import re
+import logging
 from typing import List
 
-from config import CHROMA_CLIENT
+from config import SRC_LOG_LEVELS, CHROMA_CLIENT
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def query_doc(collection_name: str, query: str, k: int, embedding_function):
@@ -97,7 +101,7 @@ def rag_template(template: str, context: str, query: str):
 
 
 def rag_messages(docs, messages, template, k, embedding_function):
-    print(docs)
+    log.debug(f"docs: {docs}")
 
     last_user_message_idx = None
     for i in range(len(messages) - 1, -1, -1):
@@ -137,6 +141,8 @@ def rag_messages(docs, messages, template, k, embedding_function):
                     k=k,
                     embedding_function=embedding_function,
                 )
+            elif doc["type"] == "text":
+                context = doc["content"]
             else:
                 context = query_doc(
                     collection_name=doc["collection_name"],
@@ -145,7 +151,7 @@ def rag_messages(docs, messages, template, k, embedding_function):
                     embedding_function=embedding_function,
                 )
         except Exception as e:
-            print(e)
+            log.exception(e)
             context = None
 
         relevant_contexts.append(context)

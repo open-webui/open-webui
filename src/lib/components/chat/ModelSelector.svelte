@@ -3,6 +3,7 @@
 	import { models, showSettings, settings, user } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import Select from '../common/Select.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -32,30 +33,24 @@
 	}
 </script>
 
-<div class="flex flex-col my-2">
+<div class="flex flex-col my-2 w-full">
 	{#each selectedModels as selectedModel, selectedModelIdx}
-		<div class="flex">
-			<select
-				id="models"
-				class="outline-none bg-transparent text-lg font-semibold rounded-lg block w-full placeholder-gray-400"
-				bind:value={selectedModel}
-				{disabled}
-			>
-				<option class=" text-gray-700" value="" selected disabled
-					>{$i18n.t('Select a model')}</option
-				>
-
-				{#each $models as model}
-					{#if model.name === 'hr'}
-						<hr />
-					{:else}
-						<option value={model.id} class="text-gray-700 text-lg"
-							>{model.name +
-								`${model.size ? ` (${(model.size / 1024 ** 3).toFixed(1)}GB)` : ''}`}</option
-						>
-					{/if}
-				{/each}
-			</select>
+		<div class="flex w-full">
+			<div class="overflow-hidden w-full">
+				<div class="mr-2 max-w-full">
+					<Select
+						placeholder={$i18n.t('Select a model')}
+						items={$models
+							.filter((model) => model.name !== 'hr')
+							.map((model) => ({
+								value: model.id,
+								label:
+									model.name + `${model.size ? ` (${(model.size / 1024 ** 3).toFixed(1)}GB)` : ''}`
+							}))}
+						bind:value={selectedModel}
+					/>
+				</div>
+			</div>
 
 			{#if selectedModelIdx === 0}
 				<button
@@ -136,6 +131,6 @@
 	{/each}
 </div>
 
-<div class="text-left mt-1.5 text-xs text-gray-500">
+<div class="text-left mt-1.5 ml-1 text-xs text-gray-500">
 	<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 </div>
