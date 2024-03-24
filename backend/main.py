@@ -32,6 +32,7 @@ from utils.utils import get_admin_user
 from apps.rag.utils import rag_messages
 
 from config import (
+    CONFIG_DATA,
     WEBUI_NAME,
     ENV,
     VERSION,
@@ -88,7 +89,6 @@ class RAGMiddleware(BaseHTTPMiddleware):
             # Example: Add a new key-value pair or modify existing ones
             # data["modified"] = True  # Example modification
             if "docs" in data:
-
                 data = {**data}
                 data["messages"] = rag_messages(
                     data["docs"],
@@ -163,11 +163,11 @@ app.mount("/rag/api/v1", rag_app)
 
 @app.get("/api/config")
 async def get_app_config():
-
     return {
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
+        "locale": CONFIG_DATA["ui"]["locale"],
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
@@ -191,7 +191,6 @@ class ModelFilterConfigForm(BaseModel):
 async def update_model_filter_config(
     form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
 ):
-
     app.state.MODEL_FILTER_ENABLED = form_data.enabled
     app.state.MODEL_FILTER_LIST = form_data.models
 
@@ -231,7 +230,6 @@ async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
 
 @app.get("/api/version")
 async def get_app_config():
-
     return {
         "version": VERSION,
     }
