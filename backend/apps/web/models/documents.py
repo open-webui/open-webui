@@ -3,6 +3,7 @@ from peewee import *
 from playhouse.shortcuts import model_to_dict
 from typing import List, Union, Optional
 import time
+import logging
 
 from utils.utils import decode_token
 from utils.misc import get_gravatar_url
@@ -10,6 +11,10 @@ from utils.misc import get_gravatar_url
 from apps.web.internal.db import DB
 
 import json
+
+from config import SRC_LOG_LEVELS
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 ####################
 # Documents DB Schema
@@ -118,7 +123,7 @@ class DocumentsTable:
             doc = Document.get(Document.name == form_data.name)
             return DocumentModel(**model_to_dict(doc))
         except Exception as e:
-            print(e)
+            log.exception(e)
             return None
 
     def update_doc_content_by_name(
@@ -138,7 +143,7 @@ class DocumentsTable:
             doc = Document.get(Document.name == name)
             return DocumentModel(**model_to_dict(doc))
         except Exception as e:
-            print(e)
+            log.exception(e)
             return None
 
     def delete_doc_by_name(self, name: str) -> bool:

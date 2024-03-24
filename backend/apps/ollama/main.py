@@ -23,6 +23,7 @@ import json
 import uuid
 import aiohttp
 import asyncio
+import logging
 from urllib.parse import urlparse
 from typing import Optional, List, Union
 
@@ -30,11 +31,13 @@ from typing import Optional, List, Union
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import decode_token, get_current_user, get_admin_user
+
+
+from config import SRC_LOG_LEVELS, OLLAMA_BASE_URLS, MODEL_FILTER_ENABLED, MODEL_FILTER_LIST, UPLOAD_DIR
 from utils.misc import calculate_sha256
 
-
-from config import OLLAMA_BASE_URLS, MODEL_FILTER_ENABLED, MODEL_FILTER_LIST, UPLOAD_DIR
-
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 
 app = FastAPI()
 app.add_middleware(
@@ -85,7 +88,7 @@ class UrlUpdateForm(BaseModel):
 async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin_user)):
     app.state.OLLAMA_BASE_URLS = form_data.urls
 
-    print(app.state.OLLAMA_BASE_URLS)
+    log.info(f"app.state.OLLAMA_BASE_URLS: {app.state.OLLAMA_BASE_URLS}")
     return {"OLLAMA_BASE_URLS": app.state.OLLAMA_BASE_URLS}
 
 
@@ -106,7 +109,7 @@ async def fetch_url(url):
                 return await response.json()
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.error(f"Connection error: {e}")
         return None
 
 
@@ -130,7 +133,7 @@ def merge_models_lists(model_lists):
 
 
 async def get_all_models():
-    print("get_all_models")
+    log.info("get_all_models()")
     tasks = [fetch_url(f"{url}/api/tags") for url in app.state.OLLAMA_BASE_URLS]
     responses = await asyncio.gather(*tasks)
 
@@ -171,7 +174,7 @@ async def get_ollama_tags(
 
             return r.json()
         except Exception as e:
-            print(e)
+            log.exception(e)
             error_detail = "Open WebUI: Server Connection Error"
             if r is not None:
                 try:
@@ -217,7 +220,7 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
 
             return r.json()
         except Exception as e:
-            print(e)
+            log.exception(e)
             error_detail = "Open WebUI: Server Connection Error"
             if r is not None:
                 try:
@@ -243,7 +246,7 @@ async def pull_model(
     form_data: ModelNameForm, url_idx: int = 0, user=Depends(get_admin_user)
 ):
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     r = None
 
@@ -292,7 +295,7 @@ async def pull_model(
         return await run_in_threadpool(get_request)
 
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -331,7 +334,7 @@ async def push_model(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.debug(f"url: {url}")
 
     r = None
 
@@ -363,7 +366,7 @@ async def push_model(
     try:
         return await run_in_threadpool(get_request)
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -391,9 +394,9 @@ class CreateModelForm(BaseModel):
 async def create_model(
     form_data: CreateModelForm, url_idx: int = 0, user=Depends(get_admin_user)
 ):
-    print(form_data)
+    log.debug(f"form_data: {form_data}")
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     r = None
 
@@ -415,7 +418,7 @@ async def create_model(
 
             r.raise_for_status()
 
-            print(r)
+            log.debug(f"r: {r}")
 
             return StreamingResponse(
                 stream_content(),
@@ -428,7 +431,7 @@ async def create_model(
     try:
         return await run_in_threadpool(get_request)
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -466,7 +469,7 @@ async def copy_model(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     try:
         r = requests.request(
@@ -476,11 +479,11 @@ async def copy_model(
         )
         r.raise_for_status()
 
-        print(r.text)
+        log.debug(f"r.text: {r.text}")
 
         return True
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -513,7 +516,7 @@ async def delete_model(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     try:
         r = requests.request(
@@ -523,11 +526,11 @@ async def delete_model(
         )
         r.raise_for_status()
 
-        print(r.text)
+        log.debug(f"r.text: {r.text}")
 
         return True
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -553,7 +556,7 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_current_use
 
     url_idx = random.choice(app.state.MODELS[form_data.name]["urls"])
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     try:
         r = requests.request(
@@ -565,7 +568,7 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_current_use
 
         return r.json()
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -605,7 +608,7 @@ async def generate_embeddings(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     try:
         r = requests.request(
@@ -617,7 +620,7 @@ async def generate_embeddings(
 
         return r.json()
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -665,7 +668,7 @@ async def generate_completion(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     r = None
 
@@ -686,7 +689,7 @@ async def generate_completion(
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):
@@ -763,11 +766,11 @@ async def generate_chat_completion(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     r = None
 
-    print(form_data.model_dump_json(exclude_none=True).encode())
+    log.debug("form_data.model_dump_json(exclude_none=True).encode(): {0} ".format(form_data.model_dump_json(exclude_none=True).encode()))
 
     def get_request():
         nonlocal form_data
@@ -786,7 +789,7 @@ async def generate_chat_completion(
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):
@@ -809,7 +812,7 @@ async def generate_chat_completion(
                 headers=dict(r.headers),
             )
         except Exception as e:
-            print(e)
+            log.exception(e)
             raise e
 
     try:
@@ -863,7 +866,7 @@ async def generate_openai_chat_completion(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     r = None
 
@@ -886,7 +889,7 @@ async def generate_openai_chat_completion(
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):
@@ -1184,7 +1187,7 @@ async def deprecated_proxy(path: str, request: Request, user=Depends(get_current
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):
