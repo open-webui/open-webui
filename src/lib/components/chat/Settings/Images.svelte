@@ -323,6 +323,7 @@
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={selectedModel}
 							placeholder={$i18n.t('Select a model')}
+							required
 						>
 							{#if !selectedModel}
 								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
