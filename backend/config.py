@@ -218,8 +218,8 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
         else OLLAMA_API_BASE_URL
     )
 
-if ENV == "prod" and RUNNING_ON_K8S == "":
-    if OLLAMA_BASE_URL == "/ollama":
+if ENV == "prod":
+    if OLLAMA_BASE_URL == "/ollama" and RUNNING_ON_K8S == "":
         OLLAMA_BASE_URL = "http://host.docker.internal:11434"
     else:
         OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
