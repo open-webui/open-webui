@@ -19,7 +19,7 @@
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
-	import { generateChatCompletion, cancelChatCompletion, generateTitle } from '$lib/apis/ollama';
+	import { generateChatCompletion, cancelOllamaRequest, generateTitle } from '$lib/apis/ollama';
 	import {
 		addTagById,
 		createNewChat,
@@ -104,7 +104,7 @@
 
 	const initNewChat = async () => {
 		if (currentRequestId !== null) {
-			await cancelChatCompletion(localStorage.token, currentRequestId);
+			await cancelOllamaRequest(localStorage.token, currentRequestId);
 			currentRequestId = null;
 		}
 		window.history.replaceState(history.state, '', `/`);
@@ -372,7 +372,7 @@
 
 					if (stopResponseFlag) {
 						controller.abort('User: Stop Response');
-						await cancelChatCompletion(localStorage.token, currentRequestId);
+						await cancelOllamaRequest(localStorage.token, currentRequestId);
 					}
 
 					currentRequestId = null;

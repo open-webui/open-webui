@@ -1,3 +1,5 @@
+import logging
+
 from litellm.proxy.proxy_server import ProxyConfig, initialize
 from litellm.proxy.proxy_server import app
 
@@ -9,7 +11,10 @@ from starlette.responses import StreamingResponse
 import json
 
 from utils.utils import get_http_authorization_cred, get_current_user
-from config import ENV
+from config import SRC_LOG_LEVELS, ENV
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["LITELLM"])
 
 
 from config import (
@@ -49,7 +54,7 @@ async def auth_middleware(request: Request, call_next):
 
     try:
         user = get_current_user(get_http_authorization_cred(auth_header))
-        print(user)
+        log.debug(f"user: {user}")
         request.state.user = user
     except Exception as e:
         return JSONResponse(status_code=400, content={"detail": str(e)})

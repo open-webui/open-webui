@@ -1,24 +1,43 @@
-from fastapi import FastAPI, Request, Response, HTTPException, Depends, status
+from fastapi import (
+    FastAPI,
+    Request,
+    Response,
+    HTTPException,
+    Depends,
+    status,
+    UploadFile,
+    File,
+    BackgroundTasks,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 
 from pydantic import BaseModel, ConfigDict
 
+import os
+import copy
 import random
 import requests
 import json
 import uuid
 import aiohttp
 import asyncio
+import logging
+from urllib.parse import urlparse
+from typing import Optional, List, Union
+
 
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import decode_token, get_current_user, get_admin_user
-from config import OLLAMA_BASE_URLS, MODEL_FILTER_ENABLED, MODEL_FILTER_LIST
 
-from typing import Optional, List, Union
 
+from config import SRC_LOG_LEVELS, OLLAMA_BASE_URLS, MODEL_FILTER_ENABLED, MODEL_FILTER_LIST, UPLOAD_DIR
+from utils.misc import calculate_sha256
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 
 app = FastAPI()
 app.add_middleware(
@@ -69,7 +88,7 @@ class UrlUpdateForm(BaseModel):
 async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin_user)):
     app.state.OLLAMA_BASE_URLS = form_data.urls
 
-    print(app.state.OLLAMA_BASE_URLS)
+    log.info(f"app.state.OLLAMA_BASE_URLS: {app.state.OLLAMA_BASE_URLS}")
     return {"OLLAMA_BASE_URLS": app.state.OLLAMA_BASE_URLS}
 
 
@@ -90,7 +109,7 @@ async def fetch_url(url):
                 return await response.json()
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.error(f"Connection error: {e}")
         return None
 
 
@@ -114,7 +133,7 @@ def merge_models_lists(model_lists):
 
 
 async def get_all_models():
-    print("get_all_models")
+    log.info("get_all_models()")
     tasks = [fetch_url(f"{url}/api/tags") for url in app.state.OLLAMA_BASE_URLS]
     responses = await asyncio.gather(*tasks)
 
@@ -155,7 +174,7 @@ async def get_ollama_tags(
 
             return r.json()
         except Exception as e:
-            print(e)
+            log.exception(e)
             error_detail = "Open WebUI: Server Connection Error"
             if r is not None:
                 try:
@@ -201,7 +220,7 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
 
             return r.json()
         except Exception as e:
-            print(e)
+            log.exception(e)
             error_detail = "Open WebUI: Server Connection Error"
             if r is not None:
                 try:
@@ -227,18 +246,33 @@ async def pull_model(
     form_data: ModelNameForm, url_idx: int = 0, user=Depends(get_admin_user)
 ):
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     r = None
 
     def get_request():
         nonlocal url
         nonlocal r
+
+        request_id = str(uuid.uuid4())
         try:
+            REQUEST_POOL.append(request_id)
 
             def stream_content():
-                for chunk in r.iter_content(chunk_size=8192):
-                    yield chunk
+                try:
+                    yield json.dumps({"id": request_id, "done": False}) + "\n"
+
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if request_id in REQUEST_POOL:
+                            yield chunk
+                        else:
+                            print("User: canceled request")
+                            break
+                finally:
+                    if hasattr(r, "close"):
+                        r.close()
+                        if request_id in REQUEST_POOL:
+                            REQUEST_POOL.remove(request_id)
 
             r = requests.request(
                 method="POST",
@@ -259,8 +293,9 @@ async def pull_model(
 
     try:
         return await run_in_threadpool(get_request)
+
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -299,7 +334,7 @@ async def push_model(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.debug(f"url: {url}")
 
     r = None
 
@@ -331,7 +366,7 @@ async def push_model(
     try:
         return await run_in_threadpool(get_request)
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -359,9 +394,9 @@ class CreateModelForm(BaseModel):
 async def create_model(
     form_data: CreateModelForm, url_idx: int = 0, user=Depends(get_admin_user)
 ):
-    print(form_data)
+    log.debug(f"form_data: {form_data}")
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     r = None
 
@@ -383,7 +418,7 @@ async def create_model(
 
             r.raise_for_status()
 
-            print(r)
+            log.debug(f"r: {r}")
 
             return StreamingResponse(
                 stream_content(),
@@ -396,7 +431,7 @@ async def create_model(
     try:
         return await run_in_threadpool(get_request)
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -434,7 +469,7 @@ async def copy_model(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     try:
         r = requests.request(
@@ -444,11 +479,11 @@ async def copy_model(
         )
         r.raise_for_status()
 
-        print(r.text)
+        log.debug(f"r.text: {r.text}")
 
         return True
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -481,7 +516,7 @@ async def delete_model(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     try:
         r = requests.request(
@@ -491,11 +526,11 @@ async def delete_model(
         )
         r.raise_for_status()
 
-        print(r.text)
+        log.debug(f"r.text: {r.text}")
 
         return True
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -521,7 +556,7 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_current_use
 
     url_idx = random.choice(app.state.MODELS[form_data.name]["urls"])
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     try:
         r = requests.request(
@@ -533,7 +568,7 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_current_use
 
         return r.json()
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -573,7 +608,7 @@ async def generate_embeddings(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     try:
         r = requests.request(
@@ -585,7 +620,7 @@ async def generate_embeddings(
 
         return r.json()
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -633,7 +668,7 @@ async def generate_completion(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     r = None
 
@@ -654,7 +689,7 @@ async def generate_completion(
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):
@@ -731,11 +766,11 @@ async def generate_chat_completion(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     r = None
 
-    print(form_data.model_dump_json(exclude_none=True).encode())
+    log.debug("form_data.model_dump_json(exclude_none=True).encode(): {0} ".format(form_data.model_dump_json(exclude_none=True).encode()))
 
     def get_request():
         nonlocal form_data
@@ -754,7 +789,7 @@ async def generate_chat_completion(
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):
@@ -777,7 +812,7 @@ async def generate_chat_completion(
                 headers=dict(r.headers),
             )
         except Exception as e:
-            print(e)
+            log.exception(e)
             raise e
 
     try:
@@ -831,7 +866,7 @@ async def generate_openai_chat_completion(
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
-    print(url)
+    log.info(f"url: {url}")
 
     r = None
 
@@ -854,7 +889,7 @@ async def generate_openai_chat_completion(
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):
@@ -895,6 +930,211 @@ async def generate_openai_chat_completion(
             status_code=r.status_code if r else 500,
             detail=error_detail,
         )
+
+
+class UrlForm(BaseModel):
+    url: str
+
+
+class UploadBlobForm(BaseModel):
+    filename: str
+
+
+def parse_huggingface_url(hf_url):
+    try:
+        # Parse the URL
+        parsed_url = urlparse(hf_url)
+
+        # Get the path and split it into components
+        path_components = parsed_url.path.split("/")
+
+        # Extract the desired output
+        user_repo = "/".join(path_components[1:3])
+        model_file = path_components[-1]
+
+        return model_file
+    except ValueError:
+        return None
+
+
+async def download_file_stream(
+    ollama_url, file_url, file_path, file_name, chunk_size=1024 * 1024
+):
+    done = False
+
+    if os.path.exists(file_path):
+        current_size = os.path.getsize(file_path)
+    else:
+        current_size = 0
+
+    headers = {"Range": f"bytes={current_size}-"} if current_size > 0 else {}
+
+    timeout = aiohttp.ClientTimeout(total=600)  # Set the timeout
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(file_url, headers=headers) as response:
+            total_size = int(response.headers.get("content-length", 0)) + current_size
+
+            with open(file_path, "ab+") as file:
+                async for data in response.content.iter_chunked(chunk_size):
+                    current_size += len(data)
+                    file.write(data)
+
+                    done = current_size == total_size
+                    progress = round((current_size / total_size) * 100, 2)
+
+                    yield f'data: {{"progress": {progress}, "completed": {current_size}, "total": {total_size}}}\n\n'
+
+                if done:
+                    file.seek(0)
+                    hashed = calculate_sha256(file)
+                    file.seek(0)
+
+                    url = f"{ollama_url}/api/blobs/sha256:{hashed}"
+                    response = requests.post(url, data=file)
+
+                    if response.ok:
+                        res = {
+                            "done": done,
+                            "blob": f"sha256:{hashed}",
+                            "name": file_name,
+                        }
+                        os.remove(file_path)
+
+                        yield f"data: {json.dumps(res)}\n\n"
+                    else:
+                        raise "Ollama: Could not create blob, Please try again."
+
+
+# def number_generator():
+#     for i in range(1, 101):
+#         yield f"data: {i}\n"
+
+
+# url = "https://huggingface.co/TheBloke/stablelm-zephyr-3b-GGUF/resolve/main/stablelm-zephyr-3b.Q2_K.gguf"
+@app.post("/models/download")
+@app.post("/models/download/{url_idx}")
+async def download_model(
+    form_data: UrlForm,
+    url_idx: Optional[int] = None,
+):
+
+    if url_idx == None:
+        url_idx = 0
+    url = app.state.OLLAMA_BASE_URLS[url_idx]
+
+    file_name = parse_huggingface_url(form_data.url)
+
+    if file_name:
+        file_path = f"{UPLOAD_DIR}/{file_name}"
+        return StreamingResponse(
+            download_file_stream(url, form_data.url, file_path, file_name),
+        )
+    else:
+        return None
+
+
+@app.post("/models/upload")
+@app.post("/models/upload/{url_idx}")
+def upload_model(file: UploadFile = File(...), url_idx: Optional[int] = None):
+    if url_idx == None:
+        url_idx = 0
+    ollama_url = app.state.OLLAMA_BASE_URLS[url_idx]
+
+    file_path = f"{UPLOAD_DIR}/{file.filename}"
+
+    # Save file in chunks
+    with open(file_path, "wb+") as f:
+        for chunk in file.file:
+            f.write(chunk)
+
+    def file_process_stream():
+        nonlocal ollama_url
+        total_size = os.path.getsize(file_path)
+        chunk_size = 1024 * 1024
+        try:
+            with open(file_path, "rb") as f:
+                total = 0
+                done = False
+
+                while not done:
+                    chunk = f.read(chunk_size)
+                    if not chunk:
+                        done = True
+                        continue
+
+                    total += len(chunk)
+                    progress = round((total / total_size) * 100, 2)
+
+                    res = {
+                        "progress": progress,
+                        "total": total_size,
+                        "completed": total,
+                    }
+                    yield f"data: {json.dumps(res)}\n\n"
+
+                if done:
+                    f.seek(0)
+                    hashed = calculate_sha256(f)
+                    f.seek(0)
+
+                    url = f"{ollama_url}/api/blobs/sha256:{hashed}"
+                    response = requests.post(url, data=f)
+
+                    if response.ok:
+                        res = {
+                            "done": done,
+                            "blob": f"sha256:{hashed}",
+                            "name": file.filename,
+                        }
+                        os.remove(file_path)
+                        yield f"data: {json.dumps(res)}\n\n"
+                    else:
+                        raise Exception(
+                            "Ollama: Could not create blob, Please try again."
+                        )
+
+        except Exception as e:
+            res = {"error": str(e)}
+            yield f"data: {json.dumps(res)}\n\n"
+
+    return StreamingResponse(file_process_stream(), media_type="text/event-stream")
+
+
+# async def upload_model(file: UploadFile = File(), url_idx: Optional[int] = None):
+#     if url_idx == None:
+#         url_idx = 0
+#     url = app.state.OLLAMA_BASE_URLS[url_idx]
+
+#     file_location = os.path.join(UPLOAD_DIR, file.filename)
+#     total_size = file.size
+
+#     async def file_upload_generator(file):
+#         print(file)
+#         try:
+#             async with aiofiles.open(file_location, "wb") as f:
+#                 completed_size = 0
+#                 while True:
+#                     chunk = await file.read(1024*1024)
+#                     if not chunk:
+#                         break
+#                     await f.write(chunk)
+#                     completed_size += len(chunk)
+#                     progress = (completed_size / total_size) * 100
+
+#                     print(progress)
+#                     yield f'data: {json.dumps({"status": "uploading", "percentage": progress, "total": total_size, "completed": completed_size, "done": False})}\n'
+#         except Exception as e:
+#             print(e)
+#             yield f"data: {json.dumps({'status': 'error', 'message': str(e)})}\n"
+#         finally:
+#             await file.close()
+#             print("done")
+#             yield f'data: {json.dumps({"status": "completed", "percentage": 100, "total": total_size, "completed": completed_size, "done": True})}\n'
+
+#     return StreamingResponse(
+#         file_upload_generator(copy.deepcopy(file)), media_type="text/event-stream"
+#     )
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
@@ -947,7 +1187,7 @@ async def deprecated_proxy(path: str, request: Request, user=Depends(get_current
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):

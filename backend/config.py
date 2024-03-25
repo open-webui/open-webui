@@ -1,4 +1,6 @@
 import os
+import sys
+import logging
 import chromadb
 from chromadb import Settings
 from base64 import b64encode
@@ -21,7 +23,7 @@ try:
 
     load_dotenv(find_dotenv("../.env"))
 except ImportError:
-    print("dotenv not installed, skipping...")
+    log.warning("dotenv not installed, skipping...")
 
 WEBUI_NAME = "Open WebUI"
 shutil.copyfile("../build/favicon.png", "./static/favicon.png")
@@ -101,6 +103,34 @@ CHANGELOG = changelog_json
 
 
 ####################################
+# LOGGING
+####################################
+log_levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
+
+GLOBAL_LOG_LEVEL = os.environ.get("GLOBAL_LOG_LEVEL", "").upper()
+if GLOBAL_LOG_LEVEL in log_levels:
+    logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
+else:
+    GLOBAL_LOG_LEVEL = "INFO"
+
+log = logging.getLogger(__name__)
+log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
+
+log_sources = ["AUDIO", "CONFIG", "DB", "IMAGES", "LITELLM", "MAIN", "MODELS", "OLLAMA", "OPENAI", "RAG"]
+
+SRC_LOG_LEVELS = {}
+
+for source in log_sources:
+    log_env_var = source + "_LOG_LEVEL"
+    SRC_LOG_LEVELS[source] = os.environ.get(log_env_var, "").upper()
+    if SRC_LOG_LEVELS[source] not in log_levels:
+        SRC_LOG_LEVELS[source] = GLOBAL_LOG_LEVEL
+    log.info(f"{log_env_var}: {SRC_LOG_LEVELS[source]}")
+
+log.setLevel(SRC_LOG_LEVELS["CONFIG"])
+
+
+####################################
 # CUSTOM_NAME
 ####################################
 
@@ -125,7 +155,7 @@ if CUSTOM_NAME:
 
             WEBUI_NAME = data["name"]
     except Exception as e:
-        print(e)
+        log.exception(e)
         pass
 
 
@@ -194,9 +224,9 @@ def create_config_file(file_path):
 LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
 
 if not os.path.exists(LITELLM_CONFIG_PATH):
-    print("Config file doesn't exist. Creating...")
+    log.info("Config file doesn't exist. Creating...")
     create_config_file(LITELLM_CONFIG_PATH)
-    print("Config file created successfully.")
+    log.info("Config file created successfully.")
 
 
 ####################################
@@ -376,3 +406,4 @@ WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models"
 ####################################
 
 AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
+COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
