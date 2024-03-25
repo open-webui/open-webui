@@ -209,6 +209,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
 
+RUNNING_ON_K8S = os.environ.get("KUBERNETES_SERVICE_HOST", "")
 
 if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     OLLAMA_BASE_URL = (
@@ -217,9 +218,23 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
         else OLLAMA_API_BASE_URL
     )
 
-if ENV == "prod":
+if ENV == "prod" and RUNNING_ON_K8S == "":
     if OLLAMA_BASE_URL == "/ollama":
         OLLAMA_BASE_URL = "http://host.docker.internal:11434"
+    else:
+        OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
+    
+
+
+def is_running_in_kubernetes():
+    return 'KUBERNETES_SERVICE_HOST' in os.environ
+
+# Setze EMV auf True, wenn in Kubernetes
+if is_running_in_kubernetes():
+    os.environ['EMV'] = 'True'
+    print("Läuft in Kubernetes, EMV gesetzt auf True.")
+else:
+    print("Läuft nicht in Kubernetes.")
 
 
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
