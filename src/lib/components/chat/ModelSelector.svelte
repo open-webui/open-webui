@@ -45,7 +45,8 @@
 							.map((model) => ({
 								value: model.id,
 								label:
-									model.name + `${model.size ? ` (${(model.size / 1024 ** 3).toFixed(1)}GB)` : ''}`
+									model.name + `${model.size ? ` (${(model.size / 1024 ** 3).toFixed(1)}GB)` : ''}`,
+								info: model
 							}))}
 						bind:value={selectedModel}
 					/>
