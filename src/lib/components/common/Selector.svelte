@@ -12,6 +12,9 @@
 
 	export let value = '';
 	export let placeholder = 'Select a model';
+	export let searchEnabled = true;
+	export let searchPlaceholder = 'Search a model';
+
 	export let items = [
 		{ value: 'mango', label: 'Mango' },
 		{ value: 'watermelon', label: 'Watermelon' },
@@ -49,39 +52,44 @@
 		transition={flyAndScale}
 		sideOffset={4}
 	>
-		<div class="flex items-center gap-2.5 px-5 mt-3.5 mb-3">
-			<Search className="size-4" strokeWidth="2.5" />
+		<slot>
+			{#if searchEnabled}
+				<div class="flex items-center gap-2.5 px-5 mt-3.5 mb-3">
+					<Search className="size-4" strokeWidth="2.5" />
 
-			<input
-				bind:value={searchValue}
-				class="w-full text-sm bg-transparent outline-none"
-				placeholder="Search a model"
-			/>
-		</div>
+					<input
+						bind:value={searchValue}
+						class="w-full text-sm bg-transparent outline-none"
+						placeholder={searchPlaceholder}
+					/>
+				</div>
 
-		<hr class="border-gray-100 dark:border-gray-800" />
+				<hr class="border-gray-100 dark:border-gray-800" />
+			{/if}
 
-		<div class="px-3 my-2 max-h-80 overflow-y-auto">
-			{#each filteredItems as item}
-				<Select.Item
-					class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm  text-gray-700 dark:text-gray-100  outline-none transition-all duration-75 data-[highlighted]:bg-muted"
-					value={item.value}
-					label={item.label}
-				>
-					{item.label}
+			<div class="px-3 my-2 max-h-80 overflow-y-auto">
+				{#each filteredItems as item}
+					<Select.Item
+						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm  text-gray-700 dark:text-gray-100  outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+						value={item.value}
+						label={item.label}
+					>
+						{item.label}
 
-					{#if value === item.value}
-						<div class="ml-auto">
-							<Check />
+						{#if value === item.value}
+							<div class="ml-auto">
+								<Check />
+							</div>
+						{/if}
+					</Select.Item>
+				{:else}
+					<div>
+						<div class="block px-5 py-2 text-sm text-gray-700 dark:text-gray-100">
+							No results found
 						</div>
-					{/if}
-				</Select.Item>
-			{:else}
-				<span class="block px-5 py-2 text-sm text-gray-700 dark:text-gray-100">
-					No results found
-				</span>
-			{/each}
-		</div>
+					</div>
+				{/each}
+			</div>
+		</slot>
 	</Select.Content>
-	<Select.Input name="favoriteFruit" />
 </Select.Root>

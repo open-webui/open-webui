@@ -3,7 +3,7 @@
 	import { models, showSettings, settings, user } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import Select from '../common/Select.svelte';
+	import Selector from './ModelSelector/Selector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -38,7 +38,7 @@
 		<div class="flex w-full">
 			<div class="overflow-hidden w-full">
 				<div class="mr-2 max-w-full">
-					<Select
+					<Selector
 						placeholder={$i18n.t('Select a model')}
 						items={$models
 							.filter((model) => model.name !== 'hr')
