@@ -10,9 +10,9 @@
 
 	import { cancelOllamaRequest, deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 
-	import { user, MODEL_DOWNLOAD_POOL } from '$lib/stores';
+	import { user, MODEL_DOWNLOAD_POOL, models } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
-	import { splitStream } from '$lib/utils';
+	import { getModels, splitStream } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -141,6 +141,8 @@
 						modelName: sanitizedModelTag
 					})
 				);
+
+				models.set(await getModels(localStorage.token));
 			} else {
 				toast.error('Download canceled');
 			}
@@ -233,6 +235,17 @@
 					</div>
 				{/each}
 
+				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user.role === 'admin'}
+					<button
+						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+						on:click={() => {
+							pullModelHandler();
+						}}
+					>
+						Pull "{searchValue}" from Ollama.com
+					</button>
+				{/if}
+
 				{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
 					<div
 						class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
@@ -279,7 +292,7 @@
 							</div>
 						</div>
 
-						<div class="mr-3 translate-y-0.5">
+						<div class="mr-2 translate-y-0.5">
 							<Tooltip content="Cancel">
 								<button
 									class="text-gray-800 dark:text-gray-100"
@@ -309,17 +322,6 @@
 						</div>
 					</div>
 				{/each}
-
-				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user.role === 'admin'}
-					<button
-						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
-						on:click={() => {
-							pullModelHandler();
-						}}
-					>
-						Pull "{searchValue}" from Ollama.com
-					</button>
-				{/if}
 			</div>
 		</slot>
 	</Select.Content>
