@@ -31,6 +31,10 @@ export const getModels = async (token: string) => {
 // Helper functions
 //////////////////////////
 
+export const capitalizeFirstLetter = (string) => {
+	return string.charAt(0).toUpperCase() + string.slice(1);
+};
+
 export const splitStream = (splitOn) => {
 	let buffer = '';
 	return new TransformStream({
