@@ -21,6 +21,7 @@ from langchain_community.document_loaders import (
     TextLoader,
     PyPDFLoader,
     CSVLoader,
+    UnstructuredHTMLLoader,
     Docx2txtLoader,
     UnstructuredEPubLoader,
     UnstructuredWordDocumentLoader,
@@ -402,6 +403,8 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         loader = UnstructuredRSTLoader(file_path, mode="elements")
     elif file_ext == "xml":
         loader = UnstructuredXMLLoader(file_path)
+    elif file_ext in ["htm", "html"]:
+        loader = UnstructuredHTMLLoader(file_path)
     elif file_ext == "md":
         loader = UnstructuredMarkdownLoader(file_path)
     elif file_content_type == "application/epub+zip":
