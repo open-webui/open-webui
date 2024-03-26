@@ -1,7 +1,7 @@
 import json
 
 import requests
-from config import VERSION
+from config import VERSION, WEBUI_FAVICON_URL, WEBUI_NAME
 
 
 def post_webhook(url: str, message: str, event_data: dict) -> bool:
@@ -26,8 +26,8 @@ def post_webhook(url: str, message: str, event_data: dict) -> bool:
                 "sections": [
                     {
                         "activityTitle": message,
-                        "activitySubtitle": f"Open WebUI ({VERSION}) - {action}",
-                        "activityImage": "https://openwebui.com/favicon.png",
+                        "activitySubtitle": f"{WEBUI_NAME} ({VERSION}) - {action}",
+                        "activityImage": WEBUI_FAVICON_URL,
                         "facts": facts,
                         "markdown": True,
                     }

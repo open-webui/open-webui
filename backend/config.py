@@ -1,29 +1,27 @@
-import os
-import chromadb
-from chromadb import Settings
-from base64 import b64encode
-from bs4 import BeautifulSoup
-
-from pathlib import Path
 import json
-import yaml
+import os
+import shutil
+from base64 import b64encode
+from pathlib import Path
+from secrets import token_bytes
 
+import chromadb
 import markdown
 import requests
-import shutil
-
-from secrets import token_bytes
+import yaml
+from bs4 import BeautifulSoup
+from chromadb import Settings
 from constants import ERROR_MESSAGES
 
-
 try:
-    from dotenv import load_dotenv, find_dotenv
+    from dotenv import find_dotenv, load_dotenv
 
     load_dotenv(find_dotenv("../.env"))
 except ImportError:
     print("dotenv not installed, skipping...")
 
 WEBUI_NAME = "Open WebUI"
+WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################
@@ -111,7 +109,7 @@ if CUSTOM_NAME:
         data = r.json()
         if r.ok:
             if "logo" in data:
-                url = (
+                WEBUI_FAVICON_URL = url = (
                     f"https://api.openwebui.com{data['logo']}"
                     if data["logo"][0] == "/"
                     else data["logo"]
