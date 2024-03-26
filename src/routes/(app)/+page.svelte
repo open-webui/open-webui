@@ -784,6 +784,17 @@
 		}
 	};
 
+	const setChatTitle = async (_chatId, _title) => {
+		if (_chatId === $chatId) {
+			title = _title;
+		}
+
+		if ($settings.saveChatHistory ?? true) {
+			chat = await updateChatById(localStorage.token, _chatId, { title: _title });
+			await chats.set(await getChatList(localStorage.token));
+		}
+	};
+
 	const getTags = async () => {
 		return await getTagsById(localStorage.token, $chatId).catch(async (error) => {
 			return [];
@@ -810,17 +821,6 @@
 		});
 
 		_tags.set(await getAllChatTags(localStorage.token));
-	};
-
-	const setChatTitle = async (_chatId, _title) => {
-		if (_chatId === $chatId) {
-			title = _title;
-		}
-
-		if ($settings.saveChatHistory ?? true) {
-			chat = await updateChatById(localStorage.token, _chatId, { title: _title });
-			await chats.set(await getChatList(localStorage.token));
-		}
 	};
 </script>
 
