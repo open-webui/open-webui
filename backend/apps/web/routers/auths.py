@@ -29,6 +29,7 @@ from utils.utils import (
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from config import WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 
 router = APIRouter()
 
@@ -79,6 +80,8 @@ async def update_profile(
 async def update_password(
     form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
 ):
+    if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+        raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
     if session_user:
         user = Auths.authenticate_user(session_user.email, form_data.password)
 
@@ -98,7 +101,16 @@ async def update_password(
 
 @router.post("/signin", response_model=SigninResponse)
 async def signin(request: Request, form_data: SigninForm):
-    user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
+    if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+        if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
+            raise HTTPException(400,
+                                detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
+        trusted_email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower(
+        )
+        user = Auths.authenticate_user_by_trusted_header(trusted_email)
+    else:
+        user = Auths.authenticate_user(form_data.email.lower(),
+                                       form_data.password)
     if user:
         token = create_token(
             data={"id": user.id},
@@ -137,6 +149,17 @@ async def signup(request: Request, form_data: SignupForm):
 
     if Users.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+
+    if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+        if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
+            raise HTTPException(400,
+                                detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
+        trusted_email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower(
+        )
+        if trusted_email != form_data.email:
+            raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_MISMATCH)
+        # TODO: Yolo hack to assign a password
+        form_data.password = str(uuid.uuid4())
 
     try:
         role = (
