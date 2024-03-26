@@ -19,7 +19,7 @@
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream, convertMessagesToHistory } from '$lib/utils';
 
-	import { generateChatCompletion, generateTitle, cancelChatCompletion } from '$lib/apis/ollama';
+	import { generateChatCompletion, cancelOllamaRequest } from '$lib/apis/ollama';
 	import {
 		addTagById,
 		createNewChat,
@@ -31,14 +31,19 @@
 		updateChatById
 	} from '$lib/apis/chats';
 	import { queryCollection, queryDoc } from '$lib/apis/rag';
-	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion, generateTitle } from '$lib/apis/openai';
 
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
-	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import {
+		LITELLM_API_BASE_URL,
+		OPENAI_API_BASE_URL,
+		OLLAMA_API_BASE_URL,
+		WEBUI_BASE_URL
+	} from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -382,7 +387,7 @@
 
 					if (stopResponseFlag) {
 						controller.abort('User: Stop Response');
-						await cancelChatCompletion(localStorage.token, currentRequestId);
+						await cancelOllamaRequest(localStorage.token, currentRequestId);
 					}
 
 					currentRequestId = null;
@@ -521,7 +526,8 @@
 
 		if (messages.length == 2 && messages.at(1).content !== '') {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			await generateChatTitle(_chatId, userPrompt);
+			const _title = await generateChatTitle(userPrompt);
+			await setChatTitle(_chatId, _title);
 		}
 	};
 
@@ -706,17 +712,27 @@
 		if (messages.length == 2) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 
-			if ($settings?.titleAutoGenerateModel) {
-				await generateChatTitle(_chatId, userPrompt);
-			} else {
-				await setChatTitle(_chatId, userPrompt);
-			}
+			const _title = await generateChatTitle(userPrompt);
+			await setChatTitle(_chatId, _title);
 		}
 	};
 
 	const stopResponse = () => {
 		stopResponseFlag = true;
 		console.log('stopResponse');
+	};
+
+	const regenerateResponse = async () => {
+		console.log('regenerateResponse');
+		if (messages.length != 0 && messages.at(-1).done == true) {
+			messages.splice(messages.length - 1, 1);
+			messages = messages;
+
+			let userMessage = messages.at(-1);
+			let userPrompt = userMessage.content;
+
+			await sendPrompt(userPrompt, userMessage.id);
+		}
 	};
 
 	const continueGeneration = async () => {
@@ -751,36 +767,35 @@
 		}
 	};
 
-	const regenerateResponse = async () => {
-		console.log('regenerateResponse');
-		if (messages.length != 0 && messages.at(-1).done == true) {
-			messages.splice(messages.length - 1, 1);
-			messages = messages;
+	const generateChatTitle = async (userPrompt) => {
+		if ($settings?.title?.auto ?? true) {
+			const model = $models.find((model) => model.id === selectedModels[0]);
 
-			let userMessage = messages.at(-1);
-			let userPrompt = userMessage.content;
+			const titleModelId =
+				model?.external ?? false
+					? $settings?.title?.modelExternal ?? selectedModels[0]
+					: $settings?.title?.model ?? selectedModels[0];
+			const titleModel = $models.find((model) => model.id === titleModelId);
 
-			await sendPrompt(userPrompt, userMessage.id);
-		}
-	};
-
-	const generateChatTitle = async (_chatId, userPrompt) => {
-		if ($settings.titleAutoGenerate ?? true) {
+			console.log(titleModel);
 			const title = await generateTitle(
 				localStorage.token,
-				$settings?.titleGenerationPrompt ??
+				$settings?.title?.prompt ??
 					$i18n.t(
 						"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
 					) + ' {{prompt}}',
-				$settings?.titleAutoGenerateModel ?? selectedModels[0],
-				userPrompt
+				titleModelId,
+				userPrompt,
+				titleModel?.external ?? false
+					? titleModel.source === 'litellm'
+						? `${LITELLM_API_BASE_URL}/v1`
+						: `${OPENAI_API_BASE_URL}`
+					: `${OLLAMA_API_BASE_URL}/v1`
 			);
 
-			if (title) {
-				await setChatTitle(_chatId, title);
-			}
+			return title;
 		} else {
-			await setChatTitle(_chatId, `${userPrompt}`);
+			return `${userPrompt}`;
 		}
 	};
 
@@ -789,8 +804,10 @@
 			title = _title;
 		}
 
-		chat = await updateChatById(localStorage.token, _chatId, { title: _title });
-		await chats.set(await getChatList(localStorage.token));
+		if ($settings.saveChatHistory ?? true) {
+			chat = await updateChatById(localStorage.token, _chatId, { title: _title });
+			await chats.set(await getChatList(localStorage.token));
+		}
 	};
 
 	const getTags = async () => {
@@ -843,7 +860,7 @@
 			shareEnabled={messages.length > 0}
 			initNewChat={async () => {
 				if (currentRequestId !== null) {
-					await cancelChatCompletion(localStorage.token, currentRequestId);
+					await cancelOllamaRequest(localStorage.token, currentRequestId);
 					currentRequestId = null;
 				}
 

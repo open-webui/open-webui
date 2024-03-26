@@ -1,24 +1,29 @@
-import json
 import os
-import shutil
-from base64 import b64encode
-from pathlib import Path
-from secrets import token_bytes
-
+import sys
+import logging
 import chromadb
+from chromadb import Settings
+from base64 import b64encode
+from bs4 import BeautifulSoup
+
+from pathlib import Path
+import json
+import yaml
+
 import markdown
 import requests
-import yaml
-from bs4 import BeautifulSoup
-from chromadb import Settings
+import shutil
+
+from secrets import token_bytes
 from constants import ERROR_MESSAGES
 
+
 try:
-    from dotenv import find_dotenv, load_dotenv
+    from dotenv import load_dotenv, find_dotenv
 
     load_dotenv(find_dotenv("../.env"))
 except ImportError:
-    print("dotenv not installed, skipping...")
+    log.warning("dotenv not installed, skipping...")
 
 WEBUI_NAME = "Open WebUI"
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
@@ -99,6 +104,34 @@ CHANGELOG = changelog_json
 
 
 ####################################
+# LOGGING
+####################################
+log_levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
+
+GLOBAL_LOG_LEVEL = os.environ.get("GLOBAL_LOG_LEVEL", "").upper()
+if GLOBAL_LOG_LEVEL in log_levels:
+    logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
+else:
+    GLOBAL_LOG_LEVEL = "INFO"
+
+log = logging.getLogger(__name__)
+log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
+
+log_sources = ["AUDIO", "CONFIG", "DB", "IMAGES", "LITELLM", "MAIN", "MODELS", "OLLAMA", "OPENAI", "RAG"]
+
+SRC_LOG_LEVELS = {}
+
+for source in log_sources:
+    log_env_var = source + "_LOG_LEVEL"
+    SRC_LOG_LEVELS[source] = os.environ.get(log_env_var, "").upper()
+    if SRC_LOG_LEVELS[source] not in log_levels:
+        SRC_LOG_LEVELS[source] = GLOBAL_LOG_LEVEL
+    log.info(f"{log_env_var}: {SRC_LOG_LEVELS[source]}")
+
+log.setLevel(SRC_LOG_LEVELS["CONFIG"])
+
+
+####################################
 # CUSTOM_NAME
 ####################################
 
@@ -123,7 +156,7 @@ if CUSTOM_NAME:
 
             WEBUI_NAME = data["name"]
     except Exception as e:
-        print(e)
+        log.exception(e)
         pass
 
 
@@ -192,9 +225,9 @@ def create_config_file(file_path):
 LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
 
 if not os.path.exists(LITELLM_CONFIG_PATH):
-    print("Config file doesn't exist. Creating...")
+    log.info("Config file doesn't exist. Creating...")
     create_config_file(LITELLM_CONFIG_PATH)
-    print("Config file created successfully.")
+    log.info("Config file created successfully.")
 
 
 ####################################
@@ -206,7 +239,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
-
+KUBERNETES_SERVICE_HOST = os.environ.get("KUBERNETES_SERVICE_HOST", "")
 
 if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     OLLAMA_BASE_URL = (
@@ -216,8 +249,10 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     )
 
 if ENV == "prod":
-    if OLLAMA_BASE_URL == "/ollama":
+    if OLLAMA_BASE_URL == "/ollama" and KUBERNETES_SERVICE_HOST == "":
         OLLAMA_BASE_URL = "http://host.docker.internal:11434"
+    else:
+        OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
 
 
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")

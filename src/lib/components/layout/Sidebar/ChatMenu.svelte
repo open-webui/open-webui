@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
@@ -29,6 +30,7 @@
 			sideOffset={-2}
 			side="bottom"
 			align="start"
+			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer"
