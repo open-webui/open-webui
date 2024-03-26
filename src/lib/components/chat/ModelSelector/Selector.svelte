@@ -2,7 +2,7 @@
 	import { Select } from 'bits-ui';
 
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -177,8 +177,9 @@
 
 <Select.Root
 	{items}
-	onOpenChange={() => {
+	onOpenChange={async () => {
 		searchValue = '';
+		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 	}}
 	selected={items.find((item) => item.value === value)}
 	onSelectedChange={(selectedItem) => {
@@ -203,6 +204,7 @@
 					<Search className="size-4" strokeWidth="2.5" />
 
 					<input
+						id="model-search-input"
 						bind:value={searchValue}
 						class="w-full text-sm bg-transparent outline-none"
 						placeholder={searchPlaceholder}
