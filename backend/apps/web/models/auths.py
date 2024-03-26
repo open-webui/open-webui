@@ -24,6 +24,7 @@ class Auth(Model):
     email = CharField()
     password = CharField()
     active = BooleanField()
+    api_key = CharField(null=True, unique=True)
 
     class Meta:
         database = DB
@@ -34,6 +35,7 @@ class AuthModel(BaseModel):
     email: str
     password: str
     active: bool = True
+    api_key: Optional[str] = None
 
 
 ####################
@@ -45,6 +47,8 @@ class Token(BaseModel):
     token: str
     token_type: str
 
+class ApiKey(BaseModel):
+    api_key: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: str
@@ -122,6 +126,21 @@ class AuthsTable:
         except:
             return None
 
+    def authenticate_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
+        log.info(f"authenticate_user_by_api_key: {api_key}")
+        # if no api_key, return None
+        if not api_key:
+            return None
+        try:
+            auth = Auth.get(Auth.api_key == api_key, Auth.active == True)
+            if auth:
+                user = Users.get_user_by_id(auth.id)
+                return user
+            else:
+                return None
+        except:
+            return None
+
     def update_user_password_by_id(self, id: str, new_password: str) -> bool:
         try:
             query = Auth.update(password=new_password).where(Auth.id == id)
@@ -139,6 +158,22 @@ class AuthsTable:
             return True if result == 1 else False
         except:
             return False
+
+    def update_api_key_by_id(self, id: str, api_key: str) -> str:
+        try:
+            query = Auth.update(api_key=api_key).where(Auth.id == id)
+            result = query.execute()
+
+            return True if result == 1 else False
+        except:
+            return False
+
+    def get_api_key_by_id(self, id: str) -> Optional[str]:
+        try:
+            auth = Auth.get(Auth.id == id)
+            return auth.api_key
+        except:
+            return None
 
     def delete_auth_by_id(self, id: str) -> bool:
         try:
