@@ -208,8 +208,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
-
-RUNNING_ON_K8S = os.environ.get("KUBERNETES_SERVICE_HOST", "")
+KUBERNETES_SERVICE_HOST = os.environ.get("KUBERNETES_SERVICE_HOST", "")
 
 if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     OLLAMA_BASE_URL = (
@@ -219,7 +218,7 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     )
 
 if ENV == "prod":
-    if OLLAMA_BASE_URL == "/ollama" and RUNNING_ON_K8S == "":
+    if OLLAMA_BASE_URL == "/ollama" and KUBERNETES_SERVICE_HOST == "":
         OLLAMA_BASE_URL = "http://host.docker.internal:11434"
     else:
         OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
