@@ -3,7 +3,7 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { user } from '$lib/stores';
-	import { updateUserProfile } from '$lib/apis/auths';
+	import { updateUserProfile, createApiKey } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
@@ -17,6 +17,9 @@
 	let name = '';
 	let showJWTToken = false;
 	let JWTTokenCopied = false;
+	let showApiKey= false;
+	let ApiKeyCopied = false;
+	let localApiKey = localStorage.apiKey;
 	let profileImageInputElement: HTMLInputElement;
 
 	const submitHandler = async () => {
@@ -31,6 +34,18 @@
 			return true;
 		}
 		return false;
+	};
+
+	const createApiKeyHandler = async () => {
+		const apiKey = await createApiKey(localStorage.token);
+		if (apiKey) {
+			localApiKey = apiKey["api_key"];
+			localStorage.apiKey = localApiKey;
+			toast.success($i18n.t('API Key created.'));
+		} else {
+			toast.error($i18n.t('Failed to create API Key.'));
+		
+		}
 	};
 
 	onMount(() => {
@@ -170,40 +185,82 @@
 
 		<hr class=" dark:border-gray-700 my-4" />
 
-		<div class=" w-full justify-between">
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('JWT Token')}</div>
-			</div>
+		<div class="flex flex-col gap-4">
+			<div class="justify-between w-full ">
+				<div class="flex justify-between w-full">
+					<div class="self-center text-xs font-medium ">{$i18n.t('JWT Token')}</div>
+				</div>
 
-			<div class="flex mt-2">
-				<div class="flex w-full">
-					<input
-						class="w-full rounded-l-lg py-1.5 pl-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-						type={showJWTToken ? 'text' : 'password'}
-						value={localStorage.token}
-						disabled
-					/>
+				<div class="flex mt-2">
+					<div class="flex w-full">
+						<input
+							class="w-full rounded-l-lg py-1.5 pl-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							type={showJWTToken ? 'text' : 'password'}
+							value={localStorage.token}
+							disabled
+						/>
+
+						<button
+							class="px-2 transition rounded-r-lg dark:bg-gray-800"
+							on:click={() => {
+								showJWTToken = !showJWTToken;
+							}}
+						>
+							{#if showJWTToken}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l10.5 10.5a.75.75 0 1 0 1.06-1.06l-1.322-1.323a7.012 7.012 0 0 0 2.16-3.11.87.87 0 0 0 0-.567A7.003 7.003 0 0 0 4.82 3.76l-1.54-1.54Zm3.196 3.195 1.135 1.136A1.502 1.502 0 0 1 9.45 8.389l1.136 1.135a3 3 0 0 0-4.109-4.109Z"
+										clip-rule="evenodd"
+									/>
+									<path
+										d="m7.812 10.994 1.816 1.816A7.003 7.003 0 0 1 1.38 8.28a.87.87 0 0 1 0-.566 6.985 6.985 0 0 1 1.113-2.039l2.513 2.513a3 3 0 0 0 2.806 2.806Z"
+									/>
+								</svg>
+							{:else}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+									<path
+										fill-rule="evenodd"
+										d="M1.38 8.28a.87.87 0 0 1 0-.566 7.003 7.003 0 0 1 13.238.006.87.87 0 0 1 0 .566A7.003 7.003 0 0 1 1.379 8.28ZM11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							{/if}
+						</button>
+					</div>
 
 					<button
-						class="dark:bg-gray-800 px-2 transition rounded-r-lg"
+						class="ml-1.5 px-1.5 py-1 hover:bg-gray-800 transition rounded-lg"
 						on:click={() => {
-							showJWTToken = !showJWTToken;
+							copyToClipboard(localStorage.token);
+							JWTTokenCopied = true;
+							setTimeout(() => {
+								JWTTokenCopied = false;
+							}, 2000);
 						}}
 					>
-						{#if showJWTToken}
+						{#if JWTTokenCopied}
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
+								viewBox="0 0 20 20"
 								fill="currentColor"
 								class="w-4 h-4"
 							>
 								<path
 									fill-rule="evenodd"
-									d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l10.5 10.5a.75.75 0 1 0 1.06-1.06l-1.322-1.323a7.012 7.012 0 0 0 2.16-3.11.87.87 0 0 0 0-.567A7.003 7.003 0 0 0 4.82 3.76l-1.54-1.54Zm3.196 3.195 1.135 1.136A1.502 1.502 0 0 1 9.45 8.389l1.136 1.135a3 3 0 0 0-4.109-4.109Z"
+									d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
 									clip-rule="evenodd"
-								/>
-								<path
-									d="m7.812 10.994 1.816 1.816A7.003 7.003 0 0 1 1.38 8.28a.87.87 0 0 1 0-.566 6.985 6.985 0 0 1 1.113-2.039l2.513 2.513a3 3 0 0 0 2.806 2.806Z"
 								/>
 							</svg>
 						{:else}
@@ -213,60 +270,127 @@
 								fill="currentColor"
 								class="w-4 h-4"
 							>
-								<path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
 								<path
 									fill-rule="evenodd"
-									d="M1.38 8.28a.87.87 0 0 1 0-.566 7.003 7.003 0 0 1 13.238.006.87.87 0 0 1 0 .566A7.003 7.003 0 0 1 1.379 8.28ZM11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+									d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z"
+									clip-rule="evenodd"
+								/>
+								<path
+									fill-rule="evenodd"
+									d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z"
 									clip-rule="evenodd"
 								/>
 							</svg>
 						{/if}
 					</button>
 				</div>
+			</div>
+			<div class="justify-between w-full ">
+				<div class="flex justify-between w-full">
+					<div class="self-center text-xs font-medium ">{$i18n.t('API Key')}</div>
+				</div>
 
-				<button
-					class="ml-1.5 px-1.5 py-1 hover:bg-gray-800 transition rounded-lg"
-					on:click={() => {
-						copyToClipboard(localStorage.token);
-						JWTTokenCopied = true;
-						setTimeout(() => {
-							JWTTokenCopied = false;
-						}, 2000);
-					}}
-				>
-					{#if JWTTokenCopied}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
+				<div class="flex mt-2">
+					<div class="flex w-full">
+						<input
+							class="w-full rounded-l-lg py-1.5 pl-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							type={showApiKey ? 'text' : 'password'}
+							value={localApiKey}
+							disabled
+						/>
+
+						<button
+							class="ml-1.5 px-1.5 py-1 hover:bg-gray-800 transition rounded-lg"
+							on:click={() => {createApiKeyHandler()}}
 						>
-							<path
-								fill-rule="evenodd"
-								d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					{:else}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4"><path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"></path></svg>
+							
+						</button>
+
+						<button
+							class="px-2 transition rounded-r-lg dark:bg-gray-800"
+							on:click={() => {
+								showApiKey = !showApiKey;
+							}}
 						>
-							<path
-								fill-rule="evenodd"
-								d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z"
-								clip-rule="evenodd"
-							/>
-							<path
-								fill-rule="evenodd"
-								d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					{/if}
-				</button>
+							{#if showApiKey}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l10.5 10.5a.75.75 0 1 0 1.06-1.06l-1.322-1.323a7.012 7.012 0 0 0 2.16-3.11.87.87 0 0 0 0-.567A7.003 7.003 0 0 0 4.82 3.76l-1.54-1.54Zm3.196 3.195 1.135 1.136A1.502 1.502 0 0 1 9.45 8.389l1.136 1.135a3 3 0 0 0-4.109-4.109Z"
+										clip-rule="evenodd"
+									/>
+									<path
+										d="m7.812 10.994 1.816 1.816A7.003 7.003 0 0 1 1.38 8.28a.87.87 0 0 1 0-.566 6.985 6.985 0 0 1 1.113-2.039l2.513 2.513a3 3 0 0 0 2.806 2.806Z"
+									/>
+								</svg>
+							{:else}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+									<path
+										fill-rule="evenodd"
+										d="M1.38 8.28a.87.87 0 0 1 0-.566 7.003 7.003 0 0 1 13.238.006.87.87 0 0 1 0 .566A7.003 7.003 0 0 1 1.379 8.28ZM11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							{/if}
+						</button>
+					</div>
+
+					<button
+						class="ml-1.5 px-1.5 py-1 hover:bg-gray-800 transition rounded-lg"
+						on:click={() => {
+							copyToClipboard(localApiKey);
+							ApiKeyCopied = true;
+							setTimeout(() => {
+								ApiKeyCopied = false;
+							}, 2000);
+						}}
+					>
+						{#if ApiKeyCopied}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						{:else}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z"
+									clip-rule="evenodd"
+								/>
+								<path
+									fill-rule="evenodd"
+									d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						{/if}
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>
