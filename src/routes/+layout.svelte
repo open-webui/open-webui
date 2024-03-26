@@ -25,8 +25,8 @@
 		if (backendConfig) {
 			// Save Backend Status to Store
 			await config.set(backendConfig);
-			if ($config.locale) {
-				initI18n($config.locale);
+			if ($config.default_locale) {
+				initI18n($config.default_locale);
 			} else {
 				initI18n();
 			}

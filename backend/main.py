@@ -167,7 +167,7 @@ async def get_app_config():
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
-        "locale": CONFIG_DATA["ui"]["locale"],
+        "default_locale": CONFIG_DATA["ui"]["default_locale"],
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
