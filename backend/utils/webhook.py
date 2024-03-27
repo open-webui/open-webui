@@ -1,17 +1,18 @@
 import json
-
 import requests
 from config import VERSION, WEBUI_FAVICON_URL, WEBUI_NAME
-
 
 def post_webhook(url: str, message: str, event_data: dict) -> bool:
     try:
         payload = {}
 
-        if "https://hooks.slack.com" in url:
+        # Slack and Google Chat Webhooks
+        if "https://hooks.slack.com" in url or "https://chat.googleapis.com" in url:
             payload["text"] = message
+        # Discord Webhooks
         elif "https://discord.com/api/webhooks" in url:
             payload["content"] = message
+        # Microsoft Teams Webhooks
         elif "webhook.office.com" in url:
             action = event_data.get("action", "undefined")
             facts = [
@@ -33,6 +34,7 @@ def post_webhook(url: str, message: str, event_data: dict) -> bool:
                     }
                 ],
             }
+        # Default Payload
         else:
             payload = {**event_data}
 
