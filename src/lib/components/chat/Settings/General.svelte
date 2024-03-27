@@ -14,7 +14,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light'];
+	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled'];
 	let selectedTheme = 'system';
 
 	let languages = [];
