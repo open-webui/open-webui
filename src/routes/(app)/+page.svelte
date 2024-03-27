@@ -518,6 +518,10 @@
 
 	const sendPromptOpenAI = async (model, userPrompt, responseMessageId, _chatId) => {
 		const responseMessage = history.messages[responseMessageId];
+
+		// Wait until history/message have been updated
+		await tick();
+
 		scrollToBottom();
 
 		const docs = messages
