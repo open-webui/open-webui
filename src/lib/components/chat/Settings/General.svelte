@@ -91,11 +91,7 @@
 	});
 
 	const applyTheme = (_theme: string) => {
-		let themeToApply = _theme;
-
-		if (themeToApply.includes('oled')) {
-			themeToApply = 'dark';
-		}
+		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
 
 		if (_theme === 'system') {
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
