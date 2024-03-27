@@ -26,6 +26,7 @@ except ImportError:
     log.warning("dotenv not installed, skipping...")
 
 WEBUI_NAME = "Open WebUI"
+WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################
@@ -141,7 +142,7 @@ if CUSTOM_NAME:
         data = r.json()
         if r.ok:
             if "logo" in data:
-                url = (
+                WEBUI_FAVICON_URL = url = (
                     f"https://api.openwebui.com{data['logo']}"
                     if data["logo"][0] == "/"
                     else data["logo"]
