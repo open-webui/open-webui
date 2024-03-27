@@ -14,7 +14,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled'];
+	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
 	let selectedTheme = 'system';
 
 	let languages = [];
@@ -93,11 +93,15 @@
 	const applyTheme = (_theme: string) => {
 		let themeToApply = _theme;
 
+		if (themeToApply.includes('oled')) {
+			themeToApply = 'dark';
+		}
+
 		if (_theme === 'system') {
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		}
 
-		if (themeToApply === 'dark') {
+		if (themeToApply === 'dark' && !_theme.includes('oled')) {
 			document.documentElement.style.setProperty('--color-gray-900', '#171717');
 		}
 
@@ -117,14 +121,13 @@
 	};
 
 	const themeChangeHandler = (_theme: string) => {
-		if (_theme === 'oled') {
+		theme.set(_theme);
+		localStorage.setItem('theme', _theme);
+		if (_theme.includes('oled')) {
 			document.documentElement.style.setProperty('--color-gray-900', '#000000');
-		} else {
-			theme.set(_theme);
-			localStorage.setItem('theme', _theme);
-
-			applyTheme(_theme);
+			document.documentElement.classList.add('dark');
 		}
+		applyTheme(_theme);
 	};
 </script>
 
@@ -147,7 +150,7 @@
 						<option value="light">☀️ {$i18n.t('Light')}</option>
 						<option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
 						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option>
-						<option value="oled">🌌 {$i18n.t('OLED Dark')}</option>
+						<option value="oled-dark">🌌 {$i18n.t('OLED Dark')}</option>
 					</select>
 				</div>
 			</div>
