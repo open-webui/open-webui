@@ -117,7 +117,18 @@ else:
 log = logging.getLogger(__name__)
 log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
 
-log_sources = ["AUDIO", "CONFIG", "DB", "IMAGES", "LITELLM", "MAIN", "MODELS", "OLLAMA", "OPENAI", "RAG"]
+log_sources = [
+    "AUDIO",
+    "CONFIG",
+    "DB",
+    "IMAGES",
+    "LITELLM",
+    "MAIN",
+    "MODELS",
+    "OLLAMA",
+    "OPENAI",
+    "RAG",
+]
 
 SRC_LOG_LEVELS = {}
 
@@ -239,7 +250,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
-KUBERNETES_SERVICE_HOST = os.environ.get("KUBERNETES_SERVICE_HOST", "")
+K8S_FLAG = os.environ.get("K8S_FLAG", "")
 
 if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     OLLAMA_BASE_URL = (
@@ -249,9 +260,10 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     )
 
 if ENV == "prod":
-    if OLLAMA_BASE_URL == "/ollama" and KUBERNETES_SERVICE_HOST == "":
+    if OLLAMA_BASE_URL == "/ollama":
         OLLAMA_BASE_URL = "http://host.docker.internal:11434"
-    else:
+
+    elif K8S_FLAG:
         OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
 
 
