@@ -3,7 +3,12 @@
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	const dispatch = createEventDispatcher();
 
-	import { getOllamaUrls, getOllamaVersion, updateOllamaUrls } from '$lib/apis/ollama';
+	import {
+		getOllamaUrls,
+		getOllamaVersion,
+		updateOllamaUrls,
+		updateOllamaLoadBalancer
+	} from '$lib/apis/ollama';
 	import {
 		getOpenAIKeys,
 		getOpenAIUrls,
@@ -19,6 +24,8 @@
 	// External
 	let OLLAMA_BASE_URL = '';
 	let OLLAMA_BASE_URLS = [''];
+	let OLLAMA_LB_POLICY = 'rr';
+	let OLLAMA_LB_WEIGHTS = [];
 
 	let OPENAI_API_KEY = '';
 	let OPENAI_API_BASE_URL = '';
@@ -33,6 +40,13 @@
 		OPENAI_API_KEYS = await updateOpenAIKeys(localStorage.token, OPENAI_API_KEYS);
 
 		await models.set(await getModels());
+	};
+
+	const updateOllamaLoadBalancerPolicy = async () => {
+		OLLAMA_LB_POLICY = await updateOllamaLoadBalancer(localStorage.token, {
+			policy: OLLAMA_LB_POLICY,
+			weights: OLLAMA_LB_WEIGHTS
+		});
 	};
 
 	const updateOllamaUrlsHandler = async () => {
@@ -61,6 +75,7 @@
 <form
 	class="flex flex-col h-full justify-between text-sm"
 	on:submit|preventDefault={() => {
+		updateOllamaLoadBalancerPolicy();
 		updateOpenAIHandler();
 		dispatch('save');
 	}}
@@ -157,15 +172,37 @@
 		<hr class=" dark:border-gray-700" />
 
 		<div>
+			<div class=" flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Load Balancer Policy')}</div>
+				<div class="flex items-center relative">
+					<select
+						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
+						bind:value={OLLAMA_LB_POLICY}
+						placeholder={$i18n.t('Select a policy')}
+						on:change={(e) => {}}
+					>
+						<option value="round-robin">{$i18n.t('Round Robin')}</option>
+						<option value="weighted-round-robin">{$i18n.t('Weighted Round Robin')}</option>
+					</select>
+				</div>
+			</div>
+
 			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama Base URL')}</div>
 			<div class="flex w-full gap-1.5">
 				<div class="flex-1 flex flex-col gap-2">
 					{#each OLLAMA_BASE_URLS as url, idx}
 						<div class="flex gap-1.5">
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="w-9/12 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 								placeholder="Enter URL (e.g. http://localhost:11434)"
 								bind:value={url}
+							/>
+							<input
+								class="w-3/12 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder="Weight"
+								type="number"
+								min="1"
+								bind:value={OLLAMA_LB_WEIGHTS[idx]}
 							/>
 
 							<div class="self-center flex items-center">

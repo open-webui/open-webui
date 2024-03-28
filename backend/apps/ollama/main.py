@@ -30,8 +30,8 @@ from typing import Optional, List, Union
 from apps.web.models.users import Users
 from apps.ollama.load_balancer import (
     LoadBalancer,
-    RoundRobinStrategy,
-    WeightedRoundRobinStrategy,
+    RoundRobinPolicy,
+    WeightedRoundRobinPolicy,
 )
 from constants import ERROR_MESSAGES
 from utils.utils import decode_token, get_current_user, get_admin_user
@@ -40,8 +40,8 @@ from config import (
     OLLAMA_BASE_URLS,
     MODEL_FILTER_ENABLED,
     MODEL_FILTER_LIST,
-    OLLAMA_MODEL_WEIGHTS,
-    OLLAMA_LOAD_BALANCING_STRATEGY,
+    OLLAMA_LB_WEIGHTS,
+    OLLAMA_LB_POLICY,
 )
 
 
@@ -62,8 +62,9 @@ app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
-app.state.OLLAMA_MODEL_WEIGHTS = OLLAMA_MODEL_WEIGHTS
 app.state.OLLAMA_LB = LoadBalancer()
+app.state.OLLAMA_LB_POLICY = "round-robin"
+app.state.OLLAMA_LB_WEIGHTS = OLLAMA_LB_WEIGHTS
 app.state.MODELS = {}
 
 REQUEST_POOL = []
@@ -76,12 +77,12 @@ REQUEST_POOL = []
 
 def get_ollama_load_balanced_url(model_name: str):
     if app.state.OLLAMA_LB.models_map is None:
-        if OLLAMA_LOAD_BALANCING_STRATEGY == "weighted-round-robin":
-            lb_strategy = WeightedRoundRobinStrategy()
-            lb_strategy.set_weights(app.state.OLLAMA_MODEL_WEIGHTS)
+        if OLLAMA_LB_POLICY == "weighted-round-robin":
+            lb_policy = WeightedRoundRobinPolicy()
+            lb_policy.set_weights(app.state.OLLAMA_LB_WEIGHTS)
         else:  # Fallback to "round-robin"
-            lb_strategy = RoundRobinStrategy()
-        lb = LoadBalancer(lb_strategy)
+            lb_policy = RoundRobinPolicy()
+        lb = LoadBalancer(lb_policy)
         lb.set_model_map(app.state.MODELS)
         app.state.OLLAMA_LB = lb
 
@@ -104,6 +105,22 @@ async def check_url(request: Request, call_next):
 @app.get("/urls")
 async def get_ollama_api_urls(user=Depends(get_admin_user)):
     return {"OLLAMA_BASE_URLS": app.state.OLLAMA_BASE_URLS}
+
+
+class LoadBalancerConfig(BaseModel):
+    policy: str
+    weights: Optional[List[int]]
+
+
+@app.post("/lb/update")
+async def update_ollama_load_balancer(
+    form_data: LoadBalancerConfig, user=Depends(get_admin_user)
+):
+    app.state.OLLAMA_LB_POLICY = form_data.policy
+    app.state.OLLAMA_LB_WEIGHTS = form_data.weights
+
+    print(app.state.OLLAMA_LB_POLICY)
+    return {"OLLAMA_LB_POLICY": app.state.OLLAMA_LB_POLICY}
 
 
 class UrlUpdateForm(BaseModel):
