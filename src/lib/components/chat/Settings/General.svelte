@@ -99,6 +99,7 @@
 
 		if (themeToApply === 'dark' && !_theme.includes('oled')) {
 			document.documentElement.style.setProperty('--color-gray-900', '#171717');
+			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
 		}
 
 		themes
@@ -121,6 +122,7 @@
 		localStorage.setItem('theme', _theme);
 		if (_theme.includes('oled')) {
 			document.documentElement.style.setProperty('--color-gray-900', '#000000');
+			document.documentElement.style.setProperty('--color-gray-950', '#000000');
 			document.documentElement.classList.add('dark');
 		}
 		applyTheme(_theme);
