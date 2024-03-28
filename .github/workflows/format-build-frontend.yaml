@@ -18,5 +18,8 @@ jobs:
         run: bun install
       - name: Format frontend
         run: bun run format
+      - name: Check for changes after format
+        run: git diff --exit-code
       - name: Build frontend
+        if: always()
         run: bun run build

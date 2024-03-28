@@ -25,3 +25,5 @@ jobs:
           pip install yapf
       - name: Format backend
         run: bun run format:backend
+      - name: Check for changes after format
+        run: git diff --exit-code
