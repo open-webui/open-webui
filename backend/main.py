@@ -50,6 +50,7 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
+
 class SPAStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
         try:
@@ -199,6 +200,9 @@ async def update_model_filter_config(
 
     openai_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
     openai_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
+
+    litellm_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    litellm_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
     return {
         "enabled": app.state.MODEL_FILTER_ENABLED,
