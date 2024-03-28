@@ -331,6 +331,39 @@
 				</div>
 			</div>
 
+			<div class="px-2 mt-1 mb-2 flex justify-center space-x-2">
+				<div class="flex w-full" id="submit-file">
+					<div class="self-center pl-3 py-2 rounded-l-xl bg-gray-950">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+			
+					<input
+						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm text-gray-300 bg-gray-950 outline-none"
+						placeholder="File Name"
+						type="text"
+					/>
+			
+					<button
+						type="submit"
+						class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r-xl"
+					>
+						Submit
+					</button>
+				</div>
+			</div>			
+
+
 			{#if $tags.length > 0}
 				<div class="px-2.5 mt-0.5 mb-2 flex gap-1 flex-wrap">
 					<button

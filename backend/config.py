@@ -22,8 +22,8 @@ try:
     load_dotenv(find_dotenv("../.env"))
 except ImportError:
     print("dotenv not installed, skipping...")
-
-WEBUI_NAME = "Open WebUI"
+    
+WEBUI_NAME = "Next WebUI"
 shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################
@@ -370,3 +370,11 @@ WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models"
 ####################################
 
 AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
+
+
+####################################
+# NextCloud
+####################################
+NEXTCLOUD_URL = "http://localhost:80/remote.php/dav/files/maf001h/"
+NEXTCLOUD_USERNAME = "maf001h"
+NEXTCLOUD_PASSWORD = "DeuceDoc#2020"
