@@ -80,7 +80,7 @@
 	const confirmSelectWeb = async (url) => {
 		dispatch('url', url);
 
-		prompt = removeFirstHashWord(prompt);
+		prompt = removeFirstHashWord(prompt.replace(url, '')).trim();
 		const chatInputElement = document.getElementById('chat-textarea');
 
 		await tick();
@@ -132,12 +132,12 @@
 						</button>
 					{/each}
 
-					{#if prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
+					{#if prompt.split(/ {2,}/)?.at(0)?.substring(1).startsWith('http')}
 						<button
 							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-100 selected-command-option-button"
 							type="button"
 							on:click={() => {
-								const url = prompt.split(' ')?.at(0)?.substring(1);
+								const url = prompt.split(/ {2,}/)?.at(0)?.substring(1);
 								if (isValidHttpUrl(url)) {
 									confirmSelectWeb(url);
 								} else {
@@ -150,7 +150,7 @@
 							}}
 						>
 							<div class=" font-medium text-black line-clamp-1">
-								{prompt.split(' ')?.at(0)?.substring(1)}
+								{prompt.split(/ {2,}/)?.at(0)?.substring(1)}
 							</div>
 
 							<div class=" text-xs text-gray-600 line-clamp-1">{$i18n.t('Web')}</div>
