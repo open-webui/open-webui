@@ -66,5 +66,9 @@
 	{
 		"code": "zh-TW",
 		"title": "Chinese (Traditional)"
+	},
+	{
+		"code": "ko-KR",
+		"title": "Korean"
 	}
 ]
