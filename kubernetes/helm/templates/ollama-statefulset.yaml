@@ -88,7 +88,7 @@ spec:
       resources:
         requests:
           storage: {{ .Values.ollama.persistence.size | quote }}
-      storageClass: {{ .Values.ollama.persistence.storageClass }}
+      storageClassName: {{ .Values.ollama.persistence.storageClass }}
       {{- with .Values.ollama.persistence.selector }}
       selector:
         {{- toYaml . | nindent 8 }}
