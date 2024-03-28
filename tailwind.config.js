@@ -16,9 +16,8 @@ export default {
 					700: '#4e4e4e',
 					800: '#333',
 					850: '#262626',
-
-					900: '#171717',
-					950: '#0d0d0d'
+					900: 'var(--color-gray-900, #171717)',
+					950: 'var(--color-gray-950, #0d0d0d)'
 				}
 			},
 			typography: {
