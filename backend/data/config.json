@@ -1,6 +1,7 @@
 {
     "version": 0,
     "ui": {
+	"default_locale": "en-US",
         "prompt_suggestions": [
             {
                 "title": [
