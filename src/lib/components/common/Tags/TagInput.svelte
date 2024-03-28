@@ -1,24 +1,24 @@
 <script lang="ts">
 	import { createEventDispatcher, getContext } from 'svelte';
+	import { tags } from '$lib/stores';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
 
 	let showTagInput = false;
 	let tagName = '';
+
+	const addTagHandler = async () => {
+		dispatch('add', tagName);
+		tagName = '';
+		showTagInput = false;
+	};
 </script>
 
 <div class="flex space-x-1 pl-1.5">
 	{#if showTagInput}
 		<div class="flex items-center">
-			<button
-				type="button"
-				on:click={() => {
-					dispatch('add', tagName);
-					tagName = '';
-					showTagInput = false;
-				}}
-			>
+			<button type="button" on:click={addTagHandler}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 16 16"
@@ -36,10 +36,19 @@
 				bind:value={tagName}
 				class=" pl-2 cursor-pointer self-center text-xs h-fit bg-transparent outline-none line-clamp-1 w-[8rem]"
 				placeholder={$i18n.t('Add a tag')}
+				list="tagOptions"
+				on:keydown={(event) => {
+					if (event.key === 'Enter') {
+						addTagHandler();
+					}
+				}}
 			/>
+			<datalist id="tagOptions">
+				{#each $tags as tag}
+					<option value={tag.name} />
+				{/each}
+			</datalist>
 		</div>
-
-		<!-- TODO: Tag Suggestions -->
 	{/if}
 
 	<button
