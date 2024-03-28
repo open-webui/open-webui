@@ -272,6 +272,14 @@ OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != "" else OLLAMA_BASE_U
 
 OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(";")]
 
+OLLAMA_LB_WEIGHTS = os.environ.get("OLLAMA_LB_WEIGHTS", "")
+OLLAMA_LB_WEIGHTS = OLLAMA_LB_WEIGHTS if OLLAMA_LB_WEIGHTS != "" else OLLAMA_LB_WEIGHTS
+
+OLLAMA_LB_WEIGHTS = [int(w.strip()) for w in OLLAMA_LB_WEIGHTS.split(";")]
+
+OLLAMA_LB_POLICY = os.environ.get("OLLAMA_LB_POLICY", "round-robin")
+OLLAMA_LB_POLICY = OLLAMA_LB_POLICY if OLLAMA_LB_POLICY != "" else OLLAMA_LB_POLICY
+
 
 ####################################
 # OPENAI_API
