@@ -105,8 +105,9 @@ async def signin(request: Request, form_data: SigninForm):
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400,
                                 detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
-        trusted_email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower(
-        )
+        trusted_email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower()
+        if not Users.get_user_by_email(trusted_email.lower()):
+            await signup(request, SignupForm(email=trusted_email, password=str(uuid.uuid4()), name=trusted_email))
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
     else:
         user = Auths.authenticate_user(form_data.email.lower(),
@@ -149,17 +150,6 @@ async def signup(request: Request, form_data: SignupForm):
 
     if Users.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
-
-    if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
-        if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
-            raise HTTPException(400,
-                                detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
-        trusted_email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower(
-        )
-        if trusted_email != form_data.email:
-            raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_MISMATCH)
-        # TODO: Yolo hack to assign a password
-        form_data.password = str(uuid.uuid4())
 
     try:
         role = (

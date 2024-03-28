@@ -15,8 +15,6 @@
 	let email = '';
 	let password = '';
 
-	let showPasswordField = !($config?.trusted_header_auth ?? false);
-
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
@@ -58,6 +56,9 @@
 			await goto('/');
 		}
 		loaded = true;
+		if ($config?.trusted_header_auth ?? false) {
+			await signInHandler();
+		}
 	});
 </script>
 
@@ -92,7 +93,16 @@
 		</div> -->
 
 		<div class="w-full sm:max-w-lg px-4 min-h-screen flex flex-col">
-			<div class=" my-auto pb-10 w-full">
+			{#if ($config?.trusted_header_auth ?? false)}
+				<div class=" my-auto pb-10 w-full">
+					<div class=" text-xl sm:text-2xl font-bold">
+						{$i18n.t('Signing in')}
+						{$i18n.t('to')}
+						{$WEBUI_NAME}
+					</div>
+				</div>
+			{:else}
+				<div class=" my-auto pb-10 w-full">
 				<form
 					class=" flex flex-col justify-center bg-white py-6 sm:py-16 px-6 sm:px-16 rounded-2xl"
 					on:submit|preventDefault={() => {
@@ -143,19 +153,17 @@
 							/>
 						</div>
 
-						{#if showPasswordField}
-							<div>
-								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
-								<input
-									bind:value={password}
-									type="password"
-									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
-									placeholder={$i18n.t('Enter Your Password')}
-									autocomplete="current-password"
-									required
-								/>
-							</div>
-						{/if}
+						<div>
+							<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
+							<input
+								bind:value={password}
+								type="password"
+								class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+								placeholder={$i18n.t('Enter Your Password')}
+								autocomplete="current-password"
+								required
+							/>
+						</div>
 					</div>
 
 					<div class="mt-5">
@@ -188,6 +196,7 @@
 					</div>
 				</form>
 			</div>
+			{/if}
 		</div>
 	</div>
 {/if}
