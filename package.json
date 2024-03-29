@@ -2,7 +2,6 @@
 	"name": "open-webui",
 	"version": "0.1.115",
 	"private": true,
-	"main": "main.cjs",
 	"scripts": {
 		"start": "electron main.cjs",
 		"dev": "vite dev --host",
@@ -19,6 +18,7 @@
 		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write 'src/lib/i18n/**/*.{js,json}'"
 	},
 	"devDependencies": {
+		"@electron-forge/cli": "^7.3.1",
 		"@sveltejs/adapter-auto": "^2.0.0",
 		"@sveltejs/adapter-static": "^2.0.3",
 		"@sveltejs/kit": "^1.30.0",
@@ -27,7 +27,7 @@
 		"@typescript-eslint/eslint-plugin": "^6.17.0",
 		"@typescript-eslint/parser": "^6.17.0",
 		"autoprefixer": "^10.4.16",
-		"electron": "^29.1.0",
+		"electron": "^29.1.6",
 		"eslint": "^8.56.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-plugin-svelte": "^2.30.0",

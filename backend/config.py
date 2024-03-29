@@ -25,7 +25,7 @@ try:
 except ImportError:
     log.warning("dotenv not installed, skipping...")
 
-WEBUI_NAME = "EDI 837 ClaimFlow Assistant Chatbot"
+WEBUI_NAME = "Medical Data Polygraph"
 shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################
@@ -79,7 +79,8 @@ changelog_json = {}
 
 # Iterate over each version
 for version in soup.find_all("h2"):
-    version_number = version.get_text().strip().split(" - ")[0][1:-1]  # Remove brackets
+    version_number = version.get_text().strip().split(
+        " - ")[0][1:-1]  # Remove brackets
     date = version.get_text().strip().split(" - ")[1]
 
     version_data = {"date": date}
@@ -116,7 +117,8 @@ else:
 log = logging.getLogger(__name__)
 log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
 
-log_sources = ["AUDIO", "CONFIG", "DB", "IMAGES", "LITELLM", "MAIN", "MODELS", "OLLAMA", "OPENAI", "RAG"]
+log_sources = ["AUDIO", "CONFIG", "DB", "IMAGES",
+               "LITELLM", "MAIN", "MODELS", "OLLAMA", "OPENAI", "RAG"]
 
 SRC_LOG_LEVELS = {}
 
@@ -137,7 +139,8 @@ log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
 if CUSTOM_NAME:
     try:
-        r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
+        r = requests.get(
+            f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
         data = r.json()
         if r.ok:
             if "logo" in data:
@@ -328,7 +331,8 @@ USER_PERMISSIONS_CHAT_DELETION = (
 USER_PERMISSIONS = {"chat": {"deletion": USER_PERMISSIONS_CHAT_DELETION}}
 
 
-MODEL_FILTER_ENABLED = os.environ.get("MODEL_FILTER_ENABLED", "False").lower() == "true"
+MODEL_FILTER_ENABLED = os.environ.get(
+    "MODEL_FILTER_ENABLED", "False").lower() == "true"
 MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
 MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 
@@ -398,7 +402,8 @@ Query: [query]"""
 ####################################
 
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
-WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
+WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR",
+                              f"{CACHE_DIR}/whisper/models")
 
 
 ####################################
