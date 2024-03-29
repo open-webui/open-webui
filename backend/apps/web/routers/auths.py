@@ -103,32 +103,37 @@ async def update_password(
 async def signin(request: Request, form_data: SigninForm):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
-            raise HTTPException(400,
-                                detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
+
         trusted_email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower()
         if not Users.get_user_by_email(trusted_email.lower()):
-            await signup(request, SignupForm(email=trusted_email, password=str(uuid.uuid4()), name=trusted_email))
+            await signup(
+                request,
+                SignupForm(
+                    email=trusted_email, password=str(uuid.uuid4()), name=trusted_email
+                ),
+            )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
     else:
-        user = Auths.authenticate_user(form_data.email.lower(),
-                                       form_data.password)
-    if user:
-        token = create_token(
-            data={"id": user.id},
-            expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
-        )
+        user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
-        return {
-            "token": token,
-            "token_type": "Bearer",
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-            "profile_image_url": user.profile_image_url,
-        }
-    else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        if user:
+            token = create_token(
+                data={"id": user.id},
+                expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
+            )
+
+            return {
+                "token": token,
+                "token_type": "Bearer",
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "role": user.role,
+                "profile_image_url": user.profile_image_url,
+            }
+        else:
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
 
 ############################
