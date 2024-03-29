@@ -855,6 +855,14 @@
 		/>
 		<div class="flex flex-col flex-auto">
 			<div
+				class="{$settings?.fullScreenMode ?? null
+					? 'max-w-full'
+					: 'max-w-2xl md:px-0'} mx-auto w-full px-4"
+			>
+				<ModelSelector bind:selectedModels />
+			</div>
+
+			<div
 				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 				id="messages-container"
 				bind:this={messagesContainerElement}
@@ -864,13 +872,7 @@
 						messagesContainerElement.clientHeight + 5;
 				}}
 			>
-				<div
-					class="{$settings?.fullScreenMode ?? null
-						? 'max-w-full'
-						: 'max-w-2xl md:px-0'} mx-auto w-full px-4"
-				>
-					<ModelSelector bind:selectedModels />
-				</div>
+				
 
 				<div class=" h-full w-full flex flex-col py-8">
 					<Messages
