@@ -316,10 +316,10 @@
 						</div>
 					</div>
 
-					<div class="flex flex-col gap-1 px-1 my-2 w-full">
+					<div class="flex flex-col gap-1 px-1 w-full">
 						<div class="flex w-full">
 							<div class="overflow-hidden w-full">
-								<div class="mr-2 max-w-full">
+								<div class="max-w-full">
 									<Selector
 										placeholder={$i18n.t('Select a model')}
 										items={$models
