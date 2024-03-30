@@ -5,6 +5,7 @@
 
 	const i18n = getContext('i18n');
 
+	export let label = '';
 	let showTagInput = false;
 	let tagName = '';
 
@@ -34,7 +35,7 @@
 			</button>
 			<input
 				bind:value={tagName}
-				class=" pl-2 cursor-pointer self-center text-xs h-fit bg-transparent outline-none line-clamp-1 w-[8rem]"
+				class=" pl-2 cursor-pointer self-center text-xs h-fit bg-transparent outline-none line-clamp-1 w-[5.5rem]"
 				placeholder={$i18n.t('Add a tag')}
 				list="tagOptions"
 				on:keydown={(event) => {
@@ -71,4 +72,8 @@
 			</svg>
 		</div>
 	</button>
+
+	{#if label && !showTagInput}
+		<span class="text-xs pl-1.5 self-center">{label}</span>
+	{/if}
 </div>

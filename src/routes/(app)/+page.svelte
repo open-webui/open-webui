@@ -48,6 +48,7 @@
 	let messagesContainerElement: HTMLDivElement;
 	let currentRequestId = null;
 
+	let showModelSelector = false;
 	let selectedModels = [''];
 
 	let selectedModelfile = null;
@@ -837,7 +838,16 @@
 </svelte:head>
 
 <div class="h-screen max-h-[100dvh] w-full flex flex-col">
-	<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
+	<Navbar
+		{title}
+		bind:selectedModels
+		bind:showModelSelector
+		shareEnabled={messages.length > 0}
+		{initNewChat}
+		{tags}
+		{addTag}
+		{deleteTag}
+	/>
 	<div class="flex flex-col flex-auto">
 		<div
 			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
@@ -849,15 +859,7 @@
 					messagesContainerElement.clientHeight + 5;
 			}}
 		>
-			<div
-				class="{$settings?.fullScreenMode ?? null
-					? 'max-w-full'
-					: 'max-w-2xl md:px-0'} mx-auto w-full px-4"
-			>
-				<ModelSelector bind:selectedModels />
-			</div>
-
-			<div class=" h-full w-full flex flex-col py-8">
+			<div class=" h-full w-full flex flex-col pt-2 pb-4">
 				<Messages
 					chatId={$chatId}
 					{selectedModels}

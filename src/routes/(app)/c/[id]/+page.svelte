@@ -56,8 +56,10 @@
 	let currentRequestId = null;
 
 	// let chatId = $page.params.id;
+	let showModelSelector = false;
 	let selectedModels = [''];
 	let selectedModelfile = null;
+
 	$: selectedModelfile =
 		selectedModels.length === 1 &&
 		$modelfiles.filter((modelfile) => modelfile.tagName === selectedModels[0]).length > 0
@@ -861,6 +863,8 @@
 	<div class="min-h-screen max-h-screen w-full flex flex-col">
 		<Navbar
 			{title}
+			bind:selectedModels
+			bind:showModelSelector
 			shareEnabled={messages.length > 0}
 			initNewChat={async () => {
 				if (currentRequestId !== null) {
@@ -885,15 +889,7 @@
 						messagesContainerElement.clientHeight + 5;
 				}}
 			>
-				<div
-					class="{$settings?.fullScreenMode ?? null
-						? 'max-w-full'
-						: 'max-w-2xl md:px-0'} mx-auto w-full px-4"
-				>
-					<ModelSelector bind:selectedModels />
-				</div>
-
-				<div class=" h-full w-full flex flex-col py-8">
+				<div class=" h-full w-full flex flex-col py-4">
 					<Messages
 						chatId={$chatId}
 						{selectedModels}
