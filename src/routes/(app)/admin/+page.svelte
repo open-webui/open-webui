@@ -5,11 +5,15 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
+	import { DataHandler } from '@vincjo/datatables';
 
 	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
 	import SettingsModal from '$lib/components/admin/SettingsModal.svelte';
+	import RowsPerPage from '$lib/components/common/Paginations/RowsPerPage.svelte';
+	import RowCount from '$lib/components/common/Paginations/RowCount.svelte';
+	import Pagination from '$lib/components/common/Paginations/Pagination.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -20,6 +24,9 @@
 
 	let showSettingsModal = false;
 	let showEditUserModal = false;
+
+	const dataHandler = new DataHandler(users, { rowsPerPage: 10 });
+	const userRows = dataHandler.getRows();
 
 	const updateRoleHandler = async (id, role) => {
 		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
@@ -61,6 +68,8 @@
 		}
 		loaded = true;
 	});
+
+	$: users, dataHandler.setRows(users);
 </script>
 
 <svelte:head>
@@ -126,6 +135,7 @@
 						<hr class=" my-3 dark:border-gray-600" />
 
 						<div class="scrollbar-hidden relative overflow-x-auto whitespace-nowrap">
+							<RowsPerPage {dataHandler} />
 							<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto">
 								<thead
 									class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
@@ -138,7 +148,7 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each users as user}
+									{#each $userRows as user}
 										<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-700 text-xs">
 											<td class="px-3 py-2 min-w-[7rem] w-28">
 												<button
@@ -231,6 +241,10 @@
 									{/each}
 								</tbody>
 							</table>
+							<div class=" flex justify-between items-center">
+								<RowCount {dataHandler} />
+								<Pagination {dataHandler} />
+							</div>
 						</div>
 					</div>
 				</div>
