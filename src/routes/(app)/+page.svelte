@@ -534,6 +534,8 @@
 
 		console.log(docs);
 
+		console.log(model);
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -586,7 +588,9 @@
 				max_tokens: $settings?.options?.num_predict ?? undefined,
 				docs: docs.length > 0 ? docs : undefined
 			},
-			model.source === 'litellm' ? `${LITELLM_API_BASE_URL}/v1` : `${OPENAI_API_BASE_URL}`
+			model.source.toLowerCase() === 'litellm'
+				? `${LITELLM_API_BASE_URL}/v1`
+				: `${OPENAI_API_BASE_URL}`
 		);
 
 		if (res && res.ok) {
