@@ -602,7 +602,7 @@
 				max_tokens: $settings?.options?.num_predict ?? undefined,
 				docs: docs.length > 0 ? docs : undefined
 			},
-			model.source.toLowerCase() === 'litellm'
+			model?.source?.toLowerCase() === 'litellm'
 				? `${LITELLM_API_BASE_URL}/v1`
 				: `${OPENAI_API_BASE_URL}`
 		);
