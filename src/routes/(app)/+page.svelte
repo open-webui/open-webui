@@ -781,7 +781,7 @@
 				titleModelId,
 				userPrompt,
 				titleModel?.external ?? false
-					? titleModel.source === 'litellm'
+					? titleModel?.source?.toLowerCase() === 'litellm'
 						? `${LITELLM_API_BASE_URL}/v1`
 						: `${OPENAI_API_BASE_URL}`
 					: `${OLLAMA_API_BASE_URL}/v1`
