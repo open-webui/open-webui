@@ -5,7 +5,7 @@
 	const { saveAs } = fileSaver;
 
 	import { Separator } from 'bits-ui';
-	import { getChatById } from '$lib/apis/chats';
+	import { getChatById, shareChatById } from '$lib/apis/chats';
 	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings } from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
@@ -19,6 +19,7 @@
 	import ChevronUpDown from '../icons/ChevronUpDown.svelte';
 	import Menu from './Navbar/Menu.svelte';
 	import TagChatModal from '../chat/TagChatModal.svelte';
+	import { copyToClipboard } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -32,7 +33,7 @@
 	export let addTag: Function;
 	export let deleteTag: Function;
 
-	export let showModelSelector = false;
+	export let showModelSelector = true;
 
 	let showShareChatModal = false;
 	let showTagChatModal = false;
@@ -64,6 +65,23 @@
 		);
 	};
 
+	const shareLocalChat = async () => {
+		const chat = await getChatById(localStorage.token, $chatId);
+		console.log('shareLocal', chat);
+		if (chat.share_id) {
+			const shareUrl = `${window.location.origin}/s/${chat.share_id}`;
+			toast.info(
+				$i18n.t('Chat is already shared at {{shareUrl}}, copied to clipboard', { shareUrl })
+			);
+			copyToClipboard(shareUrl);
+		} else {
+			const sharedChat = await shareChatById(localStorage.token, $chatId);
+			const shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
+			toast.info($i18n.t('Chat is now shared at {{shareUrl}}, copied to clipboard', { shareUrl }));
+			copyToClipboard(shareUrl);
+		}
+	};
+
 	const downloadChat = async () => {
 		const chat = (await getChatById(localStorage.token, $chatId)).chat;
 		console.log('download', chat);
@@ -80,7 +98,7 @@
 	};
 </script>
 
-<ShareChatModal bind:show={showShareChatModal} {downloadChat} {shareChat} />
+<ShareChatModal bind:show={showShareChatModal} {downloadChat} {shareChat} {shareLocalChat} />
 <!-- <TagChatModal bind:show={showTagChatModal} {tags} {deleteTag} {addTag} /> -->
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div
@@ -135,8 +153,10 @@
 		</div> -->
 
 		<div class="flex items-center w-full max-w-full">
-			<div class="w-full flex-1 overflow-hidden max-w-full">
-				<ModelSelector bind:selectedModels />
+			<div class="flex-1 overflow-hidden max-w-full">
+				{#if showModelSelector}
+					<ModelSelector bind:selectedModels />
+				{/if}
 			</div>
 
 			<div class="self-start flex flex-none items-center">
