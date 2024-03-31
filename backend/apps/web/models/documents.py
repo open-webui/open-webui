@@ -13,6 +13,7 @@ from apps.web.internal.db import DB
 import json
 
 from config import SRC_LOG_LEVELS
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 

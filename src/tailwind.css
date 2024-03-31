@@ -3,13 +3,14 @@
 @tailwind utilities;
 
 @layer base {
-	html, pre {
+	html,
+	pre {
 		font-family: -apple-system, 'Arimo', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Ubuntu,
 			Cantarell, 'Noto Sans', sans-serif, 'Helvetica Neue', Arial, 'Apple Color Emoji',
 			'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 	}
 
-  pre {
-    white-space: pre-wrap;
-  }
+	pre {
+		white-space: pre-wrap;
+	}
 }

@@ -181,20 +181,20 @@
 		searchValue = '';
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 	}}
-	selected={items.find((item) => item.value === value)}
+	selected={items.find((item) => item.value === value) ?? ''}
 	onSelectedChange={(selectedItem) => {
 		value = selectedItem.value;
 	}}
 >
 	<Select.Trigger class="relative w-full" aria-label={placeholder}>
 		<Select.Value
-			class="inline-flex h-input px-0.5 w-full outline-none bg-transparent truncate text-lg font-semibold placeholder-gray-400  focus:outline-none"
+			class="flex text-left px-0.5 outline-none bg-transparent truncate text-lg font-semibold placeholder-gray-400  focus:outline-none"
 			{placeholder}
 		/>
 		<ChevronDown className="absolute end-2 top-1/2 -translate-y-[45%] size-3.5" strokeWidth="2.5" />
 	</Select.Trigger>
 	<Select.Content
-		class="w-full rounded-lg  bg-white dark:bg-gray-900 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/50  outline-none"
+		class=" z-40 w-full rounded-lg  bg-white dark:bg-gray-900 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/50  outline-none"
 		transition={flyAndScale}
 		sideOffset={4}
 	>
@@ -214,7 +214,7 @@
 				<hr class="border-gray-100 dark:border-gray-800" />
 			{/if}
 
-			<div class="px-3 my-2 max-h-80 overflow-y-auto">
+			<div class="px-3 my-2 max-h-72 overflow-y-auto">
 				{#each filteredItems as item}
 					<Select.Item
 						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm  text-gray-700 dark:text-gray-100  outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-[highlighted]:bg-muted"

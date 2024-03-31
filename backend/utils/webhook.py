@@ -1,6 +1,12 @@
 import json
 import requests
-from config import VERSION, WEBUI_FAVICON_URL, WEBUI_NAME
+import logging
+
+from config import SRC_LOG_LEVELS, VERSION, WEBUI_FAVICON_URL, WEBUI_NAME
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["WEBHOOK"])
+
 
 def post_webhook(url: str, message: str, event_data: dict) -> bool:
     try:
@@ -38,9 +44,11 @@ def post_webhook(url: str, message: str, event_data: dict) -> bool:
         else:
             payload = {**event_data}
 
+        log.debug(f"payload: {payload}")
         r = requests.post(url, json=payload)
         r.raise_for_status()
+        log.debug(f"r.text: {r.text}")
         return True
     except Exception as e:
-        print(e)
+        log.exception(e)
         return False
