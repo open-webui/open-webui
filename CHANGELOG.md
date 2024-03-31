@@ -10,9 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **🔄 Enhanced UI**: Model selector now conveniently located in the navbar, enabling seamless switching between multiple models during conversations.
-- **🔍 Improved Model Selector**:
-  - Directly pull a model from the selector.
-  - Models now display detailed information for better understanding.
+- **🔍 Improved Model Selector**: Directly pull a model from the selector/Models now display detailed information for better understanding.
 - **💬 Webhook Support**: Now compatible with Google Chat and Microsoft Teams.
 - **🌐 Localization**: Korean translation (I18n) now available.
 - **🌑 Dark Theme**: OLED dark theme introduced for reduced strain during prolonged usage.
