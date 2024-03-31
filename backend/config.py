@@ -349,7 +349,8 @@ WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
 
 WEBUI_AUTH = True
 WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
-    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None)
+    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
+)
 
 ####################################
 # WEBUI_SECRET_KEY
