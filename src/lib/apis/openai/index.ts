@@ -263,3 +263,53 @@ export const synthesizeOpenAISpeech = async (
 
 	return res;
 };
+
+export const generateTitle = async (
+	token: string = '',
+	template: string,
+	model: string,
+	prompt: string,
+	url: string = OPENAI_API_BASE_URL
+) => {
+	let error = null;
+
+	template = template.replace(/{{prompt}}/g, prompt);
+
+	console.log(template);
+
+	const res = await fetch(`${url}/chat/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			messages: [
+				{
+					role: 'user',
+					content: template
+				}
+			],
+			stream: false
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res?.choices[0]?.message?.content ?? 'New Chat';
+};

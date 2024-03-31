@@ -18,6 +18,7 @@
 
 	import { splitStream } from '$lib/utils';
 	import ChatCompletion from '$lib/components/playground/ChatCompletion.svelte';
+	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -315,27 +316,24 @@
 						</div>
 					</div>
 
-					<div class="  flex gap-1 px-1">
-						<select
-							id="models"
-							class="outline-none bg-transparent text-sm font-medium rounded-lg w-full placeholder-gray-400"
-							bind:value={selectedModelId}
-						>
-							<option class=" text-gray-800" value="" selected disabled
-								>{$i18n.t('Select a model')}</option
-							>
-
-							{#each $models as model}
-								{#if model.name === 'hr'}
-									<hr />
-								{:else}
-									<option value={model.id} class="text-gray-800 text-lg"
-										>{model.name +
-											`${model.size ? ` (${(model.size / 1024 ** 3).toFixed(1)}GB)` : ''}`}</option
-									>
-								{/if}
-							{/each}
-						</select>
+					<div class="flex flex-col gap-1 px-1 w-full">
+						<div class="flex w-full">
+							<div class="overflow-hidden w-full">
+								<div class="max-w-full">
+									<Selector
+										placeholder={$i18n.t('Select a model')}
+										items={$models
+											.filter((model) => model.name !== 'hr')
+											.map((model) => ({
+												value: model.id,
+												label: model.name,
+												info: model
+											}))}
+										bind:value={selectedModelId}
+									/>
+								</div>
+							</div>
+						</div>
 
 						<!-- <button
 							class=" self-center dark:hover:text-gray-300"
