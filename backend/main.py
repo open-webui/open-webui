@@ -161,22 +161,27 @@ app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
 app.mount("/rag/api/v1", rag_app)
 
-
 @app.get("/api/config")
 async def get_app_config():
+    # Checking and Handling the Absence of 'ui' in CONFIG_DATA
+    if "ui" in CONFIG_DATA:
+        default_locale = CONFIG_DATA["ui"].get("default_locale", "en-US")
+        default_prompt_suggestions = CONFIG_DATA["ui"].get("prompt_suggestions", [])
+    else:
+        default_locale = "en-US"
+        default_prompt_suggestions = []
+
+    # The Rest of the Function Now Uses the Variables Defined Above
     return {
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
-        "default_locale": (
-            CONFIG_DATA["ui"]["default_locale"]
-            if "default_locale" in CONFIG_DATA["ui"]
-            else "en-US"
-        ),
+        "default_locale": default_locale,
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
-        "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
+        "default_prompt_suggestions": default_prompt_suggestions,
     }
+
 
 
 @app.get("/api/config/model/filter")
