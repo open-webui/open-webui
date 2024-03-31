@@ -156,6 +156,8 @@ def rag_messages(docs, messages, template, k, embedding_function):
 
         relevant_contexts.append(context)
 
+    log.debug(f"relevant_contexts: {relevant_contexts}")
+
     context_string = ""
     for context in relevant_contexts:
         if context:
