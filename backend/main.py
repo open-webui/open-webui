@@ -164,15 +164,18 @@ app.mount("/rag/api/v1", rag_app)
 
 @app.get("/api/config")
 async def get_app_config():
+    # Checking and Handling the Absence of 'ui' in CONFIG_DATA
+
+    default_locale = "en-US"
+    if "ui" in CONFIG_DATA:
+        default_locale = CONFIG_DATA["ui"].get("default_locale", "en-US")
+
+    # The Rest of the Function Now Uses the Variables Defined Above
     return {
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
-        "default_locale": (
-            CONFIG_DATA["ui"]["default_locale"]
-            if "ui" in CONFIG_DATA and "default_locale" in CONFIG_DATA["ui"]
-            else "en-US"
-        ),
+        "default_locale": default_locale,
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
