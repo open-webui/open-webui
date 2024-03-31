@@ -670,7 +670,7 @@ async def generate_completion(
         else:
             raise HTTPException(
                 status_code=400,
-                detail="error_detail",
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
