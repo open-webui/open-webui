@@ -29,6 +29,7 @@ from apps.web.models.tags import (
 from constants import ERROR_MESSAGES
 
 from config import SRC_LOG_LEVELS
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 

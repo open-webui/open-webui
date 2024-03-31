@@ -2,6 +2,7 @@ import json
 import requests
 from config import VERSION, WEBUI_FAVICON_URL, WEBUI_NAME
 
+
 def post_webhook(url: str, message: str, event_data: dict) -> bool:
     try:
         payload = {}

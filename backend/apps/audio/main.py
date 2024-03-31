@@ -22,7 +22,13 @@ from utils.utils import (
 )
 from utils.misc import calculate_sha256
 
-from config import SRC_LOG_LEVELS, CACHE_DIR, UPLOAD_DIR, WHISPER_MODEL, WHISPER_MODEL_DIR
+from config import (
+    SRC_LOG_LEVELS,
+    CACHE_DIR,
+    UPLOAD_DIR,
+    WHISPER_MODEL,
+    WHISPER_MODEL_DIR,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["AUDIO"])
