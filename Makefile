@@ -8,6 +8,8 @@ remove:
 
 start:
 	@docker-compose start
+startanbuild: 
+	docker-compose up -d --build
 
 stop:
 	@docker-compose stop
