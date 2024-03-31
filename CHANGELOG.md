@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.116] - 2024-03-31
+
+### Added
+
+- **🔄 Enhanced UI**: Model selector now conveniently located in the navbar, enabling seamless switching between multiple models during conversations.
+- **🔍 Improved Model Selector**: Directly pull a model from the selector/Models now display detailed information for better understanding.
+- **💬 Webhook Support**: Now compatible with Google Chat and Microsoft Teams.
+- **🌐 Localization**: Korean translation (I18n) now available.
+- **🌑 Dark Theme**: OLED dark theme introduced for reduced strain during prolonged usage.
+- **🏷️ Tag Autocomplete**: Dropdown feature added for effortless chat tagging.
+
+### Fixed
+
+- **🔽 Auto-Scrolling**: Addressed OpenAI auto-scrolling issue.
+- **🏷️ Tag Validation**: Implemented tag validation to prevent empty string tags.
+- **🚫 Model Whitelisting**: Resolved LiteLLM model whitelisting issue.
+- **✅ Spelling**: Corrected various spelling issues for improved readability.
+
 ## [0.1.115] - 2024-03-24
 
 ### Added

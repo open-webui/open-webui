@@ -16,6 +16,7 @@ from utils.utils import get_current_user, get_password_hash, get_admin_user
 from constants import ERROR_MESSAGES
 
 from config import SRC_LOG_LEVELS
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 

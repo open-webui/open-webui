@@ -1,6 +1,0 @@
-{
-    "model_name": "string",
-    "litellm_params": {
-        "model": "ollama/mistral"
-    }
-}

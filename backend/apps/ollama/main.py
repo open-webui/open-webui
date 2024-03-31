@@ -33,7 +33,13 @@ from constants import ERROR_MESSAGES
 from utils.utils import decode_token, get_current_user, get_admin_user
 
 
-from config import SRC_LOG_LEVELS, OLLAMA_BASE_URLS, MODEL_FILTER_ENABLED, MODEL_FILTER_LIST, UPLOAD_DIR
+from config import (
+    SRC_LOG_LEVELS,
+    OLLAMA_BASE_URLS,
+    MODEL_FILTER_ENABLED,
+    MODEL_FILTER_LIST,
+    UPLOAD_DIR,
+)
 from utils.misc import calculate_sha256
 
 log = logging.getLogger(__name__)
@@ -266,7 +272,7 @@ async def pull_model(
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):
@@ -664,7 +670,7 @@ async def generate_completion(
         else:
             raise HTTPException(
                 status_code=400,
-                detail="error_detail",
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
@@ -770,7 +776,11 @@ async def generate_chat_completion(
 
     r = None
 
-    log.debug("form_data.model_dump_json(exclude_none=True).encode(): {0} ".format(form_data.model_dump_json(exclude_none=True).encode()))
+    log.debug(
+        "form_data.model_dump_json(exclude_none=True).encode(): {0} ".format(
+            form_data.model_dump_json(exclude_none=True).encode()
+        )
+    )
 
     def get_request():
         nonlocal form_data

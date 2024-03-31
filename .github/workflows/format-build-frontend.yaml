@@ -1,22 +1,36 @@
-name: Bun CI
+name: Frontend Build
+
 on:
   push:
-    branches: ['main']
+    branches:
+      - main
+      - dev
   pull_request:
+    branches:
+      - main
+      - dev
+
 jobs:
   build:
     name: 'Format & Build Frontend'
-    env:
-      PUBLIC_API_BASE_URL: ''
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Use Bun
-        uses: oven-sh/setup-bun@v1
-      - run: bun --version
-      - name: Install frontend dependencies
-        run: bun install
-      - name: Format frontend
-        run: bun run format
-      - name: Build frontend
-        run: bun run build
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20' # Or specify any other version you want to use
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Format Frontend
+        run: npm run format
+
+      - name: Check for Changes After Format
+        run: git diff --exit-code
+
+      - name: Build Frontend
+        run: npm run build

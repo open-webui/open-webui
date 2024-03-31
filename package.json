@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.1.115",
+	"version": "0.1.116",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev --host",
@@ -13,7 +13,6 @@
 		"lint:types": "npm run check",
 		"lint:backend": "pylint backend/",
 		"format": "prettier --plugin-search-dir --write '**/*.{js,ts,svelte,css,md,html,json}'",
-		"format:backend": "yapf --recursive backend -p -i",
 		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write 'src/lib/i18n/**/*.{js,json}'"
 	},
 	"devDependencies": {
