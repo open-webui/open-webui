@@ -272,7 +272,7 @@ async def pull_model(
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):
