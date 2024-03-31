@@ -245,7 +245,7 @@ async def get_app_config():
 
 @app.get("/api/changelog")
 async def get_app_changelog():
-    return CHANGELOG
+    return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
 
 
 @app.get("/api/version/updates")
