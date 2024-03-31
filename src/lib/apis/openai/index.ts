@@ -250,7 +250,8 @@ export const synthesizeOpenAISpeech = async (
 		body: JSON.stringify({
 			model: 'tts-1',
 			input: text,
-			voice: speaker
+			voice: speaker,
+			speed: 1.0,
 		})
 	}).catch((err) => {
 		console.log(err);

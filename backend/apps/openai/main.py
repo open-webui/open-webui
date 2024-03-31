@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, Request, Response, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
@@ -7,6 +9,7 @@ import aiohttp
 import asyncio
 import json
 import logging
+from urllib.parse import urljoin
 
 from pydantic import BaseModel
 
@@ -97,9 +100,24 @@ async def update_openai_key(form_data: KeysUpdateForm, user=Depends(get_admin_us
 
 @app.post("/audio/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
+    audio_base_url = os.environ.get("OPENAI_AUDIO_BASE_URL", "")
+    if audio_base_url:
+        print(f"Got OPENAI_AUDIO_BASE_URL: {audio_base_url}")
+    else:
+        audio_base_url = os.environ["OPENAI_BASE_URL"]
+        print(f"Using OPENAI_BASE_URL for audio: {audio_base_url}")
+
     idx = None
     try:
-        idx = app.state.OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
+        is_openedai_speech = True
+        if is_openedai_speech: # TODO: check if user wants to use openai cloud service (but why?), and behave accordingly
+            base_url = audio_base_url
+        else:
+            idx = app.state.OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
+            base_url = app.state.OPENAI_API_BASE_URLS[idx]
+
+        speech_url = urljoin(base_url, "/audio/speech")
+
         body = await request.body()
         name = hashlib.sha256(body).hexdigest()
 
@@ -113,13 +131,20 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             return FileResponse(file_path)
 
         headers = {}
-        headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEYS[idx]}"
+
+        if is_openedai_speech:
+            # TODO: support auth for openai-speech?
+            # TODO: log a warning that this isn't supported yet
+            pass
+        else:
+            headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEYS[idx]}"
+
         headers["Content-Type"] = "application/json"
 
         r = None
         try:
             r = requests.post(
-                url=f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech",
+                url=speech_url,
                 data=body,
                 headers=headers,
                 stream=True,
