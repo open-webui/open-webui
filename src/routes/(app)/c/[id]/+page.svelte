@@ -56,7 +56,7 @@
 	let currentRequestId = null;
 
 	// let chatId = $page.params.id;
-	let showModelSelector = false;
+	let showModelSelector = true;
 	let selectedModels = [''];
 	let selectedModelfile = null;
 
