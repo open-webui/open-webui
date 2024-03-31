@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  open-webui:
+    environment:
+      - 'OPENAI_BASE_URL=$OPENAI_BASE_URL'
+      - 'OPENAI_AUDIO_BASE_URL=$OPENAI_AUDIO_BASE_URL'
+
