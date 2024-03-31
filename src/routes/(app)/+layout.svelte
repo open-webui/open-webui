@@ -217,7 +217,7 @@
 
 	<ShortcutsModal bind:show={showShortcuts} />
 
-	<div class="app relative">
+	<div class="app relative overflow-hidden">
 		{#if !['user', 'admin'].includes($user.role)}
 			<div class="fixed w-full h-full flex z-50">
 				<div
