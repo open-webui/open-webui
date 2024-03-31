@@ -170,7 +170,7 @@ async def get_app_config():
         "version": VERSION,
         "default_locale": (
             CONFIG_DATA["ui"]["default_locale"]
-            if "default_locale" in CONFIG_DATA["ui"]
+            if "ui" in CONFIG_DATA and "default_locale" in CONFIG_DATA["ui"]
             else "en-US"
         ),
         "images": images_app.state.ENABLED,
