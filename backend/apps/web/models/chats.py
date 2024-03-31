@@ -20,6 +20,7 @@ class Chat(Model):
     title = CharField()
     chat = TextField()  # Save Chat JSON as Text
     timestamp = DateField()
+    share_id = CharField(null=True, unique=True)
 
     class Meta:
         database = DB
@@ -31,6 +32,7 @@ class ChatModel(BaseModel):
     title: str
     chat: str
     timestamp: int  # timestamp in epoch
+    share_id: Optional[str] = None
 
 
 ####################
@@ -52,6 +54,7 @@ class ChatResponse(BaseModel):
     title: str
     chat: dict
     timestamp: int  # timestamp in epoch
+    share_id: Optional[str] = None  # id of the chat to be shared
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -87,6 +90,44 @@ class ChatTable:
                 chat=json.dumps(chat),
                 title=chat["title"] if "title" in chat else "New Chat",
                 timestamp=int(time.time()),
+            ).where(Chat.id == id)
+            query.execute()
+
+            chat = Chat.get(Chat.id == id)
+            return ChatModel(**model_to_dict(chat))
+        except:
+            return None
+
+    def insert_shared_chat(self, chat_id: str) -> Optional[ChatModel]:
+        # Get the existing chat to share
+        chat = Chat.get(Chat.id == chat_id)
+        # Check if the chat is already shared
+        if chat.share_id:
+            return self.get_chat_by_id_and_user_id(chat.share_id, "shared")
+        # Create a new chat with the same data, but with a new ID
+        shared_chat = ChatModel(
+            **{
+                "id": str(uuid.uuid4()),
+                "user_id": "shared",
+                "title": chat.title,
+                "chat": chat.chat,
+                "timestamp": int(time.time()),
+            }
+        )
+        shared_result = Chat.create(**shared_chat.model_dump())
+        # Update the original chat with the share_id
+        result = (
+            Chat.update(share_id=shared_chat.id).where(Chat.id == chat_id).execute()
+        )
+
+        return shared_chat if (shared_result and result) else None
+
+    def update_chat_share_id_by_id(
+        self, od: str, share_id: Optional[str]
+    ) -> Optional[ChatModel]:
+        try:
+            query = Chat.update(
+                share_id=share_id,
             ).where(Chat.id == id)
             query.execute()
 
