@@ -140,7 +140,7 @@
 			</div>
 
 			<div class="self-start flex flex-none items-center">
-				<div class="flex self-center w-[1px] h-5 mx-2 bg-stone-700" />
+				<div class="flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" />
 
 				{#if !shareEnabled}
 					<Tooltip content="Settings">
