@@ -333,7 +333,7 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
         if overwrite:
             for collection in CHROMA_CLIENT.list_collections():
                 if collection_name == collection.name:
-                    print(f"deleting existing collection {collection_name}")
+                    log.info(f"deleting existing collection {collection_name}")
                     CHROMA_CLIENT.delete_collection(name=collection_name)
 
         collection = CHROMA_CLIENT.create_collection(
@@ -346,7 +346,7 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
         )
         return True
     except Exception as e:
-        print(e)
+        log.exception(e)
         if e.__class__.__name__ == "UniqueConstraintError":
             return True
 
@@ -575,7 +575,7 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                                 ),
                             )
                 except Exception as e:
-                    print(e)
+                    log.exception(e)
                     pass
 
         except Exception as e:

@@ -325,7 +325,7 @@ def save_url_image(url):
 
         return image_id
     except Exception as e:
-        print(f"Error saving image: {e}")
+        log.exception(f"Error saving image: {e}")
         return None
 
 
@@ -397,7 +397,7 @@ def generate_image(
                 user.id,
                 app.state.COMFYUI_BASE_URL,
             )
-            print(res)
+            log.debug(f"res: {res}")
 
             images = []
 
@@ -409,7 +409,7 @@ def generate_image(
                 with open(file_body_path, "w") as f:
                     json.dump(data.model_dump(exclude_none=True), f)
 
-            print(images)
+            log.debug(f"images: {images}")
             return images
         else:
             if form_data.model:

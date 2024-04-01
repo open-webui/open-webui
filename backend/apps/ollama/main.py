@@ -272,7 +272,7 @@ async def pull_model(
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):
@@ -670,7 +670,7 @@ async def generate_completion(
         else:
             raise HTTPException(
                 status_code=400,
-                detail="error_detail",
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
