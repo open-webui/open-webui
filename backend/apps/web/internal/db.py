@@ -1,4 +1,5 @@
 from peewee import *
+from peewee_migrate import Router
 from config import SRC_LOG_LEVELS, DATA_DIR
 import os
 import logging
@@ -16,4 +17,6 @@ else:
 
 
 DB = SqliteDatabase(f"{DATA_DIR}/webui.db")
-DB.connect()
+router = Router(DB, migrate_dir="apps/web/internal/migrations", logger=log)
+router.run()
+DB.connect(reuse_if_open=True)
