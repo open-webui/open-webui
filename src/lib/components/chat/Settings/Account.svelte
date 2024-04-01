@@ -39,6 +39,11 @@
     };
 
 	const submitHandler = async () => {
+		const isInitialsImage: boolean = profileImageUrl === generateInitialsImage($user.name) || profileImageUrl === '';
+        if (isInitialsImage && name !== $user.name) {
+            profileImageUrl = generateInitialsImage(name);
+        }
+
 		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
 			(error) => {
 				toast.error(error);
