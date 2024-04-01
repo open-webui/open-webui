@@ -448,8 +448,25 @@ def store_doc(
 
     log.info(f"file.content_type: {file.content_type}")
     try:
+        is_valid_filename = True
+        unsanitized_filename = file.filename
+        if not unsanitized_filename.isascii():
+            is_valid_filename = False
+
+        unvalidated_file_path  = f"{UPLOAD_DIR}/{unsanitized_filename}"
+        dereferenced_file_path = str(Path(unvalidated_file_path).resolve(strict=False))
+        if not dereferenced_file_path.startswith(UPLOAD_DIR):
+            is_valid_filename = False
+
+        if is_valid_filename:
+            file_path = dereferenced_file_path
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
+
         filename = file.filename
-        file_path = f"{UPLOAD_DIR}/{filename}"
         contents = file.file.read()
         with open(file_path, "wb") as f:
             f.write(contents)
