@@ -970,6 +970,13 @@ def parse_huggingface_url(hf_url):
 async def download_file_stream(
     ollama_url, file_url, file_path, file_name, chunk_size=1024 * 1024
 ):
+    allowed_hosts = ["https://huggingface.co/", "https://github.com/"]
+
+    if not any(file_url.startswith(host) for host in allowed_hosts):
+        raise ValueError(
+            "Invalid file_url. Only URLs from allowed hosts are permitted."
+        )
+
     done = False
 
     if os.path.exists(file_path):
