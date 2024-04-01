@@ -102,6 +102,7 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
   ```bash
   docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
+Then, you can use the following address to run Open WebUI on the browser of your local computer `http://localhost:3000/`. In case you're getting error, please ensure you have `ollama` up and running on your local host too. To verify this, you can open a tab and type `http://127.0.0.1:11434/` and you'll see `Ollama is running`. 
 
 - **If Ollama is on a Different Server**, use this command:
 
