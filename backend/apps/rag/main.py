@@ -453,7 +453,7 @@ def store_doc(
         if not unsanitized_filename.isascii():
             is_valid_filename = False
 
-        unvalidated_file_path  = f"{UPLOAD_DIR}/{unsanitized_filename}"
+        unvalidated_file_path = f"{UPLOAD_DIR}/{unsanitized_filename}"
         dereferenced_file_path = str(Path(unvalidated_file_path).resolve(strict=False))
         if not dereferenced_file_path.startswith(UPLOAD_DIR):
             is_valid_filename = False
