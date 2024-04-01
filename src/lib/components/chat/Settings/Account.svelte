@@ -19,6 +19,25 @@
 	let JWTTokenCopied = false;
 	let profileImageInputElement: HTMLInputElement;
 
+	const generateInitialsImage = (name) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 100;
+        canvas.height = 100;
+
+        ctx.fillStyle = '#F39C12';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '40px Helvetica';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const initials = name.split(' ').map(word => word[0]).join('');
+        ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
+
+        return canvas.toDataURL();
+    };
+
 	const submitHandler = async () => {
 		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
 			(error) => {
@@ -116,7 +135,7 @@
 						}}
 					>
 						<img
-							src={profileImageUrl !== '' ? profileImageUrl : '/user.png'}
+							src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(name)}
 							alt="profile"
 							class=" rounded-full w-16 h-16 object-cover"
 						/>
@@ -142,9 +161,7 @@
 				<button
 					class=" text-xs text-gray-600"
 					on:click={async () => {
-						const url = await getGravatarUrl($user.email);
-
-						profileImageUrl = url;
+						profileImageUrl = generateInitialsImage(name);
 					}}>{$i18n.t('Use Gravatar')}</button
 				>
 			</div>
