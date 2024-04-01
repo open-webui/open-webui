@@ -20,29 +20,33 @@
 	let profileImageInputElement: HTMLInputElement;
 
 	const generateInitialsImage = (name) => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 100;
-        canvas.height = 100;
+		const canvas = document.createElement('canvas');
+		const ctx = canvas.getContext('2d');
+		canvas.width = 100;
+		canvas.height = 100;
 
-        ctx.fillStyle = '#F39C12';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+		ctx.fillStyle = '#F39C12';
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '40px Helvetica';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const initials = name.split(' ').map(word => word[0]).join('');
-        ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
+		ctx.fillStyle = '#FFFFFF';
+		ctx.font = '40px Helvetica';
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		const initials = name
+			.split(' ')
+			.map((word) => word[0])
+			.join('');
+		ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
 
-        return canvas.toDataURL();
-    };
+		return canvas.toDataURL();
+	};
 
 	const submitHandler = async () => {
-		const isInitialsImage: boolean = profileImageUrl === generateInitialsImage($user.name) || profileImageUrl === '';
-        if (isInitialsImage && name !== $user.name) {
-            profileImageUrl = generateInitialsImage(name);
-        }
+		const isInitialsImage: boolean =
+			profileImageUrl === generateInitialsImage($user.name) || profileImageUrl === '';
+		if (isInitialsImage && name !== $user.name) {
+			profileImageUrl = generateInitialsImage(name);
+		}
 
 		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
 			(error) => {
