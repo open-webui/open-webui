@@ -77,8 +77,6 @@ def get_http_authorization_cred(auth_header: str):
 def get_current_user(
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
-
-    print(auth_token)
     # auth by api key
     if auth_token.credentials.startswith("sk-"):
         return get_current_user_by_api_key(auth_token.credentials)
