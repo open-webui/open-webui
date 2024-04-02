@@ -123,7 +123,7 @@
 							}}>delete this link</button
 						> and create a new shared link.
 					{:else}
-						Messages you send after creating your link won't be shared. Anyone with the URL will be
+						Messages you send after creating your link won't be shared. Users with the URL will be
 						able to view the shared chat.
 					{/if}
 				</div>
