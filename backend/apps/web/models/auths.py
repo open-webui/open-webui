@@ -167,22 +167,6 @@ class AuthsTable:
         except:
             return False
 
-    def update_api_key_by_id(self, id: str, api_key: str) -> str:
-        try:
-            query = Auth.update(api_key=api_key).where(Auth.id == id)
-            result = query.execute()
-
-            return True if result == 1 else False
-        except:
-            return False
-
-    def get_api_key_by_id(self, id: str) -> Optional[str]:
-        try:
-            auth = Auth.get(Auth.id == id)
-            return auth.api_key
-        except:
-            return None
-
     def delete_auth_by_id(self, id: str) -> bool:
         try:
             # Delete User

@@ -158,5 +158,21 @@ class UsersTable:
         except:
             return False
 
+    def update_user_api_key_by_id(self, id: str, api_key: str) -> str:
+        try:
+            query = User.update(api_key=api_key).where(User.id == id)
+            result = query.execute()
+
+            return True if result == 1 else False
+        except:
+            return False
+
+    def get_user_api_key_by_id(self, id: str) -> Optional[str]:
+        try:
+            user = User.get(User.id == id)
+            return user.api_key
+        except:
+            return None
+
 
 Users = UsersTable(DB)

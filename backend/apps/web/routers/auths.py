@@ -277,7 +277,7 @@ async def update_token_expires_duration(
 @router.post("/api_key", response_model=ApiKey)
 async def create_api_key_(user=Depends(get_current_user)):
     api_key = create_api_key()
-    success = Auths.update_api_key_by_id(user.id, api_key)
+    success = Users.update_user_api_key_by_id(user.id, api_key)
     if success:
         return {
             "api_key": api_key,
@@ -289,14 +289,14 @@ async def create_api_key_(user=Depends(get_current_user)):
 # delete api key
 @router.delete("/api_key", response_model=bool)
 async def delete_api_key(user=Depends(get_current_user)):
-    success = Auths.update_api_key_by_id(user.id, None)
+    success = Users.update_user_api_key_by_id(user.id, None)
     return success
 
 
 # get api key
 @router.get("/api_key", response_model=ApiKey)
 async def get_api_key(user=Depends(get_current_user)):
-    api_key = Auths.get_api_key_by_id(user.id, None)
+    api_key = Users.get_user_api_key_by_id(user.id)
     if api_key:
         return {
             "api_key": api_key,
