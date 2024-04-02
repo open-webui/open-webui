@@ -21,7 +21,6 @@
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
 			localStorage.token = sessionUser.token;
-			await setApiKey(sessionUser.token);
 			await user.set(sessionUser);
 			goto('/');
 		}
