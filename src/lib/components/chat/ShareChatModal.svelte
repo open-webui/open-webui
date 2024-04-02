@@ -1,15 +1,84 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
+
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
+	import { toast } from 'svelte-sonner';
+	import { getChatById, shareChatById } from '$lib/apis/chats';
+	import { chatId, modelfiles } from '$lib/stores';
+	import { copyToClipboard } from '$lib/utils';
+
 	import Modal from '../common/Modal.svelte';
 	import Link from '../icons/Link.svelte';
 
+	let chat = null;
 	const i18n = getContext('i18n');
 
-	export let downloadChat: Function;
-	export let shareChat: Function;
-	export let shareLocalChat: Function;
+	const shareLocalChat = async () => {
+		const _chat = chat;
+
+		let chatShareUrl = '';
+		if (_chat.share_id) {
+			chatShareUrl = `${window.location.origin}/s/${_chat.share_id}`;
+		} else {
+			const sharedChat = await shareChatById(localStorage.token, $chatId);
+			chatShareUrl = `${window.location.origin}/s/${sharedChat.id}`;
+		}
+
+		toast.success($i18n.t('Copied shared conversation URL to clipboard!'));
+		copyToClipboard(chatShareUrl);
+	};
+
+	const shareChat = async () => {
+		const _chat = chat.chat;
+		console.log('share', _chat);
+
+		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		const url = 'https://openwebui.com';
+		// const url = 'http://localhost:5173';
+
+		const tab = await window.open(`${url}/chats/upload`, '_blank');
+		window.addEventListener(
+			'message',
+			(event) => {
+				if (event.origin !== url) return;
+				if (event.data === 'loaded') {
+					tab.postMessage(
+						JSON.stringify({
+							chat: _chat,
+							modelfiles: $modelfiles.filter((modelfile) =>
+								_chat.models.includes(modelfile.tagName)
+							)
+						}),
+						'*'
+					);
+				}
+			},
+			false
+		);
+	};
+
+	const downloadChat = async () => {
+		const _chat = chat.chat;
+		console.log('download', chat);
+
+		const chatText = _chat.messages.reduce((a, message, i, arr) => {
+			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
+		}, '');
+
+		let blob = new Blob([chatText], {
+			type: 'text/plain'
+		});
+
+		saveAs(blob, `chat-${_chat.title}.txt`);
+	};
 
 	export let show = false;
+
+	onMount(async () => {
+		chat = await getChatById(localStorage.token, $chatId);
+	});
 </script>
 
 <Modal bind:show size="sm">
