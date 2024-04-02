@@ -143,17 +143,19 @@
 				id="messages-container"
 			>
 				<div class=" h-full w-full flex flex-col py-4">
-					<div>
-						<div class=" text-3xl font-semibold line-clamp-1">
-							{title}
+					<div class="px-3">
+						<div>
+							<div class=" text-3xl font-semibold line-clamp-1">
+								{title}
+							</div>
+
+							<div class=" mt-1 text-gray-400">
+								{dayjs(chat.chat.timestamp).format('MMMM D, YYYY')}
+							</div>
 						</div>
 
-						<div class=" mt-1 text-gray-400">
-							{dayjs(chat.chat.timestamp).format('MMMM D, YYYY')}
-						</div>
+						<hr class=" dark:border-gray-800 my-6" />
 					</div>
-
-					<hr class=" dark:border-gray-800 my-6" />
 
 					<div class="py-2">
 						<Messages
