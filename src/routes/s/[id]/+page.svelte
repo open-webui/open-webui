@@ -3,6 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
+	import dayjs from 'dayjs';
+
 	import { modelfiles, settings, chatId, WEBUI_NAME } from '$lib/stores';
 	import { convertMessagesToHistory } from '$lib/utils';
 
@@ -135,26 +137,40 @@
 	<div
 		class="min-h-screen max-h-screen w-full flex flex-col text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900"
 	>
-		<div class="flex flex-col flex-auto">
+		<div class="flex flex-col flex-auto justify-center">
 			<div
-				class=" py-6 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+				class=" py-6 flex flex-col justify-center w-full flex-auto overflow-auto h-0 max-w-3xl mx-auto"
 				id="messages-container"
 			>
 				<div class=" h-full w-full flex flex-col py-4">
-					<Messages
-						chatId={$chatId}
-						readOnly={true}
-						{selectedModels}
-						{selectedModelfiles}
-						{processing}
-						bind:history
-						bind:messages
-						bind:autoScroll
-						bottomPadding={files.length > 0}
-						sendPrompt={() => {}}
-						continueGeneration={() => {}}
-						regenerateResponse={() => {}}
-					/>
+					<div>
+						<div class=" text-3xl font-semibold line-clamp-1">
+							{title}
+						</div>
+
+						<div class=" mt-1 text-gray-400">
+							{dayjs(chat.chat.timestamp).format('MMMM D, YYYY')}
+						</div>
+					</div>
+
+					<hr class=" dark:border-gray-800 my-6" />
+
+					<div class="py-2">
+						<Messages
+							chatId={$chatId}
+							readOnly={true}
+							{selectedModels}
+							{selectedModelfiles}
+							{processing}
+							bind:history
+							bind:messages
+							bind:autoScroll
+							bottomPadding={files.length > 0}
+							sendPrompt={() => {}}
+							continueGeneration={() => {}}
+							regenerateResponse={() => {}}
+						/>
+					</div>
 				</div>
 			</div>
 		</div>
