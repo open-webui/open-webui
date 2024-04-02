@@ -17,7 +17,7 @@
 	let name = '';
 	let showJWTToken = false;
 	let JWTTokenCopied = false;
-	let showApiKey= false;
+	let showApiKey = false;
 	let ApiKeyCopied = false;
 	let localApiKey = localStorage.apiKey;
 	let profileImageInputElement: HTMLInputElement;
@@ -39,12 +39,11 @@
 	const createApiKeyHandler = async () => {
 		const apiKey = await createApiKey(localStorage.token);
 		if (apiKey) {
-			localApiKey = apiKey["api_key"];
+			localApiKey = apiKey['api_key'];
 			localStorage.apiKey = localApiKey;
 			toast.success($i18n.t('API Key created.'));
 		} else {
 			toast.error($i18n.t('Failed to create API Key.'));
-		
 		}
 	};
 
@@ -186,9 +185,9 @@
 		<hr class=" dark:border-gray-700 my-4" />
 
 		<div class="flex flex-col gap-4">
-			<div class="justify-between w-full ">
+			<div class="justify-between w-full">
 				<div class="flex justify-between w-full">
-					<div class="self-center text-xs font-medium ">{$i18n.t('JWT Token')}</div>
+					<div class="self-center text-xs font-medium">{$i18n.t('JWT Token')}</div>
 				</div>
 
 				<div class="flex mt-2">
@@ -285,9 +284,9 @@
 					</button>
 				</div>
 			</div>
-			<div class="justify-between w-full ">
+			<div class="justify-between w-full">
 				<div class="flex justify-between w-full">
-					<div class="self-center text-xs font-medium ">{$i18n.t('API Key')}</div>
+					<div class="self-center text-xs font-medium">{$i18n.t('API Key')}</div>
 				</div>
 
 				<div class="flex mt-2">
@@ -298,14 +297,6 @@
 							value={localApiKey}
 							disabled
 						/>
-
-						<button
-							class="ml-1.5 px-1.5 py-1 hover:bg-gray-800 transition rounded-lg"
-							on:click={() => {createApiKeyHandler()}}
-						>
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4"><path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"></path></svg>
-							
-						</button>
 
 						<button
 							class="px-2 transition rounded-r-lg dark:bg-gray-800"
@@ -389,6 +380,28 @@
 								/>
 							</svg>
 						{/if}
+					</button>
+
+					<button
+						class=" px-1.5 py-1 hover:bg-gray-800 transition rounded-lg"
+						on:click={() => {
+							createApiKeyHandler();
+						}}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
+							class="size-4"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+							/>
+						</svg>
 					</button>
 				</div>
 			</div>

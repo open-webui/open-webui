@@ -342,7 +342,7 @@ export const createApiKey = async (token: string) => {
 		throw error;
 	}
 	return res;
-}
+};
 
 export const getApiKey = async (token: string) => {
 	let error = null;
@@ -367,7 +367,7 @@ export const getApiKey = async (token: string) => {
 		throw error;
 	}
 	return res;
-}
+};
 
 export const deleteApiKey = async (token: string) => {
 	let error = null;
@@ -392,4 +392,4 @@ export const deleteApiKey = async (token: string) => {
 		throw error;
 	}
 	return res;
-}
+};
