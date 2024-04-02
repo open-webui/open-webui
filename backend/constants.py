@@ -5,6 +5,13 @@ class MESSAGES(str, Enum):
     DEFAULT = lambda msg="": f"{msg if msg else ''}"
 
 
+class WEBHOOK_MESSAGES(str, Enum):
+    DEFAULT = lambda msg="": f"{msg if msg else ''}"
+    USER_SIGNUP = lambda username="": (
+        f"New user signed up: {username}" if username else "New user signed up"
+    )
+
+
 class ERROR_MESSAGES(str, Enum):
     def __str__(self) -> str:
         return super().__str__()
@@ -46,9 +53,12 @@ class ERROR_MESSAGES(str, Enum):
 
     PANDOC_NOT_INSTALLED = "Pandoc is not installed on the server. Please contact your administrator for assistance."
     INCORRECT_FORMAT = (
-        lambda err="": f"Invalid format. Please use the correct format{err if err else ''}"
+        lambda err="": f"Invalid format. Please use the correct format{err}"
     )
     RATE_LIMIT_EXCEEDED = "API rate limit exceeded"
 
     MODEL_NOT_FOUND = lambda name="": f"Model '{name}' was not found"
     OPENAI_NOT_FOUND = lambda name="": f"OpenAI API was not found"
+    OLLAMA_NOT_FOUND = "WebUI could not connect to Ollama"
+
+    EMPTY_CONTENT = "The content provided is empty. Please ensure that there is text or data present before proceeding."

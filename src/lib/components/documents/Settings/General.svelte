@@ -5,15 +5,21 @@
 		updateRAGConfig,
 		getQuerySettings,
 		scanDocs,
-		updateQuerySettings
+		updateQuerySettings,
+		resetVectorDB
 	} from '$lib/apis/rag';
+
 	import { documents } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
 
 	let loading = false;
+
+	let showResetConfirm = false;
 
 	let chunkSize = 0;
 	let chunkOverlap = 0;
@@ -31,7 +37,7 @@
 
 		if (res) {
 			await documents.set(await getDocs(localStorage.token));
-			toast.success('Scan complete!');
+			toast.success($i18n.t('Scan complete!'));
 		}
 	};
 
@@ -69,10 +75,12 @@
 >
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 		<div>
-			<div class=" mb-2 text-sm font-medium">General Settings</div>
+			<div class=" mb-2 text-sm font-medium">{$i18n.t('General Settings')}</div>
 
 			<div class="  flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">Scan for documents from '/data/docs'</div>
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Scan for documents from {{path}}', { path: '/data/docs' })}
+				</div>
 
 				<button
 					class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded flex flex-row space-x-1 items-center {loading
@@ -85,7 +93,7 @@
 					type="button"
 					disabled={loading}
 				>
-					<div class="self-center font-medium">Scan</div>
+					<div class="self-center font-medium">{$i18n.t('Scan')}</div>
 
 					<!-- <svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -133,77 +141,76 @@
 
 		<hr class=" dark:border-gray-700" />
 
-		<div class=" space-y-3">
-			<div class=" space-y-3">
-				<div class=" text-sm font-medium">Chunk Params</div>
+		<div class=" ">
+			<div class=" text-sm font-medium">{$i18n.t('Chunk Params')}</div>
 
-				<div class=" flex gap-2">
-					<div class="  flex w-full justify-between gap-2">
-						<div class="self-center text-xs font-medium min-w-fit">Chunk Size</div>
+			<div class=" flex">
+				<div class="  flex w-full justify-between">
+					<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('Chunk Size')}</div>
 
-						<div class="self-center">
-							<input
-								class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
-								type="number"
-								placeholder="Enter Chunk Size"
-								bind:value={chunkSize}
-								autocomplete="off"
-								min="0"
-							/>
-						</div>
-					</div>
-
-					<div class="flex w-full gap-2">
-						<div class=" self-center text-xs font-medium min-w-fit">Chunk Overlap</div>
-
-						<div class="self-center">
-							<input
-								class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
-								type="number"
-								placeholder="Enter Chunk Overlap"
-								bind:value={chunkOverlap}
-								autocomplete="off"
-								min="0"
-							/>
-						</div>
+					<div class="self-center p-3">
+						<input
+							class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+							type="number"
+							placeholder={$i18n.t('Enter Chunk Size')}
+							bind:value={chunkSize}
+							autocomplete="off"
+							min="0"
+						/>
 					</div>
 				</div>
 
-				<div>
-					<div class="flex justify-between items-center text-xs">
-						<div class=" text-xs font-medium">PDF Extract Images (OCR)</div>
+				<div class="flex w-full">
+					<div class=" self-center text-xs font-medium min-w-fit">{$i18n.t('Chunk Overlap')}</div>
 
-						<button
-							class=" text-xs font-medium text-gray-500"
-							type="button"
-							on:click={() => {
-								pdfExtractImages = !pdfExtractImages;
-							}}>{pdfExtractImages ? 'On' : 'Off'}</button
-						>
+					<div class="self-center p-3">
+						<input
+							class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+							type="number"
+							placeholder={$i18n.t('Enter Chunk Overlap')}
+							bind:value={chunkOverlap}
+							autocomplete="off"
+							min="0"
+						/>
 					</div>
 				</div>
 			</div>
 
 			<div>
-				<div class=" text-sm font-medium">Query Params</div>
+				<div class="flex justify-between items-center text-xs">
+					<div class=" text-xs font-medium">{$i18n.t('PDF Extract Images (OCR)')}</div>
 
-				<div class=" flex py-2">
-					<div class="  flex w-full justify-between gap-2">
-						<div class="self-center text-xs font-medium flex-1">Top K</div>
+					<button
+						class=" text-xs font-medium text-gray-500"
+						type="button"
+						on:click={() => {
+							pdfExtractImages = !pdfExtractImages;
+						}}>{pdfExtractImages ? $i18n.t('On') : $i18n.t('Off')}</button
+					>
+				</div>
+			</div>
+		</div>
 
-						<div class="self-center">
-							<input
-								class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
-								type="number"
-								placeholder="Enter Top K"
-								bind:value={querySettings.k}
-								autocomplete="off"
-								min="0"
-							/>
-						</div>
+		<div>
+			<div class=" text-sm font-medium">{$i18n.t('Query Params')}</div>
+
+			<div class=" flex">
+				<div class="  flex w-full justify-between">
+					<div class="self-center text-xs font-medium flex-1">{$i18n.t('Top K')}</div>
+
+					<div class="self-center p-3">
+						<input
+							class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+							type="number"
+							placeholder={$i18n.t('Enter Top K')}
+							bind:value={querySettings.k}
+							autocomplete="off"
+							min="0"
+						/>
 					</div>
+				</div>
 
-					<!-- <div class="flex w-full">
+				<!-- <div class="flex w-full">
 						<div class=" self-center text-xs font-medium min-w-fit">Chunk Overlap</div>
 	
 						<div class="self-center p-3">
@@ -217,18 +224,111 @@
 							/>
 						</div>
 					</div> -->
-				</div>
+			</div>
 
-				<div>
-					<div class=" mb-2.5 text-sm font-medium">RAG Template</div>
-					<textarea
-						bind:value={querySettings.template}
-						class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
-						rows="4"
-					/>
-				</div>
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('RAG Template')}</div>
+				<textarea
+					bind:value={querySettings.template}
+					class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
+					rows="4"
+				/>
 			</div>
 		</div>
+
+		<hr class=" dark:border-gray-700" />
+
+		{#if showResetConfirm}
+			<div class="flex justify-between rounded-md items-center py-2 px-3.5 w-full transition">
+				<div class="flex items-center space-x-3">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-4 h-4"
+					>
+						<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
+						<path
+							fill-rule="evenodd"
+							d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM5.72 7.47a.75.75 0 0 1 1.06 0L8 8.69l1.22-1.22a.75.75 0 1 1 1.06 1.06L9.06 9.75l1.22 1.22a.75.75 0 1 1-1.06 1.06L8 10.81l-1.22 1.22a.75.75 0 0 1-1.06-1.06l1.22-1.22-1.22-1.22a.75.75 0 0 1 0-1.06Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<span>{$i18n.t('Are you sure?')}</span>
+				</div>
+
+				<div class="flex space-x-1.5 items-center">
+					<button
+						class="hover:text-white transition"
+						on:click={() => {
+							const res = resetVectorDB(localStorage.token).catch((error) => {
+								toast.error(error);
+								return null;
+							});
+
+							if (res) {
+								toast.success($i18n.t('Success'));
+							}
+
+							showResetConfirm = false;
+						}}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</button>
+					<button
+						class="hover:text-white transition"
+						on:click={() => {
+							showResetConfirm = false;
+						}}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+							/>
+						</svg>
+					</button>
+				</div>
+			</div>
+		{:else}
+			<button
+				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+				on:click={() => {
+					showResetConfirm = true;
+				}}
+			>
+				<div class=" self-center mr-3">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-4 h-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M3.5 2A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 12.5 4H9.621a1.5 1.5 0 0 1-1.06-.44L7.439 2.44A1.5 1.5 0 0 0 6.38 2H3.5Zm6.75 7.75a.75.75 0 0 0 0-1.5h-4.5a.75.75 0 0 0 0 1.5h4.5Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+				<div class=" self-center text-sm font-medium">{$i18n.t('Reset Vector Storage')}</div>
+			</button>
+		{/if}
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
@@ -236,7 +336,7 @@
 			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 			type="submit"
 		>
-			Save
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </form>

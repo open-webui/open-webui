@@ -5,16 +5,21 @@
 	import {
 		createModel,
 		deleteModel,
+		downloadModel,
 		getOllamaUrls,
 		getOllamaVersion,
-		pullModel
+		pullModel,
+		cancelOllamaRequest,
+		uploadModel
 	} from '$lib/apis/ollama';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, models, user } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { addLiteLLMModel, deleteLiteLLMModel, getLiteLLMModelInfo } from '$lib/apis/litellm';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let getModels: Function;
 
@@ -58,11 +63,13 @@
 	let pullProgress = null;
 
 	let modelUploadMode = 'file';
-	let modelInputFile = '';
+	let modelInputFile: File[] | null = null;
 	let modelFileUrl = '';
 	let modelFileContent = `TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`;
 	let modelFileDigest = '';
+
 	let uploadProgress = null;
+	let uploadMessage = '';
 
 	let deleteModelTag = '';
 
@@ -134,11 +141,17 @@
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = modelTag.trim();
 		if (modelDownloadStatus[sanitizedModelTag]) {
-			toast.error(`Model '${sanitizedModelTag}' is already in queue for downloading.`);
+			toast.error(
+				$i18n.t(`Model '{{modelTag}}' is already in queue for downloading.`, {
+					modelTag: sanitizedModelTag
+				})
+			);
 			return;
 		}
 		if (Object.keys(modelDownloadStatus).length === 3) {
-			toast.error('Maximum of 3 models can be downloaded simultaneously. Please try again later.');
+			toast.error(
+				$i18n.t('Maximum of 3 models can be downloaded simultaneously. Please try again later.')
+			);
 			return;
 		}
 
@@ -151,15 +164,17 @@
 				// Remove the downloaded model
 				delete modelDownloadStatus[modelName];
 
-				console.log(data);
+				modelDownloadStatus = { ...modelDownloadStatus };
 
 				if (!data.success) {
 					toast.error(data.error);
 				} else {
-					toast.success(`Model '${modelName}' has been successfully downloaded.`);
+					toast.success(
+						$i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, { modelName })
+					);
 
 					const notification = new Notification($WEBUI_NAME, {
-						body: `Model '${modelName}' has been successfully downloaded.`,
+						body: $i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, { modelName }),
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
 
@@ -174,35 +189,32 @@
 
 	const uploadModelHandler = async () => {
 		modelTransferring = true;
-		uploadProgress = 0;
 
 		let uploaded = false;
 		let fileResponse = null;
 		let name = '';
 
 		if (modelUploadMode === 'file') {
-			const file = modelInputFile[0];
-			const formData = new FormData();
-			formData.append('file', file);
+			const file = modelInputFile ? modelInputFile[0] : null;
 
-			fileResponse = await fetch(`${WEBUI_API_BASE_URL}/utils/upload`, {
-				method: 'POST',
-				headers: {
-					...($user && { Authorization: `Bearer ${localStorage.token}` })
-				},
-				body: formData
-			}).catch((error) => {
-				console.log(error);
-				return null;
-			});
+			if (file) {
+				uploadMessage = 'Uploading...';
+
+				fileResponse = await uploadModel(localStorage.token, file, selectedOllamaUrlIdx).catch(
+					(error) => {
+						toast.error(error);
+						return null;
+					}
+				);
+			}
 		} else {
-			fileResponse = await fetch(`${WEBUI_API_BASE_URL}/utils/download?url=${modelFileUrl}`, {
-				method: 'GET',
-				headers: {
-					...($user && { Authorization: `Bearer ${localStorage.token}` })
-				}
-			}).catch((error) => {
-				console.log(error);
+			uploadProgress = 0;
+			fileResponse = await downloadModel(
+				localStorage.token,
+				modelFileUrl,
+				selectedOllamaUrlIdx
+			).catch((error) => {
+				toast.error(error);
 				return null;
 			});
 		}
@@ -225,6 +237,9 @@
 							let data = JSON.parse(line.replace(/^data: /, ''));
 
 							if (data.progress) {
+								if (uploadMessage) {
+									uploadMessage = '';
+								}
 								uploadProgress = data.progress;
 							}
 
@@ -243,6 +258,9 @@
 					console.log(error);
 				}
 			}
+		} else {
+			const error = await fileResponse?.json();
+			toast.error(error?.detail ?? error);
 		}
 
 		if (uploaded) {
@@ -308,7 +326,11 @@
 		}
 
 		modelFileUrl = '';
-		modelInputFile = '';
+
+		if (modelUploadInputElement) {
+			modelUploadInputElement.value = '';
+		}
+		modelInputFile = null;
 		modelTransferring = false;
 		uploadProgress = null;
 
@@ -323,7 +345,7 @@
 		);
 
 		if (res) {
-			toast.success(`Deleted ${deleteModelTag}`);
+			toast.success($i18n.t(`Deleted {{deleteModelTag}}`, { deleteModelTag }));
 		}
 
 		deleteModelTag = '';
@@ -354,12 +376,24 @@
 					for (const line of lines) {
 						if (line !== '') {
 							let data = JSON.parse(line);
+							console.log(data);
 							if (data.error) {
 								throw data.error;
 							}
 							if (data.detail) {
 								throw data.detail;
 							}
+
+							if (data.id) {
+								modelDownloadStatus[opts.modelName] = {
+									...modelDownloadStatus[opts.modelName],
+									requestId: data.id,
+									reader,
+									done: false
+								};
+								console.log(data);
+							}
+
 							if (data.status) {
 								if (data.digest) {
 									let downloadProgress = 0;
@@ -369,11 +403,17 @@
 										downloadProgress = 100;
 									}
 									modelDownloadStatus[opts.modelName] = {
+										...modelDownloadStatus[opts.modelName],
 										pullProgress: downloadProgress,
 										digest: data.digest
 									};
 								} else {
 									toast.success(data.status);
+
+									modelDownloadStatus[opts.modelName] = {
+										...modelDownloadStatus[opts.modelName],
+										done: data.status === 'success'
+									};
 								}
 							}
 						}
@@ -386,7 +426,14 @@
 					opts.callback({ success: false, error, modelName: opts.modelName });
 				}
 			}
-			opts.callback({ success: true, modelName: opts.modelName });
+
+			console.log(modelDownloadStatus[opts.modelName]);
+
+			if (modelDownloadStatus[opts.modelName].done) {
+				opts.callback({ success: true, modelName: opts.modelName });
+			} else {
+				opts.callback({ success: false, error: 'Download canceled', modelName: opts.modelName });
+			}
 		}
 	};
 
@@ -410,7 +457,7 @@
 				}
 			}
 		} else {
-			toast.error(`Model ${liteLLMModelName} already exists.`);
+			toast.error($i18n.t(`Model {{modelName}} already exists.`, { modelName: liteLLMModelName }));
 		}
 
 		liteLLMModelName = '';
@@ -456,13 +503,25 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
 	});
+
+	const cancelModelPullHandler = async (model: string) => {
+		const { reader, requestId } = modelDownloadStatus[model];
+		if (reader) {
+			await reader.cancel();
+
+			await cancelOllamaRequest(localStorage.token, requestId);
+			delete modelDownloadStatus[model];
+			await deleteModel(localStorage.token, model);
+			toast.success(`${model} download has been canceled`);
+		}
+	};
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-[23rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-[24rem]">
 		{#if ollamaVersion}
 			<div class="space-y-2 pr-1.5">
-				<div class="text-sm font-medium">Manage Ollama Models</div>
+				<div class="text-sm font-medium">{$i18n.t('Manage Ollama Models')}</div>
 
 				{#if OLLAMA_URLS.length > 0}
 					<div class="flex gap-2">
@@ -470,7 +529,7 @@
 							<select
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 								bind:value={selectedOllamaUrlIdx}
-								placeholder="Select an Ollama instance"
+								placeholder={$i18n.t('Select an Ollama instance')}
 							>
 								{#each OLLAMA_URLS as url, idx}
 									<option value={idx} class="bg-gray-100 dark:bg-gray-700">{url}</option>
@@ -513,12 +572,14 @@
 
 				<div class="space-y-2">
 					<div>
-						<div class=" mb-2 text-sm font-medium">Pull a model from Ollama.com</div>
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('Pull a model from Ollama.com')}</div>
 						<div class="flex w-full">
 							<div class="flex-1 mr-2">
 								<input
 									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-									placeholder="Enter model tag (e.g. mistral:7b)"
+									placeholder={$i18n.t('Enter model tag (e.g. {{modelTag}})', {
+										modelTag: 'mistral:7b'
+									})}
 									bind:value={modelTag}
 								/>
 							</div>
@@ -573,47 +634,84 @@
 							</button>
 						</div>
 
-						<div>
-							<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
-								To access the available model names for downloading, <a
-									class=" text-gray-500 dark:text-gray-300 font-medium underline"
-									href="https://ollama.com/library"
-									target="_blank">click here.</a
-								>
-							</div>
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('To access the available model names for downloading,')}
+							<a
+								class=" text-gray-500 dark:text-gray-300 font-medium underline"
+								href="https://ollama.com/library"
+								target="_blank">{$i18n.t('click here.')}</a
+							>
 						</div>
 
 						{#if Object.keys(modelDownloadStatus).length > 0}
 							{#each Object.keys(modelDownloadStatus) as model}
-								<div class="flex flex-col">
-									<div class="font-medium mb-1">{model}</div>
-									<div class="">
-										<div
-											class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
-											style="width: {Math.max(15, modelDownloadStatus[model].pullProgress ?? 0)}%"
-										>
-											{modelDownloadStatus[model].pullProgress ?? 0}%
-										</div>
-										<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
-											{modelDownloadStatus[model].digest}
+								{#if 'pullProgress' in modelDownloadStatus[model]}
+									<div class="flex flex-col">
+										<div class="font-medium mb-1">{model}</div>
+										<div class="">
+											<div class="flex flex-row justify-between space-x-4 pr-2">
+												<div class=" flex-1">
+													<div
+														class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
+														style="width: {Math.max(
+															15,
+															modelDownloadStatus[model].pullProgress ?? 0
+														)}%"
+													>
+														{modelDownloadStatus[model].pullProgress ?? 0}%
+													</div>
+												</div>
+
+												<Tooltip content="Cancel">
+													<button
+														class="text-gray-800 dark:text-gray-100"
+														on:click={() => {
+															cancelModelPullHandler(model);
+														}}
+													>
+														<svg
+															class="w-4 h-4 text-gray-800 dark:text-white"
+															aria-hidden="true"
+															xmlns="http://www.w3.org/2000/svg"
+															width="24"
+															height="24"
+															fill="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke="currentColor"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M6 18 17.94 6M18 18 6.06 6"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											</div>
+											{#if 'digest' in modelDownloadStatus[model]}
+												<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
+													{modelDownloadStatus[model].digest}
+												</div>
+											{/if}
 										</div>
 									</div>
-								</div>
+								{/if}
 							{/each}
 						{/if}
 					</div>
 
 					<div>
-						<div class=" mb-2 text-sm font-medium">Delete a model</div>
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('Delete a model')}</div>
 						<div class="flex w-full">
 							<div class="flex-1 mr-2">
 								<select
 									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={deleteModelTag}
-									placeholder="Select a model"
+									placeholder={$i18n.t('Select a model')}
 								>
 									{#if !deleteModelTag}
-										<option value="" disabled selected>Select a model</option>
+										<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 									{/if}
 									{#each $models.filter((m) => m.size != null && (selectedOllamaUrlIdx === null ? true : (m?.urls ?? []).includes(selectedOllamaUrlIdx))) as model}
 										<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
@@ -646,13 +744,13 @@
 
 					<div class="pt-1">
 						<div class="flex justify-between items-center text-xs">
-							<div class=" text-sm font-medium">Experimental</div>
+							<div class=" text-sm font-medium">{$i18n.t('Experimental')}</div>
 							<button
 								class=" text-xs font-medium text-gray-500"
 								type="button"
 								on:click={() => {
 									showExperimentalOllama = !showExperimentalOllama;
-								}}>{showExperimentalOllama ? 'Hide' : 'Show'}</button
+								}}>{showExperimentalOllama ? $i18n.t('Hide') : $i18n.t('Show')}</button
 							>
 						</div>
 					</div>
@@ -664,7 +762,7 @@
 							}}
 						>
 							<div class=" mb-2 flex w-full justify-between">
-								<div class="  text-sm font-medium">Upload a GGUF model</div>
+								<div class="  text-sm font-medium">{$i18n.t('Upload a GGUF model')}</div>
 
 								<button
 									class="p-1 px-3 text-xs flex rounded transition"
@@ -678,9 +776,9 @@
 									type="button"
 								>
 									{#if modelUploadMode === 'file'}
-										<span class="ml-2 self-center">File Mode</span>
+										<span class="ml-2 self-center">{$i18n.t('File Mode')}</span>
 									{:else}
-										<span class="ml-2 self-center">URL Mode</span>
+										<span class="ml-2 self-center">{$i18n.t('URL Mode')}</span>
 									{/if}
 								</button>
 							</div>
@@ -704,7 +802,7 @@
 
 											<button
 												type="button"
-												class="w-full rounded-lg text-left py-2 px-4 dark:text-gray-300 dark:bg-gray-850"
+												class="w-full rounded-lg text-left py-2 px-4 bg-white dark:text-gray-300 dark:bg-gray-850"
 												on:click={() => {
 													modelUploadInputElement.click();
 												}}
@@ -712,21 +810,21 @@
 												{#if modelInputFile && modelInputFile.length > 0}
 													{modelInputFile[0].name}
 												{:else}
-													Click here to select
+													{$i18n.t('Click here to select')}
 												{/if}
 											</button>
 										</div>
 									{:else}
 										<div class="flex-1 {modelFileUrl !== '' ? 'mr-2' : ''}">
 											<input
-												class="w-full rounded-lg text-left py-2 px-4 dark:text-gray-300 dark:bg-gray-850 outline-none {modelFileUrl !==
+												class="w-full rounded-lg text-left py-2 px-4 bg-white dark:text-gray-300 dark:bg-gray-850 outline-none {modelFileUrl !==
 												''
 													? 'mr-2'
 													: ''}"
 												type="url"
 												required
 												bind:value={modelFileUrl}
-												placeholder="Type Hugging Face Resolve (Download) URL"
+												placeholder={$i18n.t('Type Hugging Face Resolve (Download) URL')}
 											/>
 										</div>
 									{/if}
@@ -734,7 +832,7 @@
 
 								{#if (modelUploadMode === 'file' && modelInputFile && modelInputFile.length > 0) || (modelUploadMode === 'url' && modelFileUrl !== '')}
 									<button
-										class="px-3 text-gray-100 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded transition"
+										class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg disabled:cursor-not-allowed transition"
 										type="submit"
 										disabled={modelTransferring}
 									>
@@ -786,26 +884,43 @@
 							{#if (modelUploadMode === 'file' && modelInputFile && modelInputFile.length > 0) || (modelUploadMode === 'url' && modelFileUrl !== '')}
 								<div>
 									<div>
-										<div class=" my-2.5 text-sm font-medium">Modelfile Content</div>
+										<div class=" my-2.5 text-sm font-medium">{$i18n.t('Modelfile Content')}</div>
 										<textarea
 											bind:value={modelFileContent}
-											class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-100 dark:text-gray-100 dark:bg-gray-850 outline-none resize-none"
 											rows="6"
 										/>
 									</div>
 								</div>
 							{/if}
 							<div class=" mt-1 text-xs text-gray-400 dark:text-gray-500">
-								To access the GGUF models available for downloading, <a
+								{$i18n.t('To access the GGUF models available for downloading,')}
+								<a
 									class=" text-gray-500 dark:text-gray-300 font-medium underline"
 									href="https://huggingface.co/models?search=gguf"
-									target="_blank">click here.</a
+									target="_blank">{$i18n.t('click here.')}</a
 								>
 							</div>
 
-							{#if uploadProgress !== null}
+							{#if uploadMessage}
 								<div class="mt-2">
-									<div class=" mb-2 text-xs">Upload Progress</div>
+									<div class=" mb-2 text-xs">{$i18n.t('Upload Progress')}</div>
+
+									<div class="w-full rounded-full dark:bg-gray-800">
+										<div
+											class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
+											style="width: 100%"
+										>
+											{uploadMessage}
+										</div>
+									</div>
+									<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
+										{modelFileDigest}
+									</div>
+								</div>
+							{:else if uploadProgress !== null}
+								<div class="mt-2">
+									<div class=" mb-2 text-xs">{$i18n.t('Upload Progress')}</div>
 
 									<div class="w-full rounded-full dark:bg-gray-800">
 										<div
@@ -832,13 +947,13 @@
 				<div>
 					<div class="mb-2">
 						<div class="flex justify-between items-center text-xs">
-							<div class=" text-sm font-medium">Manage LiteLLM Models</div>
+							<div class=" text-sm font-medium">{$i18n.t('Manage LiteLLM Models')}</div>
 							<button
 								class=" text-xs font-medium text-gray-500"
 								type="button"
 								on:click={() => {
 									showLiteLLM = !showLiteLLM;
-								}}>{showLiteLLM ? 'Hide' : 'Show'}</button
+								}}>{showLiteLLM ? $i18n.t('Hide') : $i18n.t('Show')}</button
 							>
 						</div>
 					</div>
@@ -846,14 +961,16 @@
 					{#if showLiteLLM}
 						<div>
 							<div class="flex justify-between items-center text-xs">
-								<div class=" text-sm font-medium">Add a model</div>
+								<div class=" text-sm font-medium">{$i18n.t('Add a model')}</div>
 								<button
 									class=" text-xs font-medium text-gray-500"
 									type="button"
 									on:click={() => {
 										showLiteLLMParams = !showLiteLLMParams;
 									}}
-									>{showLiteLLMParams ? 'Hide Additional Params' : 'Show Additional Params'}</button
+									>{showLiteLLMParams
+										? $i18n.t('Hide Additional Params')
+										: $i18n.t('Show Additional Params')}</button
 								>
 							</div>
 						</div>
@@ -863,7 +980,7 @@
 								<div class="flex-1 mr-2">
 									<input
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-										placeholder="Enter LiteLLM Model (litellm_params.model)"
+										placeholder={$i18n.t('Enter LiteLLM Model (litellm_params.model)')}
 										bind:value={liteLLMModel}
 										autocomplete="off"
 									/>
@@ -890,7 +1007,7 @@
 
 							{#if showLiteLLMParams}
 								<div>
-									<div class=" mb-1.5 text-sm font-medium">Model Name</div>
+									<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Model Name')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
@@ -904,12 +1021,14 @@
 								</div>
 
 								<div>
-									<div class=" mb-1.5 text-sm font-medium">API Base URL</div>
+									<div class=" mb-1.5 text-sm font-medium">{$i18n.t('API Base URL')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter LiteLLM API Base URL (litellm_params.api_base)"
+												placeholder={$i18n.t(
+													'Enter LiteLLM API Base URL (litellm_params.api_base)'
+												)}
 												bind:value={liteLLMAPIBase}
 												autocomplete="off"
 											/>
@@ -918,12 +1037,12 @@
 								</div>
 
 								<div>
-									<div class=" mb-1.5 text-sm font-medium">API Key</div>
+									<div class=" mb-1.5 text-sm font-medium">{$i18n.t('API Key')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter LiteLLM API Key (litellm_params.api_key)"
+												placeholder={$i18n.t('Enter LiteLLM API Key (litellm_params.api_key)')}
 												bind:value={liteLLMAPIKey}
 												autocomplete="off"
 											/>
@@ -932,12 +1051,12 @@
 								</div>
 
 								<div>
-									<div class="mb-1.5 text-sm font-medium">API RPM</div>
+									<div class="mb-1.5 text-sm font-medium">{$i18n.t('API RPM')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter LiteLLM API RPM (litellm_params.rpm)"
+												placeholder={$i18n.t('Enter LiteLLM API RPM (litellm_params.rpm)')}
 												bind:value={liteLLMRPM}
 												autocomplete="off"
 											/>
@@ -946,12 +1065,12 @@
 								</div>
 
 								<div>
-									<div class="mb-1.5 text-sm font-medium">Max Tokens</div>
+									<div class="mb-1.5 text-sm font-medium">{$i18n.t('Max Tokens')}</div>
 									<div class="flex w-full">
 										<div class="flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter Max Tokens (litellm_params.max_tokens)"
+												placeholder={$i18n.t('Enter Max Tokens (litellm_params.max_tokens)')}
 												bind:value={liteLLMMaxTokens}
 												type="number"
 												min="1"
@@ -964,27 +1083,27 @@
 						</div>
 
 						<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
-							Not sure what to add?
+							{$i18n.t('Not sure what to add?')}
 							<a
 								class=" text-gray-300 font-medium underline"
 								href="https://litellm.vercel.app/docs/proxy/configs#quick-start"
 								target="_blank"
 							>
-								Click here for help.
+								{$i18n.t('Click here for help.')}
 							</a>
 						</div>
 
 						<div>
-							<div class=" mb-2.5 text-sm font-medium">Delete a model</div>
+							<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Delete a model')}</div>
 							<div class="flex w-full">
 								<div class="flex-1 mr-2">
 									<select
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={deleteLiteLLMModelId}
-										placeholder="Select a model"
+										placeholder={$i18n.t('Select a model')}
 									>
 										{#if !deleteLiteLLMModelId}
-											<option value="" disabled selected>Select a model</option>
+											<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 										{/if}
 										{#each liteLLMModelInfo as model}
 											<option value={model.model_info.id} class="bg-gray-100 dark:bg-gray-700"

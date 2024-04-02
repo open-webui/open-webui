@@ -1,4 +1,6 @@
 import os
+import sys
+import logging
 import chromadb
 from chromadb import Settings
 from base64 import b64encode
@@ -21,9 +23,10 @@ try:
 
     load_dotenv(find_dotenv("../.env"))
 except ImportError:
-    print("dotenv not installed, skipping...")
+    log.warning("dotenv not installed, skipping...")
 
 WEBUI_NAME = "Open WebUI"
+WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################
@@ -101,6 +104,47 @@ CHANGELOG = changelog_json
 
 
 ####################################
+# LOGGING
+####################################
+log_levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
+
+GLOBAL_LOG_LEVEL = os.environ.get("GLOBAL_LOG_LEVEL", "").upper()
+if GLOBAL_LOG_LEVEL in log_levels:
+    logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
+else:
+    GLOBAL_LOG_LEVEL = "INFO"
+
+log = logging.getLogger(__name__)
+log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
+
+log_sources = [
+    "AUDIO",
+    "COMFYUI",
+    "CONFIG",
+    "DB",
+    "IMAGES",
+    "LITELLM",
+    "MAIN",
+    "MODELS",
+    "OLLAMA",
+    "OPENAI",
+    "RAG",
+    "WEBHOOK",
+]
+
+SRC_LOG_LEVELS = {}
+
+for source in log_sources:
+    log_env_var = source + "_LOG_LEVEL"
+    SRC_LOG_LEVELS[source] = os.environ.get(log_env_var, "").upper()
+    if SRC_LOG_LEVELS[source] not in log_levels:
+        SRC_LOG_LEVELS[source] = GLOBAL_LOG_LEVEL
+    log.info(f"{log_env_var}: {SRC_LOG_LEVELS[source]}")
+
+log.setLevel(SRC_LOG_LEVELS["CONFIG"])
+
+
+####################################
 # CUSTOM_NAME
 ####################################
 
@@ -111,7 +155,7 @@ if CUSTOM_NAME:
         data = r.json()
         if r.ok:
             if "logo" in data:
-                url = (
+                WEBUI_FAVICON_URL = url = (
                     f"https://api.openwebui.com{data['logo']}"
                     if data["logo"][0] == "/"
                     else data["logo"]
@@ -125,7 +169,7 @@ if CUSTOM_NAME:
 
             WEBUI_NAME = data["name"]
     except Exception as e:
-        print(e)
+        log.exception(e)
         pass
 
 
@@ -194,9 +238,9 @@ def create_config_file(file_path):
 LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
 
 if not os.path.exists(LITELLM_CONFIG_PATH):
-    print("Config file doesn't exist. Creating...")
+    log.info("Config file doesn't exist. Creating...")
     create_config_file(LITELLM_CONFIG_PATH)
-    print("Config file created successfully.")
+    log.info("Config file created successfully.")
 
 
 ####################################
@@ -209,7 +253,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
 INCLUDE_OLLAMA = os.environ.get("INCLUDE_OLLAMA_ENV", "false")
-
+K8S_FLAG = os.environ.get("K8S_FLAG", "")
 
 if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     OLLAMA_BASE_URL = (
@@ -226,6 +270,9 @@ if ENV == "prod":
             OLLAMA_BASE_URL = "http://localhost:11434"
         else:    
             OLLAMA_BASE_URL = "http://host.docker.internal:11434"
+
+    elif K8S_FLAG:
+        OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
 
 
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
@@ -256,8 +303,10 @@ OPENAI_API_BASE_URLS = (
     OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != "" else OPENAI_API_BASE_URL
 )
 
-OPENAI_API_BASE_URLS = [url.strip() for url in OPENAI_API_BASE_URLS.split(";")]
-
+OPENAI_API_BASE_URLS = [
+    url.strip() if url != "" else "https://api.openai.com/v1"
+    for url in OPENAI_API_BASE_URLS.split(";")
+]
 
 ####################################
 # WEBUI
@@ -294,13 +343,19 @@ DEFAULT_PROMPT_SUGGESTIONS = (
 
 
 DEFAULT_USER_ROLE = os.getenv("DEFAULT_USER_ROLE", "pending")
-USER_PERMISSIONS = {"chat": {"deletion": True}}
+
+USER_PERMISSIONS_CHAT_DELETION = (
+    os.environ.get("USER_PERMISSIONS_CHAT_DELETION", "True").lower() == "true"
+)
+
+USER_PERMISSIONS = {"chat": {"deletion": USER_PERMISSIONS_CHAT_DELETION}}
 
 
-MODEL_FILTER_ENABLED = os.environ.get("MODEL_FILTER_ENABLED", False)
+MODEL_FILTER_ENABLED = os.environ.get("MODEL_FILTER_ENABLED", "False").lower() == "true"
 MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
 MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
 ####################################
 # WEBUI_VERSION
@@ -385,3 +440,4 @@ WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models"
 ####################################
 
 AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
+COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")

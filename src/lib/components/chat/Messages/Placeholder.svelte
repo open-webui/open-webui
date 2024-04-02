@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { user } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	export let models = [];
 	export let modelfiles = [];
@@ -31,7 +33,7 @@
 							<img
 								src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
 								alt="modelfile"
-								class=" w-14 rounded-full border-[1px] border-gray-200 dark:border-none"
+								class=" size-12 rounded-full border-[1px] border-gray-200 dark:border-none"
 								draggable="false"
 							/>
 						{:else}
@@ -39,7 +41,7 @@
 								src={models.length === 1
 									? `${WEBUI_BASE_URL}/static/favicon.png`
 									: `${WEBUI_BASE_URL}/static/favicon.png`}
-								class=" w-14 rounded-full border-[1px] border-gray-200 dark:border-none"
+								class=" size-12 rounded-full border-[1px] border-gray-200 dark:border-none"
 								alt="logo"
 								draggable="false"
 							/>
@@ -64,9 +66,9 @@
 					</div>
 				{/if}
 			{:else}
-				<div class=" line-clamp-1">Hello, {$user.name}</div>
+				<div class=" line-clamp-1">{$i18n.t('Hello, {{name}}', { name: $user.name })}</div>
 
-				<div>How can I help you today?</div>
+				<div>{$i18n.t('How can I help you today?')}</div>
 			{/if}
 		</div>
 	</div>

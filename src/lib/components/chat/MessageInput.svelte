@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
 	import { settings } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
@@ -13,6 +13,8 @@
 	import Models from './MessageInput/Models.svelte';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import Tooltip from '../common/Tooltip.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
@@ -209,11 +211,11 @@
 					// Event triggered when an error occurs
 					speechRecognition.onerror = function (event) {
 						console.log(event);
-						toast.error(`Speech recognition error: ${event.error}`);
+						toast.error($i18n.t(`Speech recognition error: {{error}}`, { error: event.error }));
 						isRecording = false;
 					};
 				} else {
-					toast.error('SpeechRecognition API is not supported in this browser.');
+					toast.error($i18n.t('SpeechRecognition API is not supported in this browser.'));
 				}
 			}
 		}
@@ -333,12 +335,15 @@
 						uploadDoc(file);
 					} else {
 						toast.error(
-							`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+							$i18n.t(
+								`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
+								{ file_type: file['type'] }
+							)
 						);
 						uploadDoc(file);
 					}
 				} else {
-					toast.error(`File not found.`);
+					toast.error($i18n.t(`File not found.`));
 				}
 			}
 
@@ -477,13 +482,16 @@
 								filesInputElement.value = '';
 							} else {
 								toast.error(
-									`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+									$i18n.t(
+										`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
+										{ file_type: file['type'] }
+									)
 								);
 								uploadDoc(file);
 								filesInputElement.value = '';
 							}
 						} else {
-							toast.error(`File not found.`);
+							toast.error($i18n.t(`File not found.`));
 						}
 					}}
 				/>
@@ -570,7 +578,7 @@
 													{file.name}
 												</div>
 
-												<div class=" text-gray-500 text-sm">Document</div>
+												<div class=" text-gray-500 text-sm">{$i18n.t('Document')}</div>
 											</div>
 										</div>
 									{:else if file.type === 'collection'}
@@ -598,7 +606,7 @@
 													{file?.title ?? `#${file.name}`}
 												</div>
 
-												<div class=" text-gray-500 text-sm">Collection</div>
+												<div class=" text-gray-500 text-sm">{$i18n.t('Collection')}</div>
 											</div>
 										</div>
 									{/if}
@@ -632,7 +640,7 @@
 					<div class=" flex">
 						{#if fileUploadEnabled}
 							<div class=" self-end mb-2 ml-1">
-								<Tooltip content="Upload files">
+								<Tooltip content={$i18n.t('Upload files')}>
 									<button
 										class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
 										type="button"
@@ -664,8 +672,8 @@
 							placeholder={chatInputPlaceholder !== ''
 								? chatInputPlaceholder
 								: isRecording
-								? 'Listening...'
-								: 'Send a message'}
+								? $i18n.t('Listening...')
+								: $i18n.t('Send a Message')}
 							bind:value={prompt}
 							on:keypress={(e) => {
 								if (e.keyCode == 13 && !e.shiftKey) {
@@ -804,7 +812,7 @@
 
 						<div class="self-end mb-2 flex space-x-1 mr-1">
 							{#if messages.length == 0 || messages.at(-1).done == true}
-								<Tooltip content="Record voice">
+								<Tooltip content={$i18n.t('Record voice')}>
 									{#if speechRecognitionEnabled}
 										<button
 											id="voice-input-button"
@@ -873,7 +881,7 @@
 									{/if}
 								</Tooltip>
 
-								<Tooltip content="Send message">
+								<Tooltip content={$i18n.t('Send message')}>
 									<button
 										class="{prompt !== ''
 											? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
@@ -919,7 +927,7 @@
 				</form>
 
 				<div class="mt-1.5 text-xs text-gray-500 text-center">
-					LLMs can make mistakes. Verify important information.
+					{$i18n.t('LLMs can make mistakes. Verify important information.')}
 				</div>
 			</div>
 		</div>

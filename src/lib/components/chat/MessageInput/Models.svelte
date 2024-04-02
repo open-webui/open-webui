@@ -2,8 +2,10 @@
 	import { generatePrompt } from '$lib/apis/ollama';
 	import { models } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
-	import { tick } from 'svelte';
+	import { tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	export let prompt = '';
 	export let user = null;
@@ -41,7 +43,7 @@
 		user = JSON.parse(JSON.stringify(model.name));
 		await tick();
 
-		chatInputPlaceholder = `'${model.name}' is thinking...`;
+		chatInputPlaceholder = $i18n.t('{{modelName}} is thinking...', { modelName: model.name });
 
 		const chatInputElement = document.getElementById('chat-textarea');
 
@@ -113,7 +115,9 @@
 					toast.error(error.error);
 				}
 			} else {
-				toast.error(`Uh-oh! There was an issue connecting to Ollama.`);
+				toast.error(
+					$i18n.t('Uh-oh! There was an issue connecting to {{provider}}.', { provider: 'llama' })
+				);
 			}
 		}
 

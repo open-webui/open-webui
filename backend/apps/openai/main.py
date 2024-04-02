@@ -6,6 +6,7 @@ import requests
 import aiohttp
 import asyncio
 import json
+import logging
 
 from pydantic import BaseModel
 
@@ -19,6 +20,7 @@ from utils.utils import (
     get_admin_user,
 )
 from config import (
+    SRC_LOG_LEVELS,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     CACHE_DIR,
@@ -30,6 +32,9 @@ from typing import List, Optional
 
 import hashlib
 from pathlib import Path
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 
 app = FastAPI()
 app.add_middleware(
@@ -111,6 +116,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEYS[idx]}"
         headers["Content-Type"] = "application/json"
 
+        r = None
         try:
             r = requests.post(
                 url=f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech",
@@ -133,7 +139,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             return FileResponse(file_path)
 
         except Exception as e:
-            print(e)
+            log.exception(e)
             error_detail = "Open WebUI: Server Connection Error"
             if r is not None:
                 try:
@@ -143,7 +149,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 except:
                     error_detail = f"External: {e}"
 
-            raise HTTPException(status_code=r.status_code, detail=error_detail)
+            raise HTTPException(
+                status_code=r.status_code if r else 500, detail=error_detail
+            )
 
     except ValueError:
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
@@ -157,7 +165,7 @@ async def fetch_url(url, key):
                 return await response.json()
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.error(f"Connection error: {e}")
         return None
 
 
@@ -165,20 +173,21 @@ def merge_models_lists(model_lists):
     merged_list = []
 
     for idx, models in enumerate(model_lists):
-        merged_list.extend(
-            [
-                {**model, "urlIdx": idx}
-                for model in models
-                if "api.openai.com" not in app.state.OPENAI_API_BASE_URLS[idx]
-                or "gpt" in model["id"]
-            ]
-        )
+        if models is not None and "error" not in models:
+            merged_list.extend(
+                [
+                    {**model, "urlIdx": idx}
+                    for model in models
+                    if "api.openai.com" not in app.state.OPENAI_API_BASE_URLS[idx]
+                    or "gpt" in model["id"]
+                ]
+            )
 
     return merged_list
 
 
 async def get_all_models():
-    print("get_all_models")
+    log.info("get_all_models()")
 
     if len(app.state.OPENAI_API_KEYS) == 1 and app.state.OPENAI_API_KEYS[0] == "":
         models = {"data": []}
@@ -187,15 +196,24 @@ async def get_all_models():
             fetch_url(f"{url}/models", app.state.OPENAI_API_KEYS[idx])
             for idx, url in enumerate(app.state.OPENAI_API_BASE_URLS)
         ]
+
         responses = await asyncio.gather(*tasks)
-        responses = list(
-            filter(lambda x: x is not None and "error" not in x, responses)
-        )
         models = {
             "data": merge_models_lists(
-                list(map(lambda response: response["data"], responses))
+                list(
+                    map(
+                        lambda response: (
+                            response["data"]
+                            if response and "data" in response
+                            else None
+                        ),
+                        responses,
+                    )
+                )
             )
         }
+
+        log.info(f"models: {models}")
         app.state.MODELS = {model["id"]: model for model in models["data"]}
 
         return models
@@ -218,6 +236,9 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
         return models
     else:
         url = app.state.OPENAI_API_BASE_URLS[url_idx]
+
+        r = None
+
         try:
             r = requests.request(method="GET", url=f"{url}/models")
             r.raise_for_status()
@@ -230,7 +251,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
 
             return response_data
         except Exception as e:
-            print(e)
+            log.exception(e)
             error_detail = "Open WebUI: Server Connection Error"
             if r is not None:
                 try:
@@ -264,7 +285,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         if body.get("model") == "gpt-4-vision-preview":
             if "max_tokens" not in body:
                 body["max_tokens"] = 4000
-            print("Modified body_dict:", body)
+            log.debug("Modified body_dict:", body)
 
         # Fix for ChatGPT calls failing because the num_ctx key is in body
         if "num_ctx" in body:
@@ -276,7 +297,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         # Convert the modified body back to JSON
         body = json.dumps(body)
     except json.JSONDecodeError as e:
-        print("Error loading request body into a dictionary:", e)
+        log.error("Error loading request body into a dictionary:", e)
 
     url = app.state.OPENAI_API_BASE_URLS[idx]
     key = app.state.OPENAI_API_KEYS[idx]
@@ -289,6 +310,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     headers = {}
     headers["Authorization"] = f"Bearer {key}"
     headers["Content-Type"] = "application/json"
+
+    r = None
 
     try:
         r = requests.request(
@@ -312,7 +335,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             response_data = r.json()
             return response_data
     except Exception as e:
-        print(e)
+        log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -322,4 +345,6 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             except:
                 error_detail = f"External: {e}"
 
-        raise HTTPException(status_code=r.status_code, detail=error_detail)
+        raise HTTPException(
+            status_code=r.status_code if r else 500, detail=error_detail
+        )

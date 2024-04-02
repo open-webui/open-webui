@@ -1,28 +1,31 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, getContext } from 'svelte';
+	import { tags } from '$lib/stores';
+	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
 
+	const i18n = getContext('i18n');
+
+	export let label = '';
 	let showTagInput = false;
 	let tagName = '';
+
+	const addTagHandler = async () => {
+		tagName = tagName.trim();
+		if (tagName !== '') {
+			dispatch('add', tagName);
+			tagName = '';
+			showTagInput = false;
+		} else {
+			toast.error('Invalid Tag');
+		}
+	};
 </script>
 
 <div class="flex space-x-1 pl-1.5">
 	{#if showTagInput}
 		<div class="flex items-center">
-			<input
-				bind:value={tagName}
-				class=" cursor-pointer self-center text-xs h-fit bg-transparent outline-none line-clamp-1 w-[4rem]"
-				placeholder="Add a tag"
-			/>
-
-			<button
-				type="button"
-				on:click={() => {
-					dispatch('add', tagName);
-					tagName = '';
-					showTagInput = false;
-				}}
-			>
+			<button type="button" on:click={addTagHandler}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 16 16"
@@ -36,9 +39,23 @@
 					/>
 				</svg>
 			</button>
+			<input
+				bind:value={tagName}
+				class=" pl-2 cursor-pointer self-center text-xs h-fit bg-transparent outline-none line-clamp-1 w-[5.5rem]"
+				placeholder={$i18n.t('Add a tag')}
+				list="tagOptions"
+				on:keydown={(event) => {
+					if (event.key === 'Enter') {
+						addTagHandler();
+					}
+				}}
+			/>
+			<datalist id="tagOptions">
+				{#each $tags as tag}
+					<option value={tag.name} />
+				{/each}
+			</datalist>
 		</div>
-
-		<!-- TODO: Tag Suggestions -->
 	{/if}
 
 	<button
@@ -61,4 +78,8 @@
 			</svg>
 		</div>
 	</button>
+
+	{#if label && !showTagInput}
+		<span class="text-xs pl-1.5 self-center">{label}</span>
+	{/if}
 </div>
