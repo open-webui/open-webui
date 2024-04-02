@@ -121,18 +121,6 @@
 			}
 		}
 	};
-
-	const scrollToBottom = () => {
-		if (messagesContainerElement) {
-			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
-		}
-	};
-
-	onMount(async () => {
-		if (!($settings.saveChatHistory ?? true)) {
-			await goto('/');
-		}
-	});
 </script>
 
 <svelte:head>
@@ -144,26 +132,13 @@
 </svelte:head>
 
 {#if loaded}
-	<div class="min-h-screen max-h-screen w-full flex flex-col">
-		<Navbar
-			{title}
-			bind:selectedModels
-			bind:showModelSelector
-			shareEnabled={false}
-			initNewChat={async () => {
-				goto('/');
-			}}
-		/>
+	<div
+		class="min-h-screen max-h-screen w-full flex flex-col text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900"
+	>
 		<div class="flex flex-col flex-auto">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+				class=" py-6 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 				id="messages-container"
-				bind:this={messagesContainerElement}
-				on:scroll={(e) => {
-					autoScroll =
-						messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-						messagesContainerElement.clientHeight + 5;
-				}}
 			>
 				<div class=" h-full w-full flex flex-col py-4">
 					<Messages
