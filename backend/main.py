@@ -62,6 +62,21 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
+print(
+    f"""
+  ___                    __        __   _     _   _ ___ 
+ / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
+| | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || | 
+| |_| | |_) |  __/ | | |   \ V  V /  __/ |_) | |_| || | 
+ \___/| .__/ \___|_| |_|    \_/\_/ \___|_.__/ \___/|___|
+      |_|                                               
+
+      
+v{VERSION} - building the best open-source AI user interface.      
+https://github.com/open-webui/open-webui
+"""
+)
+
 app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
 app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
@@ -164,18 +179,22 @@ app.mount("/rag/api/v1", rag_app)
 
 @app.get("/api/config")
 async def get_app_config():
+    # Checking and Handling the Absence of 'ui' in CONFIG_DATA
+
+    default_locale = "en-US"
+    if "ui" in CONFIG_DATA:
+        default_locale = CONFIG_DATA["ui"].get("default_locale", "en-US")
+
+    # The Rest of the Function Now Uses the Variables Defined Above
     return {
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
-        "default_locale": (
-            CONFIG_DATA["ui"]["default_locale"]
-            if "ui" in CONFIG_DATA and "default_locale" in CONFIG_DATA["ui"]
-            else "en-US"
-        ),
+        "default_locale": default_locale,
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
+        "trusted_header_auth": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
     }
 
 

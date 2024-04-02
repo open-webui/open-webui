@@ -258,6 +258,9 @@
 					console.log(error);
 				}
 			}
+		} else {
+			const error = await fileResponse?.json();
+			toast.error(error?.detail ?? error);
 		}
 
 		if (uploaded) {

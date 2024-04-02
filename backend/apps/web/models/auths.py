@@ -139,6 +139,14 @@ class AuthsTable:
                 return user
             else:
                 return None
+
+    def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
+        log.info(f"authenticate_user_by_trusted_header: {email}")
+        try:
+            auth = Auth.get(Auth.email == email, Auth.active == True)
+            if auth:
+                user = Users.get_user_by_id(auth.id)
+                return user
         except:
             return None
 

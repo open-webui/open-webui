@@ -81,6 +81,12 @@ async def check_url(request: Request, call_next):
     return response
 
 
+@app.head("/")
+@app.get("/")
+async def get_status():
+    return {"status": True}
+
+
 @app.get("/urls")
 async def get_ollama_api_urls(user=Depends(get_admin_user)):
     return {"OLLAMA_BASE_URLS": app.state.OLLAMA_BASE_URLS}
@@ -1029,6 +1035,14 @@ async def download_model(
     url_idx: Optional[int] = None,
 ):
 
+    allowed_hosts = ["https://huggingface.co/", "https://github.com/"]
+
+    if not any(form_data.url.startswith(host) for host in allowed_hosts):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file_url. Only URLs from allowed hosts are permitted.",
+        )
+
     if url_idx == None:
         url_idx = 0
     url = app.state.OLLAMA_BASE_URLS[url_idx]
@@ -1037,6 +1051,7 @@ async def download_model(
 
     if file_name:
         file_path = f"{UPLOAD_DIR}/{file_name}"
+
         return StreamingResponse(
             download_file_stream(url, form_data.url, file_path, file_name),
         )
