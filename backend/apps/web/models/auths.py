@@ -25,7 +25,6 @@ class Auth(Model):
     email = CharField()
     password = CharField()
     active = BooleanField()
-    api_key = CharField(null=True, unique=True)
 
     class Meta:
         database = DB
@@ -36,7 +35,6 @@ class AuthModel(BaseModel):
     email: str
     password: str
     active: bool = True
-    api_key: Optional[str] = None
 
 
 ####################
@@ -136,13 +134,8 @@ class AuthsTable:
             return None
 
         try:
-            auth = Auth.get(Auth.api_key == api_key, Auth.active == True)
-            if auth:
-                user = Users.get_user_by_id(auth.id)
-                return user
-            else:
-                return None
-
+            user = Users.get_user_by_api_key(api_key)
+            return user if user else None
         except:
             return False
 

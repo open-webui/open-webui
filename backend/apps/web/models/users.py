@@ -20,6 +20,7 @@ class User(Model):
     role = CharField()
     profile_image_url = CharField()
     timestamp = DateField()
+    api_key = CharField(null=True, unique=True)
 
     class Meta:
         database = DB
@@ -32,6 +33,7 @@ class UserModel(BaseModel):
     role: str = "pending"
     profile_image_url: str = "/user.png"
     timestamp: int  # timestamp in epoch
+    api_key: Optional[str] = None
 
 
 ####################
@@ -78,6 +80,13 @@ class UsersTable:
     def get_user_by_id(self, id: str) -> Optional[UserModel]:
         try:
             user = User.get(User.id == id)
+            return UserModel(**model_to_dict(user))
+        except:
+            return None
+
+    def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
+        try:
+            user = User.get(User.api_key == api_key)
             return UserModel(**model_to_dict(user))
         except:
             return None
