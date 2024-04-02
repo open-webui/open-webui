@@ -3,7 +3,7 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { user } from '$lib/stores';
-	import { updateUserProfile, createApiKey } from '$lib/apis/auths';
+	import { updateUserProfile, createAPIKey, getAPIKey } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
@@ -15,11 +15,14 @@
 
 	let profileImageUrl = '';
 	let name = '';
+
 	let showJWTToken = false;
 	let JWTTokenCopied = false;
-	let showApiKey = false;
-	let ApiKeyCopied = false;
-	let localApiKey = localStorage.apiKey;
+
+	let APIKey = '';
+	let showAPIKey = false;
+	let APIKeyCopied = false;
+
 	let profileImageInputElement: HTMLInputElement;
 
 	const submitHandler = async () => {
@@ -36,20 +39,23 @@
 		return false;
 	};
 
-	const createApiKeyHandler = async () => {
-		const apiKey = await createApiKey(localStorage.token);
-		if (apiKey) {
-			localApiKey = apiKey['api_key'];
-			localStorage.apiKey = localApiKey;
+	const createAPIKeyHandler = async () => {
+		APIKey = await createAPIKey(localStorage.token);
+		if (APIKey) {
 			toast.success($i18n.t('API Key created.'));
 		} else {
 			toast.error($i18n.t('Failed to create API Key.'));
 		}
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		name = $user.name;
 		profileImageUrl = $user.profile_image_url;
+
+		APIKey = await getAPIKey(localStorage.token).catch((error) => {
+			console.log(error);
+			return '';
+		});
 	});
 </script>
 
@@ -293,18 +299,18 @@
 					<div class="flex w-full">
 						<input
 							class="w-full rounded-l-lg py-1.5 pl-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
-							type={showApiKey ? 'text' : 'password'}
-							value={localApiKey}
+							type={showAPIKey ? 'text' : 'password'}
+							value={APIKey}
 							disabled
 						/>
 
 						<button
 							class="px-2 transition rounded-r-lg dark:bg-gray-800"
 							on:click={() => {
-								showApiKey = !showApiKey;
+								showAPIKey = !showAPIKey;
 							}}
 						>
-							{#if showApiKey}
+							{#if showAPIKey}
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									viewBox="0 0 16 16"
@@ -341,14 +347,14 @@
 					<button
 						class="ml-1.5 px-1.5 py-1 hover:bg-gray-800 transition rounded-lg"
 						on:click={() => {
-							copyToClipboard(localApiKey);
-							ApiKeyCopied = true;
+							copyToClipboard(APIKey);
+							APIKeyCopied = true;
 							setTimeout(() => {
-								ApiKeyCopied = false;
+								APIKeyCopied = false;
 							}, 2000);
 						}}
 					>
-						{#if ApiKeyCopied}
+						{#if APIKeyCopied}
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"
@@ -385,7 +391,7 @@
 					<button
 						class=" px-1.5 py-1 hover:bg-gray-800 transition rounded-lg"
 						on:click={() => {
-							createApiKeyHandler();
+							createAPIKeyHandler();
 						}}
 					>
 						<svg

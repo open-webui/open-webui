@@ -1,6 +1,6 @@
 <script>
 	import { goto } from '$app/navigation';
-	import { userSignIn, userSignUp, getApiKey } from '$lib/apis/auths';
+	import { userSignIn, userSignUp } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
@@ -24,17 +24,6 @@
 			await setApiKey(sessionUser.token);
 			await user.set(sessionUser);
 			goto('/');
-		}
-	};
-
-	const setApiKey = async (token) => {
-		const apiKey = await getApiKey(token).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (apiKey) {
-			localStorage.apiKey = apiKey['api-key'];
 		}
 	};
 

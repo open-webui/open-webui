@@ -319,7 +319,7 @@ export const updateJWTExpiresDuration = async (token: string, duration: string) 
 	return res;
 };
 
-export const createApiKey = async (token: string) => {
+export const createAPIKey = async (token: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
@@ -341,10 +341,10 @@ export const createApiKey = async (token: string) => {
 	if (error) {
 		throw error;
 	}
-	return res;
+	return res.api_key;
 };
 
-export const getApiKey = async (token: string) => {
+export const getAPIKey = async (token: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
@@ -366,10 +366,10 @@ export const getApiKey = async (token: string) => {
 	if (error) {
 		throw error;
 	}
-	return res;
+	return res.api_key;
 };
 
-export const deleteApiKey = async (token: string) => {
+export const deleteAPIKey = async (token: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
