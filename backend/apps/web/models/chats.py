@@ -247,8 +247,6 @@ class ChatTable:
                 for chat in Chat.select().where(Chat.user_id == user_id)
             ]
 
-            print(shared_chat_ids)
-
             query = Chat.delete().where(Chat.user_id << shared_chat_ids)
             query.execute()  # Remove the rows, return number of rows removed.
 
