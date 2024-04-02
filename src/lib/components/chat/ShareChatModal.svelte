@@ -21,7 +21,7 @@
 		const sharedChat = await shareChatById(localStorage.token, $chatId);
 		const chatShareUrl = `${window.location.origin}/s/${sharedChat.id}`;
 
-		toast.success($i18n.t('Copied shared conversation URL to clipboard!'));
+		toast.success($i18n.t('Copied shared chat URL to clipboard!'));
 		copyToClipboard(chatShareUrl);
 		chat = await getChatById(localStorage.token, $chatId);
 	};
