@@ -73,8 +73,10 @@
 	export let show = false;
 
 	onMount(async () => {
-		chat = await getChatById(localStorage.token, $chatId);
-		console.log(chat);
+		chatId.subscribe(async (value) => {
+			chat = await getChatById(localStorage.token, value);
+			console.log(chat);
+		});
 	});
 </script>
 
