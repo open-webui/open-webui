@@ -226,9 +226,9 @@ async def share_chat_by_id(id: str, user=Depends(get_current_user)):
 ############################
 
 
-@router.delete("/{id}/share", response_model=Optional[bool])
-async def delete_shared_chat_by_id(id: str, user=Depends(get_current_user)):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+@router.delete("/{share_id}/share", response_model=Optional[bool])
+async def delete_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id_and_user_id(share_id, user.id)
     if chat:
         if not chat.share_id:
             return False
@@ -248,9 +248,9 @@ async def delete_shared_chat_by_id(id: str, user=Depends(get_current_user)):
 ############################
 
 
-@router.get("/share/{id}", response_model=Optional[ChatResponse])
-async def get_shared_chat_by_id(id: str, user=Depends(get_current_user)):
-    chat = Chats.get_chat_by_id_and_user_id(id, "shared")
+@router.get("/share/{share_id}", response_model=Optional[ChatResponse])
+async def get_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id(share_id)
 
     if chat:
         return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})

@@ -181,6 +181,13 @@ class ChatTable:
             .order_by(Chat.timestamp.desc())
         ]
 
+    def get_chat_by_id(self, id: str) -> Optional[ChatModel]:
+        try:
+            chat = Chat.get(Chat.id == id)
+            return ChatModel(**model_to_dict(chat))
+        except:
+            return None
+
     def get_chat_by_id_and_user_id(self, id: str, user_id: str) -> Optional[ChatModel]:
         try:
             chat = Chat.get(Chat.id == id, Chat.user_id == user_id)
