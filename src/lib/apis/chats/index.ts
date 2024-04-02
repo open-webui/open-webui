@@ -285,7 +285,7 @@ export const shareChatById = async (token: string, id: string) => {
 export const deleteSharedChatById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/share`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
