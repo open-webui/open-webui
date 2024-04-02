@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
-
-	const i18n = getContext('i18n');
+	import { onMount } from 'svelte';
 
 	export let messages = [];
 	let textAreaElement: HTMLTextAreaElement;
@@ -21,20 +19,16 @@
 					class="px-2 py-1 text-sm font-semibold uppercase min-w-[6rem] text-left dark:group-hover:bg-gray-800 rounded-lg transition"
 					on:click={() => {
 						message.role = message.role === 'user' ? 'assistant' : 'user';
-					}}>{$i18n.t(message.role)}</button
+					}}>{message.role}</button
 				>
 			</div>
 
 			<div class="flex-1">
-				<!-- $i18n.t('a user') -->
-				<!-- $i18n.t('an assistant') -->
 				<textarea
 					id="{message.role}-{idx}-textarea"
 					bind:this={textAreaElement}
 					class="w-full bg-transparent outline-none rounded-lg p-2 text-sm resize-none overflow-hidden"
-					placeholder={$i18n.t(`Enter {{role}} message here`, {
-						role: message.role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
-					})}
+					placeholder="Enter {message.role === 'user' ? 'a user' : 'an assistant'} message here"
 					rows="1"
 					on:input={(e) => {
 						textAreaElement.style.height = '';
@@ -106,6 +100,6 @@
 			</svg>
 		</div>
 
-		<div class=" text-sm font-medium">{$i18n.t('Add message')}</div>
+		<div class=" text-sm font-medium">Add message</div>
 	</button>
 </div>

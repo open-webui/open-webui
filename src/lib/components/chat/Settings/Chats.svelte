@@ -2,6 +2,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
+	import { resetVectorDB } from '$lib/apis/rag';
 	import { chats, user } from '$lib/stores';
 
 	import {
@@ -12,11 +13,9 @@
 		getChatList
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
-	import { onMount, getContext } from 'svelte';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-
-	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
 	// Chats
@@ -100,13 +99,13 @@
 	});
 </script>
 
-<div class="flex flex-col h-full justify-between space-y-3 text-sm max-h-[22rem]">
+<div class="flex flex-col h-full justify-between space-y-3 text-sm">
 	<div class=" space-y-2">
 		<div
 			class="flex flex-col justify-between rounded-md items-center py-2 px-3.5 w-full transition"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-sm font-medium">{$i18n.t('Chat History')}</div>
+				<div class=" self-center text-sm font-medium">Chat History</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition"
@@ -130,7 +129,7 @@
 							/>
 						</svg>
 
-						<span class="ml-2 self-center"> {$i18n.t('On')} </span>
+						<span class="ml-2 self-center"> On </span>
 					{:else}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -148,13 +147,13 @@
 							/>
 						</svg>
 
-						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						<span class="ml-2 self-center">Off</span>
 					{/if}
 				</button>
 			</div>
 
 			<div class="text-xs text-left w-full font-medium mt-0.5">
-				{$i18n.t('This setting does not sync across browsers or devices.')}
+				This setting does not sync across browsers or devices.
 			</div>
 		</div>
 
@@ -189,7 +188,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center text-sm font-medium">{$i18n.t('Import Chats')}</div>
+				<div class=" self-center text-sm font-medium">Import Chats</div>
 			</button>
 			<button
 				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
@@ -211,7 +210,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center text-sm font-medium">{$i18n.t('Export Chats')}</div>
+				<div class=" self-center text-sm font-medium">Export Chats</div>
 			</button>
 		</div>
 
@@ -233,7 +232,7 @@
 							clip-rule="evenodd"
 						/>
 					</svg>
-					<span>{$i18n.t('Are you sure?')}</span>
+					<span>Are you sure?</span>
 				</div>
 
 				<div class="flex space-x-1.5 items-center">
@@ -297,7 +296,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center text-sm font-medium">{$i18n.t('Delete Chats')}</div>
+				<div class=" self-center text-sm font-medium">Delete Chats</div>
 			</button>
 		{/if}
 
@@ -325,9 +324,39 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center text-sm font-medium">
-					{$i18n.t('Export All Chats (All Users)')}
+				<div class=" self-center text-sm font-medium">Export All Chats (All Users)</div>
+			</button>
+
+			<hr class=" dark:border-gray-700" />
+
+			<button
+				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+				on:click={() => {
+					const res = resetVectorDB(localStorage.token).catch((error) => {
+						toast.error(error);
+						return null;
+					});
+
+					if (res) {
+						toast.success('Success');
+					}
+				}}
+			>
+				<div class=" self-center mr-3">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-4 h-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M3.5 2A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 12.5 4H9.621a1.5 1.5 0 0 1-1.06-.44L7.439 2.44A1.5 1.5 0 0 0 6.38 2H3.5Zm6.75 7.75a.75.75 0 0 0 0-1.5h-4.5a.75.75 0 0 0 0 1.5h4.5Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
 				</div>
+				<div class=" self-center text-sm font-medium">Reset Vector Storage</div>
 			</button>
 		{/if}
 	</div>

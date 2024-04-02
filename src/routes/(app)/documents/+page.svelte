@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext } from 'svelte';
+	import { onMount } from 'svelte';
 	import { WEBUI_NAME, documents } from '$lib/stores';
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
@@ -17,9 +17,6 @@
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 	import SettingsModal from '$lib/components/documents/SettingsModal.svelte';
 	import AddDocModal from '$lib/components/documents/AddDocModal.svelte';
-
-	const i18n = getContext('i18n');
-
 	let importFiles = '';
 
 	let inputFiles = '';
@@ -123,7 +120,7 @@
 						}
 					}
 				} else {
-					toast.error($i18n.t(`File not found.`));
+					toast.error(`File not found.`);
 				}
 			}
 
@@ -152,7 +149,9 @@
 </script>
 
 <svelte:head>
-	<title>{$i18n.t('Documents')} | {$WEBUI_NAME}</title>
+	<title>
+		{`Documents | ${$WEBUI_NAME}`}
+	</title>
 </svelte:head>
 
 {#if dragged}
@@ -189,7 +188,7 @@
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<div class="mb-6">
 				<div class="flex justify-between items-center">
-					<div class=" text-2xl font-semibold self-center">{$i18n.t('My Documents')}</div>
+					<div class=" text-2xl font-semibold self-center">My Documents</div>
 
 					<div>
 						<button
@@ -212,12 +211,12 @@
 								/>
 							</svg>
 
-							<div class=" text-xs">{$i18n.t('Document Settings')}</div>
+							<div class=" text-xs">Document Settings</div>
 						</button>
 					</div>
 				</div>
 				<div class=" text-gray-500 text-xs mt-1">
-					ⓘ {$i18n.t("Use '#' in the prompt input to load and select your documents.")}
+					ⓘ Use '#' in the prompt input to load and select your documents.
 				</div>
 			</div>
 
@@ -240,7 +239,7 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
 						bind:value={query}
-						placeholder={$i18n.t('Search Documents')}
+						placeholder="Search Document"
 					/>
 				</div>
 
@@ -275,7 +274,7 @@
 					on:dragleave={onDragLeave}
 				>
 					<div class="  pointer-events-none">
-						<div class="text-center dark:text-white text-2xl font-semibold z-50">{$i18n.t('Add Files')}</div>
+						<div class="text-center dark:text-white text-2xl font-semibold z-50">Add Files</div>
 
 						<div class=" mt-2 text-center text-sm dark:text-gray-200 w-full">
 							Drop any files here to add to my documents
@@ -315,7 +314,7 @@
 								// await chats.set(await getChatListByTagName(localStorage.token, tag.name));
 							}}
 						>
-							<div class=" text-xs font-medium self-center line-clamp-1">{$i18n.t('all')}</div>
+							<div class=" text-xs font-medium self-center line-clamp-1">all</div>
 						</button>
 
 						{#each tags as tag}
@@ -345,7 +344,7 @@
 										// await chats.set(await getChatListByTagName(localStorage.token, tag.name));
 									}}
 								>
-									<div class=" text-xs font-medium self-center line-clamp-1">{$i18n.t('add tags')}</div>
+									<div class=" text-xs font-medium self-center line-clamp-1">add tags</div>
 								</button> -->
 
 								<button
@@ -355,9 +354,7 @@
 										// await chats.set(await getChatListByTagName(localStorage.token, tag.name));
 									}}
 								>
-									<div class=" text-xs font-medium self-center line-clamp-1">
-										{$i18n.t('delete')}
-									</div>
+									<div class=" text-xs font-medium self-center line-clamp-1">delete</div>
 								</button>
 							</div>
 						</div>
@@ -566,7 +563,7 @@
 							documentsImportInputElement.click();
 						}}
 					>
-						<div class=" self-center mr-2 font-medium">{$i18n.t('Import Documents Mapping')}</div>
+						<div class=" self-center mr-2 font-medium">Import Documents Mapping</div>
 
 						<div class=" self-center">
 							<svg
@@ -593,7 +590,7 @@
 							saveAs(blob, `documents-mapping-export-${Date.now()}.json`);
 						}}
 					>
-						<div class=" self-center mr-2 font-medium">{$i18n.t('Export Documents Mapping')}</div>
+						<div class=" self-center mr-2 font-medium">Export Documents Mapping</div>
 
 						<div class=" self-center">
 							<svg

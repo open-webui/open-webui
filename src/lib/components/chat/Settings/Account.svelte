@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
+	import { onMount } from 'svelte';
 
 	import { user } from '$lib/stores';
 	import { updateUserProfile } from '$lib/apis/auths';
@@ -8,8 +8,6 @@
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
 	import { copyToClipboard } from '$lib/utils';
-
-	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
 
@@ -40,7 +38,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[22rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 		<input
 			id="profile-image-input"
 			bind:this={profileImageInputElement}
@@ -103,7 +101,7 @@
 			}}
 		/>
 
-		<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Profile')}</div>
+		<div class=" mb-2.5 text-sm font-medium">Profile</div>
 
 		<div class="flex space-x-5">
 			<div class="flex flex-col">
@@ -145,13 +143,13 @@
 						const url = await getGravatarUrl($user.email);
 
 						profileImageUrl = url;
-					}}>{$i18n.t('Use Gravatar')}</button
+					}}>Use Gravatar</button
 				>
 			</div>
 
 			<div class="flex-1">
 				<div class="flex flex-col w-full">
-					<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+					<div class=" mb-1 text-xs text-gray-500">Name</div>
 
 					<div class="flex-1">
 						<input
@@ -172,7 +170,7 @@
 
 		<div class=" w-full justify-between">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('JWT Token')}</div>
+				<div class=" self-center text-xs font-medium">JWT Token</div>
 			</div>
 
 			<div class="flex mt-2">
@@ -282,7 +280,7 @@
 				}
 			}}
 		>
-			{$i18n.t('Save')}
+			Save
 		</button>
 	</div>
 </div>

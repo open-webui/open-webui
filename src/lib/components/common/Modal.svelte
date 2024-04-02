@@ -2,8 +2,6 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 
-	import { flyAndScale } from '$lib/utils/transitions';
-
 	export let show = true;
 	export let size = 'md';
 
@@ -43,10 +41,10 @@
 		}}
 	>
 		<div
-			class=" m-auto rounded-2xl max-w-full {sizeToWidth(
+			class=" modal-content m-auto rounded-2xl max-w-full {sizeToWidth(
 				size
 			)} mx-2 bg-gray-50 dark:bg-gray-900 shadow-3xl"
-			in:flyAndScale
+			in:fade={{ duration: 10 }}
 			on:click={(e) => {
 				e.stopPropagation();
 			}}

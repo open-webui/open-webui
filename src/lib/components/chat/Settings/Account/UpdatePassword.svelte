@@ -1,9 +1,6 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { updateUserPassword } from '$lib/apis/auths';
-
-	const i18n = getContext('i18n');
 
 	let show = false;
 	let currentPassword = '';
@@ -20,7 +17,7 @@
 			);
 
 			if (res) {
-				toast.success($i18n.t('Successfully updated.'));
+				toast.success('Successfully updated.');
 			}
 
 			currentPassword = '';
@@ -43,20 +40,20 @@
 	}}
 >
 	<div class="flex justify-between items-center text-sm">
-		<div class="  font-medium">{$i18n.t('Change Password')}</div>
+		<div class="  font-medium">Change Password</div>
 		<button
 			class=" text-xs font-medium text-gray-500"
 			type="button"
 			on:click={() => {
 				show = !show;
-			}}>{show ? $i18n.t('Hide') : $i18n.t('Show')}</button
+			}}>{show ? 'Hide' : 'Show'}</button
 		>
 	</div>
 
 	{#if show}
 		<div class=" py-2.5 space-y-1.5">
 			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Current Password')}</div>
+				<div class=" mb-1 text-xs text-gray-500">Current Password</div>
 
 				<div class="flex-1">
 					<input
@@ -70,7 +67,7 @@
 			</div>
 
 			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
+				<div class=" mb-1 text-xs text-gray-500">New Password</div>
 
 				<div class="flex-1">
 					<input
@@ -84,7 +81,7 @@
 			</div>
 
 			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Confirm Password')}</div>
+				<div class=" mb-1 text-xs text-gray-500">Confirm Password</div>
 
 				<div class="flex-1">
 					<input
@@ -102,7 +99,7 @@
 			<button
 				class=" px-4 py-2 text-xs bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-800 text-gray-100 transition rounded-md font-medium"
 			>
-				{$i18n.t('Update password')}
+				Update password
 			</button>
 		</div>
 	{/if}

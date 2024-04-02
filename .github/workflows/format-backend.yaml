@@ -1,39 +1,27 @@
 name: Python CI
-
 on:
   push:
-    branches:
-      - main
-      - dev
+    branches: ['main']
   pull_request:
-    branches:
-      - main
-      - dev
-
 jobs:
   build:
     name: 'Format Backend'
+    env:
+      PUBLIC_API_BASE_URL: ''
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        python-version: [3.11]
-
+        node-version:
+          - latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-
+      - name: Use Python
+        uses: actions/setup-python@v4
+      - name: Use Bun
+        uses: oven-sh/setup-bun@v1
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install black
-
+          pip install yapf
       - name: Format backend
-        run: npm run format:backend
-
-      - name: Check for changes after format
-        run: git diff --exit-code
+        run: bun run format:backend

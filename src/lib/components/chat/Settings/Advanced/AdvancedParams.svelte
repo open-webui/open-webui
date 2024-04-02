@@ -1,8 +1,4 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
-
-	const i18n = getContext('i18n');
-
 	export let options = {
 		// Advanced
 		seed: 0,
@@ -24,7 +20,7 @@
 <div class=" space-y-3 text-xs">
 	<div>
 		<div class=" py-0.5 flex w-full justify-between">
-			<div class=" w-20 text-xs font-medium self-center">{$i18n.t('Seed')}</div>
+			<div class=" w-20 text-xs font-medium self-center">Seed</div>
 			<div class=" flex-1 self-center">
 				<input
 					class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
@@ -40,12 +36,12 @@
 
 	<div>
 		<div class=" py-0.5 flex w-full justify-between">
-			<div class=" w-20 text-xs font-medium self-center">{$i18n.t('Stop Sequence')}</div>
+			<div class=" w-20 text-xs font-medium self-center">Stop Sequence</div>
 			<div class=" flex-1 self-center">
 				<input
 					class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
 					type="text"
-					placeholder={$i18n.t('Enter stop sequence')}
+					placeholder="Enter Stop Sequence"
 					bind:value={options.stop}
 					autocomplete="off"
 				/>
@@ -55,7 +51,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Temperature')}</div>
+			<div class=" self-center text-xs font-medium">Temperature</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
@@ -65,9 +61,9 @@
 				}}
 			>
 				{#if options.temperature === ''}
-					<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+					<span class="ml-2 self-center"> Default </span>
 				{:else}
-					<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+					<span class="ml-2 self-center"> Custom </span>
 				{/if}
 			</button>
 		</div>
@@ -101,7 +97,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Mirostat')}</div>
+			<div class=" self-center text-xs font-medium">Mirostat</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
@@ -111,9 +107,9 @@
 				}}
 			>
 				{#if options.mirostat === ''}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Default </span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Custom </span>
 				{/if}
 			</button>
 		</div>
@@ -147,7 +143,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Mirostat Eta')}</div>
+			<div class=" self-center text-xs font-medium">Mirostat Eta</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
@@ -157,9 +153,9 @@
 				}}
 			>
 				{#if options.mirostat_eta === ''}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Default </span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Custom </span>
 				{/if}
 			</button>
 		</div>
@@ -193,7 +189,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Mirostat Tau')}</div>
+			<div class=" self-center text-xs font-medium">Mirostat Tau</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
@@ -203,9 +199,9 @@
 				}}
 			>
 				{#if options.mirostat_tau === ''}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Default </span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					<span class="ml-2 self-center"> Custom </span>
 				{/if}
 			</button>
 		</div>
@@ -239,7 +235,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
+			<div class=" self-center text-xs font-medium">Top K</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
@@ -249,9 +245,9 @@
 				}}
 			>
 				{#if options.top_k === ''}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Default </span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Custom </span>
 				{/if}
 			</button>
 		</div>
@@ -285,7 +281,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Top P')}</div>
+			<div class=" self-center text-xs font-medium">Top P</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
@@ -295,9 +291,9 @@
 				}}
 			>
 				{#if options.top_p === ''}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Default </span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Custom </span>
 				{/if}
 			</button>
 		</div>
@@ -331,7 +327,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Repeat Penalty')}</div>
+			<div class=" self-center text-xs font-medium">Repeat Penalty</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
@@ -341,9 +337,9 @@
 				}}
 			>
 				{#if options.repeat_penalty === ''}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Default </span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Custom </span>
 				{/if}
 			</button>
 		</div>
@@ -377,7 +373,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Repeat Last N')}</div>
+			<div class=" self-center text-xs font-medium">Repeat Last N</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
@@ -387,9 +383,9 @@
 				}}
 			>
 				{#if options.repeat_last_n === ''}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Default </span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Custom </span>
 				{/if}
 			</button>
 		</div>
@@ -423,7 +419,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Tfs Z')}</div>
+			<div class=" self-center text-xs font-medium">Tfs Z</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
@@ -433,9 +429,9 @@
 				}}
 			>
 				{#if options.tfs_z === ''}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Default </span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Custom </span>
 				{/if}
 			</button>
 		</div>
@@ -469,7 +465,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Context Length')}</div>
+			<div class=" self-center text-xs font-medium">Context Length</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
@@ -479,9 +475,9 @@
 				}}
 			>
 				{#if options.num_ctx === ''}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Default </span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Custom </span>
 				{/if}
 			</button>
 		</div>
@@ -514,7 +510,7 @@
 	</div>
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Max Tokens')}</div>
+			<div class=" self-center text-xs font-medium">Max Tokens</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
@@ -524,9 +520,9 @@
 				}}
 			>
 				{#if options.num_predict === ''}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Default </span>
 				{:else}
-					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					<span class="ml-2 self-center"> Custom </span>
 				{/if}
 			</button>
 		</div>

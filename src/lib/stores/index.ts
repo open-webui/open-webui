@@ -7,9 +7,8 @@ export const config = writable(undefined);
 export const user = writable(undefined);
 
 // Frontend
-export const MODEL_DOWNLOAD_POOL = writable({});
+export const theme = writable('dark');
 
-export const theme = writable('system');
 export const chatId = writable('');
 
 export const chats = writable([]);

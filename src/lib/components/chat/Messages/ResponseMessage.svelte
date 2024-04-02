@@ -8,9 +8,7 @@
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
-	import { onMount, tick, getContext } from 'svelte';
-
-	const i18n = getContext('i18n');
+	import { onMount, tick } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -318,7 +316,7 @@
 
 				{#if message.timestamp}
 					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
-						{dayjs(message.timestamp * 1000).format($i18n.t('DD/MM/YYYY HH:mm'))}
+						{dayjs(message.timestamp * 1000).format('DD/MM/YYYY HH:mm')}
 					</span>
 				{/if}
 			</Name>
@@ -362,7 +360,7 @@
 											editMessageConfirmHandler();
 										}}
 									>
-										{$i18n.t('Save')}
+										Save
 									</button>
 
 									<button
@@ -371,7 +369,7 @@
 											cancelEditMessage();
 										}}
 									>
-										{$i18n.t('Cancel')}
+										Cancel
 									</button>
 								</div>
 							</div>
@@ -422,7 +420,7 @@
 										class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
 									>
 										{#if siblings.length > 1}
-											<div class="flex self-center min-w-fit -mt-1">
+											<div class="flex self-center min-w-fit">
 												<button
 													class="self-center dark:hover:text-white hover:text-black transition"
 													on:click={() => {

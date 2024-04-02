@@ -78,7 +78,3 @@ select {
 	/* for Chrome */
 	-webkit-appearance: none;
 }
-
-.katex-mathml {
-	display: none;
-}

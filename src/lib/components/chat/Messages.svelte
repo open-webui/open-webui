@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { chats, config, modelfiles, settings, user } from '$lib/stores';
-	import { tick, getContext } from 'svelte';
+	import { tick } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
@@ -12,8 +12,6 @@
 	import Placeholder from './Messages/Placeholder.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { imageGenerations } from '$lib/apis/images';
-
-	const i18n = getContext('i18n');
 
 	export let chatId = '';
 	export let sendPrompt: Function;
@@ -69,7 +67,7 @@
 		navigator.clipboard.writeText(text).then(
 			function () {
 				console.log('Async: Copying to clipboard was successful!');
-				toast.success($i18n.t('Copying to clipboard was successful!'));
+				toast.success('Copying to clipboard was successful!');
 			},
 			function (err) {
 				console.error('Async: Could not copy text: ', err);

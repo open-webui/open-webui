@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -19,7 +19,7 @@
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
-	import { generateChatCompletion, cancelOllamaRequest } from '$lib/apis/ollama';
+	import { generateChatCompletion, cancelChatCompletion, generateTitle } from '$lib/apis/ollama';
 	import {
 		addTagById,
 		createNewChat,
@@ -30,25 +30,21 @@
 		updateChatById
 	} from '$lib/apis/chats';
 	import { queryCollection, queryDoc } from '$lib/apis/rag';
-	import { generateOpenAIChatCompletion, generateTitle } from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
-	import { LITELLM_API_BASE_URL, OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
+	import { LITELLM_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-
-	const i18n = getContext('i18n');
-
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 	let currentRequestId = null;
 
-	let showModelSelector = false;
 	let selectedModels = [''];
 
 	let selectedModelfile = null;
@@ -105,7 +101,7 @@
 
 	const initNewChat = async () => {
 		if (currentRequestId !== null) {
-			await cancelOllamaRequest(localStorage.token, currentRequestId);
+			await cancelChatCompletion(localStorage.token, currentRequestId);
 			currentRequestId = null;
 		}
 		window.history.replaceState(history.state, '', `/`);
@@ -144,9 +140,7 @@
 	};
 
 	const scrollToBottom = () => {
-		if (messagesContainerElement) {
-			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
-		}
+		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 	};
 
 	//////////////////////////
@@ -161,7 +155,7 @@
 		);
 
 		if (selectedModels.includes('')) {
-			toast.error($i18n.t('Model not selected'));
+			toast.error('Model not selected');
 		} else if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
 			console.log('wait');
@@ -171,9 +165,7 @@
 		) {
 			// Upload not done
 			toast.error(
-				$i18n.t(
-					`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
-				)
+				`Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.`
 			);
 		} else {
 			// Reset chat message textarea height
@@ -209,7 +201,7 @@
 				if ($settings.saveChatHistory ?? true) {
 					chat = await createNewChat(localStorage.token, {
 						id: $chatId,
-						title: $i18n.t('New Chat'),
+						title: 'New Chat',
 						models: selectedModels,
 						system: $settings.system ?? undefined,
 						options: {
@@ -275,7 +267,7 @@
 						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
 					}
 				} else {
-					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
+					toast.error(`Model ${modelId} not found`);
 				}
 			})
 		);
@@ -316,7 +308,7 @@
 					.map((file) => file.url.slice(file.url.indexOf(',') + 1));
 
 				// Add images array only if it contains elements
-				if (imageUrls && imageUrls.length > 0 && message.role === 'user') {
+				if (imageUrls && imageUrls.length > 0) {
 					baseMessage.images = imageUrls;
 				}
 
@@ -373,7 +365,7 @@
 
 					if (stopResponseFlag) {
 						controller.abort('User: Stop Response');
-						await cancelOllamaRequest(localStorage.token, currentRequestId);
+						await cancelChatCompletion(localStorage.token, currentRequestId);
 					}
 
 					currentRequestId = null;
@@ -487,18 +479,12 @@
 					responseMessage.content = error.error;
 				}
 			} else {
-				toast.error(
-					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: 'Ollama' })
-				);
-				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-					provider: 'Ollama'
-				});
+				toast.error(`Uh-oh! There was an issue connecting to Ollama.`);
+				responseMessage.content = `Uh-oh! There was an issue connecting to Ollama.`;
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-				provider: 'Ollama'
-			});
+			responseMessage.content = `Uh-oh! There was an issue connecting to Ollama.`;
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -512,13 +498,13 @@
 
 		if (messages.length == 2 && messages.at(1).content !== '') {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-			const _title = await generateChatTitle(userPrompt);
-			await setChatTitle(_chatId, _title);
+			await generateChatTitle(_chatId, userPrompt);
 		}
 	};
 
 	const sendPromptOpenAI = async (model, userPrompt, responseMessageId, _chatId) => {
 		const responseMessage = history.messages[responseMessageId];
+		scrollToBottom();
 
 		const docs = messages
 			.filter((message) => message?.files ?? null)
@@ -528,8 +514,6 @@
 			.flat(1);
 
 		console.log(docs);
-
-		console.log(model);
 
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
@@ -548,8 +532,7 @@
 					.filter((message) => message)
 					.map((message, idx, arr) => ({
 						role: message.role,
-						...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-						message.role === 'user'
+						...(message.files?.filter((file) => file.type === 'image').length > 0 ?? false
 							? {
 									content: [
 										{
@@ -583,15 +566,8 @@
 				max_tokens: $settings?.options?.num_predict ?? undefined,
 				docs: docs.length > 0 ? docs : undefined
 			},
-			model?.source?.toLowerCase() === 'litellm'
-				? `${LITELLM_API_BASE_URL}/v1`
-				: `${OPENAI_API_BASE_URL}`
+			model.source === 'litellm' ? `${LITELLM_API_BASE_URL}/v1` : `${OPENAI_API_BASE_URL}`
 		);
-
-		// Wait until history/message have been updated
-		await tick();
-
-		scrollToBottom();
 
 		if (res && res.ok) {
 			const reader = res.body
@@ -680,18 +656,12 @@
 					}
 				}
 			} else {
-				toast.error(
-					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: model })
-				);
-				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-					provider: model
-				});
+				toast.error(`Uh-oh! There was an issue connecting to ${model}.`);
+				responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
 			}
 
 			responseMessage.error = true;
-			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-				provider: model
-			});
+			responseMessage.content = `Uh-oh! There was an issue connecting to ${model}.`;
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -706,8 +676,11 @@
 		if (messages.length == 2) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 
-			const _title = await generateChatTitle(userPrompt);
-			await setChatTitle(_chatId, _title);
+			if ($settings?.titleAutoGenerateModel) {
+				await generateChatTitle(_chatId, userPrompt);
+			} else {
+				await setChatTitle(_chatId, userPrompt);
+			}
 		}
 	};
 
@@ -757,50 +730,25 @@
 					);
 			}
 		} else {
-			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
+			toast.error(`Model ${modelId} not found`);
 		}
 	};
 
-	const generateChatTitle = async (userPrompt) => {
-		if ($settings?.title?.auto ?? true) {
-			const model = $models.find((model) => model.id === selectedModels[0]);
-
-			const titleModelId =
-				model?.external ?? false
-					? $settings?.title?.modelExternal ?? selectedModels[0]
-					: $settings?.title?.model ?? selectedModels[0];
-			const titleModel = $models.find((model) => model.id === titleModelId);
-
-			console.log(titleModel);
+	const generateChatTitle = async (_chatId, userPrompt) => {
+		if ($settings.titleAutoGenerate ?? true) {
 			const title = await generateTitle(
 				localStorage.token,
-				$settings?.title?.prompt ??
-					$i18n.t(
-						"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
-					) + ' {{prompt}}',
-				titleModelId,
-				userPrompt,
-				titleModel?.external ?? false
-					? titleModel?.source?.toLowerCase() === 'litellm'
-						? `${LITELLM_API_BASE_URL}/v1`
-						: `${OPENAI_API_BASE_URL}`
-					: `${OLLAMA_API_BASE_URL}/v1`
+				$settings?.titleGenerationPrompt ??
+					"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title': {{prompt}}",
+				$settings?.titleAutoGenerateModel ?? selectedModels[0],
+				userPrompt
 			);
 
-			return title;
+			if (title) {
+				await setChatTitle(_chatId, title);
+			}
 		} else {
-			return `${userPrompt}`;
-		}
-	};
-
-	const setChatTitle = async (_chatId, _title) => {
-		if (_chatId === $chatId) {
-			title = _title;
-		}
-
-		if ($settings.saveChatHistory ?? true) {
-			chat = await updateChatById(localStorage.token, _chatId, { title: _title });
-			await chats.set(await getChatList(localStorage.token));
+			await setChatTitle(_chatId, `${userPrompt}`);
 		}
 	};
 
@@ -831,6 +779,17 @@
 
 		_tags.set(await getAllChatTags(localStorage.token));
 	};
+
+	const setChatTitle = async (_chatId, _title) => {
+		if (_chatId === $chatId) {
+			title = _title;
+		}
+
+		if ($settings.saveChatHistory ?? true) {
+			chat = await updateChatById(localStorage.token, _chatId, { title: _title });
+			await chats.set(await getChatList(localStorage.token));
+		}
+	};
 </script>
 
 <svelte:head>
@@ -842,16 +801,7 @@
 </svelte:head>
 
 <div class="h-screen max-h-[100dvh] w-full flex flex-col">
-	<Navbar
-		{title}
-		bind:selectedModels
-		bind:showModelSelector
-		shareEnabled={messages.length > 0}
-		{initNewChat}
-		{tags}
-		{addTag}
-		{deleteTag}
-	/>
+	<Navbar {title} shareEnabled={messages.length > 0} {initNewChat} {tags} {addTag} {deleteTag} />
 	<div class="flex flex-col flex-auto">
 		<div
 			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
@@ -860,10 +810,18 @@
 			on:scroll={(e) => {
 				autoScroll =
 					messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-					messagesContainerElement.clientHeight + 5;
+					messagesContainerElement.clientHeight + 50;
 			}}
 		>
-			<div class=" h-full w-full flex flex-col pt-2 pb-4">
+			<div
+				class="{$settings?.fullScreenMode ?? null
+					? 'max-w-full'
+					: 'max-w-2xl md:px-0'} mx-auto w-full px-4"
+			>
+				<ModelSelector bind:selectedModels />
+			</div>
+
+			<div class=" h-full w-full flex flex-col py-8">
 				<Messages
 					chatId={$chatId}
 					{selectedModels}

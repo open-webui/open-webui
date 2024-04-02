@@ -1,13 +1,11 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 
-	import { tick, createEventDispatcher, getContext } from 'svelte';
+	import { tick, createEventDispatcher } from 'svelte';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import { modelfiles, settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-
-	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
 
@@ -67,18 +65,17 @@
 					{#if $modelfiles.map((modelfile) => modelfile.tagName).includes(message.user)}
 						{$modelfiles.find((modelfile) => modelfile.tagName === message.user)?.title}
 					{:else}
-						{$i18n.t('You')}
-						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
+						You <span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
 					{/if}
 				{:else if $settings.showUsername}
 					{user.name}
 				{:else}
-					{$i18n.t('You')}
+					You
 				{/if}
 
 				{#if message.timestamp}
 					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
-						{dayjs(message.timestamp * 1000).format($i18n.t('DD/MM/YYYY HH:mm'))}
+						{dayjs(message.timestamp * 1000).format('DD/MM/YYYY HH:mm')}
 					</span>
 				{/if}
 			</Name>
@@ -126,7 +123,7 @@
 											{file.name}
 										</div>
 
-										<div class=" text-gray-500 text-sm">{$i18n.t('Document')}</div>
+										<div class=" text-gray-500 text-sm">Document</div>
 									</div>
 								</button>
 							{:else if file.type === 'collection'}
@@ -155,7 +152,7 @@
 											{file?.title ?? `#${file.name}`}
 										</div>
 
-										<div class=" text-gray-500 text-sm">{$i18n.t('Collection')}</div>
+										<div class=" text-gray-500 text-sm">Collection</div>
 									</div>
 								</button>
 							{/if}
@@ -184,7 +181,7 @@
 								editMessageConfirmHandler();
 							}}
 						>
-							{$i18n.t('Save & Submit')}
+							Save & Submit
 						</button>
 
 						<button
@@ -193,7 +190,7 @@
 								cancelEditMessage();
 							}}
 						>
-							{$i18n.t('Cancel')}
+							Cancel
 						</button>
 					</div>
 				</div>
@@ -203,7 +200,7 @@
 
 					<div class=" flex justify-start space-x-1 text-gray-700 dark:text-gray-500">
 						{#if siblings.length > 1}
-							<div class="flex self-center -mt-1">
+							<div class="flex self-center">
 								<button
 									class="self-center dark:hover:text-white hover:text-black transition"
 									on:click={() => {

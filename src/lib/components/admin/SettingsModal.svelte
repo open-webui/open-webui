@@ -1,12 +1,9 @@
 <script>
-	import { getContext } from 'svelte';
 	import Modal from '../common/Modal.svelte';
 	import Database from './Settings/Database.svelte';
 
 	import General from './Settings/General.svelte';
 	import Users from './Settings/Users.svelte';
-
-	const i18n = getContext('i18n');
 
 	export let show = false;
 
@@ -16,7 +13,7 @@
 <Modal bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Admin Settings')}</div>
+			<div class=" text-lg font-medium self-center">Admin Settings</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -64,7 +61,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('General')}</div>
+					<div class=" self-center">General</div>
 				</button>
 
 				<button
@@ -88,7 +85,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('Users')}</div>
+					<div class=" self-center">Users</div>
 				</button>
 
 				<button
@@ -116,7 +113,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('Database')}</div>
+					<div class=" self-center">Database</div>
 				</button>
 			</div>
 			<div class="flex-1 md:min-h-[380px]">

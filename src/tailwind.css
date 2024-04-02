@@ -3,14 +3,16 @@
 @tailwind utilities;
 
 @layer base {
-	html,
-	pre {
+	html {
 		font-family: -apple-system, 'Arimo', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Ubuntu,
 			Cantarell, 'Noto Sans', sans-serif, 'Helvetica Neue', Arial, 'Apple Color Emoji',
 			'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 	}
 
 	pre {
+		font-family: -apple-system, 'Arimo', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Ubuntu,
+			Cantarell, 'Noto Sans', sans-serif, 'Helvetica Neue', Arial, 'Apple Color Emoji',
+			'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 		white-space: pre-wrap;
 	}
 }

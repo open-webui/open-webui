@@ -70,5 +70,3 @@ webui:
     port: 80
     containerPort: 8080
     nodePort: ""
-    labels: {}
-    loadBalancerClass: "" 

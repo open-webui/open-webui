@@ -6,14 +6,8 @@ from playhouse.shortcuts import model_to_dict
 import json
 import uuid
 import time
-import logging
 
 from apps.web.internal.db import DB
-
-from config import SRC_LOG_LEVELS
-
-log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 ####################
 # Tag DB Schema
@@ -179,7 +173,7 @@ class TagTable:
                 (ChatIdTag.tag_name == tag_name) & (ChatIdTag.user_id == user_id)
             )
             res = query.execute()  # Remove the rows, return number of rows removed.
-            log.debug(f"res: {res}")
+            print(res)
 
             tag_count = self.count_chat_ids_by_tag_name_and_user_id(tag_name, user_id)
             if tag_count == 0:
@@ -191,7 +185,7 @@ class TagTable:
 
             return True
         except Exception as e:
-            log.error(f"delete_tag: {e}")
+            print("delete_tag", e)
             return False
 
     def delete_tag_by_tag_name_and_chat_id_and_user_id(
@@ -204,7 +198,7 @@ class TagTable:
                 & (ChatIdTag.user_id == user_id)
             )
             res = query.execute()  # Remove the rows, return number of rows removed.
-            log.debug(f"res: {res}")
+            print(res)
 
             tag_count = self.count_chat_ids_by_tag_name_and_user_id(tag_name, user_id)
             if tag_count == 0:
@@ -216,7 +210,7 @@ class TagTable:
 
             return True
         except Exception as e:
-            log.error(f"delete_tag: {e}")
+            print("delete_tag", e)
             return False
 
     def delete_tags_by_chat_id_and_user_id(self, chat_id: str, user_id: str) -> bool:

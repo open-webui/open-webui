@@ -4,9 +4,7 @@
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
-	import { onMount, getContext } from 'svelte';
-
-	const i18n = getContext('i18n');
+	import { onMount } from 'svelte';
 
 	let ollamaVersion = '';
 
@@ -45,8 +43,7 @@
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
 				<div>
-					{$WEBUI_NAME}
-					{$i18n.t('Version')}
+					{$WEBUI_NAME} Version
 				</div>
 			</div>
 			<div class="flex w-full justify-between items-center">
@@ -59,10 +56,10 @@
 							target="_blank"
 						>
 							{updateAvailable === null
-								? $i18n.t('Checking for updates...')
+								? 'Checking for updates...'
 								: updateAvailable
-								? `(v${version.latest} ${$i18n.t('available!')})`
-								: $i18n.t('(latest)')}
+								? `(v${version.latest} available!)`
+								: '(latest)'}
 						</a>
 					</div>
 
@@ -72,7 +69,7 @@
 							showChangelog.set(true);
 						}}
 					>
-						<div>{$i18n.t("See what's new")}</div>
+						<div>See what's new</div>
 					</button>
 				</div>
 
@@ -82,7 +79,7 @@
 						checkForVersionUpdates();
 					}}
 				>
-					{$i18n.t('Check for updates')}
+					Check for updates
 				</button>
 			</div>
 		</div>
@@ -91,7 +88,7 @@
 			<hr class=" dark:border-gray-700" />
 
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama Version')}</div>
+				<div class=" mb-2.5 text-sm font-medium">Ollama Version</div>
 				<div class="flex w-full">
 					<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
 						{ollamaVersion ?? 'N/A'}
@@ -126,8 +123,7 @@
 		</div>
 
 		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-			{$i18n.t('Created by')}
-			<a
+			Created by <a
 				class=" text-gray-500 dark:text-gray-300 font-medium"
 				href="https://github.com/tjbck"
 				target="_blank">Timothy J. Baek</a

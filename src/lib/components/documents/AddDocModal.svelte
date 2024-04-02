@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
-	import { onMount, getContext } from 'svelte';
+	import { onMount } from 'svelte';
 
 	import { createNewDoc, getDocs, tagDocByName, updateDocByName } from '$lib/apis/documents';
 	import Modal from '../common/Modal.svelte';
@@ -12,8 +12,6 @@
 	import { uploadDocToVectorDB } from '$lib/apis/rag';
 	import { transformFileName } from '$lib/utils';
 	import { SUPPORTED_FILE_EXTENSIONS, SUPPORTED_FILE_TYPE } from '$lib/constants';
-
-	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let selectedDoc;
@@ -73,7 +71,7 @@
 			inputFiles = null;
 			uploadDocInputElement.value = '';
 		} else {
-			toast.error($i18n.t(`File not found.`));
+			toast.error(`File not found.`);
 		}
 
 		show = false;
@@ -98,7 +96,7 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Add Docs')}</div>
+			<div class=" text-lg font-medium self-center">Add Docs</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -138,7 +136,7 @@
 						/>
 
 						<button
-							class="w-full text-sm font-medium py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-center rounded-xl"
+							class="w-full text-sm font-medium py-3 bg-gray-850 hover:bg-gray-800 text-center rounded-xl"
 							type="button"
 							on:click={() => {
 								uploadDocInputElement.click();
@@ -147,14 +145,14 @@
 							{#if inputFiles}
 								{inputFiles.length > 0 ? `${inputFiles.length}` : ''} document(s) selected.
 							{:else}
-								{$i18n.t('Click here to select documents.')}
+								Click here to select documents.
 							{/if}
 						</button>
 					</div>
 
 					<div class=" flex flex-col space-y-1.5">
 						<div class="flex flex-col w-full">
-							<div class=" mb-1.5 text-xs text-gray-500">{$i18n.t('Tags')}</div>
+							<div class=" mb-1.5 text-xs text-gray-500">Tags</div>
 
 							<Tags {tags} addTag={addTagHandler} deleteTag={deleteTagHandler} />
 						</div>
@@ -165,7 +163,7 @@
 							class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 							type="submit"
 						>
-							{$i18n.t('Save')}
+							Save
 						</button>
 					</div>
 				</form>

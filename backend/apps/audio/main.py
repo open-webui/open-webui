@@ -1,5 +1,4 @@
 import os
-import logging
 from fastapi import (
     FastAPI,
     Request,
@@ -22,24 +21,11 @@ from utils.utils import (
 )
 from utils.misc import calculate_sha256
 
-from config import (
-    SRC_LOG_LEVELS,
-    CACHE_DIR,
-    UPLOAD_DIR,
-    WHISPER_MODEL,
-    WHISPER_MODEL_DIR,
-    DEVICE_TYPE,
-)
+from config import CACHE_DIR, UPLOAD_DIR, WHISPER_MODEL, WHISPER_MODEL_DIR, DEVICE_TYPE
 
-log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["AUDIO"])
-
-whisper_device_type = DEVICE_TYPE
-
-if whisper_device_type != "cuda":
+if DEVICE_TYPE != "cuda":
     whisper_device_type = "cpu"
 
-log.info(f"whisper_device_type: {whisper_device_type}")
 
 app = FastAPI()
 app.add_middleware(
@@ -56,7 +42,7 @@ def transcribe(
     file: UploadFile = File(...),
     user=Depends(get_current_user),
 ):
-    log.info(f"file.content_type: {file.content_type}")
+    print(file.content_type)
 
     if file.content_type not in ["audio/mpeg", "audio/wav"]:
         raise HTTPException(
@@ -80,7 +66,7 @@ def transcribe(
         )
 
         segments, info = model.transcribe(file_path, beam_size=5)
-        log.info(
+        print(
             "Detected language '%s' with probability %f"
             % (info.language, info.language_probability)
         )
@@ -90,7 +76,7 @@ def transcribe(
         return {"text": transcript.strip()}
 
     except Exception as e:
-        log.exception(e)
+        print(e)
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

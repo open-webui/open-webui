@@ -2,8 +2,6 @@
 # Initialize device type args
 # use build args in the docker build commmand with --build-arg="BUILDARG=true"
 ARG USE_CUDA=false
-ARG USE_CUDA_VER=cu121
-ARG USE_EMBEDDING_MODEL=all-MiniLM-L6-v2
 ARG USE_MPS=false
 ARG INCLUDE_OLLAMA=false
 
@@ -30,9 +28,8 @@ RUN npm run build
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm as base
 
+# Use args
 ARG USE_CUDA
-ARG USE_CUDA_VER
-ARG USE_EMBEDDING_MODEL
 ARG USE_MPS
 ARG INCLUDE_OLLAMA
 
@@ -42,9 +39,7 @@ ENV ENV=prod \
     # pass build args to the build
     INCLUDE_OLLAMA_DOCKER=${INCLUDE_OLLAMA} \
     USE_MPS_DOCKER=${USE_MPS} \
-    USE_CUDA_DOCKER=${USE_CUDA} \
-    USE_CUDA_DOCKER_VER=${USE_CUDA_VER} \
-    USE_EMBEDDING_MODEL_DOCKER=${USE_EMBEDDING_MODEL}
+    USE_CUDA_DOCKER=${USE_CUDA}
 
 ## Basis URL Config ##
 ENV OLLAMA_BASE_URL="/ollama" \
@@ -66,7 +61,7 @@ ENV WHISPER_MODEL="base" \
 # Leaderboard: https://huggingface.co/spaces/mteb/leaderboard 
 # for better performance and multilangauge support use "intfloat/multilingual-e5-large" (~2.5GB) or "intfloat/multilingual-e5-base" (~1.5GB)
 # IMPORTANT: If you change the default model (all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
-ENV RAG_EMBEDDING_MODEL="$USE_EMBEDDING_MODEL_DOCKER" \
+ENV RAG_EMBEDDING_MODEL="all-MiniLM-L6-v2" \
     RAG_EMBEDDING_MODEL_DIR="/app/backend/data/cache/embedding/models" \
     SENTENCE_TRANSFORMERS_HOME="/app/backend/data/cache/embedding/models" \
     # device type for whisper tts and embbeding models - "cpu" (default) or "mps" (apple silicon) - choosing this right can lead to better performance
@@ -83,10 +78,8 @@ WORKDIR /app/backend
 COPY ./backend/requirements.txt ./requirements.txt
 
 RUN if [ "$USE_CUDA" = "true" ]; then \
-        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117 --no-cache-dir && \
         pip3 install -r requirements.txt --no-cache-dir; \
-        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-        python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
     elif [ "$USE_MPS" = "true" ]; then \
         pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
         pip3 install -r requirements.txt --no-cache-dir && \

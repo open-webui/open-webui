@@ -2,22 +2,6 @@
 	export let show = false;
 	export let src = '';
 	export let alt = '';
-
-	const downloadImage = (url, filename) => {
-		fetch(url)
-			.then((response) => response.blob())
-			.then((blob) => {
-				const objectUrl = window.URL.createObjectURL(blob);
-				const link = document.createElement('a');
-				link.href = objectUrl;
-				link.download = filename;
-				document.body.appendChild(link);
-				link.click();
-				document.body.removeChild(link);
-				window.URL.revokeObjectURL(objectUrl);
-			})
-			.catch((error) => console.error('Error downloading image:', error));
-	};
 </script>
 
 {#if show}
@@ -51,7 +35,10 @@
 				<button
 					class=" p-5"
 					on:click={() => {
-						downloadImage(src, 'Image.png');
+						const a = document.createElement('a');
+						a.href = src;
+						a.download = 'Image.png';
+						a.click();
 					}}
 				>
 					<svg

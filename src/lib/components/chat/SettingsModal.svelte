@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { models, settings, user } from '$lib/stores';
 
@@ -17,8 +16,6 @@
 	import Chats from './Settings/Chats.svelte';
 	import Connections from './Settings/Connections.svelte';
 	import Images from './Settings/Images.svelte';
-
-	const i18n = getContext('i18n');
 
 	export let show = false;
 
@@ -61,7 +58,7 @@
 <Modal bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
+			<div class=" text-lg font-medium self-center">Settings</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -109,7 +106,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('General')}</div>
+					<div class=" self-center">General</div>
 				</button>
 
 				{#if $user?.role === 'admin'}
@@ -134,7 +131,7 @@
 								/>
 							</svg>
 						</div>
-						<div class=" self-center">{$i18n.t('Connections')}</div>
+						<div class=" self-center">Connections</div>
 					</button>
 
 					<button
@@ -160,7 +157,7 @@
 								/>
 							</svg>
 						</div>
-						<div class=" self-center">{$i18n.t('Models')}</div>
+						<div class=" self-center">Models</div>
 					</button>
 				{/if}
 
@@ -187,7 +184,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('Interface')}</div>
+					<div class=" self-center">Interface</div>
 				</button>
 
 				<button
@@ -214,7 +211,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('Audio')}</div>
+					<div class=" self-center">Audio</div>
 				</button>
 
 				{#if $user.role === 'admin'}
@@ -241,7 +238,7 @@
 								/>
 							</svg>
 						</div>
-						<div class=" self-center">{$i18n.t('Images')}</div>
+						<div class=" self-center">Images</div>
 					</button>
 				{/if}
 
@@ -268,7 +265,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('Chats')}</div>
+					<div class=" self-center">Chats</div>
 				</button>
 
 				<button
@@ -294,7 +291,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('Account')}</div>
+					<div class=" self-center">Account</div>
 				</button>
 
 				<button
@@ -320,16 +317,16 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('About')}</div>
+					<div class=" self-center">About</div>
 				</button>
 			</div>
-			<div class="flex-1 md:min-h-[25rem]">
+			<div class="flex-1 md:min-h-[380px]">
 				{#if selectedTab === 'general'}
 					<General
 						{getModels}
 						{saveSettings}
 						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
+							toast.success('Settings saved successfully!');
 						}}
 					/>
 				{:else if selectedTab === 'models'}
@@ -338,28 +335,28 @@
 					<Connections
 						{getModels}
 						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
+							toast.success('Settings saved successfully!');
 						}}
 					/>
 				{:else if selectedTab === 'interface'}
 					<Interface
 						{saveSettings}
 						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
+							toast.success('Settings saved successfully!');
 						}}
 					/>
 				{:else if selectedTab === 'audio'}
 					<Audio
 						{saveSettings}
 						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
+							toast.success('Settings saved successfully!');
 						}}
 					/>
 				{:else if selectedTab === 'images'}
 					<Images
 						{saveSettings}
 						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
+							toast.success('Settings saved successfully!');
 						}}
 					/>
 				{:else if selectedTab === 'chats'}
@@ -367,7 +364,7 @@
 				{:else if selectedTab === 'account'}
 					<Account
 						saveHandler={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
+							toast.success('Settings saved successfully!');
 						}}
 					/>
 				{:else if selectedTab === 'about'}

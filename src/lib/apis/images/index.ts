@@ -139,7 +139,7 @@ export const updateOpenAIKey = async (token: string = '', key: string) => {
 	return res.OPENAI_API_KEY;
 };
 
-export const getImageGenerationEngineUrls = async (token: string = '') => {
+export const getAUTOMATIC1111Url = async (token: string = '') => {
 	let error = null;
 
 	const res = await fetch(`${IMAGES_API_BASE_URL}/url`, {
@@ -168,10 +168,10 @@ export const getImageGenerationEngineUrls = async (token: string = '') => {
 		throw error;
 	}
 
-	return res;
+	return res.AUTOMATIC1111_BASE_URL;
 };
 
-export const updateImageGenerationEngineUrls = async (token: string = '', urls: object = {}) => {
+export const updateAUTOMATIC1111Url = async (token: string = '', url: string) => {
 	let error = null;
 
 	const res = await fetch(`${IMAGES_API_BASE_URL}/url/update`, {
@@ -182,7 +182,7 @@ export const updateImageGenerationEngineUrls = async (token: string = '', urls: 
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			...urls
+			url: url
 		})
 	})
 		.then(async (res) => {
@@ -203,7 +203,7 @@ export const updateImageGenerationEngineUrls = async (token: string = '', urls: 
 		throw error;
 	}
 
-	return res;
+	return res.AUTOMATIC1111_BASE_URL;
 };
 
 export const getImageSize = async (token: string = '') => {

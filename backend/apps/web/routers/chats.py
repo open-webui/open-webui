@@ -5,7 +5,6 @@ from utils.utils import get_current_user, get_admin_user
 from fastapi import APIRouter
 from pydantic import BaseModel
 import json
-import logging
 
 from apps.web.models.users import Users
 from apps.web.models.chats import (
@@ -27,11 +26,6 @@ from apps.web.models.tags import (
 )
 
 from constants import ERROR_MESSAGES
-
-from config import SRC_LOG_LEVELS
-
-log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
@@ -84,7 +78,7 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_current_user)):
         chat = Chats.insert_new_chat(user.id, form_data)
         return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
     except Exception as e:
-        log.exception(e)
+        print(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
@@ -101,7 +95,7 @@ async def get_all_tags(user=Depends(get_current_user)):
         tags = Tags.get_tags_by_user_id(user.id)
         return tags
     except Exception as e:
-        log.exception(e)
+        print(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )

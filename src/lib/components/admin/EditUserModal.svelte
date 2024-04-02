@@ -2,12 +2,11 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { createEventDispatcher } from 'svelte';
-	import { onMount, getContext } from 'svelte';
+	import { onMount } from 'svelte';
 
 	import { updateUserById } from '$lib/apis/users';
 	import Modal from '../common/Modal.svelte';
 
-	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let show = false;
@@ -43,7 +42,7 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Edit User')}</div>
+			<div class=" text-lg font-medium self-center">Edit User</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -85,8 +84,7 @@
 							<div class=" self-center capitalize font-semibold">{selectedUser.name}</div>
 
 							<div class="text-xs text-gray-500">
-								{$i18n.t('Created at')}
-								{dayjs(selectedUser.timestamp * 1000).format($i18n.t('MMMM DD, YYYY'))}
+								Created at {dayjs(selectedUser.timestamp * 1000).format('MMMM DD, YYYY')}
 							</div>
 						</div>
 					</div>
@@ -95,7 +93,7 @@
 
 					<div class=" flex flex-col space-y-1.5">
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
+							<div class=" mb-1 text-xs text-gray-500">Email</div>
 
 							<div class="flex-1">
 								<input
@@ -110,7 +108,7 @@
 						</div>
 
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+							<div class=" mb-1 text-xs text-gray-500">Name</div>
 
 							<div class="flex-1">
 								<input
@@ -124,7 +122,7 @@
 						</div>
 
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
+							<div class=" mb-1 text-xs text-gray-500">New Password</div>
 
 							<div class="flex-1">
 								<input
@@ -142,7 +140,7 @@
 							class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
 							type="submit"
 						>
-							{$i18n.t('Save')}
+							Save
 						</button>
 					</div>
 				</form>

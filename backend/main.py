@@ -4,7 +4,6 @@ import markdown
 import time
 import os
 import sys
-import logging
 import requests
 
 from fastapi import FastAPI, Request, Depends, status
@@ -32,7 +31,6 @@ from utils.utils import get_admin_user
 from apps.rag.utils import rag_messages
 
 from config import (
-    CONFIG_DATA,
     WEBUI_NAME,
     ENV,
     VERSION,
@@ -40,15 +38,8 @@ from config import (
     FRONTEND_BUILD_DIR,
     MODEL_FILTER_ENABLED,
     MODEL_FILTER_LIST,
-    GLOBAL_LOG_LEVEL,
-    SRC_LOG_LEVELS,
-    WEBHOOK_URL,
 )
 from constants import ERROR_MESSAGES
-
-logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
-log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 class SPAStaticFiles(StaticFiles):
@@ -67,9 +58,6 @@ app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
-app.state.WEBHOOK_URL = WEBHOOK_URL
-
-
 origins = ["*"]
 
 
@@ -78,7 +66,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
         if request.method == "POST" and (
             "/api/chat" in request.url.path or "/chat/completions" in request.url.path
         ):
-            log.debug(f"request.url.path: {request.url.path}")
+            print(request.url.path)
 
             # Read the original request body
             body = await request.body()
@@ -90,6 +78,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
             # Example: Add a new key-value pair or modify existing ones
             # data["modified"] = True  # Example modification
             if "docs" in data:
+
                 data = {**data}
                 data["messages"] = rag_messages(
                     data["docs"],
@@ -100,7 +89,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
                 )
                 del data["docs"]
 
-                log.debug(f"data['messages']: {data['messages']}")
+                print(data["messages"])
 
             modified_body_bytes = json.dumps(data).encode("utf-8")
 
@@ -164,18 +153,11 @@ app.mount("/rag/api/v1", rag_app)
 
 @app.get("/api/config")
 async def get_app_config():
-    # Checking and Handling the Absence of 'ui' in CONFIG_DATA
 
-    default_locale = "en-US"
-    if "ui" in CONFIG_DATA:
-        default_locale = CONFIG_DATA["ui"].get("default_locale", "en-US")
-
-    # The Rest of the Function Now Uses the Variables Defined Above
     return {
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
-        "default_locale": default_locale,
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
@@ -196,9 +178,10 @@ class ModelFilterConfigForm(BaseModel):
 
 
 @app.post("/api/config/model/filter")
-async def update_model_filter_config(
+async def get_model_filter_config(
     form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
 ):
+
     app.state.MODEL_FILTER_ENABLED = form_data.enabled
     app.state.MODEL_FILTER_LIST = form_data.models
 
@@ -208,39 +191,15 @@ async def update_model_filter_config(
     openai_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
     openai_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
-    litellm_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
-    litellm_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
-
     return {
         "enabled": app.state.MODEL_FILTER_ENABLED,
         "models": app.state.MODEL_FILTER_LIST,
     }
 
 
-@app.get("/api/webhook")
-async def get_webhook_url(user=Depends(get_admin_user)):
-    return {
-        "url": app.state.WEBHOOK_URL,
-    }
-
-
-class UrlForm(BaseModel):
-    url: str
-
-
-@app.post("/api/webhook")
-async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
-    app.state.WEBHOOK_URL = form_data.url
-
-    webui_app.state.WEBHOOK_URL = app.state.WEBHOOK_URL
-
-    return {
-        "url": app.state.WEBHOOK_URL,
-    }
-
-
 @app.get("/api/version")
 async def get_app_config():
+
     return {
         "version": VERSION,
     }
@@ -248,7 +207,7 @@ async def get_app_config():
 
 @app.get("/api/changelog")
 async def get_app_changelog():
-    return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
+    return CHANGELOG
 
 
 @app.get("/api/version/updates")
