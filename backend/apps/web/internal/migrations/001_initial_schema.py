@@ -51,7 +51,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     class Chat(pw.Model):
         id = pw.CharField(max_length=255, unique=True)
         user_id = pw.CharField(max_length=255)
-        title = pw.CharField(max_length=255)
+        title = pw.CharField()
         chat = pw.TextField()
         timestamp = pw.DateField()
 
@@ -74,8 +74,8 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         id = pw.AutoField()
         collection_name = pw.CharField(max_length=255, unique=True)
         name = pw.CharField(max_length=255, unique=True)
-        title = pw.CharField(max_length=255)
-        filename = pw.CharField(max_length=255)
+        title = pw.CharField()
+        filename = pw.CharField()
         content = pw.TextField(null=True)
         user_id = pw.CharField(max_length=255)
         timestamp = pw.DateField()
@@ -99,7 +99,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         id = pw.AutoField()
         command = pw.CharField(max_length=255, unique=True)
         user_id = pw.CharField(max_length=255)
-        title = pw.CharField(max_length=255)
+        title = pw.CharField()
         content = pw.TextField()
         timestamp = pw.DateField()
 
