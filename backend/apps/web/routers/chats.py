@@ -232,7 +232,7 @@ async def delete_shared_chat_by_id(id: str, user=Depends(get_current_user)):
     if chat:
         if not chat.share_id:
             return False
-        result = Chats.delete_chat_by_id_and_user_id(chat.share_id, "shared")
+        result = Chats.delete_shared_chat_by_chat_id(chat.id)
         update_result = Chats.update_chat_share_id_by_id(chat.id, None)
 
         return result and update_result
