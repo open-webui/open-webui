@@ -67,21 +67,17 @@
 
 	const shareLocalChat = async () => {
 		const chat = await getChatById(localStorage.token, $chatId);
-		console.log('shareLocal', chat);
+
+		let chatShareUrl = '';
 		if (chat.share_id) {
-			const shareUrl = `${window.location.origin}/s/${chat.share_id}`;
-			toast.success(
-				$i18n.t('Chat is already shared at {{shareUrl}}, copied to clipboard', { shareUrl })
-			);
-			copyToClipboard(shareUrl);
+			chatShareUrl = `${window.location.origin}/s/${chat.share_id}`;
 		} else {
 			const sharedChat = await shareChatById(localStorage.token, $chatId);
-			const shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
-			toast.success(
-				$i18n.t('Chat is now shared at {{shareUrl}}, copied to clipboard', { shareUrl })
-			);
-			copyToClipboard(shareUrl);
+			chatShareUrl = `${window.location.origin}/s/${sharedChat.id}`;
 		}
+
+		toast.success($i18n.t('Copied shared conversation URL to clipboard!'));
+		copyToClipboard(chatShareUrl);
 	};
 
 	const downloadChat = async () => {
