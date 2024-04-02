@@ -48,8 +48,10 @@ class Token(BaseModel):
     token: str
     token_type: str
 
+
 class ApiKey(BaseModel):
     api_key: Optional[str] = None
+
 
 class UserResponse(BaseModel):
     id: str
@@ -132,6 +134,7 @@ class AuthsTable:
         # if no api_key, return None
         if not api_key:
             return None
+
         try:
             auth = Auth.get(Auth.api_key == api_key, Auth.active == True)
             if auth:
@@ -139,6 +142,9 @@ class AuthsTable:
                 return user
             else:
                 return None
+
+        except:
+            return False
 
     def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_trusted_header: {email}")
