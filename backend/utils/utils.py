@@ -1,6 +1,8 @@
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import HTTPException, status, Depends
+
 from apps.web.models.users import Users
+from apps.web.models.auths import Auths
 
 from pydantic import BaseModel
 from typing import Union, Optional
@@ -97,8 +99,6 @@ def get_current_user(
 
 
 def get_current_user_by_api_key(api_key: str):
-    from apps.web.models.auths import Auths
-
     user = Auths.authenticate_user_by_api_key(api_key)
     if user is None:
         raise HTTPException(
