@@ -199,12 +199,12 @@ async def share_chat_by_id(id: str, user=Depends(get_current_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         if chat.share_id:
-            shared_chat = Chats.get_chat_by_id_and_user_id(chat.share_id, "shared")
+            shared_chat = Chats.update_shared_chat_by_chat_id(chat.id)
             return ChatResponse(
                 **{**shared_chat.model_dump(), "chat": json.loads(shared_chat.chat)}
             )
 
-        shared_chat = Chats.insert_shared_chat(chat.id)
+        shared_chat = Chats.insert_shared_chat_by_chat_id(chat.id)
         if not shared_chat:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

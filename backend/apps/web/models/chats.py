@@ -98,7 +98,7 @@ class ChatTable:
         except:
             return None
 
-    def insert_shared_chat(self, chat_id: str) -> Optional[ChatModel]:
+    def insert_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         # Get the existing chat to share
         chat = Chat.get(Chat.id == chat_id)
         # Check if the chat is already shared
@@ -121,6 +121,24 @@ class ChatTable:
         )
 
         return shared_chat if (shared_result and result) else None
+
+    def update_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
+        try:
+            print("update_shared_chat_by_id")
+            chat = Chat.get(Chat.id == chat_id)
+            print(chat)
+
+            query = Chat.update(
+                title=chat.title,
+                chat=chat.chat,
+            ).where(Chat.id == chat.share_id)
+
+            query.execute()
+
+            chat = Chat.get(Chat.id == chat.share_id)
+            return ChatModel(**model_to_dict(chat))
+        except:
+            return None
 
     def delete_shared_chat_by_chat_id(self, chat_id: str) -> bool:
         try:
