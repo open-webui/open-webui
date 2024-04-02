@@ -108,7 +108,7 @@ class ChatTable:
         shared_chat = ChatModel(
             **{
                 "id": str(uuid.uuid4()),
-                "user_id": "shared",
+                "user_id": f"shared-{chat_id}",
                 "title": chat.title,
                 "chat": chat.chat,
                 "timestamp": int(time.time()),
@@ -121,6 +121,15 @@ class ChatTable:
         )
 
         return shared_chat if (shared_result and result) else None
+
+    def delete_shared_chat_by_chat_id(self, chat_id: str) -> bool:
+        try:
+            query = Chat.delete().where(Chat.user_id == f"shared-{chat_id}")
+            query.execute()  # Remove the rows, return number of rows removed.
+
+            return True
+        except:
+            return False
 
     def update_chat_share_id_by_id(
         self, od: str, share_id: Optional[str]
