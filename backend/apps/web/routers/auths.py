@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi import APIRouter
 from pydantic import BaseModel
 import re
+import uuid
 
 from apps.web.models.auths import (
     SigninForm,
@@ -13,7 +14,7 @@ from apps.web.models.auths import (
     UserResponse,
     SigninResponse,
     Auths,
-    ApiKey
+    ApiKey,
 )
 from apps.web.models.users import Users
 
@@ -22,7 +23,7 @@ from utils.utils import (
     get_current_user,
     get_admin_user,
     create_token,
-    create_api_key
+    create_api_key,
 )
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
