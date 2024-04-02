@@ -2,7 +2,6 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import HTTPException, status, Depends
 
 from apps.web.models.users import Users
-from apps.web.models.auths import Auths
 
 from pydantic import BaseModel
 from typing import Union, Optional
@@ -78,6 +77,8 @@ def get_http_authorization_cred(auth_header: str):
 def get_current_user(
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
+
+    print(auth_token)
     # auth by api key
     if auth_token.credentials.startswith("sk-"):
         return get_current_user_by_api_key(auth_token.credentials)
@@ -99,7 +100,7 @@ def get_current_user(
 
 
 def get_current_user_by_api_key(api_key: str):
-    user = Auths.authenticate_user_by_api_key(api_key)
+    user = Users.get_user_by_api_key(api_key)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
