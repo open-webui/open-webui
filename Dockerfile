@@ -30,6 +30,9 @@ ENV WEBUI_SECRET_KEY ""
 ENV SCARF_NO_ANALYTICS true
 ENV DO_NOT_TRACK true
 
+ENV MANIFEST_NAME "Open WebUI"
+ENV MANIFEST_SHORT_NAME "Open WebUI"
+
 ######## Preloaded models ########
 # whisper TTS Settings
 ENV WHISPER_MODEL="base"
