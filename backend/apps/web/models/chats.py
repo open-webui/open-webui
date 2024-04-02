@@ -224,13 +224,27 @@ class ChatTable:
             query = Chat.delete().where((Chat.id == id) & (Chat.user_id == user_id))
             query.execute()  # Remove the rows, return number of rows removed.
 
-            return True
+            return True and self.delete_shared_chat_by_chat_id(id)
         except:
             return False
 
     def delete_chats_by_user_id(self, user_id: str) -> bool:
         try:
             query = Chat.delete().where(Chat.user_id == user_id)
+            query.execute()  # Remove the rows, return number of rows removed.
+
+            return True and self.delete_shared_chats_by_user_id(user_id)
+        except:
+            return False
+
+    def delete_shared_chats_by_user_id(self, user_id: str) -> bool:
+        try:
+            shared_chat_ids = [
+                f"shared-{chat.id}"
+                for chat in Chat.select().where(Chat.user_id == user_id)
+            ]
+
+            query = Chat.delete().where(Chat.user_id << shared_chat_ids)
             query.execute()  # Remove the rows, return number of rows removed.
 
             return True
