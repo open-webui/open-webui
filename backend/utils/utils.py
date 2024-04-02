@@ -95,6 +95,7 @@ def get_current_user(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+
 def get_current_user_by_api_key(api_key: str):
     from apps.web.models.auths import Auths
 
@@ -105,6 +106,7 @@ def get_current_user_by_api_key(api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
     return user
+
 
 def get_verified_user(user=Depends(get_current_user)):
     if user.role not in {"user", "admin"}:
