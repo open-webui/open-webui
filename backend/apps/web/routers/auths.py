@@ -1,13 +1,10 @@
-from fastapi import Response, Request
-from fastapi import Depends, FastAPI, HTTPException, status
-from datetime import datetime, timedelta
-from typing import List, Union
+from fastapi import Request
+from fastapi import Depends, HTTPException, status
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter
 from pydantic import BaseModel
-import time
-import uuid
 import re
+import uuid
 
 from apps.web.models.auths import (
     SigninForm,
@@ -17,6 +14,7 @@ from apps.web.models.auths import (
     UserResponse,
     SigninResponse,
     Auths,
+    ApiKey,
 )
 from apps.web.models.users import Users
 
@@ -25,6 +23,7 @@ from utils.utils import (
     get_current_user,
     get_admin_user,
     create_token,
+    create_api_key,
 )
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
@@ -267,3 +266,40 @@ async def update_token_expires_duration(
         return request.app.state.JWT_EXPIRES_IN
     else:
         return request.app.state.JWT_EXPIRES_IN
+
+
+############################
+# API Key
+############################
+
+
+# create api key
+@router.post("/api_key", response_model=ApiKey)
+async def create_api_key_(user=Depends(get_current_user)):
+    api_key = create_api_key()
+    success = Users.update_user_api_key_by_id(user.id, api_key)
+    if success:
+        return {
+            "api_key": api_key,
+        }
+    else:
+        raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_API_KEY_ERROR)
+
+
+# delete api key
+@router.delete("/api_key", response_model=bool)
+async def delete_api_key(user=Depends(get_current_user)):
+    success = Users.update_user_api_key_by_id(user.id, None)
+    return success
+
+
+# get api key
+@router.get("/api_key", response_model=ApiKey)
+async def get_api_key(user=Depends(get_current_user)):
+    api_key = Users.get_user_api_key_by_id(user.id)
+    if api_key:
+        return {
+            "api_key": api_key,
+        }
+    else:
+        raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
