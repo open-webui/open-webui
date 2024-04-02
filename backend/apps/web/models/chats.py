@@ -132,7 +132,7 @@ class ChatTable:
             return False
 
     def update_chat_share_id_by_id(
-        self, od: str, share_id: Optional[str]
+        self, id: str, share_id: Optional[str]
     ) -> Optional[ChatModel]:
         try:
             query = Chat.update(
