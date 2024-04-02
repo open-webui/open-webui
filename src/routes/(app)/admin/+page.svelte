@@ -12,6 +12,7 @@
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
 	import SettingsModal from '$lib/components/admin/SettingsModal.svelte';
+	import Paginator from '$lib/components/common/Paginator.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -23,6 +24,13 @@
 
 	let showSettingsModal = false;
 	let showEditUserModal = false;
+
+	let paginatorSettings = {
+		page: 0,
+		limit: 5,
+		size: users.length,
+		amounts: [5, 10, 15, 20]
+	};
 
 	const updateRoleHandler = async (id, role) => {
 		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
@@ -64,6 +72,13 @@
 		}
 		loaded = true;
 	});
+
+	$: paginatedSource = users.slice(
+		paginatorSettings.page * paginatorSettings.limit,
+		paginatorSettings.page * paginatorSettings.limit + paginatorSettings.limit
+	);
+
+	$: paginatorSettings.size = users.length;
 </script>
 
 <svelte:head>
@@ -159,7 +174,7 @@
 										</tr>
 									</thead>
 									<tbody>
-										{#each users.filter((user) => {
+										{#each paginatedSource.filter((user) => {
 											if (search === '') {
 												return true;
 											} else {
@@ -265,6 +280,7 @@
 										{/each}
 									</tbody>
 								</table>
+								<Paginator bind:settings={paginatorSettings} showNumerals />
 							</div>
 
 							<div class=" text-gray-500 text-xs mt-2 text-right">
