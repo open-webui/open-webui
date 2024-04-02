@@ -70,14 +70,16 @@
 		console.log('shareLocal', chat);
 		if (chat.share_id) {
 			const shareUrl = `${window.location.origin}/s/${chat.share_id}`;
-			toast.info(
+			toast.success(
 				$i18n.t('Chat is already shared at {{shareUrl}}, copied to clipboard', { shareUrl })
 			);
 			copyToClipboard(shareUrl);
 		} else {
 			const sharedChat = await shareChatById(localStorage.token, $chatId);
 			const shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
-			toast.info($i18n.t('Chat is now shared at {{shareUrl}}, copied to clipboard', { shareUrl }));
+			toast.success(
+				$i18n.t('Chat is now shared at {{shareUrl}}, copied to clipboard', { shareUrl })
+			);
 			copyToClipboard(shareUrl);
 		}
 	};
