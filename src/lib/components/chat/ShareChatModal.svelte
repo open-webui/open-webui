@@ -5,7 +5,7 @@
 	const { saveAs } = fileSaver;
 
 	import { toast } from 'svelte-sonner';
-	import { getChatById, shareChatById } from '$lib/apis/chats';
+	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
 	import { chatId, modelfiles } from '$lib/stores';
 	import { copyToClipboard } from '$lib/utils';
 
@@ -28,6 +28,7 @@
 
 		toast.success($i18n.t('Copied shared conversation URL to clipboard!'));
 		copyToClipboard(chatShareUrl);
+		chat = await getChatById(localStorage.token, $chatId);
 	};
 
 	const shareChat = async () => {
@@ -78,6 +79,7 @@
 
 	onMount(async () => {
 		chat = await getChatById(localStorage.token, $chatId);
+		console.log(chat);
 	});
 </script>
 
@@ -105,53 +107,77 @@
 		</div>
 		<hr class=" dark:border-gray-800" />
 
-		<div class="px-4 pt-4 pb-5 w-full flex flex-col justify-center">
-			<div class=" text-sm dark:text-gray-300 mb-1">
-				Messages you send after creating your link won't be shared. Anyone with the URL will be able
-				to view the shared chat.
-			</div>
+		{#if chat}
+			<div class="px-4 pt-4 pb-5 w-full flex flex-col justify-center">
+				<div class=" text-sm dark:text-gray-300 mb-1">
+					{#if chat.share_id}
+						<a href="/s/{chat.share_id}" target="_blank"
+							>You have shared this chat <span class=" underline">before</span>.</a
+						>
+						Click here to
+						<button
+							class="underline"
+							on:click={async () => {
+								const res = await deleteSharedChatById(localStorage.token, $chatId);
 
-			<div class="flex justify-end">
-				<div class="flex flex-col items-end space-x-1 mt-1.5">
-					<div class="flex gap-1">
-						<button
-							class=" self-center px-3.5 py-2 rounded-xl text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white"
-							type="button"
-							on:click={() => {
-								shareChat();
-								show = false;
-							}}
-						>
-							{$i18n.t('Share to OpenWebUI Community')}
-						</button>
+								if (res) {
+									chat = await getChatById(localStorage.token, $chatId);
+								}
+							}}>delete this link</button
+						> and create a new shared link.
+					{:else}
+						Messages you send after creating your link won't be shared. Anyone with the URL will be
+						able to view the shared chat.
+					{/if}
+				</div>
 
-						<button
-							class=" self-center flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white"
-							type="button"
-							on:click={() => {
-								shareLocalChat();
-								show = false;
-							}}
-						>
-							<Link />
-							{$i18n.t('Copy Link')}
-						</button>
-					</div>
-					<div class="flex gap-1 mt-1.5">
-						<div class=" self-center text-gray-400 text-xs font-medium">{$i18n.t('or')}</div>
-						<button
-							class=" text-right rounded-full text-xs font-medium text-gray-700 dark:text-gray-500 underline"
-							type="button"
-							on:click={() => {
-								downloadChat();
-								show = false;
-							}}
-						>
-							{$i18n.t('Download as a File')}
-						</button>
+				<div class="flex justify-end">
+					<div class="flex flex-col items-end space-x-1 mt-1.5">
+						<div class="flex gap-1">
+							<button
+								class=" self-center px-3.5 py-2 rounded-xl text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white"
+								type="button"
+								on:click={() => {
+									shareChat();
+									show = false;
+								}}
+							>
+								{$i18n.t('Share to OpenWebUI Community')}
+							</button>
+
+							<button
+								class=" self-center flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white"
+								type="button"
+								on:click={() => {
+									shareLocalChat();
+									show = false;
+								}}
+							>
+								<Link />
+
+								{#if chat.share_id}
+									{$i18n.t('Update and Copy Link')}
+								{:else}
+									{$i18n.t('Copy Link')}
+								{/if}
+							</button>
+						</div>
+						<div class="flex gap-1 mt-1.5">
+							<div class=" self-center text-gray-400 text-xs font-medium">{$i18n.t('or')}</div>
+							<button
+								class=" text-right rounded-full text-xs font-medium text-gray-700 dark:text-gray-500 underline"
+								type="button"
+								on:click={() => {
+									downloadChat();
+									show = false;
+								}}
+							>
+								{$i18n.t('Download as a File')}
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
+		{/if}
 	</div>
 </Modal>

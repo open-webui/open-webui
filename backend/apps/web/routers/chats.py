@@ -226,16 +226,17 @@ async def share_chat_by_id(id: str, user=Depends(get_current_user)):
 ############################
 
 
-@router.delete("/{share_id}/share", response_model=Optional[bool])
-async def delete_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
-    chat = Chats.get_chat_by_id_and_user_id(share_id, user.id)
+@router.delete("/{id}/share", response_model=Optional[bool])
+async def delete_shared_chat_by_id(id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         if not chat.share_id:
             return False
-        result = Chats.delete_shared_chat_by_chat_id(chat.id)
-        update_result = Chats.update_chat_share_id_by_id(chat.id, None)
 
-        return result and update_result
+        result = Chats.delete_shared_chat_by_chat_id(id)
+        update_result = Chats.update_chat_share_id_by_id(id, None)
+
+        return result and update_result != None
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
