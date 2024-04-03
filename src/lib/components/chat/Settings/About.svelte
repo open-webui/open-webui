@@ -6,6 +6,8 @@
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+
 	const i18n = getContext('i18n');
 
 	let ollamaVersion = '';
@@ -51,8 +53,10 @@
 			</div>
 			<div class="flex w-full justify-between items-center">
 				<div class="flex flex-col text-xs text-gray-700 dark:text-gray-200">
-					<div>
-						v{WEBUI_VERSION}
+					<div class="flex gap-1">
+						<Tooltip content={WEBUI_VERSION === '0.1.117' ? "🪖 We're just getting started." : ''}>
+							v{WEBUI_VERSION}
+						</Tooltip>
 
 						<a
 							href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
