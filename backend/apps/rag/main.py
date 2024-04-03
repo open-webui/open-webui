@@ -8,7 +8,7 @@ from fastapi import (
     Form,
 )
 from fastapi.middleware.cors import CORSMiddleware
-import os, shutil, logging
+import os, shutil, logging, re
 
 from pathlib import Path
 from typing import List
@@ -450,7 +450,7 @@ def store_doc(
     try:
         is_valid_filename = True
         unsanitized_filename = file.filename
-        if not unsanitized_filename.isascii():
+        if re.search(r'[\\/:"\*\?<>|\n\t ]', unsanitized_filename) is not None:
             is_valid_filename = False
 
         unvalidated_file_path = f"{UPLOAD_DIR}/{unsanitized_filename}"
