@@ -581,7 +581,7 @@
 							<div class="py-2 w-full">
 								{#if $user.role === 'admin'}
 									<button
-										class="flex py-2.5 px-3.5 w-full dark:hover:bg-gray-800 transition"
+										class="flex py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 										on:click={() => {
 											goto('/admin');
 											showDropdown = false;
@@ -607,7 +607,7 @@
 									</button>
 
 									<button
-										class="flex py-2.5 px-3.5 w-full dark:hover:bg-gray-800 transition"
+										class="flex py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 										on:click={() => {
 											goto('/playground');
 											showDropdown = false;
@@ -634,7 +634,7 @@
 								{/if}
 
 								<button
-									class="flex py-2.5 px-3.5 w-full dark:hover:bg-gray-800 transition"
+									class="flex py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 									on:click={async () => {
 										await showSettings.set(true);
 										showDropdown = false;
@@ -669,7 +669,7 @@
 
 							<div class="py-2 w-full">
 								<button
-									class="flex py-2.5 px-3.5 w-full dark:hover:bg-gray-800 transition"
+									class="flex py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 									on:click={() => {
 										localStorage.removeItem('token');
 										location.href = '/auth';
