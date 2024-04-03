@@ -1,11 +1,9 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
 
 	import { Separator } from 'bits-ui';
-	import { getChatById } from '$lib/apis/chats';
+	import { getChatById, shareChatById } from '$lib/apis/chats';
 	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings } from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
@@ -32,55 +30,13 @@
 	export let addTag: Function;
 	export let deleteTag: Function;
 
-	export let showModelSelector = false;
+	export let showModelSelector = true;
 
 	let showShareChatModal = false;
 	let showTagChatModal = false;
-
-	const shareChat = async () => {
-		const chat = (await getChatById(localStorage.token, $chatId)).chat;
-		console.log('share', chat);
-
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
-		const url = 'https://openwebui.com';
-		// const url = 'http://localhost:5173';
-
-		const tab = await window.open(`${url}/chats/upload`, '_blank');
-		window.addEventListener(
-			'message',
-			(event) => {
-				if (event.origin !== url) return;
-				if (event.data === 'loaded') {
-					tab.postMessage(
-						JSON.stringify({
-							chat: chat,
-							modelfiles: $modelfiles.filter((modelfile) => chat.models.includes(modelfile.tagName))
-						}),
-						'*'
-					);
-				}
-			},
-			false
-		);
-	};
-
-	const downloadChat = async () => {
-		const chat = (await getChatById(localStorage.token, $chatId)).chat;
-		console.log('download', chat);
-
-		const chatText = chat.messages.reduce((a, message, i, arr) => {
-			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
-		}, '');
-
-		let blob = new Blob([chatText], {
-			type: 'text/plain'
-		});
-
-		saveAs(blob, `chat-${chat.title}.txt`);
-	};
 </script>
 
-<ShareChatModal bind:show={showShareChatModal} {downloadChat} {shareChat} />
+<ShareChatModal bind:show={showShareChatModal} />
 <!-- <TagChatModal bind:show={showTagChatModal} {tags} {deleteTag} {addTag} /> -->
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div
@@ -135,12 +91,14 @@
 		</div> -->
 
 		<div class="flex items-center w-full max-w-full">
-			<div class="w-full flex-1 overflow-hidden max-w-full">
-				<ModelSelector bind:selectedModels />
+			<div class="flex-1 overflow-hidden max-w-full">
+				{#if showModelSelector}
+					<ModelSelector bind:selectedModels />
+				{/if}
 			</div>
 
 			<div class="self-start flex flex-none items-center">
-				<div class="flex self-center w-[1px] h-5 mx-2 bg-stone-700" />
+				<div class="flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" />
 
 				{#if !shareEnabled}
 					<Tooltip content="Settings">

@@ -14,6 +14,7 @@ uuid
 requests
 aiohttp
 peewee
+peewee-migrate
 bcrypt
 
 litellm==1.30.7

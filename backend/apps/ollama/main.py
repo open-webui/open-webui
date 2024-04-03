@@ -81,6 +81,12 @@ async def check_url(request: Request, call_next):
     return response
 
 
+@app.head("/")
+@app.get("/")
+async def get_status():
+    return {"status": True}
+
+
 @app.get("/urls")
 async def get_ollama_api_urls(user=Depends(get_admin_user)):
     return {"OLLAMA_BASE_URLS": app.state.OLLAMA_BASE_URLS}
