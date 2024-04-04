@@ -58,7 +58,12 @@ export const userSignIn = async (email: string, password: string) => {
 	return res;
 };
 
-export const userSignUp = async (name: string, email: string, password: string, profile_image_url: string) => {
+export const userSignUp = async (
+	name: string,
+	email: string,
+	password: string,
+	profile_image_url: string
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signup`, {

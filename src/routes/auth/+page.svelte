@@ -36,10 +36,12 @@
 	};
 
 	const signUpHandler = async () => {
-		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch((error) => {
-			toast.error(error);
-			return null;
-		});
+		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
+			(error) => {
+				toast.error(error);
+				return null;
+			}
+		);
 
 		await setSessionUser(sessionUser);
 	};
