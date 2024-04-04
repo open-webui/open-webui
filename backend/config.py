@@ -395,6 +395,9 @@ RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 RAG_EMBEDDING_MODEL_DEVICE_TYPE = os.environ.get(
     "RAG_EMBEDDING_MODEL_DEVICE_TYPE", "cpu"
 )
+RAG_EMBEDDING_MODEL_AUTO_UPDATE = False
+if os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "").lower() == "true":
+    RAG_EMBEDDING_MODEL_AUTO_UPDATE = True
 CHROMA_CLIENT = chromadb.PersistentClient(
     path=CHROMA_DATA_PATH,
     settings=Settings(allow_reset=True, anonymized_telemetry=False),
