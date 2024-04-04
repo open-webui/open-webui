@@ -111,8 +111,8 @@ export const generateInitialsImage = (name) => {
 	ctx.textBaseline = 'middle';
 	const firstNameInitial = name[0];
 	const lastNameInitial = name.lastIndexOf(' ') > -1 ? name[name.lastIndexOf(' ') + 1] : '';
-    const initials = `${firstNameInitial}${lastNameInitial}`.toUpperCase()
-	
+	const initials = `${firstNameInitial}${lastNameInitial}`.toUpperCase();
+
 	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
 
 	return canvas.toDataURL();
