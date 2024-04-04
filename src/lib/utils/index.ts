@@ -109,10 +109,10 @@ export const generateInitialsImage = (name) => {
 	ctx.font = '40px Helvetica';
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
-	const initials = name
-		.split(' ')
-		.map((word) => word[0])
-		.join('');
+	const firstNameInitial = name[0];
+	const lastNameInitial = name.lastIndexOf(' ') > -1 ? name[name.lastIndexOf(' ') + 1] : '';
+    const initials = `${firstNameInitial}${lastNameInitial}`.toUpperCase()
+	
 	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
 
 	return canvas.toDataURL();
