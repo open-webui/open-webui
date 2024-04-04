@@ -191,6 +191,7 @@ def rag_messages(docs, messages, template, k, embedding_function):
 
     return messages
 
+
 def embedding_model_get_path(
     embedding_model: str, update_embedding_model: bool = False
 ):
