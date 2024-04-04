@@ -25,8 +25,9 @@ try:
 except ImportError:
     log.warning("dotenv not installed, skipping...")
 
-WEBUI_NAME = "Open WebUI"
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+
 shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################
@@ -149,6 +150,7 @@ log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 ####################################
 
 CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
+
 if CUSTOM_NAME:
     try:
         r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
@@ -171,7 +173,9 @@ if CUSTOM_NAME:
     except Exception as e:
         log.exception(e)
         pass
-
+else:
+    if WEBUI_NAME != "Open WebUI":
+        WEBUI_NAME += " (Open WebUI)"
 
 ####################################
 # DATA/FRONTEND BUILD DIR
@@ -362,6 +366,9 @@ WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
 ####################################
 
 WEBUI_AUTH = True
+WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
+    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
+)
 
 ####################################
 # WEBUI_SECRET_KEY

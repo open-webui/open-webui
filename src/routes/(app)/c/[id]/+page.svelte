@@ -56,7 +56,7 @@
 	let currentRequestId = null;
 
 	// let chatId = $page.params.id;
-	let showModelSelector = false;
+	let showModelSelector = true;
 	let selectedModels = [''];
 	let selectedModelfile = null;
 
@@ -865,6 +865,7 @@
 	<div class="min-h-screen max-h-screen w-full flex flex-col">
 		<Navbar
 			{title}
+			{chat}
 			bind:selectedModels
 			bind:showModelSelector
 			shareEnabled={messages.length > 0}

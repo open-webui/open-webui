@@ -62,13 +62,27 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
+print(
+    f"""
+  ___                    __        __   _     _   _ ___ 
+ / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
+| | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || | 
+| |_| | |_) |  __/ | | |   \ V  V /  __/ |_) | |_| || | 
+ \___/| .__/ \___|_| |_|    \_/\_/ \___|_.__/ \___/|___|
+      |_|                                               
+
+      
+v{VERSION} - building the best open-source AI user interface.      
+https://github.com/open-webui/open-webui
+"""
+)
+
 app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
 app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.WEBHOOK_URL = WEBHOOK_URL
-
 
 origins = ["*"]
 
@@ -179,6 +193,7 @@ async def get_app_config():
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
+        "trusted_header_auth": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
     }
 
 
@@ -266,6 +281,20 @@ async def get_app_latest_release_version():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
         )
+
+
+@app.get("/manifest.json")
+async def get_manifest_json():
+    return {
+        "name": WEBUI_NAME,
+        "short_name": WEBUI_NAME,
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#343541",
+        "theme_color": "#343541",
+        "orientation": "portrait-primary",
+        "icons": [{"src": "/favicon.png", "type": "image/png", "sizes": "844x884"}],
+    }
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

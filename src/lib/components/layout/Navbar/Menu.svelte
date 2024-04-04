@@ -1,23 +1,94 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
+
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
+	import { jsPDF } from 'jspdf';
+
+	import { showSettings } from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
-	import Pencil from '$lib/components/icons/Pencil.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { showSettings } from '$lib/stores';
 	import Tags from '$lib/components/common/Tags.svelte';
 
 	export let shareEnabled: boolean = false;
 	export let shareHandler: Function;
+	export let downloadHandler: Function;
+
 	// export let tagHandler: Function;
 
+	export let chat;
 	export let tags;
 	export let deleteTag: Function;
 	export let addTag: Function;
 
 	export let onClose: Function = () => {};
+
+	const downloadChatAsTxt = async () => {
+		const _chat = chat.chat;
+		console.log('download', chat);
+
+		const chatText = _chat.messages.reduce((a, message, i, arr) => {
+			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
+		}, '');
+
+		let blob = new Blob([chatText], {
+			type: 'text/plain'
+		});
+
+		saveAs(blob, `chat-${_chat.title}.txt`);
+	};
+
+	const downloadChatAsPdf = async () => {
+		const _chat = chat.chat;
+		console.log('download', chat);
+
+		const doc = new jsPDF();
+
+		// Initialize y-coordinate for text placement
+		let yPos = 10;
+		const pageHeight = doc.internal.pageSize.height;
+
+		// Function to check if new text exceeds the current page height
+		function checkAndAddNewPage() {
+			if (yPos > pageHeight - 10) {
+				doc.addPage();
+				yPos = 10; // Reset yPos for the new page
+			}
+		}
+
+		// Function to add text with specific style
+		function addStyledText(text, isTitle = false) {
+			// Set font style and size based on the parameters
+			doc.setFont('helvetica', isTitle ? 'bold' : 'normal');
+			doc.setFontSize(isTitle ? 12 : 10);
+
+			const textMargin = 7;
+
+			// Split text into lines to ensure it fits within the page width
+			const lines = doc.splitTextToSize(text, 180); // Adjust the width as needed
+
+			lines.forEach((line) => {
+				checkAndAddNewPage(); // Check if we need a new page before adding more text
+				doc.text(line, 10, yPos);
+				yPos += textMargin; // Increment yPos for the next line
+			});
+
+			// Add extra space after a block of text
+			yPos += 2;
+		}
+
+		_chat.messages.forEach((message, i) => {
+			// Add user text in bold
+			doc.setFont('helvetica', 'normal', 'bold');
+
+			addStyledText(message.role.toUpperCase(), { isTitle: true });
+			addStyledText(message.content);
+		});
+
+		doc.save(`chat-${_chat.title}.pdf`);
+	};
 </script>
 
 <Dropdown
@@ -31,14 +102,14 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[150px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
+			class="w-full max-w-[200px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-900 dark:text-white shadow-lg"
 			sideOffset={8}
 			side="bottom"
 			align="end"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer"
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
 				on:click={async () => {
 					await showSettings.set(!$showSettings);
 				}}
@@ -49,7 +120,7 @@
 					viewBox="0 0 24 24"
 					stroke-width="1.5"
 					stroke="currentColor"
-					class="w-5 h-5"
+					class="size-4"
 				>
 					<path
 						stroke-linecap="round"
@@ -67,7 +138,7 @@
 
 			{#if shareEnabled}
 				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer"
+					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
 					on:click={() => {
 						shareHandler();
 					}}
@@ -87,7 +158,59 @@
 					<div class="flex items-center">Share</div>
 				</DropdownMenu.Item>
 
-				<hr class="border-gray-100 dark:border-gray-800 my-1" />
+				<!-- <DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer"
+					on:click={() => {
+						downloadHandler();
+					}}
+				/> -->
+				<DropdownMenu.Sub>
+					<DropdownMenu.SubTrigger
+						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+							/>
+						</svg>
+
+						<div class="flex items-center">Download</div>
+					</DropdownMenu.SubTrigger>
+					<DropdownMenu.SubContent
+						class="w-full rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-900 dark:text-white shadow-lg"
+						transition={flyAndScale}
+						sideOffset={8}
+					>
+						<DropdownMenu.Item
+							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
+							on:click={() => {
+								downloadChatAsTxt();
+							}}
+						>
+							<div class="flex items-center line-clamp-1">Plain text (.txt)</div>
+						</DropdownMenu.Item>
+
+						<DropdownMenu.Item
+							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
+							on:click={() => {
+								downloadChatAsPdf();
+							}}
+						>
+							<div class="flex items-center line-clamp-1">PDF document (.pdf)</div>
+						</DropdownMenu.Item>
+					</DropdownMenu.SubContent>
+				</DropdownMenu.Sub>
+
+				<hr class="border-gray-100 dark:border-gray-800 mt-2.5 mb-1.5" />
 
 				<div class="flex p-1">
 					<Tags {tags} {deleteTag} {addTag} />

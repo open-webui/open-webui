@@ -47,6 +47,10 @@ class Token(BaseModel):
     token_type: str
 
 
+class ApiKey(BaseModel):
+    api_key: Optional[str] = None
+
+
 class UserResponse(BaseModel):
     id: str
     email: str
@@ -120,6 +124,28 @@ class AuthsTable:
                     return None
             else:
                 return None
+        except:
+            return None
+
+    def authenticate_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
+        log.info(f"authenticate_user_by_api_key: {api_key}")
+        # if no api_key, return None
+        if not api_key:
+            return None
+
+        try:
+            user = Users.get_user_by_api_key(api_key)
+            return user if user else None
+        except:
+            return False
+
+    def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
+        log.info(f"authenticate_user_by_trusted_header: {email}")
+        try:
+            auth = Auth.get(Auth.email == email, Auth.active == True)
+            if auth:
+                user = Users.get_user_by_id(auth.id)
+                return user
         except:
             return None
 

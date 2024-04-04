@@ -31,6 +31,21 @@ export const getModels = async (token: string) => {
 // Helper functions
 //////////////////////////
 
+export const sanitizeResponseContent = (content: string) => {
+	return content
+		.replace(/<\|[a-z]*$/, '')
+		.replace(/<\|[a-z]+\|$/, '')
+		.replace(/<$/, '')
+		.replaceAll(/<\|[a-z]+\|>/g, ' ')
+		.replaceAll(/<br\s?\/?>/gi, '\n')
+		.replaceAll('<', '&lt;')
+		.trim();
+};
+
+export const revertSanitizedResponseContent = (content: string) => {
+	return content.replaceAll('&lt;', '<');
+};
+
 export const capitalizeFirstLetter = (string) => {
 	return string.charAt(0).toUpperCase() + string.slice(1);
 };

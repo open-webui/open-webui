@@ -5,6 +5,8 @@ from starlette.responses import StreamingResponse, FileResponse
 
 from pydantic import BaseModel
 
+
+import markdown
 import requests
 import os
 import aiohttp
@@ -26,6 +28,17 @@ async def get_gravatar(
     email: str,
 ):
     return get_gravatar_url(email)
+
+
+class MarkdownForm(BaseModel):
+    md: str
+
+
+@router.post("/markdown")
+async def get_html_from_markdown(
+    form_data: MarkdownForm,
+):
+    return {"html": markdown.markdown(form_data.md)}
 
 
 @router.get("/db/download")
