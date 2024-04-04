@@ -34,7 +34,7 @@
 	};
 
 	let embeddingModel = {
-		embedding_model: '',
+		embedding_model: ''
 	};
 
 	const scanHandler = async () => {
