@@ -57,7 +57,12 @@ class UsersTable:
         self.db.create_tables([User])
 
     def insert_new_user(
-        self, id: str, name: str, email: str, profile_image_url: str, role: str = "pending",
+        self,
+        id: str,
+        name: str,
+        email: str,
+        profile_image_url: str,
+        role: str = "pending",
     ) -> Optional[UserModel]:
         user = UserModel(
             **{

@@ -91,7 +91,12 @@ class AuthsTable:
         self.db.create_tables([Auth])
 
     def insert_new_auth(
-        self, email: str, password: str, name: str, profile_image_url: str, role: str = "pending"
+        self,
+        email: str,
+        password: str,
+        name: str,
+        profile_image_url: str,
+        role: str = "pending",
     ) -> Optional[UserModel]:
         log.info("insert_new_auth")
 
