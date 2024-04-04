@@ -46,11 +46,47 @@
 
 		const doc = new jsPDF();
 
-		const chatText = _chat.messages.reduce((a, message, i, arr) => {
-			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
-		}, '');
+		// Initialize y-coordinate for text placement
+		let yPos = 10;
+		const pageHeight = doc.internal.pageSize.height;
 
-		doc.text(chatText, 10, 10);
+		// Function to check if new text exceeds the current page height
+		function checkAndAddNewPage() {
+			if (yPos > pageHeight - 10) {
+				doc.addPage();
+				yPos = 10; // Reset yPos for the new page
+			}
+		}
+
+		// Function to add text with specific style
+		function addStyledText(text, isTitle = false) {
+			// Set font style and size based on the parameters
+			doc.setFont('helvetica', isTitle ? 'bold' : 'normal');
+			doc.setFontSize(isTitle ? 12 : 10);
+
+			const textMargin = 7;
+
+			// Split text into lines to ensure it fits within the page width
+			const lines = doc.splitTextToSize(text, 180); // Adjust the width as needed
+
+			lines.forEach((line) => {
+				checkAndAddNewPage(); // Check if we need a new page before adding more text
+				doc.text(line, 10, yPos);
+				yPos += textMargin; // Increment yPos for the next line
+			});
+
+			// Add extra space after a block of text
+			yPos += 2;
+		}
+
+		_chat.messages.forEach((message, i) => {
+			// Add user text in bold
+			doc.setFont('helvetica', 'normal', 'bold');
+
+			addStyledText(message.role.toUpperCase(), { isTitle: true });
+			addStyledText(message.content);
+		});
+
 		doc.save(`chat-${_chat.title}.pdf`);
 	};
 </script>
