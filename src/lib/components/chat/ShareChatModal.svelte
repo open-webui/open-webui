@@ -1,9 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
 
-	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
-
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
 	import { chatId, modelfiles } from '$lib/stores';
@@ -53,21 +50,6 @@
 			},
 			false
 		);
-	};
-
-	const downloadChat = async () => {
-		const _chat = chat.chat;
-		console.log('download', chat);
-
-		const chatText = _chat.messages.reduce((a, message, i, arr) => {
-			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
-		}, '');
-
-		let blob = new Blob([chatText], {
-			type: 'text/plain'
-		});
-
-		saveAs(blob, `chat-${_chat.title}.txt`);
 	};
 
 	export let show = false;
@@ -157,19 +139,6 @@
 								{:else}
 									{$i18n.t('Copy Link')}
 								{/if}
-							</button>
-						</div>
-						<div class="flex gap-1 mt-1.5">
-							<div class=" self-center text-gray-400 text-xs font-medium">{$i18n.t('or')}</div>
-							<button
-								class=" text-right rounded-full text-xs font-medium text-gray-700 dark:text-gray-500 underline"
-								type="button"
-								on:click={() => {
-									downloadChat();
-									show = false;
-								}}
-							>
-								{$i18n.t('Download as a File')}
 							</button>
 						</div>
 					</div>
