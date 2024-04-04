@@ -43,8 +43,6 @@ from config import (
     GLOBAL_LOG_LEVEL,
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
-    MANIFEST_NAME,
-    MANIFEST_SHORT_NAME
 )
 from constants import ERROR_MESSAGES
 
@@ -70,9 +68,6 @@ app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.WEBHOOK_URL = WEBHOOK_URL
-
-app.state.MANIFEST_NAME = MANIFEST_NAME
-app.state.MANIFEST_SHORT_NAME = MANIFEST_SHORT_NAME
 
 origins = ["*"]
 
@@ -275,20 +270,14 @@ async def get_app_latest_release_version():
 @app.get("/manifest.json")
 async def get_manifest_json():
     return {
-        "name": app.state.MANIFEST_NAME,
-        "short_name": app.state.MANIFEST_SHORT_NAME,
+        "name": WEBUI_NAME,
+        "short_name": WEBUI_NAME,
         "start_url": "/",
         "display": "standalone",
         "background_color": "#343541",
         "theme_color": "#343541",
         "orientation": "portrait-primary",
-        "icons": [
-            {
-                "src": "/favicon.png",
-                "type": "image/png",
-                "sizes": "844x884"
-            }
-        ]
+        "icons": [{"src": "/favicon.png", "type": "image/png", "sizes": "844x884"}],
     }
 
 
