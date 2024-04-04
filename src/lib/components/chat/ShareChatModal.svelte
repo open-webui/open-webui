@@ -54,12 +54,16 @@
 
 	export let show = false;
 
-	onMount(async () => {
-		chatId.subscribe(async (value) => {
-			chat = await getChatById(localStorage.token, value);
-			console.log(chat);
-		});
-	});
+	$: if (show) {
+		(async () => {
+			if ($chatId) {
+				chat = await getChatById(localStorage.token, $chatId);
+			} else {
+				chat = null;
+				console.log(chat);
+			}
+		})();
+	}
 </script>
 
 <Modal bind:show size="sm">
