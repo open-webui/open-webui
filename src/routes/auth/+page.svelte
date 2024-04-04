@@ -5,6 +5,7 @@
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { generateInitialsImage } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -35,7 +36,7 @@
 	};
 
 	const signUpHandler = async () => {
-		const sessionUser = await userSignUp(name, email, password).catch((error) => {
+		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch((error) => {
 			toast.error(error);
 			return null;
 		});

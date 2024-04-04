@@ -6,7 +6,7 @@
 	import { updateUserProfile } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
-	import { getGravatarUrl } from '$lib/apis/utils';
+	import { generateInitialsImage } from '$lib/utils';
 	import { copyToClipboard } from '$lib/utils';
 
 	const i18n = getContext('i18n');
@@ -18,28 +18,6 @@
 	let showJWTToken = false;
 	let JWTTokenCopied = false;
 	let profileImageInputElement: HTMLInputElement;
-
-	const generateInitialsImage = (name) => {
-		const canvas = document.createElement('canvas');
-		const ctx = canvas.getContext('2d');
-		canvas.width = 100;
-		canvas.height = 100;
-
-		ctx.fillStyle = '#F39C12';
-		ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-		ctx.fillStyle = '#FFFFFF';
-		ctx.font = '40px Helvetica';
-		ctx.textAlign = 'center';
-		ctx.textBaseline = 'middle';
-		const initials = name
-			.split(' ')
-			.map((word) => word[0])
-			.join('');
-		ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
-
-		return canvas.toDataURL();
-	};
 
 	const submitHandler = async () => {
 		const isInitialsImage: boolean =
