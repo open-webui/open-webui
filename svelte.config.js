@@ -16,6 +16,12 @@ const config = {
 			assets: 'build',
 			fallback: 'index.html'
 		})
+	},
+	onwarn: (warning, handler) => {
+		const { code, _ } = warning;
+		if (code === 'css-unused-selector') return;
+
+		handler(warning);
 	}
 };
 

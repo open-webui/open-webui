@@ -1,9 +1,54 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
+import { getOllamaModels } from '$lib/apis/ollama';
+import { getOpenAIModels } from '$lib/apis/openai';
+import { getLiteLLMModels } from '$lib/apis/litellm';
+
+export const getModels = async (token: string) => {
+	let models = await Promise.all([
+		await getOllamaModels(token).catch((error) => {
+			console.log(error);
+			return null;
+		}),
+		await getOpenAIModels(token).catch((error) => {
+			console.log(error);
+			return null;
+		}),
+		await getLiteLLMModels(token).catch((error) => {
+			console.log(error);
+			return null;
+		})
+	]);
+
+	models = models
+		.filter((models) => models)
+		.reduce((a, e, i, arr) => a.concat(e, ...(i < arr.length - 1 ? [{ name: 'hr' }] : [])), []);
+
+	return models;
+};
 
 //////////////////////////
 // Helper functions
 //////////////////////////
+
+export const sanitizeResponseContent = (content: string) => {
+	return content
+		.replace(/<\|[a-z]*$/, '')
+		.replace(/<\|[a-z]+\|$/, '')
+		.replace(/<$/, '')
+		.replaceAll(/<\|[a-z]+\|>/g, ' ')
+		.replaceAll(/<br\s?\/?>/gi, '\n')
+		.replaceAll('<', '&lt;')
+		.trim();
+};
+
+export const revertSanitizedResponseContent = (content: string) => {
+	return content.replaceAll('&lt;', '<');
+};
+
+export const capitalizeFirstLetter = (string) => {
+	return string.charAt(0).toUpperCase() + string.slice(1);
+};
 
 export const splitStream = (splitOn) => {
 	let buffer = '';

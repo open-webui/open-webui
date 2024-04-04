@@ -2,12 +2,18 @@ from pydantic import BaseModel
 from typing import List, Union, Optional
 import time
 import uuid
+import logging
 from peewee import *
 
 from apps.web.models.users import UserModel, Users
 from utils.utils import verify_password
 
 from apps.web.internal.db import DB
+
+from config import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 ####################
 # DB MODEL
@@ -39,6 +45,10 @@ class AuthModel(BaseModel):
 class Token(BaseModel):
     token: str
     token_type: str
+
+
+class ApiKey(BaseModel):
+    api_key: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -86,7 +96,7 @@ class AuthsTable:
     def insert_new_auth(
         self, email: str, password: str, name: str, role: str = "pending"
     ) -> Optional[UserModel]:
-        print("insert_new_auth")
+        log.info("insert_new_auth")
 
         id = str(uuid.uuid4())
 
@@ -103,7 +113,7 @@ class AuthsTable:
             return None
 
     def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
-        print("authenticate_user", email)
+        log.info(f"authenticate_user: {email}")
         try:
             auth = Auth.get(Auth.email == email, Auth.active == True)
             if auth:
@@ -114,6 +124,28 @@ class AuthsTable:
                     return None
             else:
                 return None
+        except:
+            return None
+
+    def authenticate_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
+        log.info(f"authenticate_user_by_api_key: {api_key}")
+        # if no api_key, return None
+        if not api_key:
+            return None
+
+        try:
+            user = Users.get_user_by_api_key(api_key)
+            return user if user else None
+        except:
+            return False
+
+    def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
+        log.info(f"authenticate_user_by_trusted_header: {email}")
+        try:
+            auth = Auth.get(Auth.email == email, Auth.active == True)
+            if auth:
+                user = Users.get_user_by_id(auth.id)
+                return user
         except:
             return None
 

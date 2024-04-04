@@ -11,7 +11,7 @@
 	import '../tailwind.css';
 	import 'tippy.js/dist/tippy.css';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import i18n from '$lib/i18n';
+	import i18n, { initI18n } from '$lib/i18n';
 
 	setContext('i18n', i18n);
 
@@ -25,6 +25,11 @@
 		if (backendConfig) {
 			// Save Backend Status to Store
 			await config.set(backendConfig);
+			if ($config.default_locale) {
+				initI18n($config.default_locale);
+			} else {
+				initI18n();
+			}
 
 			await WEBUI_NAME.set(backendConfig.name);
 			console.log(backendConfig);
