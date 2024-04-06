@@ -151,9 +151,12 @@
 						if (canvasPixelTest()) {
 							profileImageUrl = generateInitialsImage(name);
 						} else {
-							toast.error("Canvas pixel test failed, fingerprint evasion likely. Disable fingerprint evasion and try again!", {
-								autoClose: 1000 * 10,
-							});
+							toast.error(
+								'Canvas pixel test failed, fingerprint evasion likely. Disable fingerprint evasion and try again!',
+								{
+									autoClose: 1000 * 10
+								}
+							);
 						}
 					}}>{$i18n.t('Use Gravatar')}</button
 				>
