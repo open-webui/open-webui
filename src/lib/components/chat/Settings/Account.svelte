@@ -152,7 +152,9 @@
 							profileImageUrl = generateInitialsImage(name);
 						} else {
 							toast.info(
-								$i18n.t('Fingerprint spoofing detected: default profile picture set. Disable to access initial gravatar!'),
+								$i18n.t(
+									'Fingerprint spoofing detected: default profile picture set. Disable to access initial gravatar!'
+								),
 								{
 									autoClose: 1000 * 10
 								}
