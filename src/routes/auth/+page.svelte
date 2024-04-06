@@ -43,6 +43,16 @@
 			}
 		);
 
+		if (!canvasPixelTest()) {
+			toast.error(
+				$i18n.t('Canvas pixel test failed: fingerprint evasion likely. Using default avatar image.'),
+				{
+					position: "bottom-center",
+					autoClose: 1000 * 10,
+				}
+			);
+		}
+
 		await setSessionUser(sessionUser);
 	};
 

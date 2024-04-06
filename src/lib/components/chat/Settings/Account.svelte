@@ -152,7 +152,7 @@
 							profileImageUrl = generateInitialsImage(name);
 						} else {
 							toast.error(
-								'Canvas pixel test failed, fingerprint evasion likely. Disable fingerprint evasion and try again!',
+								$i18n.t('Canvas pixel test failed: fingerprint evasion likely. Disable fingerprint evasion and try again!'),
 								{
 									autoClose: 1000 * 10
 								}
