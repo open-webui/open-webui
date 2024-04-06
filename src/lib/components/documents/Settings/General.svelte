@@ -51,8 +51,12 @@
 	};
 
 	const embeddingModelUpdateHandler = async () => {
-		if ((embeddingModel.embedding_model.split("/").length -1) > 1) {
-			toast.error($i18n.t('Model filesystem path detected. Model shortname is required for update, cannot continue.', ));
+		if (embeddingModel.embedding_model.split('/').length - 1 > 1) {
+			toast.error(
+				$i18n.t(
+					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
+				)
+			);
 			return;
 		}
 
@@ -65,19 +69,13 @@
 		if (res) {
 			console.log('embeddingModelUpdateHandler:', res);
 			if (res.status === true) {
-				toast.success(
-					$i18n.t('Model {{embedding_model}} update complete!', res),
-					{
-						duration: 1000 * 10,
-					}
-				);
+				toast.success($i18n.t('Model {{embedding_model}} update complete!', res), {
+					duration: 1000 * 10
+				});
 			} else {
-				toast.error(
-					$i18n.t('Model {{embedding_model}} update failed or not required!', res),
-                                        {
-						duration: 1000 * 10,
-                                        }
-				);
+				toast.error($i18n.t('Model {{embedding_model}} update failed or not required!', res), {
+					duration: 1000 * 10
+				});
 			}
 		}
 	};
@@ -180,26 +178,24 @@
 					{/if}
 				</button>
 			</div>
-
 		</div>
 
 		<hr class=" dark:border-gray-700" />
 
 		<div>
 			<div class="  flex w-full justify-between">
-				<Tooltip content={
-					$i18n.t('Embedding model: {{embedding_model}}', embeddingModel)
-				}>
-
+				<Tooltip content={$i18n.t('Embedding model: {{embedding_model}}', embeddingModel)}>
 					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Update embedding model {{embedding_model}}', { embedding_model: embeddingModel.embedding_model.slice(-40) })}
+						{$i18n.t('Update embedding model {{embedding_model}}', {
+							embedding_model: embeddingModel.embedding_model.slice(-40)
+						})}
 					</div>
 				</Tooltip>
-
-				<Tooltip content={
-					$i18n.t('Understand that updating or changing your embedding model requires reset of the vector database and re-import of all documents. You have been warned!')
-				}>
-
+				<Tooltip
+					content={$i18n.t(
+						'Understand that updating or changing your embedding model requires reset of the vector database and re-import of all documents. You have been warned!'
+					)}
+				>
 					<button
 						class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded flex flex-row space-x-1 items-center {loading1
 							? ' cursor-not-allowed'
