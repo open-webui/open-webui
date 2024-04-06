@@ -78,5 +78,5 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:with-ollama
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:ollama
           build-args: USE_OLLAMA=true
