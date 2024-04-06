@@ -43,6 +43,8 @@ from config import (
     GLOBAL_LOG_LEVEL,
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
+    AI_TEAM_TEXT,
+    AI_TEAM_MAILTO,
 )
 from constants import ERROR_MESSAGES
 

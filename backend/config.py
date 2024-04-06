@@ -173,9 +173,9 @@ if CUSTOM_NAME:
     except Exception as e:
         log.exception(e)
         pass
-else:
-    if WEBUI_NAME != "Open WebUI":
-        WEBUI_NAME += " (Open WebUI)"
+#else:
+#    if WEBUI_NAME != "Open WebUI":
+#        WEBUI_NAME += " (Open WebUI)"
 
 ####################################
 # DATA/FRONTEND BUILD DIR
@@ -352,7 +352,7 @@ USER_PERMISSIONS = {"chat": {"deletion": USER_PERMISSIONS_CHAT_DELETION}}
 MODEL_FILTER_ENABLED = os.environ.get("MODEL_FILTER_ENABLED", "False").lower() == "true"
 MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
 MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
-
+AI_TEAM_EAMAIL = os.environ.get("AI_TEAM_EAMAIL", "")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
 ####################################
@@ -431,3 +431,6 @@ WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models"
 
 AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
 COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
+
+AI_TEAM_TEXT = os.environ.get("AI_TEAM_TEXT", "")
+AI_TEAM_MAILTO = os.environ.get("AI_TEAM_MAILTO", "")

@@ -13,6 +13,7 @@
 	import Models from './MessageInput/Models.svelte';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import Tooltip from '../common/Tooltip.svelte';
+	import { AI_TEAM_MAILTO, AI_TEAM_TEXT} from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -927,7 +928,8 @@
 				</form>
 
 				<div class="mt-1.5 text-xs text-gray-500 text-center">
-					{$i18n.t('LLMs can make mistakes. Verify important information.')}
+					{$i18n.t('AI can make mistakes. Always verify the results!')}					
+					<a href="{$AI_TEAM_MAILTO}]">  {$AI_TEAM_TEXT}</a>					
 				</div>
 			</div>
 		</div>

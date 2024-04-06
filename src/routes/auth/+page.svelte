@@ -168,7 +168,7 @@
 									bind:value={password}
 									type="password"
 									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
-									placeholder={$i18n.t('Enter Your Password')}
+									placeholder={$i18n.t('Your Pass (DO NOT use your company password!)')}
 									autocomplete="current-password"
 									required
 								/>

@@ -5,6 +5,8 @@ import { writable } from 'svelte/store';
 export const WEBUI_NAME = writable(APP_NAME);
 export const config = writable(undefined);
 export const user = writable(undefined);
+export const AI_TEAM_TEXT = writable({});
+export const AI_TEAM_MAILTO = writable({});
 
 // Frontend
 export const MODEL_DOWNLOAD_POOL = writable({});
