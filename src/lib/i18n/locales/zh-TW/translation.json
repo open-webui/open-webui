@@ -101,7 +101,7 @@
 	"Deleted {{deleteModelTag}}": "已刪除 {{deleteModelTag}}",
 	"Deleted {tagName}": "已刪除 {tagName}",
 	"Description": "描述",
-	"Desktop Notifications": "桌面通知",
+	"Notifications": "桌面通知",
 	"Disabled": "已停用",
 	"Discover a modelfile": "發現新 Modelfile",
 	"Discover a prompt": "發現新提示詞",
