@@ -71,13 +71,13 @@ async def download_chat_as_pdf(
     for message in form_data.messages:
         role = message["role"]
         content = message["content"]
-        pdf.set_font("NotoSans", "B", size=12)  # Bold for the role
+        pdf.set_font("NotoSans", "B", size=14)  # Bold for the role
         pdf.multi_cell(effective_page_width, 10, f"{role.upper()}", 0, "L")
         pdf.ln(1)  # Extra space between messages
 
         pdf.set_font("NotoSans", size=10)  # Regular for content
-        pdf.multi_cell(effective_page_width, 10, content, 0, "L")
-        pdf.ln(1)  # Extra space between messages
+        pdf.multi_cell(effective_page_width, 6, content, 0, "L")
+        pdf.ln(1.5)  # Extra space between messages
 
     # Save the pdf with name .pdf
     pdf_bytes = pdf.output()
