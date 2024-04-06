@@ -43,12 +43,6 @@
 			}
 		);
 
-		if (!canvasPixelTest()) {
-			toast.error('Canvas pixel test failed, fingerprint evasion likely. Default image used.', {
-				autoClose: 1000 * 10
-			});
-		}
-
 		await setSessionUser(sessionUser);
 	};
 
