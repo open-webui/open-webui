@@ -6,7 +6,7 @@
 	import { updateUserProfile } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
-	import { generateInitialsImage } from '$lib/utils';
+	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 	import { copyToClipboard } from '$lib/utils';
 
 	const i18n = getContext('i18n');
@@ -148,7 +148,13 @@
 				<button
 					class=" text-xs text-gray-600"
 					on:click={async () => {
-						profileImageUrl = generateInitialsImage(name);
+						if (canvasPixelTest()) {
+							profileImageUrl = generateInitialsImage(name);
+						} else {
+							toast.error("Canvas pixel test failed, fingerprint evasion likely. Disable fingerprint evasion and try again!", {
+								autoClose: 1000 * 10,
+							});
+						}
 					}}>{$i18n.t('Use Gravatar')}</button
 				>
 			</div>
