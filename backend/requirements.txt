@@ -42,6 +42,8 @@ xlrd
 opencv-python-headless
 rapidocr-onnxruntime
 
+fpdf2
+
 faster-whisper
 
 PyJWT
