@@ -1,0 +1,8 @@
+services:
+  ollama:
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    image: ollama/ollama:rocm
+    environment:
+      - 'HSA_OVERRIDE_GFX_VERSION=${HSA_OVERRIDE_GFX_VERSION}'
