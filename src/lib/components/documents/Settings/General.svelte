@@ -15,6 +15,8 @@
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+
 	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
@@ -49,16 +51,33 @@
 	};
 
 	const embeddingModelUpdateHandler = async () => {
+		if ((embeddingModel.embedding_model.split("/").length -1) > 1) {
+			toast.error($i18n.t('Model filesystem path detected. Model shortname is required for update, cannot continue.', ));
+			return;
+		}
+
+		console.log('Update embedding model attempt:', embeddingModel.embedding_model);
+
 		loading1 = true;
 		const res = await updateEmbeddingModel(localStorage.token, embeddingModel);
 		loading1 = false;
 
 		if (res) {
 			console.log('embeddingModelUpdateHandler:', res);
-			if (res.status == true) {
-				toast.success($i18n.t('Model {{embedding_model}} update complete!', res));
+			if (res.status === true) {
+				toast.success(
+					$i18n.t('Model {{embedding_model}} update complete!', res),
+					{
+						duration: 1000 * 10,
+					}
+				);
 			} else {
-				toast.error($i18n.t('Model {{embedding_model}} update failed or not required!', res));
+				toast.error(
+					$i18n.t('Model {{embedding_model}} update failed or not required!', res),
+                                        {
+						duration: 1000 * 10,
+                                        }
+				);
 			}
 		}
 	};
@@ -162,65 +181,66 @@
 				</button>
 			</div>
 
+		</div>
+
+		<hr class=" dark:border-gray-700" />
+
+		<div>
 			<div class="  flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Update embedding model {{embedding_model}}', embeddingModel)}
-				</div>
+				<Tooltip content={
+					$i18n.t('Embedding model: {{embedding_model}}', embeddingModel)
+				}>
 
-				<button
-					class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded flex flex-row space-x-1 items-center {loading1
-						? ' cursor-not-allowed'
-						: ''}"
-					on:click={() => {
-						embeddingModelUpdateHandler(embeddingModel);
-						console.log('Update embedding model:', embeddingModel.embedding_model);
-					}}
-					type="button"
-					disabled={loading1}
-				>
-					<div class="self-center font-medium">{$i18n.t('Update')}</div>
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Update embedding model {{embedding_model}}', { embedding_model: embeddingModel.embedding_model.slice(-40) })}
+					</div>
+				</Tooltip>
 
-					<!-- <svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 16 16"
-						fill="currentColor"
-						class="w-3 h-3"
+				<Tooltip content={
+					$i18n.t('Understand that updating or changing your embedding model requires reset of the vector database and re-import of all documents. You have been warned!')
+				}>
+
+					<button
+						class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded flex flex-row space-x-1 items-center {loading1
+							? ' cursor-not-allowed'
+							: ''}"
+						on:click={() => {
+							embeddingModelUpdateHandler(embeddingModel);
+						}}
+						type="button"
+						disabled={loading1}
 					>
-						<path
-							fill-rule="evenodd"
-							d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75Zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273Z"
-							clip-rule="evenodd"
-						/>
-					</svg> -->
+						<div class="self-center font-medium">{$i18n.t('Update')}</div>
 
-					{#if loading1}
-						<div class="ml-3 self-center">
-							<svg
-								class=" w-3 h-3"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								xmlns="http://www.w3.org/2000/svg"
-								><style>
-									.spinner_ajPY {
-										transform-origin: center;
-										animation: spinner_AtaB 0.75s infinite linear;
-									}
-									@keyframes spinner_AtaB {
-										100% {
-											transform: rotate(360deg);
+						{#if loading1}
+							<div class="ml-3 self-center">
+								<svg
+									class=" w-3 h-3"
+									viewBox="0 0 24 24"
+									fill="currentColor"
+									xmlns="http://www.w3.org/2000/svg"
+									><style>
+										.spinner_ajPY {
+											transform-origin: center;
+											animation: spinner_AtaB 0.75s infinite linear;
 										}
-									}
-								</style><path
-									d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-									opacity=".25"
-								/><path
-									d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-									class="spinner_ajPY"
-								/></svg
-							>
-						</div>
-					{/if}
-				</button>
+										@keyframes spinner_AtaB {
+											100% {
+												transform: rotate(360deg);
+											}
+										}
+									</style><path
+										d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+										opacity=".25"
+									/><path
+										d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+										class="spinner_ajPY"
+									/></svg
+								>
+							</div>
+						{/if}
+					</button>
+				</Tooltip>
 			</div>
 		</div>
 
