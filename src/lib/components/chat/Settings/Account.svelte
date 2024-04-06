@@ -6,6 +6,7 @@
 	import { updateUserProfile } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
+	import { getGravatarUrl } from '$lib/apis/utils';
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 	import { copyToClipboard } from '$lib/utils';
 
@@ -146,20 +147,28 @@
 					</button>
 				</div>
 				<button
-					class=" text-xs text-gray-600"
+					class=" text-xs text-left text-gray-600"
 					on:click={async () => {
 						if (canvasPixelTest()) {
 							profileImageUrl = generateInitialsImage(name);
 						} else {
 							toast.info(
 								$i18n.t(
-									'Fingerprint spoofing detected: default profile picture set. Disable to access Initial gravatar!'
+									'Fingerprint spoofing detected: default profile picture set. Disable to access Initial avatar!'
 								),
 								{
-									autoClose: 1000 * 10
+									duration: 1000 * 10
 								}
 							);
 						}
+					}}>{$i18n.t('Use Initials')}</button
+				>
+				<button
+					class=" text-xs text-left text-gray-600"
+					on:click={async () => {
+						const url = await getGravatarUrl($user.email);
+
+						profileImageUrl = url;
 					}}>{$i18n.t('Use Gravatar')}</button
 				>
 			</div>
