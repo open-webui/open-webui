@@ -46,7 +46,7 @@
 		if (!canvasPixelTest()) {
 			toast.info(
 				$i18n.t(
-					'Fingerprint spoofing detected: default profile picture set. Disable to access initial gravatar!'
+					'Fingerprint spoofing detected: default profile picture set. Disable to access Initial gravatar!'
 				),
 				{
 					position: 'bottom-center',
