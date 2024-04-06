@@ -44,8 +44,8 @@
 		);
 
 		if (!canvasPixelTest()) {
-			toast.error(
-				$i18n.t('Canvas pixel test failed: fingerprint evasion likely. Using default avatar image.'),
+			toast.info(
+				$i18n.t('Fingerprint spoofing detected: default profile picture set. Disable to access initial gravatar!'),
 				{
 					position: "bottom-center",
 					autoClose: 1000 * 10,
