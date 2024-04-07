@@ -26,9 +26,14 @@ ENV OPENAI_API_BASE_URL ""
 ENV OPENAI_API_KEY ""
 
 ENV WEBUI_SECRET_KEY ""
+ENV WEBUI_AUTH_TRUSTED_EMAIL_HEADER ""
 
 ENV SCARF_NO_ANALYTICS true
 ENV DO_NOT_TRACK true
+
+# Use locally bundled version of the LiteLLM cost map json
+# to avoid repetitive startup connections
+ENV LITELLM_LOCAL_MODEL_COST_MAP="True"
 
 ######## Preloaded models ########
 # whisper TTS Settings

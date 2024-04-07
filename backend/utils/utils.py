@@ -1,6 +1,8 @@
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import HTTPException, status, Depends
+
 from apps.web.models.users import Users
+
 from pydantic import BaseModel
 from typing import Union, Optional
 from constants import ERROR_MESSAGES
@@ -8,6 +10,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import requests
 import jwt
+import uuid
 import logging
 import config
 
@@ -58,6 +61,11 @@ def extract_token_from_auth_header(auth_header: str):
     return auth_header[len("Bearer ") :]
 
 
+def create_api_key():
+    key = str(uuid.uuid4()).replace("-", "")
+    return f"sk-{key}"
+
+
 def get_http_authorization_cred(auth_header: str):
     try:
         scheme, credentials = auth_header.split(" ")
@@ -69,6 +77,10 @@ def get_http_authorization_cred(auth_header: str):
 def get_current_user(
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
+    # auth by api key
+    if auth_token.credentials.startswith("sk-"):
+        return get_current_user_by_api_key(auth_token.credentials)
+    # auth by jwt token
     data = decode_token(auth_token.credentials)
     if data != None and "id" in data:
         user = Users.get_user_by_id(data["id"])
@@ -83,6 +95,16 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+
+
+def get_current_user_by_api_key(api_key: str):
+    user = Users.get_user_by_api_key(api_key)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.INVALID_TOKEN,
+        )
+    return user
 
 
 def get_verified_user(user=Depends(get_current_user)):

@@ -17,7 +17,11 @@
 	import { config, settings } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
 	import { imageGenerations } from '$lib/apis/images';
-	import { extractSentences } from '$lib/utils';
+	import {
+		extractSentences,
+		revertSanitizedResponseContent,
+		sanitizeResponseContent
+	} from '$lib/utils';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -32,6 +36,8 @@
 	export let siblings;
 
 	export let isLastMessage = true;
+
+	export let readOnly = false;
 
 	export let confirmEditResponseMessage: Function;
 	export let showPreviousMessage: Function;
@@ -54,7 +60,7 @@
 	let loadingSpeech = false;
 	let generatingImage = false;
 
-	$: tokens = marked.lexer(message.content);
+	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
 
 	const renderer = new marked.Renderer();
 
@@ -128,7 +134,7 @@
 				// • auto-render specific keys, e.g.:
 				delimiters: [
 					{ left: '$$', right: '$$', display: false },
-					{ left: '$', right: '$', display: false },
+					{ left: '$ ', right: ' $', display: false },
 					{ left: '\\(', right: '\\)', display: false },
 					{ left: '\\[', right: '\\]', display: false },
 					{ left: '[ ', right: ' ]', display: false }
@@ -403,8 +409,10 @@
 								{:else}
 									{#each tokens as token}
 										{#if token.type === 'code'}
-											<!-- {token.text} -->
-											<CodeBlock lang={token.lang} code={token.text} />
+											<CodeBlock
+												lang={token.lang}
+												code={revertSanitizedResponseContent(token.text)}
+											/>
 										{:else}
 											{@html marked.parse(token.raw, {
 												...defaults,
@@ -422,7 +430,7 @@
 										class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
 									>
 										{#if siblings.length > 1}
-											<div class="flex self-center min-w-fit -mt-1">
+											<div class="flex self-center min-w-fit">
 												<button
 													class="self-center dark:hover:text-white hover:text-black transition"
 													on:click={() => {
@@ -469,31 +477,33 @@
 											</div>
 										{/if}
 
-										<Tooltip content="Edit" placement="bottom">
-											<button
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
-												on:click={() => {
-													editMessageHandler();
-												}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2"
-													stroke="currentColor"
-													class="w-4 h-4"
+										{#if !readOnly}
+											<Tooltip content="Edit" placement="bottom">
+												<button
+													class="{isLastMessage
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
+													on:click={() => {
+														editMessageHandler();
+													}}
 												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="2"
+														stroke="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
+										{/if}
 
 										<Tooltip content="Copy" placement="bottom">
 											<button
@@ -521,59 +531,61 @@
 											</button>
 										</Tooltip>
 
-										<Tooltip content="Good Response" placement="bottom">
-											<button
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded {message.rating === 1
-													? 'bg-gray-100 dark:bg-gray-800'
-													: ''} dark:hover:text-white hover:text-black transition"
-												on:click={() => {
-													rateMessage(message.id, 1);
-												}}
-											>
-												<svg
-													stroke="currentColor"
-													fill="none"
-													stroke-width="2"
-													viewBox="0 0 24 24"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													class="w-4 h-4"
-													xmlns="http://www.w3.org/2000/svg"
-													><path
-														d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-													/></svg
+										{#if !readOnly}
+											<Tooltip content="Good Response" placement="bottom">
+												<button
+													class="{isLastMessage
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1 rounded {message.rating === 1
+														? 'bg-gray-100 dark:bg-gray-800'
+														: ''} dark:hover:text-white hover:text-black transition"
+													on:click={() => {
+														rateMessage(message.id, 1);
+													}}
 												>
-											</button>
-										</Tooltip>
+													<svg
+														stroke="currentColor"
+														fill="none"
+														stroke-width="2"
+														viewBox="0 0 24 24"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														class="w-4 h-4"
+														xmlns="http://www.w3.org/2000/svg"
+														><path
+															d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
+														/></svg
+													>
+												</button>
+											</Tooltip>
 
-										<Tooltip content="Bad Response" placement="bottom">
-											<button
-												class="{isLastMessage
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded {message.rating === -1
-													? 'bg-gray-100 dark:bg-gray-800'
-													: ''} dark:hover:text-white hover:text-black transition"
-												on:click={() => {
-													rateMessage(message.id, -1);
-												}}
-											>
-												<svg
-													stroke="currentColor"
-													fill="none"
-													stroke-width="2"
-													viewBox="0 0 24 24"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													class="w-4 h-4"
-													xmlns="http://www.w3.org/2000/svg"
-													><path
-														d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
-													/></svg
+											<Tooltip content="Bad Response" placement="bottom">
+												<button
+													class="{isLastMessage
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1 rounded {message.rating === -1
+														? 'bg-gray-100 dark:bg-gray-800'
+														: ''} dark:hover:text-white hover:text-black transition"
+													on:click={() => {
+														rateMessage(message.id, -1);
+													}}
 												>
-											</button>
-										</Tooltip>
+													<svg
+														stroke="currentColor"
+														fill="none"
+														stroke-width="2"
+														viewBox="0 0 24 24"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														class="w-4 h-4"
+														xmlns="http://www.w3.org/2000/svg"
+														><path
+															d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
+														/></svg
+													>
+												</button>
+											</Tooltip>
+										{/if}
 
 										<Tooltip content="Read Aloud" placement="bottom">
 											<button
@@ -656,7 +668,7 @@
 											</button>
 										</Tooltip>
 
-										{#if $config.images}
+										{#if $config.images && !readOnly}
 											<Tooltip content="Generate Image" placement="bottom">
 												<button
 													class="{isLastMessage
@@ -752,7 +764,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if isLastMessage}
+										{#if isLastMessage && !readOnly}
 											<Tooltip content="Continue Response" placement="bottom">
 												<button
 													type="button"

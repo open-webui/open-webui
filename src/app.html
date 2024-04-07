@@ -9,7 +9,11 @@
 		<script>
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
-				if (
+				if (localStorage?.theme && localStorage?.theme.includes('oled')) {
+					document.documentElement.style.setProperty('--color-gray-900', '#000000');
+					document.documentElement.style.setProperty('--color-gray-950', '#000000');
+					document.documentElement.classList.add('dark');
+				} else if (
 					localStorage.theme === 'light' ||
 					(!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: light)').matches)
 				) {

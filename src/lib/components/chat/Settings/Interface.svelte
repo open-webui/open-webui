@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getBackendConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
-	import { config, models, user } from '$lib/stores';
+	import { config, models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
@@ -14,6 +14,7 @@
 	let titleAutoGenerate = true;
 	let responseAutoCopy = false;
 	let titleAutoGenerateModel = '';
+	let titleAutoGenerateModelExternal = '';
 	let fullScreenMode = false;
 	let titleGenerationPrompt = '';
 
@@ -33,7 +34,12 @@
 
 	const toggleTitleAutoGenerate = async () => {
 		titleAutoGenerate = !titleAutoGenerate;
-		saveSettings({ titleAutoGenerate: titleAutoGenerate });
+		saveSettings({
+			title: {
+				...$settings.title,
+				auto: titleAutoGenerate
+			}
+		});
 	};
 
 	const toggleResponseAutoCopy = async () => {
@@ -65,8 +71,13 @@
 		}
 
 		saveSettings({
-			titleAutoGenerateModel: titleAutoGenerateModel !== '' ? titleAutoGenerateModel : undefined,
-			titleGenerationPrompt: titleGenerationPrompt ? titleGenerationPrompt : undefined
+			title: {
+				...$settings.title,
+				model: titleAutoGenerateModel !== '' ? titleAutoGenerateModel : undefined,
+				modelExternal:
+					titleAutoGenerateModelExternal !== '' ? titleAutoGenerateModelExternal : undefined,
+				prompt: titleGenerationPrompt ? titleGenerationPrompt : undefined
+			}
 		});
 	};
 
@@ -77,16 +88,18 @@
 
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 
-		titleAutoGenerate = settings.titleAutoGenerate ?? true;
-		responseAutoCopy = settings.responseAutoCopy ?? false;
-		showUsername = settings.showUsername ?? false;
-		fullScreenMode = settings.fullScreenMode ?? false;
-		titleAutoGenerateModel = settings.titleAutoGenerateModel ?? '';
+		titleAutoGenerate = settings?.title?.auto ?? true;
+		titleAutoGenerateModel = settings?.title?.model ?? '';
+		titleAutoGenerateModelExternal = settings?.title?.modelExternal ?? '';
 		titleGenerationPrompt =
-			settings.titleGenerationPrompt ??
+			settings?.title?.prompt ??
 			$i18n.t(
 				"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
 			) + ' {{prompt}}';
+
+		responseAutoCopy = settings.responseAutoCopy ?? false;
+		showUsername = settings.showUsername ?? false;
+		fullScreenMode = settings.fullScreenMode ?? false;
 	});
 </script>
 
@@ -190,8 +203,9 @@
 
 		<div>
 			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Title Auto-Generation Model')}</div>
-			<div class="flex w-full">
-				<div class="flex-1 mr-2">
+			<div class="flex w-full gap-2 pr-2">
+				<div class="flex-1">
+					<div class=" text-xs mb-1">Local Models</div>
 					<select
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						bind:value={titleAutoGenerateModel}
@@ -202,6 +216,24 @@
 							{#if model.size != null}
 								<option value={model.name} class="bg-gray-100 dark:bg-gray-700">
 									{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}
+								</option>
+							{/if}
+						{/each}
+					</select>
+				</div>
+
+				<div class="flex-1">
+					<div class=" text-xs mb-1">External Models</div>
+					<select
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						bind:value={titleAutoGenerateModelExternal}
+						placeholder={$i18n.t('Select a model')}
+					>
+						<option value="" selected>{$i18n.t('Current Model')}</option>
+						{#each $models as model}
+							{#if model.name !== 'hr'}
+								<option value={model.name} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
 								</option>
 							{/if}
 						{/each}

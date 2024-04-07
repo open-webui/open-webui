@@ -1,6 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { userSignIn, userSignUp } from '$lib/apis/auths';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
@@ -56,6 +57,9 @@
 			await goto('/');
 		}
 		loaded = true;
+		if ($config?.trusted_header_auth ?? false) {
+			await signInHandler();
+		}
 	});
 </script>
 
@@ -90,100 +94,118 @@
 		</div> -->
 
 		<div class="w-full sm:max-w-lg px-4 min-h-screen flex flex-col">
-			<div class=" my-auto pb-10 w-full">
-				<form
-					class=" flex flex-col justify-center bg-white py-6 sm:py-16 px-6 sm:px-16 rounded-2xl"
-					on:submit|preventDefault={() => {
-						submitHandler();
-					}}
-				>
-					<div class=" text-xl sm:text-2xl font-bold">
-						{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Sign up')}
-						{$i18n.t('to')}
-						{$WEBUI_NAME}
-					</div>
-
-					{#if mode === 'signup'}
-						<div class=" mt-1 text-xs font-medium text-gray-500">
-							ⓘ {$WEBUI_NAME}
-							{$i18n.t(
-								'does not make any external connections, and your data stays securely on your locally hosted server.'
-							)}
+			{#if $config?.trusted_header_auth ?? false}
+				<div class=" my-auto pb-10 w-full">
+					<div
+						class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-bold dark:text-gray-200"
+					>
+						<div>
+							{$i18n.t('Signing in')}
+							{$i18n.t('to')}
+							{$WEBUI_NAME}
 						</div>
-					{/if}
 
-					<div class="flex flex-col mt-4">
+						<div>
+							<Spinner />
+						</div>
+					</div>
+				</div>
+			{:else}
+				<div class=" my-auto pb-10 w-full">
+					<form
+						class=" flex flex-col justify-center bg-white py-6 sm:py-16 px-6 sm:px-16 rounded-2xl"
+						on:submit|preventDefault={() => {
+							submitHandler();
+						}}
+					>
+						<div class=" text-xl sm:text-2xl font-bold">
+							{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Sign up')}
+							{$i18n.t('to')}
+							{$WEBUI_NAME}
+						</div>
+
 						{#if mode === 'signup'}
-							<div>
-								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Name')}</div>
+							<div class=" mt-1 text-xs font-medium text-gray-500">
+								ⓘ {$WEBUI_NAME}
+								{$i18n.t(
+									'does not make any external connections, and your data stays securely on your locally hosted server.'
+								)}
+							</div>
+						{/if}
+
+						<div class="flex flex-col mt-4">
+							{#if mode === 'signup'}
+								<div>
+									<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Name')}</div>
+									<input
+										bind:value={name}
+										type="text"
+										class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+										autocomplete="name"
+										placeholder={$i18n.t('Enter Your Full Name')}
+										required
+									/>
+								</div>
+
+								<hr class=" my-3" />
+							{/if}
+
+							<div class="mb-2">
+								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Email')}</div>
 								<input
-									bind:value={name}
-									type="text"
+									bind:value={email}
+									type="email"
 									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
-									autocomplete="name"
-									placeholder={$i18n.t('Enter Your Full Name')}
+									autocomplete="email"
+									placeholder={$i18n.t('Enter Your Email')}
 									required
 								/>
 							</div>
 
-							<hr class=" my-3" />
-						{/if}
-
-						<div class="mb-2">
-							<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Email')}</div>
-							<input
-								bind:value={email}
-								type="email"
-								class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
-								autocomplete="email"
-								placeholder={$i18n.t('Enter Your Email')}
-								required
-							/>
+							<div>
+								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
+								<input
+									bind:value={password}
+									type="password"
+									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+									placeholder={$i18n.t('Enter Your Password')}
+									autocomplete="current-password"
+									required
+								/>
+							</div>
 						</div>
 
-						<div>
-							<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
-							<input
-								bind:value={password}
-								type="password"
-								class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
-								placeholder={$i18n.t('Enter Your Password')}
-								autocomplete="current-password"
-								required
-							/>
-						</div>
-					</div>
-
-					<div class="mt-5">
-						<button
-							class=" bg-gray-900 hover:bg-gray-800 w-full rounded-full text-white font-semibold text-sm py-3 transition"
-							type="submit"
-						>
-							{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
-						</button>
-
-						<div class=" mt-4 text-sm text-center">
-							{mode === 'signin'
-								? $i18n.t("Don't have an account?")
-								: $i18n.t('Already have an account?')}
-
+						<div class="mt-5">
 							<button
-								class=" font-medium underline"
-								type="button"
-								on:click={() => {
-									if (mode === 'signin') {
-										mode = 'signup';
-									} else {
-										mode = 'signin';
-									}
-								}}
+								class=" bg-gray-900 hover:bg-gray-800 w-full rounded-full text-white font-semibold text-sm py-3 transition"
+								type="submit"
 							>
-								{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
+								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
 							</button>
+
+							<div class=" mt-4 text-sm text-center">
+								{mode === 'signin'
+									? $i18n.t("Don't have an account?")
+									: $i18n.t('Already have an account?')}
+
+								<button
+									class=" font-medium underline"
+									type="button"
+									on:click={() => {
+										if (mode === 'signin') {
+											mode = 'signup';
+										} else {
+											mode = 'signin';
+										}
+									}}
+								>
+									{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
+								</button>
+							</div>
 						</div>
-					</div>
-				</form>
-			</div>
+					</form>
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}

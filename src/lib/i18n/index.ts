@@ -37,30 +37,36 @@ const createIsLoadingStore = (i18n: i18nType) => {
 	return isLoading;
 };
 
-i18next
-	.use(
-		resourcesToBackend(
-			(language: string, namespace: string) => import(`./locales/${language}/${namespace}.json`)
-		)
-	)
-	.use(LanguageDetector)
-	.init({
-		debug: false,
-		detection: {
-			order: ['querystring', 'localStorage', 'navigator'],
-			caches: ['localStorage'],
-			lookupQuerystring: 'lang',
-			lookupLocalStorage: 'locale'
-		},
-		fallbackLng: {
-			default: ['en-US']
-		},
-		ns: 'translation',
-		returnEmptyString: false,
-		interpolation: {
-			escapeValue: false // not needed for svelte as it escapes by default
-		}
-	});
+export const initI18n = (defaultLocale: string) => {
+	let detectionOrder = defaultLocale
+		? ['querystring', 'localStorage']
+		: ['querystring', 'localStorage', 'navigator'];
+	let fallbackDefaultLocale = defaultLocale ? [defaultLocale] : ['en-US'];
+
+	const loadResource = (language: string, namespace: string) =>
+		import(`./locales/${language}/${namespace}.json`);
+
+	i18next
+		.use(resourcesToBackend(loadResource))
+		.use(LanguageDetector)
+		.init({
+			debug: false,
+			detection: {
+				order: detectionOrder,
+				caches: ['localStorage'],
+				lookupQuerystring: 'lang',
+				lookupLocalStorage: 'locale'
+			},
+			fallbackLng: {
+				default: fallbackDefaultLocale
+			},
+			ns: 'translation',
+			returnEmptyString: false,
+			interpolation: {
+				escapeValue: false // not needed for svelte as it escapes by default
+			}
+		});
+};
 
 const i18n = createI18nStore(i18next);
 const isLoadingStore = createIsLoadingStore(i18next);

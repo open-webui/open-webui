@@ -10,7 +10,12 @@ import uuid
 
 from apps.web.models.users import Users
 
-from utils.utils import get_password_hash, get_current_user, get_admin_user, create_token
+from utils.utils import (
+    get_password_hash,
+    get_current_user,
+    get_admin_user,
+    create_token,
+)
 from utils.misc import get_gravatar_url, validate_email_format
 from constants import ERROR_MESSAGES
 
@@ -41,7 +46,6 @@ async def set_global_default_models(
 ):
     request.app.state.DEFAULT_MODELS = form_data.models
     return request.app.state.DEFAULT_MODELS
-
 
 
 @router.post("/default/suggestions", response_model=List[PromptSuggestion])

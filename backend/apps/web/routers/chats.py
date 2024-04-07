@@ -5,6 +5,7 @@ from utils.utils import get_current_user, get_admin_user
 from fastapi import APIRouter
 from pydantic import BaseModel
 import json
+import logging
 
 from apps.web.models.users import Users
 from apps.web.models.chats import (
@@ -26,6 +27,11 @@ from apps.web.models.tags import (
 )
 
 from constants import ERROR_MESSAGES
+
+from config import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
@@ -78,7 +84,7 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_current_user)):
         chat = Chats.insert_new_chat(user.id, form_data)
         return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
     except Exception as e:
-        print(e)
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
@@ -95,7 +101,7 @@ async def get_all_tags(user=Depends(get_current_user)):
         tags = Tags.get_tags_by_user_id(user.id)
         return tags
     except Exception as e:
-        print(e)
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
@@ -181,6 +187,78 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_current_
 
     result = Chats.delete_chat_by_id_and_user_id(id, user.id)
     return result
+
+
+############################
+# ShareChatById
+############################
+
+
+@router.post("/{id}/share", response_model=Optional[ChatResponse])
+async def share_chat_by_id(id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+        if chat.share_id:
+            shared_chat = Chats.update_shared_chat_by_chat_id(chat.id)
+            return ChatResponse(
+                **{**shared_chat.model_dump(), "chat": json.loads(shared_chat.chat)}
+            )
+
+        shared_chat = Chats.insert_shared_chat_by_chat_id(chat.id)
+        if not shared_chat:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
+
+        return ChatResponse(
+            **{**shared_chat.model_dump(), "chat": json.loads(shared_chat.chat)}
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+
+############################
+# DeletedSharedChatById
+############################
+
+
+@router.delete("/{id}/share", response_model=Optional[bool])
+async def delete_shared_chat_by_id(id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+        if not chat.share_id:
+            return False
+
+        result = Chats.delete_shared_chat_by_chat_id(id)
+        update_result = Chats.update_chat_share_id_by_id(id, None)
+
+        return result and update_result != None
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+
+############################
+# GetSharedChatById
+############################
+
+
+@router.get("/share/{share_id}", response_model=Optional[ChatResponse])
+async def get_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id(share_id)
+
+    if chat:
+        return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+        )
 
 
 ############################

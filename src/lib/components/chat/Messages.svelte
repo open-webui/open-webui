@@ -16,6 +16,7 @@
 	const i18n = getContext('i18n');
 
 	export let chatId = '';
+	export let readOnly = false;
 	export let sendPrompt: Function;
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
@@ -317,6 +318,7 @@
 							<UserMessage
 								on:delete={() => messageDeleteHandler(message.id)}
 								user={$user}
+								{readOnly}
 								{message}
 								isFirstMessage={messageIdx === 0}
 								siblings={message.parentId !== null
@@ -335,6 +337,7 @@
 								modelfiles={selectedModelfiles}
 								siblings={history.messages[message.parentId]?.childrenIds ?? []}
 								isLastMessage={messageIdx + 1 === messages.length}
+								{readOnly}
 								{confirmEditResponseMessage}
 								{showPreviousMessage}
 								{showNextMessage}

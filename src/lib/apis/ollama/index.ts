@@ -339,7 +339,7 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 	return [res, controller];
 };
 
-export const cancelChatCompletion = async (token: string = '', requestId: string) => {
+export const cancelOllamaRequest = async (token: string = '', requestId: string) => {
 	let error = null;
 
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/cancel/${requestId}`, {

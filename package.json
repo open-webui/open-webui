@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.1.114",
+	"version": "0.1.117",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev --host",
@@ -13,7 +13,7 @@
 		"lint:types": "npm run check",
 		"lint:backend": "pylint backend/",
 		"format": "prettier --plugin-search-dir --write '**/*.{js,ts,svelte,css,md,html,json}'",
-		"format:backend": "yapf --recursive backend -p -i",
+		"format:backend": "black . --exclude \"/venv/\"",
 		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write 'src/lib/i18n/**/*.{js,json}'"
 	},
 	"devDependencies": {
@@ -53,6 +53,7 @@
 		"i18next-resources-to-backend": "^1.2.0",
 		"idb": "^7.1.1",
 		"js-sha256": "^0.10.1",
+		"jspdf": "^2.5.1",
 		"katex": "^0.16.9",
 		"marked": "^9.1.0",
 		"svelte-sonner": "^0.3.19",

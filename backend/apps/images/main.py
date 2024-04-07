@@ -27,9 +27,13 @@ from pathlib import Path
 import uuid
 import base64
 import json
+import logging
 
-from config import CACHE_DIR, AUTOMATIC1111_BASE_URL, COMFYUI_BASE_URL
+from config import SRC_LOG_LEVELS, CACHE_DIR, AUTOMATIC1111_BASE_URL, COMFYUI_BASE_URL
 
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["IMAGES"])
 
 IMAGE_CACHE_DIR = Path(CACHE_DIR).joinpath("./image/generations/")
 IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -304,7 +308,7 @@ def save_b64_image(b64_str):
 
         return image_id
     except Exception as e:
-        print(f"Error saving image: {e}")
+        log.error(f"Error saving image: {e}")
         return None
 
 
@@ -321,7 +325,7 @@ def save_url_image(url):
 
         return image_id
     except Exception as e:
-        print(f"Error saving image: {e}")
+        log.exception(f"Error saving image: {e}")
         return None
 
 
@@ -393,7 +397,7 @@ def generate_image(
                 user.id,
                 app.state.COMFYUI_BASE_URL,
             )
-            print(res)
+            log.debug(f"res: {res}")
 
             images = []
 
@@ -405,7 +409,7 @@ def generate_image(
                 with open(file_body_path, "w") as f:
                     json.dump(data.model_dump(exclude_none=True), f)
 
-            print(images)
+            log.debug(f"images: {images}")
             return images
         else:
             if form_data.model:
@@ -431,7 +435,7 @@ def generate_image(
 
             res = r.json()
 
-            print(res)
+            log.debug(f"res: {res}")
 
             images = []
 
