@@ -16,6 +16,10 @@
 		"title": "Deutsch"
 	},
 	{
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+	{
 		"code": "es-ES",
 		"title": "Spanish"
 	},
