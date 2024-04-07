@@ -1,5 +1,9 @@
 [
 	{
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+	{
 		"code": "en-US",
 		"title": "English (US)"
 	},
