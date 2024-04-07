@@ -150,7 +150,7 @@
 	"Failed to read clipboard contents": "",
 	"File Mode": "",
 	"File not found.": "",
-	"Fingerprint spoofing detected: default profile picture set. Disable to access Initial avatar!": "",
+	"Fingerprint spoofing detected: Unable to use initials as avatar. Defaulting to default profile image.": "",
 	"Focus chat input": "",
 	"Format your variables using square brackets like this:": "",
 	"From (Base Model)": "",

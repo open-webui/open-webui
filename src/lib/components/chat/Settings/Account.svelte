@@ -21,10 +21,10 @@
 	let profileImageInputElement: HTMLInputElement;
 
 	const submitHandler = async () => {
-		const isInitialsImage: boolean =
-			profileImageUrl === generateInitialsImage($user.name) || profileImageUrl === '';
-		if (isInitialsImage && name !== $user.name) {
-			profileImageUrl = generateInitialsImage(name);
+		if (name !== $user.name) {
+			if (profileImageUrl === generateInitialsImage($user.name) || profileImageUrl === '') {
+				profileImageUrl = generateInitialsImage(name);
+			}
 		}
 
 		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
@@ -110,11 +110,11 @@
 			}}
 		/>
 
-		<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Profile')}</div>
-
-		<div class="flex space-x-5">
+		<!-- <div class="flex space-x-5">
 			<div class="flex flex-col">
 				<div class="self-center">
+					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Profile')}</div>
+
 					<button
 						class="relative rounded-full dark:bg-gray-700"
 						type="button"
@@ -125,7 +125,7 @@
 						<img
 							src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(name)}
 							alt="profile"
-							class=" rounded-full w-16 h-16 object-cover"
+							class=" rounded-full size-20 object-cover"
 						/>
 
 						<div
@@ -146,49 +146,144 @@
 						</div>
 					</button>
 				</div>
-				<button
-					class=" text-xs text-left text-gray-600"
-					on:click={async () => {
-						if (canvasPixelTest()) {
-							profileImageUrl = generateInitialsImage(name);
-						} else {
-							toast.info(
-								$i18n.t(
-									'Fingerprint spoofing detected: default profile picture set. Disable to access Initial avatar!'
-								),
-								{
-									duration: 1000 * 10
-								}
-							);
-						}
-					}}>{$i18n.t('Use Initials')}</button
-				>
-				<button
-					class=" text-xs text-left text-gray-600"
-					on:click={async () => {
-						const url = await getGravatarUrl($user.email);
-
-						profileImageUrl = url;
-					}}>{$i18n.t('Use Gravatar')}</button
-				>
 			</div>
 
-			<div class="flex-1">
+			<div class="flex-1 flex flex-col self-center">
 				<div class="flex flex-col w-full">
 					<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
 
 					<div class="flex-1">
 						<input
-							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="text"
 							bind:value={name}
 							required
 						/>
 					</div>
+
+					<div class="mt-2">
+						<button
+							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
+							on:click={async () => {
+								const url = await getGravatarUrl($user.email);
+
+								profileImageUrl = url;
+							}}>{$i18n.t('Use Gravatar')}</button
+						>
+
+						<button
+							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
+							on:click={async () => {
+								if (canvasPixelTest()) {
+									profileImageUrl = generateInitialsImage(name);
+								} else {
+									toast.info(
+										$i18n.t(
+											'Fingerprint spoofing detected: Unable to use initials as avatar. Defaulting to default profile image.'
+										),
+										{
+											duration: 1000 * 10
+										}
+									);
+								}
+							}}>{$i18n.t('Use Initials')}</button
+						>
+					</div>
+				</div>
+			</div>
+		</div> -->
+
+		<div class="flex space-x-5">
+			<div class="flex flex-col">
+				<div class="self-center mt-2">
+					<button
+						class="relative rounded-full dark:bg-gray-700"
+						type="button"
+						on:click={() => {
+							profileImageInputElement.click();
+						}}
+					>
+						<img
+							src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(name)}
+							alt="profile"
+							class=" rounded-full size-16 object-cover"
+						/>
+
+						<div
+							class="absolute flex justify-center rounded-full bottom-0 left-0 right-0 top-0 h-full w-full overflow-hidden bg-gray-700 bg-fixed opacity-0 transition duration-300 ease-in-out hover:opacity-50"
+						>
+							<div class="my-auto text-gray-100">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-5 h-5"
+								>
+									<path
+										d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z"
+									/>
+								</svg>
+							</div>
+						</div>
+					</button>
+				</div>
+			</div>
+
+			<div class="flex-1 flex flex-col self-center">
+				<div class="  font-medium mb-1.5">{$i18n.t('Profile Image')}</div>
+
+				<div>
+					<button
+						class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-4 py-1 bg-gray-100 dark:bg-gray-850"
+						on:click={async () => {
+							if (canvasPixelTest()) {
+								profileImageUrl = generateInitialsImage(name);
+							} else {
+								toast.info(
+									$i18n.t(
+										'Fingerprint spoofing detected: Unable to use initials as avatar. Defaulting to default profile image.'
+									),
+									{
+										duration: 1000 * 10
+									}
+								);
+							}
+						}}>{$i18n.t('Use Initials')}</button
+					>
+
+					<button
+						class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-4 py-1 bg-gray-100 dark:bg-gray-850"
+						on:click={async () => {
+							const url = await getGravatarUrl($user.email);
+
+							profileImageUrl = url;
+						}}>{$i18n.t('Use Gravatar')}</button
+					>
+
+					<button
+						class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-4 py-1 bg-gray-100 dark:bg-gray-850"
+						on:click={async () => {
+							profileImageUrl = '/user.png';
+						}}>{$i18n.t('Remove')}</button
+					>
 				</div>
 			</div>
 		</div>
 
+		<div class="flex-1">
+			<div class="flex flex-col w-full">
+				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+
+				<div class="flex-1">
+					<input
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						type="text"
+						bind:value={name}
+						required
+					/>
+				</div>
+			</div>
+		</div>
 		<hr class=" dark:border-gray-700 my-4" />
 		<UpdatePassword />
 
