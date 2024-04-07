@@ -61,7 +61,7 @@ class UsersTable:
         id: str,
         name: str,
         email: str,
-        profile_image_url: str,
+        profile_image_url: str = "/user.png",
         role: str = "pending",
     ) -> Optional[UserModel]:
         user = UserModel(

@@ -82,7 +82,7 @@ class SignupForm(BaseModel):
     name: str
     email: str
     password: str
-    profile_image_url: str
+    profile_image_url: Optional[str] = "/user.png"
 
 
 class AuthsTable:
@@ -95,7 +95,7 @@ class AuthsTable:
         email: str,
         password: str,
         name: str,
-        profile_image_url: str,
+        profile_image_url: str = "/user.png",
         role: str = "pending",
     ) -> Optional[UserModel]:
         log.info("insert_new_auth")

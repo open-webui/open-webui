@@ -43,18 +43,6 @@
 			}
 		);
 
-		if (!canvasPixelTest()) {
-			toast.info(
-				$i18n.t(
-					'Fingerprint spoofing detected: default profile picture set. Disable to access Initial avatar!'
-				),
-				{
-					position: 'bottom-center',
-					duration: 1000 * 10
-				}
-			);
-		}
-
 		await setSessionUser(sessionUser);
 	};
 
