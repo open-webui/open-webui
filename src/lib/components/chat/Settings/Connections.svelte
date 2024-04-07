@@ -7,6 +7,7 @@
 		getOllamaUrls,
 		getOllamaVersion,
 		updateOllamaUrls,
+		getOllamaLoadBalancer,
 		updateOllamaLoadBalancer
 	} from '$lib/apis/ollama';
 	import {
@@ -24,7 +25,7 @@
 	// External
 	let OLLAMA_BASE_URL = '';
 	let OLLAMA_BASE_URLS = [''];
-	let OLLAMA_LB_POLICY = 'rr';
+	let OLLAMA_LB_POLICY = 'round-robin';
 	let OLLAMA_LB_WEIGHTS = [];
 
 	let OPENAI_API_KEY = '';
@@ -66,7 +67,9 @@
 	onMount(async () => {
 		if ($user.role === 'admin') {
 			OLLAMA_BASE_URLS = await getOllamaUrls(localStorage.token);
-			OPENAI_API_BASE_URLS = await getOpenAIUrls(localStorage.token);
+			const lbConfig = await getOllamaLoadBalancer(localStorage.token);
+			OLLAMA_LB_POLICY = lbConfig.OLLAMA_LB_POLICY;
+			OLLAMA_LB_WEIGHTS = lbConfig.OLLAMA_LB_WEIGHTS;
 			OPENAI_API_KEYS = await getOpenAIKeys(localStorage.token);
 		}
 	});
@@ -192,18 +195,26 @@
 				<div class="flex-1 flex flex-col gap-2">
 					{#each OLLAMA_BASE_URLS as url, idx}
 						<div class="flex gap-1.5">
-							<input
-								class="w-9/12 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder="Enter URL (e.g. http://localhost:11434)"
-								bind:value={url}
-							/>
-							<input
-								class="w-3/12 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder="Weight"
-								type="number"
-								min="1"
-								bind:value={OLLAMA_LB_WEIGHTS[idx]}
-							/>
+							{#if OLLAMA_LB_POLICY == 'round-robin'}
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									placeholder="Enter URL (e.g. http://localhost:11434)"
+									bind:value={url}
+								/>
+							{:else if OLLAMA_LB_POLICY == 'weighted-round-robin'}
+								<input
+									class="w-9/12 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									placeholder="Enter URL (e.g. http://localhost:11434)"
+									bind:value={url}
+								/>
+								<input
+									class="w-3/12 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									placeholder="Weight"
+									type="number"
+									min="1"
+									bind:value={OLLAMA_LB_WEIGHTS[idx]}
+								/>
+							{/if}
 
 							<div class="self-center flex items-center">
 								{#if idx === 0}

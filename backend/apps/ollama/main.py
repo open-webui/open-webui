@@ -107,22 +107,6 @@ async def get_ollama_api_urls(user=Depends(get_admin_user)):
     return {"OLLAMA_BASE_URLS": app.state.OLLAMA_BASE_URLS}
 
 
-class LoadBalancerConfig(BaseModel):
-    policy: str
-    weights: Optional[List[int]]
-
-
-@app.post("/lb/update")
-async def update_ollama_load_balancer(
-    form_data: LoadBalancerConfig, user=Depends(get_admin_user)
-):
-    app.state.OLLAMA_LB_POLICY = form_data.policy
-    app.state.OLLAMA_LB_WEIGHTS = form_data.weights
-
-    print(app.state.OLLAMA_LB_POLICY)
-    return {"OLLAMA_LB_POLICY": app.state.OLLAMA_LB_POLICY}
-
-
 class UrlUpdateForm(BaseModel):
     urls: List[str]
 
@@ -133,6 +117,25 @@ async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin
 
     print(app.state.OLLAMA_BASE_URLS)
     return {"OLLAMA_BASE_URLS": app.state.OLLAMA_BASE_URLS}
+
+
+@app.get("/lb")
+async def get_ollama_api_urls(user=Depends(get_admin_user)):
+    return {"OLLAMA_LB_POLICY": app.state.OLLAMA_LB_POLICY, "OLLAMA_LB_WEIGHTS": app.state.OLLAMA_LB_WEIGHTS}
+
+class LoadBalancerConfig(BaseModel):
+    policy: str
+    weights: Optional[List[int]]
+
+@app.post("/lb/update")
+async def update_ollama_load_balancer(
+    form_data: LoadBalancerConfig, user=Depends(get_admin_user)
+):
+    app.state.OLLAMA_LB_POLICY = form_data.policy
+    app.state.OLLAMA_LB_WEIGHTS = form_data.weights
+
+    print(app.state.OLLAMA_LB_POLICY)
+    return {"OLLAMA_LB_POLICY": app.state.OLLAMA_LB_POLICY}
 
 
 @app.get("/cancel/{request_id}")
