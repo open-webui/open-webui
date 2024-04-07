@@ -1,9 +1,5 @@
 [
 	{
-		"code": "en-GB",
-		"title": "English (GB)"
-	},
-	{
 		"code": "en-US",
 		"title": "English (US)"
 	},
@@ -18,6 +14,10 @@
 	{
 		"code": "de-DE",
 		"title": "Deutsch"
+	},
+	{
+		"code": "en-GB",
+		"title": "English (GB)"
 	},
 	{
 		"code": "es-ES",
