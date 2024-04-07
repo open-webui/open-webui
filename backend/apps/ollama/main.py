@@ -137,7 +137,7 @@ async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin
 
 
 @app.get("/lb")
-async def get_ollama_api_urls(user=Depends(get_admin_user)):
+async def get_ollama_load_balancer(user=Depends(get_admin_user)):
     return {
         "OLLAMA_LB_POLICY": app.state.OLLAMA_LB_POLICY,
         "OLLAMA_LB_WEIGHTS": app.state.OLLAMA_LB_WEIGHTS,
