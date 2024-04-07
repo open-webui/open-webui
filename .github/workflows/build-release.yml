@@ -57,3 +57,14 @@ jobs:
         path: .
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Trigger Docker build workflow
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'docker-build.yaml',
+            ref: 'v${{ steps.get_version.outputs.version }}',
+          })
