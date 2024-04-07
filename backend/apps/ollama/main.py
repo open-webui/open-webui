@@ -138,11 +138,16 @@ async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin
 
 @app.get("/lb")
 async def get_ollama_api_urls(user=Depends(get_admin_user)):
-    return {"OLLAMA_LB_POLICY": app.state.OLLAMA_LB_POLICY, "OLLAMA_LB_WEIGHTS": app.state.OLLAMA_LB_WEIGHTS}
+    return {
+        "OLLAMA_LB_POLICY": app.state.OLLAMA_LB_POLICY,
+        "OLLAMA_LB_WEIGHTS": app.state.OLLAMA_LB_WEIGHTS,
+    }
+
 
 class LoadBalancerConfig(BaseModel):
     policy: str
     weights: Optional[List[int]]
+
 
 @app.post("/lb/update")
 async def update_ollama_load_balancer(
@@ -1081,7 +1086,6 @@ async def download_model(
     form_data: UrlForm,
     url_idx: Optional[int] = None,
 ):
-
 
     allowed_hosts = ["https://huggingface.co/", "https://github.com/"]
 
