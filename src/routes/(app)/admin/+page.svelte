@@ -91,7 +91,7 @@
 					<div class=" flex flex-col justify-center">
 						<div class=" px-5 pt-3">
 							<div class=" flex justify-between items-center">
-								<div class="flex items-center text-2xl font-semibold font-mona">Dashboard</div>
+								<div class="flex items-center text-2xl font-semibold">Dashboard</div>
 								<div>
 									<button
 										class="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
