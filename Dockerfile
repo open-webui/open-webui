@@ -50,6 +50,11 @@ ENV OPENAI_API_KEY="" \
     SCARF_NO_ANALYTICS=true \
     DO_NOT_TRACK=true
 
+# Use locally bundled version of the LiteLLM cost map json
+# to avoid repetitive startup connections
+ENV LITELLM_LOCAL_MODEL_COST_MAP="True"
+
+
 #### Other models #########################################################
 ## whisper TTS model settings ##
 ENV WHISPER_MODEL="base" \
@@ -66,39 +71,39 @@ WORKDIR /app/backend
 COPY ./backend/requirements.txt ./requirements.txt
 
 RUN if [ "$USE_CUDA" = "true" ]; then \
-        # If you use CUDA the whisper and embedding modell will be downloaded on first use
-        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-        pip3 install -r requirements.txt --no-cache-dir && \
-        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-        python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
+    # If you use CUDA the whisper and embedding modell will be downloaded on first use
+    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
+    pip3 install -r requirements.txt --no-cache-dir && \
+    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+    python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
     else \
-        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-        pip3 install -r requirements.txt --no-cache-dir && \
-        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-        python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
+    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
+    pip3 install -r requirements.txt --no-cache-dir && \
+    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+    python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
     fi
 
 
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
-        apt-get update && \
-        # Install pandoc and netcat
-        apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
-        # for RAG OCR
-        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
-        # install helper tools
-        apt-get install -y --no-install-recommends curl && \
-        # install ollama
-        curl -fsSL https://ollama.com/install.sh | sh && \
-        # cleanup
-        rm -rf /var/lib/apt/lists/*; \
+    apt-get update && \
+    # Install pandoc and netcat
+    apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
+    # for RAG OCR
+    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # install helper tools
+    apt-get install -y --no-install-recommends curl && \
+    # install ollama
+    curl -fsSL https://ollama.com/install.sh | sh && \
+    # cleanup
+    rm -rf /var/lib/apt/lists/*; \
     else \
-        apt-get update && \
-        # Install pandoc and netcat
-        apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
-        # for RAG OCR
-        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
-        # cleanup
-        rm -rf /var/lib/apt/lists/*; \
+    apt-get update && \
+    # Install pandoc and netcat
+    apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
+    # for RAG OCR
+    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # cleanup
+    rm -rf /var/lib/apt/lists/*; \
     fi
 
 
