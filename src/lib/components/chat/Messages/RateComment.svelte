@@ -55,7 +55,7 @@
 	};
 </script>
 
-<div class=" my-2.5 rounded-xl px-4 py-3 border border-gray-850">
+<div class=" my-2.5 rounded-xl px-4 py-3 border dark:border-gray-850">
 	<div class="flex justify-between items-center">
 		<div class=" text-sm">Tell us more:</div>
 
@@ -106,7 +106,7 @@
 
 	<div class="mt-2 flex justify-end">
 		<button
-			class=" bg-emerald-700 text-sm font-medium rounded-lg px-3.5 py-1.5"
+			class=" bg-emerald-700 text-white text-sm font-medium rounded-lg px-3.5 py-1.5"
 			on:click={() => {
 				submitHandler();
 			}}
