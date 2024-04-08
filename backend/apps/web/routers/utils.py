@@ -1,16 +1,11 @@
-from fastapi import APIRouter, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Response
 from fastapi import Depends, HTTPException, status
 from starlette.responses import StreamingResponse, FileResponse
-
-
 from pydantic import BaseModel
 
 
+from fpdf import FPDF
 import markdown
-import requests
-import os
-import aiohttp
-import json
 
 
 from utils.utils import get_admin_user
@@ -18,7 +13,7 @@ from utils.misc import calculate_sha256, get_gravatar_url
 
 from config import OLLAMA_BASE_URLS, DATA_DIR, UPLOAD_DIR
 from constants import ERROR_MESSAGES
-
+from typing import List
 
 router = APIRouter()
 
@@ -39,6 +34,59 @@ async def get_html_from_markdown(
     form_data: MarkdownForm,
 ):
     return {"html": markdown.markdown(form_data.md)}
+
+
+class ChatForm(BaseModel):
+    title: str
+    messages: List[dict]
+
+
+@router.post("/pdf")
+async def download_chat_as_pdf(
+    form_data: ChatForm,
+):
+    pdf = FPDF()
+    pdf.add_page()
+
+    STATIC_DIR = "./static"
+    FONTS_DIR = f"{STATIC_DIR}/fonts"
+
+    pdf.add_font("NotoSans", "", f"{FONTS_DIR}/NotoSans-Regular.ttf")
+    pdf.add_font("NotoSans", "b", f"{FONTS_DIR}/NotoSans-Bold.ttf")
+    pdf.add_font("NotoSans", "i", f"{FONTS_DIR}/NotoSans-Italic.ttf")
+    pdf.add_font("NotoSansKR", "", f"{FONTS_DIR}/NotoSansKR-Regular.ttf")
+    pdf.add_font("NotoSansJP", "", f"{FONTS_DIR}/NotoSansJP-Regular.ttf")
+
+    pdf.set_font("NotoSans", size=12)
+    pdf.set_fallback_fonts(["NotoSansKR", "NotoSansJP"])
+
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # Adjust the effective page width for multi_cell
+    effective_page_width = (
+        pdf.w - 2 * pdf.l_margin - 10
+    )  # Subtracted an additional 10 for extra padding
+
+    # Add chat messages
+    for message in form_data.messages:
+        role = message["role"]
+        content = message["content"]
+        pdf.set_font("NotoSans", "B", size=14)  # Bold for the role
+        pdf.multi_cell(effective_page_width, 10, f"{role.upper()}", 0, "L")
+        pdf.ln(1)  # Extra space between messages
+
+        pdf.set_font("NotoSans", size=10)  # Regular for content
+        pdf.multi_cell(effective_page_width, 6, content, 0, "L")
+        pdf.ln(1.5)  # Extra space between messages
+
+    # Save the pdf with name .pdf
+    pdf_bytes = pdf.output()
+
+    return Response(
+        content=bytes(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment;filename=chat.pdf"},
+    )
 
 
 @router.get("/db/download")

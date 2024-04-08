@@ -107,12 +107,8 @@
 		await sendPrompt(userPrompt, userMessageId, chatId);
 	};
 
-	const confirmEditResponseMessage = async (messageId, content) => {
-		history.messages[messageId].originalContent = history.messages[messageId].content;
-		history.messages[messageId].content = content;
-
+	const updateChatMessages = async () => {
 		await tick();
-
 		await updateChatById(localStorage.token, chatId, {
 			messages: messages,
 			history: history
@@ -121,15 +117,20 @@
 		await chats.set(await getChatList(localStorage.token));
 	};
 
-	const rateMessage = async (messageId, rating) => {
-		history.messages[messageId].rating = rating;
-		await tick();
-		await updateChatById(localStorage.token, chatId, {
-			messages: messages,
-			history: history
-		});
+	const confirmEditResponseMessage = async (messageId, content) => {
+		history.messages[messageId].originalContent = history.messages[messageId].content;
+		history.messages[messageId].content = content;
 
-		await chats.set(await getChatList(localStorage.token));
+		await updateChatMessages();
+	};
+
+	const rateMessage = async (messageId, rating) => {
+		history.messages[messageId].annotation = {
+			...history.messages[messageId].annotation,
+			rating: rating
+		};
+
+		await updateChatMessages();
 	};
 
 	const showPreviousMessage = async (message) => {
@@ -338,6 +339,7 @@
 								siblings={history.messages[message.parentId]?.childrenIds ?? []}
 								isLastMessage={messageIdx + 1 === messages.length}
 								{readOnly}
+								{updateChatMessages}
 								{confirmEditResponseMessage}
 								{showPreviousMessage}
 								{showNextMessage}

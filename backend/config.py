@@ -257,6 +257,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
 K8S_FLAG = os.environ.get("K8S_FLAG", "")
+USE_OLLAMA_DOCKER = os.environ.get("USE_OLLAMA_DOCKER", "false")
 
 if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     OLLAMA_BASE_URL = (
@@ -266,9 +267,13 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     )
 
 if ENV == "prod":
-    if OLLAMA_BASE_URL == "/ollama":
-        OLLAMA_BASE_URL = "http://host.docker.internal:11434"
-
+    if OLLAMA_BASE_URL == "/ollama" and not K8S_FLAG:
+        if USE_OLLAMA_DOCKER.lower() == "true":
+            # if you use all-in-one docker container (Open WebUI + Ollama)
+            # with the docker build arg USE_OLLAMA=true (--build-arg="USE_OLLAMA=true") this only works with http://localhost:11434
+            OLLAMA_BASE_URL = "http://localhost:11434"
+        else:
+            OLLAMA_BASE_URL = "http://host.docker.internal:11434"
     elif K8S_FLAG:
         OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
 
@@ -391,13 +396,21 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (all-MiniLM-L6-v2)
 RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-# device type ebbeding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
-RAG_EMBEDDING_MODEL_DEVICE_TYPE = os.environ.get(
-    "RAG_EMBEDDING_MODEL_DEVICE_TYPE", "cpu"
-)
+log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL}"),
 RAG_EMBEDDING_MODEL_AUTO_UPDATE = False
 if os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "").lower() == "true":
     RAG_EMBEDDING_MODEL_AUTO_UPDATE = True
+
+
+# device type ebbeding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
+USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
+
+if USE_CUDA.lower() == "true":
+    DEVICE_TYPE = "cuda"
+else:
+    DEVICE_TYPE = "cpu"
+
+
 CHROMA_CLIENT = chromadb.PersistentClient(
     path=CHROMA_DATA_PATH,
     settings=Settings(allow_reset=True, anonymized_telemetry=False),

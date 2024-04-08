@@ -31,7 +31,7 @@ class UserModel(BaseModel):
     name: str
     email: str
     role: str = "pending"
-    profile_image_url: str = "/user.png"
+    profile_image_url: str
     timestamp: int  # timestamp in epoch
     api_key: Optional[str] = None
 
@@ -59,7 +59,12 @@ class UsersTable:
         self.db.create_tables([User])
 
     def insert_new_user(
-        self, id: str, name: str, email: str, role: str = "pending"
+        self,
+        id: str,
+        name: str,
+        email: str,
+        profile_image_url: str = "/user.png",
+        role: str = "pending",
     ) -> Optional[UserModel]:
         user = UserModel(
             **{
@@ -67,7 +72,7 @@ class UsersTable:
                 "name": name,
                 "email": email,
                 "role": role,
-                "profile_image_url": "/user.png",
+                "profile_image_url": profile_image_url,
                 "timestamp": int(time.time()),
             }
         )
