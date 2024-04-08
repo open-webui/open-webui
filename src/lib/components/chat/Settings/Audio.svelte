@@ -21,6 +21,10 @@
 
 	let voices = [];
 	let speaker = '';
+	let volume = 100;
+	let speechRate = 1;
+	let pitch = 1;
+	let notificationsPlayback = false;
 
 	const getOpenAIVoices = () => {
 		voices = [
@@ -207,6 +211,45 @@
 					type="button"
 				>
 					{#if responseAutoPlayback === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{/if}
+				</button>
+			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Volume')}</div>
+				<div class="flex items-center relative dark:bg-gray-900 w-fit rounded px-2 p-1 text-xs bg-transparent outline-none text-right">
+					<input type="range" id="volume" min="0" max="100" bind:value={volume} />
+				</div>
+			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Speech Rate')}</div>
+				<div class="flex items-center relative dark:bg-gray-900 w-fit rounded px-2 p-1 text-xs bg-transparent outline-none text-right">
+					<input class=" dark:bg-gray-900 w-fit rounded text-xs bg-transparent outline-none text-right" type="range" id="volume" min="0" max="100" bind:value={speechRate} />
+				</div>
+			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Pitch')}</div>
+				<div class="flex items-center relative dark:bg-gray-900 w-fit rounded px-2 p-1 text-xs bg-transparent outline-none text-right">
+					<input class=" dark:bg-gray-900 w-fit rounded text-xs bg-transparent outline-none text-right" type="range" id="volume" min="0" max="100" bind:value={pitch} />
+				</div>
+			</div>
+
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Enable Notifications Playback')}</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						console.log('toggling notifications playback');
+					}}
+					type="button"
+				>
+					{#if notificationsPlayback === true}
 						<span class="ml-2 self-center">{$i18n.t('On')}</span>
 					{:else}
 						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
