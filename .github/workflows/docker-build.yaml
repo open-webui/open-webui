@@ -46,14 +46,14 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # This configuration dynamically generates tags based on the branch, tag, commit, and custom suffix for lite version.
           tags: |
             type=ref,event=branch
             type=ref,event=tag
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            latest=true
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push Docker image (latest)
         uses: docker/build-push-action@v5
