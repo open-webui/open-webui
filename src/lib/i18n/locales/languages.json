@@ -16,6 +16,10 @@
 		"title": "Deutsch"
 	},
 	{
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+	{
 		"code": "es-ES",
 		"title": "Spanish"
 	},
@@ -52,8 +56,16 @@
 		"title": "Portuguese (Portugal)"
 	},
 	{
+		"code": "pt-BR",
+		"title": "Portuguese (Brazil)"
+	},
+	{
 		"code": "ru-RU",
 		"title": "Russian (Russia)"
+	},
+	{
+		"code": "tr-TR",
+		"title": "Turkish"
 	},
 	{
 		"code": "uk-UA",

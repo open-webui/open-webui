@@ -206,6 +206,18 @@ class ChatTable:
         except:
             return None
 
+    def get_chat_by_share_id(self, id: str) -> Optional[ChatModel]:
+        try:
+            chat = Chat.get(Chat.share_id == id)
+
+            if chat:
+                chat = Chat.get(Chat.id == id)
+                return ChatModel(**model_to_dict(chat))
+            else:
+                return None
+        except:
+            return None
+
     def get_chat_by_id_and_user_id(self, id: str, user_id: str) -> Optional[ChatModel]:
         try:
             chat = Chat.get(Chat.id == id, Chat.user_id == user_id)

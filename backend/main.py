@@ -84,7 +84,6 @@ app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.WEBHOOK_URL = WEBHOOK_URL
 
-
 origins = ["*"]
 
 
@@ -282,6 +281,20 @@ async def get_app_latest_release_version():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
         )
+
+
+@app.get("/manifest.json")
+async def get_manifest_json():
+    return {
+        "name": WEBUI_NAME,
+        "short_name": WEBUI_NAME,
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#343541",
+        "theme_color": "#343541",
+        "orientation": "portrait-primary",
+        "icons": [{"src": "/favicon.png", "type": "image/png", "sizes": "844x884"}],
+    }
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

@@ -17,7 +17,11 @@
 	import { config, settings } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
 	import { imageGenerations } from '$lib/apis/images';
-	import { extractSentences } from '$lib/utils';
+	import {
+		extractSentences,
+		revertSanitizedResponseContent,
+		sanitizeResponseContent
+	} from '$lib/utils';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -56,7 +60,7 @@
 	let loadingSpeech = false;
 	let generatingImage = false;
 
-	$: tokens = marked.lexer(message.content);
+	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
 
 	const renderer = new marked.Renderer();
 
@@ -405,8 +409,10 @@
 								{:else}
 									{#each tokens as token}
 										{#if token.type === 'code'}
-											<!-- {token.text} -->
-											<CodeBlock lang={token.lang} code={token.text} />
+											<CodeBlock
+												lang={token.lang}
+												code={revertSanitizedResponseContent(token.text)}
+											/>
 										{:else}
 											{@html marked.parse(token.raw, {
 												...defaults,

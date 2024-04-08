@@ -58,7 +58,12 @@ export const userSignIn = async (email: string, password: string) => {
 	return res;
 };
 
-export const userSignUp = async (name: string, email: string, password: string) => {
+export const userSignUp = async (
+	name: string,
+	email: string,
+	password: string,
+	profile_image_url: string
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signup`, {
@@ -69,7 +74,8 @@ export const userSignUp = async (name: string, email: string, password: string) 
 		body: JSON.stringify({
 			name: name,
 			email: email,
-			password: password
+			password: password,
+			profile_image_url: profile_image_url
 		})
 	})
 		.then(async (res) => {

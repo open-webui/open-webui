@@ -2,21 +2,13 @@
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { Separator } from 'bits-ui';
-	import { getChatById, shareChatById } from '$lib/apis/chats';
 	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings } from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
-	import TagInput from '../common/Tags/TagInput.svelte';
 	import ModelSelector from '../chat/ModelSelector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-
-	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
-	import ChevronDown from '../icons/ChevronDown.svelte';
-	import ChevronUpDown from '../icons/ChevronUpDown.svelte';
 	import Menu from './Navbar/Menu.svelte';
-	import TagChatModal from '../chat/TagChatModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -24,6 +16,7 @@
 	export let title: string = $WEBUI_NAME;
 	export let shareEnabled: boolean = false;
 
+	export let chat;
 	export let selectedModels;
 
 	export let tags = [];
@@ -33,63 +26,15 @@
 	export let showModelSelector = true;
 
 	let showShareChatModal = false;
-	let showTagChatModal = false;
+	let showDownloadChatModal = false;
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} />
-<!-- <TagChatModal bind:show={showTagChatModal} {tags} {deleteTag} {addTag} /> -->
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div
 		class=" flex {$settings?.fullScreenMode ?? null ? 'max-w-full' : 'max-w-3xl'} 
 		 w-full mx-auto px-3"
 	>
-		<!-- {#if shareEnabled}
-			<div class="flex items-center w-full max-w-full">
-				<div class=" flex-1 self-center font-medium line-clamp-1">
-					<div>
-						{title != '' ? title : $WEBUI_NAME}
-					</div>
-				</div>
-				<div class="pl-2 self-center flex items-center">
-					<div class=" mr-1">
-						<Tags {tags} {deleteTag} {addTag} />
-					</div>
-
-					<Tooltip content="Share">
-						<button
-							class="cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
-							on:click={async () => {
-								showShareChatModal = !showShareChatModal;
-
-								// console.log(showShareChatModal);
-							}}
-						>
-							<div class=" m-auto self-center">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 24 24"
-									fill="currentColor"
-									class="w-4 h-4"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-							</div>
-						</button>
-					</Tooltip>
-				</div>
-			</div>
-		{/if} -->
-
-		<!-- <div class=" flex-1 self-center font-medium line-clamp-1">
-			<div>
-				{title != '' ? title : $WEBUI_NAME}
-			</div>
-		</div> -->
-
 		<div class="flex items-center w-full max-w-full">
 			<div class="flex-1 overflow-hidden max-w-full">
 				{#if showModelSelector}
@@ -132,9 +77,13 @@
 					</Tooltip>
 				{:else}
 					<Menu
+						{chat}
 						{shareEnabled}
 						shareHandler={() => {
 							showShareChatModal = !showShareChatModal;
+						}}
+						downloadHandler={() => {
+							showDownloadChatModal = !showDownloadChatModal;
 						}}
 						{tags}
 						{deleteTag}

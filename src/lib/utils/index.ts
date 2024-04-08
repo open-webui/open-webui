@@ -31,6 +31,21 @@ export const getModels = async (token: string) => {
 // Helper functions
 //////////////////////////
 
+export const sanitizeResponseContent = (content: string) => {
+	return content
+		.replace(/<\|[a-z]*$/, '')
+		.replace(/<\|[a-z]+\|$/, '')
+		.replace(/<$/, '')
+		.replaceAll(/<\|[a-z]+\|>/g, ' ')
+		.replaceAll(/<br\s?\/?>/gi, '\n')
+		.replaceAll('<', '&lt;')
+		.trim();
+};
+
+export const revertSanitizedResponseContent = (content: string) => {
+	return content.replaceAll('&lt;', '<');
+};
+
 export const capitalizeFirstLetter = (string) => {
 	return string.charAt(0).toUpperCase() + string.slice(1);
 };
@@ -94,6 +109,82 @@ export const getGravatarURL = (email) => {
 
 	// Grab the actual image URL
 	return `https://www.gravatar.com/avatar/${hash}`;
+};
+
+export const canvasPixelTest = () => {
+	// Test a 1x1 pixel to potentially identify browser/plugin fingerprint blocking or spoofing
+	// Inspiration: https://github.com/kkapsner/CanvasBlocker/blob/master/test/detectionTest.js
+	const canvas = document.createElement('canvas');
+	const ctx = canvas.getContext('2d');
+	canvas.height = 1;
+	canvas.width = 1;
+	const imageData = new ImageData(canvas.width, canvas.height);
+	const pixelValues = imageData.data;
+
+	// Generate RGB test data
+	for (let i = 0; i < imageData.data.length; i += 1) {
+		if (i % 4 !== 3) {
+			pixelValues[i] = Math.floor(256 * Math.random());
+		} else {
+			pixelValues[i] = 255;
+		}
+	}
+
+	ctx.putImageData(imageData, 0, 0);
+	const p = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+	// Read RGB data and fail if unmatched
+	for (let i = 0; i < p.length; i += 1) {
+		if (p[i] !== pixelValues[i]) {
+			console.log(
+				'canvasPixelTest: Wrong canvas pixel RGB value detected:',
+				p[i],
+				'at:',
+				i,
+				'expected:',
+				pixelValues[i]
+			);
+			console.log('canvasPixelTest: Canvas blocking or spoofing is likely');
+			return false;
+		}
+	}
+
+	return true;
+};
+
+export const generateInitialsImage = (name) => {
+	const canvas = document.createElement('canvas');
+	const ctx = canvas.getContext('2d');
+	canvas.width = 100;
+	canvas.height = 100;
+
+	if (!canvasPixelTest()) {
+		console.log(
+			'generateInitialsImage: failed pixel test, fingerprint evasion is likely. Using default image.'
+		);
+		return '/user.png';
+	}
+
+	ctx.fillStyle = '#F39C12';
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+	ctx.fillStyle = '#FFFFFF';
+	ctx.font = '40px Helvetica';
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'middle';
+
+	const sanitizedName = name.trim();
+	const initials =
+		sanitizedName.length > 0
+			? sanitizedName[0] +
+			  (sanitizedName.split(' ').length > 1
+					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
+					: '')
+			: '';
+
+	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
+
+	return canvas.toDataURL();
 };
 
 export const copyToClipboard = (text) => {

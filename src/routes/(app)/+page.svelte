@@ -847,6 +847,7 @@
 		bind:selectedModels
 		bind:showModelSelector
 		shareEnabled={messages.length > 0}
+		{chat}
 		{initNewChat}
 		{tags}
 		{addTag}

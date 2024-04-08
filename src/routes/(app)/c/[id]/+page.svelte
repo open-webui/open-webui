@@ -865,6 +865,7 @@
 	<div class="min-h-screen max-h-screen w-full flex flex-col">
 		<Navbar
 			{title}
+			{chat}
 			bind:selectedModels
 			bind:showModelSelector
 			shareEnabled={messages.length > 0}

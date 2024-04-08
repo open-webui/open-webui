@@ -86,6 +86,7 @@ class SignupForm(BaseModel):
     name: str
     email: str
     password: str
+    profile_image_url: Optional[str] = "/user.png"
 
 
 class AuthsTable:
@@ -94,7 +95,12 @@ class AuthsTable:
         self.db.create_tables([Auth])
 
     def insert_new_auth(
-        self, email: str, password: str, name: str, role: str = "pending"
+        self,
+        email: str,
+        password: str,
+        name: str,
+        profile_image_url: str = "/user.png",
+        role: str = "pending",
     ) -> Optional[UserModel]:
         log.info("insert_new_auth")
 
@@ -105,7 +111,7 @@ class AuthsTable:
         )
         result = Auth.create(**auth.model_dump())
 
-        user = Users.insert_new_user(id, name, email, role)
+        user = Users.insert_new_user(id, name, email, profile_image_url, role)
 
         if result and user:
             return user
