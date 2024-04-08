@@ -1,5 +1,4 @@
-#
-name: Create and publish a Docker image
+name: Create and publish Docker images with specific build args
 
 # Configures this workflow to run every time a change is pushed to the branch called `release`.
 on:
@@ -24,7 +23,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-      #
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,8 +41,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker images
-        id: meta
+      - name: Extract metadata for Docker images (default latest tag)
+        id: meta-latest
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -54,14 +53,31 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-          flavor: |
-            latest=${{ github.ref == 'refs/heads/main' }}
+            latest=true
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image (latest)
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-latest.outputs.tags }}
+          labels: ${{ steps.meta-latest.outputs.labels }}
+
+      - name: Build and push Docker image with CUDA
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cuda
+          build-args: USE_CUDA=true
+
+      - name: Build and push Docker image with Ollama
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:ollama
+          build-args: USE_OLLAMA=true

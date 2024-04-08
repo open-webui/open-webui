@@ -28,6 +28,7 @@ from config import (
     UPLOAD_DIR,
     WHISPER_MODEL,
     WHISPER_MODEL_DIR,
+    DEVICE_TYPE,
 )
 
 log = logging.getLogger(__name__)
@@ -41,6 +42,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# setting device type for whisper model
+whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
+log.info(f"whisper_device_type: {whisper_device_type}")
 
 
 @app.post("/transcribe")
@@ -66,7 +71,7 @@ def transcribe(
 
         model = WhisperModel(
             WHISPER_MODEL,
-            device="auto",
+            device=whisper_device_type,
             compute_type="int8",
             download_root=WHISPER_MODEL_DIR,
         )
