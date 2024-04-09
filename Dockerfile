@@ -71,23 +71,24 @@ WORKDIR /app/backend
 COPY ./backend/requirements.txt ./requirements.txt
 
 ADD https://astral.sh/uv/install.sh /install.sh
-RUN apt-get install -y --no-install-recommends curl && \
+# Install dependencies and configure environment
+RUN apt-get update && apt-get install -y --no-install-recommends curl && \
     # cleanup
     rm -rf /var/lib/apt/lists/* && \
     # install uv
     chmod -R 655 /install.sh && /install.sh && rm /install.sh && mv /root/.cargo/bin/uv /usr/bin/ && \
 
-RUN if [ "$USE_CUDA" = "true" ]; then \
-    # If you use CUDA the whisper and embedding modell will be downloaded on first use
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-    python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
+    if [ "$USE_CUDA" = "true" ]; then \
+        # If you use CUDA the whisper and embedding model will be downloaded on first use
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
+        uv pip install --system -r requirements.txt --no-cache-dir && \
+        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+        python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
     else \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-    uv pip install --system install -r requirements.txt --no-cache-dir && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-    python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
+        uv pip install --system -r requirements.txt --no-cache-dir && \
+        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+        python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
     fi
 
 
