@@ -70,13 +70,12 @@ WORKDIR /app/backend
 # install python dependencies
 COPY ./backend/requirements.txt ./requirements.txt
 
-# install uv
 ADD https://astral.sh/uv/install.sh /install.sh
-RUN chmod -R 655 /install.sh && /install.sh && rm /install.sh && mv /root/.cargo/bin/uv /usr/bin/ && \
-    # install helper tools
-    apt-get install -y --no-install-recommends curl && \
+RUN apt-get install -y --no-install-recommends curl && \
     # cleanup
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    # install uv
+    chmod -R 655 /install.sh && /install.sh && rm /install.sh && mv /root/.cargo/bin/uv /usr/bin/ && \
 
 RUN if [ "$USE_CUDA" = "true" ]; then \
     # If you use CUDA the whisper and embedding modell will be downloaded on first use
