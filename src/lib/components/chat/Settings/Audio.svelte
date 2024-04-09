@@ -21,7 +21,7 @@
 
 	let voices = [];
 	let speaker = '';
-	let volume = 100;
+	let volume = null;
 	let speechRate = 1;
 	let pitch = 1;
 	let notificationsPlayback = false;
@@ -218,29 +218,88 @@
 				</button>
 			</div>
 
-			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Volume')}</div>
-				<div class="flex items-center relative dark:bg-gray-900 w-fit rounded px-2 p-1 text-xs bg-transparent outline-none text-right">
-					<input type="range" id="volume" min="0" max="100" bind:value={volume} />
+			<div class=" py-0.5 w-full justify-between">
+				<div class="flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Volume')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						type="button"
+						on:click={() => {
+							volume = volume === null ? 0.8 : null;
+						}}
+					>
+						{#if volume === null}
+							<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+						{:else}
+							<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+						{/if}
+					</button>
 				</div>
+
+				{#if volume !== null}
+					<div class="flex mt-0.5 space-x-2">
+						<div class=" flex-1">
+							<input
+								id="steps-range"
+								type="range"
+								min="0.1"
+								max="1"
+								step="0.01"
+								bind:value={volume}
+								class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+							/>
+						</div>
+						<div>
+							<input
+								bind:value={volume}
+								type="number"
+								class=" bg-transparent text-center w-14"
+								min="0.1"
+								max="1"
+								step="0.01"
+							/>
+						</div>
+					</div>
+				{/if}
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Speech Rate')}</div>
-				<div class="flex items-center relative dark:bg-gray-900 w-fit rounded px-2 p-1 text-xs bg-transparent outline-none text-right">
-					<input class=" dark:bg-gray-900 w-fit rounded text-xs bg-transparent outline-none text-right" type="range" id="volume" min="0" max="100" bind:value={speechRate} />
+				<div
+					class="flex items-center relative dark:bg-gray-900 w-fit rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+				>
+					<input
+						class=" dark:bg-gray-900 w-fit rounded text-xs bg-transparent outline-none text-right"
+						type="range"
+						id="volume"
+						min="0"
+						max="100"
+						bind:value={speechRate}
+					/>
 				</div>
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Pitch')}</div>
-				<div class="flex items-center relative dark:bg-gray-900 w-fit rounded px-2 p-1 text-xs bg-transparent outline-none text-right">
-					<input class=" dark:bg-gray-900 w-fit rounded text-xs bg-transparent outline-none text-right" type="range" id="volume" min="0" max="100" bind:value={pitch} />
+				<div
+					class="flex items-center relative dark:bg-gray-900 w-fit rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+				>
+					<input
+						class=" dark:bg-gray-900 w-fit rounded text-xs bg-transparent outline-none text-right"
+						type="range"
+						id="volume"
+						min="0"
+						max="100"
+						bind:value={pitch}
+					/>
 				</div>
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Enable Notifications Playback')}</div>
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Enable Notifications Playback')}
+				</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition"
