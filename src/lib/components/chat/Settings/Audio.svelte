@@ -73,12 +73,18 @@
 		saveSettings({ speechAutoSend: speechAutoSend });
 	};
 
+	const toggleNotificationsPlayback = async () => {
+		notificationsPlayback = !notificationsPlayback;
+		saveSettings({ notificationsPlayback: notificationsPlayback });
+	};
+
 	onMount(async () => {
 		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 
 		conversationMode = settings.conversationMode ?? false;
 		speechAutoSend = settings.speechAutoSend ?? false;
 		responseAutoPlayback = settings.responseAutoPlayback ?? false;
+		notificationsPlayback = settings.notificationsPlayback ?? false;
 
 		STTEngine = settings?.audio?.STTEngine ?? '';
 		TTSEngine = settings?.audio?.TTSEngine ?? '';
@@ -364,7 +370,7 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition"
 					on:click={() => {
-						console.log('toggling notifications playback');
+						toggleNotificationsPlayback();
 					}}
 					type="button"
 				>
