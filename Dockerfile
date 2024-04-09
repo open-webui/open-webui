@@ -72,7 +72,11 @@ COPY ./backend/requirements.txt ./requirements.txt
 
 # install uv
 ADD https://astral.sh/uv/install.sh /install.sh
-RUN chmod -R 655 /install.sh && /install.sh && rm /install.sh && mv /root/.cargo/bin/uv /usr/bin/
+RUN chmod -R 655 /install.sh && /install.sh && rm /install.sh && mv /root/.cargo/bin/uv /usr/bin/ && \
+    # install helper tools
+    apt-get install -y --no-install-recommends curl && \
+    # cleanup
+    rm -rf /var/lib/apt/lists/*
 
 RUN if [ "$USE_CUDA" = "true" ]; then \
     # If you use CUDA the whisper and embedding modell will be downloaded on first use
@@ -94,8 +98,6 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
-    # install helper tools
-    apt-get install -y --no-install-recommends curl && \
     # install ollama
     curl -fsSL https://ollama.com/install.sh | sh && \
     # cleanup
@@ -106,8 +108,6 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
-    # install helper tools
-    apt-get install -y --no-install-recommends curl && \
     # cleanup
     rm -rf /var/lib/apt/lists/*; \
     fi
