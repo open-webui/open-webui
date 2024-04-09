@@ -28,8 +28,6 @@ except ImportError:
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 
-shutil.copyfile("../build/favicon.png", "./static/favicon.png")
-
 ####################################
 # ENV (dev,test,prod)
 ####################################
@@ -103,6 +101,26 @@ for version in soup.find_all("h2"):
 
 CHANGELOG = changelog_json
 
+####################################
+# DATA/FRONTEND BUILD DIR
+####################################
+
+DATA_DIR = str(Path(os.getenv("DATA_DIR", "./data")).resolve())
+FRONTEND_BUILD_DIR = str(Path(os.getenv("FRONTEND_BUILD_DIR", "../build")))
+
+try:
+    with open(f"{DATA_DIR}/config.json", "r") as f:
+        CONFIG_DATA = json.load(f)
+except:
+    CONFIG_DATA = {}
+
+####################################
+# Static DIR
+####################################
+
+STATIC_DIR = str(Path(os.getenv("STATIC_DIR", "./static")).resolve())
+
+shutil.copyfile(f"{FRONTEND_BUILD_DIR}/favicon.png", f"{STATIC_DIR}/favicon.png")
 
 ####################################
 # LOGGING
@@ -165,7 +183,7 @@ if CUSTOM_NAME:
 
                 r = requests.get(url, stream=True)
                 if r.status_code == 200:
-                    with open("./static/favicon.png", "wb") as f:
+                    with open(f"{STATIC_DIR}/favicon.png", "wb") as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
 
@@ -177,18 +195,6 @@ else:
     if WEBUI_NAME != "Open WebUI":
         WEBUI_NAME += " (Open WebUI)"
 
-####################################
-# DATA/FRONTEND BUILD DIR
-####################################
-
-DATA_DIR = str(Path(os.getenv("DATA_DIR", "./data")).resolve())
-FRONTEND_BUILD_DIR = str(Path(os.getenv("FRONTEND_BUILD_DIR", "../build")))
-
-try:
-    with open(f"{DATA_DIR}/config.json", "r") as f:
-        CONFIG_DATA = json.load(f)
-except:
-    CONFIG_DATA = {}
 
 ####################################
 # File Upload DIR
