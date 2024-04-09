@@ -106,6 +106,8 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # install helper tools
+    apt-get install -y --no-install-recommends curl && \
     # cleanup
     rm -rf /var/lib/apt/lists/*; \
     fi
