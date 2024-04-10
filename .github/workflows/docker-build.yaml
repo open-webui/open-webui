@@ -321,6 +321,7 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=cuda
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-cuda,onlatest=true
@@ -367,6 +368,7 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=ollama
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-ollama,onlatest=true
