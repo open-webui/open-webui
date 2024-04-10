@@ -38,6 +38,8 @@ from config import (
     VERSION,
     CHANGELOG,
     FRONTEND_BUILD_DIR,
+    CACHE_DIR,
+    STATIC_DIR,
     MODEL_FILTER_ENABLED,
     MODEL_FILTER_LIST,
     GLOBAL_LOG_LEVEL,
@@ -282,7 +284,6 @@ async def get_app_latest_release_version():
             detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
         )
 
-
 @app.get("/manifest.json")
 async def get_manifest_json():
     return {
@@ -296,10 +297,8 @@ async def get_manifest_json():
         "icons": [{"src": "/favicon.png", "type": "image/png", "sizes": "844x884"}],
     }
 
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/cache", StaticFiles(directory="data/cache"), name="cache")
-
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
 
 app.mount(
     "/",
