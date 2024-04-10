@@ -15,6 +15,7 @@ from typing import List
 
 from sentence_transformers import SentenceTransformer
 from chromadb.utils import embedding_functions
+from chromadb.utils.batch_utils import create_batches
 
 from langchain_community.document_loaders import (
     WebBaseLoader,
@@ -331,9 +332,14 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
             embedding_function=app.state.sentence_transformer_ef,
         )
 
-        collection.add(
-            documents=texts, metadatas=metadatas, ids=[str(uuid.uuid1()) for _ in texts]
-        )
+        for batch in create_batches(
+            api=CHROMA_CLIENT,
+            ids=[str(uuid.uuid1()) for _ in texts],
+            metadatas=metadatas,
+            documents=texts,
+        ):
+            collection.add(*batch)
+
         return True
     except Exception as e:
         log.exception(e)
