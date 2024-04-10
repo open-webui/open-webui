@@ -35,6 +35,9 @@
 		k: 4
 	};
 
+	let embeddingModelConfig = {
+		embedding_model: ''
+	};
 	let embeddingModel = '';
 
 	const scanHandler = async () => {
@@ -61,7 +64,13 @@
 		console.log('Update embedding model attempt:', embeddingModel);
 
 		updateEmbeddingModelLoading = true;
-		const res = await updateEmbeddingModel(localStorage.token, { embedding_model: embeddingModel });
+		const res = await updateEmbeddingModel(localStorage.token, {
+			embedding_model: embeddingModel
+		}).catch((error) => {
+			toast.error(error);
+			embeddingModel = embeddingModelConfig.embedding_model;
+			return null;
+		});
 		updateEmbeddingModelLoading = false;
 
 		if (res) {
@@ -99,8 +108,7 @@
 			chunkOverlap = res.chunk.chunk_overlap;
 		}
 
-		const embeddingModelConfig = await getEmbeddingModel(localStorage.token);
-
+		embeddingModelConfig = await getEmbeddingModel(localStorage.token);
 		embeddingModel = embeddingModelConfig.embedding_model;
 
 		querySettings = await getQuerySettings(localStorage.token);
