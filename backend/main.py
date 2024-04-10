@@ -5,6 +5,7 @@ import time
 import os
 import sys
 import logging
+import aiohttp
 import requests
 
 from fastapi import FastAPI, Request, Depends, status
@@ -18,6 +19,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
+
 from apps.litellm.main import app as litellm_app, startup as litellm_app_startup
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
@@ -271,14 +273,16 @@ async def get_app_changelog():
 @app.get("/api/version/updates")
 async def get_app_latest_release_version():
     try:
-        response = requests.get(
-            f"https://api.github.com/repos/open-webui/open-webui/releases/latest"
-        )
-        response.raise_for_status()
-        latest_version = response.json()["tag_name"]
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                "https://api.github.com/repos/open-webui/open-webui/releases/latest"
+            ) as response:
+                response.raise_for_status()
+                data = await response.json()
+                latest_version = data["tag_name"]
 
-        return {"current": VERSION, "latest": latest_version[1:]}
-    except Exception as e:
+                return {"current": VERSION, "latest": latest_version[1:]}
+    except aiohttp.ClientError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
