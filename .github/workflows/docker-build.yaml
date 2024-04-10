@@ -66,6 +66,7 @@ jobs:
 
       - name: Build and push Docker image with CUDA
         uses: docker/build-push-action@v5
+        if: github.ref == 'refs/heads/main'
         with:
           context: .
           push: true
@@ -75,6 +76,7 @@ jobs:
 
       - name: Build and push Docker image with Ollama
         uses: docker/build-push-action@v5
+        if: github.ref == 'refs/heads/main'
         with:
           context: .
           push: true
