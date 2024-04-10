@@ -92,18 +92,18 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 > [!NOTE]  
 > Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Open WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
 
-### Quick Start with Docker (3 ways) 🐳
+### Quick Start with Docker 🐳
 
 > [!IMPORTANT]
 > When using Docker to install Open WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
 
-1. **If Ollama is on your computer**, use this command:
+ **If Ollama is on your computer**, use this command:
 
   ```bash
   docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
-2. **If Ollama is on a Different Server**, use this command:
+ **If Ollama is on a Different Server**, use this command:
 
   To connect to Ollama on another server, change the `OLLAMA_BASE_URL` to the server's URL:
 
@@ -112,62 +112,7 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
   ```
 
   After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
-
-3. **If you want to customize your build with additional ARGS**, use this commands:
-
-> [!NOTE]  
-> If you only want to use Open WebUI with Ollama included or CUDA acelleration it's recomented to use our official images with the tags :cuda or :ollama
-> If you want a combination of both or more customisation options like a different embedding model and/or CUDA version you need to build the image yourself following the instructions below.
-
-  - **For the build:**
-
-  ```bash
-  docker build -t open-webui
-  ```
-
-  - **Optional build ARGS (use them in the docker build command below if needed):**
-
-  e.g.
-
-  ```bash
-  --build-arg="USE_EMBEDDING_MODEL=intfloat/multilingual-e5-large"
-  ```
-  For "intfloat/multilingual-e5-large" custom embedding model (default is all-MiniLM-L6-v2), only works with [sentence transforer models](https://huggingface.co/models?library=sentence-transformers). Current [Leaderbord](https://huggingface.co/spaces/mteb/leaderboard) of embedding models.
-
-  ```bash
-  --build-arg="USE_OLLAMA=true"
-  ```
-  For including ollama in the image.
-
-  ```bash
-  --build-arg="USE_CUDA=true"
-  ```
-  To use CUDA exeleration for the embedding and whisper models.
-
-> [!NOTE]
-> You need to install the [Nvidia CUDA container toolkit](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/) on your machine to be able to set CUDA as the Docker engine. Only works with Linux - use WSL for Windows!
-
-  ```bash
-  --build-arg="USE_CUDA_VER=cu117"
-  ```
-  For CUDA 11 (default is CUDA 12)
-
-  **To run the image:**
-
-  - **If you DID NOT use the USE_CUDA=true build ARG**, use this command:
-
-  ```bash
-    docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-  ```
-
-  - **If you DID use the USE_CUDA=true build ARG**, use this command:
-
-  ```bash
-    docker run --gpus all -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-  ```
-
-  - After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
-
+  
 #### Open WebUI: Server Connection Error
 
 If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
