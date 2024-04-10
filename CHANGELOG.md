@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🦙 Ollama and CUDA Images**: Added support for `:ollama` and `:cuda` tagged images.
+- **🦙 Ollama and CUDA Images**: Added support for ':ollama' and ':cuda' tagged images.
 - **👍 Enhanced Response Rating**: Now you can annotate your ratings for better feedback.
 - **👤 User Initials Profile Photo**: User initials are now the default profile photo.
 - **🔍 Update RAG Embedding Model**: Customize RAG embedding model directly in document settings.
