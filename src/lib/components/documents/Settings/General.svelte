@@ -114,7 +114,7 @@
 		saveHandler();
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[22rem]">
 		<div>
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('General Settings')}</div>
 
@@ -124,7 +124,7 @@
 				</div>
 
 				<button
-					class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded flex flex-row space-x-1 items-center {scanDirLoading
+					class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg flex flex-row space-x-1 items-center {scanDirLoading
 						? ' cursor-not-allowed'
 						: ''}"
 					on:click={() => {
@@ -250,7 +250,7 @@
 
 							<div class="self-center p-3">
 								<input
-									class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+									class=" w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 									type="number"
 									placeholder={$i18n.t('Enter Chunk Size')}
 									bind:value={chunkSize}
@@ -267,7 +267,7 @@
 
 							<div class="self-center p-3">
 								<input
-									class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+									class="w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 									type="number"
 									placeholder={$i18n.t('Enter Chunk Overlap')}
 									bind:value={chunkOverlap}
@@ -278,7 +278,7 @@
 						</div>
 					</div>
 
-					<div>
+					<div class="pr-2">
 						<div class="flex justify-between items-center text-xs">
 							<div class=" text-xs font-medium">{$i18n.t('PDF Extract Images (OCR)')}</div>
 
@@ -293,6 +293,8 @@
 					</div>
 				</div>
 
+				<hr class=" dark:border-gray-700 my-3" />
+
 				<div>
 					<div class=" text-sm font-medium">{$i18n.t('Query Params')}</div>
 
@@ -302,7 +304,7 @@
 
 							<div class="self-center p-3">
 								<input
-									class=" w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+									class=" w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 									type="number"
 									placeholder={$i18n.t('Enter Top K')}
 									bind:value={querySettings.k}
@@ -311,34 +313,19 @@
 								/>
 							</div>
 						</div>
-
-						<!-- <div class="flex w-full">
-						<div class=" self-center text-xs font-medium min-w-fit">Chunk Overlap</div>
-	
-						<div class="self-center p-3">
-							<input
-								class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
-								type="number"
-								placeholder="Enter Chunk Overlap"
-								bind:value={chunkOverlap}
-								autocomplete="off"
-								min="0"
-							/>
-						</div>
-					</div> -->
 					</div>
 
 					<div>
 						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('RAG Template')}</div>
 						<textarea
 							bind:value={querySettings.template}
-							class="w-full rounded p-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none resize-none"
+							class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
 							rows="4"
 						/>
 					</div>
 				</div>
 
-				<hr class=" dark:border-gray-700" />
+				<hr class=" dark:border-gray-700 my-3" />
 
 				{#if showResetConfirm}
 					<div class="flex justify-between rounded-md items-center py-2 px-3.5 w-full transition">
@@ -432,15 +419,14 @@
 					</button>
 				{/if}
 			</div>
-
-			<div class="flex justify-end pt-3 text-sm font-medium">
-				<button
-					class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
-					type="submit"
-				>
-					{$i18n.t('Save')}
-				</button>
-			</div>
 		</div>
+	</div>
+	<div class="flex justify-end pt-3 text-sm font-medium">
+		<button
+			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
+			type="submit"
+		>
+			{$i18n.t('Save')}
+		</button>
 	</div>
 </form>
