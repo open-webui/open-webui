@@ -167,6 +167,7 @@ async def update_embedding_model(
         )
 
     if sentence_transformer_ef:
+        app.state.RAG_EMBEDDING_MODEL = form_data.embedding_model
         app.state.RAG_EMBEDDING_MODEL_PATH = embedding_model_path
         app.state.sentence_transformer_ef = sentence_transformer_ef
 
