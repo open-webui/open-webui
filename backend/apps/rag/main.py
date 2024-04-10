@@ -44,7 +44,7 @@ from apps.web.models.documents import (
     DocumentResponse,
 )
 
-from apps.rag.utils import query_doc, query_collection, embedding_model_get_path
+from apps.rag.utils import query_doc, query_collection, get_embedding_model_path
 
 from utils.misc import (
     calculate_sha256,
@@ -77,10 +77,14 @@ app.state.PDF_EXTRACT_IMAGES = False
 app.state.CHUNK_SIZE = CHUNK_SIZE
 app.state.CHUNK_OVERLAP = CHUNK_OVERLAP
 app.state.RAG_TEMPLATE = RAG_TEMPLATE
+
+
 app.state.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
-app.state.RAG_EMBEDDING_MODEL_PATH = embedding_model_get_path(
+app.state.RAG_EMBEDDING_MODEL_PATH = get_embedding_model_path(
     app.state.RAG_EMBEDDING_MODEL, RAG_EMBEDDING_MODEL_AUTO_UPDATE
 )
+
+
 app.state.TOP_K = 4
 
 app.state.sentence_transformer_ef = (
@@ -148,7 +152,7 @@ async def update_embedding_model(
     )
 
     try:
-        app.state.RAG_EMBEDDING_MODEL_PATH = embedding_model_get_path(
+        app.state.RAG_EMBEDDING_MODEL_PATH = get_embedding_model_path(
             app.state.RAG_EMBEDDING_MODEL, True
         )
         app.state.sentence_transformer_ef = (

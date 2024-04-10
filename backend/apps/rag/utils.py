@@ -192,21 +192,21 @@ def rag_messages(docs, messages, template, k, embedding_function):
     return messages
 
 
-def embedding_model_get_path(
+def get_embedding_model_path(
     embedding_model: str, update_embedding_model: bool = False
 ):
     # Construct huggingface_hub kwargs with local_files_only to return the snapshot path
     cache_dir = os.getenv("SENTENCE_TRANSFORMERS_HOME")
+
     local_files_only = not update_embedding_model
+
     snapshot_kwargs = {
         "cache_dir": cache_dir,
         "local_files_only": local_files_only,
     }
 
-    log.debug(f"SENTENCE_TRANSFORMERS_HOME cache_dir: {cache_dir}")
     log.debug(f"embedding_model: {embedding_model}")
-    log.debug(f"update_embedding_model: {update_embedding_model}")
-    log.debug(f"local_files_only: {local_files_only}")
+    log.debug(f"snapshot_kwargs: {snapshot_kwargs}")
 
     # Inspiration from upstream sentence_transformers
     if (
