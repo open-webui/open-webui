@@ -16,7 +16,6 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [RealityStream](/RealityStream/) - Machine Learning Classification Models
 - [USEEIO Commodities for Deep Learning](/data-pipeline/research/economy) - New data for all 50 states
 - [OpenFootprint](/useeio.js/footprint) - Javascript Label Development
-- [Earthscape Chatbot UI Install](/earthscape/app/) - 100+ LLMs in a Web Interface you can host yourself - Srujana
 - [ML for Community Forecasting](../data-pipeline/timelines/training/naics/)
 - [International Google Data Commons API](/data-pipeline/international/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
 - [Python - State Regions using Sets of Counties](/community-data/us/edd/)
@@ -77,15 +76,15 @@ Our React Team meets Wednesdays at [10 PM EDT](coders)
 
 Not your average modeling tasks, but worth the effort.
 
-**[Find ObservableHQ Interface for selecting charts](https://github.com/observablehq)** - Zhiyuan
+**[Install LLM from Google Data Commons](/localsite/info/data/datacommons/)**
+Install LLM from Google Data Commons, Integrate within [Open WebUI](/projects/src/)
+
+**[Integrate ObservableHQ's Interface for selecting charts](https://github.com/observablehq)**  
 Deploy to GitHub pages to create an easy-to-use alternative to Tableau.
 [Mike Bostock provided an assist](https://github.com/observablehq/framework/discussions/1030) - deploy.yml files
 
 **[Enhance API Key Storage in Earthscape and push to Chatbot UI](/earthscape)**
 [API Key Local Storage mockup](../localsite/tools/storage/api/) - Javascript repeater with localStorage
-
-**[Install LLM from Google Data Commons](/localsite/info/data/datacommons/)**
-Install LLM from Google Data Commons, Integrate within Earthscape
 
 **[Push EPA Data to Google Data Commons](/localsite/info/data/datacommons/)**
 Push EPA data assempled in our [OpenFootprint](/OpenFootprint) impacts folder into Google Data Commons.
