@@ -17,7 +17,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [USEEIO Commodities for Deep Learning](/data-pipeline/research/economy) - New data for all 50 states
 - [OpenFootprint](/useeio.js/footprint) - Javascript Label Development
 - [Earthscape Chatbot UI Install](/earthscape/app/) - 100+ LLMs in a Web Interface you can host yourself - Srujana
-- [ML for Community Forecasting](../data-pipeline/timelines/training/naics/) - Lily, Sijia, Alison, Irene, Honglin, Ronan, Luwei, Wenxi, Magie
+- [ML for Community Forecasting](../data-pipeline/timelines/training/naics/)
 - [International Google Data Commons API](/data-pipeline/international/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
 - [Python - State Regions using Sets of Counties](/community-data/us/edd/)
 - [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - Honglin, Rupesh
