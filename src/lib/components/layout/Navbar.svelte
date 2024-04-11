@@ -1,24 +1,14 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
 
-	import { Separator } from 'bits-ui';
-	import { getChatById } from '$lib/apis/chats';
 	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings } from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
-	import TagInput from '../common/Tags/TagInput.svelte';
 	import ModelSelector from '../chat/ModelSelector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-
-	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
-	import ChevronDown from '../icons/ChevronDown.svelte';
-	import ChevronUpDown from '../icons/ChevronUpDown.svelte';
 	import Menu from './Navbar/Menu.svelte';
-	import TagChatModal from '../chat/TagChatModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -26,121 +16,34 @@
 	export let title: string = $WEBUI_NAME;
 	export let shareEnabled: boolean = false;
 
+	export let chat;
 	export let selectedModels;
 
 	export let tags = [];
 	export let addTag: Function;
 	export let deleteTag: Function;
 
-	export let showModelSelector = false;
+	export let showModelSelector = true;
 
 	let showShareChatModal = false;
-	let showTagChatModal = false;
-
-	const shareChat = async () => {
-		const chat = (await getChatById(localStorage.token, $chatId)).chat;
-		console.log('share', chat);
-
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
-		const url = 'https://openwebui.com';
-		// const url = 'http://localhost:5173';
-
-		const tab = await window.open(`${url}/chats/upload`, '_blank');
-		window.addEventListener(
-			'message',
-			(event) => {
-				if (event.origin !== url) return;
-				if (event.data === 'loaded') {
-					tab.postMessage(
-						JSON.stringify({
-							chat: chat,
-							modelfiles: $modelfiles.filter((modelfile) => chat.models.includes(modelfile.tagName))
-						}),
-						'*'
-					);
-				}
-			},
-			false
-		);
-	};
-
-	const downloadChat = async () => {
-		const chat = (await getChatById(localStorage.token, $chatId)).chat;
-		console.log('download', chat);
-
-		const chatText = chat.messages.reduce((a, message, i, arr) => {
-			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
-		}, '');
-
-		let blob = new Blob([chatText], {
-			type: 'text/plain'
-		});
-
-		saveAs(blob, `chat-${chat.title}.txt`);
-	};
+	let showDownloadChatModal = false;
 </script>
 
-<ShareChatModal bind:show={showShareChatModal} {downloadChat} {shareChat} />
-<!-- <TagChatModal bind:show={showTagChatModal} {tags} {deleteTag} {addTag} /> -->
+<ShareChatModal bind:show={showShareChatModal} />
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div
 		class=" flex {$settings?.fullScreenMode ?? null ? 'max-w-full' : 'max-w-3xl'} 
 		 w-full mx-auto px-3"
 	>
-		<!-- {#if shareEnabled}
-			<div class="flex items-center w-full max-w-full">
-				<div class=" flex-1 self-center font-medium line-clamp-1">
-					<div>
-						{title != '' ? title : $WEBUI_NAME}
-					</div>
-				</div>
-				<div class="pl-2 self-center flex items-center">
-					<div class=" mr-1">
-						<Tags {tags} {deleteTag} {addTag} />
-					</div>
-
-					<Tooltip content="Share">
-						<button
-							class="cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
-							on:click={async () => {
-								showShareChatModal = !showShareChatModal;
-
-								// console.log(showShareChatModal);
-							}}
-						>
-							<div class=" m-auto self-center">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 24 24"
-									fill="currentColor"
-									class="w-4 h-4"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-							</div>
-						</button>
-					</Tooltip>
-				</div>
-			</div>
-		{/if} -->
-
-		<!-- <div class=" flex-1 self-center font-medium line-clamp-1">
-			<div>
-				{title != '' ? title : $WEBUI_NAME}
-			</div>
-		</div> -->
-
 		<div class="flex items-center w-full max-w-full">
-			<div class="w-full flex-1 overflow-hidden max-w-full">
-				<ModelSelector bind:selectedModels />
+			<div class="flex-1 overflow-hidden max-w-full">
+				{#if showModelSelector}
+					<ModelSelector bind:selectedModels />
+				{/if}
 			</div>
 
 			<div class="self-start flex flex-none items-center">
-				<div class="flex self-center w-[1px] h-5 mx-2 bg-stone-700" />
+				<div class="flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" />
 
 				{#if !shareEnabled}
 					<Tooltip content="Settings">
@@ -174,9 +77,13 @@
 					</Tooltip>
 				{:else}
 					<Menu
+						{chat}
 						{shareEnabled}
 						shareHandler={() => {
 							showShareChatModal = !showShareChatModal;
+						}}
+						downloadHandler={() => {
+							showDownloadChatModal = !showDownloadChatModal;
 						}}
 						{tags}
 						{deleteTag}

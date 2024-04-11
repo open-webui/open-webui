@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.118] - 2024-04-10
+
+### Added
+
+- **🦙 Ollama and CUDA Images**: Added support for ':ollama' and ':cuda' tagged images.
+- **👍 Enhanced Response Rating**: Now you can annotate your ratings for better feedback.
+- **👤 User Initials Profile Photo**: User initials are now the default profile photo.
+- **🔍 Update RAG Embedding Model**: Customize RAG embedding model directly in document settings.
+- **🌍 Additional Language Support**: Added Turkish language support.
+
+### Fixed
+
+- **🔒 Share Chat Permission**: Resolved issue with chat sharing permissions.
+- **🛠 Modal Close**: Modals can now be closed using the Esc key.
+
+### Changed
+
+- **🎨 Admin Panel Styling**: Refreshed styling for the admin panel.
+- **🐳 Docker Image Build**: Updated docker image build process for improved efficiency.
+
+## [0.1.117] - 2024-04-03
+
+### Added
+
+- 🗨️ **Local Chat Sharing**: Share chat links seamlessly between users.
+- 🔑 **API Key Generation Support**: Generate secret keys to leverage Open WebUI with OpenAI libraries.
+- 📄 **Chat Download as PDF**: Easily download chats in PDF format.
+- 📝 **Improved Logging**: Enhancements to logging functionality.
+- 📧 **Trusted Email Authentication**: Authenticate using a trusted email header.
+
+### Fixed
+
+- 🌷 **Enhanced Dutch Translation**: Improved translation for Dutch users.
+- ⚪ **White Theme Styling**: Resolved styling issue with the white theme.
+- 📜 **LaTeX Chat Screen Overflow**: Fixed screen overflow issue with LaTeX rendering.
+- 🔒 **Security Patches**: Applied necessary security patches.
+
 ## [0.1.116] - 2024-03-31
 
 ### Added

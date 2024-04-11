@@ -100,7 +100,7 @@
 	"Deleted {{deleteModelTag}}": "Удалено {{deleteModelTag}}",
 	"Deleted {tagName}": "Удалено {tagName}",
 	"Description": "Описание",
-	"Desktop Notifications": "Уведомления на рабочем столе",
+	"Notifications": "Уведомления на рабочем столе",
 	"Disabled": "Отключено",
 	"Discover a modelfile": "Найти файл модели",
 	"Discover a prompt": "Найти промт",

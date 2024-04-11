@@ -56,7 +56,7 @@
 	let currentRequestId = null;
 
 	// let chatId = $page.params.id;
-	let showModelSelector = false;
+	let showModelSelector = true;
 	let selectedModels = [''];
 	let selectedModelfile = null;
 
@@ -536,11 +536,6 @@
 	const sendPromptOpenAI = async (model, userPrompt, responseMessageId, _chatId) => {
 		const responseMessage = history.messages[responseMessageId];
 
-		// Wait until history/message have been updated
-		await tick();
-
-		scrollToBottom();
-
 		const docs = messages
 			.filter((message) => message?.files ?? null)
 			.map((message) =>
@@ -606,6 +601,11 @@
 				? `${LITELLM_API_BASE_URL}/v1`
 				: `${OPENAI_API_BASE_URL}`
 		);
+
+		// Wait until history/message have been updated
+		await tick();
+
+		scrollToBottom();
 
 		if (res && res.ok) {
 			const reader = res.body
@@ -865,6 +865,7 @@
 	<div class="min-h-screen max-h-screen w-full flex flex-col">
 		<Navbar
 			{title}
+			{chat}
 			bind:selectedModels
 			bind:showModelSelector
 			shareEnabled={messages.length > 0}

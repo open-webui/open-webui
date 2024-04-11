@@ -5,6 +5,7 @@ import time
 import os
 import sys
 import logging
+import aiohttp
 import requests
 
 from fastapi import FastAPI, Request, Depends, status
@@ -18,6 +19,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
+
 from apps.litellm.main import app as litellm_app, startup as litellm_app_startup
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
@@ -38,6 +40,8 @@ from config import (
     VERSION,
     CHANGELOG,
     FRONTEND_BUILD_DIR,
+    CACHE_DIR,
+    STATIC_DIR,
     MODEL_FILTER_ENABLED,
     MODEL_FILTER_LIST,
     GLOBAL_LOG_LEVEL,
@@ -62,13 +66,27 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
+print(
+    f"""
+  ___                    __        __   _     _   _ ___ 
+ / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
+| | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || | 
+| |_| | |_) |  __/ | | |   \ V  V /  __/ |_) | |_| || | 
+ \___/| .__/ \___|_| |_|    \_/\_/ \___|_.__/ \___/|___|
+      |_|                                               
+
+      
+v{VERSION} - building the best open-source AI user interface.      
+https://github.com/open-webui/open-webui
+"""
+)
+
 app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
 app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.WEBHOOK_URL = WEBHOOK_URL
-
 
 origins = ["*"]
 
@@ -164,18 +182,22 @@ app.mount("/rag/api/v1", rag_app)
 
 @app.get("/api/config")
 async def get_app_config():
+    # Checking and Handling the Absence of 'ui' in CONFIG_DATA
+
+    default_locale = "en-US"
+    if "ui" in CONFIG_DATA:
+        default_locale = CONFIG_DATA["ui"].get("default_locale", "en-US")
+
+    # The Rest of the Function Now Uses the Variables Defined Above
     return {
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
-        "default_locale": (
-            CONFIG_DATA["ui"]["default_locale"]
-            if "ui" in CONFIG_DATA and "default_locale" in CONFIG_DATA["ui"]
-            else "en-US"
-        ),
+        "default_locale": default_locale,
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
+        "trusted_header_auth": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
     }
 
 
@@ -251,23 +273,38 @@ async def get_app_changelog():
 @app.get("/api/version/updates")
 async def get_app_latest_release_version():
     try:
-        response = requests.get(
-            f"https://api.github.com/repos/open-webui/open-webui/releases/latest"
-        )
-        response.raise_for_status()
-        latest_version = response.json()["tag_name"]
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                "https://api.github.com/repos/open-webui/open-webui/releases/latest"
+            ) as response:
+                response.raise_for_status()
+                data = await response.json()
+                latest_version = data["tag_name"]
 
-        return {"current": VERSION, "latest": latest_version[1:]}
-    except Exception as e:
+                return {"current": VERSION, "latest": latest_version[1:]}
+    except aiohttp.ClientError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
         )
 
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/cache", StaticFiles(directory="data/cache"), name="cache")
+@app.get("/manifest.json")
+async def get_manifest_json():
+    return {
+        "name": WEBUI_NAME,
+        "short_name": WEBUI_NAME,
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#343541",
+        "theme_color": "#343541",
+        "orientation": "portrait-primary",
+        "icons": [{"src": "/favicon.png", "type": "image/png", "sizes": "844x884"}],
+    }
 
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
 
 app.mount(
     "/",

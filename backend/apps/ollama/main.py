@@ -81,6 +81,12 @@ async def check_url(request: Request, call_next):
     return response
 
 
+@app.head("/")
+@app.get("/")
+async def get_status():
+    return {"status": True}
+
+
 @app.get("/urls")
 async def get_ollama_api_urls(user=Depends(get_admin_user)):
     return {"OLLAMA_BASE_URLS": app.state.OLLAMA_BASE_URLS}
@@ -209,7 +215,8 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
 
         if len(responses) > 0:
             lowest_version = min(
-                responses, key=lambda x: tuple(map(int, x["version"].split(".")))
+                responses,
+                key=lambda x: tuple(map(int, x["version"].split("-")[0].split("."))),
             )
 
             return {"version": lowest_version["version"]}
@@ -272,7 +279,7 @@ async def pull_model(
                         if request_id in REQUEST_POOL:
                             yield chunk
                         else:
-                            print("User: canceled request")
+                            log.warning("User: canceled request")
                             break
                 finally:
                     if hasattr(r, "close"):
@@ -670,7 +677,7 @@ async def generate_completion(
         else:
             raise HTTPException(
                 status_code=400,
-                detail="error_detail",
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
     url = app.state.OLLAMA_BASE_URLS[url_idx]
@@ -1029,6 +1036,14 @@ async def download_model(
     url_idx: Optional[int] = None,
 ):
 
+    allowed_hosts = ["https://huggingface.co/", "https://github.com/"]
+
+    if not any(form_data.url.startswith(host) for host in allowed_hosts):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file_url. Only URLs from allowed hosts are permitted.",
+        )
+
     if url_idx == None:
         url_idx = 0
     url = app.state.OLLAMA_BASE_URLS[url_idx]
@@ -1037,6 +1052,7 @@ async def download_model(
 
     if file_name:
         file_path = f"{UPLOAD_DIR}/{file_name}"
+
         return StreamingResponse(
             download_file_stream(url, form_data.url, file_path, file_name),
         )

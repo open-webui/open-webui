@@ -190,6 +190,86 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_current_
 
 
 ############################
+# ShareChatById
+############################
+
+
+@router.post("/{id}/share", response_model=Optional[ChatResponse])
+async def share_chat_by_id(id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+        if chat.share_id:
+            shared_chat = Chats.update_shared_chat_by_chat_id(chat.id)
+            return ChatResponse(
+                **{**shared_chat.model_dump(), "chat": json.loads(shared_chat.chat)}
+            )
+
+        shared_chat = Chats.insert_shared_chat_by_chat_id(chat.id)
+        if not shared_chat:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
+
+        return ChatResponse(
+            **{**shared_chat.model_dump(), "chat": json.loads(shared_chat.chat)}
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+
+############################
+# DeletedSharedChatById
+############################
+
+
+@router.delete("/{id}/share", response_model=Optional[bool])
+async def delete_shared_chat_by_id(id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+        if not chat.share_id:
+            return False
+
+        result = Chats.delete_shared_chat_by_chat_id(id)
+        update_result = Chats.update_chat_share_id_by_id(id, None)
+
+        return result and update_result != None
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+
+############################
+# GetSharedChatById
+############################
+
+
+@router.get("/share/{share_id}", response_model=Optional[ChatResponse])
+async def get_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
+    if user.role == "pending":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role == "user":
+        chat = Chats.get_chat_by_share_id(share_id)
+    elif user.role == "admin":
+        chat = Chats.get_chat_by_id(share_id)
+
+    if chat:
+        return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+
+############################
 # GetChatTagsById
 ############################
 

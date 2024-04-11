@@ -100,7 +100,7 @@
 	"Deleted {{deleteModelTag}}": "Esborrat {{deleteModelTag}}",
 	"Deleted {tagName}": "Esborrat {tagName}",
 	"Description": "Descripció",
-	"Desktop Notifications": "Notificacions d'Escriptori",
+	"Notifications": "Notificacions d'Escriptori",
 	"Disabled": "Desactivat",
 	"Discover a modelfile": "Descobreix un fitxer de model",
 	"Discover a prompt": "Descobreix un prompt",
