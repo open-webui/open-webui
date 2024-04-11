@@ -452,5 +452,8 @@ WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models"
 # Images
 ####################################
 
+IMAGE_GENERATION_ENABLED = (
+    os.environ.get("IMAGE_GENERATION_ENABLED", "").lower() == "true"
+)
 AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
 COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
