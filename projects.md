@@ -47,15 +47,15 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 **AI Chatbots LLM/SLM**
 
-- [Open WebUI](https://docs.openwebui.com) with [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/)
 <!-- Docker path: https://chat.openai.com/share/61b0997f-ea9b-49f7-9bcb-12fa0519a2d1 -->
+- [Open WebUI](src) with [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/)
 - [Earthscape for Chatbot AI - Supabase and NextJS Hosting](/earthscape/app/)
 <!--
 - [ChatAll - Share simultaneous AI Chats with Chatbot UI](https://github.com/sunner/ChatALL)
 -->
 
 **Storyboard Team - Image and Video Generation**
-- [AI Community Visualizations](/data-pipeline/research/) - [Kishor's Repo](https://github.com/mannurkishorreddy/streamlit-replicate-img-app) and [Our Fork](https://github.com/ModelEarth/replicate) - Kishor
+- [Requests Visualization](/data-pipeline/research/) - [Kishor's Repo](https://github.com/mannurkishorreddy/streamlit-replicate-img-app) and [Our Fork](https://github.com/ModelEarth/replicate)
 - [Image Gallery (React)](/replicate/gallery/view/) - Anthony
 - [Image Gallery (JQuery) and Video (Leonardo)](/data-pipeline/research/stream) - Loren
 
