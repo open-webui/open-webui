@@ -29,7 +29,13 @@ import base64
 import json
 import logging
 
-from config import SRC_LOG_LEVELS, CACHE_DIR, IMAGE_GENERATION_ENABLED, AUTOMATIC1111_BASE_URL, COMFYUI_BASE_URL
+from config import (
+    SRC_LOG_LEVELS,
+    CACHE_DIR,
+    IMAGE_GENERATION_ENABLED,
+    AUTOMATIC1111_BASE_URL,
+    COMFYUI_BASE_URL,
+)
 
 
 log = logging.getLogger(__name__)
