@@ -80,10 +80,12 @@ def transcribe(
 
         log.debug(f"whisper_kwargs: {whisper_kwargs}")
 
-        try: 
+        try:
             model = WhisperModel(**whisper_kwargs)
         except:
-            log.debug("WhisperModel initialization failed, attempting download with local_files_only=False")
+            log.debug(
+                "WhisperModel initialization failed, attempting download with local_files_only=False"
+            )
             whisper_kwargs["local_files_only"] = False
             model = WhisperModel(**whisper_kwargs)
 
