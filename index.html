@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>Open WebUI Projects</title>
+<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script type="text/javascript" src="https://model.earth/localsite/js/localsite.js?showheader=true"></script>
+
+<script>
+if(typeof param=='undefined'){ var param={}; }
+loadMarkdown("projects.md", "projectsDiv", "_parent");
+</script>
+
+<style>
+  body {
+    font-family: 'Nunito Sans', sans-serif;
+  }
+  li p { /* Not sure why this became necessary */
+    margin-top: 0px;
+    margin-bottom: 2px;
+  }
+</style>
+
+</head>
+
+<body>
+
+<div class="content contentpadding">
+  <div id="projectsDiv"></div>
+</div>
+
+</body>
+</html>
