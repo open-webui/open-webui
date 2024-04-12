@@ -55,7 +55,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 **Storyboard Team - Image and Video Generation**
 - [Storyboard Generator](/data-pipeline/research/) - [Kishor's Repo](https://github.com/mannurkishorreddy/streamlit-replicate-img-app) and [Our Fork](https://github.com/ModelEarth/replicate)
-- [Image Gallery (React)](/replicate/gallery/view/) - Anthony
+- [Image Gallery (React)](/react-gallery/view/) - Anthony
 - [Image Gallery (JQuery) and Video (Leonardo)](/data-pipeline/research/stream)
 
 **React, Tabulator, Industry Timelines**
