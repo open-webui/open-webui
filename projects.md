@@ -5,7 +5,7 @@ Regular meetings: [Sunday 10 PM EST and Thursday Noon EST](/io/coders/)
 
 # Active Projects
 
-[Localsite Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [AI Community Visualizations](/data-pipeline/research)
+[Localsite Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research)
 
 <!--
 CSV Files to use for Timelines, Observable, and AI Training at: [industries/naics/US/counties](https://github.com/ModelEarth/community-data/tree/master/industries/naics/US/counties)  
@@ -21,7 +21,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [Python - State Regions using Sets of Counties](/community-data/us/edd/)
 - [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - Honglin, Rupesh
 
-- [3D Force Graph](https://github.com/vasturiano/3d-force-graph) - Rakesh
+- [3D Force Graph](https://github.com/vasturiano/3d-force-graph) for [Balanced Diets](/balance/) - Rakesh, Anshit
 
 **Observable + GDC Visualization Projects**
 
