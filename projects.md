@@ -1,4 +1,4 @@
-Regular meetings: [Sunday 10 PM EST and Thursday Noon EST](/io/coders/)
+Regular meetings: [Sunday 10 PM ET and Thursday Noon ET](/io/coders/)
 <!--Overview Session on Tuesday at Noon ET for new team members.-->
 
 <hr style="margin-bottom:20px">
@@ -11,19 +11,19 @@ Regular meetings: [Sunday 10 PM EST and Thursday Noon EST](/io/coders/)
 CSV Files to use for Timelines, Observable, and AI Training at: [industries/naics/US/counties](https://github.com/ModelEarth/community-data/tree/master/industries/naics/US/counties)  
 Pre-processed data for county industry levels, based on employment, establishments and payroll.-->
 
-**Machine Learning with Python and GDC**
+**Machine Learning with Python and Google Data Commons**
 
 - [RealityStream](/RealityStream/) - Machine Learning Classification Models
-- [USEEIO Commodities for Deep Learning](/data-pipeline/research/economy) - New data for all 50 states
 - [OpenFootprint](/useeio.js/footprint) - Javascript Label Development
 - [ML for Community Forecasting](../data-pipeline/timelines/training/naics/)
+- [Annual NAICS - Process Industries by Zip Code](/data-pipeline/industries/naics)
 - [International Google Data Commons API](/data-pipeline/international/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
 - [Python - State Regions using Sets of Counties](/community-data/us/edd/)
 - [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - Honglin, Rupesh
 
 - [3D Force Graph](https://github.com/vasturiano/3d-force-graph) for [Balanced Diets](/balance/) - Rakesh, Anshit
 
-**Observable + GDC Visualization Projects**
+**Observable Framework + GDC Visualization Projects**
 
 - [Python CoLabs for GDC API calls](/data-commons/docs/) - [Air and Climate](/data-commons/dist/air) - Paul and Anna
 - [Observable with Data Commons](/data-commons/) - [Data Loaders How-To](/data-commons/dist/air/)
@@ -56,7 +56,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 **Storyboard Team - Image and Video Generation**
 - [Storyboard Generator](/data-pipeline/research/) - [Kishor's Repo](https://github.com/mannurkishorreddy/streamlit-replicate-img-app) and [Our Fork](https://github.com/ModelEarth/replicate)
 - [Image Gallery (React)](/replicate/gallery/view/) - Anthony
-- [Image Gallery (JQuery) and Video (Leonardo)](/data-pipeline/research/stream) - Loren
+- [Image Gallery (JQuery) and Video (Leonardo)](/data-pipeline/research/stream)
 
 **React, Tabulator, Industry Timelines**
 Our React Team meets Wednesdays at [10 PM EDT](coders)
@@ -65,19 +65,17 @@ Our React Team meets Wednesdays at [10 PM EDT](coders)
 - [React Team - Commodity Totals](/localsite/info/data/totals/) in [Jobs Reports](/localsite/info/#indicators=JOBS)
 - [Tabulator - Merge in industry year rows using Javascript (1-3)](/data-pipeline/timelines/tabulator/) - Rupesh<!--Vadlamudi-->
 - [Tabulator - Merge in titles using Javascript (4)](/data-pipeline/timelines/tabulator/) - Dinesh, Fanyi, Rupesh
-- [Annual NAICS - Process Industries by Zip Code](/data-pipeline/industries/naics) - Gaurav
+- [USEEIO Commodities for Deep Learning](/data-pipeline/research/economy) - Totals for states
 - [Steps for SQLite in Browser](/data-pipeline/timelines/sqlite/phiresky/) - [Example (Runs SQL)](https://phiresky.github.io/blog/2021/hosting-sqlite-databases-on-github-pages/) - Aashish
 - [Impact Label Pipeline](/apps/impact) - Too optimize and change inputs
-- [Deep Learning Economy - Commodity Totals](/data-pipeline/research/economy/) - Honglin
-
 
 <hr style="margin-bottom: 20px;">
 # MoonShot Challenges
 
 Not your average modeling tasks, but worth the effort.
 
-**[Install LLM from Google Data Commons](/localsite/info/data/datacommons/)**
-Install LLM from Google Data Commons, Integrate within [Open WebUI](/projects/src/)
+**[Install LLM from Google Data Commons](github.com/datacommonsorg/website)**
+Build LLM from Google Data Commons locally [notes](/localsite/info/data/datacommons/), Integrate within [Open WebUI](/projects/src/)
 
 **[Integrate ObservableHQ's Interface for selecting charts](https://github.com/observablehq)**  
 Deploy to GitHub pages to create an easy-to-use alternative to Tableau.
