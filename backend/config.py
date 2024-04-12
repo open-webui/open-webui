@@ -352,7 +352,6 @@ USER_PERMISSIONS = {"chat": {"deletion": USER_PERMISSIONS_CHAT_DELETION}}
 MODEL_FILTER_ENABLED = os.environ.get("MODEL_FILTER_ENABLED", "False").lower() == "true"
 MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
 MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
-AI_TEAM_EAMAIL = os.environ.get("AI_TEAM_EAMAIL", "")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
 ####################################
