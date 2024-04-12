@@ -122,4 +122,4 @@ Center for Environmental Solutions and Emergency Response (CESER)
 Office of Research and Development
 US Environmental Protection Agency
 
-[Contact our Model.earth Team](../io/team/) - We have talented coders seeking paid positions to help states and communities.
+[Contact our Model.earth Team](../io/team/)
