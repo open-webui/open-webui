@@ -70,14 +70,8 @@ WORKDIR /app/backend
 # install python dependencies
 COPY ./backend/requirements.txt ./requirements.txt
 
-ADD https://astral.sh/uv/install.sh /install.sh
 # Install dependencies and configure environment
-RUN apt-get update && apt-get install -y --no-install-recommends curl && \
-    # cleanup
-    rm -rf /var/lib/apt/lists/* && \
-    # install uv
-    chmod -R 655 /install.sh && /install.sh && rm /install.sh && mv /root/.cargo/bin/uv /usr/bin/ && \
-
+RUN pip3 install uv && \
     if [ "$USE_CUDA" = "true" ]; then \
         # If you use CUDA the whisper and embedding model will be downloaded on first use
         pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
