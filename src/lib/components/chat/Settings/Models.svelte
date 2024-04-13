@@ -139,7 +139,7 @@
 	};
 
 	const pullModelHandler = async () => {
-		const sanitizedModelTag = modelTag.trim();
+		const sanitizedModelTag = modelTag.trim().replace(/^ollama\s+(run|pull)\s+/, '');
 		if (modelDownloadStatus[sanitizedModelTag]) {
 			toast.error(
 				$i18n.t(`Model '{{modelTag}}' is already in queue for downloading.`, {
