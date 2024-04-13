@@ -467,3 +467,28 @@ export const blobToFile = (blob, fileName) => {
 	const file = new File([blob], fileName, { type: blob.type });
 	return file;
 };
+
+// templatePrompt replaces any occurrences of the following in the template with the prompt
+// {{prompt}} will be replaced with the prompt
+// {{prompt:start:<length>}} will be replaced with the first <length> characters of the prompt
+// {{prompt:end:<length>}} will be replaced with the last <length> characters of the prompt
+// Character length is used as we don't have the ability to tokenize the prompt
+export const templatePrompt = (template, prompt) => {
+	template = template.replace(/{{prompt}}/g, prompt);
+
+	// Replace {{prompt:start:<length>}} with the first <length> characters of the prompt
+	const startMatch = template.match(/{{prompt:start:(\d+)}}/);
+	if (startMatch) {
+		const length = parseInt(startMatch[1]);
+		template = template.replace(startMatch[0], prompt.substring(0, length));
+	}
+
+	// Replace {{prompt:end:<length>}} with the last <length> characters of the prompt
+	const endMatch = template.match(/{{prompt:end:(\d+)}}/);
+	if (endMatch) {
+		const length = parseInt(endMatch[1]);
+		template = template.replace(endMatch[0], prompt.substring(prompt.length - length));
+	}
+
+	return template;
+};
