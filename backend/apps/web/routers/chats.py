@@ -251,7 +251,15 @@ async def delete_shared_chat_by_id(id: str, user=Depends(get_current_user)):
 
 @router.get("/share/{share_id}", response_model=Optional[ChatResponse])
 async def get_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
-    chat = Chats.get_chat_by_id(share_id)
+    if user.role == "pending":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role == "user":
+        chat = Chats.get_chat_by_share_id(share_id)
+    elif user.role == "admin":
+        chat = Chats.get_chat_by_id(share_id)
 
     if chat:
         return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
