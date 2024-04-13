@@ -10,22 +10,37 @@ ARG USE_CUDA_VER=cu121
 # for better performance and multilangauge support use "intfloat/multilingual-e5-large" (~2.5GB) or "intfloat/multilingual-e5-base" (~1.5GB)
 # IMPORTANT: If you change the default model (all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
 ARG USE_EMBEDDING_MODEL=all-MiniLM-L6-v2
+# Limited system user UID
+ARG USE_UID=998
+# Limited system user GID
+ARG USE_GID=998
+
 
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:21-alpine3.19 as build
 
+# Use args
+ARG USE_UID
+ARG USE_GID
+
+# User/Group
+RUN addgroup -S open-webui -g $USE_GID && adduser -S open-webui -G open-webui -u $USE_UID
+USER open-webui:open-webui
+
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY --chown=$USE_UID:$USE_GID package.json package-lock.json ./
 RUN npm ci
 
-COPY . .
+COPY --chown=$USE_UID:$USE_GID . .
 RUN npm run build
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm as base
 
 # Use args
+ARG USE_UID
+ARG USE_GID
 ARG USE_CUDA
 ARG USE_OLLAMA
 ARG USE_CUDA_VER
@@ -90,8 +105,13 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
+# User/Group
+RUN groupadd -r open-webui -g $USE_GID && useradd --no-log-init -m -r -g open-webui open-webui -u $USE_UID && chown -R $USE_UID:$USE_GID .
+USER open-webui:open-webui
+ENV PATH="${PATH}:/home/open-webui/.local/bin"
+
 # install python dependencies
-COPY ./backend/requirements.txt ./requirements.txt
+COPY --chown=$USE_UID:$USE_GID ./backend/requirements.txt ./requirements.txt
 
 RUN if [ "$USE_CUDA" = "true" ]; then \
         # If you use CUDA the whisper and embedding model will be downloaded on first use
@@ -113,13 +133,14 @@ RUN if [ "$USE_CUDA" = "true" ]; then \
 # COPY --from=build /app/onnx /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx
 
 # copy built frontend files
-COPY --from=build /app/build /app/build
-COPY --from=build /app/CHANGELOG.md /app/CHANGELOG.md
-COPY --from=build /app/package.json /app/package.json
+COPY --chown=$USE_UID:$USE_GID --from=build /app/build /app/build
+COPY --chown=$USE_UID:$USE_GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
+COPY --chown=$USE_UID:$USE_GID --from=build /app/package.json /app/package.json
 
 # copy backend files
-COPY ./backend .
+COPY --chown=$USE_UID:$USE_GID ./backend .
 
 EXPOSE 8080
 
+ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/home/open-webui/.local/lib/python3.11/site-packages/torch:/home/open-webui/.local/lib/python3.11/site-packages/nvidia/cudnn/lib"
 CMD [ "bash", "start.sh"]
