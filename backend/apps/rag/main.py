@@ -138,20 +138,22 @@ async def get_status():
     }
 
 
-@app.get("/embedding/model")
-async def get_embedding_model(user=Depends(get_admin_user)):
+@app.get("/embedding")
+async def get_embedding_config(user=Depends(get_admin_user)):
     return {
         "status": True,
+        "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
         "embedding_model": app.state.RAG_EMBEDDING_MODEL,
     }
 
 
 class EmbeddingModelUpdateForm(BaseModel):
+    embedding_engine: str
     embedding_model: str
 
 
-@app.post("/embedding/model/update")
-async def update_embedding_model(
+@app.post("/embedding/update")
+async def update_embedding_config(
     form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
 ):
 
@@ -160,18 +162,26 @@ async def update_embedding_model(
     )
 
     try:
-        sentence_transformer_ef = (
-            embedding_functions.SentenceTransformerEmbeddingFunction(
-                model_name=get_embedding_model_path(form_data.embedding_model, True),
-                device=DEVICE_TYPE,
-            )
-        )
+        app.state.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
 
-        app.state.RAG_EMBEDDING_MODEL = form_data.embedding_model
-        app.state.sentence_transformer_ef = sentence_transformer_ef
+        if app.state.RAG_EMBEDDING_ENGINE == "ollama":
+            app.state.RAG_EMBEDDING_MODEL = form_data.embedding_model
+            app.state.sentence_transformer_ef = None
+        else:
+            sentence_transformer_ef = (
+                embedding_functions.SentenceTransformerEmbeddingFunction(
+                    model_name=get_embedding_model_path(
+                        form_data.embedding_model, True
+                    ),
+                    device=DEVICE_TYPE,
+                )
+            )
+            app.state.RAG_EMBEDDING_MODEL = form_data.embedding_model
+            app.state.sentence_transformer_ef = sentence_transformer_ef
 
         return {
             "status": True,
+            "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
             "embedding_model": app.state.RAG_EMBEDDING_MODEL,
         }
 

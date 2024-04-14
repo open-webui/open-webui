@@ -7,11 +7,11 @@
 		scanDocs,
 		updateQuerySettings,
 		resetVectorDB,
-		getEmbeddingModel,
-		updateEmbeddingModel
+		getEmbeddingConfig,
+		updateEmbeddingConfig
 	} from '$lib/apis/rag';
 
-	import { documents } from '$lib/stores';
+	import { documents, models } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -27,6 +27,8 @@
 	let showResetConfirm = false;
 
 	let embeddingEngine = '';
+	let embeddingModel = '';
+
 	let chunkSize = 0;
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
@@ -35,8 +37,6 @@
 		template: '',
 		k: 4
 	};
-
-	let embeddingModel = '';
 
 	const scanHandler = async () => {
 		scanDirLoading = true;
@@ -50,7 +50,16 @@
 	};
 
 	const embeddingModelUpdateHandler = async () => {
-		if (embeddingModel.split('/').length - 1 > 1) {
+		if (embeddingModel === '') {
+			toast.error(
+				$i18n.t(
+					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
+				)
+			);
+			return;
+		}
+
+		if (embeddingEngine === '' && embeddingModel.split('/').length - 1 > 1) {
 			toast.error(
 				$i18n.t(
 					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
@@ -62,11 +71,17 @@
 		console.log('Update embedding model attempt:', embeddingModel);
 
 		updateEmbeddingModelLoading = true;
-		const res = await updateEmbeddingModel(localStorage.token, {
+		const res = await updateEmbeddingConfig(localStorage.token, {
+			embedding_engine: embeddingEngine,
 			embedding_model: embeddingModel
 		}).catch(async (error) => {
 			toast.error(error);
-			embeddingModel = (await getEmbeddingModel(localStorage.token)).embedding_model;
+
+			const embeddingConfig = await getEmbeddingConfig(localStorage.token);
+			if (embeddingConfig) {
+				embeddingEngine = embeddingConfig.embedding_engine;
+				embeddingModel = embeddingConfig.embedding_model;
+			}
 			return null;
 		});
 		updateEmbeddingModelLoading = false;
@@ -102,7 +117,12 @@
 			chunkOverlap = res.chunk.chunk_overlap;
 		}
 
-		embeddingModel = (await getEmbeddingModel(localStorage.token)).embedding_model;
+		const embeddingConfig = await getEmbeddingConfig(localStorage.token);
+
+		if (embeddingConfig) {
+			embeddingEngine = embeddingConfig.embedding_engine;
+			embeddingModel = embeddingConfig.embedding_model;
+		}
 
 		querySettings = await getQuerySettings(localStorage.token);
 	});
@@ -126,6 +146,9 @@
 						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={embeddingEngine}
 						placeholder="Select an embedding engine"
+						on:change={() => {
+							embeddingModel = '';
+						}}
 					>
 						<option value="">{$i18n.t('Default (SentenceTransformer)')}</option>
 						<option value="ollama">{$i18n.t('Ollama')}</option>
@@ -136,10 +159,77 @@
 
 		<div class="space-y-2">
 			<div>
+				<div class=" mb-2 text-sm font-medium">{$i18n.t('Update Embedding Model')}</div>
+
 				{#if embeddingEngine === 'ollama'}
-					<div>da</div>
+					<div class="flex w-full">
+						<div class="flex-1 mr-2">
+							<select
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								bind:value={embeddingModel}
+								placeholder={$i18n.t('Select a model')}
+								required
+							>
+								{#if !embeddingModel}
+									<option value="" disabled selected>{$i18n.t('Select a model')}</option>
+								{/if}
+								{#each $models.filter((m) => m.id && !m.external) as model}
+									<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
+										>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
+									>
+								{/each}
+							</select>
+						</div>
+						<button
+							class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+							on:click={() => {
+								embeddingModelUpdateHandler();
+							}}
+							disabled={updateEmbeddingModelLoading}
+						>
+							{#if updateEmbeddingModelLoading}
+								<div class="self-center">
+									<svg
+										class=" w-4 h-4"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										xmlns="http://www.w3.org/2000/svg"
+										><style>
+											.spinner_ajPY {
+												transform-origin: center;
+												animation: spinner_AtaB 0.75s infinite linear;
+											}
+											@keyframes spinner_AtaB {
+												100% {
+													transform: rotate(360deg);
+												}
+											}
+										</style><path
+											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+											opacity=".25"
+										/><path
+											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+											class="spinner_ajPY"
+										/></svg
+									>
+								</div>
+							{:else}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							{/if}
+						</button>
+					</div>
 				{:else}
-					<div class=" mb-2 text-sm font-medium">{$i18n.t('Update Embedding Model')}</div>
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
 							<input
@@ -200,13 +290,13 @@
 							{/if}
 						</button>
 					</div>
-
-					<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
-						{$i18n.t(
-							'Warning: If you update or change your embedding model, you will need to re-import all documents.'
-						)}
-					</div>
 				{/if}
+
+				<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+					{$i18n.t(
+						'Warning: If you update or change your embedding model, you will need to re-import all documents.'
+					)}
+				</div>
 
 				<hr class=" dark:border-gray-700 my-3" />
 
