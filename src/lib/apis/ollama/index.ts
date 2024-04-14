@@ -220,6 +220,32 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 	return res;
 };
 
+export const generateEmbeddings = async (token: string = '', model: string, text: string) => {
+	let error = null;
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/embeddings`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			prompt: text
+		})
+	}).catch((err) => {
+		error = err;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const generateTextCompletion = async (token: string = '', model: string, text: string) => {
 	let error = null;
 

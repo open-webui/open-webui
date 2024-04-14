@@ -405,6 +405,9 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
 
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (all-MiniLM-L6-v2)
+
+RAG_EMBEDDING_ENGINE = os.environ.get("RAG_EMBEDDING_ENGINE", "")
+
 RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL}"),
 

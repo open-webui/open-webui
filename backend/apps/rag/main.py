@@ -39,13 +39,21 @@ import uuid
 import json
 
 
+from apps.ollama.main import generate_ollama_embeddings, GenerateEmbeddingsForm
+
 from apps.web.models.documents import (
     Documents,
     DocumentForm,
     DocumentResponse,
 )
 
-from apps.rag.utils import query_doc, query_collection, get_embedding_model_path
+from apps.rag.utils import (
+    query_doc,
+    query_embeddings_doc,
+    query_collection,
+    query_embeddings_collection,
+    get_embedding_model_path,
+)
 
 from utils.misc import (
     calculate_sha256,
@@ -58,6 +66,7 @@ from config import (
     SRC_LOG_LEVELS,
     UPLOAD_DIR,
     DOCS_DIR,
+    RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     DEVICE_TYPE,
@@ -74,16 +83,19 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 app = FastAPI()
 
-app.state.PDF_EXTRACT_IMAGES = False
+
+app.state.TOP_K = 4
 app.state.CHUNK_SIZE = CHUNK_SIZE
 app.state.CHUNK_OVERLAP = CHUNK_OVERLAP
+
+
+app.state.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
+app.state.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.RAG_TEMPLATE = RAG_TEMPLATE
 
 
-app.state.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
+app.state.PDF_EXTRACT_IMAGES = False
 
-
-app.state.TOP_K = 4
 
 app.state.sentence_transformer_ef = (
     embedding_functions.SentenceTransformerEmbeddingFunction(
@@ -121,24 +133,27 @@ async def get_status():
         "chunk_size": app.state.CHUNK_SIZE,
         "chunk_overlap": app.state.CHUNK_OVERLAP,
         "template": app.state.RAG_TEMPLATE,
+        "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
         "embedding_model": app.state.RAG_EMBEDDING_MODEL,
     }
 
 
-@app.get("/embedding/model")
-async def get_embedding_model(user=Depends(get_admin_user)):
+@app.get("/embedding")
+async def get_embedding_config(user=Depends(get_admin_user)):
     return {
         "status": True,
+        "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
         "embedding_model": app.state.RAG_EMBEDDING_MODEL,
     }
 
 
 class EmbeddingModelUpdateForm(BaseModel):
+    embedding_engine: str
     embedding_model: str
 
 
-@app.post("/embedding/model/update")
-async def update_embedding_model(
+@app.post("/embedding/update")
+async def update_embedding_config(
     form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
 ):
 
@@ -147,18 +162,26 @@ async def update_embedding_model(
     )
 
     try:
-        sentence_transformer_ef = (
-            embedding_functions.SentenceTransformerEmbeddingFunction(
-                model_name=get_embedding_model_path(form_data.embedding_model, True),
-                device=DEVICE_TYPE,
-            )
-        )
+        app.state.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
 
-        app.state.RAG_EMBEDDING_MODEL = form_data.embedding_model
-        app.state.sentence_transformer_ef = sentence_transformer_ef
+        if app.state.RAG_EMBEDDING_ENGINE == "ollama":
+            app.state.RAG_EMBEDDING_MODEL = form_data.embedding_model
+            app.state.sentence_transformer_ef = None
+        else:
+            sentence_transformer_ef = (
+                embedding_functions.SentenceTransformerEmbeddingFunction(
+                    model_name=get_embedding_model_path(
+                        form_data.embedding_model, True
+                    ),
+                    device=DEVICE_TYPE,
+                )
+            )
+            app.state.RAG_EMBEDDING_MODEL = form_data.embedding_model
+            app.state.sentence_transformer_ef = sentence_transformer_ef
 
         return {
             "status": True,
+            "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
             "embedding_model": app.state.RAG_EMBEDDING_MODEL,
         }
 
@@ -252,12 +275,28 @@ def query_doc_handler(
 ):
 
     try:
-        return query_doc(
-            collection_name=form_data.collection_name,
-            query=form_data.query,
-            k=form_data.k if form_data.k else app.state.TOP_K,
-            embedding_function=app.state.sentence_transformer_ef,
-        )
+        if app.state.RAG_EMBEDDING_ENGINE == "ollama":
+            query_embeddings = generate_ollama_embeddings(
+                GenerateEmbeddingsForm(
+                    **{
+                        "model": app.state.RAG_EMBEDDING_MODEL,
+                        "prompt": form_data.query,
+                    }
+                )
+            )
+
+            return query_embeddings_doc(
+                collection_name=form_data.collection_name,
+                query_embeddings=query_embeddings,
+                k=form_data.k if form_data.k else app.state.TOP_K,
+            )
+        else:
+            return query_doc(
+                collection_name=form_data.collection_name,
+                query=form_data.query,
+                k=form_data.k if form_data.k else app.state.TOP_K,
+                embedding_function=app.state.sentence_transformer_ef,
+            )
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -277,12 +316,35 @@ def query_collection_handler(
     form_data: QueryCollectionsForm,
     user=Depends(get_current_user),
 ):
-    return query_collection(
-        collection_names=form_data.collection_names,
-        query=form_data.query,
-        k=form_data.k if form_data.k else app.state.TOP_K,
-        embedding_function=app.state.sentence_transformer_ef,
-    )
+    try:
+        if app.state.RAG_EMBEDDING_ENGINE == "ollama":
+            query_embeddings = generate_ollama_embeddings(
+                GenerateEmbeddingsForm(
+                    **{
+                        "model": app.state.RAG_EMBEDDING_MODEL,
+                        "prompt": form_data.query,
+                    }
+                )
+            )
+
+            return query_embeddings_collection(
+                collection_names=form_data.collection_names,
+                query_embeddings=query_embeddings,
+                k=form_data.k if form_data.k else app.state.TOP_K,
+            )
+        else:
+            return query_collection(
+                collection_names=form_data.collection_names,
+                query=form_data.query,
+                k=form_data.k if form_data.k else app.state.TOP_K,
+                embedding_function=app.state.sentence_transformer_ef,
+            )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
 
 
 @app.post("/web")
@@ -317,9 +379,11 @@ def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> b
         chunk_overlap=app.state.CHUNK_OVERLAP,
         add_start_index=True,
     )
+
     docs = text_splitter.split_documents(data)
 
     if len(docs) > 0:
+        log.info("store_data_in_vector_db", "store_docs_in_vector_db")
         return store_docs_in_vector_db(docs, collection_name, overwrite), None
     else:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
@@ -338,6 +402,7 @@ def store_text_in_vector_db(
 
 
 def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> bool:
+    log.info("store_docs_in_vector_db", docs, collection_name)
 
     texts = [doc.page_content for doc in docs]
     metadatas = [doc.metadata for doc in docs]
@@ -349,20 +414,39 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
                     log.info(f"deleting existing collection {collection_name}")
                     CHROMA_CLIENT.delete_collection(name=collection_name)
 
-        collection = CHROMA_CLIENT.create_collection(
-            name=collection_name,
-            embedding_function=app.state.sentence_transformer_ef,
-        )
+        if app.state.RAG_EMBEDDING_ENGINE == "ollama":
+            collection = CHROMA_CLIENT.create_collection(name=collection_name)
 
-        for batch in create_batches(
-            api=CHROMA_CLIENT,
-            ids=[str(uuid.uuid1()) for _ in texts],
-            metadatas=metadatas,
-            documents=texts,
-        ):
-            collection.add(*batch)
+            for batch in create_batches(
+                api=CHROMA_CLIENT,
+                ids=[str(uuid.uuid1()) for _ in texts],
+                metadatas=metadatas,
+                embeddings=[
+                    generate_ollama_embeddings(
+                        GenerateEmbeddingsForm(
+                            **{"model": RAG_EMBEDDING_MODEL, "prompt": text}
+                        )
+                    )
+                    for text in texts
+                ],
+            ):
+                collection.add(*batch)
+        else:
 
-        return True
+            collection = CHROMA_CLIENT.create_collection(
+                name=collection_name,
+                embedding_function=app.state.sentence_transformer_ef,
+            )
+
+            for batch in create_batches(
+                api=CHROMA_CLIENT,
+                ids=[str(uuid.uuid1()) for _ in texts],
+                metadatas=metadatas,
+                documents=texts,
+            ):
+                collection.add(*batch)
+
+            return True
     except Exception as e:
         log.exception(e)
         if e.__class__.__name__ == "UniqueConstraintError":
