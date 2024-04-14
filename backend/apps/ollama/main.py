@@ -612,8 +612,13 @@ async def generate_embeddings(
     user=Depends(get_current_user),
 ):
     if url_idx == None:
-        if form_data.model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+        model = form_data.model
+
+        if ":" not in model:
+            model = f"{model}:latest"
+
+        if model in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -672,8 +677,13 @@ async def generate_completion(
 ):
 
     if url_idx == None:
-        if form_data.model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+        model = form_data.model
+
+        if ":" not in model:
+            model = f"{model}:latest"
+
+        if model in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -770,8 +780,13 @@ async def generate_chat_completion(
 ):
 
     if url_idx == None:
-        if form_data.model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+        model = form_data.model
+
+        if ":" not in model:
+            model = f"{model}:latest"
+
+        if model in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -874,8 +889,13 @@ async def generate_openai_chat_completion(
 ):
 
     if url_idx == None:
-        if form_data.model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+        model = form_data.model
+
+        if ":" not in model:
+            model = f"{model}:latest"
+
+        if model in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
