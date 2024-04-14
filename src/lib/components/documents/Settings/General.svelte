@@ -29,6 +29,9 @@
 	let embeddingEngine = '';
 	let embeddingModel = '';
 
+	let openAIKey = '';
+	let openAIUrl = '';
+
 	let chunkSize = 0;
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
@@ -50,15 +53,6 @@
 	};
 
 	const embeddingModelUpdateHandler = async () => {
-		if (embeddingModel === '') {
-			toast.error(
-				$i18n.t(
-					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
-				)
-			);
-			return;
-		}
-
 		if (embeddingEngine === '' && embeddingModel.split('/').length - 1 > 1) {
 			toast.error(
 				$i18n.t(
@@ -67,21 +61,46 @@
 			);
 			return;
 		}
+		if (embeddingEngine === 'ollama' && embeddingModel === '') {
+			toast.error(
+				$i18n.t(
+					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
+				)
+			);
+			return;
+		}
+
+		if (embeddingEngine === 'openai' && embeddingModel === '') {
+			toast.error(
+				$i18n.t(
+					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
+				)
+			);
+			return;
+		}
+
+		if ((embeddingEngine === 'openai' && openAIKey === '') || openAIUrl === '') {
+			toast.error($i18n.t('OpenAI URL/Key required.'));
+			return;
+		}
 
 		console.log('Update embedding model attempt:', embeddingModel);
 
 		updateEmbeddingModelLoading = true;
 		const res = await updateEmbeddingConfig(localStorage.token, {
 			embedding_engine: embeddingEngine,
-			embedding_model: embeddingModel
+			embedding_model: embeddingModel,
+			...(embeddingEngine === 'openai'
+				? {
+						openai_config: {
+							key: openAIKey,
+							url: openAIUrl
+						}
+				  }
+				: {})
 		}).catch(async (error) => {
 			toast.error(error);
-
-			const embeddingConfig = await getEmbeddingConfig(localStorage.token);
-			if (embeddingConfig) {
-				embeddingEngine = embeddingConfig.embedding_engine;
-				embeddingModel = embeddingConfig.embedding_model;
-			}
+			await setEmbeddingConfig();
 			return null;
 		});
 		updateEmbeddingModelLoading = false;
@@ -89,7 +108,7 @@
 		if (res) {
 			console.log('embeddingModelUpdateHandler:', res);
 			if (res.status === true) {
-				toast.success($i18n.t('Model {{embedding_model}} update complete!', res), {
+				toast.success($i18n.t('Embedding model set to "{{embedding_model}}"', res), {
 					duration: 1000 * 10
 				});
 			}
@@ -107,6 +126,18 @@
 		querySettings = await updateQuerySettings(localStorage.token, querySettings);
 	};
 
+	const setEmbeddingConfig = async () => {
+		const embeddingConfig = await getEmbeddingConfig(localStorage.token);
+
+		if (embeddingConfig) {
+			embeddingEngine = embeddingConfig.embedding_engine;
+			embeddingModel = embeddingConfig.embedding_model;
+
+			openAIKey = embeddingConfig.openai_config.key;
+			openAIUrl = embeddingConfig.openai_config.url;
+		}
+	};
+
 	onMount(async () => {
 		const res = await getRAGConfig(localStorage.token);
 
@@ -117,12 +148,7 @@
 			chunkOverlap = res.chunk.chunk_overlap;
 		}
 
-		const embeddingConfig = await getEmbeddingConfig(localStorage.token);
-
-		if (embeddingConfig) {
-			embeddingEngine = embeddingConfig.embedding_engine;
-			embeddingModel = embeddingConfig.embedding_model;
-		}
+		await setEmbeddingConfig();
 
 		querySettings = await getQuerySettings(localStorage.token);
 	});
@@ -146,15 +172,38 @@
 						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={embeddingEngine}
 						placeholder="Select an embedding engine"
-						on:change={() => {
-							embeddingModel = '';
+						on:change={(e) => {
+							if (e.target.value === 'ollama') {
+								embeddingModel = '';
+							} else if (e.target.value === 'openai') {
+								embeddingModel = 'text-embedding-3-small';
+							}
 						}}
 					>
 						<option value="">{$i18n.t('Default (SentenceTransformer)')}</option>
 						<option value="ollama">{$i18n.t('Ollama')}</option>
+						<option value="openai">{$i18n.t('OpenAI')}</option>
 					</select>
 				</div>
 			</div>
+
+			{#if embeddingEngine === 'openai'}
+				<div class="mt-1 flex gap-2">
+					<input
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						placeholder={$i18n.t('API Base URL')}
+						bind:value={openAIUrl}
+						required
+					/>
+
+					<input
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						placeholder={$i18n.t('API Key')}
+						bind:value={openAIKey}
+						required
+					/>
+				</div>
+			{/if}
 		</div>
 
 		<div class="space-y-2">

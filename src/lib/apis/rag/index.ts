@@ -373,7 +373,13 @@ export const getEmbeddingConfig = async (token: string) => {
 	return res;
 };
 
+type OpenAIConfigForm = {
+	key: string;
+	url: string;
+};
+
 type EmbeddingModelUpdateForm = {
+	openai_config?: OpenAIConfigForm;
 	embedding_engine: string;
 	embedding_model: string;
 };

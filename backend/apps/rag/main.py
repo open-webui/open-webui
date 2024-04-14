@@ -421,7 +421,7 @@ def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> b
     docs = text_splitter.split_documents(data)
 
     if len(docs) > 0:
-        log.info("store_data_in_vector_db", "store_docs_in_vector_db")
+        log.info(f"store_data_in_vector_db {docs}")
         return store_docs_in_vector_db(docs, collection_name, overwrite), None
     else:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
@@ -440,7 +440,7 @@ def store_text_in_vector_db(
 
 
 def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> bool:
-    log.info("store_docs_in_vector_db", docs, collection_name)
+    log.info(f"store_docs_in_vector_db {docs} {collection_name}")
 
     texts = [doc.page_content for doc in docs]
     metadatas = [doc.metadata for doc in docs]
@@ -468,6 +468,8 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
                 collection.add(*batch)
 
         else:
+            collection = CHROMA_CLIENT.create_collection(name=collection_name)
+
             if app.state.RAG_EMBEDDING_ENGINE == "ollama":
                 embeddings = [
                     generate_ollama_embeddings(
