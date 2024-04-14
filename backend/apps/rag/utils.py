@@ -43,6 +43,8 @@ def query_embeddings_doc(collection_name: str, query_embeddings, k: int):
             query_embeddings=[query_embeddings],
             n_results=k,
         )
+
+        log.info(f"query_embeddings_doc:result {result}")
         return result
     except Exception as e:
         raise e
@@ -155,7 +157,9 @@ def rag_messages(
     openai_key,
     openai_url,
 ):
-    log.debug(f"docs: {docs}")
+    log.debug(
+        f"docs: {docs} {messages} {embedding_engine} {embedding_model} {embedding_function} {openai_key} {openai_url}"
+    )
 
     last_user_message_idx = None
     for i in range(len(messages) - 1, -1, -1):
