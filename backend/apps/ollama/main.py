@@ -618,7 +618,7 @@ async def generate_embeddings(
             model = f"{model}:latest"
 
         if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -683,7 +683,7 @@ async def generate_completion(
             model = f"{model}:latest"
 
         if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -786,7 +786,7 @@ async def generate_chat_completion(
             model = f"{model}:latest"
 
         if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -895,7 +895,7 @@ async def generate_openai_chat_completion(
             model = f"{model}:latest"
 
         if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
