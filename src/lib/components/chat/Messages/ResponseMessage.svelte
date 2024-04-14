@@ -124,9 +124,9 @@
                     eval_duration: ${
 											Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
 										}ms<br/>
-                    approximate_total: ${
-											approximateToHumanReadable(message.info.total_duration)
-										}</span>`,
+                    approximate_total: ${approximateToHumanReadable(
+											message.info.total_duration
+										)}</span>`,
 				allowHTML: true
 			});
 		}
