@@ -32,7 +32,7 @@ import logging
 from config import (
     SRC_LOG_LEVELS,
     CACHE_DIR,
-    IMAGE_GENERATION_ENABLED,
+    ENABLE_IMAGE_GENERATION,
     AUTOMATIC1111_BASE_URL,
     COMFYUI_BASE_URL,
 )
@@ -54,7 +54,7 @@ app.add_middleware(
 )
 
 app.state.ENGINE = ""
-app.state.ENABLED = IMAGE_GENERATION_ENABLED
+app.state.ENABLED = ENABLE_IMAGE_GENERATION
 
 app.state.OPENAI_API_KEY = ""
 app.state.MODEL = ""
