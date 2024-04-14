@@ -469,9 +469,9 @@ export const blobToFile = (blob, fileName) => {
 };
 
 export const approximateToHumanReadable = (nanoseconds: number) => {
-	const seconds = Math.floor((nanoseconds / 1e+9) % 60);
-	const minutes = Math.floor((nanoseconds / 6e+10) % 60);
-	const hours = Math.floor((nanoseconds / 3.6e+12) % 24);
+	const seconds = Math.floor((nanoseconds / 1e9) % 60);
+	const minutes = Math.floor((nanoseconds / 6e10) % 60);
+	const hours = Math.floor((nanoseconds / 3.6e12) % 24);
 
 	const results: string[] = [];
 
