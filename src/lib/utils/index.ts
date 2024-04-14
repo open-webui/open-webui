@@ -467,3 +467,25 @@ export const blobToFile = (blob, fileName) => {
 	const file = new File([blob], fileName, { type: blob.type });
 	return file;
 };
+
+export const approximateToHumanReadable = (nanoseconds: number) => {
+	const seconds = Math.floor((nanoseconds / 1e+9) % 60);
+	const minutes = Math.floor((nanoseconds / 6e+10) % 60);
+	const hours = Math.floor((nanoseconds / 3.6e+12) % 24);
+
+	const results: string[] = [];
+
+	if (seconds >= 0) {
+		results.push(`${seconds}s`);
+	}
+
+	if (minutes > 0) {
+		results.push(`${minutes}m`);
+	}
+
+	if (hours > 0) {
+		results.push(`${hours}h`);
+	}
+
+	return results.reverse().join(' ');
+};
