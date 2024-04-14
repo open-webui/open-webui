@@ -269,3 +269,26 @@ def get_embedding_model_path(
     except Exception as e:
         log.exception(f"Cannot determine embedding model snapshot path: {e}")
         return embedding_model
+
+
+def generate_openai_embeddings(
+    model: str, text: str, key: str, url: str = "https://api.openai.com"
+):
+    try:
+        r = requests.post(
+            f"{url}/v1/embeddings",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {key}",
+            },
+            json={"input": text, "model": model},
+        )
+        r.raise_for_status()
+        data = r.json()
+        if "data" in data:
+            return data["data"][0]["embedding"]
+        else:
+            raise "Something went wrong :/"
+    except Exception as e:
+        print(e)
+        return None
