@@ -26,6 +26,7 @@
 
 	let showResetConfirm = false;
 
+	let embeddingEngine = '';
 	let chunkSize = 0;
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
@@ -118,81 +119,119 @@
 		<div>
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('General Settings')}</div>
 
-			<div class="  flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Scan for documents from {{path}}', { path: '/data/docs' })}
+			<div class=" flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Engine')}</div>
+				<div class="flex items-center relative">
+					<select
+						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+						bind:value={embeddingEngine}
+						placeholder="Select an embedding engine"
+					>
+						<option value="">{$i18n.t('Default (SentenceTransformer)')}</option>
+						<option value="ollama">{$i18n.t('Ollama')}</option>
+					</select>
 				</div>
-
-				<button
-					class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg flex flex-row space-x-1 items-center {scanDirLoading
-						? ' cursor-not-allowed'
-						: ''}"
-					on:click={() => {
-						scanHandler();
-						console.log('check');
-					}}
-					type="button"
-					disabled={scanDirLoading}
-				>
-					<div class="self-center font-medium">{$i18n.t('Scan')}</div>
-
-					{#if scanDirLoading}
-						<div class="ml-3 self-center">
-							<svg
-								class=" w-3 h-3"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								xmlns="http://www.w3.org/2000/svg"
-								><style>
-									.spinner_ajPY {
-										transform-origin: center;
-										animation: spinner_AtaB 0.75s infinite linear;
-									}
-									@keyframes spinner_AtaB {
-										100% {
-											transform: rotate(360deg);
-										}
-									}
-								</style><path
-									d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-									opacity=".25"
-								/><path
-									d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-									class="spinner_ajPY"
-								/></svg
-							>
-						</div>
-					{/if}
-				</button>
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700" />
-
 		<div class="space-y-2">
 			<div>
-				<div class=" mb-2 text-sm font-medium">{$i18n.t('Update Embedding Model')}</div>
-				<div class="flex w-full">
-					<div class="flex-1 mr-2">
-						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t('Update embedding model (e.g. {{model}})', {
-								model: embeddingModel.slice(-40)
-							})}
-							bind:value={embeddingModel}
-						/>
-					</div>
-					<button
-						class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-						on:click={() => {
-							embeddingModelUpdateHandler();
-						}}
-						disabled={updateEmbeddingModelLoading}
-					>
-						{#if updateEmbeddingModelLoading}
-							<div class="self-center">
+				{#if embeddingEngine === 'ollama'}
+					<div>da</div>
+				{:else}
+					<div class=" mb-2 text-sm font-medium">{$i18n.t('Update Embedding Model')}</div>
+					<div class="flex w-full">
+						<div class="flex-1 mr-2">
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder={$i18n.t('Update embedding model (e.g. {{model}})', {
+									model: embeddingModel.slice(-40)
+								})}
+								bind:value={embeddingModel}
+							/>
+						</div>
+						<button
+							class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+							on:click={() => {
+								embeddingModelUpdateHandler();
+							}}
+							disabled={updateEmbeddingModelLoading}
+						>
+							{#if updateEmbeddingModelLoading}
+								<div class="self-center">
+									<svg
+										class=" w-4 h-4"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										xmlns="http://www.w3.org/2000/svg"
+										><style>
+											.spinner_ajPY {
+												transform-origin: center;
+												animation: spinner_AtaB 0.75s infinite linear;
+											}
+											@keyframes spinner_AtaB {
+												100% {
+													transform: rotate(360deg);
+												}
+											}
+										</style><path
+											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+											opacity=".25"
+										/><path
+											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+											class="spinner_ajPY"
+										/></svg
+									>
+								</div>
+							{:else}
 								<svg
-									class=" w-4 h-4"
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
+									/>
+									<path
+										d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
+									/>
+								</svg>
+							{/if}
+						</button>
+					</div>
+
+					<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+						{$i18n.t(
+							'Warning: If you update or change your embedding model, you will need to re-import all documents.'
+						)}
+					</div>
+				{/if}
+
+				<hr class=" dark:border-gray-700 my-3" />
+
+				<div class="  flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Scan for documents from {{path}}', { path: '/data/docs' })}
+					</div>
+
+					<button
+						class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg flex flex-row space-x-1 items-center {scanDirLoading
+							? ' cursor-not-allowed'
+							: ''}"
+						on:click={() => {
+							scanHandler();
+							console.log('check');
+						}}
+						type="button"
+						disabled={scanDirLoading}
+					>
+						<div class="self-center font-medium">{$i18n.t('Scan')}</div>
+
+						{#if scanDirLoading}
+							<div class="ml-3 self-center">
+								<svg
+									class=" w-3 h-3"
 									viewBox="0 0 24 24"
 									fill="currentColor"
 									xmlns="http://www.w3.org/2000/svg"
@@ -215,28 +254,8 @@
 									/></svg
 								>
 							</div>
-						{:else}
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-4 h-4"
-							>
-								<path
-									d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
-								/>
-								<path
-									d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-								/>
-							</svg>
 						{/if}
 					</button>
-				</div>
-
-				<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
-					{$i18n.t(
-						'Warning: If you update or change your embedding model, you will need to re-import all documents.'
-					)}
 				</div>
 
 				<hr class=" dark:border-gray-700 my-3" />

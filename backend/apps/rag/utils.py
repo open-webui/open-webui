@@ -2,6 +2,9 @@ import os
 import re
 import logging
 from typing import List
+import requests
+
+
 from huggingface_hub import snapshot_download
 
 from config import SRC_LOG_LEVELS, CHROMA_CLIENT
@@ -19,6 +22,21 @@ def query_doc(collection_name: str, query: str, k: int, embedding_function):
         )
         result = collection.query(
             query_texts=[query],
+            n_results=k,
+        )
+        return result
+    except Exception as e:
+        raise e
+
+
+def query_embeddings_doc(collection_name: str, query_embeddings, k: int):
+    try:
+        # if you use docker use the model from the environment variable
+        collection = CHROMA_CLIENT.get_collection(
+            name=collection_name,
+        )
+        result = collection.query(
+            query_embeddings=[query_embeddings],
             n_results=k,
         )
         return result
@@ -87,6 +105,24 @@ def query_collection(
 
             result = collection.query(
                 query_texts=[query],
+                n_results=k,
+            )
+            results.append(result)
+        except:
+            pass
+
+    return merge_and_sort_query_results(results, k)
+
+
+def query_embeddings_collection(collection_names: List[str], query_embeddings, k: int):
+
+    results = []
+    for collection_name in collection_names:
+        try:
+            collection = CHROMA_CLIENT.get_collection(name=collection_name)
+
+            result = collection.query(
+                query_embeddings=[query_embeddings],
                 n_results=k,
             )
             results.append(result)
