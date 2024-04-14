@@ -12,7 +12,7 @@
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
 	import SettingsModal from '$lib/components/admin/SettingsModal.svelte';
-	import Paginator from '$lib/components/common/Paginator.svelte';
+	import Pagination from '$lib/components/common/Pagination.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -22,15 +22,10 @@
 	let search = '';
 	let selectedUser = null;
 
+	let page = 1;
+
 	let showSettingsModal = false;
 	let showEditUserModal = false;
-
-	let paginatorSettings = {
-		page: 0,
-		limit: 5,
-		size: users.length,
-		amounts: [5, 10, 15, 20]
-	};
 
 	const updateRoleHandler = async (id, role) => {
 		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
@@ -72,23 +67,6 @@
 		}
 		loaded = true;
 	});
-
-	$: paginatedSource = users
-		.filter((user) => {
-			if (search === '') {
-				return true;
-			} else {
-				let name = user.name.toLowerCase();
-				const query = search.toLowerCase();
-				return name.includes(query);
-			}
-		})
-		.slice(
-			paginatorSettings.page * paginatorSettings.limit,
-			paginatorSettings.page * paginatorSettings.limit + paginatorSettings.limit
-		);
-
-	$: paginatorSettings.size = users.length;
 </script>
 
 <svelte:head>
@@ -184,7 +162,17 @@
 										</tr>
 									</thead>
 									<tbody>
-										{#each paginatedSource as user}
+										{#each users
+											.filter((user) => {
+												if (search === '') {
+													return true;
+												} else {
+													let name = user.name.toLowerCase();
+													const query = search.toLowerCase();
+													return name.includes(query);
+												}
+											})
+											.slice((page - 1) * 20, page * 20) as user}
 											<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-700 text-xs">
 												<td class="px-3 py-2 min-w-[7rem] w-28">
 													<button
@@ -288,7 +276,7 @@
 								ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 							</div>
 
-							<Paginator bind:settings={paginatorSettings} showNumerals />
+							<Pagination bind:page count={users.length} />
 						</div>
 					</div>
 				</div>
