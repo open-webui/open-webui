@@ -468,12 +468,12 @@ export const blobToFile = (blob, fileName) => {
 	return file;
 };
 
-// templatePrompt replaces any occurrences of the following in the template with the prompt
+// promptTemplate replaces any occurrences of the following in the template with the prompt
 // {{prompt}} will be replaced with the prompt
 // {{prompt:start:<length>}} will be replaced with the first <length> characters of the prompt
 // {{prompt:end:<length>}} will be replaced with the last <length> characters of the prompt
 // Character length is used as we don't have the ability to tokenize the prompt
-export const templatePrompt = (template: string, prompt: string) => {
+export const promptTemplate = (template: string, prompt: string) => {
 	template = template.replace(/{{prompt}}/g, prompt);
 
 	// Replace all instances of {{prompt:start:<length>}} with the first <length> characters of the prompt
@@ -493,7 +493,8 @@ export const templatePrompt = (template: string, prompt: string) => {
 	}
 
 	return template;
-  
+};
+
 export const approximateToHumanReadable = (nanoseconds: number) => {
 	const seconds = Math.floor((nanoseconds / 1e9) % 60);
 	const minutes = Math.floor((nanoseconds / 6e10) % 60);

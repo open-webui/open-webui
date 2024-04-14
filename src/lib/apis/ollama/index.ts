@@ -1,5 +1,5 @@
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
-import { templatePrompt } from '$lib/utils';
+import { promptTemplate } from '$lib/utils';
 
 export const getOllamaUrls = async (token: string = '') => {
 	let error = null;
@@ -145,7 +145,7 @@ export const generateTitle = async (
 ) => {
 	let error = null;
 
-	template = templatePrompt(template, prompt);
+	template = promptTemplate(template, prompt);
 
 	console.log(template);
 
