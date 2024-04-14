@@ -39,7 +39,7 @@ import uuid
 import json
 
 
-from apps.ollama.main import generate_ollama_embeddings
+from apps.ollama.main import generate_ollama_embeddings, GenerateEmbeddingsForm
 
 from apps.web.models.documents import (
     Documents,
@@ -277,7 +277,12 @@ def query_doc_handler(
     try:
         if app.state.RAG_EMBEDDING_ENGINE == "ollama":
             query_embeddings = generate_ollama_embeddings(
-                {"model": app.state.RAG_EMBEDDING_MODEL, "prompt": form_data.query}
+                GenerateEmbeddingsForm(
+                    **{
+                        "model": app.state.RAG_EMBEDDING_MODEL,
+                        "prompt": form_data.query,
+                    }
+                )
             )
 
             return query_embeddings_doc(
@@ -314,7 +319,12 @@ def query_collection_handler(
     try:
         if app.state.RAG_EMBEDDING_ENGINE == "ollama":
             query_embeddings = generate_ollama_embeddings(
-                {"model": app.state.RAG_EMBEDDING_MODEL, "prompt": form_data.query}
+                GenerateEmbeddingsForm(
+                    **{
+                        "model": app.state.RAG_EMBEDDING_MODEL,
+                        "prompt": form_data.query,
+                    }
+                )
             )
 
             return query_embeddings_collection(
@@ -373,6 +383,7 @@ def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> b
     docs = text_splitter.split_documents(data)
 
     if len(docs) > 0:
+        log.info("store_data_in_vector_db", "store_docs_in_vector_db")
         return store_docs_in_vector_db(docs, collection_name, overwrite), None
     else:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
@@ -390,9 +401,8 @@ def store_text_in_vector_db(
     return store_docs_in_vector_db(docs, collection_name, overwrite)
 
 
-async def store_docs_in_vector_db(
-    docs, collection_name, overwrite: bool = False
-) -> bool:
+def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> bool:
+    log.info("store_docs_in_vector_db", docs, collection_name)
 
     texts = [doc.page_content for doc in docs]
     metadatas = [doc.metadata for doc in docs]
@@ -413,13 +423,16 @@ async def store_docs_in_vector_db(
                 metadatas=metadatas,
                 embeddings=[
                     generate_ollama_embeddings(
-                        {"model": RAG_EMBEDDING_MODEL, "prompt": text}
+                        GenerateEmbeddingsForm(
+                            **{"model": RAG_EMBEDDING_MODEL, "prompt": text}
+                        )
                     )
                     for text in texts
                 ],
             ):
                 collection.add(*batch)
         else:
+
             collection = CHROMA_CLIENT.create_collection(
                 name=collection_name,
                 embedding_function=app.state.sentence_transformer_ef,

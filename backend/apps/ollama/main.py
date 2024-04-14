@@ -658,6 +658,9 @@ def generate_ollama_embeddings(
     form_data: GenerateEmbeddingsForm,
     url_idx: Optional[int] = None,
 ):
+
+    log.info("generate_ollama_embeddings", form_data)
+
     if url_idx == None:
         model = form_data.model
 
@@ -684,6 +687,8 @@ def generate_ollama_embeddings(
         r.raise_for_status()
 
         data = r.json()
+
+        log.info("generate_ollama_embeddings", data)
 
         if "embedding" in data:
             return data["embedding"]

@@ -32,6 +32,7 @@ def query_doc(collection_name: str, query: str, k: int, embedding_function):
 def query_embeddings_doc(collection_name: str, query_embeddings, k: int):
     try:
         # if you use docker use the model from the environment variable
+        log.info("query_embeddings_doc", query_embeddings)
         collection = CHROMA_CLIENT.get_collection(
             name=collection_name,
         )
@@ -117,6 +118,8 @@ def query_collection(
 def query_embeddings_collection(collection_names: List[str], query_embeddings, k: int):
 
     results = []
+    log.info("query_embeddings_collection", query_embeddings)
+
     for collection_name in collection_names:
         try:
             collection = CHROMA_CLIENT.get_collection(name=collection_name)
