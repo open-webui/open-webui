@@ -5,7 +5,7 @@ Regular meetings: [Sunday 10 PM ET and Thursday Noon ET](/io/coders/)
 
 # Active Projects
 
-[Localsite Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research)
+[Local Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research)
 
 <!--
 CSV Files to use for Timelines, Observable, and AI Training at: [industries/naics/US/counties](https://github.com/ModelEarth/community-data/tree/master/industries/naics/US/counties)  
@@ -17,6 +17,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [OpenFootprint](/useeio.js/footprint) - Javascript Label Development
 - [ML for Community Forecasting](../data-pipeline/timelines/training/naics/)
 - [Annual NAICS - Process Industries by Zip Code](/data-pipeline/industries/naics)
+- [USEEIO Commodities for Deep Learning](/data-pipeline/research/economy) - Totals for states
 - [International Google Data Commons API](/data-pipeline/international/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
 - [Python - State Regions using Sets of Counties](/community-data/us/edd/)
 - [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - Honglin, Rupesh
@@ -32,7 +33,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [Chord Chart Data Prep](/io/charts/chord/) - [ask Kargil for location](https://github.com/modelearth/Observables-DataLoader/tree/master/docs) - Parth
 
 
-**BuildingTransparency and State Region Maps**
+**BuildingTransparency and Open Footprint labels**
 
 - [BuildingTransparency with OpenFootprint impact data](/OpenFootprint)
 - [Use our state map filter](#geoview=country) with colors for [new USEEIO reporting maps](https://figshare.com/collections/USEEIO_State_Models_v1_0_-_Supporting_Figures/7041473)
@@ -65,7 +66,6 @@ Our React Team meets Wednesdays at [10 PM EDT](coders)
 - [React Team - Commodity Totals](/localsite/info/data/totals/) in [Jobs Reports](/localsite/info/#indicators=JOBS)
 - [Tabulator - Merge in industry year rows using Javascript (1-3)](/data-pipeline/timelines/tabulator/) - Rupesh<!--Vadlamudi-->
 - [Tabulator - Merge in titles using Javascript (4)](/data-pipeline/timelines/tabulator/) - Dinesh, Fanyi, Rupesh
-- [USEEIO Commodities for Deep Learning](/data-pipeline/research/economy) - Totals for states
 - [Steps for SQLite in Browser](/data-pipeline/timelines/sqlite/phiresky/) - [Example (Runs SQL)](https://phiresky.github.io/blog/2021/hosting-sqlite-databases-on-github-pages/) - Aashish
 - [Impact Label Pipeline](/apps/impact) - Too optimize and change inputs
 
