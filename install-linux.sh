@@ -51,10 +51,19 @@ install_docker() {
     echo "Docker has been successfully installed."
 }
 
+# Function to check for Node.js
+check_nodejs() {
+    if ! command -v node &> /dev/null; then
+        install_nodejs
+    else
+        echo "Node.js is already installed."
+    fi
+}
+
 # Function to install Node.js using nvm
 install_nodejs() {
     echo "Node.js not found. Installing Node.js using nvm..."
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
     source "$HOME/.nvm/nvm.sh"
     nvm install 20
 }
@@ -74,12 +83,10 @@ install_miniconda() {
 dockerless_install() {
     echo "Starting Docker-less installation..."
     
-    # Node.js Installation
-    if ! command -v node &> /dev/null; then
-        install_nodejs
-    fi
+    # Check and install Node.js if necessary
+    check_nodejs
 
-    # Miniconda and Python Environment Setup
+    # Install Miniconda and Python Environment
     install_miniconda
 
     cp -RPp .env.example .env
@@ -98,14 +105,6 @@ dockerless_install() {
     echo "Open WebUI has been installed and started without Docker."
 }
 
-# Function to install Open WebUI with Docker
-install_openwebui_docker() {
-    echo "Installing Open WebUI with Docker..."
-    docker pull ghcr.io/open-webui/open-webui:latest
-    docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:latest
-    echo "Open WebUI has been installed and started with Docker. Access it at http://localhost:3000"
-}
-
 # Main script starts here
 echo "Starting the Open WebUI installation script..."
 
@@ -120,39 +119,47 @@ fi
 check_docker
 
 # Step 2: Ask about Ollama installation
-echo "Would you like to install Ollama inside Docker? (y/n)"
-read -r install_ollama
+echo "Would you like to install Ollama directly (not inside Docker)? (y/n)"
+read -r install_ollama_directly
 
-if [ "$install_ollama" = "y" ]; then
-    # Commands to install Ollama in Docker go here.
-    echo "Do you want Ollama in Docker with GPU support? (y/n): "
-    read -r use_gpu
-    echo "Installing Ollama with Docker..."
-    if [ "$use_gpu" = "y" ]; then
-        ./run-ollama-docker.sh --enable-gpu
-    else
-        ./run-ollama-docker.sh
-    fi
+if [ "$install_ollama_directly" = "y" ]; then
+    curl -fsSL https://ollama.com/install.sh | sh
+    echo "Ollama has been installed directly on the system."
 else
-    # If not installing Ollama, ask about using Docker Compose for both
-    echo "Would you like to deploy Open WebUI and Ollama together using Docker Compose? (y/n)"
-    read -r deploy_compose
+    echo "Proceeding with Docker-based installation options..."
+    echo "Would you like to install Ollama inside Docker? (y/n)"
+    read -r install_ollama
 
-    if [ "$deploy_compose" = "y" ]; then
-        echo "Enable GPU support? (y/n)"
-        read -r enable_gpu
-
-        compose_cmd="./run-compose.sh"
-
-        if [ "$enable_gpu" = "y" ]; then
-            compose_cmd+=" --enable-gpu"
+    if [ "$install_ollama" = "y" ]; then
+        echo "Do you want Ollama in Docker with GPU support? (y/n): "
+        read -r use_gpu
+        echo "Installing Ollama with Docker..."
+        if [ "$use_gpu" = "y" ]; then
+            ./run-ollama-docker.sh --enable-gpu
+        else
+            ./run-ollama-docker.sh
         fi
-
-        echo "Running: $compose_cmd"
-        eval "$compose_cmd"
     else
-        # If not using Docker Compose, install Open WebUI with Docker alone
-        install_openwebui_docker
+        # If not installing Ollama, ask about using Docker Compose for both
+        echo "Would you like to deploy Open WebUI and Ollama together using Docker Compose? (y/n)"
+        read -r deploy_compose
+
+        if [ "$deploy_compose" = "y" ]; then
+            echo "Enable GPU support? (y/n)"
+            read -r enable_gpu
+
+            compose_cmd="./run-compose.sh"
+
+            if [ "$enable_gpu" = "y" ]; then
+                compose_cmd+=" --enable-gpu"
+            fi
+
+            echo "Running: $compose_cmd"
+            eval "$compose_cmd"
+        else
+            # If not using Docker Compose, install Open WebUI with Docker alone
+            install_openwebui_docker
+        fi
     fi
 fi
 
