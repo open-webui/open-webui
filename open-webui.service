@@ -1,0 +1,14 @@
+[Unit]
+Description=Open WebUI Service
+After=network.target
+
+[Service]
+Type=simple
+User=$(whoami)
+# Ensure bash is used to execute the start script
+ExecStart=/bin/bash $BASE_DIR/open-webui/backend/start.sh
+Restart=always
+EnvironmentFile=-/etc/open-webui/env
+
+[Install]
+WantedBy=multi-user.target

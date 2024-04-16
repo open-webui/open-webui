@@ -96,34 +96,26 @@ check_nodejs() {
 # Function to create and enable a systemd service for Open WebUI
 create_openwebui_service() {
     echo "Creating systemd service for Open WebUI..."
+    local repo_service_path="$BASE_DIR/open-webui/open-webui.service"
     local systemd_service_path="/etc/systemd/system/open-webui.service"
 
-    # Create the systemd service file
-    sudo tee $systemd_service_path <<EOF
-[Unit]
-Description=Open WebUI Service
-After=network.target
+    # Ensure the service file exists in the repository
+    if [ -f "$repo_service_path" ]; then
+        # Copy the service file to the systemd directory
+        sudo cp "$repo_service_path" "$systemd_service_path"
 
-[Service]
-Type=simple
-User=$(whoami)
-# Ensure bash is used to execute the start script
-ExecStart=/bin/bash $BASE_DIR/open-webui/backend/start.sh
-Restart=always
-EnvironmentFile=-/etc/open-webui/env
+        # Reload systemd to recognize the new service
+        sudo systemctl daemon-reload
+        # Enable the service to start at boot
+        sudo systemctl enable open-webui.service
+        # Optionally start the service
+        sudo systemctl start open-webui.service
 
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    # Reload systemd to recognize the new service
-    sudo systemctl daemon-reload
-    # Enable the service to start at boot
-    sudo systemctl enable open-webui.service
-    # Start the service
-    sudo systemctl start open-webui.service
-
-    echo "Open WebUI systemd service has been installed and started."
+        echo "Open WebUI systemd service has been installed and started."
+    else
+        echo "Failed to locate the systemd service file in the repository. Please ensure it exists at $repo_service_path."
+        exit 1
+    fi
 }
 
 # Function to create systemd override for Ollama
