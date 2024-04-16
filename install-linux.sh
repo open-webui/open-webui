@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Initialize flags
+# Initialize flags and installation path
 NO_DOCKER=0
 NO_OLLAMA=0
+INSTALL_PATH="$HOME/.open-webui/source"
 
 # Parse command-line arguments
 for arg in "$@"
@@ -16,11 +17,32 @@ do
         NO_OLLAMA=1
         shift # Remove --no-ollama from processing
         ;;
+        --install-path)
+        INSTALL_PATH="$2"
+        shift # Remove argument name
+        shift # Remove argument value
+        ;;
         *)
         # Unknown option
         ;;
     esac
 done
+
+# Define the base directory as the installation path
+BASE_DIR=$(mkdir -p "$INSTALL_PATH" && cd "$INSTALL_PATH" && pwd)
+cd "$BASE_DIR"
+
+echo "Installation will proceed in directory: $BASE_DIR"
+
+# Function to clone the Open WebUI repository
+clone_repository() {
+    if [ -d "$BASE_DIR/.git" ]; then
+        echo "The Open WebUI repository already exists at $BASE_DIR."
+    else
+        echo "Cloning Open WebUI repository into $BASE_DIR..."
+        git clone https://github.com/open-webui/open-webui.git "$BASE_DIR"
+    fi
+}
 
 # Function to check if Docker is installed
 check_docker() {
@@ -38,6 +60,7 @@ check_docker() {
                 echo "Exiting the installation script."
                 exit 0
             fi
+            clone_repository
             dockerless_install
             exit 0
         fi
@@ -57,6 +80,7 @@ install_docker() {
         exit 1
     fi
     echo "Docker has been successfully installed."
+    clone_repository
 }
 
 # Function to check for Node.js
@@ -118,6 +142,7 @@ echo "Starting the Open WebUI installation script..."
 
 if [ "$NO_DOCKER" -eq 1 ]; then
     echo "Proceeding with Docker-less installation due to --no-docker flag."
+    clone_repository
     dockerless_install
     echo "Installation process has completed."
     exit 0
