@@ -23,7 +23,13 @@ check_docker() {
         if [ "$choice" = "y" ]; then
             install_docker
         else
-            echo "Docker is required for the Docker-based installation. Proceeding with Docker-less installation."
+            echo "Docker is required for the Docker-based installation."
+            echo "Would you like to proceed with the Docker-less installation? (y/N)"
+            read -r proceed
+            if [ "$proceed" != "y" ]; then
+                echo "Exiting the installation script."
+                exit 0
+            fi
             dockerless_install
             exit 0
         fi
@@ -35,18 +41,8 @@ check_docker() {
 # Function to install Docker
 install_docker() {
     echo "Installing Docker..."
-    sudo apt-get update
-    sudo apt-get install -y \
-        ca-certificates \
-        curl \
-        gnupg \
-        lsb-release
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    sudo apt-get update
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+    curl -fsSL get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
     sudo docker run --rm hello-world
     if [ $? -ne 0 ]; then
         echo "Docker installation failed. Please check the error messages above."
@@ -55,11 +51,12 @@ install_docker() {
     echo "Docker has been successfully installed."
 }
 
-# Function to install Node.js
+# Function to install Node.js using nvm
 install_nodejs() {
-    echo "Node.js not found. Installing Node.js version 20..."
-    curl -sL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-    sudo apt-get install -y nodejs
+    echo "Node.js not found. Installing Node.js using nvm..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+    source "$HOME/.nvm/nvm.sh"
+    nvm install 20
 }
 
 # Function to install Miniconda for Python
@@ -112,7 +109,7 @@ install_openwebui_docker() {
 # Main script starts here
 echo "Starting the Open WebUI installation script..."
 
-if [ "$NO_DOCKER" -eq 1 ]; then
+if [ -n "$NO_DOCKER" ] && [ "$NO_DOCKER" -eq 1 ]; then
     echo "Proceeding with Docker-less installation due to --no-docker flag."
     dockerless_install
     echo "Installation process has completed."
