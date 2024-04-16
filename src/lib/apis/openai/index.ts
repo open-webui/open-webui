@@ -249,8 +249,7 @@ export const synthesizeOpenAISpeech = async (
 		body: JSON.stringify({
 			model: 'tts-1',
 			input: text,
-			voice: speaker,
-			speed: 1.0,
+			voice: speaker
 		})
 	}).catch((err) => {
 		console.log(err);
@@ -313,4 +312,96 @@ export const generateTitle = async (
 	}
 
 	return res?.choices[0]?.message?.content ?? 'New Chat';
+};
+
+export const synthesizeOpenedAISpeech = async (
+	token: string = '',
+	model: string = 'tts-1',
+	speaker: string = 'alloy',
+	speed: number = 1.0,
+	text: string = ''
+) => {
+	let error = null;
+
+	const res = await fetch(`${OPENAI_API_BASE_URL}/opened/audio/speech`, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			model: model,
+			voice: speaker,
+			speed: speed,
+			input: text
+		})
+	}).catch((err) => {
+		console.log(err);
+		error = err;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getOpenedAISpeechEnabled = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${OPENAI_API_BASE_URL}/opened/audio/enabled`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = `getOpenedAISpeechEnabled: ${err?.error?.message ?? 'Network Problem'}`;
+			return false;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	const is_enabled = (typeof value === 'boolean') ? res : res ?? false;
+
+	return is_enabled
+}
+
+export const getOpenedAISpeechVoices = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${OPENAI_API_BASE_URL}/opened/audio/voices`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = `getOpenedAISpeechVoices: ${err?.error?.message ?? 'Network Problem'}`;
+			return [];
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	const voices = Array.isArray(res) ? res : res ?? [{name: 'alloy'}];
+
+	return voices;
 };

@@ -9,14 +9,17 @@
 
 	// Audio
 
+	import { getOpenedAISpeechEnabled, getOpenedAISpeechVoices } from '$lib/apis/openai';
+
 	let STTEngines = ['', 'openai'];
 	let STTEngine = '';
 
 	let conversationMode = false;
 	let speechAutoSend = false;
 	let responseAutoPlayback = false;
+	let isOpenedAISpeechEnabled = false;
 
-	let TTSEngines = ['', 'openai'];
+	let TTSEngines = ['', 'openai', 'openedai'];
 	let TTSEngine = '';
 
 	let voices = [];
@@ -31,6 +34,10 @@
 			{ name: 'nova' },
 			{ name: 'shimmer' }
 		];
+	};
+
+	const getOpenedAISpeechVoiceList = async () => {
+		voices = await getOpenedAISpeechVoices(localStorage.token);
 	};
 
 	const getWebAPIVoices = () => {
@@ -75,13 +82,27 @@
 		conversationMode = settings.conversationMode ?? false;
 		speechAutoSend = settings.speechAutoSend ?? false;
 		responseAutoPlayback = settings.responseAutoPlayback ?? false;
+		isOpenedAISpeechEnabled = await getOpenedAISpeechEnabled(localStorage.token);
 
 		STTEngine = settings?.audio?.STTEngine ?? '';
 		TTSEngine = settings?.audio?.TTSEngine ?? '';
 		speaker = settings?.audio?.speaker ?? '';
 
+		if (isOpenedAISpeechEnabled === false && TTSEngine === 'openedai') {
+			TTSEngine = '';
+			speaker = '';
+			saveSettings({
+				audio: {
+					TTSEngine: TTSEngine,
+					speaker: speaker
+				}
+			});
+		}
+
 		if (TTSEngine === 'openai') {
 			getOpenAIVoices();
+		} else if (TTSEngine === 'openedai') {
+			getOpenedAISpeechVoiceList();
 		} else {
 			getWebAPIVoices();
 		}
@@ -184,6 +205,9 @@
 							if (e.target.value === 'openai') {
 								getOpenAIVoices();
 								speaker = 'alloy';
+							} else if (e.target.value === 'openedai') {
+								getOpenedAISpeechVoiceList();
+								speaker = 'alloy';
 							} else {
 								getWebAPIVoices();
 								speaker = '';
@@ -192,6 +216,7 @@
 					>
 						<option value="">{$i18n.t('Default (Web API)')}</option>
 						<option value="openai">{$i18n.t('Open AI')}</option>
+						<option value="openedai" disabled={!isOpenedAISpeechEnabled}>{$i18n.t('Opened AI Speech')}</option>
 					</select>
 				</div>
 			</div>
@@ -236,7 +261,7 @@
 					</div>
 				</div>
 			</div>
-		{:else if TTSEngine === 'openai'}
+		{:else if (TTSEngine === 'openai' || TTSEngine === 'openedai')}
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
 				<div class="flex w-full">

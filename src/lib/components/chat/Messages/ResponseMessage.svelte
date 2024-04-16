@@ -15,7 +15,12 @@
 	const dispatch = createEventDispatcher();
 
 	import { config, settings } from '$lib/stores';
-	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
+	import {
+		getOpenedAISpeechEnabled,
+		synthesizeOpenAISpeech,
+		synthesizeOpenedAISpeech
+	} from '$lib/apis/openai';
+
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		extractSentences,
@@ -58,6 +63,7 @@
 	let sentencesAudio = {};
 	let speaking = null;
 	let speakingIdx = null;
+	let isOpenedAISpeechEnabled = false;
 
 	let loadingSpeech = false;
 	let generatingImage = false;
@@ -65,6 +71,11 @@
 	let showRateComment = false;
 
 	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
+
+	const saveSettings = async (updated) => {
+		await settings.set({ ...$settings, ...updated });
+		localStorage.setItem('settings', JSON.stringify($settings));
+	};
 
 	const renderer = new marked.Renderer();
 
@@ -180,6 +191,18 @@
 			speaking = null;
 			speakingIdx = null;
 		} else {
+			isOpenedAISpeechEnabled = await getOpenedAISpeechEnabled(localStorage.token);
+
+			if (isOpenedAISpeechEnabled === false && $settings?.audio?.TTSEngine === 'openedai') {
+				console.log("OpenedAISpeech is disabled, resetting TTS settings...");
+				saveSettings({
+					audio: {
+						TTSEngine: '',
+						speaker: ''
+					}
+				});
+			}
+
 			speaking = true;
 
 			if ($settings?.audio?.TTSEngine === 'openai') {
@@ -214,6 +237,57 @@
 					const res = await synthesizeOpenAISpeech(
 						localStorage.token,
 						$settings?.audio?.speaker,
+						sentence
+					).catch((error) => {
+						toast.error(error);
+						return null;
+					});
+
+					if (res) {
+						const blob = await res.blob();
+						const blobUrl = URL.createObjectURL(blob);
+						const audio = new Audio(blobUrl);
+						sentencesAudio[idx] = audio;
+						loadingSpeech = false;
+
+						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+					}
+				}
+			} else if ($settings?.audio?.TTSEngine === 'openedai') {
+				loadingSpeech = true;
+
+				const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
+					const lastIndex = mergedTexts.length - 1;
+					if (lastIndex >= 0) {
+						const previousText = mergedTexts[lastIndex];
+						const wordCount = previousText.split(/\s+/).length;
+						if (wordCount < 2) {
+							mergedTexts[lastIndex] = previousText + ' ' + currentText;
+						} else {
+							mergedTexts.push(currentText);
+						}
+					} else {
+						mergedTexts.push(currentText);
+					}
+					return mergedTexts;
+				}, []);
+
+				console.log(sentences);
+
+				sentencesAudio = sentences.reduce((a, e, i, arr) => {
+					a[i] = null;
+					return a;
+				}, {});
+
+				let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+
+				for (const [idx, sentence] of sentences.entries()) {
+					// TODO: add model support, i.e. tts-1-hd. Also add speed config.
+					const res = await synthesizeOpenedAISpeech(
+						localStorage.token,
+						undefined,
+						$settings?.audio?.speaker,
+						undefined,
 						sentence
 					).catch((error) => {
 						toast.error(error);

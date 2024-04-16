@@ -457,8 +457,9 @@ export const extractSentences = (text) => {
 	// Split the paragraph into sentences based on common punctuation marks
 	const sentences = text.split(/(?<=[.!?])/);
 
+	// Replace quotations to avoid corrupt TTS (looking at you tinyllama)
 	return sentences
-		.map((sentence) => removeEmojis(sentence.trim()))
+		.map((sentence) => removeEmojis(sentence.trim().replace(/^"$/, '')))
 		.filter((sentence) => sentence !== '');
 };
 

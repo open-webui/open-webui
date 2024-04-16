@@ -9,7 +9,6 @@ import aiohttp
 import asyncio
 import json
 import logging
-from urllib.parse import urljoin
 
 from pydantic import BaseModel
 
@@ -26,6 +25,9 @@ from config import (
     SRC_LOG_LEVELS,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
+    ENABLE_OPENEDAI_SPEECH,
+    OPENEDAI_SPEECH_BASE_URL,
+    OPENEDAI_SPEECH_VOICES,
     CACHE_DIR,
     MODEL_FILTER_ENABLED,
     MODEL_FILTER_LIST,
@@ -53,6 +55,10 @@ app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.OPENAI_API_KEYS = OPENAI_API_KEYS
+
+app.state.ENABLED_OPENEDAI_SPEECH = ENABLE_OPENEDAI_SPEECH
+app.state.OPENEDAI_SPEECH_BASE_URL = OPENEDAI_SPEECH_BASE_URL
+app.state.OPENEDAI_SPEECH_VOICES = OPENEDAI_SPEECH_VOICES
 
 app.state.MODELS = {}
 
@@ -99,30 +105,31 @@ async def update_openai_key(form_data: KeysUpdateForm, user=Depends(get_admin_us
 
 
 @app.post("/audio/speech")
+@app.post("/opened/audio/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
-    audio_base_url = os.environ.get("OPENAI_AUDIO_BASE_URL", "")
-    if audio_base_url:
-        print(f"Got OPENAI_AUDIO_BASE_URL: {audio_base_url}")
-    else:
-        audio_base_url = os.environ["OPENAI_BASE_URL"]
-        print(f"Using OPENAI_BASE_URL for audio: {audio_base_url}")
-
     idx = None
+    is_openedai_enabled = False
+    log.debug(f"request.url.path: {request.url.path}")
+
+    if request.url.path.startswith("/openai/api/opened/audio/speech"):
+        if app.state.ENABLED_OPENEDAI_SPEECH and app.state.OPENEDAI_SPEECH_BASE_URL != '':
+            is_openedai_enabled = True
+        elif app.state.ENABLED_OPENEDAI_SPEECH:
+            raise HTTPException(
+                status_code=500, detail="OpenedAI endpoint called with empty OPENEDAI_SPEECH_BASE_URL"
+            )
+
     try:
-        is_openedai_speech = True
-        if is_openedai_speech: # TODO: check if user wants to use openai cloud service (but why?), and behave accordingly
-            base_url = audio_base_url
-        else:
+        if not is_openedai_enabled:
             idx = app.state.OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
-            base_url = app.state.OPENAI_API_BASE_URLS[idx]
-
-        speech_url = urljoin(base_url, "/audio/speech")
-
+            speech_url=f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech"
+        else:
+            speech_url=f"{app.state.OPENEDAI_SPEECH_BASE_URL}/audio/speech"
+            log.info(f"Using OPENEDAI_SPEECH_BASE_URL: {speech_url}")
         body = await request.body()
         name = hashlib.sha256(body).hexdigest()
 
-        # TODO: check how this cache gets pruned
-        SPEECH_CACHE_DIR = Path(CACHE_DIR) / "audio" / "speech"
+        SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
         SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
         file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
         file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
@@ -132,16 +139,14 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             return FileResponse(file_path)
 
         headers = {}
-
-        if is_openedai_speech:
+        if not is_openedai_enabled:
             # TODO: support auth for openai-speech?
             # TODO: log a warning that this isn't supported yet
-            pass
-        else:
             headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEYS[idx]}"
 
         headers["Content-Type"] = "application/json"
 
+        log.debug(f"request.post: body={body}, headers={headers}")
         r = None
         try:
             r = requests.post(
@@ -181,6 +186,18 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
     except ValueError:
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
+
+
+@app.get("/opened/audio/voices")
+async def get_openedai_audio_voices(user=Depends(get_verified_user)):
+    voices = [{"name": voice} for voice in app.state.OPENEDAI_SPEECH_VOICES]
+    log.debug(f"OPENEDAI_SPEECH_VOICES: {voices}")
+    return voices
+
+
+@app.get("/opened/audio/enabled")
+async def get_openedai_audio_enabled(user=Depends(get_verified_user)):
+    return app.state.ENABLED_OPENEDAI_SPEECH
 
 
 async def fetch_url(url, key):
