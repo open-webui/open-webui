@@ -37,11 +37,11 @@ if [ "$OS" = "Linux" ]; then
     # Fetch and execute the installation script
     curl -fsSL "$INSTALL_SCRIPT_URL" | bash
 
-    echo "Thank you for being a user of Open WebUI!"
+    echo "Thank you for being a user of Open WebUI! Be sure to visit https://openwebui.com/ for the latest updates and news."
 elif [ "$OS" = "WSL" ]; then
-    echo "Detected Windows Subsystem for Linux (WSL). This installer is intended for native Linux environments only."
+    echo "Detected Windows Subsystem for Linux (WSL). This installer is intended for native Linux environments only. Please visit https://docs.openwebui.com/getting-started/ for instructions on how to install Open WebUI on Windows."
     exit 1
 else
-    echo "Detected $OS. This installer only supports Linux environments."
+    echo "Detected $OS. This installer only supports Linux environments. Please visit https://docs.openwebui.com/getting-started/ for instructions on how to install Open WebUI on your operating system."
     exit 1
 fi
