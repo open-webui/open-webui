@@ -37,6 +37,8 @@ echo "Installation will proceed in directory: $BASE_DIR"
 clone_repository() {
     if [ -d "$BASE_DIR/open-webui/.git" ]; then
         echo "The Open WebUI repository already exists at $BASE_DIR/open-webui."
+        echo "Pulling updates from the remote repository..."
+        cd "$BASE_DIR/open-webui" && git pull
     else
         echo "Cloning Open WebUI repository into $BASE_DIR/open-webui..."
         git clone https://github.com/open-webui/open-webui.git "$BASE_DIR/open-webui"
