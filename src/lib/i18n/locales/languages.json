@@ -52,12 +52,16 @@
 		"title": "Dutch (Netherlands)"
 	},
 	{
-		"code": "pt-PT",
-		"title": "Portuguese (Portugal)"
+		"code": "pl-PL",
+		"title": "Polish"
 	},
 	{
 		"code": "pt-BR",
 		"title": "Portuguese (Brazil)"
+	},
+	{
+		"code": "pt-PT",
+		"title": "Portuguese (Portugal)"
 	},
 	{
 		"code": "ru-RU",
