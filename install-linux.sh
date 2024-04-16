@@ -93,6 +93,39 @@ check_nodejs() {
     fi
 }
 
+# Function to create and enable a systemd service for Open WebUI
+create_openwebui_service() {
+    echo "Creating systemd service for Open WebUI..."
+    local systemd_service_path="/etc/systemd/system/open-webui.service"
+
+    # Create the systemd service file
+    sudo tee $systemd_service_path <<EOF
+[Unit]
+Description=Open WebUI Service
+After=network.target
+
+[Service]
+Type=simple
+User=$(whoami)
+# Ensure bash is used to execute the start script
+ExecStart=/bin/bash $BASE_DIR/open-webui/backend/start.sh
+Restart=always
+EnvironmentFile=-/etc/open-webui/env
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # Reload systemd to recognize the new service
+    sudo systemctl daemon-reload
+    # Enable the service to start at boot
+    sudo systemctl enable open-webui.service
+    # Start the service
+    sudo systemctl start open-webui.service
+
+    echo "Open WebUI systemd service has been installed and started."
+}
+
 # Function to create systemd override for Ollama
 configure_ollama_systemd() {
     echo "Configuring systemd service for Ollama..."
@@ -167,8 +200,10 @@ dockerless_install() {
 
     cd ./backend
     pip install -r requirements.txt -U
-    sh start.sh
     echo "Open WebUI has been installed and started without Docker."
+
+    # Create and start the systemd service
+    create_openwebui_service
 }
 
 # Main script starts here
