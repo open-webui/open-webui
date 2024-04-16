@@ -93,6 +93,29 @@ check_nodejs() {
     fi
 }
 
+# Function to create systemd override for Ollama
+configure_ollama_systemd() {
+    echo "Configuring systemd service for Ollama..."
+    local systemd_dir="/etc/systemd/system/ollama.service.d"
+    local override_conf="$systemd_dir/override.conf"
+
+    # Ensure the systemd directory exists
+    sudo mkdir -p $systemd_dir
+
+    # Create or truncate the override file
+    echo "Creating or clearing override configuration for Ollama..."
+    sudo tee $override_conf <<EOF
+[Service]
+Environment="OLLAMA_HOST=0.0.0.0"
+Environment="OLLAMA_ORIGINS=*"
+EOF
+
+    # Reload systemd to apply changes and restart the service
+    sudo systemctl daemon-reload
+    sudo systemctl restart ollama
+    echo "Ollama systemd service configured with overrides."
+}
+
 # Function to install Node.js using nvm
 install_nodejs() {
     echo "Node.js not found. Installing Node.js using nvm..."
@@ -170,6 +193,7 @@ if [ "$NO_OLLAMA" -eq 0 ]; then
     if [ "$install_ollama_directly" = "y" ]; then
         curl -fsSL https://ollama.com/install.sh | sh
         echo "Ollama has been installed directly on the system."
+        configure_ollama_systemd
         # No exit here; continue to WebUI installation
     else
         echo "Proceeding with Docker-based installation options..."
