@@ -45,6 +45,31 @@
 			show = true;
 		}
 		await chats.set(await getChatList(localStorage.token));
+
+		let touchstartX = 0;
+		let touchendX = 0;
+
+		function checkDirection() {
+			const screenWidth = window.innerWidth;
+			const swipeDistance = Math.abs(touchendX - touchstartX);
+			if (swipeDistance >= screenWidth / 4) {
+				if (touchendX < touchstartX) {
+					show = false;
+				}
+				if (touchendX > touchstartX) {
+					show = true;
+				}
+			}
+		}
+
+		document.addEventListener('touchstart', (e) => {
+			touchstartX = e.changedTouches[0].screenX;
+		});
+
+		document.addEventListener('touchend', (e) => {
+			touchendX = e.changedTouches[0].screenX;
+			checkDirection();
+		});
 	});
 
 	// Helper function to fetch and add chat content to each chat
@@ -706,6 +731,7 @@
 	</div>
 
 	<div
+		id="sidebar-handle"
 		class="fixed left-0 top-[50dvh] -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
 	>
 		<Tooltip
