@@ -1,3 +1,4 @@
+{{- if not .Values.ollama.externalHost }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -18,4 +19,5 @@ spec:
     name: http
     port: {{ .port }}
     targetPort: http
+{{- end }}
 {{- end }}

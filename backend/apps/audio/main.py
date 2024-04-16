@@ -1,4 +1,5 @@
 import os
+import logging
 from fastapi import (
     FastAPI,
     Request,
@@ -21,7 +22,17 @@ from utils.utils import (
 )
 from utils.misc import calculate_sha256
 
-from config import CACHE_DIR, UPLOAD_DIR, WHISPER_MODEL, WHISPER_MODEL_DIR
+from config import (
+    SRC_LOG_LEVELS,
+    CACHE_DIR,
+    UPLOAD_DIR,
+    WHISPER_MODEL,
+    WHISPER_MODEL_DIR,
+    DEVICE_TYPE,
+)
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["AUDIO"])
 
 app = FastAPI()
 app.add_middleware(
@@ -32,13 +43,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# setting device type for whisper model
+whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
+log.info(f"whisper_device_type: {whisper_device_type}")
+
 
 @app.post("/transcribe")
 def transcribe(
     file: UploadFile = File(...),
     user=Depends(get_current_user),
 ):
-    print(file.content_type)
+    log.info(f"file.content_type: {file.content_type}")
 
     if file.content_type not in ["audio/mpeg", "audio/wav"]:
         raise HTTPException(
@@ -56,13 +71,13 @@ def transcribe(
 
         model = WhisperModel(
             WHISPER_MODEL,
-            device="auto",
+            device=whisper_device_type,
             compute_type="int8",
             download_root=WHISPER_MODEL_DIR,
         )
 
         segments, info = model.transcribe(file_path, beam_size=5)
-        print(
+        log.info(
             "Detected language '%s' with probability %f"
             % (info.language, info.language_probability)
         )
@@ -72,7 +87,7 @@ def transcribe(
         return {"text": transcript.strip()}
 
     except Exception as e:
-        print(e)
+        log.exception(e)
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

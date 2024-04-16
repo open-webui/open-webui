@@ -17,7 +17,9 @@ spec:
   resources:
     requests:
       storage: {{ .Values.webui.persistence.size }}
-  storageClass: {{ .Values.webui.persistence.storageClass }}
+  {{- if .Values.webui.persistence.storageClass }}
+  storageClassName: {{ .Values.webui.persistence.storageClass }}
+  {{- end }}
   {{- with .Values.webui.persistence.selector }}
   selector:
     {{- toYaml . | nindent 4 }}

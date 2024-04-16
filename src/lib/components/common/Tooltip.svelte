@@ -29,6 +29,6 @@
 	});
 </script>
 
-<div bind:this={tooltipElement} aria-label={content}>
+<div bind:this={tooltipElement} aria-label={content} class="flex">
 	<slot />
 </div>

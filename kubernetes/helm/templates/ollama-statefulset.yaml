@@ -1,3 +1,4 @@
+{{- if not .Values.ollama.externalHost }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -88,9 +89,10 @@ spec:
       resources:
         requests:
           storage: {{ .Values.ollama.persistence.size | quote }}
-      storageClass: {{ .Values.ollama.persistence.storageClass }}
+      storageClassName: {{ .Values.ollama.persistence.storageClass }}
       {{- with .Values.ollama.persistence.selector }}
       selector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- end }}
+{{- end }}
