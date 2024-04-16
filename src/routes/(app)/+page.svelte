@@ -849,9 +849,6 @@
 		shareEnabled={messages.length > 0}
 		{chat}
 		{initNewChat}
-		{tags}
-		{addTag}
-		{deleteTag}
 	/>
 	<div class="flex flex-col flex-auto">
 		<div
