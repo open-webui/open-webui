@@ -538,6 +538,7 @@
 							{:else}
 								<div class="flex self-center space-x-1.5 z-10">
 									<ChatMenu
+										chatId={chat.id}
 										renameHandler={() => {
 											chatTitle = chat.title;
 											chatTitleEditId = chat.id;

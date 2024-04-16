@@ -6,14 +6,19 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Tags from '$lib/components/chat/Tags.svelte';
 
 	export let renameHandler: Function;
 	export let deleteHandler: Function;
-
 	export let onClose: Function;
+
+	export let chatId = '';
+
+	let show = false;
 </script>
 
 <Dropdown
+	bind:show
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();
@@ -51,6 +56,12 @@
 				<GarbageBin strokeWidth="2" />
 				<div class="flex items-center">Delete</div>
 			</DropdownMenu.Item>
+
+			<hr class="border-gray-100 dark:border-gray-800 mt-2.5 mb-1.5" />
+
+			<div class="flex p-1">
+				<Tags {chatId} />
+			</div>
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
