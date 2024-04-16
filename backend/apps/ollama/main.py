@@ -215,7 +215,8 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
 
         if len(responses) > 0:
             lowest_version = min(
-                responses, key=lambda x: tuple(map(int, x["version"].split(".")))
+                responses,
+                key=lambda x: tuple(map(int, x["version"].split("-")[0].split("."))),
             )
 
             return {"version": lowest_version["version"]}

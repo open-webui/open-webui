@@ -100,7 +100,7 @@
 	"Deleted {{deleteModelTag}}": "Đã xóa {{deleteModelTag}}",
 	"Deleted {tagName}": "Đã xóa {tagName}",
 	"Description": "Mô tả",
-	"Desktop Notifications": "Thông báo trên máy tính (Notification)",
+	"Notifications": "Thông báo trên máy tính (Notification)",
 	"Disabled": "Đã vô hiệu hóa",
 	"Discover a modelfile": "Khám phá thêm các mô hình mới",
 	"Discover a prompt": "Khám phá thêm prompt mới",

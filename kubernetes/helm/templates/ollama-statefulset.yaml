@@ -1,3 +1,4 @@
+{{- if not .Values.ollama.externalHost }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -94,3 +95,4 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- end }}
+{{- end }}

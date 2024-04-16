@@ -100,7 +100,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} silindi",
 	"Deleted {tagName}": "{tagName} silindi",
 	"Description": "Açıklama",
-	"Desktop Notifications": "Masaüstü Bildirimleri",
+	"Notifications": "Bildirimler",
 	"Disabled": "Devre Dışı",
 	"Discover a modelfile": "Bir model dosyası keşfedin",
 	"Discover a prompt": "Bir prompt keşfedin",

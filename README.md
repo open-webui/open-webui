@@ -94,24 +94,27 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 
 ### Quick Start with Docker 🐳
 
-> [!IMPORTANT]
+> [!WARNING]
 > When using Docker to install Open WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
 
-- **If Ollama is on your computer**, use this command:
+> [!TIP]  
+> If you wish to utilize Open WebUI with Ollama included or CUDA acceleration, we recommend utilizing our official images tagged with either `:cuda` or `:ollama`. To enable CUDA, you must install the [Nvidia CUDA container toolkit](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/) on your Linux/WSL system.
 
-  ```bash
-  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-  ```
+**If Ollama is on your computer**, use this command:
 
-- **If Ollama is on a Different Server**, use this command:
+```bash
+docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+```
 
-- To connect to Ollama on another server, change the `OLLAMA_BASE_URL` to the server's URL:
+**If Ollama is on a Different Server**, use this command:
 
-  ```bash
-  docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://example.com -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-  ```
+To connect to Ollama on another server, change the `OLLAMA_BASE_URL` to the server's URL:
 
-- After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
+```bash
+docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://example.com -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+```
+
+After installation, you can access Open WebUI at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
 
 #### Open WebUI: Server Connection Error
 
