@@ -33,7 +33,7 @@
 		: items;
 
 	const pullModelHandler = async () => {
-		const sanitizedModelTag = searchValue.trim();
+		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
 
 		console.log($MODEL_DOWNLOAD_POOL);
 		if ($MODEL_DOWNLOAD_POOL[sanitizedModelTag]) {

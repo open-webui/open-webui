@@ -10,7 +10,7 @@ ollama
 {{- if .Values.ollama.externalHost }}
 {{- printf .Values.ollama.externalHost }}
 {{- else }}
-{{- printf "http://%s.%s.svc.cluster.local:%d/" (include "ollama.name" .) (.Release.Namespace) (.Values.ollama.service.port | int) }}
+{{- printf "http://%s.%s.svc.cluster.local:%d" (include "ollama.name" .) (.Release.Namespace) (.Values.ollama.service.port | int) }}
 {{- end }}
 {{- end }}
 

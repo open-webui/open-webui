@@ -28,6 +28,7 @@ from config import (
     UPLOAD_DIR,
     WHISPER_MODEL,
     WHISPER_MODEL_DIR,
+    WHISPER_MODEL_AUTO_UPDATE,
     DEVICE_TYPE,
 )
 
@@ -69,12 +70,24 @@ def transcribe(
             f.write(contents)
             f.close()
 
-        model = WhisperModel(
-            WHISPER_MODEL,
-            device=whisper_device_type,
-            compute_type="int8",
-            download_root=WHISPER_MODEL_DIR,
-        )
+        whisper_kwargs = {
+            "model_size_or_path": WHISPER_MODEL,
+            "device": whisper_device_type,
+            "compute_type": "int8",
+            "download_root": WHISPER_MODEL_DIR,
+            "local_files_only": not WHISPER_MODEL_AUTO_UPDATE,
+        }
+
+        log.debug(f"whisper_kwargs: {whisper_kwargs}")
+
+        try:
+            model = WhisperModel(**whisper_kwargs)
+        except:
+            log.warning(
+                "WhisperModel initialization failed, attempting download with local_files_only=False"
+            )
+            whisper_kwargs["local_files_only"] = False
+            model = WhisperModel(**whisper_kwargs)
 
         segments, info = model.transcribe(file_path, beam_size=5)
         log.info(
