@@ -337,7 +337,7 @@
 	"TTS Settings": "Configuración de TTS",
 	"Type Hugging Face Resolve (Download) URL": "Type Hugging Face Resolve (Download) URL",
 	"Uh-oh! There was an issue connecting to {{provider}}.": "¡UH oh! Hubo un problema al conectarse a {{provider}}.",
-	"Understand that updating or changing your embedding model requires reset of the vector database and re-import of all documents. You have been warned!": "Comprenda que actualizar o cambiar su modelo de incrustación requiere restablecer la base de datos de vectores y volver a importar todos los documentos. ¡Usted ha sido advertido!",
+	"Understand that updating or changing your embedding model requires reset of the vector database and re-import of all documents. You have been warned!": "Comprenda que actualizar o cambiar su modelo de embedding requiere restablecer la base de datos de vectores y volver a importar todos los documentos. ¡Usted ha sido advertido!",
 	"Unknown File Type '{{file_type}}', but accepting and treating as plain text": "Tipo de archivo desconocido '{{file_type}}', pero se acepta y se trata como texto sin formato",
 	"Update": "Actualizar",
 	"Update embedding model {{embedding_model}}": "Actualizar modelo de embedding {{embedding_model}}",
