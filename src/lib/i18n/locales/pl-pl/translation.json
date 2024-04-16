@@ -195,7 +195,7 @@
     "MMMM DD, YYYY": "MMMM DD, YYYY",
     "Model '{{modelName}}' has been successfully downloaded.": "Model '{{nazwaModelu}}' został pomyślnie pobrany.",
     "Model '{{modelTag}}' is already in queue for downloading.": "Model '{{nazwaModelu}}' jest już w kolejce do pobrania.",
-    "Model {{embedding_model}} update complete!": "Aktualizacja modelu {{embedding_model}} zakończona pomyślnie!": "",
+    "Model {{embedding_model}} update complete!": "Aktualizacja modelu {{embedding_model}} zakończona pomyślnie!",
     "Model {{embedding_model}} update failed or not required!": "Model {{embedding_model}} aktualizacja nie powiodła się lub nie jest wymagana!",
     "Model {{modelId}} not found": "Model {{modelId}} nie został znaleziony",
     "Model {{modelName}} already exists.": "Model {{modelName}} już istnieje.",
