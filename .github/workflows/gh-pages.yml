@@ -1,0 +1,28 @@
+name: Deploy Install Script
+
+on:
+  push:
+    paths:
+      - 'install.sh'  # Only run workflow if install.sh is changed
+    branches:
+      - main  # Set this to your default branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Prepare GitHub Pages directory
+      run: |
+        mkdir -p gh-pages-content
+        cp install.sh gh-pages-content/install.sh
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./gh-pages-content
+        keep_files: false  # Replace all content with the content in publish_dir
