@@ -111,6 +111,14 @@ install_miniconda() {
     conda activate openwebui
 }
 
+# Function to install Open WebUI with Docker
+install_openwebui_docker() {
+    echo "Installing Open WebUI with Docker..."
+    docker pull ghcr.io/open-webui/open-webui:latest
+    docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:latest
+    echo "Open WebUI has been installed and started with Docker. Access it at http://localhost:3000"
+}
+
 # Function for Docker-less installation
 dockerless_install() {
     echo "Starting Docker-less installation..."
