@@ -216,7 +216,9 @@
 					>
 						<option value="">{$i18n.t('Default (Web API)')}</option>
 						<option value="openai">{$i18n.t('Open AI')}</option>
-						<option value="openedai" disabled={!isOpenedAISpeechEnabled}>{$i18n.t('Opened AI Speech')}</option>
+						<option value="openedai" disabled={!isOpenedAISpeechEnabled}
+							>{$i18n.t('Opened AI Speech')}</option
+						>
 					</select>
 				</div>
 			</div>
@@ -261,7 +263,7 @@
 					</div>
 				</div>
 			</div>
-		{:else if (TTSEngine === 'openai' || TTSEngine === 'openedai')}
+		{:else if TTSEngine === 'openai' || TTSEngine === 'openedai'}
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
 				<div class="flex w-full">

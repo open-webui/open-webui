@@ -326,11 +326,14 @@ OPENAI_API_BASE_URLS = [
 # OPENAI_COMPAT
 ####################################
 
-ENABLE_OPENEDAI_SPEECH = (
-    os.environ.get("ENABLE_OPENEDAI_SPEECH", "").lower() == "true"
-)
+ENABLE_OPENEDAI_SPEECH = os.environ.get("ENABLE_OPENEDAI_SPEECH", "").lower() == "true"
 OPENEDAI_SPEECH_BASE_URL = os.environ.get("OPENEDAI_SPEECH_BASE_URL", "").strip(" /")
-OPENEDAI_SPEECH_VOICES = [voice.strip() for voice in os.environ.get("OPENEDAI_SPEECH_VOICES", "alloy;echo;fable;onyx;nova;shimmer").split(";")]
+OPENEDAI_SPEECH_VOICES = [
+    voice.strip()
+    for voice in os.environ.get(
+        "OPENEDAI_SPEECH_VOICES", "alloy;echo;fable;onyx;nova;shimmer"
+    ).split(";")
+]
 
 
 ####################################

@@ -373,10 +373,10 @@ export const getOpenedAISpeechEnabled = async (token: string = '') => {
 		throw error;
 	}
 
-	const is_enabled = (typeof value === 'boolean') ? res : res ?? false;
+	const is_enabled = typeof value === 'boolean' ? res : res ?? false;
 
-	return is_enabled
-}
+	return is_enabled;
+};
 
 export const getOpenedAISpeechVoices = async (token: string = '') => {
 	let error = null;
@@ -402,7 +402,7 @@ export const getOpenedAISpeechVoices = async (token: string = '') => {
 		throw error;
 	}
 
-	const voices = Array.isArray(res) ? res : res ?? [{name: 'alloy'}];
+	const voices = Array.isArray(res) ? res : res ?? [{ name: 'alloy' }];
 
 	return voices;
 };

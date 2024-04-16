@@ -112,19 +112,23 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     log.debug(f"request.url.path: {request.url.path}")
 
     if request.url.path.startswith("/openai/api/opened/audio/speech"):
-        if app.state.ENABLED_OPENEDAI_SPEECH and app.state.OPENEDAI_SPEECH_BASE_URL != '':
+        if (
+            app.state.ENABLED_OPENEDAI_SPEECH
+            and app.state.OPENEDAI_SPEECH_BASE_URL != ""
+        ):
             is_openedai_enabled = True
         elif app.state.ENABLED_OPENEDAI_SPEECH:
             raise HTTPException(
-                status_code=500, detail="OpenedAI endpoint called with empty OPENEDAI_SPEECH_BASE_URL"
+                status_code=500,
+                detail="OpenedAI endpoint called with empty OPENEDAI_SPEECH_BASE_URL",
             )
 
     try:
         if not is_openedai_enabled:
             idx = app.state.OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
-            speech_url=f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech"
+            speech_url = f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech"
         else:
-            speech_url=f"{app.state.OPENEDAI_SPEECH_BASE_URL}/audio/speech"
+            speech_url = f"{app.state.OPENEDAI_SPEECH_BASE_URL}/audio/speech"
             log.info(f"Using OPENEDAI_SPEECH_BASE_URL: {speech_url}")
         body = await request.body()
         name = hashlib.sha256(body).hexdigest()

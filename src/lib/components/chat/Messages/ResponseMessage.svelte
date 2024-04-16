@@ -198,7 +198,7 @@
 			isOpenedAISpeechEnabled = await getOpenedAISpeechEnabled(localStorage.token);
 
 			if (isOpenedAISpeechEnabled === false && $settings?.audio?.TTSEngine === 'openedai') {
-				console.log("OpenedAISpeech is disabled, resetting TTS settings...");
+				console.log('OpenedAISpeech is disabled, resetting TTS settings...');
 				saveSettings({
 					audio: {
 						TTSEngine: '',
