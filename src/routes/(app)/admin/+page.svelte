@@ -12,6 +12,7 @@
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
 	import SettingsModal from '$lib/components/admin/SettingsModal.svelte';
+	import Pagination from '$lib/components/common/Pagination.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -20,6 +21,8 @@
 
 	let search = '';
 	let selectedUser = null;
+
+	let page = 1;
 
 	let showSettingsModal = false;
 	let showEditUserModal = false;
@@ -159,15 +162,17 @@
 										</tr>
 									</thead>
 									<tbody>
-										{#each users.filter((user) => {
-											if (search === '') {
-												return true;
-											} else {
-												let name = user.name.toLowerCase();
-												const query = search.toLowerCase();
-												return name.includes(query);
-											}
-										}) as user}
+										{#each users
+											.filter((user) => {
+												if (search === '') {
+													return true;
+												} else {
+													let name = user.name.toLowerCase();
+													const query = search.toLowerCase();
+													return name.includes(query);
+												}
+											})
+											.slice((page - 1) * 20, page * 20) as user}
 											<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-700 text-xs">
 												<td class="px-3 py-2 min-w-[7rem] w-28">
 													<button
@@ -270,6 +275,8 @@
 							<div class=" text-gray-500 text-xs mt-2 text-right">
 								ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 							</div>
+
+							<Pagination bind:page count={users.length} />
 						</div>
 					</div>
 				</div>

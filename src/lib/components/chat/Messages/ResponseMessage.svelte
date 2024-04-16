@@ -18,6 +18,7 @@
 	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
+		approximateToHumanReadable,
 		extractSentences,
 		revertSanitizedResponseContent,
 		sanitizeResponseContent
@@ -122,7 +123,10 @@
                     eval_count: ${message.info.eval_count ?? 'N/A'}<br/>
                     eval_duration: ${
 											Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
-										}ms</span>`,
+										}ms<br/>
+                    approximate_total: ${approximateToHumanReadable(
+											message.info.total_duration
+										)}</span>`,
 				allowHTML: true
 			});
 		}

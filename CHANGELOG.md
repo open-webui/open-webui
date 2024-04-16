@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.119] - 2024-04-16
+
+### Added
+
+- **🌟 Enhanced RAG Embedding Support**: Ollama, and OpenAI models can now be used for RAG embedding model.
+- **🔄 Seamless Integration**: Copy 'ollama run <model name>' directly from Ollama page to easily select and pull models.
+- **🏷️ Tagging Feature**: Add tags to chats directly via the sidebar chat menu.
+- **📱 Mobile Accessibility**: Swipe left and right on mobile to effortlessly open and close the sidebar.
+- **🔍 Improved Navigation**: Admin panel now supports pagination for user list.
+- **🌍 Additional Language Support**: Added Polish language support.
+
+### Fixed
+
+- **🌍 Language Enhancements**: Vietnamese and Spanish translations have been improved.
+- **🔧 Helm Fixes**: Resolved issues with Helm trailing slash and manifest.json.
+
+### Changed
+
+- **🐳 Docker Optimization**: Updated docker image build process to utilize 'uv' for significantly faster builds compared to 'pip3'.
+
 ## [0.1.118] - 2024-04-10
 
 ### Added
