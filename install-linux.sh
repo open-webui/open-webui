@@ -36,11 +36,11 @@ echo "Installation will proceed in directory: $BASE_DIR"
 
 # Function to clone the Open WebUI repository
 clone_repository() {
-    if [ -d "$BASE_DIR/.git" ]; then
-        echo "The Open WebUI repository already exists at $BASE_DIR."
+    if [ -d "$BASE_DIR/open-webui/.git" ]; then
+        echo "The Open WebUI repository already exists at $BASE_DIR/open-webui."
     else
-        echo "Cloning Open WebUI repository into $BASE_DIR..."
-        git clone https://github.com/open-webui/open-webui.git "$BASE_DIR"
+        echo "Cloning Open WebUI repository into $BASE_DIR/open-webui..."
+        git clone https://github.com/open-webui/open-webui.git "$BASE_DIR/open-webui"
     fi
 }
 
@@ -114,7 +114,9 @@ install_miniconda() {
 # Function for Docker-less installation
 dockerless_install() {
     echo "Starting Docker-less installation..."
-    
+
+    cd "$BASE_DIR/open-webui" # Change directory to the repository
+
     # Check and install Node.js if necessary
     check_nodejs
 
