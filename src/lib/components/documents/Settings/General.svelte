@@ -166,12 +166,12 @@
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('General Settings')}</div>
 
 			<div class=" flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Engine')}</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Model Engine')}</div>
 				<div class="flex items-center relative">
 					<select
 						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={embeddingEngine}
-						placeholder="Select an embedding engine"
+						placeholder="Select an embedding model engine"
 						on:change={(e) => {
 							if (e.target.value === 'ollama') {
 								embeddingModel = '';
