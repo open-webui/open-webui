@@ -169,6 +169,7 @@ if [ "$NO_OLLAMA" -eq 0 ]; then
     if [ "$install_ollama_directly" = "y" ]; then
         curl -fsSL https://ollama.com/install.sh | sh
         echo "Ollama has been installed directly on the system."
+        # Continue to the next step, do not exit
     else
         echo "Proceeding with Docker-based installation options..."
         echo "Would you like to install Ollama inside Docker? (y/n)"
@@ -183,28 +184,26 @@ if [ "$NO_OLLAMA" -eq 0 ]; then
             else
                 ./run-ollama-docker.sh
             fi
-        else
-            # If not installing Ollama, ask about using Docker Compose for both
-            echo "Would you like to deploy Open WebUI and Ollama together using Docker Compose? (y/n)"
-            read -r deploy_compose
-
-            if [ "$deploy_compose" = "y" ]; then
-                echo "Enable GPU support? (y/n)"
-                read -r enable_gpu
-
-                compose_cmd="./run-compose.sh"
-
-                if [ "$enable_gpu" = "y" ]; then
-                    compose_cmd+=" --enable-gpu"
-                fi
-
-                echo "Running: $compose_cmd"
-                eval "$compose_cmd"
-            else
-                # If not using Docker Compose, install Open WebUI with Docker alone
-                install_openwebui_docker
-            fi
         fi
+    fi
+    # After handling Ollama installation, continue to inquire about deploying Open WebUI
+    echo "Would you like to deploy Open WebUI and Ollama together using Docker Compose? (y/n)"
+    read -r deploy_compose
+
+    if [ "$deploy_compose" = "y" ]; then
+        echo "Enable GPU support? (y/n)"
+        read -r enable_gpu
+
+        compose_cmd="./run-compose.sh"
+        if [ "$enable_gpu" = "y" ]; then
+            compose_cmd+=" --enable-gpu"
+        fi
+
+        echo "Running: $compose_cmd"
+        eval "$compose_cmd"
+    else
+        # If not using Docker Compose, install Open WebUI with Docker alone
+        install_openwebui_docker
     fi
 else
     echo "Skipping Ollama installation as per --no-ollama flag."
