@@ -98,24 +98,35 @@ create_openwebui_service() {
     echo "Creating systemd service for Open WebUI..."
     local repo_service_path="$BASE_DIR/open-webui/open-webui.service"
     local systemd_service_path="/etc/systemd/system/open-webui.service"
+    local env_source_path="$BASE_DIR/open-webui/.env.example"
+    local env_dest_path="/etc/open-webui/env"
 
-    # Ensure the service file exists in the repository
+    # Check if the systemd service file exists in the repository
     if [ -f "$repo_service_path" ]; then
         # Copy the service file to the systemd directory
         sudo cp "$repo_service_path" "$systemd_service_path"
-
-        # Reload systemd to recognize the new service
-        sudo systemctl daemon-reload
-        # Enable the service to start at boot
-        sudo systemctl enable open-webui.service
-        # Optionally start the service
-        sudo systemctl start open-webui.service
-
-        echo "Open WebUI systemd service has been installed and started."
     else
         echo "Failed to locate the systemd service file in the repository. Please ensure it exists at $repo_service_path."
         exit 1
     fi
+
+    # Ensure the environment file exists and copy it
+    if [ -f "$env_source_path" ]; then
+        echo "Setting up environment file..."
+        sudo mkdir -p $(dirname "$env_dest_path")  # Ensure the destination directory exists
+        sudo cp "$env_source_path" "$env_dest_path"
+    else
+        echo "Environment file not found at $env_source_path. Continuing without custom environment settings."
+    fi
+
+    # Reload systemd to recognize the new service
+    sudo systemctl daemon-reload
+    # Enable the service to start at boot
+    sudo systemctl enable open-webui.service
+    # Start the service
+    sudo systemctl start open-webui.service
+
+    echo "Open WebUI systemd service has been installed and started."
 }
 
 # Function to create systemd override for Ollama
