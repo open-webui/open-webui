@@ -182,7 +182,7 @@ if [ "$NO_OLLAMA" -eq 0 ]; then
             # Continue to Docker Compose or direct WebUI installation
         fi
     fi
-}
+fi
 
 # Ask about Docker Compose only if Ollama wasn't installed by previous options
 echo "Would you like to deploy Open WebUI and Ollama together using Docker Compose? (y/n)"
@@ -196,7 +196,8 @@ if [ "$deploy_compose" = "y" ]; then
         compose_cmd+=" --enable-gpu"
     fi
     echo "Running: $compose_cmd"
-    eval "$compose_cmd"
+    # Ensure script is run from the correct directory
+    (cd "$BASE_DIR/open-webui" && chmod +x $compose_cmd && ./$compose_cmd)
 else
     # If not using Docker Compose, just install Open WebUI with Docker
     install_openwebui_docker
