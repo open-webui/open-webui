@@ -100,7 +100,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} پاک شد",
 	"Deleted {tagName}": "{tagName} حذف شد",
 	"Description": "توضیحات",
-	"Desktop Notifications": "اعلان",
+	"Notifications": "اعلان",
 	"Disabled": "غیرفعال",
 	"Discover a modelfile": "فایل مدل را کشف کنید",
 	"Discover a prompt": "یک اعلان را کشف کنید",

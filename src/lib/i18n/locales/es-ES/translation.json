@@ -100,7 +100,7 @@
 	"Deleted {{deleteModelTag}}": "Se borró {{deleteModelTag}}",
 	"Deleted {tagName}": "Se borró {tagName}",
 	"Description": "Descripción",
-	"Desktop Notifications": "Notificaciones",
+	"Notifications": "Notificaciones",
 	"Disabled": "Desactivado",
 	"Discover a modelfile": "Descubre un modelfile",
 	"Discover a prompt": "Descubre un Prompt",

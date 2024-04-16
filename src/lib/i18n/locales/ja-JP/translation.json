@@ -100,7 +100,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} を削除しました",
 	"Deleted {tagName}": "{tagName} を削除しました",
 	"Description": "説明",
-	"Desktop Notifications": "デスクトップ通知",
+	"Notifications": "デスクトップ通知",
 	"Disabled": "無効",
 	"Discover a modelfile": "モデルファイルを見つける",
 	"Discover a prompt": "プロンプトを見つける",

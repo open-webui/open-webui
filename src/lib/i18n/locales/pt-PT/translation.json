@@ -100,7 +100,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} excluído",
 	"Deleted {tagName}": "{tagName} excluído",
 	"Description": "Descrição",
-	"Desktop Notifications": "Notificações da Área de Trabalho",
+	"Notifications": "Notificações da Área de Trabalho",
 	"Disabled": "Desativado",
 	"Discover a modelfile": "Descobrir um arquivo de modelo",
 	"Discover a prompt": "Descobrir um prompt",

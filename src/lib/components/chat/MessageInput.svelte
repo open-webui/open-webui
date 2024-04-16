@@ -296,6 +296,13 @@
 
 		const dropZone = document.querySelector('body');
 
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				console.log('Escape');
+				dragged = false;
+			}
+		};
+
 		const onDragOver = (e) => {
 			e.preventDefault();
 			dragged = true;
@@ -351,11 +358,15 @@
 			dragged = false;
 		};
 
+		window.addEventListener('keydown', handleKeyDown);
+
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
 
 		return () => {
+			window.removeEventListener('keydown', handleKeyDown);
+
 			dropZone?.removeEventListener('dragover', onDragOver);
 			dropZone?.removeEventListener('drop', onDrop);
 			dropZone?.removeEventListener('dragleave', onDragLeave);

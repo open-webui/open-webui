@@ -100,7 +100,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} is verwijderd",
 	"Deleted {tagName}": "{tagName} is verwijderd",
 	"Description": "Beschrijving",
-	"Desktop Notifications": "Desktop Notificaties",
+	"Notifications": "Desktop Notificaties",
 	"Disabled": "Uitgeschakeld",
 	"Discover a modelfile": "Ontdek een modelfile",
 	"Discover a prompt": "Ontdek een prompt",
