@@ -168,26 +168,21 @@ if [ "$NO_OLLAMA" -eq 0 ]; then
     if [ "$install_ollama_directly" = "y" ]; then
         curl -fsSL https://ollama.com/install.sh | sh
         echo "Ollama has been installed directly on the system."
-        # Continue to the next step, do not exit
+        # No exit here; continue to WebUI installation
     else
         echo "Proceeding with Docker-based installation options..."
         echo "Would you like to install Ollama inside Docker? (y/n)"
         read -r install_ollama
 
         if [ "$install_ollama" = "y" ]; then
-            echo "Do you want Ollama in Docker with GPU support? (y/n): "
-            read -r use_gpu
             echo "Installing Ollama with Docker..."
-            if [ "$use_gpu" = "y" ]; then
-                (cd "$BASE_DIR/open-webui" && ./run-ollama-docker.sh --enable-gpu)
-            else
-                (cd "$BASE_DIR/open-webui" && ./run-ollama-docker.sh)
-            fi
-            echo "Ollama has been installed with Docker. Proceeding with further options..."
-            exit 0
+            # Direct call to the script without GPU check, as the script handles it internally
+            (cd "$BASE_DIR/open-webui" && chmod +x run-ollama-docker.sh && ./run-ollama-docker.sh)
+            echo "Ollama has been installed with Docker."
+            # Continue to Docker Compose or direct WebUI installation
         fi
     fi
-fi
+}
 
 # Ask about Docker Compose only if Ollama wasn't installed by previous options
 echo "Would you like to deploy Open WebUI and Ollama together using Docker Compose? (y/n)"
