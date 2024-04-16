@@ -818,6 +818,9 @@ async def generate_chat_completion(
                 url=f"{url}/api/chat",
                 data=form_data.model_dump_json(exclude_none=True).encode(),
                 stream=True,
+                #Adding docs header to the request, so the middleware can identify and run the RAG
+                #use get_doc_by_name request to pass the correct values
+                #TODO
             )
 
             r.raise_for_status()

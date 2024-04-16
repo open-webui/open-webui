@@ -929,7 +929,7 @@
 
 				<div class="mt-1.5 text-xs text-gray-500 text-center">
 					{$i18n.t('AI can make mistakes. Always verify the results!')}					
-					<a href="{$AI_TEAM_MAILTO}]">  {$AI_TEAM_TEXT}</a>					
+					<a href="mailto:ITGovernance@jabil.com">ITGovernance@jabil.com</a>					
 				</div>
 			</div>
 		</div>

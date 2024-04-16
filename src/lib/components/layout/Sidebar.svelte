@@ -25,6 +25,8 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import ChatMenu from './Sidebar/ChatMenu.svelte';
 
+	import JabilLogoLong from "../../../../static/JabilLong.png";
+
 	let show = false;
 	let navElement;
 
@@ -555,6 +557,9 @@
 			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 
 			<div class="flex flex-col">
+				<div class="w-full flex items-center justify-center my-4">
+					<img src={JabilLogoLong} alt="Jabil Logo" class="max-w-[200px]">
+				</div>
 				{#if $user !== undefined}
 					<button
 						class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-900 transition"
