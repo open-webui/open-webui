@@ -1,12 +1,20 @@
 #!/bin/bash
 
-# Parse command-line arguments for the --no-docker flag
+# Initialize flags
+NO_DOCKER=0
+NO_OLLAMA=0
+
+# Parse command-line arguments
 for arg in "$@"
 do
     case $arg in
         --no-docker)
         NO_DOCKER=1
         shift # Remove --no-docker from processing
+        ;;
+        --no-ollama)
+        NO_OLLAMA=1
+        shift # Remove --no-ollama from processing
         ;;
         *)
         # Unknown option
@@ -108,7 +116,7 @@ dockerless_install() {
 # Main script starts here
 echo "Starting the Open WebUI installation script..."
 
-if [ -n "$NO_DOCKER" ] && [ "$NO_DOCKER" -eq 1 ]; then
+if [ "$NO_DOCKER" -eq 1 ]; then
     echo "Proceeding with Docker-less installation due to --no-docker flag."
     dockerless_install
     echo "Installation process has completed."
@@ -118,49 +126,54 @@ fi
 # Step 1: Check for Docker
 check_docker
 
-# Step 2: Ask about Ollama installation
-echo "Would you like to install Ollama directly (not inside Docker)? (y/n)"
-read -r install_ollama_directly
+# Skip Ollama-related options if --no-ollama flag is set
+if [ "$NO_OLLAMA" -eq 0 ]; then
+    echo "Would you like to install Ollama directly (not inside Docker)? (y/n)"
+    read -r install_ollama_directly
 
-if [ "$install_ollama_directly" = "y" ]; then
-    curl -fsSL https://ollama.com/install.sh | sh
-    echo "Ollama has been installed directly on the system."
-else
-    echo "Proceeding with Docker-based installation options..."
-    echo "Would you like to install Ollama inside Docker? (y/n)"
-    read -r install_ollama
-
-    if [ "$install_ollama" = "y" ]; then
-        echo "Do you want Ollama in Docker with GPU support? (y/n): "
-        read -r use_gpu
-        echo "Installing Ollama with Docker..."
-        if [ "$use_gpu" = "y" ]; then
-            ./run-ollama-docker.sh --enable-gpu
-        else
-            ./run-ollama-docker.sh
-        fi
+    if [ "$install_ollama_directly" = "y" ]; then
+        curl -fsSL https://ollama.com/install.sh | sh
+        echo "Ollama has been installed directly on the system."
     else
-        # If not installing Ollama, ask about using Docker Compose for both
-        echo "Would you like to deploy Open WebUI and Ollama together using Docker Compose? (y/n)"
-        read -r deploy_compose
+        echo "Proceeding with Docker-based installation options..."
+        echo "Would you like to install Ollama inside Docker? (y/n)"
+        read -r install_ollama
 
-        if [ "$deploy_compose" = "y" ]; then
-            echo "Enable GPU support? (y/n)"
-            read -r enable_gpu
-
-            compose_cmd="./run-compose.sh"
-
-            if [ "$enable_gpu" = "y" ]; then
-                compose_cmd+=" --enable-gpu"
+        if [ "$install_ollama" = "y" ]; then
+            echo "Do you want Ollama in Docker with GPU support? (y/n): "
+            read -r use_gpu
+            echo "Installing Ollama with Docker..."
+            if [ "$use_gpu" = "y" ]; then
+                ./run-ollama-docker.sh --enable-gpu
+            else
+                ./run-ollama-docker.sh
             fi
-
-            echo "Running: $compose_cmd"
-            eval "$compose_cmd"
         else
-            # If not using Docker Compose, install Open WebUI with Docker alone
-            install_openwebui_docker
+            # If not installing Ollama, ask about using Docker Compose for both
+            echo "Would you like to deploy Open WebUI and Ollama together using Docker Compose? (y/n)"
+            read -r deploy_compose
+
+            if [ "$deploy_compose" = "y" ]; then
+                echo "Enable GPU support? (y/n)"
+                read -r enable_gpu
+
+                compose_cmd="./run-compose.sh"
+
+                if [ "$enable_gpu" = "y" ]; then
+                    compose_cmd+=" --enable-gpu"
+                fi
+
+                echo "Running: $compose_cmd"
+                eval "$compose_cmd"
+            else
+                # If not using Docker Compose, install Open WebUI with Docker alone
+                install_openwebui_docker
+            fi
         fi
     fi
+else
+    echo "Skipping Ollama installation as per --no-ollama flag."
+    install_openwebui_docker
 fi
 
 echo "Installation process has completed."
