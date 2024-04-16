@@ -6,8 +6,7 @@ NO_OLLAMA=0
 INSTALL_PATH="$HOME/.open-webui/source"
 
 # Parse command-line arguments
-for arg in "$@"
-do
+for arg in "$@"; do
     case $arg in
         --no-docker)
         NO_DOCKER=1
@@ -180,33 +179,31 @@ if [ "$NO_OLLAMA" -eq 0 ]; then
             read -r use_gpu
             echo "Installing Ollama with Docker..."
             if [ "$use_gpu" = "y" ]; then
-                ./run-ollama-docker.sh --enable-gpu
+                (cd "$BASE_DIR/open-webui" && ./run-ollama-docker.sh --enable-gpu)
             else
-                ./run-ollama-docker.sh
+                (cd "$BASE_DIR/open-webui" && ./run-ollama-docker.sh)
             fi
+            echo "Ollama has been installed with Docker. Proceeding with further options..."
+            exit 0
         fi
     fi
-    # After handling Ollama installation, continue to inquire about deploying Open WebUI
-    echo "Would you like to deploy Open WebUI and Ollama together using Docker Compose? (y/n)"
-    read -r deploy_compose
+fi
 
-    if [ "$deploy_compose" = "y" ]; then
-        echo "Enable GPU support? (y/n)"
-        read -r enable_gpu
+# Ask about Docker Compose only if Ollama wasn't installed by previous options
+echo "Would you like to deploy Open WebUI and Ollama together using Docker Compose? (y/n)"
+read -r deploy_compose
 
-        compose_cmd="./run-compose.sh"
-        if [ "$enable_gpu" = "y" ]; then
-            compose_cmd+=" --enable-gpu"
-        fi
-
-        echo "Running: $compose_cmd"
-        eval "$compose_cmd"
-    else
-        # If not using Docker Compose, install Open WebUI with Docker alone
-        install_openwebui_docker
+if [ "$deploy_compose" = "y" ]; then
+    echo "Enable GPU support? (y/n)"
+    read -r enable_gpu
+    compose_cmd="./run-compose.sh"
+    if [ "$enable_gpu" = "y" ]; then
+        compose_cmd+=" --enable-gpu"
     fi
+    echo "Running: $compose_cmd"
+    eval "$compose_cmd"
 else
-    echo "Skipping Ollama installation as per --no-ollama flag."
+    # If not using Docker Compose, just install Open WebUI with Docker
     install_openwebui_docker
 fi
 
