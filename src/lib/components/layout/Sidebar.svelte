@@ -62,14 +62,22 @@
 			}
 		}
 
-		document.addEventListener('touchstart', (e) => {
+		const onTouchStart = (e) => {
 			touchstartX = e.changedTouches[0].screenX;
-		});
+		};
 
-		document.addEventListener('touchend', (e) => {
+		const onTouchEnd = (e) => {
 			touchendX = e.changedTouches[0].screenX;
 			checkDirection();
-		});
+		};
+
+		document.addEventListener('touchstart', onTouchStart);
+		document.addEventListener('touchend', onTouchEnd);
+
+		return () => {
+			document.removeEventListener('touchstart', onTouchStart);
+			document.removeEventListener('touchend', onTouchEnd);
+		};
 	});
 
 	// Helper function to fetch and add chat content to each chat
