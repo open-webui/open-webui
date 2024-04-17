@@ -1,0 +1,53 @@
+.revodata .bg-white {
+	color: #333333 !important;	 /* DEFAULT FONT COLOR */
+}
+
+/* Left menu bar */
+.revodata .bg-black {
+  background-color: #0A0A56;
+}
+
+.revodata .bg-black .bg-gray-950 {
+	--tw-bg-opacity: 1;
+	background-color: rgb(255 255 255 / var(--tw-bg-opacity));
+	color: #333333;
+	stroke: #0A0A56 !important;
+}
+
+.revodata .bg-black .hover\:bg-gray-900:hover {
+    --tw-bg-opacity: 1;
+    background-color: #3D21A3;
+}
+
+/* Default colors */
+.revodata .app .dark\:text-white > * {
+	color: #333333 !important;	 /* DEFAULT FONT COLOR */
+}
+
+/* Modal boxed */
+.revodata .app .modal-content > * {
+	color: #333333 !important;	 /* DEFAULT FONT COLOR */
+	stroke: #FFFFFF !important; /* ICON COLOR */
+	background-color: #ffffff !important;  /* DEFAULT BACKGROUND COLOR */
+}
+
+/* Default colors */
+.revodata .app > * {
+	color: #ffffff !important;	 /* DEFAULT FONT COLOR */
+	stroke: #FFFFFF !important; /* ICON COLOR */
+	background-color: #ffffff !important;  /* DEFAULT BACKGROUND COLOR */
+}
+
+/* Top navigation */
+.revodata #nav {
+	background-color: #f1f2f4; /* TOP BACKGROUND COLOR */
+}
+
+/* Top navigation */
+.revodata #nav > * {
+	color: #333333 !important;	 /* DEFAULT FONT COLOR */
+}
+
+.revodata .text-sm.font-medium.dark\:text-gray-300 {
+	color: #333333;
+}
