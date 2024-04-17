@@ -28,7 +28,10 @@ from apps.web.models.tags import (
 
 from constants import ERROR_MESSAGES
 
-from config import SRC_LOG_LEVELS
+from config import (
+    SRC_LOG_LEVELS,
+    ALLOW_ADMIN_EXPORT
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -79,6 +82,11 @@ async def get_all_user_chats(user=Depends(get_current_user)):
 
 @router.get("/all/db", response_model=List[ChatResponse])
 async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
+    if not ALLOW_ADMIN_EXPORT:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
     return [
         ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
         for chat in Chats.get_all_chats()
