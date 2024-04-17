@@ -32,6 +32,7 @@
 			<button
 				class="self-center"
 				on:click={() => {
+					localStorage.version = $config.version;
 					show = false;
 				}}
 			>

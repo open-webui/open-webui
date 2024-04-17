@@ -346,10 +346,10 @@ export const resetVectorDB = async (token: string) => {
 	return res;
 };
 
-export const getEmbeddingModel = async (token: string) => {
+export const getEmbeddingConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/embedding/model`, {
+	const res = await fetch(`${RAG_API_BASE_URL}/embedding`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -373,14 +373,21 @@ export const getEmbeddingModel = async (token: string) => {
 	return res;
 };
 
+type OpenAIConfigForm = {
+	key: string;
+	url: string;
+};
+
 type EmbeddingModelUpdateForm = {
+	openai_config?: OpenAIConfigForm;
+	embedding_engine: string;
 	embedding_model: string;
 };
 
-export const updateEmbeddingModel = async (token: string, payload: EmbeddingModelUpdateForm) => {
+export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/embedding/model/update`, {
+	const res = await fetch(`${RAG_API_BASE_URL}/embedding/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

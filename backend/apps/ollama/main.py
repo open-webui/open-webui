@@ -612,8 +612,13 @@ async def generate_embeddings(
     user=Depends(get_current_user),
 ):
     if url_idx == None:
-        if form_data.model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+        model = form_data.model
+
+        if ":" not in model:
+            model = f"{model}:latest"
+
+        if model in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -649,6 +654,60 @@ async def generate_embeddings(
         )
 
 
+def generate_ollama_embeddings(
+    form_data: GenerateEmbeddingsForm,
+    url_idx: Optional[int] = None,
+):
+
+    log.info(f"generate_ollama_embeddings {form_data}")
+
+    if url_idx == None:
+        model = form_data.model
+
+        if ":" not in model:
+            model = f"{model}:latest"
+
+        if model in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
+            )
+
+    url = app.state.OLLAMA_BASE_URLS[url_idx]
+    log.info(f"url: {url}")
+
+    try:
+        r = requests.request(
+            method="POST",
+            url=f"{url}/api/embeddings",
+            data=form_data.model_dump_json(exclude_none=True).encode(),
+        )
+        r.raise_for_status()
+
+        data = r.json()
+
+        log.info(f"generate_ollama_embeddings {data}")
+
+        if "embedding" in data:
+            return data["embedding"]
+        else:
+            raise "Something went wrong :/"
+    except Exception as e:
+        log.exception(e)
+        error_detail = "Open WebUI: Server Connection Error"
+        if r is not None:
+            try:
+                res = r.json()
+                if "error" in res:
+                    error_detail = f"Ollama: {res['error']}"
+            except:
+                error_detail = f"Ollama: {e}"
+
+        raise error_detail
+
+
 class GenerateCompletionForm(BaseModel):
     model: str
     prompt: str
@@ -672,8 +731,13 @@ async def generate_completion(
 ):
 
     if url_idx == None:
-        if form_data.model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+        model = form_data.model
+
+        if ":" not in model:
+            model = f"{model}:latest"
+
+        if model in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -770,8 +834,13 @@ async def generate_chat_completion(
 ):
 
     if url_idx == None:
-        if form_data.model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+        model = form_data.model
+
+        if ":" not in model:
+            model = f"{model}:latest"
+
+        if model in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -874,8 +943,13 @@ async def generate_openai_chat_completion(
 ):
 
     if url_idx == None:
-        if form_data.model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[form_data.model]["urls"])
+        model = form_data.model
+
+        if ":" not in model:
+            model = f"{model}:latest"
+
+        if model in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
