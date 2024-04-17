@@ -38,9 +38,9 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [BuildingTransparency with OpenFootprint impact data](/OpenFootprint)
 - [Use our state map filter](#geoview=country) with colors for [new USEEIO reporting maps](https://figshare.com/collections/USEEIO_State_Models_v1_0_-_Supporting_Figures/7041473)
 - [Python - Process All the Places by State and Zip](/places) - Carolyn
-- [BuildingTransparency - API Aggregates of States and Countries](/io/template/product/) - Luwei
-- [BuildingTransparency - JSON file pull for impact templates](/io/template/product/) - Harsha<!-- Later display with SQLite -->
-- [BuildingTransparency - Product Impact Profiles by State and Zip](/io/template/feed/)
+- [BuildingTransparency - Product Impact Profiles by State and Zip](/io/template/feed/) - Ronan
+- [BuildingTransparency - API Aggregates of States and Countries](/io/template/product/) - Previously Luwei
+- [BuildingTransparency - JSON file pull for impact templates](/io/template/product/)
 - [AI Process for Farm Fresh Data and Food Deserts ML](/community-data/process/python/farmfresh/)
 - [Push EPA date to Google Data Commons API](https://docs.datacommons.org/api/)
 
