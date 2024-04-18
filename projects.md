@@ -69,36 +69,8 @@ Our React Team meets Wednesdays at [10 PM EDT](coders)
 - [Steps for SQLite in Browser](/data-pipeline/timelines/sqlite/phiresky/) - [Example (Runs SQL)](https://phiresky.github.io/blog/2021/hosting-sqlite-databases-on-github-pages/) - Aashish
 - [Impact Label Pipeline](/apps/impact) - Too optimize and change inputs
 
-<hr style="margin-bottom: 20px;">
-# MoonShot Challenges
-
-Not your average modeling tasks, but worth the effort.
-
-**[Install LLM from Google Data Commons](github.com/datacommonsorg/website)**
-Build LLM from Google Data Commons locally [notes](/localsite/info/data/datacommons/), Integrate within [Open WebUI](/projects/src/)
-
-**[Integrate ObservableHQ's Interface for selecting charts](https://github.com/observablehq)**  
-Deploy to GitHub pages to create an easy-to-use alternative to Tableau.
-[Mike Bostock provided an assist](https://github.com/observablehq/framework/discussions/1030) - deploy.yml files
-
-**[Enhance API Key Storage in Earthscape and push to Chatbot UI](/earthscape)**
-[API Key Local Storage mockup](../localsite/tools/storage/api/) - Javascript repeater with localStorage
-
-**[Push EPA Data to Google Data Commons](/localsite/info/data/datacommons/)**
-Push EPA data assempled in our [OpenFootprint](/OpenFootprint) impacts folder into Google Data Commons.
-Add USEEIO data to [Data Commons Sustainability Section](https://www.datacommons.org/explore/sustainability)
-
-**[Integrate with Census Reporting Sites](/community/resources/censusreporter/)**
-Integrate with [CensusReporter.com](https://CensusReporter.com) and [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/)
-
-**[Create a See-Click-Fix-Pay Rewards Program](https://seeclickfix.com)**
-Integrate data, maps and machine learning with [social safety net programs](https://www.codeforamerica.org/features/bringing-social-safety-net-benefits-online/) using 
-[Job impact data](/localsite/info/#indicators=VADD,JOBS) and [Open Footprints](/OpenFootprint/) integrating [X](https://x.com) with [Facebook](https://facebook.com/) with [Wechat mini programs](https://sekkeidigitalgroup.com/wechat-mini-program/) and [Weibo](Weibo).
-
-**[AI Training Repos: Lunar Olympics and LunarSphere Supply Lander](/replicate/)**
-Join us [Monday evenings at 10pm EDT](/io/coders/) as we create future-forward interfaces.
-
-<!-- [ML - NAICS Imputation Using Machine Learning](https://github.com/ModelEarth/machine-learning) -->
+**Moonshot Challenges**
+Are you ready to [take the leap?](/community/projects/)
 
 
 <hr style="margin-bottom: 20px;">
