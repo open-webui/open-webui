@@ -1,5 +1,5 @@
 {
-	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s', 'm', 'h', 'd', 's' ou '-1' para não expirar.",
+	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s', 'm', 'h', 'd', 'w' ou '-1' para não expirar.",
 	"(Beta)": "(Beta)",
 	"(e.g. `sh webui.sh --api`)": "(por exemplo, `sh webui.sh --api`)",
 	"(latest)": "(mais recente)",
