@@ -116,7 +116,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             idx = app.state.OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
             base_url = app.state.OPENAI_API_BASE_URLS[idx]
 
-        speech_url = urljoin(base_url, "/audio/speech")
+        speech_url = urljoin(base_url, "./audio/speech")
 
         body = await request.body()
         name = hashlib.sha256(body).hexdigest()
