@@ -1,5 +1,5 @@
 {
-	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'초', '분', '시간', '일', '주' 또는 만료 없음 '-1'",
+	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s', 'm', 'h', 'd', 'w' 또는 만료 없음 '-1'",
 	"(Beta)": "(Beta)",
 	"(e.g. `sh webui.sh --api`)": "(예: `sh webui.sh --api`)",
 	"(latest)": "(latest)",
