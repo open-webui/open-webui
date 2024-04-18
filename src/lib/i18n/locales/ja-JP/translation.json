@@ -1,5 +1,5 @@
 {
-	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'秒', '分', '時間', '日', '週' または '-1' で無期限。",
+	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s', 'm', 'h', 'd', 'w' または '-1' で無期限。",
 	"(Beta)": "(ベータ版)",
 	"(e.g. sh webui.sh --api)": "(例: sh webui.sh --api)",
 	"(latest)": "(最新)",
