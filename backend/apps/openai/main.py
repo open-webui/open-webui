@@ -100,18 +100,18 @@ async def update_openai_key(form_data: KeysUpdateForm, user=Depends(get_admin_us
 
 @app.post("/audio/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
-    audio_base_url = os.environ.get("OPENAI_AUDIO_BASE_URL", "")
-    if audio_base_url:
-        print(f"Got OPENAI_AUDIO_BASE_URL: {audio_base_url}")
+    tts_audio_base_url = os.environ.get("TTS_OPENAI_API_BASE_URL", "")
+    if tts_audio_base_url:
+        print(f"Got TTS_OPENAI_API_BASE_URL: {tts_audio_base_url}")
     else:
-        audio_base_url = os.environ["OPENAI_BASE_URL"]
-        print(f"Using OPENAI_BASE_URL for audio: {audio_base_url}")
+        tts_audio_base_url = os.environ["OPENAI_BASE_URL"]
+        print(f"Using OPENAI_BASE_URL for audio: {tts_audio_base_url}")
 
     idx = None
     try:
         is_openedai_speech = True
         if is_openedai_speech: # TODO: check if user wants to use openai cloud service (but why?), and behave accordingly
-            base_url = audio_base_url
+            base_url = tts_audio_base_url
         else:
             idx = app.state.OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
             base_url = app.state.OPENAI_API_BASE_URLS[idx]
