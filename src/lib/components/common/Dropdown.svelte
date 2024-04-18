@@ -4,10 +4,12 @@
 
 	import { flyAndScale } from '$lib/utils/transitions';
 
+	export let show = false;
 	const dispatch = createEventDispatcher();
 </script>
 
 <DropdownMenu.Root
+	bind:open={show}
 	onOpenChange={(state) => {
 		dispatch('change', state);
 	}}
