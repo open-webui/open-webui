@@ -12,6 +12,7 @@
 	import Placeholder from './Messages/Placeholder.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { imageGenerations } from '$lib/apis/images';
+	import { copyToClipboard } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -42,40 +43,11 @@
 		element.scrollTop = element.scrollHeight;
 	};
 
-	const copyToClipboard = (text) => {
-		if (!navigator.clipboard) {
-			var textArea = document.createElement('textarea');
-			textArea.value = text;
-
-			// Avoid scrolling to bottom
-			textArea.style.top = '0';
-			textArea.style.left = '0';
-			textArea.style.position = 'fixed';
-
-			document.body.appendChild(textArea);
-			textArea.focus();
-			textArea.select();
-
-			try {
-				var successful = document.execCommand('copy');
-				var msg = successful ? 'successful' : 'unsuccessful';
-				console.log('Fallback: Copying text command was ' + msg);
-			} catch (err) {
-				console.error('Fallback: Oops, unable to copy', err);
-			}
-
-			document.body.removeChild(textArea);
-			return;
+	const copyToClipboardWithToast = async (text) => {
+		const res = await copyToClipboard(text);
+		if (res) {
+			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
-		navigator.clipboard.writeText(text).then(
-			function () {
-				console.log('Async: Copying to clipboard was successful!');
-				toast.success($i18n.t('Copying to clipboard was successful!'));
-			},
-			function (err) {
-				console.error('Async: Could not copy text: ', err);
-			}
-		);
 	};
 
 	const confirmEditMessage = async (messageId, content) => {
@@ -330,7 +302,7 @@
 								{confirmEditMessage}
 								{showPreviousMessage}
 								{showNextMessage}
-								{copyToClipboard}
+								copyToClipboard={copyToClipboardWithToast}
 							/>
 						{:else}
 							<ResponseMessage
@@ -344,7 +316,7 @@
 								{showPreviousMessage}
 								{showNextMessage}
 								{rateMessage}
-								{copyToClipboard}
+								copyToClipboard={copyToClipboardWithToast}
 								{continueGeneration}
 								{regenerateResponse}
 								on:save={async (e) => {
