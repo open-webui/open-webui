@@ -22,7 +22,6 @@
     } from '$lib/apis/azureopenai';
 
     import { toast } from 'svelte-sonner';
-    import { Value } from 'bits-ui/dist/bits/select';
 
     const i18n = getContext('i18n');
 
@@ -213,6 +212,11 @@
                                         class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
                                         placeholder={$i18n.t('Endpoint URL')}
                                         bind:value={url}
+                                        on:input={(event) => {
+                                            if (event.target.value.trim() === '') {
+                                                AZURE_OPENAI_API_BASE_URLS[idx] = 'https://your_account_name.openai.azure.com/';
+                                            }
+                                        }}
                                         autocomplete="off"
                                     />
                                 </div>
@@ -230,6 +234,11 @@
                                         class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
                                         placeholder={$i18n.t('API Version')}
                                         bind:value={AZURE_OPENAI_API_VERSIONS[idx]}
+                                        on:input={(event) => {
+                                            if (event.target.value.trim() === '') {
+                                                AZURE_OPENAI_API_VERSIONS[idx] = '2024-02-01';
+                                            }
+                                        }}
                                         autocomplete="off"
                                     />
                                 </div>
