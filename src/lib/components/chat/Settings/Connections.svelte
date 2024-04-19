@@ -10,6 +10,17 @@
 		updateOpenAIKeys,
 		updateOpenAIUrls
 	} from '$lib/apis/openai';
+
+	import {
+		getAzureOpenAIKeys,
+		getAzureOpenAIUrls,
+		getAzureOpenAIVersions,
+
+		updateAzureOpenAIKeys,
+		updateAzureOpenAIUrls,
+		updateAzureOpenAIVersions
+	} from '$lib/apis/azureopenai';
+
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
@@ -45,6 +56,14 @@
 		await models.set(await getModels());
 	};
 
+	const updateAzureOpenAIHandler = async () => {
+		AZURE_OPENAI_API_BASE_URLS = await updateAzureOpenAIUrls(localStorage.token, AZURE_OPENAI_API_BASE_URLS);
+		AZURE_OPENAI_API_KEYS = await updateAzureOpenAIKeys(localStorage.token, AZURE_OPENAI_API_KEYS);
+		AZURE_OPENAI_API_VERSIONS = await updateAzureOpenAIKeys(localStorage.token, AZURE_OPENAI_API_VERSIONS);
+
+		await models.set(await getModels());
+	};
+
 	const updateOllamaUrlsHandler = async () => {
 		OLLAMA_BASE_URLS = await updateOllamaUrls(localStorage.token, OLLAMA_BASE_URLS);
 
@@ -64,6 +83,10 @@
 			OLLAMA_BASE_URLS = await getOllamaUrls(localStorage.token);
 			OPENAI_API_BASE_URLS = await getOpenAIUrls(localStorage.token);
 			OPENAI_API_KEYS = await getOpenAIKeys(localStorage.token);
+
+			AZURE_OPENAI_API_BASE_URLS = await getAzureOpenAIUrls(localStorage.token);
+			AZURE_OPENAI_API_KEYS = await getAzureOpenAIKeys(localStorage.token);
+			AZURE_OPENAI_API_VERSIONS = await getAzureOpenAIVersions(localStorage.token);
 		}
 	});
 </script>
@@ -72,6 +95,7 @@
 	class="flex flex-col h-full justify-between text-sm"
 	on:submit|preventDefault={() => {
 		updateOpenAIHandler();
+		updateAzureOpenAIHandler();
 		dispatch('save');
 	}}
 >
