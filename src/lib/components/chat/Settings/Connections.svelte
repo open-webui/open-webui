@@ -14,13 +14,13 @@
     import {
         getAzureOpenAIKeys,
         getAzureOpenAIUrls,
-        // getAzureOpenAIVersions,
-        // getAzureOpenAIDeploymentModelNames,
+        getAzureOpenAIAPIVersions,
+        getAzureOpenAIDeploymentModelNames,
 
         updateAzureOpenAIKeys,
         updateAzureOpenAIUrls,
-        // updateAzureOpenAIVersions,
-        // updateAzureOpenAIDeploymentModelNames
+        updateAzureOpenAIAPIVersions,
+        updateAzureOpenAIDeploymentModelNames
     } from '$lib/apis/azureopenai';
 
     import { toast } from 'svelte-sonner';
@@ -62,7 +62,7 @@
     const updateAzureOpenAIHandler = async () => {
         AZURE_OPENAI_API_BASE_URLS = await updateAzureOpenAIUrls(localStorage.token, AZURE_OPENAI_API_BASE_URLS);
         AZURE_OPENAI_API_KEYS = await updateAzureOpenAIKeys(localStorage.token, AZURE_OPENAI_API_KEYS);
-        AZURE_OPENAI_API_VERSIONS = await updateAzureOpenAIVersions(localStorage.token, AZURE_OPENAI_API_VERSIONS);
+        AZURE_OPENAI_API_VERSIONS = await updateAzureOpenAIAPIVersions(localStorage.token, AZURE_OPENAI_API_VERSIONS);
         AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES = await updateAzureOpenAIDeploymentModelNames(localStorage.token, AZURE_OPENAI_API_VERSIONS);
 
         await models.set(await getModels());
@@ -90,7 +90,7 @@
 
             AZURE_OPENAI_API_BASE_URLS = await getAzureOpenAIUrls(localStorage.token);
             AZURE_OPENAI_API_KEYS = await getAzureOpenAIKeys(localStorage.token);
-            AZURE_OPENAI_API_VERSIONS = await getAzureOpenAIVersions(localStorage.token);
+            AZURE_OPENAI_API_VERSIONS = await getAzureOpenAIAPIVersions(localStorage.token);
             AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES = await getAzureOpenAIDeploymentModelNames(localStorage.token);
         }
     });
