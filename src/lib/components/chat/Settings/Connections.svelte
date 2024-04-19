@@ -193,6 +193,7 @@
             </div>
         </div>
 
+        <hr class=" dark:border-gray-700" />
 
         <div class=" space-y-3">
             <div class="mt-2 space-y-2 pr-1.5">
