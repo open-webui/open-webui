@@ -316,38 +316,47 @@
 			console.log(e);
 
 			if (e.dataTransfer?.files) {
-				let reader = new FileReader();
-
-				reader.onload = (event) => {
-					files = [
-						...files,
-						{
-							type: 'image',
-							url: `${event.target.result}`
-						}
-					];
-				};
-
 				const inputFiles = e.dataTransfer?.files;
 
 				if (inputFiles && inputFiles.length > 0) {
-					const file = inputFiles[0];
-					console.log(file, file.name.split('.').at(-1));
-					if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
-						reader.readAsDataURL(file);
-					} else if (
-						SUPPORTED_FILE_TYPE.includes(file['type']) ||
-						SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-					) {
-						uploadDoc(file);
-					} else {
-						toast.error(
-							$i18n.t(
-								`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
-								{ file_type: file['type'] }
-							)
-						);
-						uploadDoc(file);
+					for (var i = 0; i < inputFiles.length; i += 1) {
+						const file = inputFiles[i];
+						//console.log(file, file.name.split('.').at(-1));
+						if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+							try {
+								let reader = new FileReader();
+								reader.onload = (event) => {
+									files = [
+										...files,
+										{
+											type: 'image',
+											url: `${event.target.result}`
+										}
+									];
+								};
+								reader.readAsDataURL(file);
+								window.setTimeout(() => console.log('Files: (' + i + ')', files), 1000);
+							} catch (exc) {
+								toast.error(
+									$i18n.t(
+										"An image couldn't be loaded. Please try again, try to upload one image at a time or upload a different image."
+									)
+								);
+							}
+						} else if (
+							SUPPORTED_FILE_TYPE.includes(file['type']) ||
+							SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+						) {
+							await uploadDoc(file);
+						} else {
+							toast.error(
+								$i18n.t(
+									`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
+									{ file_type: file['type'] }
+								)
+							);
+							await uploadDoc(file);
+						}
 					}
 				} else {
 					toast.error($i18n.t(`File not found.`));
@@ -468,38 +477,47 @@
 					type="file"
 					hidden
 					on:change={async () => {
-						let reader = new FileReader();
-						reader.onload = (event) => {
-							files = [
-								...files,
-								{
-									type: 'image',
-									url: `${event.target.result}`
-								}
-							];
-							inputFiles = null;
-							filesInputElement.value = '';
-						};
-
 						if (inputFiles && inputFiles.length > 0) {
-							const file = inputFiles[0];
-							if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
-								reader.readAsDataURL(file);
-							} else if (
-								SUPPORTED_FILE_TYPE.includes(file['type']) ||
-								SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-							) {
-								uploadDoc(file);
-								filesInputElement.value = '';
-							} else {
-								toast.error(
-									$i18n.t(
-										`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
-										{ file_type: file['type'] }
-									)
-								);
-								uploadDoc(file);
-								filesInputElement.value = '';
+							const file = inputFiles[i];
+							for (let i = 0; i < inputFiles.length; i += 1) {
+								if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+									try {
+										let reader = new FileReader();
+										reader.onload = (event) => {
+											files = [
+												...files,
+												{
+													type: 'image',
+													url: `${event.target.result}`
+												}
+											];
+											inputFiles = null;
+											filesInputElement.value = '';
+										};
+										reader.readAsDataURL(file);
+									} catch (exc) {
+										toast.error(
+											$i18n.t(
+												"An image couldn't be loaded. Please try again, try to upload one image at a time or upload a different image."
+											)
+										);
+									}
+								} else if (
+									SUPPORTED_FILE_TYPE.includes(file['type']) ||
+									SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+								) {
+									uploadDoc(file);
+									filesInputElement.value = '';
+								} else {
+									toast.error(
+										$i18n.t(
+											`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
+											{ file_type: file['type'] }
+										)
+									);
+									uploadDoc(file);
+									filesInputElement.value = '';
+								}
 							}
 						} else {
 							toast.error($i18n.t(`File not found.`));
