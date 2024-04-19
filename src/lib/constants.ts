@@ -9,6 +9,7 @@ export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 export const LITELLM_API_BASE_URL = `${WEBUI_BASE_URL}/litellm/api`;
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;
 export const OPENAI_API_BASE_URL = `${WEBUI_BASE_URL}/openai/api`;
+export const AZURE_OPENAI_API_BASE_URL = `${WEBUI_BASE_URL}/azureopenai/api`;
 export const AUDIO_API_BASE_URL = `${WEBUI_BASE_URL}/audio/api/v1`;
 export const IMAGES_API_BASE_URL = `${WEBUI_BASE_URL}/images/api/v1`;
 export const RAG_API_BASE_URL = `${WEBUI_BASE_URL}/rag/api/v1`;
