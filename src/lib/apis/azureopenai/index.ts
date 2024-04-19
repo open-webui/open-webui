@@ -163,7 +163,7 @@ export const getAzureOpenAIAPIVersions = async (token: string = '') => {
 		throw error;
 	}
 
-	return res.AZURE_OPENAI_API_KEYS;
+	return res.AZURE_OPENAI_API_VERSIONS;
 };
 
 export const updateAzureOpenAIAPIVersions = async (token: string = '', keys: string[]) => {
@@ -198,10 +198,77 @@ export const updateAzureOpenAIAPIVersions = async (token: string = '', keys: str
 		throw error;
 	}
 
-	return res.AZURE_OPENAI_API_KEYS;
+	return res.AZURE_OPENAI_API_VERSIONS;
 };
 
 export const getAzureOpenAIDeploymentModelNames = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/deploymentmodelnames`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES;
+};
+
+export const updateAzureOpenAIDeploymentModelNames = async (token: string = '', keys: string[]) => {
+	let error = null;
+
+	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/deploymentmodelnames/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			keys: keys
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES;
+};
+
+export const getAzureOpenAIModels = async (token: string = '') => {
 	let error = null;
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/deploymentmodels`, {
@@ -234,41 +301,6 @@ export const getAzureOpenAIDeploymentModelNames = async (token: string = '') => 
 					return a.name.localeCompare(b.name);
 				})
 		: models;
-};
-
-export const updateAzureOpenAIDeploymentModelNames = async (token: string = '', keys: string[]) => {
-	let error = null;
-
-	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/deploymentmodels/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({
-			keys: keys
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res.AZURE_OPENAI_API_KEYS;
 };
 
 // depreciated, https://learn.microsoft.com/en-us/rest/api/aiservices/accountmanagement/deployments/list?view=rest-aiservices-accountmanagement-2023-05-01&viewFallbackFrom=rest-aiservices-accountmanagement-2024-02-01&tabs=HTTP#code-try-0
