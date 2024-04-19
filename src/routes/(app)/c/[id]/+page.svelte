@@ -337,21 +337,17 @@
 				return baseMessage;
 			});
 
-		let lastImageIndex = -1;
-
-		// Find the index of the last object with images
-		messagesBody.forEach((item, index) => {
-			if (item.images) {
-				lastImageIndex = index;
-			}
-		});
-
-		// Remove images from all but the last one
-		messagesBody.forEach((item, index) => {
-			if (index !== lastImageIndex) {
+		// 1. Iterate backwards until an image is found, then...
+		// 2. Remove all other images from previous objects
+		var deleteImages = false;
+		for (var i = messagesBody.length - 1; i >= 0; i--) {
+			const item = messagesBody[i];
+			if (deleteImages) {
 				delete item.images;
+			} else if (item.images) {
+				deleteImages = true;
 			}
-		});
+		}
 
 		const docs = messages
 			.filter((message) => message?.files ?? null)
