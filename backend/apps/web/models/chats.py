@@ -123,7 +123,8 @@ class ChatTable:
                 "user_id": f"shared-{chat_id}",
                 "title": chat.title,
                 "chat": chat.chat,
-                "created_at": int(time.time()),
+                "created_at": chat.created_at,
+                "updated_at": int(time.time()),
             }
         )
         shared_result = Chat.create(**shared_chat.model_dump())
