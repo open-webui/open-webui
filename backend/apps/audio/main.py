@@ -15,6 +15,8 @@ from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 
 from fastapi.middleware.cors import CORSMiddleware
 from faster_whisper import WhisperModel
+from pydantic import BaseModel
+
 
 import requests
 import hashlib
@@ -65,6 +67,36 @@ log.info(f"whisper_device_type: {whisper_device_type}")
 
 SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+class OpenAIConfigUpdateForm(BaseModel):
+    url: str
+    key: str
+
+
+@app.get("/config")
+async def get_openai_config(user=Depends(get_admin_user)):
+    return {
+        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
+        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
+    }
+
+
+@app.post("/config/update")
+async def update_openai_config(
+    form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user)
+):
+    if form_data.key == "":
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+    app.state.OPENAI_API_BASE_URL = form_data.url
+    app.state.OPENAI_API_KEY = form_data.key
+
+    return {
+        "status": True,
+        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
+        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
+    }
 
 
 @app.post("/speech")

@@ -96,8 +96,8 @@ app.state.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.RAG_TEMPLATE = RAG_TEMPLATE
 
-app.state.RAG_OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
-app.state.RAG_OPENAI_API_KEY = RAG_OPENAI_API_KEY
+app.state.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
+app.state.OPENAI_API_KEY = RAG_OPENAI_API_KEY
 
 app.state.PDF_EXTRACT_IMAGES = False
 
@@ -150,8 +150,8 @@ async def get_embedding_config(user=Depends(get_admin_user)):
         "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
         "embedding_model": app.state.RAG_EMBEDDING_MODEL,
         "openai_config": {
-            "url": app.state.RAG_OPENAI_API_BASE_URL,
-            "key": app.state.RAG_OPENAI_API_KEY,
+            "url": app.state.OPENAI_API_BASE_URL,
+            "key": app.state.OPENAI_API_KEY,
         },
     }
 
@@ -182,8 +182,8 @@ async def update_embedding_config(
             app.state.sentence_transformer_ef = None
 
             if form_data.openai_config != None:
-                app.state.RAG_OPENAI_API_BASE_URL = form_data.openai_config.url
-                app.state.RAG_OPENAI_API_KEY = form_data.openai_config.key
+                app.state.OPENAI_API_BASE_URL = form_data.openai_config.url
+                app.state.OPENAI_API_KEY = form_data.openai_config.key
         else:
             sentence_transformer_ef = (
                 embedding_functions.SentenceTransformerEmbeddingFunction(
@@ -201,8 +201,8 @@ async def update_embedding_config(
             "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
             "embedding_model": app.state.RAG_EMBEDDING_MODEL,
             "openai_config": {
-                "url": app.state.RAG_OPENAI_API_BASE_URL,
-                "key": app.state.RAG_OPENAI_API_KEY,
+                "url": app.state.OPENAI_API_BASE_URL,
+                "key": app.state.OPENAI_API_KEY,
             },
         }
 
@@ -317,8 +317,8 @@ def query_doc_handler(
                 query_embeddings = generate_openai_embeddings(
                     model=app.state.RAG_EMBEDDING_MODEL,
                     text=form_data.query,
-                    key=app.state.RAG_OPENAI_API_KEY,
-                    url=app.state.RAG_OPENAI_API_BASE_URL,
+                    key=app.state.OPENAI_API_KEY,
+                    url=app.state.OPENAI_API_BASE_URL,
                 )
 
             return query_embeddings_doc(
@@ -369,8 +369,8 @@ def query_collection_handler(
                 query_embeddings = generate_openai_embeddings(
                     model=app.state.RAG_EMBEDDING_MODEL,
                     text=form_data.query,
-                    key=app.state.RAG_OPENAI_API_KEY,
-                    url=app.state.RAG_OPENAI_API_BASE_URL,
+                    key=app.state.OPENAI_API_KEY,
+                    url=app.state.OPENAI_API_BASE_URL,
                 )
 
             return query_embeddings_collection(
@@ -486,8 +486,8 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
                     generate_openai_embeddings(
                         model=app.state.RAG_EMBEDDING_MODEL,
                         text=text,
-                        key=app.state.RAG_OPENAI_API_KEY,
-                        url=app.state.RAG_OPENAI_API_BASE_URL,
+                        key=app.state.OPENAI_API_KEY,
+                        url=app.state.OPENAI_API_BASE_URL,
                     )
                     for text in texts
                 ]
