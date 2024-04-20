@@ -1,7 +1,7 @@
 ---
 name: open-webui
 base: core22
-version: '0'  # no released version yet
+version: "0" # no released version yet
 summary: ChatGPT-Style Web UI Client for Ollama 🦙 (formerly Ollama WebUI)
 description: |
   The Open WebUI consists of two primary components:
@@ -34,8 +34,8 @@ apps:
       - opengl
     environment:
       ENV: prod
-      SCARF_NO_ANALYTICS: 'true'
-      DO_NOT_TRACK: 'true'
+      SCARF_NO_ANALYTICS: "true"
+      DO_NOT_TRACK: "true"
 parts:
   launcher:
     plugin: dump
@@ -67,15 +67,15 @@ parts:
     source-type: git
     build-packages:
       - netcat-openbsd
-      - python3.10
-      - python3.10-venv
-      - python3.10-dev
+      - python3.11
+      - python3.11-venv
+      - python3.11-dev
       - python3-pip
       - git
       - execstack
     stage-packages:
-      - python3.10
-      - python3.10-venv
+      - python3.11
+      - python3.11-venv
       - pandoc
       - libavcodec58
       - libavformat58
