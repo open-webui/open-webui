@@ -1,31 +1,38 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	
+	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
 
 	export let show = false;
 	export let message;
 
-	const LIKE_REASONS = [
-		`Accurate information`,
-		`Followed instructions perfectly`,
-		`Showcased creativity`,
-		`Positive attitude`,
-		`Attention to detail`,
-		`Thorough explanation`,
-		`Other`
-	];
+	let LIKE_REASONS = [];
+	let DISLIKE_REASONS = [];
 
-	const DISLIKE_REASONS = [
-		`Don't like the style`,
-		`Not factually correct`,
-		`Didn't fully follow instructions`,
-		`Refused when it shouldn't have`,
-		`Being Lazy`,
-		`Other`
-	];
+	function loadReasons() {
+		LIKE_REASONS = [
+			$i18n.t("Accurate information"),
+			$i18n.t("Followed instructions perfectly"),
+			$i18n.t("Showcased creativity"),
+			$i18n.t("Positive attitude"),
+			$i18n.t("Attention to detail"),
+			$i18n.t("Thorough explanation"),
+			$i18n.t("Other")
+		];
+
+		DISLIKE_REASONS = [
+			$i18n.t("Don't like the style"),
+			$i18n.t("Not factually correct"),
+			$i18n.t("Didn't fully follow instructions"),
+			$i18n.t("Refused when it shouldn't have"),
+			$i18n.t("Being lazy"),
+			$i18n.t("Other")
+		];
+	}
 
 	let reasons = [];
 	let selectedReason = null;
@@ -40,6 +47,7 @@
 	onMount(() => {
 		selectedReason = message.annotation.reason;
 		comment = message.annotation.comment;
+		loadReasons();
 	});
 
 	const submitHandler = () => {
@@ -50,14 +58,14 @@
 
 		dispatch('submit');
 
-		toast.success('Thanks for your feedback!');
+		toast.success($i18n.t('Thanks for your feedback!'));
 		show = false;
 	};
 </script>
 
 <div class=" my-2.5 rounded-xl px-4 py-3 border dark:border-gray-850">
 	<div class="flex justify-between items-center">
-		<div class=" text-sm">Tell us more:</div>
+		<div class=" text-sm">{$i18n.t('Tell us more:')}</div>
 
 		<button
 			on:click={() => {
@@ -99,7 +107,7 @@
 		<textarea
 			bind:value={comment}
 			class="w-full text-sm px-1 py-2 bg-transparent outline-none resize-none rounded-xl"
-			placeholder="Feel free to add specific details"
+			placeholder="{$i18n.t('Feel free to add specific details')}"
 			rows="2"
 		/>
 	</div>
