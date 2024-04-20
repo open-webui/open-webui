@@ -101,61 +101,57 @@ async def update_openai_config(
 
 @app.post("/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
-    idx = None
+    body = await request.body()
+    name = hashlib.sha256(body).hexdigest()
+
+    file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
+    file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
+
+    # Check if the file already exists in the cache
+    if file_path.is_file():
+        return FileResponse(file_path)
+
+    headers = {}
+    headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEY}"
+    headers["Content-Type"] = "application/json"
+
+    r = None
     try:
-        body = await request.body()
-        name = hashlib.sha256(body).hexdigest()
+        r = requests.post(
+            url=f"{app.state.OPENAI_API_BASE_URL}/audio/speech",
+            data=body,
+            headers=headers,
+            stream=True,
+        )
 
-        file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
-        file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
+        r.raise_for_status()
 
-        # Check if the file already exists in the cache
-        if file_path.is_file():
-            return FileResponse(file_path)
+        # Save the streaming content to a file
+        with open(file_path, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
 
-        headers = {}
-        headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEY}"
-        headers["Content-Type"] = "application/json"
+        with open(file_body_path, "w") as f:
+            json.dump(json.loads(body.decode("utf-8")), f)
 
-        r = None
-        try:
-            r = requests.post(
-                url=f"{app.state.OPENAI_API_BASE_URL}/audio/speech",
-                data=body,
-                headers=headers,
-                stream=True,
-            )
+        # Return the saved file
+        return FileResponse(file_path)
 
-            r.raise_for_status()
+    except Exception as e:
+        log.exception(e)
+        error_detail = "Open WebUI: Server Connection Error"
+        if r is not None:
+            try:
+                res = r.json()
+                if "error" in res:
+                    error_detail = f"External: {res['error']['message']}"
+            except:
+                error_detail = f"External: {e}"
 
-            # Save the streaming content to a file
-            with open(file_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-
-            with open(file_body_path, "w") as f:
-                json.dump(json.loads(body.decode("utf-8")), f)
-
-            # Return the saved file
-            return FileResponse(file_path)
-
-        except Exception as e:
-            log.exception(e)
-            error_detail = "Open WebUI: Server Connection Error"
-            if r is not None:
-                try:
-                    res = r.json()
-                    if "error" in res:
-                        error_detail = f"External: {res['error']}"
-                except:
-                    error_detail = f"External: {e}"
-
-            raise HTTPException(
-                status_code=r.status_code if r else 500, detail=error_detail
-            )
-
-    except ValueError:
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
+        raise HTTPException(
+            status_code=r.status_code if r != None else 500,
+            detail=error_detail,
+        )
 
 
 @app.post("/transcriptions")

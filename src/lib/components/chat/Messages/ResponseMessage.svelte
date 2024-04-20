@@ -176,10 +176,12 @@
 
 	const toggleSpeakMessage = async () => {
 		if (speaking) {
-			speechSynthesis.cancel();
+			try {
+				speechSynthesis.cancel();
 
-			sentencesAudio[speakingIdx].pause();
-			sentencesAudio[speakingIdx].currentTime = 0;
+				sentencesAudio[speakingIdx].pause();
+				sentencesAudio[speakingIdx].currentTime = 0;
+			} catch {}
 
 			speaking = null;
 			speakingIdx = null;
@@ -221,6 +223,10 @@
 						sentence
 					).catch((error) => {
 						toast.error(error);
+
+						speaking = null;
+						loadingSpeech = false;
+
 						return null;
 					});
 
@@ -230,7 +236,6 @@
 						const audio = new Audio(blobUrl);
 						sentencesAudio[idx] = audio;
 						loadingSpeech = false;
-
 						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
 					}
 				}

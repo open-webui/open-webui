@@ -1,5 +1,67 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
 
+export const getAudioConfig = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${AUDIO_API_BASE_URL}/config`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+type OpenAIConfigForm = {
+	url: string;
+	key: string;
+};
+
+export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
+	let error = null;
+
+	const res = await fetch(`${AUDIO_API_BASE_URL}/config/update`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			...payload
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const transcribeAudio = async (token: string, file: File) => {
 	const data = new FormData();
 	data.append('file', file);
@@ -48,11 +110,17 @@ export const synthesizeOpenAISpeech = async (
 			input: text,
 			voice: speaker
 		})
-	}).catch((err) => {
-		console.log(err);
-		error = err;
-		return null;
-	});
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+
+			return null;
+		});
 
 	if (error) {
 		throw error;
