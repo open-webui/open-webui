@@ -3,11 +3,13 @@
 
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
-	import { chatId, modelfiles } from '$lib/stores';
+	import { modelfiles } from '$lib/stores';
 	import { copyToClipboard } from '$lib/utils';
 
 	import Modal from '../common/Modal.svelte';
 	import Link from '../icons/Link.svelte';
+
+	export let chatId;
 
 	let chat = null;
 	let shareUrl = null;
@@ -16,10 +18,10 @@
 	const shareLocalChat = async () => {
 		const _chat = chat;
 
-		const sharedChat = await shareChatById(localStorage.token, $chatId);
+		const sharedChat = await shareChatById(localStorage.token, chatId);
 		shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
 		console.log(shareUrl);
-		chat = await getChatById(localStorage.token, $chatId);
+		chat = await getChatById(localStorage.token, chatId);
 
 		return shareUrl;
 	};
@@ -57,8 +59,8 @@
 
 	$: if (show) {
 		(async () => {
-			if ($chatId) {
-				chat = await getChatById(localStorage.token, $chatId);
+			if (chatId) {
+				chat = await getChatById(localStorage.token, chatId);
 			} else {
 				chat = null;
 				console.log(chat);
@@ -102,10 +104,10 @@
 						<button
 							class="underline"
 							on:click={async () => {
-								const res = await deleteSharedChatById(localStorage.token, $chatId);
+								const res = await deleteSharedChatById(localStorage.token, chatId);
 
 								if (res) {
-									chat = await getChatById(localStorage.token, $chatId);
+									chat = await getChatById(localStorage.token, chatId);
 								}
 							}}>delete this link</button
 						> and create a new shared link.

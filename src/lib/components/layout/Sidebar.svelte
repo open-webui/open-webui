@@ -24,6 +24,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ChatMenu from './Sidebar/ChatMenu.svelte';
+	import ShareChatModal from '../chat/ShareChatModal.svelte';
 
 	let show = false;
 	let navElement;
@@ -31,12 +32,15 @@
 	let title: string = 'UI';
 	let search = '';
 
+	let shareChatId = null;
+
 	let selectedChatId = null;
 
 	let chatDeleteId = null;
 	let chatTitleEditId = null;
 	let chatTitle = '';
 
+	let showShareChatModal = false;
 	let showDropdown = false;
 	let isEditing = false;
 
@@ -135,6 +139,8 @@
 		location.href = '/';
 	};
 </script>
+
+<ShareChatModal bind:show={showShareChatModal} chatId={shareChatId} />
 
 <div
 	bind:this={navElement}
@@ -547,6 +553,10 @@
 								<div class="flex self-center space-x-1.5 z-10">
 									<ChatMenu
 										chatId={chat.id}
+										shareHandler={() => {
+											shareChatId = selectedChatId;
+											showShareChatModal = true;
+										}}
 										renameHandler={() => {
 											chatTitle = chat.title;
 											chatTitleEditId = chat.id;
