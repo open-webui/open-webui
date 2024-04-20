@@ -21,6 +21,7 @@ class Chat(Model):
     chat = TextField()  # Save Chat JSON as Text
     timestamp = DateField()
     share_id = CharField(null=True, unique=True)
+    archived = BooleanField(default=False)
 
     class Meta:
         database = DB
@@ -33,6 +34,7 @@ class ChatModel(BaseModel):
     chat: str
     timestamp: int  # timestamp in epoch
     share_id: Optional[str] = None
+    archived: bool = False
 
 
 ####################
@@ -163,12 +165,27 @@ class ChatTable:
         except:
             return None
 
+    def toggle_chat_archive_by_id(self, id: str) -> Optional[ChatModel]:
+        try:
+            chat = self.get_chat_by_id(id)
+            query = Chat.update(
+                archived=(not chat.archived),
+            ).where(Chat.id == id)
+
+            query.execute()
+
+            chat = Chat.get(Chat.id == id)
+            return ChatModel(**model_to_dict(chat))
+        except:
+            return None
+
     def get_chat_lists_by_user_id(
         self, user_id: str, skip: int = 0, limit: int = 50
     ) -> List[ChatModel]:
         return [
             ChatModel(**model_to_dict(chat))
             for chat in Chat.select()
+            .where(Chat.archived == False)
             .where(Chat.user_id == user_id)
             .order_by(Chat.timestamp.desc())
             # .limit(limit)
@@ -181,6 +198,7 @@ class ChatTable:
         return [
             ChatModel(**model_to_dict(chat))
             for chat in Chat.select()
+            .where(Chat.archived == False)
             .where(Chat.id.in_(chat_ids))
             .order_by(Chat.timestamp.desc())
         ]
@@ -188,13 +206,16 @@ class ChatTable:
     def get_all_chats(self) -> List[ChatModel]:
         return [
             ChatModel(**model_to_dict(chat))
-            for chat in Chat.select().order_by(Chat.timestamp.desc())
+            for chat in Chat.select()
+            .where(Chat.archived == False)
+            .order_by(Chat.timestamp.desc())
         ]
 
     def get_all_chats_by_user_id(self, user_id: str) -> List[ChatModel]:
         return [
             ChatModel(**model_to_dict(chat))
             for chat in Chat.select()
+            .where(Chat.archived == False)
             .where(Chat.user_id == user_id)
             .order_by(Chat.timestamp.desc())
         ]

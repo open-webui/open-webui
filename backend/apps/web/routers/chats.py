@@ -190,6 +190,23 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_current_
 
 
 ############################
+# ArchiveChat
+############################
+
+
+@router.get("/{id}/archive", response_model=Optional[ChatResponse])
+async def archive_chat_by_id(id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+        chat = Chats.toggle_chat_archive_by_id(id)
+        return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
 # ShareChatById
 ############################
 

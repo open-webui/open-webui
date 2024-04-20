@@ -17,7 +17,8 @@
 		getChatById,
 		getChatListByTagName,
 		updateChatById,
-		getAllChatTags
+		getAllChatTags,
+		archiveChatById
 	} from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	import { fade, slide } from 'svelte/transition';
@@ -138,6 +139,11 @@
 		await settings.set({ ...$settings, ...updated });
 		localStorage.setItem('settings', JSON.stringify($settings));
 		location.href = '/';
+	};
+
+	const archiveChatHandler = async (id) => {
+		await archiveChatById(localStorage.token, id);
+		await chats.set(await getChatList(localStorage.token));
 	};
 </script>
 
@@ -594,7 +600,7 @@
 											aria-label="Archive"
 											class=" self-center dark:hover:text-white transition"
 											on:click={() => {
-												selectedChatId = chat.id;
+												archiveChatHandler(chat.id);
 											}}
 										>
 											<ArchiveBox />
