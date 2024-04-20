@@ -25,6 +25,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import ChatMenu from './Sidebar/ChatMenu.svelte';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
+	import ArchiveBox from '../icons/ArchiveBox.svelte';
 
 	let show = false;
 	let navElement;
@@ -550,7 +551,7 @@
 									</button>
 								</div>
 							{:else}
-								<div class="flex self-center space-x-1.5 z-10">
+								<div class="flex self-center space-x-1 z-10">
 									<ChatMenu
 										chatId={chat.id}
 										shareHandler={() => {
@@ -587,6 +588,18 @@
 											</svg>
 										</button>
 									</ChatMenu>
+
+									<Tooltip content="Archive">
+										<button
+											aria-label="Archive"
+											class=" self-center dark:hover:text-white transition"
+											on:click={() => {
+												selectedChatId = chat.id;
+											}}
+										>
+											<ArchiveBox />
+										</button>
+									</Tooltip>
 								</div>
 							{/if}
 						</div>
