@@ -177,15 +177,15 @@
 							e.target.style.height = `${e.target.scrollHeight}px`;
 						}}
 						on:keydown={(e) => {
-							const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
+							if (e.key === 'Escape') {
+								document.getElementById('close-edit-message-button')?.click();
+							}
 
-							// Check if Enter key is pressed
+							const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
 							const isEnterPressed = e.key === 'Enter';
 
-							// Check if both Cmd/Ctrl and Enter are pressed simultaneously
 							if (isCmdOrCtrlPressed && isEnterPressed) {
 								document.getElementById('save-edit-message-button')?.click();
-								console.log('Cmd/Ctrl + Enter is pressed');
 							}
 						}}
 					/>
@@ -202,6 +202,7 @@
 						</button>
 
 						<button
+							id="close-edit-message-button"
 							class=" px-4 py-2 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-100 transition outline outline-1 outline-gray-200 dark:outline-gray-600 rounded-lg"
 							on:click={() => {
 								cancelEditMessage();
