@@ -184,6 +184,8 @@
 	selected={items.find((item) => item.value === value) ?? ''}
 	onSelectedChange={(selectedItem) => {
 		value = selectedItem.value;
+		// emit on:change event
+		dispatch('change');
 	}}
 >
 	<Select.Trigger class="relative w-full" aria-label={placeholder}>

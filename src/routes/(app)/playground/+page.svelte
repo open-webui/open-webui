@@ -43,6 +43,124 @@
 		}
 	];
 
+	// ==>> OpenAI API compatible options
+	const applyArguments = (node, values) => {
+		for (const key in values) {
+			node.setAttribute(key, values[key]);
+		}
+	};
+	class OpenAIApiOption {
+		static #INPUT_ID_PREFIX = 'id-playground-oaiapi-';
+
+		value: any;
+		key: string;
+		label: string;
+		type: string;
+		applyValue: (data: object, value: any) => void = () => {};
+		attributes: object;
+
+		#option: null | string = null;
+
+		constructor(
+			value: any,
+			key: string,
+			label: string,
+			type: string,
+			applyValue: string | ((data: object, value: any) => void),
+			attributes: object = {}
+		) {
+			this.value = value;
+			this.key = OpenAIApiOption.#INPUT_ID_PREFIX + key;
+			this.label = label;
+			this.type = type;
+			this.#setApplyFunction(applyValue);
+			this.attributes = attributes;
+		}
+
+		#setApplyFunction(applyValue) {
+			if (typeof applyValue === 'string') {
+				this.#option = applyValue;
+				this.applyValue = (data: object, value: any) => {
+					if (!!this.value) {
+						data[this.#option] = this.value;
+					}
+				};
+			} else {
+				this.applyValue = (data) => {
+					applyValue(data, this.value);
+				};
+			}
+		}
+	}
+
+	let showOpenAIApiCompatibleOptions = false;
+	let showOpenAIApiCompatibleOptionsArea = false;
+	let openAIApiOptions = {
+		jsonMode: new OpenAIApiOption(
+			false,
+			'json-mode',
+			$i18n.t('JSON Mode'),
+			'checkbox',
+			(data, value) => {
+				if (value) {
+					data.response_format = { type: 'json_object' };
+				}
+			}
+		),
+		maxTokens: new OpenAIApiOption(
+			null,
+			'max-tokens',
+			$i18n.t('Max Tokens'),
+			'number',
+			'max_tokens'
+		),
+		seed: new OpenAIApiOption(null, 'seed', $i18n.t('Seed'), 'number', 'seed'),
+		temperature: new OpenAIApiOption(
+			null,
+			'temperature',
+			$i18n.t('Temperature'),
+			'number',
+			'temperature',
+			{
+				min: 0.0,
+				max: 2.0,
+				step: 0.1,
+				placeholder: 1.0
+			}
+		),
+		topP: new OpenAIApiOption(null, 'top-p', $i18n.t('Top P'), 'number', 'top_p', {
+			min: 0.0,
+			max: 1.0,
+			step: 0.1,
+			placeholder: 0.1
+		})
+	};
+
+	// Detect OpenAIApi compatability
+	const onChangeSelectedModel = () => {
+		if (!!selectedModelId) {
+			const model = $models.find((model) => model.id === selectedModelId);
+			// Not external or source not 'litellm' = Ollama or OpenAI
+			// (Both should support OpenAI API compatible options)
+			showOpenAIApiCompatibleOptions = !model.external || model.source !== 'litellm';
+			if (!showOpenAIApiCompatibleOptions) {
+				showOpenAIApiCompatibleOptionsArea = false;
+			}
+		}
+	};
+
+	const applyOpenAIApiCompatibleOptions = (data) => {
+		// Only apply options when advanced options are shown
+		if (!showOpenAIApiCompatibleOptionsArea) {
+			return;
+		}
+
+		for (var key in openAIApiOptions) {
+			openAIApiOptions[key].applyValue(data);
+		}
+	};
+	// <<== OpenAI API compatible options
+
 	const scrollToBottom = () => {
 		const element = mode === 'chat' ? messagesContainerElement : textCompletionAreaElement;
 
@@ -67,18 +185,21 @@
 	const textCompletionHandler = async () => {
 		const model = $models.find((model) => model.id === selectedModelId);
 
+		const data = {
+			model: model.id,
+			stream: true,
+			messages: [
+				{
+					role: 'assistant',
+					content: text
+				}
+			]
+		};
+		applyOpenAIApiCompatibleOptions(data);
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
-			{
-				model: model.id,
-				stream: true,
-				messages: [
-					{
-						role: 'assistant',
-						content: text
-					}
-				]
-			},
+			data,
 			model.external
 				? model.source === 'litellm'
 					? `${LITELLM_API_BASE_URL}/v1`
@@ -135,21 +256,24 @@
 	const chatCompletionHandler = async () => {
 		const model = $models.find((model) => model.id === selectedModelId);
 
+		const data = {
+			model: model.id,
+			stream: true,
+			messages: [
+				system
+					? {
+							role: 'system',
+							content: system
+					  }
+					: undefined,
+				...messages
+			].filter((message) => message)
+		};
+		applyOpenAIApiCompatibleOptions(data);
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
-			{
-				model: model.id,
-				stream: true,
-				messages: [
-					system
-						? {
-								role: 'system',
-								content: system
-						  }
-						: undefined,
-					...messages
-				].filter((message) => message)
-			},
+			data,
 			model.external
 				? model.source === 'litellm'
 					? `${LITELLM_API_BASE_URL}/v1`
@@ -258,6 +382,7 @@
 		} else {
 			selectedModelId = '';
 		}
+		onChangeSelectedModel();
 		loaded = true;
 	});
 </script>
@@ -330,6 +455,7 @@
 												info: model
 											}))}
 										bind:value={selectedModelId}
+										on:change={() => onChangeSelectedModel()}
 									/>
 								</div>
 							</div>
@@ -420,7 +546,55 @@
 							{$i18n.t('Cancel')}
 						</button>
 					{/if}
+					{#if showOpenAIApiCompatibleOptions}
+						<label class="ml-2" id="show-openai-api-compatible-options">
+							<input type="checkbox" bind:checked={showOpenAIApiCompatibleOptionsArea} />
+							{#if showOpenAIApiCompatibleOptionsArea}
+								{$i18n.t('Disable advanced options')}
+							{:else}
+								{$i18n.t('Enable advanced options')}
+							{/if}
+						</label>
+					{/if}
 				</div>
+
+				{#if showOpenAIApiCompatibleOptionsArea}
+					<fieldset class="pb-2">
+						<legend>{$i18n.t('Advanced OpenAI API Options:')}</legend>
+
+						{#each Object.entries(openAIApiOptions) as [key, option]}
+							<label class="block" for={option.key}>
+								{option.label}
+							</label>
+							{#if option.type === 'checkbox'}
+								<input
+									id={option.key}
+									class="block"
+									type="checkbox"
+									use:applyArguments={option.attributes}
+									bind:checked={option.value}
+								/>
+							{:else if option.type === 'number'}
+								<input
+									id={option.key}
+									class="block"
+									type="number"
+									use:applyArguments={option.attributes}
+									bind:value={option.value}
+								/>
+							{:else if option.type === 'text'}
+								<input
+									id={option.key}
+									class="block"
+									type="text"
+									use:applyArguments={option.attributes}
+									bind:value={option.value}
+								/>
+							{/if}
+							<hr />
+						{/each}
+					</fieldset>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -434,5 +608,10 @@
 	.scrollbar-hidden {
 		-ms-overflow-style: none; /* IE and Edge */
 		scrollbar-width: none; /* Firefox */
+	}
+
+	#show-openai-api-compatible-options:hover,
+	#show-openai-api-compatible-options:has(input:checked) {
+		text-decoration: underline;
 	}
 </style>
