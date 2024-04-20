@@ -150,7 +150,12 @@
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={shareChatId} />
-<ArchivedChatsModal bind:show={showArchivedChatsModal} />
+<ArchivedChatsModal
+	bind:show={showArchivedChatsModal}
+	on:change={async () => {
+		await chats.set(await getChatList(localStorage.token));
+	}}
+/>
 
 <div
 	bind:this={navElement}
