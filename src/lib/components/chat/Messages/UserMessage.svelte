@@ -176,10 +176,23 @@
 							e.target.style.height = '';
 							e.target.style.height = `${e.target.scrollHeight}px`;
 						}}
+						on:keydown={(e) => {
+							const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
+
+							// Check if Enter key is pressed
+							const isEnterPressed = e.key === 'Enter';
+
+							// Check if both Cmd/Ctrl and Enter are pressed simultaneously
+							if (isCmdOrCtrlPressed && isEnterPressed) {
+								document.getElementById('save-edit-message-button')?.click();
+								console.log('Cmd/Ctrl + Enter is pressed');
+							}
+						}}
 					/>
 
 					<div class=" mt-2 mb-1 flex justify-center space-x-2 text-sm font-medium">
 						<button
+							id="save-edit-message-button"
 							class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded-lg"
 							on:click={() => {
 								editMessageConfirmHandler();
