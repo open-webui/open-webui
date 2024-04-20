@@ -10,17 +10,18 @@
 	import Link from '../icons/Link.svelte';
 
 	let chat = null;
+	let shareUrl = null;
 	const i18n = getContext('i18n');
 
 	const shareLocalChat = async () => {
 		const _chat = chat;
 
 		const sharedChat = await shareChatById(localStorage.token, $chatId);
-		const chatShareUrl = `${window.location.origin}/s/${sharedChat.id}`;
-
-		toast.success($i18n.t('Copied shared chat URL to clipboard!'));
-		copyToClipboard(chatShareUrl);
+		shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
+		console.log(shareUrl);
 		chat = await getChatById(localStorage.token, $chatId);
+
+		return shareUrl;
 	};
 
 	const shareChat = async () => {
@@ -131,8 +132,12 @@
 							<button
 								class=" self-center flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white"
 								type="button"
-								on:click={() => {
+								on:pointerdown={() => {
 									shareLocalChat();
+								}}
+								on:click={async () => {
+									copyToClipboard(shareUrl);
+									toast.success($i18n.t('Copied shared chat URL to clipboard!'));
 									show = false;
 								}}
 							>
