@@ -81,9 +81,9 @@
 		<div class="flex flex-wrap gap-2 text-sm mt-2.5">
 			{#each reasons as reason}
 				<button
-					class="px-3.5 py-1 border dark:border-gray-850 dark:hover:bg-gray-850 {selectedReason ===
+					class="px-3.5 py-1 border dark:border-gray-850 hover:bg-gray-100 dark:hover:bg-gray-850 {selectedReason ===
 					reason
-						? 'dark:bg-gray-800'
+						? 'bg-gray-200 dark:bg-gray-800'
 						: ''} transition rounded-lg"
 					on:click={() => {
 						selectedReason = reason;
