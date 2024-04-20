@@ -477,3 +477,11 @@ ENABLE_IMAGE_GENERATION = (
 )
 AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
 COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
+
+
+####################################
+# Audio
+####################################
+
+AUDIO_OPENAI_API_BASE_URL = os.getenv("AUDIO_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
+AUDIO_OPENAI_API_KEY = os.getenv("AUDIO_OPENAI_API_KEY", OPENAI_API_KEY)

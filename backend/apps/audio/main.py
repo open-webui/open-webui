@@ -41,8 +41,8 @@ from config import (
     WHISPER_MODEL_DIR,
     WHISPER_MODEL_AUTO_UPDATE,
     DEVICE_TYPE,
-    OPENAI_API_BASE_URL,
-    OPENAI_API_KEY,
+    AUDIO_OPENAI_API_BASE_URL,
+    AUDIO_OPENAI_API_KEY,
 )
 
 log = logging.getLogger(__name__)
@@ -58,8 +58,8 @@ app.add_middleware(
 )
 
 
-app.state.OPENAI_API_BASE_URL = OPENAI_API_BASE_URL
-app.state.OPENAI_API_KEY = OPENAI_API_KEY
+app.state.OPENAI_API_BASE_URL = AUDIO_OPENAI_API_BASE_URL
+app.state.OPENAI_API_KEY = AUDIO_OPENAI_API_KEY
 
 # setting device type for whisper model
 whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
