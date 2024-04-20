@@ -67,7 +67,7 @@
 		<div class="flex flex-col md:flex-row w-full px-5 py-4 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if chats.length > 0}
-					<div class="text-left text-sm w-full mb-8">
+					<div class="text-left text-sm w-full mb-4">
 						<div class="relative overflow-x-auto">
 							<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto">
 								<thead
@@ -80,12 +80,17 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each chats as chat}
-										<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-850 text-xs">
+									{#each chats as chat, idx}
+										<tr
+											class="bg-white {idx !== chats.length - 1 &&
+												'border-b'} dark:bg-gray-900 dark:border-gray-850 text-xs"
+										>
 											<td class="px-3 py-1 w-2/3">
-												<div class=" line-clamp-1">
-													{chat.title}
-												</div>
+												<a href="/c/{chat.id}">
+													<div class=" underline line-clamp-1">
+														{chat.title}
+													</div>
+												</a>
 											</td>
 
 											<td class=" px-3 py-1">
