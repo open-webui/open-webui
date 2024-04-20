@@ -321,6 +321,13 @@ OPENAI_API_BASE_URLS = [
     for url in OPENAI_API_BASE_URLS.split(";")
 ]
 
+OPENAI_API_KEY = ""
+OPENAI_API_KEY = OPENAI_API_KEYS[
+    OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
+]
+OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+
+
 ####################################
 # WEBUI
 ####################################
@@ -446,6 +453,9 @@ And answer according to the language of the user's question.
         
 Given the context information, answer the query.
 Query: [query]"""
+
+RAG_OPENAI_API_BASE_URL = os.getenv("RAG_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
+RAG_OPENAI_API_KEY = os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY)
 
 ####################################
 # Transcribe

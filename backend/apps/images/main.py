@@ -35,6 +35,8 @@ from config import (
     ENABLE_IMAGE_GENERATION,
     AUTOMATIC1111_BASE_URL,
     COMFYUI_BASE_URL,
+    OPENAI_API_BASE_URL,
+    OPENAI_API_KEY,
 )
 
 
@@ -56,7 +58,9 @@ app.add_middleware(
 app.state.ENGINE = ""
 app.state.ENABLED = ENABLE_IMAGE_GENERATION
 
-app.state.OPENAI_API_KEY = ""
+app.state.OPENAI_API_BASE_URL = OPENAI_API_BASE_URL
+app.state.OPENAI_API_KEY = OPENAI_API_KEY
+
 app.state.MODEL = ""
 
 
@@ -360,7 +364,7 @@ def generate_image(
             }
 
             r = requests.post(
-                url=f"https://api.openai.com/v1/images/generations",
+                url=f"{app.state.OPENAI_API_BASE_URL}/images/generations",
                 json=data,
                 headers=headers,
             )

@@ -15,7 +15,7 @@
 	const dispatch = createEventDispatcher();
 
 	import { config, settings } from '$lib/stores';
-	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
+	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		approximateToHumanReadable,

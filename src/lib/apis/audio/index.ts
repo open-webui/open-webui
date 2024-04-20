@@ -5,7 +5,7 @@ export const transcribeAudio = async (token: string, file: File) => {
 	data.append('file', file);
 
 	let error = null;
-	const res = await fetch(`${AUDIO_API_BASE_URL}/transcribe`, {
+	const res = await fetch(`${AUDIO_API_BASE_URL}/transcriptions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -22,6 +22,37 @@ export const transcribeAudio = async (token: string, file: File) => {
 			console.log(err);
 			return null;
 		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const synthesizeOpenAISpeech = async (
+	token: string = '',
+	speaker: string = 'alloy',
+	text: string = ''
+) => {
+	let error = null;
+
+	const res = await fetch(`${AUDIO_API_BASE_URL}/speech`, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${token}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			model: 'tts-1',
+			input: text,
+			voice: speaker
+		})
+	}).catch((err) => {
+		console.log(err);
+		error = err;
+		return null;
+	});
 
 	if (error) {
 		throw error;
