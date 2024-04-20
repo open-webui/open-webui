@@ -2,8 +2,11 @@
 
 set -e
 
+STATIC_DIR=$SNAP_DATA/static
+mkdir -p $STATIC_DIR
+
 DATA_DIR=$(snapctl get data-dir) \
-STATIC_DIR=$SNAP_DATA/static \
+STATIC_DIR=$STATIC_DIR \
 FRONTEND_BUILD_DIR=$SNAP/build \
 HOST=$(snapctl get host) \
 PORT=$(snapctl get port) \
