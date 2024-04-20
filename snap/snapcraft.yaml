@@ -1,0 +1,105 @@
+---
+name: open-webui
+base: core22
+version: '0'  # no released version yet
+summary: ChatGPT-Style Web UI Client for Ollama 🦙 (formerly Ollama WebUI)
+description: |
+  The Open WebUI consists of two primary components:
+  the frontend and the backend (which serves as a reverse proxy,
+  handling static frontend files, and additional features).
+  Both are set up.
+adopt-info: backend
+grade: stable
+confinement: strict
+license: MIT
+architectures:
+  - build-on: [amd64]
+    build-for: [amd64]
+  - build-on: [arm64]
+    build-for: [arm64]
+
+apps:
+  open-webui:
+    command: bin/info.sh
+  listener:
+    command: bin/run-snap.sh
+    daemon: simple
+    install-mode: enable
+    restart-condition: on-failure
+    plugs:
+      - home
+      - removable-media
+      - network
+      - network-bind
+      - opengl
+    environment:
+      ENV: prod
+      SCARF_NO_ANALYTICS: 'true'
+      DO_NOT_TRACK: 'true'
+parts:
+  launcher:
+    plugin: dump
+    source: ./snap/local
+    organize:
+      info.sh: bin/info.sh
+      run-snap.sh: bin/run-snap.sh
+  minilm:
+    plugin: dump
+    source: https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz
+    organize:
+      onnx: root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx
+  frontend:
+    after: [launcher, minilm]
+    plugin: nil
+    source: .
+    source-type: git
+    override-build: |
+      craftctl default
+      npm ci
+      npm run build
+      cp -r build $CRAFT_PART_INSTALL/build
+    stage-snaps:
+      - node/20/stable
+  backend:
+    after: [frontend]
+    plugin: python
+    source: .
+    source-type: git
+    build-packages:
+      - netcat-openbsd
+      - python3.10
+      - python3.10-venv
+      - python3.10-dev
+      - python3-pip
+      - git
+      - execstack
+    stage-packages:
+      - python3.10
+      - python3.10-venv
+      - pandoc
+      - libavcodec58
+      - libavformat58
+      - libavdevice58
+      - libavfilter7
+    python-requirements:
+      - backend/requirements.txt
+    override-pull: |
+      craftctl default
+      last_committed_tag="$(git describe --tags --abbrev=0)"
+      last_committed_tag_ver="$(echo ${last_committed_tag} | sed 's/v//')"
+      craftctl set version="$(git describe --tags | sed 's/v//')"
+    override-build: |
+      craftctl default
+      pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir
+      cp -r backend $CRAFT_PART_INSTALL
+    override-prime: |
+      craftctl default
+
+      # libctranslate2.so... is caught with an executable stack (something to investigate)
+      # for now forcibly cleared below.
+      #
+      # see https://forum.snapcraft.io/t/snap-and-executable-stacks/1812 for more info on the check
+      for f in `find $CRAFT_PRIME | grep -e libctranslate2.*\.so\..*`; do
+        strip --strip-all $f;
+        execstack --clear-execstack $f;
+      done

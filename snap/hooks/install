@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+snapctl set host="0.0.0.0"
+snapctl set port="8080"
+snapctl set secret-key=$(head -c 12 /dev/random | base64)
+
+snapctl set ollama-api-base-url="http://localhost:11434/api"
+snapctl set openai-api-base-url="https://api.openai.com/v1"
+snapctl set openai-api-key=""
+
+snapctl set enable-signup="true"
+snapctl set data-dir="$SNAP_COMMON/data"
+
