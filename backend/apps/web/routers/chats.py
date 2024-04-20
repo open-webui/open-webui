@@ -48,6 +48,18 @@ async def get_user_chats(
 
 
 ############################
+# GetArchivedChats
+############################
+
+
+@router.get("/archived", response_model=List[ChatTitleIdResponse])
+async def get_archived_user_chats(
+    user=Depends(get_current_user), skip: int = 0, limit: int = 50
+):
+    return Chats.get_archived_chat_lists_by_user_id(user.id, skip, limit)
+
+
+############################
 # GetAllChats
 ############################
 

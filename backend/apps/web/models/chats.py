@@ -19,7 +19,10 @@ class Chat(Model):
     user_id = CharField()
     title = CharField()
     chat = TextField()  # Save Chat JSON as Text
-    timestamp = DateField()
+
+    created_at = DateTimeField()
+    updated_at = DateTimeField()
+
     share_id = CharField(null=True, unique=True)
     archived = BooleanField(default=False)
 
@@ -32,7 +35,10 @@ class ChatModel(BaseModel):
     user_id: str
     title: str
     chat: str
-    timestamp: int  # timestamp in epoch
+
+    created_at: int  # timestamp in epoch
+    updated_at: int  # timestamp in epoch
+
     share_id: Optional[str] = None
     archived: bool = False
 
@@ -55,13 +61,16 @@ class ChatResponse(BaseModel):
     user_id: str
     title: str
     chat: dict
-    timestamp: int  # timestamp in epoch
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
     share_id: Optional[str] = None  # id of the chat to be shared
 
 
 class ChatTitleIdResponse(BaseModel):
     id: str
     title: str
+    updated_at: int
+    created_at: int
 
 
 class ChatTable:
@@ -79,7 +88,8 @@ class ChatTable:
                     form_data.chat["title"] if "title" in form_data.chat else "New Chat"
                 ),
                 "chat": json.dumps(form_data.chat),
-                "timestamp": int(time.time()),
+                "created_at": int(time.time()),
+                "updated_at": int(time.time()),
             }
         )
 
@@ -91,7 +101,7 @@ class ChatTable:
             query = Chat.update(
                 chat=json.dumps(chat),
                 title=chat["title"] if "title" in chat else "New Chat",
-                timestamp=int(time.time()),
+                updated_at=int(time.time()),
             ).where(Chat.id == id)
             query.execute()
 
@@ -113,7 +123,7 @@ class ChatTable:
                 "user_id": f"shared-{chat_id}",
                 "title": chat.title,
                 "chat": chat.chat,
-                "timestamp": int(time.time()),
+                "created_at": int(time.time()),
             }
         )
         shared_result = Chat.create(**shared_chat.model_dump())
@@ -179,6 +189,19 @@ class ChatTable:
         except:
             return None
 
+    def get_archived_chat_lists_by_user_id(
+        self, user_id: str, skip: int = 0, limit: int = 50
+    ) -> List[ChatModel]:
+        return [
+            ChatModel(**model_to_dict(chat))
+            for chat in Chat.select()
+            .where(Chat.archived == True)
+            .where(Chat.user_id == user_id)
+            .order_by(Chat.updated_at.desc())
+            # .limit(limit)
+            # .offset(skip)
+        ]
+
     def get_chat_lists_by_user_id(
         self, user_id: str, skip: int = 0, limit: int = 50
     ) -> List[ChatModel]:
@@ -187,7 +210,7 @@ class ChatTable:
             for chat in Chat.select()
             .where(Chat.archived == False)
             .where(Chat.user_id == user_id)
-            .order_by(Chat.timestamp.desc())
+            .order_by(Chat.updated_at.desc())
             # .limit(limit)
             # .offset(skip)
         ]
@@ -200,7 +223,7 @@ class ChatTable:
             for chat in Chat.select()
             .where(Chat.archived == False)
             .where(Chat.id.in_(chat_ids))
-            .order_by(Chat.timestamp.desc())
+            .order_by(Chat.updated_at.desc())
         ]
 
     def get_all_chats(self) -> List[ChatModel]:
@@ -208,7 +231,7 @@ class ChatTable:
             ChatModel(**model_to_dict(chat))
             for chat in Chat.select()
             .where(Chat.archived == False)
-            .order_by(Chat.timestamp.desc())
+            .order_by(Chat.updated_at.desc())
         ]
 
     def get_all_chats_by_user_id(self, user_id: str) -> List[ChatModel]:
@@ -217,7 +240,7 @@ class ChatTable:
             for chat in Chat.select()
             .where(Chat.archived == False)
             .where(Chat.user_id == user_id)
-            .order_by(Chat.timestamp.desc())
+            .order_by(Chat.updated_at.desc())
         ]
 
     def get_chat_by_id(self, id: str) -> Optional[ChatModel]:
