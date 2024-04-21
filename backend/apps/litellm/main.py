@@ -42,16 +42,40 @@ app.add_middleware(
 )
 
 
-async def run_background_process(command):
-    # Start the process
-    process = await asyncio.create_subprocess_exec(
-        *command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
-    # Read output asynchronously
-    async for line in process.stdout:
-        print(line.decode().strip())  # Print stdout line by line
+# Global variable to store the subprocess reference
+background_process = None
 
-    await process.wait()  # Wait for the subprocess to finish
+
+async def run_background_process(command):
+    global background_process
+    print("run_background_process")
+
+    try:
+        # Log the command to be executed
+        print(f"Executing command: {command}")
+        # Execute the command and create a subprocess
+        process = await asyncio.create_subprocess_exec(
+            *command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        background_process = process
+        print("Subprocess started successfully.")
+
+        # Capture STDERR for debugging purposes
+        stderr_output = await process.stderr.read()
+        stderr_text = stderr_output.decode().strip()
+        if stderr_text:
+            print(f"Subprocess STDERR: {stderr_text}")
+
+        # Print output line by line
+        async for line in process.stdout:
+            print(line.decode().strip())
+
+        # Wait for the process to finish
+        returncode = await process.wait()
+        print(f"Subprocess exited with return code {returncode}")
+    except Exception as e:
+        log.error(f"Failed to start subprocess: {e}")
+        raise  # Optionally re-raise the exception if you want it to propagate
 
 
 async def start_litellm_background():
@@ -60,6 +84,15 @@ async def start_litellm_background():
     command = "litellm --telemetry False --config ./data/litellm/config.yaml"
 
     await run_background_process(command)
+
+
+async def shutdown_litellm_background():
+    print("shutdown_litellm_background")
+    global background_process
+    if background_process:
+        background_process.terminate()
+        await background_process.wait()  # Ensure the process has terminated
+        print("Subprocess terminated")
 
 
 @app.on_event("startup")

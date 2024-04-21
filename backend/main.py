@@ -20,7 +20,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
 
-from apps.litellm.main import app as litellm_app, start_litellm_background
+from apps.litellm.main import (
+    app as litellm_app,
+    start_litellm_background,
+    shutdown_litellm_background,
+)
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
@@ -316,3 +320,8 @@ app.mount(
     SPAStaticFiles(directory=FRONTEND_BUILD_DIR, html=True),
     name="spa-static-files",
 )
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await shutdown_litellm_background()
