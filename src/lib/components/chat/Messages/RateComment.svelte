@@ -7,6 +7,7 @@
 
 	const dispatch = createEventDispatcher();
 
+	export let messageId = null;
 	export let show = false;
 	export let message;
 
@@ -63,7 +64,10 @@
 	};
 </script>
 
-<div class=" my-2.5 rounded-xl px-4 py-3 border dark:border-gray-850">
+<div
+	class=" my-2.5 rounded-xl px-4 py-3 border dark:border-gray-850"
+	id="message-feedback-{messageId}"
+>
 	<div class="flex justify-between items-center">
 		<div class=" text-sm">{$i18n.t('Tell us more:')}</div>
 

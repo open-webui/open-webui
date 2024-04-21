@@ -556,6 +556,12 @@
 													on:click={() => {
 														rateMessage(message.id, 1);
 														showRateComment = true;
+
+														window.setTimeout(() => {
+															document
+																.getElementById(`message-feedback-${message.id}`)
+																?.scrollIntoView();
+														}, 0);
 													}}
 												>
 													<svg
@@ -585,6 +591,11 @@
 													on:click={() => {
 														rateMessage(message.id, -1);
 														showRateComment = true;
+														window.setTimeout(() => {
+															document
+																.getElementById(`message-feedback-${message.id}`)
+																?.scrollIntoView();
+														}, 0);
 													}}
 												>
 													<svg
@@ -844,6 +855,7 @@
 
 								{#if showRateComment}
 									<RateComment
+										messageId={message.id}
 										bind:show={showRateComment}
 										bind:message
 										on:submit={() => {
