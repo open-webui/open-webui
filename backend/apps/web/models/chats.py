@@ -64,6 +64,7 @@ class ChatResponse(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
     share_id: Optional[str] = None  # id of the chat to be shared
+    archived: bool
 
 
 class ChatTitleIdResponse(BaseModel):
