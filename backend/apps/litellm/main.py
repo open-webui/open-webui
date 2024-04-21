@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import StreamingResponse
 import json
+import time
 import requests
 
 from pydantic import BaseModel
@@ -16,7 +17,7 @@ from typing import Optional, List
 
 from utils.utils import get_verified_user, get_current_user, get_admin_user
 from config import SRC_LOG_LEVELS, ENV
-from constants import ERROR_MESSAGES
+from constants import MESSAGES
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["LITELLM"])
@@ -201,6 +202,7 @@ async def get_models(user=Depends(get_current_user)):
 
         return data
     except Exception as e:
+
         log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
@@ -211,10 +213,18 @@ async def get_models(user=Depends(get_current_user)):
             except:
                 error_detail = f"External: {e}"
 
-        raise HTTPException(
-            status_code=r.status_code if r else 500,
-            detail=error_detail,
-        )
+        return {
+            "data": [
+                {
+                    "id": model["model_name"],
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "openai",
+                }
+                for model in app.state.CONFIG["model_list"]
+            ],
+            "object": "list",
+        }
 
 
 @app.get("/model/info")
@@ -231,6 +241,8 @@ class AddLiteLLMModelForm(BaseModel):
 async def add_model_to_config(
     form_data: AddLiteLLMModelForm, user=Depends(get_admin_user)
 ):
+    # TODO: Validate model form
+
     app.state.CONFIG["model_list"].append(form_data.model_dump())
 
     with open(LITELLM_CONFIG_DIR, "w") as file:
@@ -238,7 +250,7 @@ async def add_model_to_config(
 
     await restart_litellm()
 
-    return {"message": "model added"}
+    return {"message": MESSAGES.MODEL_ADDED(form_data.model_name)}
 
 
 class DeleteLiteLLMModelForm(BaseModel):
@@ -260,7 +272,7 @@ async def delete_model_from_config(
 
     await restart_litellm()
 
-    return {"message": "model deleted"}
+    return {"message": MESSAGES.MODEL_DELETED(form_data.id)}
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
