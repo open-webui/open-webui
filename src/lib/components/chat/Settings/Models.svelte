@@ -35,7 +35,7 @@
 	let liteLLMRPM = '';
 	let liteLLMMaxTokens = '';
 
-	let deleteLiteLLMModelId = '';
+	let deleteLiteLLMModelName = '';
 
 	$: liteLLMModelName = liteLLMModel;
 
@@ -472,7 +472,7 @@
 	};
 
 	const deleteLiteLLMModelHandler = async () => {
-		const res = await deleteLiteLLMModel(localStorage.token, deleteLiteLLMModelId).catch(
+		const res = await deleteLiteLLMModel(localStorage.token, deleteLiteLLMModelName).catch(
 			(error) => {
 				toast.error(error);
 				return null;
@@ -485,7 +485,7 @@
 			}
 		}
 
-		deleteLiteLLMModelId = '';
+		deleteLiteLLMModelName = '';
 		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
 		models.set(await getModels());
 	};
@@ -1099,14 +1099,14 @@
 								<div class="flex-1 mr-2">
 									<select
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-										bind:value={deleteLiteLLMModelId}
+										bind:value={deleteLiteLLMModelName}
 										placeholder={$i18n.t('Select a model')}
 									>
-										{#if !deleteLiteLLMModelId}
+										{#if !deleteLiteLLMModelName}
 											<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 										{/if}
 										{#each liteLLMModelInfo as model}
-											<option value={model.model_info.id} class="bg-gray-100 dark:bg-gray-700"
+											<option value={model.model_name} class="bg-gray-100 dark:bg-gray-700"
 												>{model.model_name}</option
 											>
 										{/each}

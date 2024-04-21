@@ -102,6 +102,7 @@ async def shutdown_litellm_background():
         background_process.terminate()
         await background_process.wait()  # Ensure the process has terminated
         log.info("Subprocess terminated")
+        background_process = None
 
 
 @app.on_event("startup")
@@ -178,6 +179,9 @@ async def update_config(form_data: LiteLLMConfigForm, user=Depends(get_admin_use
 @app.get("/models")
 @app.get("/v1/models")
 async def get_models(user=Depends(get_current_user)):
+    while not background_process:
+        await asyncio.sleep(0.1)
+
     url = "http://localhost:14365/v1"
     r = None
     try:
@@ -211,6 +215,52 @@ async def get_models(user=Depends(get_current_user)):
             status_code=r.status_code if r else 500,
             detail=error_detail,
         )
+
+
+@app.get("/model/info")
+async def get_model_list(user=Depends(get_admin_user)):
+    return {"data": app.state.CONFIG["model_list"]}
+
+
+class AddLiteLLMModelForm(BaseModel):
+    model_name: str
+    litellm_params: dict
+
+
+@app.post("/model/new")
+async def add_model_to_config(
+    form_data: AddLiteLLMModelForm, user=Depends(get_admin_user)
+):
+    app.state.CONFIG["model_list"].append(form_data.model_dump())
+
+    with open(LITELLM_CONFIG_DIR, "w") as file:
+        yaml.dump(app.state.CONFIG, file)
+
+    await restart_litellm()
+
+    return {"message": "model added"}
+
+
+class DeleteLiteLLMModelForm(BaseModel):
+    id: str
+
+
+@app.post("/model/delete")
+async def delete_model_from_config(
+    form_data: DeleteLiteLLMModelForm, user=Depends(get_admin_user)
+):
+    app.state.CONFIG["model_list"] = [
+        model
+        for model in app.state.CONFIG["model_list"]
+        if model["model_name"] != form_data.id
+    ]
+
+    with open(LITELLM_CONFIG_DIR, "w") as file:
+        yaml.dump(app.state.CONFIG, file)
+
+    await restart_litellm()
+
+    return {"message": "model deleted"}
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
