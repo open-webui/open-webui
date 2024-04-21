@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
+	import { user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
@@ -102,11 +103,13 @@
 			getWebAPIVoices();
 		}
 
-		const res = await getAudioConfig(localStorage.token);
+		if ($user.role === 'admin') {
+			const res = await getAudioConfig(localStorage.token);
 
-		if (res) {
-			OpenAIUrl = res.OPENAI_API_BASE_URL;
-			OpenAIKey = res.OPENAI_API_KEY;
+			if (res) {
+				OpenAIUrl = res.OPENAI_API_BASE_URL;
+				OpenAIKey = res.OPENAI_API_KEY;
+			}
 		}
 	});
 </script>
@@ -114,7 +117,9 @@
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
-		await updateConfigHandler();
+		if ($user.role === 'admin') {
+			await updateConfigHandler();
+		}
 		saveSettings({
 			audio: {
 				STTEngine: STTEngine !== '' ? STTEngine : undefined,
@@ -220,22 +225,24 @@
 				</div>
 			</div>
 
-			{#if TTSEngine === 'openai'}
-				<div class="mt-1 flex gap-2 mb-1">
-					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						placeholder={$i18n.t('API Base URL')}
-						bind:value={OpenAIUrl}
-						required
-					/>
+			{#if $user.role === 'admin'}
+				{#if TTSEngine === 'openai'}
+					<div class="mt-1 flex gap-2 mb-1">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('API Base URL')}
+							bind:value={OpenAIUrl}
+							required
+						/>
 
-					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						placeholder={$i18n.t('API Key')}
-						bind:value={OpenAIKey}
-						required
-					/>
-				</div>
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('API Key')}
+							bind:value={OpenAIKey}
+							required
+						/>
+					</div>
+				{/if}
 			{/if}
 
 			<div class=" py-0.5 flex w-full justify-between">
@@ -265,7 +272,7 @@
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
-							class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={speaker}
 							placeholder="Select a voice"
 						>
