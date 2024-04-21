@@ -20,7 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
 
-from apps.litellm.main import app as litellm_app, startup as litellm_app_startup
+from apps.litellm.main import app as litellm_app
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
@@ -166,11 +166,6 @@ async def check_url(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
 
     return response
-
-
-@app.on_event("startup")
-async def on_startup():
-    await litellm_app_startup()
 
 
 app.mount("/api/v1", webui_app)

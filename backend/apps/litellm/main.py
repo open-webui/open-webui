@@ -1,8 +1,8 @@
+from fastapi import FastAPI, Depends
+from fastapi.routing import APIRoute
+from fastapi.middleware.cors import CORSMiddleware
+
 import logging
-
-from litellm.proxy.proxy_server import ProxyConfig, initialize
-from litellm.proxy.proxy_server import app
-
 from fastapi import FastAPI, Request, Depends, status, Response
 from fastapi.responses import JSONResponse
 
@@ -23,24 +23,39 @@ from config import (
 )
 
 
-proxy_config = ProxyConfig()
+import asyncio
+import subprocess
 
 
-async def config():
-    router, model_list, general_settings = await proxy_config.load_config(
-        router=None, config_file_path="./data/litellm/config.yaml"
+app = FastAPI()
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+async def run_background_process(command):
+    process = await asyncio.create_subprocess_exec(
+        *command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
+    return process
 
-    await initialize(config="./data/litellm/config.yaml", telemetry=False)
 
-
-async def startup():
-    await config()
+async def start_litellm_background():
+    # Command to run in the background
+    command = "litellm --config ./data/litellm/config.yaml"
+    await run_background_process(command)
 
 
 @app.on_event("startup")
-async def on_startup():
-    await startup()
+async def startup_event():
+    asyncio.create_task(start_litellm_background())
 
 
 app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
@@ -61,6 +76,11 @@ async def auth_middleware(request: Request, call_next):
 
     response = await call_next(request)
     return response
+
+
+@app.get("/")
+async def get_status():
+    return {"status": True}
 
 
 class ModifyModelsResponseMiddleware(BaseHTTPMiddleware):
@@ -98,3 +118,26 @@ class ModifyModelsResponseMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(ModifyModelsResponseMiddleware)
+
+
+# from litellm.proxy.proxy_server import ProxyConfig, initialize
+# from litellm.proxy.proxy_server import app
+
+# proxy_config = ProxyConfig()
+
+
+# async def config():
+#     router, model_list, general_settings = await proxy_config.load_config(
+#         router=None, config_file_path="./data/litellm/config.yaml"
+#     )
+
+#     await initialize(config="./data/litellm/config.yaml", telemetry=False)
+
+
+# async def startup():
+#     await config()
+
+
+# @app.on_event("startup")
+# async def on_startup():
+#     await startup()
