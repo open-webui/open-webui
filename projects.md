@@ -13,13 +13,12 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 **Machine Learning with Python and Google Data Commons**
 
+- [ML for Community Forecasting](../data-pipeline/timelines/training/naics/)
 - [RealityStream](/RealityStream/) - Machine Learning Classification Models
 - [OpenFootprint](/useeio.js/footprint) - Javascript Label Development
-- [ML for Community Forecasting](../data-pipeline/timelines/training/naics/)
-- [Annual NAICS - Process Industries by Zip Code](/data-pipeline/industries/naics)
-- [USEEIO Commodities for Deep Learning](/data-pipeline/research/economy) - Totals for states
-- [International Google Data Commons API](/data-pipeline/international/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
-- [Python - State Regions using Sets of Counties](/community-data/us/edd/)
+- [Process Industries NAICS by Zip Code](/data-pipeline/industries/naics) - Aashish
+- [Top Commodities by State (hide sort columns)](/data-pipeline/research/economy) - Dinesh
+- [State Regions using Sets of Counties](/community-data/us/edd/) - Dinesh
 - [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - Honglin, Rupesh
 
 - [3D Force Graph](https://github.com/vasturiano/3d-force-graph) for [Balanced Diets](/balance/) - Rakesh, Anshit
@@ -30,7 +29,8 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [Observable with Data Commons](/data-commons/) - [Data Loaders How-To](/data-commons/dist/air/)
 - [Sankey Industry Chart](/io/charts/sankey/) - Chenbohan
 - [Balanced Food](/balanced/) - [World Nutrition](/data-commons/dist/food) - Kargil, Meiru
-- [Chord Chart Data Prep](/io/charts/chord/) - [ask Kargil for location](https://github.com/modelearth/Observables-DataLoader/tree/master/docs) - Parth
+- [Chord Chart Data Prep](/io/charts/chord/) - [ask Kargil for location](https://github.com/modelearth/Observables-DataLoader/tree/master/docs)
+- [International Google Data Commons API](/data-pipeline/international/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
 
 
 **BuildingTransparency and Open Footprint labels**
@@ -48,7 +48,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 **AI Chatbots LLM/SLM**
 
 <!-- Docker path: https://chat.openai.com/share/61b0997f-ea9b-49f7-9bcb-12fa0519a2d1 -->
-- [Open WebUI](src) with [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/)
+- [Open WebUI](src) with [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/) like Pinecone<!-- Mentioned, and Matthew Berman rattles of a list of true Agents: https://youtu.be/_AOA6M9Ta2I?si=Bh8SMhyD3GmuCLks&t=378-->
 - [Earthscape for Chatbot AI - Supabase and NextJS Hosting](/earthscape/app/)
 <!--
 - [ChatAll - Share simultaneous AI Chats with Chatbot UI](https://github.com/sunner/ChatALL)
