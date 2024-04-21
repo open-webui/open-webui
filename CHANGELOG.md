@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.120] - 2024-04-20
+
+### Added
+
+- **📦 Archive Chat Feature**: Easily archive chats with a new sidebar button, and access archived chats via the profile button > archived chats.
+- **🔊 Configurable Text-to-Speech Endpoint**: Customize your Text-to-Speech experience with configurable OpenAI endpoints.
+- **🛠️ Improved Error Handling**: Enhanced error message handling for connection failures.
+- **⌨️ Enhanced Shortcut**: When editing messages, use ctrl/cmd+enter to save and submit, and esc to close.
+- **🌐 Language Support**: Added support for Georgian and enhanced translations for Portuguese and Vietnamese.
+
+### Fixed
+
+- **🔧 Model Selector**: Resolved issue where default model selection was not saving.
+- **🔗 Share Link Copy Button**: Fixed bug where the copy button wasn't copying links in Safari.
+- **🎨 Light Theme Styling**: Addressed styling issue with the light theme.
+
 ## [0.1.119] - 2024-04-16
 
 ### Added
