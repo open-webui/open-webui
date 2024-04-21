@@ -154,7 +154,7 @@ async def get_models(user=Depends(get_current_user)):
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     body = await request.body()
 
-    url = "http://localhost:4000/v1"
+    url = "http://localhost:4000"
 
     target_url = f"{url}/{path}"
 
