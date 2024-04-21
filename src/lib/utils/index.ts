@@ -20,9 +20,7 @@ export const getModels = async (token: string) => {
 		})
 	]);
 
-	models = models
-		.filter((models) => models)
-		.reduce((a, e, i, arr) => a.concat(e, ...(i < arr.length - 1 ? [{ name: 'hr' }] : [])), []);
+	models = models.filter((models) => models).reduce((a, e, i, arr) => a.concat(e), []);
 
 	return models;
 };
