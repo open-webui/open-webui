@@ -316,24 +316,22 @@
 			console.log(e);
 
 			if (e.dataTransfer?.files) {
-				let reader = new FileReader();
-
-				reader.onload = (event) => {
-					files = [
-						...files,
-						{
-							type: 'image',
-							url: `${event.target.result}`
-						}
-					];
-				};
-
 				const inputFiles = Array.from(e.dataTransfer?.files);
 
 				if (inputFiles && inputFiles.length > 0) {
 					inputFiles.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
 						if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+							let reader = new FileReader();
+							reader.onload = (event) => {
+								files = [
+									...files,
+									{
+										type: 'image',
+										url: `${event.target.result}`
+									}
+								];
+							};
 							reader.readAsDataURL(file);
 						} else if (
 							SUPPORTED_FILE_TYPE.includes(file['type']) ||
@@ -470,23 +468,22 @@
 					hidden
 					multiple
 					on:change={async () => {
-						let reader = new FileReader();
-						reader.onload = (event) => {
-							files = [
-								...files,
-								{
-									type: 'image',
-									url: `${event.target.result}`
-								}
-							];
-							inputFiles = null;
-							filesInputElement.value = '';
-						};
-
 						if (inputFiles && inputFiles.length > 0) {
 							const _inputFiles = Array.from(inputFiles);
 							_inputFiles.forEach((file) => {
 								if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+									let reader = new FileReader();
+									reader.onload = (event) => {
+										files = [
+											...files,
+											{
+												type: 'image',
+												url: `${event.target.result}`
+											}
+										];
+										inputFiles = null;
+										filesInputElement.value = '';
+									};
 									reader.readAsDataURL(file);
 								} else if (
 									SUPPORTED_FILE_TYPE.includes(file['type']) ||
