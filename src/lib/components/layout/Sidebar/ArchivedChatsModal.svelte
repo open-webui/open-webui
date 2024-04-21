@@ -67,7 +67,7 @@
 		<div class="flex flex-col md:flex-row w-full px-5 py-4 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if chats.length > 0}
-					<div class="text-left text-sm w-full mb-4">
+					<div class="text-left text-sm w-full mb-4 h-[22rem] overflow-y-scroll">
 						<div class="relative overflow-x-auto">
 							<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto">
 								<thead
@@ -75,7 +75,7 @@
 								>
 									<tr>
 										<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
-										<th scope="col" class="px-3 py-2"> {$i18n.t('Created At')} </th>
+										<th scope="col" class="px-3 py-2 hidden md:flex"> {$i18n.t('Created At')} </th>
 										<th scope="col" class="px-3 py-2 text-right" />
 									</tr>
 								</thead>
@@ -93,8 +93,10 @@
 												</a>
 											</td>
 
-											<td class=" px-3 py-1">
-												{dayjs(chat.created_at * 1000).format($i18n.t('MMMM DD, YYYY HH:mm'))}
+											<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
+												<div class="my-auto">
+													{dayjs(chat.created_at * 1000).format($i18n.t('MMMM DD, YYYY HH:mm'))}
+												</div>
 											</td>
 
 											<td class="px-3 py-1 text-right">
