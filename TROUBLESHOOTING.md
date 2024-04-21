@@ -18,6 +18,16 @@ If you're experiencing connection issues, it’s often due to the WebUI docker c
 docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
 ```
 
+## Reaching Ollama on your computer with Podman on MacOS
+
+If you're using Podman on MacOS, to reach Ollama running on your computer you must enable the host loopback with `--network slirp4netns:allow_host_loopback=true` and override `OLLAMA_BASE_URL` to `http://host.containers.internal:11434`. The Open WebUI link remains the default: `http://localhost:3000`.
+
+**Example Podman Command**:
+
+```bash
+podman run -d --network slirp4netns:allow_host_loopback=true -p 3000:8080 -e OLLAMA_BASE_URL=http://host.containers.internal:11434 -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+```
+
 ### General Connection Errors
 
 **Ensure Ollama Version is Up-to-Date**: Always start by checking that you have the latest version of Ollama. Visit [Ollama's official site](https://ollama.com/) for the latest updates.
