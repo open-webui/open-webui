@@ -81,7 +81,9 @@ async def run_background_process(command):
 async def start_litellm_background():
     print("start_litellm_background")
     # Command to run in the background
-    command = "litellm --telemetry False --config ./data/litellm/config.yaml"
+    command = (
+        "litellm --port 14365 --telemetry False --config ./data/litellm/config.yaml"
+    )
 
     await run_background_process(command)
 
@@ -141,7 +143,7 @@ async def restart_litellm(user=Depends(get_admin_user)):
 @app.get("/models")
 @app.get("/v1/models")
 async def get_models(user=Depends(get_current_user)):
-    url = "http://localhost:4000/v1"
+    url = "http://localhost:14365/v1"
     r = None
     try:
         r = requests.request(method="GET", url=f"{url}/models")
@@ -180,7 +182,7 @@ async def get_models(user=Depends(get_current_user)):
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     body = await request.body()
 
-    url = "http://localhost:4000"
+    url = "http://localhost:14365"
 
     target_url = f"{url}/{path}"
 
