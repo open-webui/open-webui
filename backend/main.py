@@ -20,12 +20,17 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
 
-from apps.litellm.main import app as litellm_app, startup as litellm_app_startup
+from apps.litellm.main import (
+    app as litellm_app,
+    start_litellm_background,
+    shutdown_litellm_background,
+)
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
 from apps.web.main import app as webui_app
 
+import asyncio
 from pydantic import BaseModel
 from typing import List
 
@@ -170,7 +175,7 @@ async def check_url(request: Request, call_next):
 
 @app.on_event("startup")
 async def on_startup():
-    await litellm_app_startup()
+    asyncio.create_task(start_litellm_background())
 
 
 app.mount("/api/v1", webui_app)
@@ -315,3 +320,8 @@ app.mount(
     SPAStaticFiles(directory=FRONTEND_BUILD_DIR, html=True),
     name="spa-static-files",
 )
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await shutdown_litellm_background()
