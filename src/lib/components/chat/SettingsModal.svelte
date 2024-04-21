@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { models, settings, user } from '$lib/stores';
 
-	import { getModels } from '$lib/utils';
+	import { getModels as _getModels } from '$lib/utils';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -23,8 +23,12 @@
 	const saveSettings = async (updated) => {
 		console.log(updated);
 		await settings.set({ ...$settings, ...updated });
-		await models.set(await getModels(localStorage.token));
+		await models.set(await getModels());
 		localStorage.setItem('settings', JSON.stringify($settings));
+	};
+
+	const getModels = async () => {
+		return await _getModels(localStorage.token);
 	};
 
 	let selectedTab = 'general';
