@@ -230,16 +230,13 @@ class ChatTable:
     def get_all_chats(self) -> List[ChatModel]:
         return [
             ChatModel(**model_to_dict(chat))
-            for chat in Chat.select()
-            .where(Chat.archived == False)
-            .order_by(Chat.updated_at.desc())
+            for chat in Chat.select().order_by(Chat.updated_at.desc())
         ]
 
     def get_all_chats_by_user_id(self, user_id: str) -> List[ChatModel]:
         return [
             ChatModel(**model_to_dict(chat))
             for chat in Chat.select()
-            .where(Chat.archived == False)
             .where(Chat.user_id == user_id)
             .order_by(Chat.updated_at.desc())
         ]
