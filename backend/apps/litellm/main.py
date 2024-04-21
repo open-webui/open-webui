@@ -43,20 +43,29 @@ app.add_middleware(
 
 
 async def run_background_process(command):
+    # Start the process
     process = await asyncio.create_subprocess_exec(
         *command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
-    return process
+    # Read output asynchronously
+    async for line in process.stdout:
+        print(line.decode().strip())  # Print stdout line by line
+
+    await process.wait()  # Wait for the subprocess to finish
 
 
 async def start_litellm_background():
+    print("start_litellm_background")
     # Command to run in the background
     command = "litellm --telemetry False --config ./data/litellm/config.yaml"
+
     await run_background_process(command)
 
 
 @app.on_event("startup")
 async def startup_event():
+
+    print("startup_event")
     # TODO: Check config.yaml file and create one
     asyncio.create_task(start_litellm_background())
 
