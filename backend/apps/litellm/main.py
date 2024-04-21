@@ -124,7 +124,7 @@ async def restart_litellm(user=Depends(get_admin_user)):
         log.info("litellm service shutdown complete.")
 
         # Restart the background service
-        await start_litellm_background()
+        start_litellm_background()
         log.info("litellm service restart complete.")
 
         return {
