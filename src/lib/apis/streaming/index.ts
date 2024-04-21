@@ -6,9 +6,14 @@ type TextStreamUpdate = {
 // createOpenAITextStream takes a ReadableStreamDefaultReader from an SSE response,
 // and returns an async generator that emits delta updates with large deltas chunked into random sized chunks
 export async function createOpenAITextStream(
-	messageStream: ReadableStreamDefaultReader
+	messageStream: ReadableStreamDefaultReader,
+	splitLargeDeltas: boolean
 ): Promise<AsyncGenerator<TextStreamUpdate>> {
-	return streamLargeDeltasAsRandomChunks(openAIStreamToIterator(messageStream));
+	let iterator = openAIStreamToIterator(messageStream);
+	if (splitLargeDeltas) {
+		iterator = streamLargeDeltasAsRandomChunks(iterator);
+	}
+	return iterator;
 }
 
 async function* openAIStreamToIterator(

@@ -552,9 +552,9 @@
 				messages: [
 					$settings.system
 						? {
-							role: 'system',
-							content: $settings.system
-						}
+								role: 'system',
+								content: $settings.system
+						  }
 						: undefined,
 					...messages
 				]
@@ -612,7 +612,7 @@
 				.pipeThrough(splitStream('\n'))
 				.getReader();
 
-			const textStream = await createOpenAITextStream(reader);
+			const textStream = await createOpenAITextStream(reader, $settings.splitLargeChunks);
 			console.log(textStream);
 
 			for await (const update of textStream) {
