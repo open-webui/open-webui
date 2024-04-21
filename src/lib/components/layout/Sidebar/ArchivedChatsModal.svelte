@@ -80,7 +80,7 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each [...chats, ...chats, ...chats] as chat, idx}
+									{#each chats as chat, idx}
 										<tr
 											class="bg-white {idx !== chats.length - 1 &&
 												'border-b'} dark:bg-gray-900 dark:border-gray-850 text-xs"
