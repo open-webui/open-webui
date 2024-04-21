@@ -322,9 +322,14 @@ OPENAI_API_BASE_URLS = [
 ]
 
 OPENAI_API_KEY = ""
-OPENAI_API_KEY = OPENAI_API_KEYS[
-    OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
-]
+
+try:
+    OPENAI_API_KEY = OPENAI_API_KEYS[
+        OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
+    ]
+except:
+    pass
+
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 
