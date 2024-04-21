@@ -117,8 +117,8 @@ class RAGMiddleware(BaseHTTPMiddleware):
                     rag_app.state.RAG_EMBEDDING_ENGINE,
                     rag_app.state.RAG_EMBEDDING_MODEL,
                     rag_app.state.sentence_transformer_ef,
-                    rag_app.state.RAG_OPENAI_API_KEY,
-                    rag_app.state.RAG_OPENAI_API_BASE_URL,
+                    rag_app.state.OPENAI_API_KEY,
+                    rag_app.state.OPENAI_API_BASE_URL,
                 )
                 del data["docs"]
 
