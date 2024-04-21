@@ -24,6 +24,9 @@ assignees: ''
 
 ## Environment
 
+- **Open WebUI Version:** [e.g., 0.1.120]
+- **Ollama (if applicable):** [e.g., 0.1.30, 0.1.32-rc1]
+
 - **Operating System:** [e.g., Windows 10, macOS Big Sur, Ubuntu 20.04]
 - **Browser (if applicable):** [e.g., Chrome 100.0, Firefox 98.0]
 

@@ -341,7 +341,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             try:
                 res = r.json()
                 if "error" in res:
-                    error_detail = f"External: {res['error']}"
+                    error_detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
             except:
                 error_detail = f"External: {e}"
 

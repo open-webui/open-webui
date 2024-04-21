@@ -324,11 +324,11 @@ def get_embedding_model_path(
 
 
 def generate_openai_embeddings(
-    model: str, text: str, key: str, url: str = "https://api.openai.com"
+    model: str, text: str, key: str, url: str = "https://api.openai.com/v1"
 ):
     try:
         r = requests.post(
-            f"{url}/v1/embeddings",
+            f"{url}/embeddings",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {key}",

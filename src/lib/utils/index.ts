@@ -20,9 +20,7 @@ export const getModels = async (token: string) => {
 		})
 	]);
 
-	models = models
-		.filter((models) => models)
-		.reduce((a, e, i, arr) => a.concat(e, ...(i < arr.length - 1 ? [{ name: 'hr' }] : [])), []);
+	models = models.filter((models) => models).reduce((a, e, i, arr) => a.concat(e), []);
 
 	return models;
 };
@@ -187,7 +185,8 @@ export const generateInitialsImage = (name) => {
 	return canvas.toDataURL();
 };
 
-export const copyToClipboard = (text) => {
+export const copyToClipboard = async (text) => {
+	let result = false;
 	if (!navigator.clipboard) {
 		const textArea = document.createElement('textarea');
 		textArea.value = text;
@@ -205,21 +204,27 @@ export const copyToClipboard = (text) => {
 			const successful = document.execCommand('copy');
 			const msg = successful ? 'successful' : 'unsuccessful';
 			console.log('Fallback: Copying text command was ' + msg);
+			result = true;
 		} catch (err) {
 			console.error('Fallback: Oops, unable to copy', err);
 		}
 
 		document.body.removeChild(textArea);
-		return;
+		return result;
 	}
-	navigator.clipboard.writeText(text).then(
-		function () {
+
+	result = await navigator.clipboard
+		.writeText(text)
+		.then(() => {
 			console.log('Async: Copying to clipboard was successful!');
-		},
-		function (err) {
-			console.error('Async: Could not copy text: ', err);
-		}
-	);
+			return true;
+		})
+		.catch((error) => {
+			console.error('Async: Could not copy text: ', error);
+			return false;
+		});
+
+	return result;
 };
 
 export const compareVersion = (latest, current) => {

@@ -29,8 +29,8 @@
 	let embeddingEngine = '';
 	let embeddingModel = '';
 
-	let openAIKey = '';
-	let openAIUrl = '';
+	let OpenAIKey = '';
+	let OpenAIUrl = '';
 
 	let chunkSize = 0;
 	let chunkOverlap = 0;
@@ -79,7 +79,7 @@
 			return;
 		}
 
-		if ((embeddingEngine === 'openai' && openAIKey === '') || openAIUrl === '') {
+		if ((embeddingEngine === 'openai' && OpenAIKey === '') || OpenAIUrl === '') {
 			toast.error($i18n.t('OpenAI URL/Key required.'));
 			return;
 		}
@@ -93,8 +93,8 @@
 			...(embeddingEngine === 'openai'
 				? {
 						openai_config: {
-							key: openAIKey,
-							url: openAIUrl
+							key: OpenAIKey,
+							url: OpenAIUrl
 						}
 				  }
 				: {})
@@ -133,8 +133,8 @@
 			embeddingEngine = embeddingConfig.embedding_engine;
 			embeddingModel = embeddingConfig.embedding_model;
 
-			openAIKey = embeddingConfig.openai_config.key;
-			openAIUrl = embeddingConfig.openai_config.url;
+			OpenAIKey = embeddingConfig.openai_config.key;
+			OpenAIUrl = embeddingConfig.openai_config.url;
 		}
 	};
 
@@ -192,14 +192,14 @@
 					<input
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						placeholder={$i18n.t('API Base URL')}
-						bind:value={openAIUrl}
+						bind:value={OpenAIUrl}
 						required
 					/>
 
 					<input
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						placeholder={$i18n.t('API Key')}
-						bind:value={openAIKey}
+						bind:value={OpenAIKey}
 						required
 					/>
 				</div>

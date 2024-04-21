@@ -25,7 +25,7 @@
 	let showDownloadChatModal = false;
 </script>
 
-<ShareChatModal bind:show={showShareChatModal} />
+<ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div
 		class=" flex {$settings?.fullScreenMode ?? null ? 'max-w-full' : 'max-w-3xl'} 
