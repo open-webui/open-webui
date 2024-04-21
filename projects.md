@@ -13,7 +13,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 **Machine Learning with Python and Google Data Commons**
 
-- [ML for Community Forecasting](../data-pipeline/timelines/training/naics/)
+- [ML for Community Forecasting](../data-pipeline/timelines/)
 - [RealityStream](/RealityStream/) - Machine Learning Classification Models
 - [OpenFootprint](/useeio.js/footprint) - Javascript Label Development
 - [Process Industries NAICS by Zip Code](/data-pipeline/industries/naics) - Aashish
