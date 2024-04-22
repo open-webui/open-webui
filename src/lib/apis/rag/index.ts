@@ -123,6 +123,7 @@ export const getQuerySettings = async (token: string) => {
 
 type QuerySettings = {
 	k: number | null;
+	r: number | null;
 	template: string | null;
 };
 

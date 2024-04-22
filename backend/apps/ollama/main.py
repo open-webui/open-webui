@@ -92,6 +92,10 @@ async def get_ollama_api_urls(user=Depends(get_admin_user)):
     return {"OLLAMA_BASE_URLS": app.state.OLLAMA_BASE_URLS}
 
 
+def get_ollama_endpoint(url_idx: int = 0):
+    return app.state.OLLAMA_BASE_URLS[url_idx]
+
+
 class UrlUpdateForm(BaseModel):
     urls: List[str]
 

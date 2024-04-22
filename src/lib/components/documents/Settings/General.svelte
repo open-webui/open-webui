@@ -42,6 +42,7 @@
 
 	let querySettings = {
 		template: '',
+		r: 0.0,
 		k: 4
 	};
 
@@ -124,7 +125,7 @@
 
 		updateRerankingModelLoading = true;
 		const res = await updateRerankingConfig(localStorage.token, {
-			reranking_model: rerankingModel,
+			reranking_model: rerankingModel
 		}).catch(async (error) => {
 			toast.error(error);
 			await setRerankingConfig();
@@ -450,6 +451,12 @@
 					</div>
 				</div>
 
+				<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+					{$i18n.t(
+						'Note: If you choose a reranking model, it will use that to score and rerank instead of the embedding model.'
+					)}
+				</div>
+
 				<hr class=" dark:border-gray-700 my-3" />
 
 				<div class="  flex w-full justify-between">
@@ -571,6 +578,26 @@
 									bind:value={querySettings.k}
 									autocomplete="off"
 									min="0"
+								/>
+							</div>
+						</div>
+					</div>
+
+					<div class=" flex">
+						<div class="  flex w-full justify-between">
+							<div class="self-center text-xs font-medium flex-1">
+								{$i18n.t('Relevance Threshold')}
+							</div>
+
+							<div class="self-center p-3">
+								<input
+									class=" w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									type="number"
+									step="0.01"
+									placeholder={$i18n.t('Enter Relevance Threshold')}
+									bind:value={querySettings.r}
+									autocomplete="off"
+									min="0.0"
 								/>
 							</div>
 						</div>
