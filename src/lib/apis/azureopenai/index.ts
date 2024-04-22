@@ -171,7 +171,7 @@ export const getAzureOpenAIAPIVersions = async (token: string = '') => {
 	return res.AZURE_OPENAI_API_VERSIONS;
 };
 
-export const updateAzureOpenAIAPIVersions = async (token: string = '', keys: string[]) => {
+export const updateAzureOpenAIAPIVersions = async (token: string = '', apiversions: string[]) => {
 	let error = null;
 	console.log('updateAzureOpenAIAPIVersions');
 
@@ -183,7 +183,7 @@ export const updateAzureOpenAIAPIVersions = async (token: string = '', keys: str
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			keys: keys
+			apiversions: apiversions
 		})
 	})
 		.then(async (res) => {
@@ -240,7 +240,7 @@ export const getAzureOpenAIDeploymentModelNames = async (token: string = '') => 
 	return res.AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES;
 };
 
-export const updateAzureOpenAIDeploymentModelNames = async (token: string = '', keys: string[]) => {
+export const updateAzureOpenAIDeploymentModelNames = async (token: string = '', deploymentmodelnames: string[][]) => {
 	let error = null;
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/deploymentmodelnames/update`, {
@@ -251,7 +251,7 @@ export const updateAzureOpenAIDeploymentModelNames = async (token: string = '', 
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			keys: keys
+			deploymentmodelnames: deploymentmodelnames
 		})
 	})
 		.then(async (res) => {

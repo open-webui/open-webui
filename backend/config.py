@@ -407,6 +407,11 @@ MODEL_FILTER_ENABLED = os.environ.get("MODEL_FILTER_ENABLED", "False").lower() =
 MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
 MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 
+
+AZURE_MODEL_FILTER_ENABLED = os.environ.get("AZURE_MODEL_FILTER_ENABLED", "False").lower() == "true"
+AZURE_MODEL_FILTER_LIST = os.environ.get("AZURE_MODEL_FILTER_LIST", "")
+AZURE_MODEL_FILTER_LIST = [model.strip() for model in AZURE_MODEL_FILTER_LIST.split(";")]
+
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
 ####################################

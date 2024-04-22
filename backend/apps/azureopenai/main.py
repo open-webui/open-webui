@@ -24,8 +24,8 @@ from config import (
     AZURE_OPENAI_API_BASE_URLS,
     AZURE_OPENAI_API_KEYS,
     CACHE_DIR,
-    MODEL_FILTER_ENABLED,
-    MODEL_FILTER_LIST,
+    AZURE_MODEL_FILTER_ENABLED,
+    AZURE_MODEL_FILTER_LIST,
 )
 from typing import List, Optional
 
@@ -45,11 +45,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
-app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.MODEL_FILTER_ENABLED = AZURE_MODEL_FILTER_ENABLED
+app.state.MODEL_FILTER_LIST = AZURE_MODEL_FILTER_LIST
 
-app.state.AZURE_OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
-app.state.AZURE_OPENAI_API_KEYS = OPENAI_API_KEYS
+app.state.AZURE_OPENAI_API_BASE_URLS = AZURE_OPENAI_API_BASE_URLS
+app.state.AZURE_OPENAI_API_KEYS = AZURE_OPENAI_API_KEYS
 
 app.state.MODELS = {}
 
@@ -74,32 +74,51 @@ class KeysUpdateForm(BaseModel):
 
 
 @app.get("/urls")
-async def get_openai_urls(user=Depends(get_admin_user)):
-    return {"OPENAI_API_BASE_URLS": app.state.OPENAI_API_BASE_URLS}
+async def get_azure_openai_urls(user=Depends(get_admin_user)):
+    return {"AZURE_OPENAI_API_BASE_URLS": app.state.AZURE_OPENAI_API_BASE_URLS}
 
 
 @app.post("/urls/update")
-async def update_openai_urls(form_data: UrlsUpdateForm, user=Depends(get_admin_user)):
-    app.state.OPENAI_API_BASE_URLS = form_data.urls
-    return {"OPENAI_API_BASE_URLS": app.state.OPENAI_API_BASE_URLS}
+async def update_azure_openai_urls(form_data: UrlsUpdateForm, user=Depends(get_admin_user)):
+    app.state.AZURE_OPENAI_API_BASE_URLS = form_data.urls
+    return {"AZURE_OPENAI_API_BASE_URLS": app.state.AZURE_OPENAI_API_BASE_URLS}
 
 
 @app.get("/keys")
-async def get_openai_keys(user=Depends(get_admin_user)):
-    return {"OPENAI_API_KEYS": app.state.OPENAI_API_KEYS}
+async def get_azure_openai_keys(user=Depends(get_admin_user)):
+    return {"AZURE_OPENAI_API_KEYS": app.state.AZURE_OPENAI_API_KEYS}
 
 
 @app.post("/keys/update")
-async def update_openai_key(form_data: KeysUpdateForm, user=Depends(get_admin_user)):
-    app.state.OPENAI_API_KEYS = form_data.keys
-    return {"OPENAI_API_KEYS": app.state.OPENAI_API_KEYS}
+async def update_azure_openai_key(form_data: KeysUpdateForm, user=Depends(get_admin_user)):
+    app.state.AZURE_OPENAI_API_KEYS = form_data.keys
+    return {"AZURE_OPENAI_API_KEYS": app.state.AZURE_OPENAI_API_KEYS}
 
+@app.get("/apiversions")
+async def get_azure_openai_keys(user=Depends(get_admin_user)):
+    return {"AZURE_OPENAI_API_VERSIONS": app.state.AZURE_OPENAI_API_VERSIOINS}
+
+
+@app.post("/apiversions/update")
+async def update_azure_openai_key(form_data: KeysUpdateForm, user=Depends(get_admin_user)):
+    app.state.AZURE_OPENAI_API_KEYS = form_data.apiversions
+    return {"AZURE_OPENAI_API_VERSIONS": app.state.AZURE_OPENAI_API_VERSIOINS}
+
+@app.get("/deploymentmodelnames")
+async def get_azure_openai_deployment_model_names(user=Depends(get_admin_user)):
+    return {"AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES": app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES}
+
+
+@app.post("/deploymentmodelnames/update")
+async def update_azure_openai_deployment_model_names(form_data: KeysUpdateForm, user=Depends(get_admin_user)):
+    app.state.AZURE_OPENAI_API_KEYS = form_data.apiversions
+    return {"AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES": app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES}
 
 @app.post("/audio/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
     idx = None
     try:
-        idx = app.state.OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
+        idx = app.state.AZURE_OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
         body = await request.body()
         name = hashlib.sha256(body).hexdigest()
 
@@ -178,7 +197,7 @@ def merge_models_lists(model_lists):
                 [
                     {**model, "urlIdx": idx}
                     for model in models
-                    if "api.openai.com" not in app.state.OPENAI_API_BASE_URLS[idx]
+                    if "api.openai.com" not in app.state.AZURE_OPENAI_API_BASE_URLS[idx]
                     or "gpt" in model["id"]
                 ]
             )
@@ -189,12 +208,12 @@ def merge_models_lists(model_lists):
 async def get_all_models():
     log.info("get_all_models()")
 
-    if len(app.state.OPENAI_API_KEYS) == 1 and app.state.OPENAI_API_KEYS[0] == "":
+    if len(app.state.AZURE_OPENAI_API_KEYS) == 1 and app.state.AZURE_OPENAI_API_KEYS[0] == "":
         models = {"data": []}
     else:
         tasks = [
-            fetch_url(f"{url}/models", app.state.OPENAI_API_KEYS[idx])
-            for idx, url in enumerate(app.state.OPENAI_API_BASE_URLS)
+            fetch_url(f"{url}/models", app.state.AZURE_OPENAI_API_KEYS[idx])
+            for idx, url in enumerate(app.state.AZURE_OPENAI_API_BASE_URLS)
         ]
 
         responses = await asyncio.gather(*tasks)
@@ -235,7 +254,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
                 return models
         return models
     else:
-        url = app.state.OPENAI_API_BASE_URLS[url_idx]
+        url = app.state.AZURE_OPENAI_API_BASE_URLS[url_idx]
 
         r = None
 
@@ -269,6 +288,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
+    log.info(f"Proxying request to {path}")
     idx = 0
 
     body = await request.body()
@@ -299,8 +319,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     except json.JSONDecodeError as e:
         log.error("Error loading request body into a dictionary:", e)
 
-    url = app.state.OPENAI_API_BASE_URLS[idx]
-    key = app.state.OPENAI_API_KEYS[idx]
+    url = app.state.AZURE_OPENAI_API_BASE_URLS[idx]
+    key = app.state.AZURE_OPENAI_API_KEYS[idx]
 
     target_url = f"{url}/{path}"
 
