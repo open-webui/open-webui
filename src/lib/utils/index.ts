@@ -40,7 +40,7 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
-    return content.replaceAll('&lt;', '<');
+	return content.replaceAll('&lt;', '<');
 };
 
 export const capitalizeFirstLetter = (string) => {
