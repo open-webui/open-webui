@@ -27,6 +27,7 @@ apscheduler
 google-generativeai
 
 langchain
+langchain-chroma
 langchain-community
 fake_useragent
 chromadb
@@ -45,6 +46,7 @@ opencv-python-headless
 rapidocr-onnxruntime
 
 fpdf2
+rank_bm25
 
 faster-whisper
 
