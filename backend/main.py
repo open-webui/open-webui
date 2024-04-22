@@ -300,6 +300,7 @@ async def get_app_latest_release_version():
 
 @app.get("/manifest.json")
 async def get_manifest_json():
+    log.info("GET /manifest.json")
     return {
         "name": WEBUI_NAME,
         "short_name": WEBUI_NAME,
