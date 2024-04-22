@@ -2,6 +2,7 @@ import { AZURE_OPENAI_API_BASE_URL } from '$lib/constants';
 
 export const getAzureOpenAIUrls = async (token: string = '') => {
 	let error = null;
+	console.log('getAzureOpenAIUrls');
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/urls`, {
 		method: 'GET',
@@ -34,6 +35,7 @@ export const getAzureOpenAIUrls = async (token: string = '') => {
 
 export const updateAzureOpenAIUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
+	console.log('updateAzureOpenAIUrls');
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/urls/update`, {
 		method: 'POST',
@@ -69,6 +71,7 @@ export const updateAzureOpenAIUrls = async (token: string = '', urls: string[]) 
 
 export const getAzureOpenAIKeys = async (token: string = '') => {
 	let error = null;
+	console.log('getAzureOpenAIKeys');
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/keys`, {
 		method: 'GET',
@@ -101,6 +104,7 @@ export const getAzureOpenAIKeys = async (token: string = '') => {
 
 export const updateAzureOpenAIKeys = async (token: string = '', keys: string[]) => {
 	let error = null;
+	console.log('updateAzureOpenAIKeys');
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/keys/update`, {
 		method: 'POST',
@@ -136,6 +140,7 @@ export const updateAzureOpenAIKeys = async (token: string = '', keys: string[]) 
 
 export const getAzureOpenAIAPIVersions = async (token: string = '') => {
 	let error = null;
+	console.log('getAzureOpenAIAPIVersions');
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/apiversions`, {
 		method: 'GET',
@@ -168,6 +173,7 @@ export const getAzureOpenAIAPIVersions = async (token: string = '') => {
 
 export const updateAzureOpenAIAPIVersions = async (token: string = '', keys: string[]) => {
 	let error = null;
+	console.log('updateAzureOpenAIAPIVersions');
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/apiversions/update`, {
 		method: 'POST',
@@ -203,6 +209,7 @@ export const updateAzureOpenAIAPIVersions = async (token: string = '', keys: str
 
 export const getAzureOpenAIDeploymentModelNames = async (token: string = '') => {
 	let error = null;
+	console.log('getAzureOpenAIDeploymentModelNames');
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/deploymentmodelnames`, {
 		method: 'GET',
@@ -270,6 +277,7 @@ export const updateAzureOpenAIDeploymentModelNames = async (token: string = '', 
 
 export const getAzureOpenAIModels = async (token: string = '') => {
 	let error = null;
+	console.log('getAzureOpenAIModels');
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/deploymentmodels`, {
 		method: 'GET',
@@ -309,6 +317,7 @@ export const getAzureOpenAIModelsDirect = async (
 	base_url: string = 'https://api.openai.com/v1',
 	api_key: string = ''
 ) => {
+	console.log('getAzureOpenAIModelsDirect');
 	let error = null;
 
 	const res = await fetch(`${base_url}/models`, {
@@ -348,6 +357,7 @@ export const generateAzureOpenAIChatCompletion = async (
 	url: string = AZURE_OPENAI_API_BASE_URL
 ) => {
 	let error = null;
+	console.log('generateAzureOpenAIChatCompletion');
 
 	const res = await fetch(`${url}/chat/completions`, {
 		method: 'POST',
@@ -375,6 +385,7 @@ export const synthesizeOpenAISpeech = async (
 	text: string = ''
 ) => {
 	let error = null;
+	console.log('synthesizeOpenAISpeech');
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/audio/speech`, {
 		method: 'POST',
@@ -408,6 +419,7 @@ export const generateTitle = async (
 	url: string = AZURE_OPENAI_API_BASE_URL
 ) => {
 	let error = null;
+	console.log('generateTitle');
 
 	template = template.replace(/{{prompt}}/g, prompt);
 

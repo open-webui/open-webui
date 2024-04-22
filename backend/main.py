@@ -19,6 +19,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
+from apps.azureopenai.main import app as azure_openai_app
 
 from apps.litellm.main import app as litellm_app, startup as litellm_app_startup
 from apps.audio.main import app as audio_app
@@ -174,6 +175,7 @@ app.mount("/litellm/api", litellm_app)
 
 app.mount("/ollama", ollama_app)
 app.mount("/openai/api", openai_app)
+app.mount("/azureopenai/api", azure_openai_app)
 
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
@@ -226,6 +228,9 @@ async def update_model_filter_config(
 
     openai_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
     openai_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
+
+    azure_openai_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    azure_openai_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
     litellm_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
     litellm_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
