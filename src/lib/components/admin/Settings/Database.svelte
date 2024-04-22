@@ -25,15 +25,15 @@
 			<div class="  flex w-full justify-between">
 				<!-- <div class=" self-center text-xs font-medium">{$i18n.t('Allow Chat Deletion')}</div> -->
 
-				{#if $config?.allow_admin_export ?? true}
+				{#if $config?.admin_export_enabled ?? true}
 					<button
 						class=" flex rounded-md py-1.5 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 						type="button"
 						on:click={() => {
-						// exportAllUserChats();
+							// exportAllUserChats();
 
-						downloadDatabase(localStorage.token);
-					}}
+							downloadDatabase(localStorage.token);
+						}}
 					>
 						<div class=" self-center mr-3">
 							<svg

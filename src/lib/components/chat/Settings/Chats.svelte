@@ -301,7 +301,7 @@
 			</button>
 		{/if}
 
-		{#if $user?.role === 'admin' && ($config?.allow_admin_export ?? true)}
+		{#if $user?.role === 'admin' && ($config?.admin_export_enabled ?? true)}
 			<hr class=" dark:border-gray-700" />
 
 			<button
