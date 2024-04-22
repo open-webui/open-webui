@@ -134,11 +134,36 @@
 							<button
 								class=" self-center flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white"
 								type="button"
-								on:pointerdown={() => {
-									shareLocalChat();
-								}}
 								on:click={async () => {
-									copyToClipboard(shareUrl);
+									const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+									if (isSafari) {
+										// Oh, Safari, you're so special, let's give you some extra love and attention
+										console.log('isSafari');
+
+										const getUrlPromise = async () => {
+											const url = await shareLocalChat();
+											return new Blob([url], { type: 'text/plain' });
+										};
+
+										navigator.clipboard
+											.write([
+												new ClipboardItem({
+													'text/plain': getUrlPromise()
+												})
+											])
+											.then(() => {
+												console.log('Async: Copying to clipboard was successful!');
+												return true;
+											})
+											.catch((error) => {
+												console.error('Async: Could not copy text: ', error);
+												return false;
+											});
+									} else {
+										copyToClipboard(await shareLocalChat());
+									}
+
 									toast.success($i18n.t('Copied shared chat URL to clipboard!'));
 									show = false;
 								}}
