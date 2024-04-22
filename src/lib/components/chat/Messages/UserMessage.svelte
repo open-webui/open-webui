@@ -176,10 +176,23 @@
 							e.target.style.height = '';
 							e.target.style.height = `${e.target.scrollHeight}px`;
 						}}
+						on:keydown={(e) => {
+							if (e.key === 'Escape') {
+								document.getElementById('close-edit-message-button')?.click();
+							}
+
+							const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
+							const isEnterPressed = e.key === 'Enter';
+
+							if (isCmdOrCtrlPressed && isEnterPressed) {
+								document.getElementById('save-edit-message-button')?.click();
+							}
+						}}
 					/>
 
 					<div class=" mt-2 mb-1 flex justify-center space-x-2 text-sm font-medium">
 						<button
+							id="save-edit-message-button"
 							class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded-lg"
 							on:click={() => {
 								editMessageConfirmHandler();
@@ -189,6 +202,7 @@
 						</button>
 
 						<button
+							id="close-edit-message-button"
 							class=" px-4 py-2 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-100 transition outline outline-1 outline-gray-200 dark:outline-gray-600 rounded-lg"
 							on:click={() => {
 								cancelEditMessage();

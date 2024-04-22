@@ -16,7 +16,6 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let selectedDoc;
 	let uploadDocInputElement: HTMLInputElement;
 	let inputFiles;
 	let tags = [];

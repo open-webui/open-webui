@@ -1,4 +1,5 @@
 import { OPENAI_API_BASE_URL } from '$lib/constants';
+import { promptTemplate } from '$lib/utils';
 
 export const getOpenAIUrls = async (token: string = '') => {
 	let error = null;
@@ -273,7 +274,7 @@ export const generateTitle = async (
 ) => {
 	let error = null;
 
-	template = template.replace(/{{prompt}}/g, prompt);
+	template = promptTemplate(template, prompt);
 
 	console.log(template);
 

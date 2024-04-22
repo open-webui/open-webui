@@ -136,7 +136,9 @@ class TagTable:
 
         return [
             TagModel(**model_to_dict(tag))
-            for tag in Tag.select().where(Tag.name.in_(tag_names))
+            for tag in Tag.select()
+            .where(Tag.user_id == user_id)
+            .where(Tag.name.in_(tag_names))
         ]
 
     def get_tags_by_chat_id_and_user_id(
@@ -151,7 +153,9 @@ class TagTable:
 
         return [
             TagModel(**model_to_dict(tag))
-            for tag in Tag.select().where(Tag.name.in_(tag_names))
+            for tag in Tag.select()
+            .where(Tag.user_id == user_id)
+            .where(Tag.name.in_(tag_names))
         ]
 
     def get_chat_ids_by_tag_name_and_user_id(

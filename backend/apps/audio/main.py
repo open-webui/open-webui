@@ -10,8 +10,19 @@ from fastapi import (
     File,
     Form,
 )
+
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
+
 from fastapi.middleware.cors import CORSMiddleware
 from faster_whisper import WhisperModel
+from pydantic import BaseModel
+
+
+import requests
+import hashlib
+from pathlib import Path
+import json
+
 
 from constants import ERROR_MESSAGES
 from utils.utils import (
@@ -28,7 +39,10 @@ from config import (
     UPLOAD_DIR,
     WHISPER_MODEL,
     WHISPER_MODEL_DIR,
+    WHISPER_MODEL_AUTO_UPDATE,
     DEVICE_TYPE,
+    AUDIO_OPENAI_API_BASE_URL,
+    AUDIO_OPENAI_API_KEY,
 )
 
 log = logging.getLogger(__name__)
@@ -43,12 +57,104 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+app.state.OPENAI_API_BASE_URL = AUDIO_OPENAI_API_BASE_URL
+app.state.OPENAI_API_KEY = AUDIO_OPENAI_API_KEY
+
 # setting device type for whisper model
 whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
 log.info(f"whisper_device_type: {whisper_device_type}")
 
+SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
+SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-@app.post("/transcribe")
+
+class OpenAIConfigUpdateForm(BaseModel):
+    url: str
+    key: str
+
+
+@app.get("/config")
+async def get_openai_config(user=Depends(get_admin_user)):
+    return {
+        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
+        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
+    }
+
+
+@app.post("/config/update")
+async def update_openai_config(
+    form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user)
+):
+    if form_data.key == "":
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+    app.state.OPENAI_API_BASE_URL = form_data.url
+    app.state.OPENAI_API_KEY = form_data.key
+
+    return {
+        "status": True,
+        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
+        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
+    }
+
+
+@app.post("/speech")
+async def speech(request: Request, user=Depends(get_verified_user)):
+    body = await request.body()
+    name = hashlib.sha256(body).hexdigest()
+
+    file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
+    file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
+
+    # Check if the file already exists in the cache
+    if file_path.is_file():
+        return FileResponse(file_path)
+
+    headers = {}
+    headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEY}"
+    headers["Content-Type"] = "application/json"
+
+    r = None
+    try:
+        r = requests.post(
+            url=f"{app.state.OPENAI_API_BASE_URL}/audio/speech",
+            data=body,
+            headers=headers,
+            stream=True,
+        )
+
+        r.raise_for_status()
+
+        # Save the streaming content to a file
+        with open(file_path, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        with open(file_body_path, "w") as f:
+            json.dump(json.loads(body.decode("utf-8")), f)
+
+        # Return the saved file
+        return FileResponse(file_path)
+
+    except Exception as e:
+        log.exception(e)
+        error_detail = "Open WebUI: Server Connection Error"
+        if r is not None:
+            try:
+                res = r.json()
+                if "error" in res:
+                    error_detail = f"External: {res['error']['message']}"
+            except:
+                error_detail = f"External: {e}"
+
+        raise HTTPException(
+            status_code=r.status_code if r != None else 500,
+            detail=error_detail,
+        )
+
+
+@app.post("/transcriptions")
 def transcribe(
     file: UploadFile = File(...),
     user=Depends(get_current_user),
@@ -69,12 +175,24 @@ def transcribe(
             f.write(contents)
             f.close()
 
-        model = WhisperModel(
-            WHISPER_MODEL,
-            device=whisper_device_type,
-            compute_type="int8",
-            download_root=WHISPER_MODEL_DIR,
-        )
+        whisper_kwargs = {
+            "model_size_or_path": WHISPER_MODEL,
+            "device": whisper_device_type,
+            "compute_type": "int8",
+            "download_root": WHISPER_MODEL_DIR,
+            "local_files_only": not WHISPER_MODEL_AUTO_UPDATE,
+        }
+
+        log.debug(f"whisper_kwargs: {whisper_kwargs}")
+
+        try:
+            model = WhisperModel(**whisper_kwargs)
+        except:
+            log.warning(
+                "WhisperModel initialization failed, attempting download with local_files_only=False"
+            )
+            whisper_kwargs["local_files_only"] = False
+            model = WhisperModel(**whisper_kwargs)
 
         segments, info = model.transcribe(file_path, beam_size=5)
         log.info(

@@ -195,7 +195,7 @@ class ImageGenerationPayload(BaseModel):
 def comfyui_generate_image(
     model: str, payload: ImageGenerationPayload, client_id, base_url
 ):
-    host = base_url.replace("http://", "").replace("https://", "")
+    ws_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
 
     comfyui_prompt = json.loads(COMFYUI_DEFAULT_PROMPT)
 
@@ -217,7 +217,7 @@ def comfyui_generate_image(
 
     try:
         ws = websocket.WebSocket()
-        ws.connect(f"ws://{host}/ws?clientId={client_id}")
+        ws.connect(f"{ws_url}/ws?clientId={client_id}")
         log.info("WebSocket connection established.")
     except Exception as e:
         log.exception(f"Failed to connect to WebSocket server: {e}")

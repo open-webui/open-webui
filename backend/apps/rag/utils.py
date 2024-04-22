@@ -2,9 +2,15 @@ import os
 import re
 import logging
 from typing import List
+import requests
+
+
 from huggingface_hub import snapshot_download
+from apps.ollama.main import generate_ollama_embeddings, GenerateEmbeddingsForm
+
 
 from config import SRC_LOG_LEVELS, CHROMA_CLIENT
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -21,6 +27,24 @@ def query_doc(collection_name: str, query: str, k: int, embedding_function):
             query_texts=[query],
             n_results=k,
         )
+        return result
+    except Exception as e:
+        raise e
+
+
+def query_embeddings_doc(collection_name: str, query_embeddings, k: int):
+    try:
+        # if you use docker use the model from the environment variable
+        log.info(f"query_embeddings_doc {query_embeddings}")
+        collection = CHROMA_CLIENT.get_collection(
+            name=collection_name,
+        )
+        result = collection.query(
+            query_embeddings=[query_embeddings],
+            n_results=k,
+        )
+
+        log.info(f"query_embeddings_doc:result {result}")
         return result
     except Exception as e:
         raise e
@@ -96,14 +120,46 @@ def query_collection(
     return merge_and_sort_query_results(results, k)
 
 
+def query_embeddings_collection(collection_names: List[str], query_embeddings, k: int):
+
+    results = []
+    log.info(f"query_embeddings_collection {query_embeddings}")
+
+    for collection_name in collection_names:
+        try:
+            collection = CHROMA_CLIENT.get_collection(name=collection_name)
+
+            result = collection.query(
+                query_embeddings=[query_embeddings],
+                n_results=k,
+            )
+            results.append(result)
+        except:
+            pass
+
+    return merge_and_sort_query_results(results, k)
+
+
 def rag_template(template: str, context: str, query: str):
     template = template.replace("[context]", context)
     template = template.replace("[query]", query)
     return template
 
 
-def rag_messages(docs, messages, template, k, embedding_function):
-    log.debug(f"docs: {docs}")
+def rag_messages(
+    docs,
+    messages,
+    template,
+    k,
+    embedding_engine,
+    embedding_model,
+    embedding_function,
+    openai_key,
+    openai_url,
+):
+    log.debug(
+        f"docs: {docs} {messages} {embedding_engine} {embedding_model} {embedding_function} {openai_key} {openai_url}"
+    )
 
     last_user_message_idx = None
     for i in range(len(messages) - 1, -1, -1):
@@ -136,22 +192,57 @@ def rag_messages(docs, messages, template, k, embedding_function):
         context = None
 
         try:
-            if doc["type"] == "collection":
-                context = query_collection(
-                    collection_names=doc["collection_names"],
-                    query=query,
-                    k=k,
-                    embedding_function=embedding_function,
-                )
-            elif doc["type"] == "text":
+
+            if doc["type"] == "text":
                 context = doc["content"]
             else:
-                context = query_doc(
-                    collection_name=doc["collection_name"],
-                    query=query,
-                    k=k,
-                    embedding_function=embedding_function,
-                )
+                if embedding_engine == "":
+                    if doc["type"] == "collection":
+                        context = query_collection(
+                            collection_names=doc["collection_names"],
+                            query=query,
+                            k=k,
+                            embedding_function=embedding_function,
+                        )
+                    else:
+                        context = query_doc(
+                            collection_name=doc["collection_name"],
+                            query=query,
+                            k=k,
+                            embedding_function=embedding_function,
+                        )
+
+                else:
+                    if embedding_engine == "ollama":
+                        query_embeddings = generate_ollama_embeddings(
+                            GenerateEmbeddingsForm(
+                                **{
+                                    "model": embedding_model,
+                                    "prompt": query,
+                                }
+                            )
+                        )
+                    elif embedding_engine == "openai":
+                        query_embeddings = generate_openai_embeddings(
+                            model=embedding_model,
+                            text=query,
+                            key=openai_key,
+                            url=openai_url,
+                        )
+
+                    if doc["type"] == "collection":
+                        context = query_embeddings_collection(
+                            collection_names=doc["collection_names"],
+                            query_embeddings=query_embeddings,
+                            k=k,
+                        )
+                    else:
+                        context = query_embeddings_doc(
+                            collection_name=doc["collection_name"],
+                            query_embeddings=query_embeddings,
+                            k=k,
+                        )
+
         except Exception as e:
             log.exception(e)
             context = None
@@ -230,3 +321,26 @@ def get_embedding_model_path(
     except Exception as e:
         log.exception(f"Cannot determine embedding model snapshot path: {e}")
         return embedding_model
+
+
+def generate_openai_embeddings(
+    model: str, text: str, key: str, url: str = "https://api.openai.com/v1"
+):
+    try:
+        r = requests.post(
+            f"{url}/embeddings",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {key}",
+            },
+            json={"input": text, "model": model},
+        )
+        r.raise_for_status()
+        data = r.json()
+        if "data" in data:
+            return data["data"][0]["embedding"]
+        else:
+            raise "Something went wrong :/"
+    except Exception as e:
+        print(e)
+        return None

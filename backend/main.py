@@ -114,7 +114,11 @@ class RAGMiddleware(BaseHTTPMiddleware):
                     data["messages"],
                     rag_app.state.RAG_TEMPLATE,
                     rag_app.state.TOP_K,
+                    rag_app.state.RAG_EMBEDDING_ENGINE,
+                    rag_app.state.RAG_EMBEDDING_MODEL,
                     rag_app.state.sentence_transformer_ef,
+                    rag_app.state.OPENAI_API_KEY,
+                    rag_app.state.OPENAI_API_BASE_URL,
                 )
                 del data["docs"]
 
