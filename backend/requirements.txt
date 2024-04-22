@@ -17,7 +17,9 @@ peewee
 peewee-migrate
 bcrypt
 
-litellm==1.30.7
+litellm==1.35.17
+litellm[proxy]==1.35.17
+
 boto3
 
 argon2-cffi

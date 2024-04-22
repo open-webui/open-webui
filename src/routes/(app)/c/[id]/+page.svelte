@@ -42,6 +42,7 @@
 		OLLAMA_API_BASE_URL,
 		WEBUI_BASE_URL
 	} from '$lib/constants';
+	import { createOpenAITextStream } from '$lib/apis/streaming';
 
 	const i18n = getContext('i18n');
 
@@ -611,38 +612,22 @@
 				.pipeThrough(splitStream('\n'))
 				.getReader();
 
-			while (true) {
-				const { value, done } = await reader.read();
+			const textStream = await createOpenAITextStream(reader, $settings.splitLargeChunks);
+			console.log(textStream);
+
+			for await (const update of textStream) {
+				const { value, done } = update;
 				if (done || stopResponseFlag || _chatId !== $chatId) {
 					responseMessage.done = true;
 					messages = messages;
 					break;
 				}
 
-				try {
-					let lines = value.split('\n');
-
-					for (const line of lines) {
-						if (line !== '') {
-							console.log(line);
-							if (line === 'data: [DONE]') {
-								responseMessage.done = true;
-								messages = messages;
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
-
-								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
-									continue;
-								} else {
-									responseMessage.content += data.choices[0].delta.content ?? '';
-									messages = messages;
-								}
-							}
-						}
-					}
-				} catch (error) {
-					console.log(error);
+				if (responseMessage.content == '' && value == '\n') {
+					continue;
+				} else {
+					responseMessage.content += value;
+					messages = messages;
 				}
 
 				if ($settings.notificationEnabled && !document.hasFocus()) {

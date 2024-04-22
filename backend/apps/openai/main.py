@@ -80,6 +80,7 @@ async def get_openai_urls(user=Depends(get_admin_user)):
 
 @app.post("/urls/update")
 async def update_openai_urls(form_data: UrlsUpdateForm, user=Depends(get_admin_user)):
+    await get_all_models()
     app.state.OPENAI_API_BASE_URLS = form_data.urls
     return {"OPENAI_API_BASE_URLS": app.state.OPENAI_API_BASE_URLS}
 

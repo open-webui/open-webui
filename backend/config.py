@@ -322,9 +322,14 @@ OPENAI_API_BASE_URLS = [
 ]
 
 OPENAI_API_KEY = ""
-OPENAI_API_KEY = OPENAI_API_KEYS[
-    OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
-]
+
+try:
+    OPENAI_API_KEY = OPENAI_API_KEYS[
+        OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
+    ]
+except:
+    pass
+
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 
@@ -376,6 +381,8 @@ MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
 MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
+
+ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
 
 ####################################
 # WEBUI_VERSION
