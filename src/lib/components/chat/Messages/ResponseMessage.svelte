@@ -15,9 +15,10 @@
 	const dispatch = createEventDispatcher();
 
 	import { config, settings } from '$lib/stores';
-	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
+	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
+		approximateToHumanReadable,
 		extractSentences,
 		revertSanitizedResponseContent,
 		sanitizeResponseContent
@@ -122,7 +123,10 @@
                     eval_count: ${message.info.eval_count ?? 'N/A'}<br/>
                     eval_duration: ${
 											Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
-										}ms</span>`,
+										}ms<br/>
+                    approximate_total: ${approximateToHumanReadable(
+											message.info.total_duration
+										)}</span>`,
 				allowHTML: true
 			});
 		}
@@ -172,10 +176,12 @@
 
 	const toggleSpeakMessage = async () => {
 		if (speaking) {
-			speechSynthesis.cancel();
+			try {
+				speechSynthesis.cancel();
 
-			sentencesAudio[speakingIdx].pause();
-			sentencesAudio[speakingIdx].currentTime = 0;
+				sentencesAudio[speakingIdx].pause();
+				sentencesAudio[speakingIdx].currentTime = 0;
+			} catch {}
 
 			speaking = null;
 			speakingIdx = null;
@@ -217,6 +223,10 @@
 						sentence
 					).catch((error) => {
 						toast.error(error);
+
+						speaking = null;
+						loadingSpeech = false;
+
 						return null;
 					});
 
@@ -226,7 +236,6 @@
 						const audio = new Audio(blobUrl);
 						sentencesAudio[idx] = audio;
 						loadingSpeech = false;
-
 						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
 					}
 				}
@@ -547,6 +556,12 @@
 													on:click={() => {
 														rateMessage(message.id, 1);
 														showRateComment = true;
+
+														window.setTimeout(() => {
+															document
+																.getElementById(`message-feedback-${message.id}`)
+																?.scrollIntoView();
+														}, 0);
 													}}
 												>
 													<svg
@@ -576,6 +591,11 @@
 													on:click={() => {
 														rateMessage(message.id, -1);
 														showRateComment = true;
+														window.setTimeout(() => {
+															document
+																.getElementById(`message-feedback-${message.id}`)
+																?.scrollIntoView();
+														}, 0);
 													}}
 												>
 													<svg
@@ -835,6 +855,7 @@
 
 								{#if showRateComment}
 									<RateComment
+										messageId={message.id}
 										bind:show={showRateComment}
 										bind:message
 										on:submit={() => {

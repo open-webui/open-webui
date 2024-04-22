@@ -316,39 +316,38 @@
 			console.log(e);
 
 			if (e.dataTransfer?.files) {
-				let reader = new FileReader();
-
-				reader.onload = (event) => {
-					files = [
-						...files,
-						{
-							type: 'image',
-							url: `${event.target.result}`
-						}
-					];
-				};
-
-				const inputFiles = e.dataTransfer?.files;
+				const inputFiles = Array.from(e.dataTransfer?.files);
 
 				if (inputFiles && inputFiles.length > 0) {
-					const file = inputFiles[0];
-					console.log(file, file.name.split('.').at(-1));
-					if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
-						reader.readAsDataURL(file);
-					} else if (
-						SUPPORTED_FILE_TYPE.includes(file['type']) ||
-						SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-					) {
-						uploadDoc(file);
-					} else {
-						toast.error(
-							$i18n.t(
-								`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
-								{ file_type: file['type'] }
-							)
-						);
-						uploadDoc(file);
-					}
+					inputFiles.forEach((file) => {
+						console.log(file, file.name.split('.').at(-1));
+						if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+							let reader = new FileReader();
+							reader.onload = (event) => {
+								files = [
+									...files,
+									{
+										type: 'image',
+										url: `${event.target.result}`
+									}
+								];
+							};
+							reader.readAsDataURL(file);
+						} else if (
+							SUPPORTED_FILE_TYPE.includes(file['type']) ||
+							SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+						) {
+							uploadDoc(file);
+						} else {
+							toast.error(
+								$i18n.t(
+									`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
+									{ file_type: file['type'] }
+								)
+							);
+							uploadDoc(file);
+						}
+					});
 				} else {
 					toast.error($i18n.t(`File not found.`));
 				}
@@ -467,40 +466,42 @@
 					bind:files={inputFiles}
 					type="file"
 					hidden
+					multiple
 					on:change={async () => {
-						let reader = new FileReader();
-						reader.onload = (event) => {
-							files = [
-								...files,
-								{
-									type: 'image',
-									url: `${event.target.result}`
-								}
-							];
-							inputFiles = null;
-							filesInputElement.value = '';
-						};
-
 						if (inputFiles && inputFiles.length > 0) {
-							const file = inputFiles[0];
-							if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
-								reader.readAsDataURL(file);
-							} else if (
-								SUPPORTED_FILE_TYPE.includes(file['type']) ||
-								SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-							) {
-								uploadDoc(file);
-								filesInputElement.value = '';
-							} else {
-								toast.error(
-									$i18n.t(
-										`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
-										{ file_type: file['type'] }
-									)
-								);
-								uploadDoc(file);
-								filesInputElement.value = '';
-							}
+							const _inputFiles = Array.from(inputFiles);
+							_inputFiles.forEach((file) => {
+								if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+									let reader = new FileReader();
+									reader.onload = (event) => {
+										files = [
+											...files,
+											{
+												type: 'image',
+												url: `${event.target.result}`
+											}
+										];
+										inputFiles = null;
+										filesInputElement.value = '';
+									};
+									reader.readAsDataURL(file);
+								} else if (
+									SUPPORTED_FILE_TYPE.includes(file['type']) ||
+									SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+								) {
+									uploadDoc(file);
+									filesInputElement.value = '';
+								} else {
+									toast.error(
+										$i18n.t(
+											`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
+											{ file_type: file['type'] }
+										)
+									);
+									uploadDoc(file);
+									filesInputElement.value = '';
+								}
+							});
 						} else {
 							toast.error($i18n.t(`File not found.`));
 						}

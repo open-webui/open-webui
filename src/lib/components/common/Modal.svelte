@@ -15,8 +15,10 @@
 			return 'w-[16rem]';
 		} else if (size === 'sm') {
 			return 'w-[30rem]';
-		} else {
+		} else if (size === 'md') {
 			return 'w-[44rem]';
+		} else {
+			return 'w-[48rem]';
 		}
 	};
 
@@ -47,7 +49,7 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={modalElement}
-		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center z-50 overflow-hidden overscroll-contain"
+		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center z-[9999] overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:click={() => {
 			show = false;

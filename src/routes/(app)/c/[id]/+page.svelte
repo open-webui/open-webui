@@ -30,14 +30,12 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { queryCollection, queryDoc } from '$lib/apis/rag';
 	import { generateOpenAIChatCompletion, generateTitle } from '$lib/apis/openai';
 
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
-	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
-	import { RAGTemplate } from '$lib/utils/rag';
+
 	import {
 		LITELLM_API_BASE_URL,
 		OPENAI_API_BASE_URL,
@@ -695,16 +693,18 @@
 				}
 			} else {
 				toast.error(
-					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: model })
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+						provider: model.name ?? model.id
+					})
 				);
 				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-					provider: model
+					provider: model.name ?? model.id
 				});
 			}
 
 			responseMessage.error = true;
 			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-				provider: model
+				provider: model.name ?? model.id
 			});
 			responseMessage.done = true;
 			messages = messages;
@@ -877,9 +877,6 @@
 
 				goto('/');
 			}}
-			{tags}
-			{addTag}
-			{deleteTag}
 		/>
 		<div class="flex flex-col flex-auto">
 			<div

@@ -10,8 +10,8 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
-	import Tags from '$lib/components/common/Tags.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import Tags from '$lib/components/chat/Tags.svelte';
+
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 
 	export let shareEnabled: boolean = false;
@@ -21,10 +21,6 @@
 	// export let tagHandler: Function;
 
 	export let chat;
-	export let tags;
-	export let deleteTag: Function;
-	export let addTag: Function;
-
 	export let onClose: Function = () => {};
 
 	const downloadTxt = async () => {
@@ -190,7 +186,7 @@
 				<hr class="border-gray-100 dark:border-gray-800 mt-2.5 mb-1.5" />
 
 				<div class="flex p-1">
-					<Tags {tags} {deleteTag} {addTag} />
+					<Tags chatId={chat.id} />
 				</div>
 
 				<!-- <DropdownMenu.Item

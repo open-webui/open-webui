@@ -681,16 +681,18 @@
 				}
 			} else {
 				toast.error(
-					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: model })
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+						provider: model.name ?? model.id
+					})
 				);
 				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-					provider: model
+					provider: model.name ?? model.id
 				});
 			}
 
 			responseMessage.error = true;
 			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-				provider: model
+				provider: model.name ?? model.id
 			});
 			responseMessage.done = true;
 			messages = messages;
@@ -849,9 +851,6 @@
 		shareEnabled={messages.length > 0}
 		{chat}
 		{initNewChat}
-		{tags}
-		{addTag}
-		{deleteTag}
 	/>
 	<div class="flex flex-col flex-auto">
 		<div

@@ -19,17 +19,13 @@
 	export let chat;
 	export let selectedModels;
 
-	export let tags = [];
-	export let addTag: Function;
-	export let deleteTag: Function;
-
 	export let showModelSelector = true;
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
 </script>
 
-<ShareChatModal bind:show={showShareChatModal} />
+<ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div
 		class=" flex {$settings?.fullScreenMode ?? null ? 'max-w-full' : 'max-w-3xl'} 
@@ -85,9 +81,6 @@
 						downloadHandler={() => {
 							showDownloadChatModal = !showDownloadChatModal;
 						}}
-						{tags}
-						{deleteTag}
-						{addTag}
 					>
 						<button
 							class="cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
