@@ -23,6 +23,8 @@ from config import (
     SRC_LOG_LEVELS,
     AZURE_OPENAI_API_BASE_URLS,
     AZURE_OPENAI_API_KEYS,
+    AZURE_OPENAI_API_VERSIONS,
+    AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES,
     CACHE_DIR,
     AZURE_MODEL_FILTER_ENABLED,
     AZURE_MODEL_FILTER_LIST,
@@ -50,6 +52,8 @@ app.state.MODEL_FILTER_LIST = AZURE_MODEL_FILTER_LIST
 
 app.state.AZURE_OPENAI_API_BASE_URLS = AZURE_OPENAI_API_BASE_URLS
 app.state.AZURE_OPENAI_API_KEYS = AZURE_OPENAI_API_KEYS
+app.state.AZURE_OPENAI_API_VERSIONS = AZURE_OPENAI_API_VERSIONS
+app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES = AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES
 
 app.state.MODELS = {}
 
@@ -72,6 +76,11 @@ class UrlsUpdateForm(BaseModel):
 class KeysUpdateForm(BaseModel):
     keys: List[str]
 
+class ApiVersionsUpdateForm(BaseModel):
+    apiversions: List[str]
+
+class DeploymentModelNamesUpdateForm(BaseModel):
+    deploymentmodelnames: List[list[str]]
 
 @app.get("/urls")
 async def get_azure_openai_urls(user=Depends(get_admin_user)):
@@ -96,23 +105,22 @@ async def update_azure_openai_key(form_data: KeysUpdateForm, user=Depends(get_ad
 
 @app.get("/apiversions")
 async def get_azure_openai_keys(user=Depends(get_admin_user)):
-    return {"AZURE_OPENAI_API_VERSIONS": app.state.AZURE_OPENAI_API_VERSIOINS}
+    return {"AZURE_OPENAI_API_VERSIONS": app.state.AZURE_OPENAI_API_VERSIONS}
 
 
 @app.post("/apiversions/update")
-async def update_azure_openai_key(form_data: KeysUpdateForm, user=Depends(get_admin_user)):
-    app.state.AZURE_OPENAI_API_KEYS = form_data.apiversions
-    return {"AZURE_OPENAI_API_VERSIONS": app.state.AZURE_OPENAI_API_VERSIOINS}
+async def update_azure_openai_key(form_data: ApiVersionsUpdateForm, user=Depends(get_admin_user)):
+    app.state.AZURE_OPENAI_API_VERSIONS = form_data.apiversions
+    return {"AZURE_OPENAI_API_VERSIONS": app.state.AZURE_OPENAI_API_VERSIONS}
 
 @app.get("/deploymentmodelnames")
 async def get_azure_openai_deployment_model_names(user=Depends(get_admin_user)):
-    return {"AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES": app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES}
-
+    return {"AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES": app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES}
 
 @app.post("/deploymentmodelnames/update")
-async def update_azure_openai_deployment_model_names(form_data: KeysUpdateForm, user=Depends(get_admin_user)):
-    app.state.AZURE_OPENAI_API_KEYS = form_data.apiversions
-    return {"AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES": app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES}
+async def update_azure_openai_deployment_model_names(form_data: DeploymentModelNamesUpdateForm, user=Depends(get_admin_user)):
+    app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES = form_data.deploymentmodelnames
+    return {"AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES": app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES}
 
 @app.post("/audio/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
@@ -206,7 +214,7 @@ def merge_models_lists(model_lists):
 
 
 async def get_all_models():
-    log.info("get_all_models()")
+    log.info("azure openAI get_all_models()")
 
     if len(app.state.AZURE_OPENAI_API_KEYS) == 1 and app.state.AZURE_OPENAI_API_KEYS[0] == "":
         models = {"data": []}

@@ -63,7 +63,7 @@
         AZURE_OPENAI_API_BASE_URLS = await updateAzureOpenAIUrls(localStorage.token, AZURE_OPENAI_API_BASE_URLS);
         AZURE_OPENAI_API_KEYS = await updateAzureOpenAIKeys(localStorage.token, AZURE_OPENAI_API_KEYS);
         AZURE_OPENAI_API_VERSIONS = await updateAzureOpenAIAPIVersions(localStorage.token, AZURE_OPENAI_API_VERSIONS);
-        AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES = await updateAzureOpenAIDeploymentModelNames(localStorage.token, AZURE_OPENAI_API_VERSIONS);
+        AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES = await updateAzureOpenAIDeploymentModelNames(localStorage.token, AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES);
 
         await models.set(await getModels());
     };

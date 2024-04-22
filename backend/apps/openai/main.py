@@ -188,7 +188,7 @@ def merge_models_lists(model_lists):
 
 
 async def get_all_models():
-    log.info("get_all_models()")
+    log.info("open ai get_all_models()")
 
     if len(app.state.OPENAI_API_KEYS) == 1 and app.state.OPENAI_API_KEYS[0] == "":
         models = {"data": []}

@@ -338,17 +338,14 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 ####################################
 
 AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY", "")
-AZURE_OPENAI_API_BASE_URL = os.environ.get("AZURE_OPENAI_API_BASE_URL", "")
+AZURE_OPENAI_API_BASE_URL = os.environ.get("AZURE_OPENAI_API_BASE_URL", "https://your_account_name.openai.azure.com/")
+AZURE_OPENAI_API_VERSION = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-01")
+AZURE_OPENAI_DEPLOYMENT_MODEL_NAME = os.environ.get("AZURE_OPENAI_DEPLOYMENT_MODEL_NAME", "")
 
-
-if AZURE_OPENAI_API_BASE_URL == "":
-    AZURE_OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 AZURE_OPENAI_API_KEYS = os.environ.get("AZURE_OPENAI_API_KEYS", "")
 AZURE_OPENAI_API_KEYS = AZURE_OPENAI_API_KEYS if AZURE_OPENAI_API_KEYS != "" else AZURE_OPENAI_API_KEY
-
 AZURE_OPENAI_API_KEYS = [url.strip() for url in AZURE_OPENAI_API_KEYS.split(";")]
-
 
 AZURE_OPENAI_API_BASE_URLS = os.environ.get("AZURE_OPENAI_API_BASE_URLS", "")
 AZURE_OPENAI_API_BASE_URLS = (
@@ -356,8 +353,27 @@ AZURE_OPENAI_API_BASE_URLS = (
 )
 
 AZURE_OPENAI_API_BASE_URLS = [
-    url.strip() if url != "" else "https://api.openai.com/v1"
+    url.strip() if url != "" else "https://back_end_your_account_name.openai.azure.com/"
     for url in AZURE_OPENAI_API_BASE_URLS.split(";")
+]
+
+AZURE_OPENAI_API_VERSIONS = os.environ.get("AZURE_OPENAI_API_VERSIONS", "")
+AZURE_OPENAI_API_VERSIONS = (
+    AZURE_OPENAI_API_VERSIONS if AZURE_OPENAI_API_VERSIONS != "" else AZURE_OPENAI_API_VERSION
+)
+AZURE_OPENAI_API_VERSIONS = [
+    url.strip() if url != "" else "2024-02-01"
+    for url in AZURE_OPENAI_API_VERSIONS.split(";")
+]
+
+AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES = os.environ.get("AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES", "")
+AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES = (
+    AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES if AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES != "" else AZURE_OPENAI_DEPLOYMENT_MODEL_NAME
+)
+
+AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES = [
+    [model_name.strip() if model_name != "" else "" for model_name in url.split(":")]
+    for url in AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES.split(";")
 ]
 
 ####################################
@@ -366,7 +382,6 @@ AZURE_OPENAI_API_BASE_URLS = [
 
 ENABLE_SIGNUP = os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
 DEFAULT_MODELS = os.environ.get("DEFAULT_MODELS", None)
-
 
 DEFAULT_PROMPT_SUGGESTIONS = (
     CONFIG_DATA["ui"]["prompt_suggestions"]

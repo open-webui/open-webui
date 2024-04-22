@@ -13,6 +13,7 @@ export const getAzureOpenAIUrls = async (token: string = '') => {
 		}
 	})
 		.then(async (res) => {
+			console.log(res)
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
@@ -237,11 +238,12 @@ export const getAzureOpenAIDeploymentModelNames = async (token: string = '') => 
 		throw error;
 	}
 
-	return res.AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES;
+	return res.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES;
 };
 
 export const updateAzureOpenAIDeploymentModelNames = async (token: string = '', deploymentmodelnames: string[][]) => {
 	let error = null;
+	console.log("updateAzureOpenAIDeploymentModelNames")
 
 	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/deploymentmodelnames/update`, {
 		method: 'POST',
@@ -272,7 +274,7 @@ export const updateAzureOpenAIDeploymentModelNames = async (token: string = '', 
 		throw error;
 	}
 
-	return res.AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES;
+	return res.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES;
 };
 
 export const getAzureOpenAIModels = async (token: string = '') => {
