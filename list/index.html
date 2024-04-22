@@ -1,31 +1,25 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
-<script type="text/javascript">
-if(location.host.indexOf('model.georgia') >= 0) {
-  window.location="https://model.earth/projects"; // Until base href is added to page so links work.
-}
-</script>
 <meta charset="utf-8">
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<title>Open WebUI Projects</title>
+<title>Open WebUI - List of Models</title>
 <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script type="text/javascript" src="https://model.earth/localsite/js/localsite.js?showheader=true"></script>
 
 <script>
-loadMarkdown("projects.md", "projectsDiv", "_parent");
+loadMarkdown("README.md", "readmeDiv", "_parent");
 </script>
 
 <style>
-  body {
-    font-family: 'Nunito Sans', sans-serif;
-  }
-  li p { /* Not sure why this became necessary */
-    margin-top: 0px;
-    margin-bottom: 2px;
-  }
+ul {
+  list-style-type: none;
+}
+img {
+  max-width: 100%;
+}
 </style>
 
 </head>
@@ -33,7 +27,9 @@ loadMarkdown("projects.md", "projectsDiv", "_parent");
 <body>
 
 <div class="content contentpadding">
-  <div id="projectsDiv"></div>
+  <a href="../">Projects</a> - 
+  <a href="https://github.com/modelearth/projects/">Our GitHub Fork</a>
+  <div id="readmeDiv"></div>
 </div>
 
 </body>
