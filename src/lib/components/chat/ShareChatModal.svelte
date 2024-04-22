@@ -137,7 +137,7 @@
 								on:pointerdown={() => {
 									shareLocalChat();
 								}}
-								on:click={async () => {
+								on:pointerup={async () => {
 									copyToClipboard(shareUrl);
 									toast.success($i18n.t('Copied shared chat URL to clipboard!'));
 									show = false;
