@@ -22,7 +22,7 @@
 
 ### Added
 
-- [List any new features, functionalities, or additions, including any breaking changes]
+- [List any new features, functionalities, or additions]
 
 ### Fixed
 
@@ -34,11 +34,7 @@
 
 ### Removed
 
-- [List any removed features, files, or deprecated functionalities]
-
-### Deprecated
-
-- [List any deprecated features, functions, or APIs]
+- [List any removed features, files, or deprecated functionalities and APIs]
 
 ### Security
 
