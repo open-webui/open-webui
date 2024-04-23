@@ -1,3 +1,6 @@
+## WARNING: FAILURE TO FOLLOW THE TEMPLATE WILL RESULT IN IMMEDIATE LOCK OF THE PULL REQUEST WITHOUT COMMENT
+Please complete the following pull request checklist to ensure accuracy, clarity, and consistency.
+
 ## Pull Request Checklist
 
 - [ ] **Description:** Briefly describe the changes in this pull request.
@@ -11,10 +14,7 @@
 
 ## Description
 
-[Insert a brief description of the changes made in this pull request, including any relevant background or motivation. Consider including answers to the following questions:
-* What problem does this PR solve?
-* How does it improve the project or fix an issue?
-* What changes were made to achieve this outcome?]
+[Insert a brief description of the changes made in this pull request, including any relevantincluding motivation and impact.]
 
 ---
 
@@ -26,23 +26,23 @@
 
 ### Fixed
 
-- [List any fixes or corrections, including bug fixes, typo fixes, or other corrections]
+- [List any fixes, corrections, or bug fixes]
 
 ### Changed
 
-- [List any changes or updates, including refactorings, optimizations, or other modifications]
+- [List any changes, updates, refactorings, or optimizations]
 
 ### Removed
 
-- [List any removed features, files, or deprecated functionalities and APIs]
+- [List any removed features, files, or deprecated functionalities]
 
 ### Security
 
-- [List any security-related changes, including vulnerability fixes or security enhancements]
+- [List any new or updated security-related changes, including vulnerability fixes]
 
 ### Breaking Changes
 
-- [List any breaking changes, including changes that may affect existing functionality or compatibility]
+- [List any breaking changes affecting compatibility or functionality]
 
 ---
 
@@ -50,4 +50,4 @@
 
 * [Insert any additional context, notes, or explanations for the changes]
 
-* [Mention any related issues, commits, or other references]
+* [Reference any related issues, commits, or other relevant information]
