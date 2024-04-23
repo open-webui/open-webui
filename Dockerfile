@@ -11,6 +11,8 @@ ARG USE_CUDA_VER=cu121
 # IMPORTANT: If you change the default model (all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
 ARG USE_EMBEDDING_MODEL=all-MiniLM-L6-v2
 
+ARG WEBUI_BASE_PATH=""
+
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:21-alpine3.19 as build
 
@@ -38,7 +40,8 @@ ENV ENV=prod \
     USE_OLLAMA_DOCKER=${USE_OLLAMA} \
     USE_CUDA_DOCKER=${USE_CUDA} \
     USE_CUDA_DOCKER_VER=${USE_CUDA_VER} \
-    USE_EMBEDDING_MODEL_DOCKER=${USE_EMBEDDING_MODEL}
+    USE_EMBEDDING_MODEL_DOCKER=${USE_EMBEDDING_MODEL} \
+    WEBUI_BASE_PATH=${WEBUI_BASE_PATH} 
 
 ## Basis URL Config ##
 ENV OLLAMA_BASE_URL="/ollama" \
