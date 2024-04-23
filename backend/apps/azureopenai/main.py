@@ -7,6 +7,7 @@ import aiohttp
 import asyncio
 import json
 import logging
+from openai import AsyncAzureOpenAI
 
 from pydantic import BaseModel
 
@@ -104,12 +105,12 @@ async def update_azure_openai_key(form_data: KeysUpdateForm, user=Depends(get_ad
     return {"AZURE_OPENAI_API_KEYS": app.state.AZURE_OPENAI_API_KEYS}
 
 @app.get("/apiversions")
-async def get_azure_openai_keys(user=Depends(get_admin_user)):
+async def get_azure_openai_apiversions(user=Depends(get_admin_user)):
     return {"AZURE_OPENAI_API_VERSIONS": app.state.AZURE_OPENAI_API_VERSIONS}
 
 
 @app.post("/apiversions/update")
-async def update_azure_openai_key(form_data: ApiVersionsUpdateForm, user=Depends(get_admin_user)):
+async def update_azure_openai_apiversions(form_data: ApiVersionsUpdateForm, user=Depends(get_admin_user)):
     app.state.AZURE_OPENAI_API_VERSIONS = form_data.apiversions
     return {"AZURE_OPENAI_API_VERSIONS": app.state.AZURE_OPENAI_API_VERSIONS}
 
@@ -201,7 +202,7 @@ async def fetch_url(url_idx):
             level_models["id"] = model_name
             level_models["name"] = model_name
             level_models["model_idx"] = model_idx
-        return {"data": level_models}
+        return await {"data": [level_models]}
     except Exception as e:
         # Handle connection error here
         log.error(f"Connection error: {e}")
@@ -339,11 +340,18 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     url = app.state.AZURE_OPENAI_API_BASE_URLS[idx]
     key = app.state.AZURE_OPENAI_API_KEYS[idx]
+    api_version = app.state.AZURE_OPENAI_API_VERSIONS[idx]
 
     target_url = f"{url}/{path}"
 
     if key == "":
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+    chat_client = AsyncAzureOpenAI(
+        api_key=  key,
+        api_version= api_version,
+        azure_endpoint = url
+    )
 
     headers = {}
     headers["Authorization"] = f"Bearer {key}"

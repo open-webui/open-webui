@@ -281,7 +281,7 @@ export const getAzureOpenAIModels = async (token: string = '') => {
 	let error = null;
 	console.log('getAzureOpenAIModels');
 
-	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/deploymentmodels`, {
+	const res = await fetch(`${AZURE_OPENAI_API_BASE_URL}/models`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
