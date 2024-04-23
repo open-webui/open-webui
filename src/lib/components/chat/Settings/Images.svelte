@@ -332,19 +332,39 @@
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Default Model')}</div>
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
-						<select
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={selectedModel}
-							placeholder={$i18n.t('Select a model')}
-							required
-						>
-							{#if !selectedModel}
-								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
-							{/if}
-							{#each models ?? [] as model}
-								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option>
-							{/each}
-						</select>
+						{#if imageGenerationEngine === 'openai' && !OPENAI_API_BASE_URL.includes('https://api.openai.com')}
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										list="model-list"
+										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										bind:value={selectedModel}
+										placeholder="Select a model"
+									/>
+
+									<datalist id="model-list">
+										{#each models ?? [] as model}
+											<option value={model.id}>{model.name}</option>
+										{/each}
+									</datalist>
+								</div>
+							</div>
+						{:else}
+							<select
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								bind:value={selectedModel}
+								placeholder={$i18n.t('Select a model')}
+								required
+							>
+								{#if !selectedModel}
+									<option value="" disabled selected>{$i18n.t('Select a model')}</option>
+								{/if}
+								{#each models ?? [] as model}
+									<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option
+									>
+								{/each}
+							</select>
+						{/if}
 					</div>
 				</div>
 			</div>
