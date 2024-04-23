@@ -1,3 +1,5 @@
+import sys
+
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.routing import APIRoute
 from fastapi.middleware.cors import CORSMiddleware
@@ -70,7 +72,7 @@ async def run_background_process(command):
         log.info(f"Executing command: {command}")
         # Execute the command and create a subprocess
         process = await asyncio.create_subprocess_exec(
-            *command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            *command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         background_process = process
         log.info("Subprocess started successfully.")
@@ -96,7 +98,17 @@ async def run_background_process(command):
 async def start_litellm_background():
     log.info("start_litellm_background")
     # Command to run in the background
-    command = f"litellm --port {LITELLM_PROXY_PORT} --host {LITELLM_PROXY_HOST} --telemetry False --config {LITELLM_CONFIG_DIR}"
+    command = [
+        "litellm",
+        "--port",
+        str(LITELLM_PROXY_PORT),
+        "--host",
+        LITELLM_PROXY_HOST,
+        "--telemetry",
+        "False",
+        "--config",
+        LITELLM_CONFIG_DIR,
+    ]
 
     await run_background_process(command)
 
