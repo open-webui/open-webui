@@ -499,3 +499,11 @@ IMAGES_OPENAI_API_KEY = os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY)
 
 AUDIO_OPENAI_API_BASE_URL = os.getenv("AUDIO_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
 AUDIO_OPENAI_API_KEY = os.getenv("AUDIO_OPENAI_API_KEY", OPENAI_API_KEY)
+
+####################################
+# LiteLLM
+####################################
+
+LITELLM_PROXY_PORT = int(os.getenv("LITELLM_PROXY_PORT", "14365"))
+if LITELLM_PROXY_PORT < 0 or LITELLM_PROXY_PORT > 65535:
+    raise ValueError("Invalid port number for LITELLM_PROXY_PORT")
