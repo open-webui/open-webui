@@ -196,13 +196,15 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 #         log.error(f"Connection error: {e}")
 #         return None
 async def fetch_url(url_idx):
-    level_models= {}
+    level_models= []
     try:
-        for model_idx, model_name in enumerate(app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES):
-            level_models["id"] = model_name
-            level_models["name"] = model_name
-            level_models["model_idx"] = model_idx
-        return await {"data": [level_models]}
+        for model_idx, model_name in enumerate(app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES[url_idx]):
+            level_model = {}
+            level_model["id"] = model_name
+            level_model["name"] = model_name
+            level_model["model_idx"] = model_idx
+            level_models.append(level_model)
+        return {"data": level_models}
     except Exception as e:
         # Handle connection error here
         log.error(f"Connection error: {e}")
