@@ -1,6 +1,3 @@
-## WARNING: FAILURE TO FOLLOW THE TEMPLATE WILL RESULT IN IMMEDIATE LOCK OF THE PULL REQUEST WITHOUT COMMENT
-Please complete the following pull request checklist to ensure accuracy, clarity, and consistency.
-
 ## Pull Request Checklist
 
 - [ ] **Description:** Briefly describe the changes in this pull request.
