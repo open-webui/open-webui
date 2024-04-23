@@ -28,6 +28,7 @@ from config import (
     MODEL_FILTER_LIST,
     DATA_DIR,
     LITELLM_PROXY_PORT,
+    LITELLM_PROXY_HOST,
 )
 
 from litellm.utils import get_llm_provider
@@ -95,7 +96,7 @@ async def run_background_process(command):
 async def start_litellm_background():
     log.info("start_litellm_background")
     # Command to run in the background
-    command = f"litellm --port {LITELLM_PROXY_PORT} --telemetry False --config ./data/litellm/config.yaml"
+    command = f"litellm --port {LITELLM_PROXY_PORT} --host {LITELLM_PROXY_HOST} --telemetry False --config ./data/litellm/config.yaml"
 
     await run_background_process(command)
 
