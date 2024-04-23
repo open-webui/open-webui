@@ -75,14 +75,16 @@
 	};
 
 	const updateConfigHandler = async () => {
-		const res = await updateAudioConfig(localStorage.token, {
-			url: OpenAIUrl,
-			key: OpenAIKey
-		});
+		if (TTSEngine === 'openai') {
+			const res = await updateAudioConfig(localStorage.token, {
+				url: OpenAIUrl,
+				key: OpenAIKey
+			});
 
-		if (res) {
-			OpenAIUrl = res.OPENAI_API_BASE_URL;
-			OpenAIKey = res.OPENAI_API_KEY;
+			if (res) {
+				OpenAIUrl = res.OPENAI_API_BASE_URL;
+				OpenAIKey = res.OPENAI_API_KEY;
+			}
 		}
 	};
 
