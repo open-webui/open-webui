@@ -35,8 +35,8 @@ from config import (
     ENABLE_IMAGE_GENERATION,
     AUTOMATIC1111_BASE_URL,
     COMFYUI_BASE_URL,
-    IMAGE_OPENAI_API_BASE_URL,
-    IMAGE_OPENAI_API_KEY,
+    IMAGES_OPENAI_API_BASE_URL,
+    IMAGES_OPENAI_API_KEY,
 )
 
 
@@ -58,8 +58,8 @@ app.add_middleware(
 app.state.ENGINE = ""
 app.state.ENABLED = ENABLE_IMAGE_GENERATION
 
-app.state.OPENAI_API_BASE_URL = IMAGE_OPENAI_API_BASE_URL
-app.state.OPENAI_API_KEY = IMAGE_OPENAI_API_KEY
+app.state.OPENAI_API_BASE_URL = IMAGES_OPENAI_API_BASE_URL
+app.state.OPENAI_API_KEY = IMAGES_OPENAI_API_KEY
 
 app.state.MODEL = ""
 
@@ -135,27 +135,33 @@ async def update_engine_url(
     }
 
 
-class OpenAIKeyUpdateForm(BaseModel):
+class OpenAIConfigUpdateForm(BaseModel):
+    url: str
     key: str
 
 
-@app.get("/key")
-async def get_openai_key(user=Depends(get_admin_user)):
-    return {"OPENAI_API_KEY": app.state.OPENAI_API_KEY}
+@app.get("/openai/config")
+async def get_openai_config(user=Depends(get_admin_user)):
+    return {
+        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
+        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
+    }
 
 
-@app.post("/key/update")
-async def update_openai_key(
-    form_data: OpenAIKeyUpdateForm, user=Depends(get_admin_user)
+@app.post("/openai/config/update")
+async def update_openai_config(
+    form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user)
 ):
-
     if form_data.key == "":
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
+    app.state.OPENAI_API_BASE_URL = form_data.url
     app.state.OPENAI_API_KEY = form_data.key
+
     return {
-        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
         "status": True,
+        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
+        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
     }
 
 

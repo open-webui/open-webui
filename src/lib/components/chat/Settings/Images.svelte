@@ -15,8 +15,8 @@
 		updateImageSize,
 		getImageSteps,
 		updateImageSteps,
-		getOpenAIKey,
-		updateOpenAIKey
+		getOpenAIConfig,
+		updateOpenAIConfig
 	} from '$lib/apis/images';
 	import { getBackendConfig } from '$lib/apis';
 	const dispatch = createEventDispatcher();
@@ -33,6 +33,7 @@
 	let AUTOMATIC1111_BASE_URL = '';
 	let COMFYUI_BASE_URL = '';
 
+	let OPENAI_API_BASE_URL = '';
 	let OPENAI_API_KEY = '';
 
 	let selectedModel = '';
@@ -131,7 +132,10 @@
 			AUTOMATIC1111_BASE_URL = URLS.AUTOMATIC1111_BASE_URL;
 			COMFYUI_BASE_URL = URLS.COMFYUI_BASE_URL;
 
-			OPENAI_API_KEY = await getOpenAIKey(localStorage.token);
+			const config = await getOpenAIConfig(localStorage.token);
+
+			OPENAI_API_KEY = config.OPENAI_API_KEY;
+			OPENAI_API_BASE_URL = config.OPENAI_API_BASE_URL;
 
 			imageSize = await getImageSize(localStorage.token);
 			steps = await getImageSteps(localStorage.token);
@@ -149,7 +153,7 @@
 		loading = true;
 
 		if (imageGenerationEngine === 'openai') {
-			await updateOpenAIKey(localStorage.token, OPENAI_API_KEY);
+			await updateOpenAIConfig(localStorage.token, OPENAI_API_BASE_URL, OPENAI_API_KEY);
 		}
 
 		await updateDefaultImageGenerationModel(localStorage.token, selectedModel);
@@ -300,13 +304,22 @@
 				</button>
 			</div>
 		{:else if imageGenerationEngine === 'openai'}
-			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('OpenAI API Key')}</div>
-			<div class="flex w-full">
-				<div class="flex-1 mr-2">
+			<div>
+				<div class=" mb-1.5 text-sm font-medium">{$i18n.t('OpenAI API Config')}</div>
+
+				<div class="flex gap-2 mb-1">
 					<input
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						placeholder={$i18n.t('Enter API Key')}
+						placeholder={$i18n.t('API Base URL')}
+						bind:value={OPENAI_API_BASE_URL}
+						required
+					/>
+
+					<input
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						placeholder={$i18n.t('API Key')}
 						bind:value={OPENAI_API_KEY}
+						required
 					/>
 				</div>
 			</div>
