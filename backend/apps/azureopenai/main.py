@@ -184,16 +184,29 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
 
 
-async def fetch_url(url, key):
+# async def fetch_url(url, key):
+#     try:
+#         headers = {"Authorization": f"Bearer {key}"}
+#         async with aiohttp.ClientSession() as session:
+#             async with session.get(url, headers=headers) as response:
+#                 return await response.json()
+#     except Exception as e:
+#         # Handle connection error here
+#         log.error(f"Connection error: {e}")
+#         return None
+async def fetch_url(url_idx):
+    level_models= {}
     try:
-        headers = {"Authorization": f"Bearer {key}"}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                return await response.json()
+        for model_idx, model_name in enumerate(app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES):
+            level_models["id"] = model_name
+            level_models["name"] = model_name
+            level_models["model_idx"] = model_idx
+        return {"data": level_models}
     except Exception as e:
         # Handle connection error here
         log.error(f"Connection error: {e}")
         return None
+
 
 
 def merge_models_lists(model_lists):
@@ -205,7 +218,7 @@ def merge_models_lists(model_lists):
                 [
                     {**model, "urlIdx": idx}
                     for model in models
-                    if "api.openai.com" not in app.state.AZURE_OPENAI_API_BASE_URLS[idx]
+                    if "openai.com" not in app.state.AZURE_OPENAI_API_BASE_URLS[idx]
                     or "gpt" in model["id"]
                 ]
             )
@@ -220,7 +233,7 @@ async def get_all_models():
         models = {"data": []}
     else:
         tasks = [
-            fetch_url(f"{url}/models", app.state.AZURE_OPENAI_API_KEYS[idx])
+            fetch_url(idx)
             for idx, url in enumerate(app.state.AZURE_OPENAI_API_BASE_URLS)
         ]
 
@@ -267,11 +280,8 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
         r = None
 
         try:
-            r = requests.request(method="GET", url=f"{url}/models")
-            r.raise_for_status()
-
-            response_data = r.json()
-            if "api.openai.com" in url:
+            response_data = fetch_url(url_idx=url_idx)
+            if "openai.com" in url:
                 response_data["data"] = list(
                     filter(lambda model: "gpt" in model["id"], response_data["data"])
                 )
