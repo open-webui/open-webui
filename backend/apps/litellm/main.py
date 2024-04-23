@@ -96,7 +96,7 @@ async def run_background_process(command):
 async def start_litellm_background():
     log.info("start_litellm_background")
     # Command to run in the background
-    command = f"litellm --port {LITELLM_PROXY_PORT} --host {LITELLM_PROXY_HOST} --telemetry False --config ./data/litellm/config.yaml"
+    command = f"litellm --port {LITELLM_PROXY_PORT} --host {LITELLM_PROXY_HOST} --telemetry False --config {LITELLM_CONFIG_DIR}"
 
     await run_background_process(command)
 
