@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
 
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
 	import { modelfiles } from '$lib/stores';
@@ -19,7 +20,7 @@
 		const _chat = chat;
 
 		const sharedChat = await shareChatById(localStorage.token, chatId);
-		shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
+		shareUrl = `${window.location.origin}${base}/s/${sharedChat.id}`;
 		console.log(shareUrl);
 		chat = await getChatById(localStorage.token, chatId);
 
@@ -97,7 +98,7 @@
 			<div class="px-4 pt-4 pb-5 w-full flex flex-col justify-center">
 				<div class=" text-sm dark:text-gray-300 mb-1">
 					{#if chat.share_id}
-						<a href="/s/{chat.share_id}" target="_blank"
+						<a href="{base}/s/{chat.share_id}" target="_blank"
 							>You have shared this chat <span class=" underline">before</span>.</a
 						>
 						Click here to

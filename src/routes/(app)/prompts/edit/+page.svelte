@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { prompts } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 
@@ -33,7 +34,7 @@
 
 			if (prompt) {
 				await prompts.set(await getPrompts(localStorage.token));
-				await goto('/prompts');
+				await goto(`${base}/prompts`);
 			}
 		} else {
 			toast.error(
@@ -67,10 +68,10 @@
 				command = prompt.command.slice(1);
 				content = prompt.content;
 			} else {
-				goto('/prompts');
+				goto(`${base}/prompts`);
 			}
 		} else {
-			goto('/prompts');
+			goto(`${base}/prompts`);
 		}
 	});
 </script>

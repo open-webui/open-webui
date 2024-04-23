@@ -1,8 +1,9 @@
 import { dev } from '$app/environment';
+import { base } from '$app/paths';
 // import { version } from '../../package.json';
 
 export const APP_NAME = 'Open WebUI';
-export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
+export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : `${base}`;
 
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 

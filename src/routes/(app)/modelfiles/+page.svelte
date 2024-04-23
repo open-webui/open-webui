@@ -13,6 +13,7 @@
 		getModelfiles
 	} from '$lib/apis/modelfiles';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 
 	const i18n = getContext('i18n');
 
@@ -85,7 +86,7 @@
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<div class=" text-2xl font-semibold mb-3">{$i18n.t('My Modelfiles')}</div>
 
-			<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2" href="/modelfiles/create">
+			<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2" href="{base}/modelfiles/create">
 				<div class=" self-center w-10">
 					<div
 						class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
@@ -120,7 +121,7 @@
 					>
 						<a
 							class=" flex flex-1 space-x-4 cursor-pointer w-full"
-							href={`/?models=${encodeURIComponent(modelfile.tagName)}`}
+							href={`${base}/?models=${encodeURIComponent(modelfile.tagName)}`}
 						>
 							<div class=" self-center w-10">
 								<div class=" rounded-full bg-stone-700">
@@ -143,7 +144,7 @@
 							<a
 								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 								type="button"
-								href={`/modelfiles/edit?tag=${encodeURIComponent(modelfile.tagName)}`}
+								href={`${base}/modelfiles/edit?tag=${encodeURIComponent(modelfile.tagName)}`}
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -167,7 +168,7 @@
 								on:click={() => {
 									// console.log(modelfile);
 									sessionStorage.modelfile = JSON.stringify(modelfile);
-									goto('/modelfiles/create');
+									goto(`${base}/modelfiles/create`);
 								}}
 							>
 								<svg

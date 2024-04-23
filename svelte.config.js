@@ -15,7 +15,10 @@ const config = {
 			pages: 'build',
 			assets: 'build',
 			fallback: 'index.html'
-		})
+		}),
+		paths: {
+			base: process.env.WEBUI_BASE_PATH || ""
+		}
 	},
 	onwarn: (warning, handler) => {
 		const { code, _ } = warning;

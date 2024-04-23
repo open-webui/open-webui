@@ -6,6 +6,7 @@
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 
 	import { getOllamaModels, getOllamaVersion } from '$lib/apis/ollama';
 	import { getModelfiles } from '$lib/apis/modelfiles';
@@ -86,7 +87,7 @@
 
 	onMount(async () => {
 		if ($user === undefined) {
-			await goto('/auth');
+			await goto(`${base}/auth`);
 		} else if (['user', 'admin'].includes($user.role)) {
 			try {
 				// Check if IndexedDB exists
@@ -235,7 +236,7 @@
 								<button
 									class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 transition font-medium text-sm"
 									on:click={async () => {
-										location.href = '/';
+										location.href = `${base}/`;
 									}}
 								>
 									{$i18n.t('Check Again')}
@@ -245,7 +246,7 @@
 									class="text-xs text-center w-full mt-2 text-gray-400 underline"
 									on:click={async () => {
 										localStorage.removeItem('token');
-										location.href = '/auth';
+										location.href = `${base}/auth`;
 									}}>{$i18n.t('Sign Out')}</button
 								>
 							</div>

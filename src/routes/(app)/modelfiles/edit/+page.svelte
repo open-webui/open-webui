@@ -2,6 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 
 	import { onMount, getContext } from 'svelte';
 	import { page } from '$app/stores';
@@ -80,7 +81,7 @@
 				categories[category.toLowerCase()] = true;
 			}
 		} else {
-			goto('/modelfiles');
+			goto(`${base}/modelfiles`);
 		}
 	});
 
@@ -174,7 +175,7 @@
 					suggestionPrompts: suggestions.filter((prompt) => prompt.content !== ''),
 					categories: Object.keys(categories).filter((category) => categories[category])
 				});
-				await goto('/modelfiles');
+				await goto(`${base}/modelfiles`);
 			}
 		}
 		loading = false;

@@ -5,6 +5,7 @@
 	const { saveAs } = fileSaver;
 
 	import { goto, invalidateAll } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { page } from '$app/stores';
 	import { user, chats, settings, showSettings, chatId, tags } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
@@ -130,7 +131,7 @@
 
 		if (res) {
 			if ($chatId === id) {
-				goto('/');
+				goto(`${base}/`);
 			}
 
 			await chats.set(await getChatList(localStorage.token));
@@ -140,7 +141,7 @@
 	const saveSettings = async (updated) => {
 		await settings.set({ ...$settings, ...updated });
 		localStorage.setItem('settings', JSON.stringify($settings));
-		location.href = '/';
+		location.href = `${base}/`;
 	};
 
 	const archiveChatHandler = async (id) => {
@@ -173,11 +174,11 @@
 			<a
 				id="sidebar-new-chat-button"
 				class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
-				href="/"
+				href="{base}/"
 				on:click={async () => {
 					selectedChatId = null;
 
-					await goto('/');
+					await goto(`${base}/`);
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
 						newChatButton?.click();
@@ -218,7 +219,7 @@
 			<div class="px-2 flex justify-center mt-0.5">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
-					href="/modelfiles"
+					href="{base}/modelfiles"
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
@@ -250,7 +251,7 @@
 			<div class="px-2 flex justify-center">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
-					href="/prompts"
+					href="{base}/prompts"
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
@@ -282,7 +283,7 @@
 			<div class="px-2 flex justify-center mb-1">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
-					href="/documents"
+					href="{base}/documents"
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
@@ -454,7 +455,7 @@
 									: chat.id === selectedChatId
 									? 'bg-gray-100 dark:bg-gray-950'
 									: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-								href="/c/{chat.id}"
+								href="{base}/c/{chat.id}"
 								on:click={() => {
 									selectedChatId = chat.id;
 									if (window.innerWidth < 1024) {
@@ -654,7 +655,7 @@
 									<button
 										class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 										on:click={() => {
-											goto('/admin');
+											goto(`${base}/admin`);
 											showDropdown = false;
 										}}
 									>
@@ -680,7 +681,7 @@
 									<button
 										class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 										on:click={() => {
-											goto('/playground');
+											goto(`${base}/playground`);
 											showDropdown = false;
 										}}
 									>
@@ -756,7 +757,7 @@
 									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 									on:click={() => {
 										localStorage.removeItem('token');
-										location.href = '/auth';
+										location.href = `${base}/auth`;
 										showDropdown = false;
 									}}
 								>

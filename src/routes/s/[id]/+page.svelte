@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { page } from '$app/stores';
 
 	import dayjs from 'dayjs';
@@ -71,7 +72,7 @@
 				const chatInput = document.getElementById('chat-textarea');
 				chatInput?.focus();
 			} else {
-				await goto('/');
+				await goto(`${base}/`);
 			}
 		})();
 	}
@@ -83,7 +84,7 @@
 	const loadSharedChat = async () => {
 		await chatId.set($page.params.id);
 		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+			await goto(`${base}/`);
 			return null;
 		});
 

@@ -2,6 +2,7 @@
 	import { onMount, tick, setContext } from 'svelte';
 	import { config, user, theme, WEBUI_NAME } from '$lib/stores';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { Toaster, toast } from 'svelte-sonner';
 
 	import { getBackendConfig } from '$lib/apis';
@@ -48,10 +49,10 @@
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
-						await goto('/auth');
+						await goto(`${base}/auth`);
 					}
 				} else {
-					await goto('/auth');
+					await goto(`${base}/auth`);
 				}
 			}
 		} else {
@@ -68,8 +69,8 @@
 	<title>{$WEBUI_NAME}</title>
 	<link rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
 
-	<link rel="stylesheet" type="text/css" href="/themes/rosepine.css" />
-	<link rel="stylesheet" type="text/css" href="/themes/rosepine-dawn.css" />
+	<link rel="stylesheet" type="text/css" href="{base}/themes/rosepine.css" />
+	<link rel="stylesheet" type="text/css" href="{base}/themes/rosepine-dawn.css" />
 </svelte:head>
 
 {#if loaded}

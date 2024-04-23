@@ -15,6 +15,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import { base } from '$app/paths';
 
 	const i18n = getContext('i18n');
 
@@ -76,7 +77,7 @@
 	};
 
 	const deleteChats = async () => {
-		await goto('/');
+		await goto(`${base}/`);
 		await deleteAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
 		});
@@ -88,7 +89,7 @@
 		console.log(saveChatHistory);
 
 		if (saveChatHistory === false) {
-			await goto('/');
+			await goto(`${base}/`);
 		}
 		saveSettings({ saveChatHistory: saveChatHistory });
 	};
