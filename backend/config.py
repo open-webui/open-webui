@@ -487,6 +487,10 @@ AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
 COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
 
 
+IMAGE_OPENAI_API_BASE_URL = os.getenv("IMAGE_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
+IMAGE_OPENAI_API_KEY = os.getenv("IMAGE_OPENAI_API_KEY", OPENAI_API_KEY)
+
+
 ####################################
 # Audio
 ####################################
