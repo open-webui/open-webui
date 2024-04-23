@@ -35,6 +35,7 @@ from apps.rag.utils import rag_messages
 
 from config import (
     CONFIG_DATA,
+    WEBUI_BASE_PATH,
     WEBUI_NAME,
     ENV,
     VERSION,
@@ -298,12 +299,12 @@ async def get_manifest_json():
     return {
         "name": WEBUI_NAME,
         "short_name": WEBUI_NAME,
-        "start_url": "/",
+        "start_url": f"{WEBUI_BASE_PATH}/",
         "display": "standalone",
         "background_color": "#343541",
         "theme_color": "#343541",
         "orientation": "portrait-primary",
-        "icons": [{"src": "/favicon.png", "type": "image/png", "sizes": "844x884"}],
+        "icons": [{"src": f"{WEBUI_BASE_PATH}/favicon.png", "type": "image/png", "sizes": "844x884"}],
     }
 
 
