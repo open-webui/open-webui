@@ -18,8 +18,8 @@ class User(Model):
     name = CharField()
     email = CharField()
     role = CharField()
-    profile_image_url = CharField()
-    timestamp = DateField()
+    profile_image_url = TextField()
+    timestamp = BigIntegerField()
     api_key = CharField(null=True, unique=True)
 
     class Meta:
