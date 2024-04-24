@@ -13,10 +13,11 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 **Machine Learning with Python and Google Data Commons**
 
-- [ML for Community Forecasting](../data-pipeline/timelines/)
+- [ML for Community Forecasting Timelines](../data-pipeline/timelines/)
 - [RealityStream](/RealityStream/) - Machine Learning Classification Models
-- [OpenFootprint](/useeio.js/footprint) - Javascript Label Development
-- [Process Industries NAICS by Zip Code](/data-pipeline/industries/naics) - Aashish
+- [OpenFootprint Builder and Meal Planner](/OpenFootprint) - Label Development for [Sustainable Products](/io/template) and [Meal Nutrition](/data-commons/docs/food/)
+- [USEEIO Open Footprint Data - Javascript](/useeio.js/footprint) and [React Widgets](/io/charts)
+- [Process Industry NAICS by Zip Code](/data-pipeline/industries/naics) - Aashish
 - [Top Commodities by State (hide sort columns)](/data-pipeline/research/economy) - Dinesh
 - [State Regions using Sets of Counties](/community-data/us/edd/) - Dinesh
 - [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - Honglin, Rupesh
@@ -85,7 +86,7 @@ TO DO: Locate the annual files Wes mentioned. How far back do they go? We recent
 
 TO DO: Create interactive version of the supporting figures [including maps of the U.S.](https://doi.org/10.6084/m9.figshare.c.7041473) showing environmental pressure intensity grouped by indicator and commodity for all states and rankings of sectors by consumption by environmental pressure for 2020.
 
-The matrix JSON API that drives our [industry comparisons](../localsite/info/) use EPA data prepared and presented using useeior (R Language),  useeio.js and the [useeio-widgets](../io/charts/) (Javascript and HTML using the USEEIO-API).
+The matrix JSON API that drives our [industry comparisons](../localsite/info/) use EPA data prepared and presented using useeior (R Language),  [useeio.js](/useeio.js/footprint) and the [useeio-widgets](../io/charts/) (Javascript and HTML using the USEEIO-API).
 
 Wes wrote: As a reminder (and mentioned in the report) we’re working on Consumption-based GHG inventories (CBEI) for Maine and other Northeast states as an application of these models but the functionalities we develop and describe will be available for all States. We anticipate that being completed by early summer. 
 
