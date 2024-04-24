@@ -180,7 +180,7 @@
 							}
 						}}
 					>
-						<option value="">{$i18n.t('Default (SentenceTransformer)')}</option>
+						<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
 						<option value="ollama">{$i18n.t('Ollama')}</option>
 						<option value="openai">{$i18n.t('OpenAI')}</option>
 					</select>
