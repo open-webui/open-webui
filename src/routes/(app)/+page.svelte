@@ -37,7 +37,7 @@
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { RAGTemplate } from '$lib/utils/rag';
-	import { LITELLM_API_BASE_URL, OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
+	import { LITELLM_API_BASE_URL, OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, AZURE_OPENAI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
@@ -585,6 +585,8 @@
 			},
 			model?.source?.toLowerCase() === 'litellm'
 				? `${LITELLM_API_BASE_URL}/v1`
+				: model?.azure?? false
+				? `${AZURE_OPENAI_API_BASE_URL}`
 				: `${OPENAI_API_BASE_URL}`
 		);
 
@@ -785,6 +787,8 @@
 				titleModel?.external ?? false
 					? titleModel?.source?.toLowerCase() === 'litellm'
 						? `${LITELLM_API_BASE_URL}/v1`
+						: titleModel?.azure?? false
+						? `${AZURE_OPENAI_API_BASE_URL}`
 						: `${OPENAI_API_BASE_URL}`
 					: `${OLLAMA_API_BASE_URL}/v1`
 			);

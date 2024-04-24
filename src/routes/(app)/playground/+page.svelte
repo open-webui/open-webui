@@ -6,6 +6,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import {
+		AZURE_OPENAI_API_BASE_URL,
 		LITELLM_API_BASE_URL,
 		OLLAMA_API_BASE_URL,
 		OPENAI_API_BASE_URL,
@@ -82,6 +83,8 @@
 			model.external
 				? model.source === 'litellm'
 					? `${LITELLM_API_BASE_URL}/v1`
+					: model?.azure?? false
+					? `${AZURE_OPENAI_API_BASE_URL}`
 					: `${OPENAI_API_BASE_URL}`
 				: `${OLLAMA_API_BASE_URL}/v1`
 		);
@@ -153,7 +156,9 @@
 			model.external
 				? model.source === 'litellm'
 					? `${LITELLM_API_BASE_URL}/v1`
-					: `${OPENAI_API_BASE_URL}`
+					: model?.azure?? false
+					? `${AZURE_OPENAI_API_BASE_URL}`
+					:`${OPENAI_API_BASE_URL}`
 				: `${OLLAMA_API_BASE_URL}/v1`
 		);
 

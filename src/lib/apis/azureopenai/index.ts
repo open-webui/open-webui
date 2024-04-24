@@ -306,7 +306,7 @@ export const getAzureOpenAIModels = async (token: string = '') => {
 
 	return models
 		? models
-				.map((model) => ({ id: model.id, name: model.name ?? model.id, external: true }))
+				.map((model) => ({ id: model.id, name: model.name ?? model.id, external: true, azure: true }))
 				.sort((a, b) => {
 					return a.name.localeCompare(b.name);
 				})
@@ -346,7 +346,7 @@ export const getAzureOpenAIModelsDirect = async (
 	const models = Array.isArray(res) ? res : res?.data ?? null;
 
 	return models
-		.map((model) => ({ id: model.id, name: model.name ?? model.id, external: true }))
+		.map((model) => ({ id: model.id, name: model.name ?? model.id, external: true, azure: true}))
 		.filter((model) => (base_url.includes('openai') ? model.name.includes('gpt') : true))
 		.sort((a, b) => {
 			return a.name.localeCompare(b.name);
