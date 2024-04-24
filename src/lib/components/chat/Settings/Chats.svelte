@@ -2,7 +2,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { chats, user } from '$lib/stores';
+	import { chats, user, config } from '$lib/stores';
 
 	import {
 		createNewChat,
