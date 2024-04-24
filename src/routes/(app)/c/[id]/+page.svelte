@@ -600,6 +600,8 @@
 			},
 			model?.source?.toLowerCase() === 'litellm'
 				? `${LITELLM_API_BASE_URL}/v1`
+				: model?.azure ?? false
+				? `${AZURE_OPENAI_API_BASE_URL}`
 				: `${OPENAI_API_BASE_URL}`
 		);
 
