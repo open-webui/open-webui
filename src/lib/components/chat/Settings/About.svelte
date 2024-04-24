@@ -47,6 +47,56 @@
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
 				<div>
+					外高桥造船海洋工程设计 - 智采数链团队 / 基于 {$WEBUI_NAME} 优化
+				</div>
+			</div>
+			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+				{#if !$WEBUI_NAME.includes('Open WebUI')}
+					<span class=" text-gray-500 dark:text-gray-300 font-medium">优化组长：</span> -
+				{/if}优化组长：
+				<a
+					class=" text-gray-500 dark:text-gray-300 font-medium"
+					href="https://github.com/digitalink-sws/"
+					target="_blank">袁轶</a
+				>
+			</div>
+			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+				{#if !$WEBUI_NAME.includes('Open WebUI')}
+					<span class=" text-gray-500 dark:text-gray-300 font-medium">参与优化组员：</span> -
+				{/if}参与优化组员：
+				<a
+					class=" text-gray-500 dark:text-gray-300 font-medium"
+					href="https://github.com/xujianmin/"
+					target="_blank">徐剑敏</a
+				>
+				<a
+					class=" text-gray-500 dark:text-gray-300 font-medium"
+					href="https://github.com/digitalink-sws/"
+					target="_blank">金松</a
+				>
+				<a
+					class=" text-gray-500 dark:text-gray-300 font-medium"
+					href="https://github.com/digitalink-sws/"
+					target="_blank">徐思颖</a
+				>
+				<a
+					class=" text-gray-500 dark:text-gray-300 font-medium"
+					href="https://github.com/digitalink-sws/"
+					target="_blank">李毅</a
+				>
+			</div>
+			<div class="mt-2 mb-2.5 text-xs text-gray-400 dark:text-gray-500">
+				<a
+					class=" text-gray-500 dark:text-gray-300 font-medium"
+					href="https://digitalink-sws.github.io"
+					target="_blank">智采数链官网 https://digitalink.github.io</a
+				>
+			</div>
+			<hr class=" dark:border-gray-700" />
+		</div>
+		<div>
+			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
+				<div>
 					{$WEBUI_NAME}
 					{$i18n.t('Version')}
 				</div>
