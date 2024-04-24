@@ -162,7 +162,7 @@ Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 # Docs DIR
 ####################################
 
-DOCS_DIR = f"{DATA_DIR}/docs"
+DOCS_DIR = os.getenv("DOCS_DIR", f"{DATA_DIR}/docs")
 Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
 
 
@@ -359,7 +359,7 @@ When answer to user:
 - If you don't know when you are not sure, ask for clarification.
 Avoid mentioning that you obtained the information from the context.
 And answer according to the language of the user's question.
-        
+
 Given the context information, answer the query.
 Query: [query]"""
 
