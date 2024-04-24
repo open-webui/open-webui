@@ -318,8 +318,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     try:
         body = body.decode("utf-8")
         body = json.loads(body)
+        deployment_model_name = body.get("model").strip()
 
-        idx = app.state.MODELS[body.get("model")]["urlIdx"]
+        idx = app.state.MODELS[deployment_model_name]["urlIdx"]
 
         # Check if the model is "gpt-4-vision-preview" and set "max_tokens" to 4000
         # This is a workaround until OpenAI fixes the issue with this model
@@ -340,23 +341,23 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     except json.JSONDecodeError as e:
         log.error("Error loading request body into a dictionary:", e)
 
-    url = app.state.AZURE_OPENAI_API_BASE_URLS[idx]
+    url = app.state.AZURE_OPENAI_API_BASE_URLS[idx].rstrip("/")
     key = app.state.AZURE_OPENAI_API_KEYS[idx]
     api_version = app.state.AZURE_OPENAI_API_VERSIONS[idx]
 
-    target_url = f"{url}/{path}"
+    target_url = f"{url}/openai/deployments/{deployment_model_name}/{path}?api-version={api_version}"
 
     if key == "":
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
-    chat_client = AsyncAzureOpenAI(
-        api_key=  key,
-        api_version= api_version,
-        azure_endpoint = url
-    )
+    # chat_client = AsyncAzureOpenAI(
+    #     api_key=  key,
+    #     api_version= api_version,
+    #     azure_endpoint = url
+    # )
 
     headers = {}
-    headers["Authorization"] = f"Bearer {key}"
+    headers["api-key"] = f"{key}"
     headers["Content-Type"] = "application/json"
 
     r = None
