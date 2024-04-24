@@ -1,3 +1,5 @@
+import sys
+
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.routing import APIRoute
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,7 +25,13 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["LITELLM"])
 
 
-from config import MODEL_FILTER_ENABLED, MODEL_FILTER_LIST, DATA_DIR
+from config import (
+    MODEL_FILTER_ENABLED,
+    MODEL_FILTER_LIST,
+    DATA_DIR,
+    LITELLM_PROXY_PORT,
+    LITELLM_PROXY_HOST,
+)
 
 from litellm.utils import get_llm_provider
 
@@ -64,7 +72,7 @@ async def run_background_process(command):
         log.info(f"Executing command: {command}")
         # Execute the command and create a subprocess
         process = await asyncio.create_subprocess_exec(
-            *command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            *command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         background_process = process
         log.info("Subprocess started successfully.")
@@ -90,9 +98,17 @@ async def run_background_process(command):
 async def start_litellm_background():
     log.info("start_litellm_background")
     # Command to run in the background
-    command = (
-        "litellm --port 14365 --telemetry False --config ./data/litellm/config.yaml"
-    )
+    command = [
+        "litellm",
+        "--port",
+        str(LITELLM_PROXY_PORT),
+        "--host",
+        LITELLM_PROXY_HOST,
+        "--telemetry",
+        "False",
+        "--config",
+        LITELLM_CONFIG_DIR,
+    ]
 
     await run_background_process(command)
 
@@ -109,7 +125,6 @@ async def shutdown_litellm_background():
 
 @app.on_event("startup")
 async def startup_event():
-
     log.info("startup_event")
     # TODO: Check config.yaml file and create one
     asyncio.create_task(start_litellm_background())
@@ -186,7 +201,7 @@ async def get_models(user=Depends(get_current_user)):
     while not background_process:
         await asyncio.sleep(0.1)
 
-    url = "http://localhost:14365/v1"
+    url = f"http://localhost:{LITELLM_PROXY_PORT}/v1"
     r = None
     try:
         r = requests.request(method="GET", url=f"{url}/models")
@@ -289,7 +304,7 @@ async def delete_model_from_config(
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     body = await request.body()
 
-    url = "http://localhost:14365"
+    url = f"http://localhost:{LITELLM_PROXY_PORT}"
 
     target_url = f"{url}/{path}"
 
