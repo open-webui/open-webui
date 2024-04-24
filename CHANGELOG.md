@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **🔧 Translation Issues**: Addressed various translation discrepancies.
 - **🔒 LiteLLM Security Fix**: Updated LiteLLM version to resolve a security vulnerability.
-- **🖥️ HTML Tag Display**: Rectified the issue where the '<br>' tag wasn't displaying correctly.
+- **🖥️ HTML Tag Display**: Rectified the issue where the '< br >' tag wasn't displaying correctly.
 - **🔗 WebSocket Connection**: Resolved the failure of WebSocket connection under HTTPS security for ComfyUI server.
 - **📜 FileReader Optimization**: Implemented FileReader initialization per image in multi-file drag & drop to ensure reusability.
 - **🏷️ Tag Display**: Corrected tag display inconsistencies.
