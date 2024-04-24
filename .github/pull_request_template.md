@@ -11,7 +11,7 @@
 
 ## Description
 
-[Insert a brief description of the changes made in this pull request, including any relevantincluding motivation and impact.]
+[Insert a brief description of the changes made in this pull request, including any relevant motivation and impact.]
 
 ---
 
