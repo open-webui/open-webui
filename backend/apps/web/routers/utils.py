@@ -11,7 +11,7 @@ import markdown
 from utils.utils import get_admin_user
 from utils.misc import calculate_sha256, get_gravatar_url
 
-from config import OLLAMA_BASE_URLS, DATA_DIR, UPLOAD_DIR
+from config import OLLAMA_BASE_URLS, DATA_DIR, UPLOAD_DIR, ENABLE_ADMIN_EXPORT
 from constants import ERROR_MESSAGES
 from typing import List
 
