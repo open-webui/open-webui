@@ -51,9 +51,7 @@
 				</div>
 			</div>
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				{#if !$WEBUI_NAME.includes('Open WebUI')}
-					<span class=" text-gray-500 dark:text-gray-300 font-medium">优化组长：</span> -
-				{/if}优化组长：
+				优化组长：
 				<a
 					class=" text-gray-500 dark:text-gray-300 font-medium"
 					href="https://github.com/digitalink-sws/"
@@ -61,9 +59,7 @@
 				>
 			</div>
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				{#if !$WEBUI_NAME.includes('Open WebUI')}
-					<span class=" text-gray-500 dark:text-gray-300 font-medium">参与优化组员：</span> -
-				{/if}参与优化组员：
+				参与优化组员：
 				<a
 					class=" text-gray-500 dark:text-gray-300 font-medium"
 					href="https://github.com/xujianmin/"
@@ -98,6 +94,13 @@
 			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
 				<div>
 					{$WEBUI_NAME}
+					{$i18n.t('Version')} @ 0.1.02-alpha
+				</div>
+			</div>
+			<p>###</p>
+			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
+				<div>
+					Open WebUI
 					{$i18n.t('Version')}
 				</div>
 			</div>
@@ -181,7 +184,7 @@
 
 		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 			{#if !$WEBUI_NAME.includes('Open WebUI')}
-				<span class=" text-gray-500 dark:text-gray-300 font-medium">{$WEBUI_NAME}</span> -
+				<span class=" text-gray-500 dark:text-gray-300 font-medium">Open WebUI</span> -
 			{/if}{$i18n.t('Created by')}
 			<a
 				class=" text-gray-500 dark:text-gray-300 font-medium"
