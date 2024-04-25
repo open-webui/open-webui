@@ -331,7 +331,7 @@ def get_model_path(model: str, update_model: bool = False):
         "local_files_only": local_files_only,
     }
 
-    log.debug(f"embedding_model: {model}")
+    log.debug(f"model: {model}")
     log.debug(f"snapshot_kwargs: {snapshot_kwargs}")
 
     # Inspiration from upstream sentence_transformers
