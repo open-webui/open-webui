@@ -3,6 +3,8 @@ Regular meetings: [Sunday 10 PM ET and Thursday Noon ET](/io/coders/)
 
 <hr style="margin-bottom:20px">
 
+Of Interest: [CrewAI+Ollama](https://lightning.ai/lightning-ai/studios/ai-agents-powered-by-crewai)
+
 # Active Projects
 
 [Local Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research)
@@ -29,7 +31,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [Python CoLabs for GDC API calls](/data-commons/docs/) - [Air and Climate](/data-commons/dist/air) - Paul and Anna
 - [Observable with Data Commons](/data-commons/) - [Data Loaders How-To](/data-commons/dist/air/)
 - [Sankey Industry Chart](/io/charts/sankey/) - Chenbohan
-- [Balanced Food](/balanced/) - [World Nutrition](/data-commons/dist/food) - Kargil, Meiru
+- [Balanced Food](/balance/) - [World Nutrition](/data-commons/dist/food) - Kargil, Meiru
 - [Chord Chart Data Prep](/io/charts/chord/) - [ask Kargil for location](https://github.com/modelearth/Observables-DataLoader/tree/master/docs)
 - [International Google Data Commons API](/data-pipeline/international/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
 
