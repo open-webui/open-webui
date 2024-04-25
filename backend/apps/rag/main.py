@@ -9,6 +9,11 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 import os, shutil, logging, re
+import nc_py_api
+import psycopg2
+from psycopg2 import sql
+import tempfile
+import requests
 
 from pathlib import Path
 from typing import List
@@ -37,7 +42,7 @@ from typing import Optional
 import mimetypes
 import uuid
 import json
-
+from constants import ERROR_MESSAGES
 
 from apps.web.models.documents import (
     Documents,
@@ -60,10 +65,15 @@ from config import (
     DOCS_DIR,
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_DEVICE_TYPE,
-    CHROMA_CLIENT,
     CHUNK_SIZE,
     CHUNK_OVERLAP,
     RAG_TEMPLATE,
+    POSTGRES_CONNECTION_STRING,
+    NEXTCLOUD_PASSWORD,
+    NEXTCLOUD_USERNAME,
+    NEXTCLOUD_URL,
+    HEADERS,
+    NEXTCLOUD_URL,
 )
 
 from constants import ERROR_MESSAGES
@@ -107,6 +117,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Create a connection to the PostgreSQL database
+conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
 
 class CollectionNameForm(BaseModel):
     collection_name: Optional[str] = "test"
@@ -330,26 +342,40 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
     metadatas = [doc.metadata for doc in docs]
 
     try:
-        if overwrite:
-            for collection in CHROMA_CLIENT.list_collections():
-                if collection_name == collection.name:
-                    log.info(f"deleting existing collection {collection_name}")
-                    CHROMA_CLIENT.delete_collection(name=collection_name)
+        # Establish a connection to the PostgreSQL database
+        conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
 
-        collection = CHROMA_CLIENT.create_collection(
-            name=collection_name,
-            embedding_function=app.state.sentence_transformer_ef,
-        )
+        # Create a cursor to execute SQL queries
+        with conn.cursor() as cursor:
+            if overwrite:
+                # If overwrite is True, delete the existing collection
+                cursor.execute("DROP TABLE IF EXISTS %s CASCADE", (collection_name,))
+                conn.commit()
 
-        collection.add(
-            documents=texts, metadatas=metadatas, ids=[str(uuid.uuid1()) for _ in texts]
-        )
+            # Create a new table for the collection
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS %s (
+                    id UUID PRIMARY KEY,
+                    text TEXT,
+                    metadata JSONB
+                )
+            """, (collection_name,))
+            conn.commit()
+
+            # Insert documents into the collection table
+            for text, metadata in zip(texts, metadatas):
+                doc_id = uuid.uuid1()
+                cursor.execute("""
+                    INSERT INTO %s (id, text, metadata)
+                    VALUES (%s, %s, %s)
+                """, (collection_name, doc_id, text, metadata))
+                conn.commit()
+
+        # Close the PostgreSQL connection
+        conn.close()
         return True
     except Exception as e:
-        log.exception(e)
-        if e.__class__.__name__ == "UniqueConstraintError":
-            return True
-
+        print(f"An error occurred: {e}")
         return False
 
 
@@ -468,16 +494,16 @@ def store_doc(
 
         filename = file.filename
         contents = file.file.read()
-        with open(file_path, "wb") as f:
-            f.write(contents)
-            f.close()
+       # Create a temporary file to write the contents
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(contents)
 
-        f = open(file_path, "rb")
-        if collection_name == None:
-            collection_name = calculate_sha256(f)[:63]
-        f.close()
+        # If `collection_name` is None, calculate SHA256 hash of the temporary file's contents
+        if collection_name is None:
+            with open(temp_file, "rb") as f:
+                collection_name = calculate_sha256(f)[:63]
 
-        loader, known_type = get_loader(file.filename, file.content_type, file_path)
+        loader, known_type = get_loader(file.filename, file.content_type, temp_file)
         data = loader.load()
 
         try:
@@ -539,33 +565,36 @@ def store_text(
             detail=ERROR_MESSAGES.DEFAULT(),
         )
 
+# Initialize Nextcloud client instance
+nc = nc_py_api.Nextcloud(nextcloud_url=NEXTCLOUD_URL, nc_auth_user=NEXTCLOUD_USERNAME, nc_auth_pass=NEXTCLOUD_PASSWORD)
 
 @app.get("/scan")
 def scan_docs_dir(user=Depends(get_admin_user)):
-    for path in Path(DOCS_DIR).rglob("./**/*"):
+    for node in nc.files.listdir(DOCS_DIR):
         try:
-            if path.is_file() and not path.name.startswith("."):
-                tags = extract_folders_after_data_docs(path)
-                filename = path.name
-                file_content_type = mimetypes.guess_type(path)
+            if node.is_file:
+                file_path = Path(node.path)
+                filename = file_path.name
+                file_content_type = mimetypes.guess_type(filename)
 
-                f = open(path, "rb")
-                collection_name = calculate_sha256(f)[:63]
-                f.close()
+                # Download the file from Nextcloud
+                file_content = nc.files.download(node.path)
 
-                loader, known_type = get_loader(
-                    filename, file_content_type[0], str(path)
-                )
+                # Calculate SHA256 hash of the file content
+                collection_name = calculate_sha256(file_content)[:63]
+
+                loader, known_type = get_loader(filename, file_content_type[0], file_content)
                 data = loader.load()
 
                 try:
+                    # Store data in vector database
                     result = store_data_in_vector_db(data, collection_name)
 
                     if result:
                         sanitized_filename = sanitize_filename(filename)
                         doc = Documents.get_doc_by_name(sanitized_filename)
 
-                        if doc == None:
+                        if doc is None:
                             doc = Documents.insert_new_doc(
                                 user.id,
                                 DocumentForm(
@@ -577,17 +606,10 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                                         "content": (
                                             json.dumps(
                                                 {
-                                                    "tags": list(
-                                                        map(
-                                                            lambda name: {"name": name},
-                                                            tags,
-                                                        )
-                                                    )
+                                                    "tags": []
                                                 }
                                             )
-                                            if len(tags)
-                                            else "{}"
-                                        ),
+                                        )
                                     }
                                 ),
                             )
@@ -598,30 +620,42 @@ def scan_docs_dir(user=Depends(get_admin_user)):
         except Exception as e:
             log.exception(e)
 
-    return True
+    return {"message": "Scan completed."}
 
+# Function to reset the PGVector database
+def reset_pgvector_db(conn):
+    with conn.cursor() as cursor:
+        cursor.execute("TRUNCATE TABLE vector_data")  # Assuming 'vector_data' is the table storing vectors in PGVector
+        conn.commit()
+    conn.close()
 
+# Function to recursively delete files and folders
+def delete_files_and_folders(directory):
+    for node in nc.files.listdir(directory):
+        if node.is_dir:
+            # Recursively delete folders
+            nc.files.delete(node.user_path, recursive=True)
+        else:
+            # Delete files
+            nc.files.delete(node.user_path)
+
+# Route to reset the PGVector database
 @app.get("/reset/db")
 def reset_vector_db(user=Depends(get_admin_user)):
-    CHROMA_CLIENT.reset()
-
+    reset_pgvector_db(conn)
+    return {"message": "PGVector database reset successfully."}
 
 @app.get("/reset")
-def reset(user=Depends(get_admin_user)) -> bool:
-    folder = f"{UPLOAD_DIR}"
-    for filename in os.listdir(folder):
-        file_path = os.path.join(folder, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            log.error("Failed to delete %s. Reason: %s" % (file_path, e))
+def reset_application(user=Depends(get_admin_user)):
+    folder = UPLOAD_DIR
+
+    # Delete files and folders in the specified folder
+    delete_files_and_folders(folder)
 
     try:
-        CHROMA_CLIENT.reset()
+        # Perform other reset operations (e.g., reset PGVector database)
+        reset_pgvector_db(conn)
     except Exception as e:
-        log.exception(e)
+        return {"error": f"Failed to reset PGVector database. Reason: {e}"}
 
-    return True
+    return {"message": "Application reset successfully."}

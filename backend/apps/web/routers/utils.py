@@ -16,7 +16,7 @@ import json
 from utils.utils import get_admin_user
 from utils.misc import calculate_sha256, get_gravatar_url
 
-from config import OLLAMA_BASE_URLS, DATA_DIR, UPLOAD_DIR
+from config import OLLAMA_BASE_URLS, DATA_DIR
 from constants import ERROR_MESSAGES
 
 
@@ -45,7 +45,7 @@ async def get_html_from_markdown(
 async def download_db(user=Depends(get_admin_user)):
 
     return FileResponse(
-        f"{DATA_DIR}/webui.db",
+        r"C:\Users\mfran\Documents\Projects\next-webui\backend\data\webui.db",
         media_type="application/octet-stream",
         filename="webui.db",
     )

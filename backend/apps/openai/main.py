@@ -7,6 +7,8 @@ import aiohttp
 import asyncio
 import json
 import logging
+import nc_py_api
+
 
 from pydantic import BaseModel
 
@@ -26,6 +28,9 @@ from config import (
     CACHE_DIR,
     MODEL_FILTER_ENABLED,
     MODEL_FILTER_LIST,
+    NEXTCLOUD_PASSWORD, 
+    NEXTCLOUD_URL, 
+    NEXTCLOUD_USERNAME,
 )
 from typing import List, Optional
 
@@ -35,6 +40,8 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
+
+nc = nc_py_api.Nextcloud(nextcloud_url=NEXTCLOUD_URL, nc_auth_user=NEXTCLOUD_USERNAME, nc_auth_pass=NEXTCLOUD_PASSWORD)
 
 app = FastAPI()
 app.add_middleware(
@@ -94,68 +101,43 @@ async def update_openai_key(form_data: KeysUpdateForm, user=Depends(get_admin_us
     app.state.OPENAI_API_KEYS = form_data.keys
     return {"OPENAI_API_KEYS": app.state.OPENAI_API_KEYS}
 
+# Your existing routes and middleware
 
 @app.post("/audio/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
-    idx = None
     try:
-        idx = app.state.OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
+        # Assuming you have a single Nextcloud URL and key
+        idx = 0
         body = await request.body()
         name = hashlib.sha256(body).hexdigest()
 
-        SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
-        SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
-        file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
+        # Define the path in the Nextcloud folder space
+        SPEECH_CACHE_DIR = Path(CACHE_DIR)  # Assuming CACHE_DIR is a path in Nextcloud
+        file_path = SPEECH_CACHE_DIR / f"{name}.mp3"
+        file_body_path = SPEECH_CACHE_DIR / f"{name}.json"
 
         # Check if the file already exists in the cache
-        if file_path.is_file():
-            return FileResponse(file_path)
+        if nc.files.find(str(file_path)):
+            return FileResponse(nc.files.listdir(str(file_path)))
 
-        headers = {}
-        headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEYS[idx]}"
-        headers["Content-Type"] = "application/json"
+        # If file does not exist, send the request to OpenAI API
+        headers = {"Authorization": f"Bearer {app.state.OPENAI_API_KEYS[idx]}", "Content-Type": "application/json"}
+        r = requests.post(f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech", data=body, headers=headers, stream=True)
 
-        r = None
-        try:
-            r = requests.post(
-                url=f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech",
-                data=body,
-                headers=headers,
-                stream=True,
-            )
+        r.raise_for_status()
 
-            r.raise_for_status()
+        # Upload the streaming content to Nextcloud
+        nc.files.upload(str(file_path), data=r.content, overwrite=True)
 
-            # Save the streaming content to a file
-            with open(file_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
+        # Save the request body to Nextcloud
+        nc.files.upload(str(file_body_path), data=json.dumps(json.loads(body.decode("utf-8"))), overwrite=True)
 
-            with open(file_body_path, "w") as f:
-                json.dump(json.loads(body.decode("utf-8")), f)
+        # Return the URL of the saved file
+        return FileResponse(nc.files.listdir(str(file_path)))
 
-            # Return the saved file
-            return FileResponse(file_path)
-
-        except Exception as e:
-            log.exception(e)
-            error_detail = "Open WebUI: Server Connection Error"
-            if r is not None:
-                try:
-                    res = r.json()
-                    if "error" in res:
-                        error_detail = f"External: {res['error']}"
-                except:
-                    error_detail = f"External: {e}"
-
-            raise HTTPException(
-                status_code=r.status_code if r else 500, detail=error_detail
-            )
-
-    except ValueError:
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
-
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 async def fetch_url(url, key):
     try:

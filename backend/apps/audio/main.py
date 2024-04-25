@@ -1,5 +1,6 @@
 import os
 import logging
+import tempfile
 from fastapi import (
     FastAPI,
     Request,
@@ -21,13 +22,15 @@ from utils.utils import (
     get_admin_user,
 )
 from utils.misc import calculate_sha256
-
+import requests
 from config import (
     SRC_LOG_LEVELS,
-    CACHE_DIR,
     UPLOAD_DIR,
     WHISPER_MODEL,
     WHISPER_MODEL_DIR,
+    HEADERS,
+    NEXTCLOUD_USERNAME,
+    NEXTCLOUD_PASSWORD
 )
 
 log = logging.getLogger(__name__)
@@ -60,9 +63,9 @@ def transcribe(
         filename = file.filename
         file_path = f"{UPLOAD_DIR}/{filename}"
         contents = file.file.read()
-        with open(file_path, "wb") as f:
-            f.write(contents)
-            f.close()
+        with tempfile.NamedTemporaryFile(mode='w', delete= False) as temp_file:
+            temp_file.write(contents)
+            temp_file.close()
 
         model = WhisperModel(
             WHISPER_MODEL,
@@ -71,7 +74,7 @@ def transcribe(
             download_root=WHISPER_MODEL_DIR,
         )
 
-        segments, info = model.transcribe(file_path, beam_size=5)
+        segments, info = model.transcribe(temp_file.name, beam_size=5)
         log.info(
             "Detected language '%s' with probability %f"
             % (info.language, info.language_probability)
@@ -79,6 +82,17 @@ def transcribe(
 
         transcript = "".join([segment.text for segment in list(segments)])
 
+        text = {"text": transcript.strip()}
+        
+        response = requests.put(file_path, data=text, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
+        if 200 <= response.status_code <= 299:
+            log.info("Transcript uploaded successfully.")
+        else:
+            print(f"Failed to upload transcript. Status code: {response.status_code}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to upload transcript. Status code: {response.status_code}"
+            )
         return {"text": transcript.strip()}
 
     except Exception as e:

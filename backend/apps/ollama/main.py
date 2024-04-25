@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict
 
 import os
 import copy
+import tempfile
 import random
 import requests
 import json
@@ -39,6 +40,9 @@ from config import (
     MODEL_FILTER_ENABLED,
     MODEL_FILTER_LIST,
     UPLOAD_DIR,
+    HEADERS,
+    NEXTCLOUD_USERNAME,
+    NEXTCLOUD_PASSWORD
 )
 from utils.misc import calculate_sha256
 
@@ -1043,17 +1047,24 @@ async def download_model(
             detail="Invalid file_url. Only URLs from allowed hosts are permitted.",
         )
 
-    if url_idx == None:
+    if url_idx is None:  # Explicit comparison for clarity
         url_idx = 0
     url = app.state.OLLAMA_BASE_URLS[url_idx]
 
     file_name = parse_huggingface_url(form_data.url)
 
     if file_name:
-        file_path = f"{UPLOAD_DIR}/{file_name}"
+        try:
+            response = requests.get(f"{UPLOAD_DIR}/{file_name}", auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
+            response.raise_for_status()  # Raise an exception for any HTTP error
+        except requests.RequestException as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to retrieve file from {UPLOAD_DIR}/{file_name}: {str(e)}"
+            )
 
         return StreamingResponse(
-            download_file_stream(url, form_data.url, file_path, file_name),
+            download_file_stream(url, form_data.url, response.content, file_name),
         )
     else:
         return None
@@ -1062,23 +1073,22 @@ async def download_model(
 @app.post("/models/upload")
 @app.post("/models/upload/{url_idx}")
 def upload_model(file: UploadFile = File(...), url_idx: Optional[int] = None):
-    if url_idx == None:
+    if url_idx is None:
         url_idx = 0
     ollama_url = app.state.OLLAMA_BASE_URLS[url_idx]
 
-    file_path = f"{UPLOAD_DIR}/{file.filename}"
-
-    # Save file in chunks
-    with open(file_path, "wb+") as f:
+    # Create a temporary file to save the uploaded content
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+        temp_file_path = temp_file.name
         for chunk in file.file:
-            f.write(chunk)
+            temp_file.write(chunk)
 
     def file_process_stream():
         nonlocal ollama_url
-        total_size = os.path.getsize(file_path)
+        total_size = os.path.getsize(temp_file_path)
         chunk_size = 1024 * 1024
         try:
-            with open(file_path, "rb") as f:
+            with open(temp_file_path, "rb") as f:
                 total = 0
                 done = False
 
@@ -1112,7 +1122,7 @@ def upload_model(file: UploadFile = File(...), url_idx: Optional[int] = None):
                             "blob": f"sha256:{hashed}",
                             "name": file.filename,
                         }
-                        os.remove(file_path)
+                        os.remove(temp_file_path)  # Remove the temporary file
                         yield f"data: {json.dumps(res)}\n\n"
                     else:
                         raise Exception(

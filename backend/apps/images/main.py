@@ -28,15 +28,41 @@ import uuid
 import base64
 import json
 import logging
+import tempfile
+import os
+from urllib.parse import urljoin
 
-from config import SRC_LOG_LEVELS, CACHE_DIR, AUTOMATIC1111_BASE_URL, COMFYUI_BASE_URL
-
+from config import (
+    SRC_LOG_LEVELS, 
+    CACHE_DIR, 
+    AUTOMATIC1111_BASE_URL, 
+    COMFYUI_BASE_URL, 
+    NEXTCLOUD_PASSWORD,
+    NEXTCLOUD_USERNAME,
+    HEADERS,
+    NEXTCLOUD_URL,
+) 
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["IMAGES"])
 
-IMAGE_CACHE_DIR = Path(CACHE_DIR).joinpath("./image/generations/")
-IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+# Construct the relative URLs
+relative_url = "cache/image/generations"
+image_url = "cache/image"
+
+# Combine the base URL and relative URL
+IMAGE_CACHE_DIR = urljoin(CACHE_DIR, relative_url)
+IMAGE_FOLDER_DIR = urljoin(CACHE_DIR, image_url)
+print(IMAGE_CACHE_DIR)
+response = requests.request("PROPFIND", IMAGE_CACHE_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+if not (200 <= response.status_code <= 299):
+    response = requests.request("MKCOL", IMAGE_FOLDER_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+    print("Directory 'Image Folder' created successfully." if response.status_code == 201 else f"Failed to create directory 'Image Folder'. Status code: {response.status_code}")
+    response = requests.request("MKCOL", IMAGE_CACHE_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+    print("Directory 'Image Cache' created successfully." if response.status_code == 201 else f"Failed to create directory 'Image Cache'. Status code: {response.status_code}")
+else :
+    print("Directory 'Image Cache' already exists.")
+    
 
 app = FastAPI()
 app.add_middleware(
@@ -45,7 +71,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
+) 
 
 app.state.ENGINE = ""
 app.state.ENABLED = False
@@ -295,37 +321,67 @@ class GenerateImageForm(BaseModel):
 
 
 def save_b64_image(b64_str):
-    image_id = str(uuid.uuid4())
-    file_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.png")
-
     try:
+        # Generate a unique image ID
+        image_id = str(uuid.uuid4())
+
+        # Define the URL for uploading the image to Nextcloud
+        url = f"{IMAGE_CACHE_DIR}/{image_id}.png"
+
         # Split the base64 string to get the actual image data
         img_data = base64.b64decode(b64_str)
 
-        # Write the image data to a file
-        with open(file_path, "wb") as f:
-            f.write(img_data)
+        # Prepare headers for authentication
+        headers = {
+            "Authorization": f"Basic {base64.b64encode(f'{NEXTCLOUD_USERNAME}:{NEXTCLOUD_PASSWORD}'.encode()).decode()}",
+            "Content-Type": "image/png"
+        }
 
-        return image_id
+        # Send a PUT request to upload the image data to Nextcloud
+        response = requests.put(url, data=img_data, headers=headers)
+
+        # Check if the upload was successful
+        if response.status_code == 201:
+            log.info("Image uploaded successfully.")
+            return image_id
+        else:
+            log.error(f"Failed to upload image. Status code: {response.status_code}")
+            return None
     except Exception as e:
         log.error(f"Error saving image: {e}")
         return None
 
 
 def save_url_image(url):
-    image_id = str(uuid.uuid4())
-    file_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.png")
-
     try:
+        # Generate a unique image ID
+        image_id = str(uuid.uuid4())
+
+        # Define the URL for uploading the image to Nextcloud
+        nextcloud_url = f"{IMAGE_CACHE_DIR}/{image_id}.png"
+
+        # Send a GET request to download the image from the URL
         r = requests.get(url)
         r.raise_for_status()
 
-        with open(file_path, "wb") as image_file:
-            image_file.write(r.content)
+        # Prepare headers for authentication
+        headers = {
+            "Authorization": f"Basic {base64.b64encode(f'{NEXTCLOUD_USERNAME}:{NEXTCLOUD_PASSWORD}'.encode()).decode()}",
+            "Content-Type": "image/png"
+        }
 
-        return image_id
+        # Send a PUT request to upload the image data to Nextcloud
+        response = requests.put(nextcloud_url, data=r.content, headers=headers)
+
+        # Check if the upload was successful
+        if response.status_code == 201:
+            log.info("Image uploaded successfully.")
+            return image_id
+        else:
+            log.error(f"Failed to upload image. Status code: {response.status_code}")
+            return None
     except Exception as e:
-        log.exception(f"Error saving image: {e}")
+        log.error(f"Error saving image: {e}")
         return None
 
 
@@ -367,10 +423,17 @@ def generate_image(
             for image in res["data"]:
                 image_id = save_b64_image(image["b64_json"])
                 images.append({"url": f"/cache/image/generations/{image_id}.png"})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
+                file_body_path = urljoin(IMAGE_CACHE_DIR,(f"{image_id}.json"))
+                
 
-                with open(file_body_path, "w") as f:
-                    json.dump(data, f)
+                with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+                    temp_file.write(json.dump(data, temp_file))
+                    with open(temp_file.name, "rb") as file:
+                        response = requests.put(file_body_path, data=file, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
+                        if 200 <= response.status_code <= 299:
+                            print("Config file uploaded successfully.")
+                        else:
+                            print(f"Failed to upload config file. Status code: {response.status_code}")
 
             return images
 
@@ -404,10 +467,18 @@ def generate_image(
             for image in res["data"]:
                 image_id = save_url_image(image["url"])
                 images.append({"url": f"/cache/image/generations/{image_id}.png"})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
-
-                with open(file_body_path, "w") as f:
-                    json.dump(data.model_dump(exclude_none=True), f)
+                file_body_path = urljoin(IMAGE_CACHE_DIR,(f"{image_id}.json"))
+                
+                # Create a temporary file to write the JSON data
+                with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+                    temp_file.write(json.dump(data.model_dump(exclude_none=True), temp_file))
+                    with open(temp_file.name, "rb") as file:
+                        response = requests.put(file_body_path, data=file, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
+                        if 200 <= response.status_code <= 299:
+                            print("Config file uploaded successfully.")
+                        else:
+                            print(f"Failed to upload config file. Status code: {response.status_code}")
+                    
 
             log.debug(f"images: {images}")
             return images
@@ -442,10 +513,17 @@ def generate_image(
             for image in res["images"]:
                 image_id = save_b64_image(image)
                 images.append({"url": f"/cache/image/generations/{image_id}.png"})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
+                file_body_path = urljoin(IMAGE_CACHE_DIR,(f"{image_id}.json"))
 
-                with open(file_body_path, "w") as f:
-                    json.dump({**data, "info": res["info"]}, f)
+                # Create a temporary file to write the JSON data
+                with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+                    temp_file.write(json.dump({**data, "info": res["info"]}, temp_file))
+                    with open(temp_file.name, "rb") as file:
+                        response = requests.put(file_body_path, data=file, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
+                        if 200 <= response.status_code <= 299:
+                            print("Config file uploaded successfully.")
+                        else:
+                            print(f"Failed to upload config file. Status code: {response.status_code}")
 
             return images
 

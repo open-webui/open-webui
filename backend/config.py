@@ -1,8 +1,6 @@
 import os
 import sys
 import logging
-import chromadb
-from chromadb import Settings
 from base64 import b64encode
 from bs4 import BeautifulSoup
 
@@ -16,6 +14,13 @@ import shutil
 
 from secrets import token_bytes
 from constants import ERROR_MESSAGES
+import psycopg2
+from psycopg2.extensions import register_adapter, AsIs
+from psycopg2.extras import DictCursor
+from psycopg2.sql import SQL, Identifier
+from transformers import GPT2Tokenizer
+import numpy as np
+import tempfile
 
 
 try:
@@ -23,7 +28,7 @@ try:
 
     load_dotenv(find_dotenv("../.env"))
 except ImportError:
-    log.warning("dotenv not installed, skipping...")
+    logging.warning("dotenv not installed, skipping...")
 
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
@@ -175,27 +180,56 @@ if CUSTOM_NAME:
         pass
 else:
     if WEBUI_NAME != "Open WebUI":
-        WEBUI_NAME += " (Open WebUI)"
+        WEBUI_NAME += " (AI Powered Personal Assistant)"
 
 ####################################
 # DATA/FRONTEND BUILD DIR
 ####################################
+# Nextcloud environment variables
+HEADERS = {
+        'OCS-APIRequest': 'true',
+        'Content-Type': 'application/octet-stream',
+    }
+NEXTCLOUD_USERNAME = os.getenv("NEXTCLOUD_USERNAME")  
+NEXTCLOUD_PASSWORD = os.getenv("NEXTCLOUD_PASSWORD")
+NEXTCLOUD_URL = "http://localhost:6060/"
 
-DATA_DIR = str(Path(os.getenv("DATA_DIR", "./data")).resolve())
+DATA_DIR = os.getenv("DATA_DIR")
+
+response = requests.request("PROPFIND", DATA_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+if not (200 <= response.status_code <= 299):
+    response = requests.request("MKCOL", DATA_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+    print("Directory 'data' created successfully." if response.status_code == 201 else f"Failed to create directory 'data'. Status code: {response.status_code}")
+else :
+    print("Directory 'data' already exists.")
+    
 FRONTEND_BUILD_DIR = str(Path(os.getenv("FRONTEND_BUILD_DIR", "../build")))
-
+ 
 try:
-    with open(f"{DATA_DIR}/config.json", "r") as f:
-        CONFIG_DATA = json.load(f)
-except:
+    # Read config.json from Nextcloud directory
+    response = requests.get(f"{DATA_DIR}/config.json", auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+    
+    if response.status_code == 200:
+        CONFIG_DATA = response.json()
+    else:
+        print(f"Failed to fetch config.json. Status code: {response.status_code}")
+        CONFIG_DATA = {}
+except Exception as e:
+    # Handle exceptions
+    print(f"An error occurred: {e}")
     CONFIG_DATA = {}
 
 ####################################
-# File Upload DIR
+# File Upload DIR 
 ####################################
 
 UPLOAD_DIR = f"{DATA_DIR}/uploads"
-Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+response = requests.request("PROPFIND", UPLOAD_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+if not (200 <= response.status_code <= 299):
+    response = requests.request("MKCOL", UPLOAD_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+    print("Directory 'uploads' created successfully." if response.status_code == 201 else f"Failed to create directory 'uploads'. Status code: {response.status_code}")
+else :
+    print("Directory 'uploads' already exists.")
 
 
 ####################################
@@ -203,7 +237,12 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 ####################################
 
 CACHE_DIR = f"{DATA_DIR}/cache"
-Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
+response = requests.request("PROPFIND", CACHE_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+if not (200 <= response.status_code <= 299):
+    response = requests.request("MKCOL", CACHE_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+    print("Directory 'cache' created successfully." if response.status_code == 201 else f"Failed to create directory 'uploads'. Status code: {response.status_code}")
+else :
+    print("Directory 'cache' already exists.")
 
 
 ####################################
@@ -211,7 +250,12 @@ Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 ####################################
 
 DOCS_DIR = f"{DATA_DIR}/docs"
-Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
+response = requests.request("PROPFIND", DOCS_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+if not (200 <= response.status_code <= 299):
+    response = requests.request("MKCOL", DOCS_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+    print("Directory 'docs' created successfully." if response.status_code == 201 else f"Failed to create directory 'uploads'. Status code: {response.status_code}")
+else :
+    print("Directory 'docs' already exists.")
 
 
 ####################################
@@ -219,12 +263,17 @@ Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
 ####################################
 
 
-def create_config_file(file_path):
-    directory = os.path.dirname(file_path)
-
-    # Check if directory exists, if not, create it
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+# Function to create the configuration file
+def create_and_upload_config_file():
+    # Create the directory if it doesn't exist
+    response = requests.request("MKCOL", f"{DATA_DIR}/litellm/", auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+    if 200 <= response.status_code <= 299:
+        print("Directory created successfully.")
+    elif response.status_code == 405:
+        print("Directory already exists.")
+    else:
+        print(f"Failed to create directory. Status code: {response.status_code}")
+        return
 
     # Data to write into the YAML file
     config_data = {
@@ -234,20 +283,31 @@ def create_config_file(file_path):
         "router_settings": {},
     }
 
-    # Write data to YAML file
-    with open(file_path, "w") as file:
-        yaml.dump(config_data, file)
-
+# Create a temporary file to store the YAML data
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+        yaml.dump(config_data, temp_file)
+        temp_file.flush()  # Flush to ensure data is written to disk
+        temp_file.close()  # Close the file so it can be read by Nextcloud
+        
+    # Upload the configuration file to Nextcloud
+    with open(temp_file.name, "rb") as file:
+        response = requests.put(LITELLM_CONFIG_PATH, data=file, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
+        if 200 <= response.status_code <= 299:
+            print("Config file uploaded successfully.")
+        else:
+            print(f"Failed to upload config file. Status code: {response.status_code}")
 
 LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
 
-if not os.path.exists(LITELLM_CONFIG_PATH):
+response = requests.request("PROPFIND", LITELLM_CONFIG_PATH, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
+if not(200 <= response.status_code <= 299):
     log.info("Config file doesn't exist. Creating...")
-    create_config_file(LITELLM_CONFIG_PATH)
+    create_and_upload_config_file()
     log.info("Config file created successfully.")
+else:
+    print("Config file already exists.")
 
-
-####################################
+#################################### 
 # OLLAMA_BASE_URL
 ####################################
 
@@ -385,20 +445,46 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 
 ####################################
-# RAG
+# Postgres/RAG Setup 
 ####################################
+POSTGRES_CONNECTION_STRING = f"dbname='{os.environ.get('POSTGRES_DB')}' user='{os.environ.get('POSTGRES_USER')}' host='{os.environ.get('POSTGRES_HOST')}'  password='{os.environ.get('POSTGRES_PASSWORD')}' port='{os.environ.get('POSTGRES_PORT')}'"
 
-CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
+pg_connection = psycopg2.connect(POSTGRES_CONNECTION_STRING)
+
+def adapt_numpy_array(arr):
+    return AsIs(arr)
+
+register_adapter(np.ndarray, adapt_numpy_array)
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (all-MiniLM-L6-v2)
-RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "EleutherAI/gpt-neo-2.7B")
 # device type ebbeding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
 RAG_EMBEDDING_MODEL_DEVICE_TYPE = os.environ.get(
     "RAG_EMBEDDING_MODEL_DEVICE_TYPE", "cpu"
 )
-CHROMA_CLIENT = chromadb.PersistentClient(
-    path=CHROMA_DATA_PATH,
-    settings=Settings(allow_reset=True, anonymized_telemetry=False),
-)
+# Initialize RAG tokenizer
+tokenizer = GPT2Tokenizer.from_pretrained(RAG_EMBEDDING_MODEL)
+
+# Function to insert vectors into PostgreSQL
+def insert_vectors(vectors):
+    with pg_connection.cursor() as cursor:
+        for vector_id, vector in vectors.items():
+            cursor.execute(
+                SQL("INSERT INTO vectors (id, vector) VALUES (%s, %s)"),
+                (vector_id, vector),
+            )
+        pg_connection.commit()
+ 
+# Function to retrieve vectors from PostgreSQL
+def retrieve_vectors(ids):
+    with pg_connection.cursor(cursor_factory=DictCursor) as cursor:
+        cursor.execute(
+            SQL("SELECT id, vector FROM vectors WHERE id IN %s"),
+            (tuple(ids),),
+        )
+        results = cursor.fetchall()
+        vectors = {result["id"]: result["vector"] for result in results}
+        return vectors
+    
 CHUNK_SIZE = 1500
 CHUNK_OVERLAP = 100
 

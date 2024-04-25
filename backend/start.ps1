@@ -22,4 +22,4 @@ if (-not ($env:WEBUI_SECRET_KEY -and $env:WEBUI_JWT_SECRET_KEY)) {
 }
 
 $env:WEBUI_SECRET_KEY = $env:WEBUI_SECRET_KEY
-Start-Process -NoNewWindow "uvicorn" "main:app --host 0.0.0.0 --port $Port --forwarded-allow-ips '*'"
+Start-Process -NoNewWindow "uvicorn" "main:app --host 0.0.0.0 --port $Port --forwarded-allow-ips '*'" 
