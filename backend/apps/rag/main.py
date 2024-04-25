@@ -390,7 +390,7 @@ def query_collection_handler(
     user=Depends(get_current_user),
 ):
     try:
-        embeddings_function = embeddings_function(
+        embeddings_function = query_embeddings_function(
             app.state.RAG_EMBEDDING_ENGINE,
             app.state.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
