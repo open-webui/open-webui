@@ -1,0 +1,26 @@
+/* Left menu bar */
+.cloudnation.light .app > div > div:first-child {
+	background-color: #21b6ff;
+}
+
+.cloudnation.light .app > div > div:first-child a,
+.cloudnation.light .app > div > div:first-child button {
+	color: #ffffff; /* TOP BACKGROUND COLOR */
+}
+
+.cloudnation.light .app > div > div:first-child a:hover,
+.cloudnation.light .app > div > div:first-child button:hover,
+.cloudnation.light .app > div > div:first-child #dropdownDots button {
+	color: #333333; /* TOP BACKGROUND COLOR */
+}
+
+
+/* main screen */
+.cloudnation.light .app > div > div:nth-child(2) > div {
+	background-color: #ffffff;
+}
+
+/* top nav */
+.cloudnation.light .app #nav {
+	background-color:#f4f4f4 !important;
+}

@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Initialize device type args
 # use build args in the docker build commmand with --build-arg="BUILDARG=true"
-ARG USE_CUDA=true
+ARG USE_CUDA=false
 ARG USE_OLLAMA=true
 # Tested with cu117 for CUDA 11 and cu121 for CUDA 12 (default)
 ARG USE_CUDA_VER=cu121
@@ -41,7 +41,7 @@ ENV ENV=prod \
     USE_EMBEDDING_MODEL_DOCKER=${USE_EMBEDDING_MODEL}
 
 ## Basis URL Config ##
-ENV WEBUI_NAME="Open WebUI" \
+ENV WEBUI_NAME="RevoData" \
     OLLAMA_BASE_URL="/ollama" \
     OPENAI_API_BASE_URL=""
 
@@ -70,25 +70,25 @@ ENV RAG_EMBEDDING_MODEL="$USE_EMBEDDING_MODEL_DOCKER" \
 WORKDIR /app/backend
 
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
-        apt-get update && \
-        # Install pandoc and netcat
-        apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
-        # for RAG OCR
-        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
-        # install helper tools
-        apt-get install -y --no-install-recommends curl && \
-        # install ollama
-        curl -fsSL https://ollama.com/install.sh | sh && \
-        # cleanup
-        rm -rf /var/lib/apt/lists/*; \
+    apt-get update && \
+    # Install pandoc and netcat
+    apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
+    # for RAG OCR
+    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # install helper tools
+    apt-get install -y --no-install-recommends curl && \
+    # install ollama
+    curl -fsSL https://ollama.com/install.sh | sh && \
+    # cleanup
+    rm -rf /var/lib/apt/lists/*; \
     else \
-        apt-get update && \
-        # Install pandoc and netcat
-        apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
-        # for RAG OCR
-        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
-        # cleanup
-        rm -rf /var/lib/apt/lists/*; \
+    apt-get update && \
+    # Install pandoc and netcat
+    apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
+    # for RAG OCR
+    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # cleanup
+    rm -rf /var/lib/apt/lists/*; \
     fi
 
 # install python dependencies
@@ -96,16 +96,16 @@ COPY ./backend/requirements.txt ./requirements.txt
 
 RUN pip3 install uv && \
     if [ "$USE_CUDA" = "true" ]; then \
-        # If you use CUDA the whisper and embedding model will be downloaded on first use
-        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-        uv pip install --system -r requirements.txt --no-cache-dir && \
-        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-        python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
+    # If you use CUDA the whisper and embedding model will be downloaded on first use
+    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
+    uv pip install --system -r requirements.txt --no-cache-dir && \
+    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+    python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
     else \
-        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-        uv pip install --system -r requirements.txt --no-cache-dir && \
-        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-        python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
+    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
+    uv pip install --system -r requirements.txt --no-cache-dir && \
+    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+    python -c "import os; from chromadb.utils import embedding_functions; sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
     fi
 
 

@@ -1,0 +1,26 @@
+/* Left menu bar */
+.uniserver.light .app > div > div:first-child {
+	background-color:#e65919 !important;
+}
+
+.uniserver.light .app > div > div:first-child a,
+.uniserver.light .app > div > div:first-child button {
+	color: #ffffff; /* TOP BACKGROUND COLOR */
+}
+
+.uniserver.light .app > div > div:first-child a:hover,
+.uniserver.light .app > div > div:first-child button:hover,
+.uniserver.light .app > div > div:first-child #dropdownDots button {
+	color: #333333; /* TOP BACKGROUND COLOR */
+}
+
+
+/* main screen */
+.uniserver.light .app > div > div:nth-child(2) > div {
+	background-color: #ffffff;
+}
+
+/* top nav */
+.uniserver.light .app #nav {
+	background-color:#f4f4f4 !important;
+}

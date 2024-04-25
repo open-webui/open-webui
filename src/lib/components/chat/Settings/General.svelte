@@ -14,8 +14,8 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark', 'revodata light'];
-	let selectedTheme = 'system';
+	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark', 'revodata light', 'cloudnation light', 'uniserver light'];
+	let selectedTheme = 'revodata light';
 
 	let languages = [];
 	let lang = $i18n.language;
@@ -149,7 +149,9 @@
 						<option value="light">☀️ {$i18n.t('Light')}</option>
 						<option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
 						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option>
-						<option value="revodata light">{$i18n.t('RevoData')}</option>
+						<option value="revodata light">RevoData</option>
+						<option value="cloudnation light">CloudNation</option>
+						<option value="uniserver light">Uniserver</option>
 					</select>
 				</div>
 			</div>

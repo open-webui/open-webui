@@ -186,3 +186,11 @@ If you have any questions, suggestions, or need assistance, please open an issue
 ---
 
 Created by [Timothy J. Baek](https://github.com/tjbck) - Let's make Open Web UI even more amazing together! 💪
+
+
+## Additions by RevoData
+
+### Run locally without GPU
+```bash
+docker run -d -p 3000:8080 -e USE_CUDA_DOCKER=false -e OLLAMA_BASE_URL=https://example.com -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main --pull=always
+```
