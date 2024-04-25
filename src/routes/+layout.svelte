@@ -31,7 +31,13 @@
 				initI18n();
 			}
 
-			await WEBUI_NAME.set(backendConfig.name);
+			// NOTEICE!!
+			// remark the following line for <title> issue.
+			// however the root cause is not understood.
+			// chenk http://localhost:8080/api/config
+			// I believe it can be remarked.
+
+			// await WEBUI_NAME.set(backendConfig.name);
 			console.log(backendConfig);
 
 			if ($config) {
