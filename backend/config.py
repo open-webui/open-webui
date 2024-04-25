@@ -430,6 +430,10 @@ RAG_EMBEDDING_MODEL = os.environ.get(
 )
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL}"),
 
+RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
+    os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "").lower() == "true"
+)
+
 RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
@@ -437,6 +441,10 @@ RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
 RAG_RERANKING_MODEL = os.environ.get("RAG_RERANKING_MODEL", "")
 if not RAG_RERANKING_MODEL == "":
     log.info(f"Reranking model set: {RAG_RERANKING_MODEL}"),
+
+RAG_RERANKING_MODEL_AUTO_UPDATE = (
+    os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "").lower() == "true"
+)
 
 RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
