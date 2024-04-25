@@ -32,13 +32,13 @@ def query_embeddings_doc(
     collection_name: str,
     query: str,
     embeddings_function,
+    reranking_function,
     k: int,
-    reranking_function: Optional[CrossEncoder] = None,
     r: Optional[float] = None,
+    hybrid: Optional[bool] = False,
 ):
     try:
-
-        if reranking_function:
+        if hybrid:
             # if you use docker use the model from the environment variable
             collection = CHROMA_CLIENT.get_collection(name=collection_name)
 
@@ -142,6 +142,7 @@ def query_embeddings_collection(
     r: float,
     embeddings_function,
     reranking_function,
+    hybrid: bool,
 ):
 
     results = []
@@ -155,6 +156,7 @@ def query_embeddings_collection(
                 r=r,
                 embeddings_function=embeddings_function,
                 reranking_function=reranking_function,
+                hybrid=hybrid,
             )
             results.append(result)
         except:
@@ -211,6 +213,7 @@ def rag_messages(
     template,
     k,
     r,
+    hybrid,
     embedding_engine,
     embedding_model,
     embedding_function,
@@ -283,6 +286,7 @@ def rag_messages(
                     r=r,
                     embeddings_function=embeddings_function,
                     reranking_function=reranking_function,
+                    hybrid=hybrid,
                 )
             else:
                 context = query_embeddings_doc(
@@ -292,6 +296,7 @@ def rag_messages(
                     r=r,
                     embeddings_function=embeddings_function,
                     reranking_function=reranking_function,
+                    hybrid=hybrid,
                 )
         except Exception as e:
             log.exception(e)
