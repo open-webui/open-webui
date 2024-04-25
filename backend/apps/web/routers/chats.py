@@ -28,7 +28,7 @@ from apps.web.models.tags import (
 
 from constants import ERROR_MESSAGES
 
-from config import SRC_LOG_LEVELS
+from config import SRC_LOG_LEVELS, ENABLE_ADMIN_EXPORT
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -45,6 +45,18 @@ async def get_user_chats(
     user=Depends(get_current_user), skip: int = 0, limit: int = 50
 ):
     return Chats.get_chat_lists_by_user_id(user.id, skip, limit)
+
+
+############################
+# GetArchivedChats
+############################
+
+
+@router.get("/archived", response_model=List[ChatTitleIdResponse])
+async def get_archived_user_chats(
+    user=Depends(get_current_user), skip: int = 0, limit: int = 50
+):
+    return Chats.get_archived_chat_lists_by_user_id(user.id, skip, limit)
 
 
 ############################
@@ -67,6 +79,11 @@ async def get_all_user_chats(user=Depends(get_current_user)):
 
 @router.get("/all/db", response_model=List[ChatResponse])
 async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
+    if not ENABLE_ADMIN_EXPORT:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
     return [
         ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
         for chat in Chats.get_all_chats()
@@ -190,6 +207,23 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_current_
 
 
 ############################
+# ArchiveChat
+############################
+
+
+@router.get("/{id}/archive", response_model=Optional[ChatResponse])
+async def archive_chat_by_id(id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+        chat = Chats.toggle_chat_archive_by_id(id)
+        return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
 # ShareChatById
 ############################
 
@@ -251,7 +285,15 @@ async def delete_shared_chat_by_id(id: str, user=Depends(get_current_user)):
 
 @router.get("/share/{share_id}", response_model=Optional[ChatResponse])
 async def get_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
-    chat = Chats.get_chat_by_id(share_id)
+    if user.role == "pending":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role == "user":
+        chat = Chats.get_chat_by_share_id(share_id)
+    elif user.role == "admin":
+        chat = Chats.get_chat_by_id(share_id)
 
     if chat:
         return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})

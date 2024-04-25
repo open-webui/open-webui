@@ -23,6 +23,51 @@ import numpy as np
 import tempfile
 
 
+####################################
+# LOGGING
+####################################
+
+log_levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
+
+GLOBAL_LOG_LEVEL = os.environ.get("GLOBAL_LOG_LEVEL", "").upper()
+if GLOBAL_LOG_LEVEL in log_levels:
+    logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
+else:
+    GLOBAL_LOG_LEVEL = "INFO"
+
+log = logging.getLogger(__name__)
+log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
+
+log_sources = [
+    "AUDIO",
+    "COMFYUI",
+    "CONFIG",
+    "DB",
+    "IMAGES",
+    "LITELLM",
+    "MAIN",
+    "MODELS",
+    "OLLAMA",
+    "OPENAI",
+    "RAG",
+    "WEBHOOK",
+]
+
+SRC_LOG_LEVELS = {}
+
+for source in log_sources:
+    log_env_var = source + "_LOG_LEVEL"
+    SRC_LOG_LEVELS[source] = os.environ.get(log_env_var, "").upper()
+    if SRC_LOG_LEVELS[source] not in log_levels:
+        SRC_LOG_LEVELS[source] = GLOBAL_LOG_LEVEL
+    log.info(f"{log_env_var}: {SRC_LOG_LEVELS[source]}")
+
+log.setLevel(SRC_LOG_LEVELS["CONFIG"])
+
+####################################
+# Load .env file
+####################################
+
 try:
     from dotenv import load_dotenv, find_dotenv
 
@@ -32,8 +77,6 @@ except ImportError:
 
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
-
-shutil.copyfile("../build/favicon.png", "./static/favicon.png")
 
 ####################################
 # ENV (dev,test,prod)
@@ -108,47 +151,26 @@ for version in soup.find_all("h2"):
 
 CHANGELOG = changelog_json
 
+####################################
+# DATA/FRONTEND BUILD DIR
+####################################
+
+DATA_DIR = str(Path(os.getenv("DATA_DIR", "./data")).resolve())
+FRONTEND_BUILD_DIR = str(Path(os.getenv("FRONTEND_BUILD_DIR", "../build")))
+
+try:
+    with open(f"{DATA_DIR}/config.json", "r") as f:
+        CONFIG_DATA = json.load(f)
+except:
+    CONFIG_DATA = {}
 
 ####################################
-# LOGGING
+# Static DIR
 ####################################
-log_levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
 
-GLOBAL_LOG_LEVEL = os.environ.get("GLOBAL_LOG_LEVEL", "").upper()
-if GLOBAL_LOG_LEVEL in log_levels:
-    logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
-else:
-    GLOBAL_LOG_LEVEL = "INFO"
+STATIC_DIR = str(Path(os.getenv("STATIC_DIR", "./static")).resolve())
 
-log = logging.getLogger(__name__)
-log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
-
-log_sources = [
-    "AUDIO",
-    "COMFYUI",
-    "CONFIG",
-    "DB",
-    "IMAGES",
-    "LITELLM",
-    "MAIN",
-    "MODELS",
-    "OLLAMA",
-    "OPENAI",
-    "RAG",
-    "WEBHOOK",
-]
-
-SRC_LOG_LEVELS = {}
-
-for source in log_sources:
-    log_env_var = source + "_LOG_LEVEL"
-    SRC_LOG_LEVELS[source] = os.environ.get(log_env_var, "").upper()
-    if SRC_LOG_LEVELS[source] not in log_levels:
-        SRC_LOG_LEVELS[source] = GLOBAL_LOG_LEVEL
-    log.info(f"{log_env_var}: {SRC_LOG_LEVELS[source]}")
-
-log.setLevel(SRC_LOG_LEVELS["CONFIG"])
-
+shutil.copyfile(f"{FRONTEND_BUILD_DIR}/favicon.png", f"{STATIC_DIR}/favicon.png")
 
 ####################################
 # CUSTOM_NAME
@@ -170,7 +192,7 @@ if CUSTOM_NAME:
 
                 r = requests.get(url, stream=True)
                 if r.status_code == 200:
-                    with open("./static/favicon.png", "wb") as f:
+                    with open(f"{STATIC_DIR}/favicon.png", "wb") as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
 
@@ -317,6 +339,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
 K8S_FLAG = os.environ.get("K8S_FLAG", "")
+USE_OLLAMA_DOCKER = os.environ.get("USE_OLLAMA_DOCKER", "false")
 
 if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     OLLAMA_BASE_URL = (
@@ -326,9 +349,13 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
     )
 
 if ENV == "prod":
-    if OLLAMA_BASE_URL == "/ollama":
-        OLLAMA_BASE_URL = "http://host.docker.internal:11434"
-
+    if OLLAMA_BASE_URL == "/ollama" and not K8S_FLAG:
+        if USE_OLLAMA_DOCKER.lower() == "true":
+            # if you use all-in-one docker container (Open WebUI + Ollama)
+            # with the docker build arg USE_OLLAMA=true (--build-arg="USE_OLLAMA=true") this only works with http://localhost:11434
+            OLLAMA_BASE_URL = "http://localhost:11434"
+        else:
+            OLLAMA_BASE_URL = "http://host.docker.internal:11434"
     elif K8S_FLAG:
         OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
 
@@ -365,6 +392,18 @@ OPENAI_API_BASE_URLS = [
     url.strip() if url != "" else "https://api.openai.com/v1"
     for url in OPENAI_API_BASE_URLS.split(";")
 ]
+
+OPENAI_API_KEY = ""
+
+try:
+    OPENAI_API_KEY = OPENAI_API_KEYS[
+        OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
+    ]
+except:
+    pass
+
+OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+
 
 ####################################
 # WEBUI
@@ -414,6 +453,8 @@ MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
 MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
+
+ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
 
 ####################################
 # WEBUI_VERSION
@@ -503,17 +544,49 @@ And answer according to the language of the user's question.
 Given the context information, answer the query.
 Query: [query]"""
 
+RAG_OPENAI_API_BASE_URL = os.getenv("RAG_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
+RAG_OPENAI_API_KEY = os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY)
+
 ####################################
 # Transcribe
 ####################################
 
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
 WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
+WHISPER_MODEL_AUTO_UPDATE = (
+    os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
+)
 
 
 ####################################
 # Images
 ####################################
 
+ENABLE_IMAGE_GENERATION = (
+    os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true"
+)
 AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
 COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
+
+
+IMAGES_OPENAI_API_BASE_URL = os.getenv(
+    "IMAGES_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL
+)
+IMAGES_OPENAI_API_KEY = os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY)
+
+
+####################################
+# Audio
+####################################
+
+AUDIO_OPENAI_API_BASE_URL = os.getenv("AUDIO_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
+AUDIO_OPENAI_API_KEY = os.getenv("AUDIO_OPENAI_API_KEY", OPENAI_API_KEY)
+
+####################################
+# LiteLLM
+####################################
+
+LITELLM_PROXY_PORT = int(os.getenv("LITELLM_PROXY_PORT", "14365"))
+if LITELLM_PROXY_PORT < 0 or LITELLM_PROXY_PORT > 65535:
+    raise ValueError("Invalid port number for LITELLM_PROXY_PORT")
+LITELLM_PROXY_HOST = os.getenv("LITELLM_PROXY_HOST", "127.0.0.1")

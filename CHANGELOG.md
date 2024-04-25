@@ -5,6 +5,75 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.121] - 2024-04-24
+
+### Fixed
+
+- **🔧 Translation Issues**: Addressed various translation discrepancies.
+- **🔒 LiteLLM Security Fix**: Updated LiteLLM version to resolve a security vulnerability.
+- **🖥️ HTML Tag Display**: Rectified the issue where the '< br >' tag wasn't displaying correctly.
+- **🔗 WebSocket Connection**: Resolved the failure of WebSocket connection under HTTPS security for ComfyUI server.
+- **📜 FileReader Optimization**: Implemented FileReader initialization per image in multi-file drag & drop to ensure reusability.
+- **🏷️ Tag Display**: Corrected tag display inconsistencies.
+- **📦 Archived Chat Styling**: Fixed styling issues in archived chat.
+- **🔖 Safari Copy Button Bug**: Addressed the bug where the copy button failed to copy links in Safari.
+
+## [0.1.120] - 2024-04-20
+
+### Added
+
+- **📦 Archive Chat Feature**: Easily archive chats with a new sidebar button, and access archived chats via the profile button > archived chats.
+- **🔊 Configurable Text-to-Speech Endpoint**: Customize your Text-to-Speech experience with configurable OpenAI endpoints.
+- **🛠️ Improved Error Handling**: Enhanced error message handling for connection failures.
+- **⌨️ Enhanced Shortcut**: When editing messages, use ctrl/cmd+enter to save and submit, and esc to close.
+- **🌐 Language Support**: Added support for Georgian and enhanced translations for Portuguese and Vietnamese.
+
+### Fixed
+
+- **🔧 Model Selector**: Resolved issue where default model selection was not saving.
+- **🔗 Share Link Copy Button**: Fixed bug where the copy button wasn't copying links in Safari.
+- **🎨 Light Theme Styling**: Addressed styling issue with the light theme.
+
+## [0.1.119] - 2024-04-16
+
+### Added
+
+- **🌟 Enhanced RAG Embedding Support**: Ollama, and OpenAI models can now be used for RAG embedding model.
+- **🔄 Seamless Integration**: Copy 'ollama run <model name>' directly from Ollama page to easily select and pull models.
+- **🏷️ Tagging Feature**: Add tags to chats directly via the sidebar chat menu.
+- **📱 Mobile Accessibility**: Swipe left and right on mobile to effortlessly open and close the sidebar.
+- **🔍 Improved Navigation**: Admin panel now supports pagination for user list.
+- **🌍 Additional Language Support**: Added Polish language support.
+
+### Fixed
+
+- **🌍 Language Enhancements**: Vietnamese and Spanish translations have been improved.
+- **🔧 Helm Fixes**: Resolved issues with Helm trailing slash and manifest.json.
+
+### Changed
+
+- **🐳 Docker Optimization**: Updated docker image build process to utilize 'uv' for significantly faster builds compared to 'pip3'.
+
+## [0.1.118] - 2024-04-10
+
+### Added
+
+- **🦙 Ollama and CUDA Images**: Added support for ':ollama' and ':cuda' tagged images.
+- **👍 Enhanced Response Rating**: Now you can annotate your ratings for better feedback.
+- **👤 User Initials Profile Photo**: User initials are now the default profile photo.
+- **🔍 Update RAG Embedding Model**: Customize RAG embedding model directly in document settings.
+- **🌍 Additional Language Support**: Added Turkish language support.
+
+### Fixed
+
+- **🔒 Share Chat Permission**: Resolved issue with chat sharing permissions.
+- **🛠 Modal Close**: Modals can now be closed using the Esc key.
+
+### Changed
+
+- **🎨 Admin Panel Styling**: Refreshed styling for the admin panel.
+- **🐳 Docker Image Build**: Updated docker image build process for improved efficiency.
+
 ## [0.1.117] - 2024-04-03
 
 ### Added

@@ -15,9 +15,10 @@
 	const dispatch = createEventDispatcher();
 
 	import { config, settings } from '$lib/stores';
-	import { synthesizeOpenAISpeech } from '$lib/apis/openai';
+	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
+		approximateToHumanReadable,
 		extractSentences,
 		revertSanitizedResponseContent,
 		sanitizeResponseContent
@@ -30,6 +31,7 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import RateComment from './RateComment.svelte';
 
 	export let modelfiles = [];
 	export let message;
@@ -39,6 +41,7 @@
 
 	export let readOnly = false;
 
+	export let updateChatMessages: Function;
 	export let confirmEditResponseMessage: Function;
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
@@ -59,6 +62,8 @@
 
 	let loadingSpeech = false;
 	let generatingImage = false;
+
+	let showRateComment = false;
 
 	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
 
@@ -118,7 +123,10 @@
                     eval_count: ${message.info.eval_count ?? 'N/A'}<br/>
                     eval_duration: ${
 											Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
-										}ms</span>`,
+										}ms<br/>
+                    approximate_total: ${approximateToHumanReadable(
+											message.info.total_duration
+										)}</span>`,
 				allowHTML: true
 			});
 		}
@@ -168,10 +176,12 @@
 
 	const toggleSpeakMessage = async () => {
 		if (speaking) {
-			speechSynthesis.cancel();
+			try {
+				speechSynthesis.cancel();
 
-			sentencesAudio[speakingIdx].pause();
-			sentencesAudio[speakingIdx].currentTime = 0;
+				sentencesAudio[speakingIdx].pause();
+				sentencesAudio[speakingIdx].currentTime = 0;
+			} catch {}
 
 			speaking = null;
 			speakingIdx = null;
@@ -213,6 +223,10 @@
 						sentence
 					).catch((error) => {
 						toast.error(error);
+
+						speaking = null;
+						loadingSpeech = false;
+
 						return null;
 					});
 
@@ -222,7 +236,6 @@
 						const audio = new Audio(blobUrl);
 						sentencesAudio[idx] = audio;
 						loadingSpeech = false;
-
 						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
 					}
 				}
@@ -536,11 +549,19 @@
 												<button
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded {message.rating === 1
+														: 'invisible group-hover:visible'} p-1 rounded {message?.annotation
+														?.rating === 1
 														? 'bg-gray-100 dark:bg-gray-800'
 														: ''} dark:hover:text-white hover:text-black transition"
 													on:click={() => {
 														rateMessage(message.id, 1);
+														showRateComment = true;
+
+														window.setTimeout(() => {
+															document
+																.getElementById(`message-feedback-${message.id}`)
+																?.scrollIntoView();
+														}, 0);
 													}}
 												>
 													<svg
@@ -563,11 +584,18 @@
 												<button
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded {message.rating === -1
+														: 'invisible group-hover:visible'} p-1 rounded {message?.annotation
+														?.rating === -1
 														? 'bg-gray-100 dark:bg-gray-800'
 														: ''} dark:hover:text-white hover:text-black transition"
 													on:click={() => {
 														rateMessage(message.id, -1);
+														showRateComment = true;
+														window.setTimeout(() => {
+															document
+																.getElementById(`message-feedback-${message.id}`)
+																?.scrollIntoView();
+														}, 0);
 													}}
 												>
 													<svg
@@ -823,6 +851,17 @@
 											</Tooltip>
 										{/if}
 									</div>
+								{/if}
+
+								{#if showRateComment}
+									<RateComment
+										messageId={message.id}
+										bind:show={showRateComment}
+										bind:message
+										on:submit={() => {
+											updateChatMessages();
+										}}
+									/>
 								{/if}
 							</div>
 						{/if}

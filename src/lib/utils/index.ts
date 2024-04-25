@@ -20,9 +20,7 @@ export const getModels = async (token: string) => {
 		})
 	]);
 
-	models = models
-		.filter((models) => models)
-		.reduce((a, e, i, arr) => a.concat(e, ...(i < arr.length - 1 ? [{ name: 'hr' }] : [])), []);
+	models = models.filter((models) => models).reduce((a, e, i, arr) => a.concat(e), []);
 
 	return models;
 };
@@ -37,7 +35,6 @@ export const sanitizeResponseContent = (content: string) => {
 		.replace(/<\|[a-z]+\|$/, '')
 		.replace(/<$/, '')
 		.replaceAll(/<\|[a-z]+\|>/g, ' ')
-		.replaceAll(/<br\s?\/?>/gi, '\n')
 		.replaceAll('<', '&lt;')
 		.trim();
 };
@@ -111,7 +108,84 @@ export const getGravatarURL = (email) => {
 	return `https://www.gravatar.com/avatar/${hash}`;
 };
 
-export const copyToClipboard = (text) => {
+export const canvasPixelTest = () => {
+	// Test a 1x1 pixel to potentially identify browser/plugin fingerprint blocking or spoofing
+	// Inspiration: https://github.com/kkapsner/CanvasBlocker/blob/master/test/detectionTest.js
+	const canvas = document.createElement('canvas');
+	const ctx = canvas.getContext('2d');
+	canvas.height = 1;
+	canvas.width = 1;
+	const imageData = new ImageData(canvas.width, canvas.height);
+	const pixelValues = imageData.data;
+
+	// Generate RGB test data
+	for (let i = 0; i < imageData.data.length; i += 1) {
+		if (i % 4 !== 3) {
+			pixelValues[i] = Math.floor(256 * Math.random());
+		} else {
+			pixelValues[i] = 255;
+		}
+	}
+
+	ctx.putImageData(imageData, 0, 0);
+	const p = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+	// Read RGB data and fail if unmatched
+	for (let i = 0; i < p.length; i += 1) {
+		if (p[i] !== pixelValues[i]) {
+			console.log(
+				'canvasPixelTest: Wrong canvas pixel RGB value detected:',
+				p[i],
+				'at:',
+				i,
+				'expected:',
+				pixelValues[i]
+			);
+			console.log('canvasPixelTest: Canvas blocking or spoofing is likely');
+			return false;
+		}
+	}
+
+	return true;
+};
+
+export const generateInitialsImage = (name) => {
+	const canvas = document.createElement('canvas');
+	const ctx = canvas.getContext('2d');
+	canvas.width = 100;
+	canvas.height = 100;
+
+	if (!canvasPixelTest()) {
+		console.log(
+			'generateInitialsImage: failed pixel test, fingerprint evasion is likely. Using default image.'
+		);
+		return '/user.png';
+	}
+
+	ctx.fillStyle = '#F39C12';
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+	ctx.fillStyle = '#FFFFFF';
+	ctx.font = '40px Helvetica';
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'middle';
+
+	const sanitizedName = name.trim();
+	const initials =
+		sanitizedName.length > 0
+			? sanitizedName[0] +
+			  (sanitizedName.split(' ').length > 1
+					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
+					: '')
+			: '';
+
+	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
+
+	return canvas.toDataURL();
+};
+
+export const copyToClipboard = async (text) => {
+	let result = false;
 	if (!navigator.clipboard) {
 		const textArea = document.createElement('textarea');
 		textArea.value = text;
@@ -129,21 +203,27 @@ export const copyToClipboard = (text) => {
 			const successful = document.execCommand('copy');
 			const msg = successful ? 'successful' : 'unsuccessful';
 			console.log('Fallback: Copying text command was ' + msg);
+			result = true;
 		} catch (err) {
 			console.error('Fallback: Oops, unable to copy', err);
 		}
 
 		document.body.removeChild(textArea);
-		return;
+		return result;
 	}
-	navigator.clipboard.writeText(text).then(
-		function () {
+
+	result = await navigator.clipboard
+		.writeText(text)
+		.then(() => {
 			console.log('Async: Copying to clipboard was successful!');
-		},
-		function (err) {
-			console.error('Async: Could not copy text: ', err);
-		}
-	);
+			return true;
+		})
+		.catch((error) => {
+			console.error('Async: Could not copy text: ', error);
+			return false;
+		});
+
+	return result;
 };
 
 export const compareVersion = (latest, current) => {
@@ -390,4 +470,53 @@ export const blobToFile = (blob, fileName) => {
 	// Create a new File object from the Blob
 	const file = new File([blob], fileName, { type: blob.type });
 	return file;
+};
+
+// promptTemplate replaces any occurrences of the following in the template with the prompt
+// {{prompt}} will be replaced with the prompt
+// {{prompt:start:<length>}} will be replaced with the first <length> characters of the prompt
+// {{prompt:end:<length>}} will be replaced with the last <length> characters of the prompt
+// Character length is used as we don't have the ability to tokenize the prompt
+export const promptTemplate = (template: string, prompt: string) => {
+	template = template.replace(/{{prompt}}/g, prompt);
+
+	// Replace all instances of {{prompt:start:<length>}} with the first <length> characters of the prompt
+	const startRegex = /{{prompt:start:(\d+)}}/g;
+	let startMatch: RegExpMatchArray | null;
+	while ((startMatch = startRegex.exec(template)) !== null) {
+		const length = parseInt(startMatch[1]);
+		template = template.replace(startMatch[0], prompt.substring(0, length));
+	}
+
+	// Replace all instances of {{prompt:end:<length>}} with the last <length> characters of the prompt
+	const endRegex = /{{prompt:end:(\d+)}}/g;
+	let endMatch: RegExpMatchArray | null;
+	while ((endMatch = endRegex.exec(template)) !== null) {
+		const length = parseInt(endMatch[1]);
+		template = template.replace(endMatch[0], prompt.substring(prompt.length - length));
+	}
+
+	return template;
+};
+
+export const approximateToHumanReadable = (nanoseconds: number) => {
+	const seconds = Math.floor((nanoseconds / 1e9) % 60);
+	const minutes = Math.floor((nanoseconds / 6e10) % 60);
+	const hours = Math.floor((nanoseconds / 3.6e12) % 24);
+
+	const results: string[] = [];
+
+	if (seconds >= 0) {
+		results.push(`${seconds}s`);
+	}
+
+	if (minutes > 0) {
+		results.push(`${minutes}m`);
+	}
+
+	if (hours > 0) {
+		results.push(`${hours}h`);
+	}
+
+	return results.reverse().join(' ');
 };

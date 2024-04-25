@@ -22,6 +22,32 @@ export const getGravatarUrl = async (email: string) => {
 	return res;
 };
 
+export const downloadChatAsPDF = async (chat: object) => {
+	let error = null;
+
+	const blob = await fetch(`${WEBUI_API_BASE_URL}/utils/pdf`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			title: chat.title,
+			messages: chat.messages
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.blob();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err;
+			return null;
+		});
+
+	return blob;
+};
+
 export const getHTMLFromMarkdown = async (md: string) => {
 	let error = null;
 

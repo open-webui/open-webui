@@ -18,8 +18,7 @@ import requests
 from pathlib import Path
 from typing import List
 
-from sentence_transformers import SentenceTransformer
-from chromadb.utils import embedding_functions
+from chromadb.utils.batch_utils import create_batches
 
 from langchain_community.document_loaders import (
     WebBaseLoader,
@@ -43,6 +42,9 @@ import mimetypes
 import uuid
 import json
 from constants import ERROR_MESSAGES
+import sentence_transformers
+
+from apps.ollama.main import generate_ollama_embeddings, GenerateEmbeddingsForm
 
 from apps.web.models.documents import (
     Documents,
@@ -50,7 +52,11 @@ from apps.web.models.documents import (
     DocumentResponse,
 )
 
-from apps.rag.utils import query_doc, query_collection
+from apps.rag.utils import (
+    query_embeddings_doc,
+    query_embeddings_collection,
+    generate_openai_embeddings,
+)
 
 from utils.misc import (
     calculate_sha256,
@@ -63,8 +69,12 @@ from config import (
     SRC_LOG_LEVELS,
     UPLOAD_DIR,
     DOCS_DIR,
+    RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_MODEL,
-    RAG_EMBEDDING_MODEL_DEVICE_TYPE,
+    RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+    RAG_OPENAI_API_BASE_URL,
+    RAG_OPENAI_API_KEY,
+    DEVICE_TYPE,
     CHUNK_SIZE,
     CHUNK_OVERLAP,
     RAG_TEMPLATE,
@@ -81,30 +91,29 @@ from constants import ERROR_MESSAGES
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
-#
-# if RAG_EMBEDDING_MODEL:
-#    sentence_transformer_ef = SentenceTransformer(
-#        model_name_or_path=RAG_EMBEDDING_MODEL,
-#        cache_folder=RAG_EMBEDDING_MODEL_DIR,
-#        device=RAG_EMBEDDING_MODEL_DEVICE_TYPE,
-#    )
-
-
 app = FastAPI()
 
-app.state.PDF_EXTRACT_IMAGES = False
+
+app.state.TOP_K = 4
 app.state.CHUNK_SIZE = CHUNK_SIZE
 app.state.CHUNK_OVERLAP = CHUNK_OVERLAP
-app.state.RAG_TEMPLATE = RAG_TEMPLATE
-app.state.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
-app.state.TOP_K = 4
 
-app.state.sentence_transformer_ef = (
-    embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name=app.state.RAG_EMBEDDING_MODEL,
-        device=RAG_EMBEDDING_MODEL_DEVICE_TYPE,
+
+app.state.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
+app.state.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
+app.state.RAG_TEMPLATE = RAG_TEMPLATE
+
+app.state.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
+app.state.OPENAI_API_KEY = RAG_OPENAI_API_KEY
+
+app.state.PDF_EXTRACT_IMAGES = False
+
+if app.state.RAG_EMBEDDING_ENGINE == "":
+    app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
+        app.state.RAG_EMBEDDING_MODEL,
+        device=DEVICE_TYPE,
+        trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     )
-)
 
 
 origins = ["*"]
@@ -135,38 +144,77 @@ async def get_status():
         "chunk_size": app.state.CHUNK_SIZE,
         "chunk_overlap": app.state.CHUNK_OVERLAP,
         "template": app.state.RAG_TEMPLATE,
+        "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
         "embedding_model": app.state.RAG_EMBEDDING_MODEL,
     }
 
 
-@app.get("/embedding/model")
-async def get_embedding_model(user=Depends(get_admin_user)):
+@app.get("/embedding")
+async def get_embedding_config(user=Depends(get_admin_user)):
     return {
         "status": True,
+        "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
         "embedding_model": app.state.RAG_EMBEDDING_MODEL,
+        "openai_config": {
+            "url": app.state.OPENAI_API_BASE_URL,
+            "key": app.state.OPENAI_API_KEY,
+        },
     }
+
+
+class OpenAIConfigForm(BaseModel):
+    url: str
+    key: str
 
 
 class EmbeddingModelUpdateForm(BaseModel):
+    openai_config: Optional[OpenAIConfigForm] = None
+    embedding_engine: str
     embedding_model: str
 
 
-@app.post("/embedding/model/update")
-async def update_embedding_model(
+@app.post("/embedding/update")
+async def update_embedding_config(
     form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
 ):
-    app.state.RAG_EMBEDDING_MODEL = form_data.embedding_model
-    app.state.sentence_transformer_ef = (
-        embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name=app.state.RAG_EMBEDDING_MODEL,
-            device=RAG_EMBEDDING_MODEL_DEVICE_TYPE,
-        )
+    log.info(
+        f"Updating embedding model: {app.state.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
     )
+    try:
+        app.state.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
 
-    return {
-        "status": True,
-        "embedding_model": app.state.RAG_EMBEDDING_MODEL,
-    }
+        if app.state.RAG_EMBEDDING_ENGINE in ["ollama", "openai"]:
+            app.state.RAG_EMBEDDING_MODEL = form_data.embedding_model
+            app.state.sentence_transformer_ef = None
+
+            if form_data.openai_config != None:
+                app.state.OPENAI_API_BASE_URL = form_data.openai_config.url
+                app.state.OPENAI_API_KEY = form_data.openai_config.key
+        else:
+            sentence_transformer_ef = sentence_transformers.SentenceTransformer(
+                app.state.RAG_EMBEDDING_MODEL,
+                device=DEVICE_TYPE,
+                trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+            )
+            app.state.RAG_EMBEDDING_MODEL = form_data.embedding_model
+            app.state.sentence_transformer_ef = sentence_transformer_ef
+
+        return {
+            "status": True,
+            "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
+            "embedding_model": app.state.RAG_EMBEDDING_MODEL,
+            "openai_config": {
+                "url": app.state.OPENAI_API_BASE_URL,
+                "key": app.state.OPENAI_API_KEY,
+            },
+        }
+
+    except Exception as e:
+        log.exception(f"Problem updating embedding model: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
 
 
 @app.get("/config")
@@ -249,14 +297,35 @@ def query_doc_handler(
     form_data: QueryDocForm,
     user=Depends(get_current_user),
 ):
-
     try:
-        return query_doc(
+        if app.state.RAG_EMBEDDING_ENGINE == "":
+            query_embeddings = app.state.sentence_transformer_ef.encode(
+                form_data.query
+            ).tolist()
+        elif app.state.RAG_EMBEDDING_ENGINE == "ollama":
+            query_embeddings = generate_ollama_embeddings(
+                GenerateEmbeddingsForm(
+                    **{
+                        "model": app.state.RAG_EMBEDDING_MODEL,
+                        "prompt": form_data.query,
+                    }
+                )
+            )
+        elif app.state.RAG_EMBEDDING_ENGINE == "openai":
+            query_embeddings = generate_openai_embeddings(
+                model=app.state.RAG_EMBEDDING_MODEL,
+                text=form_data.query,
+                key=app.state.OPENAI_API_KEY,
+                url=app.state.OPENAI_API_BASE_URL,
+            )
+
+        return query_embeddings_doc(
             collection_name=form_data.collection_name,
             query=form_data.query,
+            query_embeddings=query_embeddings,
             k=form_data.k if form_data.k else app.state.TOP_K,
-            embedding_function=app.state.sentence_transformer_ef,
         )
+
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -276,12 +345,40 @@ def query_collection_handler(
     form_data: QueryCollectionsForm,
     user=Depends(get_current_user),
 ):
-    return query_collection(
-        collection_names=form_data.collection_names,
-        query=form_data.query,
-        k=form_data.k if form_data.k else app.state.TOP_K,
-        embedding_function=app.state.sentence_transformer_ef,
-    )
+    try:
+        if app.state.RAG_EMBEDDING_ENGINE == "":
+            query_embeddings = app.state.sentence_transformer_ef.encode(
+                form_data.query
+            ).tolist()
+        elif app.state.RAG_EMBEDDING_ENGINE == "ollama":
+            query_embeddings = generate_ollama_embeddings(
+                GenerateEmbeddingsForm(
+                    **{
+                        "model": app.state.RAG_EMBEDDING_MODEL,
+                        "prompt": form_data.query,
+                    }
+                )
+            )
+        elif app.state.RAG_EMBEDDING_ENGINE == "openai":
+            query_embeddings = generate_openai_embeddings(
+                model=app.state.RAG_EMBEDDING_MODEL,
+                text=form_data.query,
+                key=app.state.OPENAI_API_KEY,
+                url=app.state.OPENAI_API_BASE_URL,
+            )
+
+        return query_embeddings_collection(
+            collection_names=form_data.collection_names,
+            query_embeddings=query_embeddings,
+            k=form_data.k if form_data.k else app.state.TOP_K,
+        )
+
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
 
 
 @app.post("/web")
@@ -316,9 +413,11 @@ def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> b
         chunk_overlap=app.state.CHUNK_OVERLAP,
         add_start_index=True,
     )
+
     docs = text_splitter.split_documents(data)
 
     if len(docs) > 0:
+        log.info(f"store_data_in_vector_db {docs}")
         return store_docs_in_vector_db(docs, collection_name, overwrite), None
     else:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
@@ -337,8 +436,11 @@ def store_text_in_vector_db(
 
 
 def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> bool:
+    log.info(f"store_docs_in_vector_db {docs} {collection_name}")
 
     texts = [doc.page_content for doc in docs]
+    texts = list(map(lambda x: x.replace("\n", " "), texts))
+
     metadatas = [doc.metadata for doc in docs]
 
     try:
@@ -474,25 +576,11 @@ def store_doc(
 
     log.info(f"file.content_type: {file.content_type}")
     try:
-        is_valid_filename = True
         unsanitized_filename = file.filename
-        if re.search(r'[\\/:"\*\?<>|\n\t ]', unsanitized_filename) is not None:
-            is_valid_filename = False
+        filename = os.path.basename(unsanitized_filename)
 
-        unvalidated_file_path = f"{UPLOAD_DIR}/{unsanitized_filename}"
-        dereferenced_file_path = str(Path(unvalidated_file_path).resolve(strict=False))
-        if not dereferenced_file_path.startswith(UPLOAD_DIR):
-            is_valid_filename = False
+        file_path = f"{UPLOAD_DIR}/{filename}"
 
-        if is_valid_filename:
-            file_path = dereferenced_file_path
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(),
-            )
-
-        filename = file.filename
         contents = file.file.read()
        # Create a temporary file to write the contents
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:

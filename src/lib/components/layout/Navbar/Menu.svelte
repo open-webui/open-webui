@@ -10,7 +10,9 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
-	import Tags from '$lib/components/common/Tags.svelte';
+	import Tags from '$lib/components/chat/Tags.svelte';
+
+	import { downloadChatAsPDF } from '$lib/apis/utils';
 
 	export let shareEnabled: boolean = false;
 	export let shareHandler: Function;
@@ -19,13 +21,9 @@
 	// export let tagHandler: Function;
 
 	export let chat;
-	export let tags;
-	export let deleteTag: Function;
-	export let addTag: Function;
-
 	export let onClose: Function = () => {};
 
-	const downloadChatAsTxt = async () => {
+	const downloadTxt = async () => {
 		const _chat = chat.chat;
 		console.log('download', chat);
 
@@ -40,54 +38,29 @@
 		saveAs(blob, `chat-${_chat.title}.txt`);
 	};
 
-	const downloadChatAsPdf = async () => {
+	const downloadPdf = async () => {
 		const _chat = chat.chat;
 		console.log('download', chat);
 
-		const doc = new jsPDF();
+		const blob = await downloadChatAsPDF(_chat);
 
-		// Initialize y-coordinate for text placement
-		let yPos = 10;
-		const pageHeight = doc.internal.pageSize.height;
+		// Create a URL for the blob
+		const url = window.URL.createObjectURL(blob);
 
-		// Function to check if new text exceeds the current page height
-		function checkAndAddNewPage() {
-			if (yPos > pageHeight - 10) {
-				doc.addPage();
-				yPos = 10; // Reset yPos for the new page
-			}
-		}
+		// Create a link element to trigger the download
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `chat-${_chat.title}.pdf`;
 
-		// Function to add text with specific style
-		function addStyledText(text, isTitle = false) {
-			// Set font style and size based on the parameters
-			doc.setFont('helvetica', isTitle ? 'bold' : 'normal');
-			doc.setFontSize(isTitle ? 12 : 10);
+		// Append the link to the body and click it programmatically
+		document.body.appendChild(a);
+		a.click();
 
-			const textMargin = 7;
+		// Remove the link from the body
+		document.body.removeChild(a);
 
-			// Split text into lines to ensure it fits within the page width
-			const lines = doc.splitTextToSize(text, 180); // Adjust the width as needed
-
-			lines.forEach((line) => {
-				checkAndAddNewPage(); // Check if we need a new page before adding more text
-				doc.text(line, 10, yPos);
-				yPos += textMargin; // Increment yPos for the next line
-			});
-
-			// Add extra space after a block of text
-			yPos += 2;
-		}
-
-		_chat.messages.forEach((message, i) => {
-			// Add user text in bold
-			doc.setFont('helvetica', 'normal', 'bold');
-
-			addStyledText(message.role.toUpperCase(), { isTitle: true });
-			addStyledText(message.content);
-		});
-
-		doc.save(`chat-${_chat.title}.pdf`);
+		// Revoke the URL to release memory
+		window.URL.revokeObjectURL(url);
 	};
 </script>
 
@@ -193,7 +166,7 @@
 						<DropdownMenu.Item
 							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
 							on:click={() => {
-								downloadChatAsTxt();
+								downloadTxt();
 							}}
 						>
 							<div class="flex items-center line-clamp-1">Plain text (.txt)</div>
@@ -202,7 +175,7 @@
 						<DropdownMenu.Item
 							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
 							on:click={() => {
-								downloadChatAsPdf();
+								downloadPdf();
 							}}
 						>
 							<div class="flex items-center line-clamp-1">PDF document (.pdf)</div>
@@ -213,7 +186,7 @@
 				<hr class="border-gray-100 dark:border-gray-800 mt-2.5 mb-1.5" />
 
 				<div class="flex p-1">
-					<Tags {tags} {deleteTag} {addTag} />
+					<Tags chatId={chat.id} />
 				</div>
 
 				<!-- <DropdownMenu.Item

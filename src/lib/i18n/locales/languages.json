@@ -16,6 +16,10 @@
 		"title": "Deutsch"
 	},
 	{
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+	{
 		"code": "es-ES",
 		"title": "Spanish"
 	},
@@ -40,6 +44,10 @@
 		"title": "Japanese"
 	},
 	{
+		"code": "ka-GE",
+		"title": "Georgian"
+	},
+	{
 		"code": "ko-KR",
 		"title": "Korean"
 	},
@@ -48,12 +56,24 @@
 		"title": "Dutch (Netherlands)"
 	},
 	{
+		"code": "pl-PL",
+		"title": "Polish"
+	},
+	{
+		"code": "pt-BR",
+		"title": "Portuguese (Brazil)"
+	},
+	{
 		"code": "pt-PT",
 		"title": "Portuguese (Portugal)"
 	},
 	{
 		"code": "ru-RU",
 		"title": "Russian (Russia)"
+	},
+	{
+		"code": "tr-TR",
+		"title": "Turkish"
 	},
 	{
 		"code": "uk-UA",

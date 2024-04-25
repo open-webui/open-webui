@@ -1,5 +1,5 @@
 {
-	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'초', '분', '시간', '일', '주' 또는 만료 없음 '-1'",
+	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s', 'm', 'h', 'd', 'w' 또는 만료 없음 '-1'",
 	"(Beta)": "(Beta)",
 	"(e.g. `sh webui.sh --api`)": "(예: `sh webui.sh --api`)",
 	"(latest)": "(latest)",
@@ -100,7 +100,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} 삭제됨",
 	"Deleted {tagName}": "{tagName} 삭제됨",
 	"Description": "설명",
-	"Desktop Notifications": "알림",
+	"Notifications": "알림",
 	"Disabled": "비활성화",
 	"Discover a modelfile": "모델파일 검색",
 	"Discover a prompt": "프롬프트 검색",
