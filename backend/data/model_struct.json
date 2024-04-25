@@ -1,0 +1,67 @@
+{
+    "data": [
+        {
+            "id": "gpt-3.5-turbo-16k",
+            "object": "model",
+            "created": 1683758102,
+            "owned_by": "openai-internal",
+            "urlIdx": 0
+        },
+        {
+            "id": "gpt-3.5-turbo-16k-0613",
+            "object": "model",
+            "created": 1685474247,
+            "owned_by": "openai",
+            "urlIdx": 0
+        },
+        {
+            "id": "gpt-3.5-turbo-instruct-0914",
+            "object": "model",
+            "created": 1694122472,
+            "owned_by": "system",
+            "urlIdx": 0
+        },
+        {
+            "id": "gpt-3.5-turbo-0613",
+            "object": "model",
+            "created": 1686587434,
+            "owned_by": "openai",
+            "urlIdx": 0
+        },
+        {
+            "id": "gpt-3.5-turbo-instruct",
+            "object": "model",
+            "created": 1692901427,
+            "owned_by": "system",
+            "urlIdx": 0
+        },
+        {
+            "id": "gpt-3.5-turbo-0301",
+            "object": "model",
+            "created": 1677649963,
+            "owned_by": "openai",
+            "urlIdx": 0
+        },
+        {
+            "id": "gpt-3.5-turbo",
+            "object": "model",
+            "created": 1677610602,
+            "owned_by": "openai",
+            "urlIdx": 0
+        },
+        {
+            "id": "gpt-3.5-turbo-0125",
+            "object": "model",
+            "created": 1706048358,
+            "owned_by": "system",
+            "urlIdx": 0
+        },
+        {
+            "id": "gpt-3.5-turbo-1106",
+            "object": "model",
+            "created": 1698959748,
+            "owned_by": "system",
+            "urlIdx": 0
+        }
+    ]
+}
