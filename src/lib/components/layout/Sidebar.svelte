@@ -787,6 +787,12 @@
 				{/if}
 			</div>
 		</div>
+
+		<hr class="mt-2" />
+		
+		<div class="px-2.5 pt-2 text-center">
+			Re-designed by SWS <a href="https://digitalink-sws.github.io" class="text-blue-900 hover:underline" target="_blank">@Digitalink</a>
+		</div>
 	</div>
 
 	<div
