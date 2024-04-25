@@ -7,8 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.122] - 2024-04-24
 
-- **🛠️ Improved Embedding Model Support**: You can now use any embedding model `sentence_transformers` supports.
-- **🌟 Enhanced RAG Pipeline**: Added `BM25` hybrid searching with reranking model support using `sentence_transformers`.
+- **🌟 Enhanced RAG Pipeline**: Added hybrid searching with `BM25`, reranking using `CrossEncoder`, and relevance score thresholds.
 
 ## [0.1.121] - 2024-04-24
 
