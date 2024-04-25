@@ -420,6 +420,9 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
+RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "5"))
+RAG_RELEVANCE_THRESHOLD = float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "0.0"))
+
 RAG_EMBEDDING_ENGINE = os.environ.get("RAG_EMBEDDING_ENGINE", "")
 
 RAG_EMBEDDING_MODEL = os.environ.get(
@@ -427,8 +430,24 @@ RAG_EMBEDDING_MODEL = os.environ.get(
 )
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL}"),
 
+RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
+    os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "").lower() == "true"
+)
+
 RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
+)
+
+RAG_RERANKING_MODEL = os.environ.get("RAG_RERANKING_MODEL", "")
+if not RAG_RERANKING_MODEL == "":
+    log.info(f"Reranking model set: {RAG_RERANKING_MODEL}"),
+
+RAG_RERANKING_MODEL_AUTO_UPDATE = (
+    os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "").lower() == "true"
+)
+
+RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
+    os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
 
 # device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
@@ -439,16 +458,15 @@ if USE_CUDA.lower() == "true":
 else:
     DEVICE_TYPE = "cpu"
 
-
 CHROMA_CLIENT = chromadb.PersistentClient(
     path=CHROMA_DATA_PATH,
     settings=Settings(allow_reset=True, anonymized_telemetry=False),
 )
-CHUNK_SIZE = 1500
-CHUNK_OVERLAP = 100
 
+CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "1500"))
+CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "100"))
 
-RAG_TEMPLATE = """Use the following context as your learned knowledge, inside <context></context> XML tags.
+DEFAULT_RAG_TEMPLATE = """Use the following context as your learned knowledge, inside <context></context> XML tags.
 <context>
     [context]
 </context>
@@ -461,6 +479,8 @@ And answer according to the language of the user's question.
         
 Given the context information, answer the query.
 Query: [query]"""
+
+RAG_TEMPLATE = os.environ.get("RAG_TEMPLATE", DEFAULT_RAG_TEMPLATE)
 
 RAG_OPENAI_API_BASE_URL = os.getenv("RAG_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
 RAG_OPENAI_API_KEY = os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY)
