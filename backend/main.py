@@ -47,6 +47,7 @@ from config import (
     FRONTEND_BUILD_DIR,
     CACHE_DIR,
     STATIC_DIR,
+    ENABLE_LITELLM,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     GLOBAL_LOG_LEVEL,
@@ -179,7 +180,8 @@ async def check_url(request: Request, call_next):
 
 @app.on_event("startup")
 async def on_startup():
-    asyncio.create_task(start_litellm_background())
+    if ENABLE_LITELLM:
+        asyncio.create_task(start_litellm_background())
 
 
 app.mount("/api/v1", webui_app)
@@ -329,4 +331,5 @@ app.mount(
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    await shutdown_litellm_background()
+    if ENABLE_LITELLM:
+        await shutdown_litellm_background()
