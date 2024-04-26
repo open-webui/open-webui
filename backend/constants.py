@@ -3,6 +3,10 @@ from enum import Enum
 
 class MESSAGES(str, Enum):
     DEFAULT = lambda msg="": f"{msg if msg else ''}"
+    MODEL_ADDED = lambda model="": f"The model '{model}' has been added successfully."
+    MODEL_DELETED = (
+        lambda model="": f"The model '{model}' has been deleted successfully."
+    )
 
 
 class WEBHOOK_MESSAGES(str, Enum):

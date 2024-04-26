@@ -359,5 +359,20 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Viết một tóm tắt trong vòng 50 từ cho [chủ đề hoặc từ khóa].",
 	"You": "Bạn",
 	"You're a helpful assistant.": "Bạn là một trợ lý hữu ích.",
-	"You're now logged in.": "Bạn đã đăng nhập."
+	"You're now logged in.": "Bạn đã đăng nhập.",
+	"Accurate information": "Thông tin chính xác",
+	"Followed instructions perfectly": "Tuân theo chỉ dẫn một cách hoàn hảo",
+	"Showcased creativity": "Thể hiện sự sáng tạo",
+	"Positive attitude": "Thể hiện thái độ tích cực",
+	"Attention to detail": "Có sự chú ý đến chi tiết của vấn đề",
+	"Thorough explanation": "Giải thích kỹ lưỡng",
+	"Don't like the style": "Không thích phong cách trả lời",
+	"Not factually correct": "Không chính xác so với thực tế",
+	"Didn't fully follow instructions": "Không tuân theo chỉ dẫn một cách đầy đủ",
+	"Refused when it shouldn't have": "Từ chối trả lời mà nhẽ không nên làm vậy",
+	"Being lazy": "Lười biếng",
+	"Other": "Khác",
+	"Thanks for your feedback!": "Cám ơn bạn đã gửi phản hồi!",
+	"Tell us more:": "Hãy cho chúng tôi hiểu thêm về chất lượng của câu trả lời:",
+	"Feel free to add specific details": "Mô tả chi tiết về chất lượng của câu hỏi và phương án trả lời"
 }

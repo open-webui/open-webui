@@ -321,6 +321,18 @@ OPENAI_API_BASE_URLS = [
     for url in OPENAI_API_BASE_URLS.split(";")
 ]
 
+OPENAI_API_KEY = ""
+
+try:
+    OPENAI_API_KEY = OPENAI_API_KEYS[
+        OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
+    ]
+except:
+    pass
+
+OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+
+
 ####################################
 # WEBUI
 ####################################
@@ -370,6 +382,8 @@ MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
+ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
+
 ####################################
 # WEBUI_VERSION
 ####################################
@@ -404,17 +418,18 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
 ####################################
 
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
-# this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (all-MiniLM-L6-v2)
+# this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
 RAG_EMBEDDING_ENGINE = os.environ.get("RAG_EMBEDDING_ENGINE", "")
 
-RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+RAG_EMBEDDING_MODEL = os.environ.get(
+    "RAG_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+)
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL}"),
 
-RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
-    os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "").lower() == "true"
+RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
+    os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
-
 
 # device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
 USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
@@ -447,6 +462,9 @@ And answer according to the language of the user's question.
 Given the context information, answer the query.
 Query: [query]"""
 
+RAG_OPENAI_API_BASE_URL = os.getenv("RAG_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
+RAG_OPENAI_API_KEY = os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY)
+
 ####################################
 # Transcribe
 ####################################
@@ -467,3 +485,26 @@ ENABLE_IMAGE_GENERATION = (
 )
 AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
 COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
+
+
+IMAGES_OPENAI_API_BASE_URL = os.getenv(
+    "IMAGES_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL
+)
+IMAGES_OPENAI_API_KEY = os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY)
+
+
+####################################
+# Audio
+####################################
+
+AUDIO_OPENAI_API_BASE_URL = os.getenv("AUDIO_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
+AUDIO_OPENAI_API_KEY = os.getenv("AUDIO_OPENAI_API_KEY", OPENAI_API_KEY)
+
+####################################
+# LiteLLM
+####################################
+
+LITELLM_PROXY_PORT = int(os.getenv("LITELLM_PROXY_PORT", "14365"))
+if LITELLM_PROXY_PORT < 0 or LITELLM_PROXY_PORT > 65535:
+    raise ValueError("Invalid port number for LITELLM_PROXY_PORT")
+LITELLM_PROXY_HOST = os.getenv("LITELLM_PROXY_HOST", "127.0.0.1")
