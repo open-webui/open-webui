@@ -33,12 +33,12 @@ def query_embeddings_doc(
     reranking_function,
     k: int,
     r: int,
-    hybrid: bool,
+    hybrid_search: bool,
 ):
     try:
         collection = CHROMA_CLIENT.get_collection(name=collection_name)
 
-        if hybrid:
+        if hybrid_search:
             documents = collection.get()  # get all documents
             bm25_retriever = BM25Retriever.from_texts(
                 texts=documents.get("documents"),
@@ -134,7 +134,7 @@ def query_embeddings_collection(
     r: float,
     embeddings_function,
     reranking_function,
-    hybrid: bool,
+    hybrid_search: bool,
 ):
 
     results = []
@@ -148,7 +148,7 @@ def query_embeddings_collection(
                 r=r,
                 embeddings_function=embeddings_function,
                 reranking_function=reranking_function,
-                hybrid=hybrid,
+                hybrid_search=hybrid_search,
             )
             results.append(result)
         except:
@@ -206,7 +206,7 @@ def rag_messages(
     template,
     k,
     r,
-    hybrid,
+    hybrid_search,
     embedding_engine,
     embedding_model,
     embedding_function,
@@ -279,7 +279,7 @@ def rag_messages(
                     r=r,
                     embeddings_function=embeddings_function,
                     reranking_function=reranking_function,
-                    hybrid=hybrid,
+                    hybrid_search=hybrid_search,
                 )
             else:
                 context = query_embeddings_doc(
@@ -289,7 +289,7 @@ def rag_messages(
                     r=r,
                     embeddings_function=embeddings_function,
                     reranking_function=reranking_function,
-                    hybrid=hybrid,
+                    hybrid_search=hybrid_search,
                 )
         except Exception as e:
             log.exception(e)

@@ -70,7 +70,7 @@ from config import (
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-    RAG_HYBRID,
+    ENABLE_RAG_HYBRID_SEARCH,
     RAG_RERANKING_MODEL,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
@@ -92,7 +92,8 @@ app = FastAPI()
 
 app.state.TOP_K = RAG_TOP_K
 app.state.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
-app.state.HYBRID = RAG_HYBRID
+
+app.state.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
 
 app.state.CHUNK_SIZE = CHUNK_SIZE
 app.state.CHUNK_OVERLAP = CHUNK_OVERLAP
@@ -324,7 +325,7 @@ async def get_query_settings(user=Depends(get_admin_user)):
         "template": app.state.RAG_TEMPLATE,
         "k": app.state.TOP_K,
         "r": app.state.RELEVANCE_THRESHOLD,
-        "hybrid": app.state.HYBRID,
+        "hybrid": app.state.ENABLE_RAG_HYBRID_SEARCH,
     }
 
 
@@ -342,13 +343,13 @@ async def update_query_settings(
     app.state.RAG_TEMPLATE = form_data.template if form_data.template else RAG_TEMPLATE
     app.state.TOP_K = form_data.k if form_data.k else 4
     app.state.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 0.0
-    app.state.HYBRID = form_data.hybrid if form_data.hybrid else False
+    app.state.ENABLE_RAG_HYBRID_SEARCH = form_data.hybrid if form_data.hybrid else False
     return {
         "status": True,
         "template": app.state.RAG_TEMPLATE,
         "k": app.state.TOP_K,
         "r": app.state.RELEVANCE_THRESHOLD,
-        "hybrid": app.state.HYBRID,
+        "hybrid": app.state.ENABLE_RAG_HYBRID_SEARCH,
     }
 
 
@@ -381,7 +382,11 @@ def query_doc_handler(
             r=form_data.r if form_data.r else app.state.RELEVANCE_THRESHOLD,
             embeddings_function=embeddings_function,
             reranking_function=app.state.sentence_transformer_rf,
-            hybrid=form_data.hybrid if form_data.hybrid else app.state.HYBRID,
+            hybrid_search=(
+                form_data.hybrid
+                if form_data.hybrid
+                else app.state.ENABLE_RAG_HYBRID_SEARCH
+            ),
         )
     except Exception as e:
         log.exception(e)
@@ -420,7 +425,11 @@ def query_collection_handler(
             r=form_data.r if form_data.r else app.state.RELEVANCE_THRESHOLD,
             embeddings_function=embeddings_function,
             reranking_function=app.state.sentence_transformer_rf,
-            hybrid=form_data.hybrid if form_data.hybrid else app.state.HYBRID,
+            hybrid_search=(
+                form_data.hybrid
+                if form_data.hybrid
+                else app.state.ENABLE_RAG_HYBRID_SEARCH
+            ),
         )
     except Exception as e:
         log.exception(e)
