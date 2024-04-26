@@ -31,7 +31,7 @@ async function* openAIStreamToIterator(
 				console.log(line);
 				if (line === 'data: [DONE]') {
 					yield { done: true, value: '' };
-				} if (line.startsWith(':')) {
+				} else if (line.startsWith(':')) {
 					// Events starting with : are comments https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#event_stream_format
 					// OpenRouter sends heartbeats like ": OPENROUTER PROCESSING"
 					continue
