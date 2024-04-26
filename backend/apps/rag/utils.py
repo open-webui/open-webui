@@ -18,8 +18,6 @@ from langchain.retrievers import (
     EnsembleRetriever,
 )
 
-from sentence_transformers import CrossEncoder
-
 from typing import Optional
 from config import SRC_LOG_LEVELS, CHROMA_CLIENT
 
@@ -32,16 +30,15 @@ def query_embeddings_doc(
     collection_name: str,
     query: str,
     embeddings_function,
+    reranking_function,
     k: int,
-    reranking_function: Optional[CrossEncoder] = None,
-    r: Optional[float] = None,
+    r: int,
+    hybrid_search: bool,
 ):
     try:
+        collection = CHROMA_CLIENT.get_collection(name=collection_name)
 
-        if reranking_function:
-            # if you use docker use the model from the environment variable
-            collection = CHROMA_CLIENT.get_collection(name=collection_name)
-
+        if hybrid_search:
             documents = collection.get()  # get all documents
             bm25_retriever = BM25Retriever.from_texts(
                 texts=documents.get("documents"),
@@ -77,24 +74,19 @@ def query_embeddings_doc(
                 "metadatas": [[d.metadata for d in result]],
             }
         else:
-            # if you use docker use the model from the environment variable
             query_embeddings = embeddings_function(query)
-
-            log.info(f"query_embeddings_doc {query_embeddings}")
-            collection = CHROMA_CLIENT.get_collection(name=collection_name)
-
             result = collection.query(
                 query_embeddings=[query_embeddings],
                 n_results=k,
             )
 
-            log.info(f"query_embeddings_doc:result {result}")
+        log.info(f"query_embeddings_doc:result {result}")
         return result
     except Exception as e:
         raise e
 
 
-def merge_and_sort_query_results(query_results, k):
+def merge_and_sort_query_results(query_results, k, reverse=False):
     # Initialize lists to store combined data
     combined_distances = []
     combined_documents = []
@@ -109,7 +101,7 @@ def merge_and_sort_query_results(query_results, k):
     combined = list(zip(combined_distances, combined_documents, combined_metadatas))
 
     # Sort the list based on distances
-    combined.sort(key=lambda x: x[0])
+    combined.sort(key=lambda x: x[0], reverse=reverse)
 
     # We don't have anything :-(
     if not combined:
@@ -142,6 +134,7 @@ def query_embeddings_collection(
     r: float,
     embeddings_function,
     reranking_function,
+    hybrid_search: bool,
 ):
 
     results = []
@@ -155,12 +148,14 @@ def query_embeddings_collection(
                 r=r,
                 embeddings_function=embeddings_function,
                 reranking_function=reranking_function,
+                hybrid_search=hybrid_search,
             )
             results.append(result)
         except:
             pass
 
-    return merge_and_sort_query_results(results, k)
+    reverse = hybrid and reranking_function is not None
+    return merge_and_sort_query_results(results, k=k, reverse=reverse)
 
 
 def rag_template(template: str, context: str, query: str):
@@ -211,6 +206,7 @@ def rag_messages(
     template,
     k,
     r,
+    hybrid_search,
     embedding_engine,
     embedding_model,
     embedding_function,
@@ -283,6 +279,7 @@ def rag_messages(
                     r=r,
                     embeddings_function=embeddings_function,
                     reranking_function=reranking_function,
+                    hybrid_search=hybrid_search,
                 )
             else:
                 context = query_embeddings_doc(
@@ -292,6 +289,7 @@ def rag_messages(
                     r=r,
                     embeddings_function=embeddings_function,
                     reranking_function=reranking_function,
+                    hybrid_search=hybrid_search,
                 )
         except Exception as e:
             log.exception(e)
@@ -479,7 +477,9 @@ class RerankCompressor(BaseDocumentCompressor):
                 (d, s) for d, s in docs_with_scores if s >= self.r_score
             ]
 
-        result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
+        reverse = self.reranking_function is not None
+        result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=reverse)
+
         final_results = []
         for doc, doc_score in result[: self.top_n]:
             metadata = doc.metadata

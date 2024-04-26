@@ -423,6 +423,10 @@ CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
 RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "5"))
 RAG_RELEVANCE_THRESHOLD = float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "0.0"))
 
+ENABLE_RAG_HYBRID_SEARCH = (
+    os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true"
+)
+
 RAG_EMBEDDING_ENGINE = os.environ.get("RAG_EMBEDDING_ENGINE", "")
 
 RAG_EMBEDDING_MODEL = os.environ.get(
