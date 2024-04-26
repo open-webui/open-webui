@@ -36,10 +36,14 @@ async function* openAIStreamToIterator(
 					// OpenRouter sends heartbeats like ": OPENROUTER PROCESSING"
 					continue
 				} else {
-					const data = JSON.parse(line.replace(/^data: /, ''));
-					console.log(data);
+					try {
+						const data = JSON.parse(line.replace(/^data: /, ''));
+						console.log(data);
 
-					yield { done: false, value: data.choices[0].delta.content ?? '' };
+						yield { done: false, value: data.choices?.[0]?.delta?.content ?? '' };
+					} catch (e) {
+						console.error('Error extracting delta from SSE event:', e);
+					}
 				}
 			}
 		}
