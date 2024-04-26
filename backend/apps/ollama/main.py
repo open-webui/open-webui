@@ -36,7 +36,7 @@ from utils.utils import decode_token, get_current_user, get_admin_user
 from config import (
     SRC_LOG_LEVELS,
     OLLAMA_BASE_URLS,
-    MODEL_FILTER_ENABLED,
+    ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     UPLOAD_DIR,
 )
@@ -55,7 +55,7 @@ app.add_middleware(
 )
 
 
-app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
+app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
@@ -168,7 +168,7 @@ async def get_ollama_tags(
     if url_idx == None:
         models = await get_all_models()
 
-        if app.state.MODEL_FILTER_ENABLED:
+        if app.state.ENABLE_MODEL_FILTER:
             if user.role == "user":
                 models["models"] = list(
                     filter(

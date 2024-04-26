@@ -47,7 +47,7 @@ from config import (
     FRONTEND_BUILD_DIR,
     CACHE_DIR,
     STATIC_DIR,
-    MODEL_FILTER_ENABLED,
+    ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     GLOBAL_LOG_LEVEL,
     SRC_LOG_LEVELS,
@@ -89,7 +89,7 @@ https://github.com/open-webui/open-webui
 
 app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
-app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
+app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.WEBHOOK_URL = WEBHOOK_URL
@@ -218,7 +218,7 @@ async def get_app_config():
 @app.get("/api/config/model/filter")
 async def get_model_filter_config(user=Depends(get_admin_user)):
     return {
-        "enabled": app.state.MODEL_FILTER_ENABLED,
+        "enabled": app.state.ENABLE_MODEL_FILTER,
         "models": app.state.MODEL_FILTER_LIST,
     }
 
@@ -232,20 +232,20 @@ class ModelFilterConfigForm(BaseModel):
 async def update_model_filter_config(
     form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
 ):
-    app.state.MODEL_FILTER_ENABLED = form_data.enabled
+    app.state.ENABLE_MODEL_FILTER = form_data.enabled
     app.state.MODEL_FILTER_LIST = form_data.models
 
-    ollama_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    ollama_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
     ollama_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
-    openai_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    openai_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
     openai_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
-    litellm_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    litellm_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
     litellm_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
     return {
-        "enabled": app.state.MODEL_FILTER_ENABLED,
+        "enabled": app.state.ENABLE_MODEL_FILTER,
         "models": app.state.MODEL_FILTER_LIST,
     }
 

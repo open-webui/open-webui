@@ -26,7 +26,7 @@ log.setLevel(SRC_LOG_LEVELS["LITELLM"])
 
 
 from config import (
-    MODEL_FILTER_ENABLED,
+    ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     DATA_DIR,
     LITELLM_PROXY_PORT,
@@ -130,7 +130,7 @@ async def startup_event():
     asyncio.create_task(start_litellm_background())
 
 
-app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
+app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 
@@ -209,7 +209,7 @@ async def get_models(user=Depends(get_current_user)):
 
         data = r.json()
 
-        if app.state.MODEL_FILTER_ENABLED:
+        if app.state.ENABLE_MODEL_FILTER:
             if user and user.role == "user":
                 data["data"] = list(
                     filter(
