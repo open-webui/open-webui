@@ -14,7 +14,8 @@
 		"lint:backend": "pylint backend/",
 		"format": "prettier --plugin-search-dir --write '**/*.{js,ts,svelte,css,md,html,json}'",
 		"format:backend": "black . --exclude \"/venv/\"",
-		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write 'src/lib/i18n/**/*.{js,json}'"
+		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write 'src/lib/i18n/**/*.{js,json}'",
+		"cy:open": "cypress open"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^2.0.0",
@@ -25,8 +26,10 @@
 		"@typescript-eslint/eslint-plugin": "^6.17.0",
 		"@typescript-eslint/parser": "^6.17.0",
 		"autoprefixer": "^10.4.16",
+		"cypress": "^13.8.1",
 		"eslint": "^8.56.0",
 		"eslint-config-prettier": "^8.5.0",
+		"eslint-plugin-cypress": "^3.0.2",
 		"eslint-plugin-svelte": "^2.30.0",
 		"i18next-parser": "^8.13.0",
 		"postcss": "^8.4.31",
