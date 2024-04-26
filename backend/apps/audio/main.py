@@ -1,6 +1,7 @@
 import os
 import logging
 import tempfile
+import io
 from fastapi import (
     FastAPI,
     Request,
@@ -22,6 +23,7 @@ from pydantic import BaseModel
 import requests
 import hashlib
 from pathlib import Path
+from urllib.parse import urljoin
 import json
 
 
@@ -37,6 +39,7 @@ import requests
 from config import (
     SRC_LOG_LEVELS,
     UPLOAD_DIR,
+    CACHE_DIR,
     WHISPER_MODEL,
     WHISPER_MODEL_DIR,
     HEADERS,
@@ -60,7 +63,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 app.state.OPENAI_API_BASE_URL = AUDIO_OPENAI_API_BASE_URL
 app.state.OPENAI_API_KEY = AUDIO_OPENAI_API_KEY
 
@@ -68,8 +70,13 @@ app.state.OPENAI_API_KEY = AUDIO_OPENAI_API_KEY
 whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
 log.info(f"whisper_device_type: {whisper_device_type}")
 
-SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
-SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+# Construct the relative URLs
+relative_url = "cache/audio/speech"
+audio_url = "cache/audio"
+
+# Combine the base URL and relative URL
+SPEECH_CACHE_DIR = urljoin(CACHE_DIR, relative_url)
+SPEECH_CACHE_FOLDER = urljoin(CACHE_DIR, audio_url)
 
 
 class OpenAIConfigUpdateForm(BaseModel):
@@ -107,12 +114,26 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     body = await request.body()
     name = hashlib.sha256(body).hexdigest()
 
-    file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
-    file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
+    # Define file paths in the Nexcloud folder space
+    response = requests.request("PROPFIND", SPEECH_CACHE_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
+    if response.status_code == 404:
+        # If directory doesn't exist, create it
+        response = requests.request("MKCOL", SPEECH_CACHE_FOLDER, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
+        print("Directory 'Audio Cache' created successfully." if response.status_code == 201 else f"Failed to create directory 'Audio Cache'. Status code: {response.status_code}")
+        response = requests.request("MKCOL", SPEECH_CACHE_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
+        print("Directory 'Speech Cache' created successfully." if response.status_code == 201 else f"Failed to create directory 'Speech Cache'. Status code: {response.status_code}")
+
+    file_path = urljoin(SPEECH_CACHE_DIR, f"{name}.mp3")
+    file_body_path = urljoin(SPEECH_CACHE_DIR, f"{name}.json")
 
     # Check if the file already exists in the cache
-    if file_path.is_file():
-        return FileResponse(file_path)
+    response = requests.request("PROPFIND", file_path, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
+    if response.status_code == 200:
+        # If the file exists, return it
+        response = requests.request("GET", file_path, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
+        if response.status_code == 200:
+            # Return the file if it exists
+            return FileResponse(io.BytesIO(response.content), media_type="audio/mp3", filename=f"{name}.mp3")
 
     headers = {}
     headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEY}"
@@ -130,16 +151,15 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         r.raise_for_status()
 
         # Save the streaming content to a file
-        with open(file_path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
+        with requests.request("PUT", file_path, data=r.content, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS) as f:
+            pass
 
-        with open(file_body_path, "w") as f:
-            json.dump(json.loads(body.decode("utf-8")), f)
+        with requests.request("PUT", file_body_path, data=body, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS) as f:
+            pass
 
         # Return the saved file
-        return FileResponse(file_path)
-
+        return FileResponse(io.BytesIO(r.content), media_type="audio/mp3", filename=f"{name}.mp3")
+    
     except Exception as e:
         log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
@@ -154,74 +174,4 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         raise HTTPException(
             status_code=r.status_code if r != None else 500,
             detail=error_detail,
-        )
-
-
-@app.post("/transcriptions")
-def transcribe(
-    file: UploadFile = File(...),
-    user=Depends(get_current_user),
-):
-    log.info(f"file.content_type: {file.content_type}")
-
-    if file.content_type not in ["audio/mpeg", "audio/wav"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.FILE_NOT_SUPPORTED,
-        )
-
-    try:
-        filename = file.filename
-        file_path = f"{UPLOAD_DIR}/{filename}"
-        contents = file.file.read()
-        with tempfile.NamedTemporaryFile(mode='w', delete= False) as temp_file:
-            temp_file.write(contents)
-            temp_file.close()
-
-        whisper_kwargs = {
-            "model_size_or_path": WHISPER_MODEL,
-            "device": whisper_device_type,
-            "compute_type": "int8",
-            "download_root": WHISPER_MODEL_DIR,
-            "local_files_only": not WHISPER_MODEL_AUTO_UPDATE,
-        }
-
-        log.debug(f"whisper_kwargs: {whisper_kwargs}")
-
-        try:
-            model = WhisperModel(**whisper_kwargs)
-        except:
-            log.warning(
-                "WhisperModel initialization failed, attempting download with local_files_only=False"
-            )
-            whisper_kwargs["local_files_only"] = False
-            model = WhisperModel(**whisper_kwargs)
-
-        segments, info = model.transcribe(temp_file.name, beam_size=5)
-        log.info(
-            "Detected language '%s' with probability %f"
-            % (info.language, info.language_probability)
-        )
-
-        transcript = "".join([segment.text for segment in list(segments)])
-
-        text = {"text": transcript.strip()}
-        
-        response = requests.put(file_path, data=text, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
-        if 200 <= response.status_code <= 299:
-            log.info("Transcript uploaded successfully.")
-        else:
-            print(f"Failed to upload transcript. Status code: {response.status_code}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to upload transcript. Status code: {response.status_code}"
-            )
-        return {"text": transcript.strip()}
-
-    except Exception as e:
-        log.exception(e)
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
         )

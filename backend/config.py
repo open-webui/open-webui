@@ -18,7 +18,7 @@ import psycopg2
 from psycopg2.extensions import register_adapter, AsIs
 from psycopg2.extras import DictCursor
 from psycopg2.sql import SQL, Identifier
-from transformers import GPT2Tokenizer
+from transformers import GPT2Tokenizer, BertTokenizer
 import numpy as np
 import tempfile
 
@@ -155,14 +155,9 @@ CHANGELOG = changelog_json
 # DATA/FRONTEND BUILD DIR
 ####################################
 
-DATA_DIR = str(Path(os.getenv("DATA_DIR", "./data")).resolve())
+LOCAL_DIR = str(Path(os.getcwd(),"../backend/data").resolve())
 FRONTEND_BUILD_DIR = str(Path(os.getenv("FRONTEND_BUILD_DIR", "../build")))
 
-try:
-    with open(f"{DATA_DIR}/config.json", "r") as f:
-        CONFIG_DATA = json.load(f)
-except:
-    CONFIG_DATA = {}
 
 ####################################
 # Static DIR
@@ -285,17 +280,12 @@ else :
 ####################################
 
 
-# Function to create the configuration file
-def create_and_upload_config_file():
-    # Create the directory if it doesn't exist
-    response = requests.request("MKCOL", f"{DATA_DIR}/litellm/", auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
-    if 200 <= response.status_code <= 299:
-        print("Directory created successfully.")
-    elif response.status_code == 405:
-        print("Directory already exists.")
-    else:
-        print(f"Failed to create directory. Status code: {response.status_code}")
-        return
+def create_config_file(file_path):
+    directory = os.path.dirname(file_path)
+
+    # Check if directory exists, if not, create it
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
     # Data to write into the YAML file
     config_data = {
@@ -305,29 +295,19 @@ def create_and_upload_config_file():
         "router_settings": {},
     }
 
-# Create a temporary file to store the YAML data
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
-        yaml.dump(config_data, temp_file)
-        temp_file.flush()  # Flush to ensure data is written to disk
-        temp_file.close()  # Close the file so it can be read by Nextcloud
-        
-    # Upload the configuration file to Nextcloud
-    with open(temp_file.name, "rb") as file:
-        response = requests.put(LITELLM_CONFIG_PATH, data=file, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
-        if 200 <= response.status_code <= 299:
-            print("Config file uploaded successfully.")
-        else:
-            print(f"Failed to upload config file. Status code: {response.status_code}")
+    # Write data to YAML file
+    with open(file_path, "w") as file:
+        yaml.dump(config_data, file)
 
-LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
 
-response = requests.request("PROPFIND", LITELLM_CONFIG_PATH, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
-if not(200 <= response.status_code <= 299):
+LITELLM_CONFIG_PATH = f"{LOCAL_DIR}/litellm/config.yaml"
+
+if not os.path.exists(LITELLM_CONFIG_PATH):
     log.info("Config file doesn't exist. Creating...")
-    create_and_upload_config_file()
+    create_config_file(LITELLM_CONFIG_PATH)
     log.info("Config file created successfully.")
-else:
-    print("Config file already exists.")
+
+
 
 #################################### 
 # OLLAMA_BASE_URL
@@ -496,14 +476,19 @@ def adapt_numpy_array(arr):
     return AsIs(arr)
 
 register_adapter(np.ndarray, adapt_numpy_array)
+
+RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
+    os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
+)
+RAG_EMBEDDING_ENGINE = os.environ.get("RAG_EMBEDDING_ENGINE", "")
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (all-MiniLM-L6-v2)
-RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "EleutherAI/gpt-neo-2.7B")
+RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL",  "sentence-transformers/all-MiniLM-L6-v2")
 # device type ebbeding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
 RAG_EMBEDDING_MODEL_DEVICE_TYPE = os.environ.get(
     "RAG_EMBEDDING_MODEL_DEVICE_TYPE", "cpu"
 )
 # Initialize RAG tokenizer
-tokenizer = GPT2Tokenizer.from_pretrained(RAG_EMBEDDING_MODEL)
+tokenizer = BertTokenizer.from_pretrained(RAG_EMBEDDING_MODEL)
 
 # Function to insert vectors into PostgreSQL
 def insert_vectors(vectors):
@@ -525,6 +510,14 @@ def retrieve_vectors(ids):
         results = cursor.fetchall()
         vectors = {result["id"]: result["vector"] for result in results}
         return vectors
+    
+# device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
+USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
+
+if USE_CUDA.lower() == "true":
+    DEVICE_TYPE = "cuda"
+else:
+    DEVICE_TYPE = "cpu"
     
 CHUNK_SIZE = 1500
 CHUNK_OVERLAP = 100
@@ -552,7 +545,7 @@ RAG_OPENAI_API_KEY = os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY)
 ####################################
 
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
-WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
+WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{LOCAL_DIR}/cache//whisper/models")
 WHISPER_MODEL_AUTO_UPDATE = (
     os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
 )

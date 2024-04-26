@@ -14,7 +14,7 @@ from config import SRC_LOG_LEVELS, POSTGRES_CONNECTION_STRING
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
-def query_doc(collection_name: str, query: str, k: int, embedding_function):
+def query_embeddings_doc(collection_name: str, query: str, k: int, embedding_function):
     try:
         conn = psycopg2.connect(**POSTGRES_CONNECTION_STRING)
         cursor = conn.cursor()
@@ -47,11 +47,11 @@ def merge_and_sort_query_results(query_results, k):
     # Add your implementation here
     pass
 
-def query_collection(
+def query_embeddings_collection(
     collection_names: List[str], query: str, k: int, embedding_function
 ):
     results = []
-    log.info(f"query_embeddings_collection {query_embeddings}")
+    log.info(f"query_embeddings_collection {embedding_function}")
 
     for collection_name in collection_names:
         try:

@@ -57,7 +57,6 @@ image_url = "cache/image"
 # Combine the base URL and relative URL
 IMAGE_CACHE_DIR = urljoin(CACHE_DIR, relative_url)
 IMAGE_FOLDER_DIR = urljoin(CACHE_DIR, image_url)
-print(IMAGE_CACHE_DIR)
 response = requests.request("PROPFIND", IMAGE_CACHE_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
 if not (200 <= response.status_code <= 299):
     response = requests.request("MKCOL", IMAGE_FOLDER_DIR, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD),headers=HEADERS)
@@ -443,7 +442,7 @@ def generate_image(
                     with open(temp_file.name, "rb") as file:
                         response = requests.put(file_body_path, data=file, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
                         if 200 <= response.status_code <= 299:
-                            print("Config file uploaded successfully.")
+                            print("Image file uploaded successfully.")
                         else:
                             print(f"Failed to upload config file. Status code: {response.status_code}")
 
@@ -487,9 +486,9 @@ def generate_image(
                     with open(temp_file.name, "rb") as file:
                         response = requests.put(file_body_path, data=file, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
                         if 200 <= response.status_code <= 299:
-                            print("Config file uploaded successfully.")
+                            print("Image file uploaded successfully.")
                         else:
-                            print(f"Failed to upload config file. Status code: {response.status_code}")
+                            print(f"Failed to upload Image file. Status code: {response.status_code}")
                     
 
             log.debug(f"images: {images}")
@@ -533,9 +532,9 @@ def generate_image(
                     with open(temp_file.name, "rb") as file:
                         response = requests.put(file_body_path, data=file, auth=(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD), headers=HEADERS)
                         if 200 <= response.status_code <= 299:
-                            print("Config file uploaded successfully.")
+                            print("Image file uploaded successfully.")
                         else:
-                            print(f"Failed to upload config file. Status code: {response.status_code}")
+                            print(f"Failed to upload Image file. Status code: {response.status_code}")
 
             return images
 

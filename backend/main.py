@@ -46,6 +46,7 @@ from config import (
     CHANGELOG,
     FRONTEND_BUILD_DIR,
     CACHE_DIR,
+    LOCAL_DIR,
     STATIC_DIR,
     MODEL_FILTER_ENABLED,
     MODEL_FILTER_LIST,
@@ -315,7 +316,7 @@ async def get_manifest_json():
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
+app.mount("/cache", StaticFiles(directory=f"{LOCAL_DIR}/cache"), name="cache")
 
 app.mount(
     "/",

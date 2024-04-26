@@ -28,9 +28,9 @@ log.setLevel(SRC_LOG_LEVELS["LITELLM"])
 from config import (
     MODEL_FILTER_ENABLED,
     MODEL_FILTER_LIST,
-    DATA_DIR,
     LITELLM_PROXY_PORT,
     LITELLM_PROXY_HOST,
+    LOCAL_DIR
 )
 
 from litellm.utils import get_llm_provider
@@ -52,7 +52,7 @@ app.add_middleware(
 )
 
 
-LITELLM_CONFIG_DIR = f"{DATA_DIR}/litellm/config.yaml"
+LITELLM_CONFIG_DIR = f"{LOCAL_DIR}/litellm/config.yaml"
 
 with open(LITELLM_CONFIG_DIR, "r") as file:
     litellm_config = yaml.safe_load(file)

@@ -11,7 +11,7 @@ import markdown
 from utils.utils import get_admin_user
 from utils.misc import calculate_sha256, get_gravatar_url
 
-from config import OLLAMA_BASE_URLS, DATA_DIR, ENABLE_ADMIN_EXPORT
+from config import OLLAMA_BASE_URLS, LOCAL_DIR, ENABLE_ADMIN_EXPORT
 from constants import ERROR_MESSAGES
 from typing import List
 
@@ -97,7 +97,7 @@ async def download_db(user=Depends(get_admin_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return FileResponse(
-        r"C:\Users\mfran\Documents\Projects\next-webui\backend\data\webui.db",
+        f"{LOCAL_DIR}/webui.db",
         media_type="application/octet-stream",
         filename="webui.db",
     )
