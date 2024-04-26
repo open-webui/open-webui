@@ -51,7 +51,8 @@ ENV OLLAMA_BASE_URL="/ollama" \
 ENV OPENAI_API_KEY="" \
     WEBUI_SECRET_KEY="" \
     SCARF_NO_ANALYTICS=true \
-    DO_NOT_TRACK=true
+    DO_NOT_TRACK=true \
+    ANONYMIZED_TELEMETRY=False
 
 # Use locally bundled version of the LiteLLM cost map json
 # to avoid repetitive startup connections
