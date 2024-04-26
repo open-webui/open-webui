@@ -172,6 +172,7 @@
 	"Import Modelfiles": "",
 	"Import Prompts": "",
 	"Include `--api` flag when running stable-diffusion-webui": "",
+	"When using docker, hostname will be: http://host.docker.internal:7860": "",
 	"Interface": "",
 	"join our Discord for help.": "",
 	"JSON": "",

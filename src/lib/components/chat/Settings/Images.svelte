@@ -272,6 +272,9 @@
 					{$i18n.t('(e.g. `sh webui.sh --api`)')}
 				</a>
 			</div>
+			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+				{$i18n.t('When using docker, hostname will be: http://host.docker.internal:7860')}
+			</div>
 		{:else if imageGenerationEngine === 'comfyui'}
 			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('ComfyUI Base URL')}</div>
 			<div class="flex w-full">

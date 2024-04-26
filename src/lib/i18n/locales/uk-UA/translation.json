@@ -169,6 +169,7 @@
 	"Import Modelfiles": "Імпортувати файл моделі",
 	"Import Prompts": "Імпортувати промти",
 	"Include `--api` flag when running stable-diffusion-webui": "Включіть прапор `--api` при запуску stable-diffusion-webui",
+	"When using docker, hostname will be: http://host.docker.internal:7860": "При використанні docker, хост має виглядати наступним чином: http://host.docker.internal:7860",
 	"Interface": "Інтерфейс",
 	"join our Discord for help.": "приєднуйтеся до нашого Discord для допомоги.",
 	"JSON": "JSON",
