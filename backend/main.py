@@ -121,6 +121,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
                     rag_app.state.RAG_TEMPLATE,
                     rag_app.state.TOP_K,
                     rag_app.state.RELEVANCE_THRESHOLD,
+                    rag_app.state.HYBRID,
                     rag_app.state.RAG_EMBEDDING_ENGINE,
                     rag_app.state.RAG_EMBEDDING_MODEL,
                     rag_app.state.sentence_transformer_ef,
