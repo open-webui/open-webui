@@ -17,10 +17,16 @@
 	let titleAutoGenerateModelExternal = '';
 	let fullScreenMode = false;
 	let titleGenerationPrompt = '';
+	let splitLargeChunks = false;
 
 	// Interface
 	let promptSuggestions = [];
 	let showUsername = false;
+
+	const toggleSplitLargeChunks = async () => {
+		splitLargeChunks = !splitLargeChunks;
+		saveSettings({ splitLargeChunks: splitLargeChunks });
+	};
 
 	const toggleFullScreenMode = async () => {
 		fullScreenMode = !fullScreenMode;
@@ -197,6 +203,28 @@
 					</button>
 				</div>
 			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Fluidly stream large external response chunks')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleSplitLargeChunks();
+						}}
+						type="button"
+					>
+						{#if splitLargeChunks === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
 		</div>
 
 		<hr class=" dark:border-gray-700" />
@@ -288,20 +316,20 @@
 								<div class="flex border-b dark:border-gray-600 w-full">
 									<input
 										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-600"
-										placeholder="Title (e.g. Tell me a fun fact)"
+										placeholder={$i18n.t('Title (e.g. Tell me a fun fact)')}
 										bind:value={prompt.title[0]}
 									/>
 
 									<input
 										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-600"
-										placeholder="Subtitle (e.g. about the Roman Empire)"
+										placeholder={$i18n.t('Subtitle (e.g. about the Roman Empire)')}
 										bind:value={prompt.title[1]}
 									/>
 								</div>
 
 								<input
 									class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-600"
-									placeholder="Prompt (e.g. Tell me a fun fact about the Roman Empire)"
+									placeholder={$i18n.t('Prompt (e.g. Tell me a fun fact about the Roman Empire)')}
 									bind:value={prompt.content}
 								/>
 							</div>

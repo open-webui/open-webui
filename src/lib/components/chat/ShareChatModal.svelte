@@ -3,24 +3,27 @@
 
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
-	import { chatId, modelfiles } from '$lib/stores';
+	import { modelfiles } from '$lib/stores';
 	import { copyToClipboard } from '$lib/utils';
 
 	import Modal from '../common/Modal.svelte';
 	import Link from '../icons/Link.svelte';
 
+	export let chatId;
+
 	let chat = null;
+	let shareUrl = null;
 	const i18n = getContext('i18n');
 
 	const shareLocalChat = async () => {
 		const _chat = chat;
 
-		const sharedChat = await shareChatById(localStorage.token, $chatId);
-		const chatShareUrl = `${window.location.origin}/s/${sharedChat.id}`;
+		const sharedChat = await shareChatById(localStorage.token, chatId);
+		shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
+		console.log(shareUrl);
+		chat = await getChatById(localStorage.token, chatId);
 
-		toast.success($i18n.t('Copied shared chat URL to clipboard!'));
-		copyToClipboard(chatShareUrl);
-		chat = await getChatById(localStorage.token, $chatId);
+		return shareUrl;
 	};
 
 	const shareChat = async () => {
@@ -56,8 +59,8 @@
 
 	$: if (show) {
 		(async () => {
-			if ($chatId) {
-				chat = await getChatById(localStorage.token, $chatId);
+			if (chatId) {
+				chat = await getChatById(localStorage.token, chatId);
 			} else {
 				chat = null;
 				console.log(chat);
@@ -101,10 +104,10 @@
 						<button
 							class="underline"
 							on:click={async () => {
-								const res = await deleteSharedChatById(localStorage.token, $chatId);
+								const res = await deleteSharedChatById(localStorage.token, chatId);
 
 								if (res) {
-									chat = await getChatById(localStorage.token, $chatId);
+									chat = await getChatById(localStorage.token, chatId);
 								}
 							}}>delete this link</button
 						> and create a new shared link.
@@ -131,8 +134,37 @@
 							<button
 								class=" self-center flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white"
 								type="button"
-								on:click={() => {
-									shareLocalChat();
+								on:click={async () => {
+									const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+									if (isSafari) {
+										// Oh, Safari, you're so special, let's give you some extra love and attention
+										console.log('isSafari');
+
+										const getUrlPromise = async () => {
+											const url = await shareLocalChat();
+											return new Blob([url], { type: 'text/plain' });
+										};
+
+										navigator.clipboard
+											.write([
+												new ClipboardItem({
+													'text/plain': getUrlPromise()
+												})
+											])
+											.then(() => {
+												console.log('Async: Copying to clipboard was successful!');
+												return true;
+											})
+											.catch((error) => {
+												console.error('Async: Could not copy text: ', error);
+												return false;
+											});
+									} else {
+										copyToClipboard(await shareLocalChat());
+									}
+
+									toast.success($i18n.t('Copied shared chat URL to clipboard!'));
 									show = false;
 								}}
 							>

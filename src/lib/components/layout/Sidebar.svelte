@@ -17,13 +17,17 @@
 		getChatById,
 		getChatListByTagName,
 		updateChatById,
-		getAllChatTags
+		getAllChatTags,
+		archiveChatById
 	} from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	import { fade, slide } from 'svelte/transition';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ChatMenu from './Sidebar/ChatMenu.svelte';
+	import ShareChatModal from '../chat/ShareChatModal.svelte';
+	import ArchiveBox from '../icons/ArchiveBox.svelte';
+	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 
 	let show = false;
 	let navElement;
@@ -31,12 +35,16 @@
 	let title: string = 'UI';
 	let search = '';
 
+	let shareChatId = null;
+
 	let selectedChatId = null;
 
 	let chatDeleteId = null;
 	let chatTitleEditId = null;
 	let chatTitle = '';
 
+	let showArchivedChatsModal = false;
+	let showShareChatModal = false;
 	let showDropdown = false;
 	let isEditing = false;
 
@@ -134,7 +142,20 @@
 		localStorage.setItem('settings', JSON.stringify($settings));
 		location.href = '/';
 	};
+
+	const archiveChatHandler = async (id) => {
+		await archiveChatById(localStorage.token, id);
+		await chats.set(await getChatList(localStorage.token));
+	};
 </script>
+
+<ShareChatModal bind:show={showShareChatModal} chatId={shareChatId} />
+<ArchivedChatsModal
+	bind:show={showArchivedChatsModal}
+	on:change={async () => {
+		await chats.set(await getChatList(localStorage.token));
+	}}
+/>
 
 <div
 	bind:this={navElement}
@@ -544,9 +565,13 @@
 									</button>
 								</div>
 							{:else}
-								<div class="flex self-center space-x-1.5 z-10">
+								<div class="flex self-center space-x-1 z-10">
 									<ChatMenu
 										chatId={chat.id}
+										shareHandler={() => {
+											shareChatId = selectedChatId;
+											showShareChatModal = true;
+										}}
 										renameHandler={() => {
 											chatTitle = chat.title;
 											chatTitleEditId = chat.id;
@@ -577,6 +602,18 @@
 											</svg>
 										</button>
 									</ChatMenu>
+
+									<Tooltip content="Archive">
+										<button
+											aria-label="Archive"
+											class=" self-center dark:hover:text-white transition"
+											on:click={() => {
+												archiveChatHandler(chat.id);
+											}}
+										>
+											<ArchiveBox />
+										</button>
+									</Tooltip>
 								</div>
 							{/if}
 						</div>
@@ -609,13 +646,13 @@
 					{#if showDropdown}
 						<div
 							id="dropdownDots"
-							class="absolute z-40 bottom-[70px] 4.5rem rounded-xl shadow w-[240px] bg-white dark:bg-gray-900"
+							class="absolute z-40 bottom-[70px] rounded-lg shadow w-[240px] bg-white dark:bg-gray-900"
 							transition:fade|slide={{ duration: 100 }}
 						>
-							<div class="py-2 w-full">
+							<div class="p-1 py-2 w-full">
 								{#if $user.role === 'admin'}
 									<button
-										class="flex py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+										class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 										on:click={() => {
 											goto('/admin');
 											showDropdown = false;
@@ -641,7 +678,7 @@
 									</button>
 
 									<button
-										class="flex py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+										class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 										on:click={() => {
 											goto('/playground');
 											showDropdown = false;
@@ -668,7 +705,20 @@
 								{/if}
 
 								<button
-									class="flex py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+									on:click={() => {
+										showArchivedChatsModal = true;
+										showDropdown = false;
+									}}
+								>
+									<div class=" self-center mr-3">
+										<ArchiveBox className="size-5" strokeWidth="1.5" />
+									</div>
+									<div class=" self-center font-medium">{$i18n.t('Archived Chats')}</div>
+								</button>
+
+								<button
+									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 									on:click={async () => {
 										await showSettings.set(true);
 										showDropdown = false;
@@ -699,11 +749,11 @@
 								</button>
 							</div>
 
-							<hr class=" dark:border-gray-700 m-0 p-0" />
+							<hr class=" dark:border-gray-800 m-0 p-0" />
 
-							<div class="py-2 w-full">
+							<div class="p-1 py-2 w-full">
 								<button
-									class="flex py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 									on:click={() => {
 										localStorage.removeItem('token');
 										location.href = '/auth';

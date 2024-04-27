@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.121] - 2024-04-24
+
+### Fixed
+
+- **🔧 Translation Issues**: Addressed various translation discrepancies.
+- **🔒 LiteLLM Security Fix**: Updated LiteLLM version to resolve a security vulnerability.
+- **🖥️ HTML Tag Display**: Rectified the issue where the '< br >' tag wasn't displaying correctly.
+- **🔗 WebSocket Connection**: Resolved the failure of WebSocket connection under HTTPS security for ComfyUI server.
+- **📜 FileReader Optimization**: Implemented FileReader initialization per image in multi-file drag & drop to ensure reusability.
+- **🏷️ Tag Display**: Corrected tag display inconsistencies.
+- **📦 Archived Chat Styling**: Fixed styling issues in archived chat.
+- **🔖 Safari Copy Button Bug**: Addressed the bug where the copy button failed to copy links in Safari.
+
+## [0.1.120] - 2024-04-20
+
+### Added
+
+- **📦 Archive Chat Feature**: Easily archive chats with a new sidebar button, and access archived chats via the profile button > archived chats.
+- **🔊 Configurable Text-to-Speech Endpoint**: Customize your Text-to-Speech experience with configurable OpenAI endpoints.
+- **🛠️ Improved Error Handling**: Enhanced error message handling for connection failures.
+- **⌨️ Enhanced Shortcut**: When editing messages, use ctrl/cmd+enter to save and submit, and esc to close.
+- **🌐 Language Support**: Added support for Georgian and enhanced translations for Portuguese and Vietnamese.
+
+### Fixed
+
+- **🔧 Model Selector**: Resolved issue where default model selection was not saving.
+- **🔗 Share Link Copy Button**: Fixed bug where the copy button wasn't copying links in Safari.
+- **🎨 Light Theme Styling**: Addressed styling issue with the light theme.
+
 ## [0.1.119] - 2024-04-16
 
 ### Added

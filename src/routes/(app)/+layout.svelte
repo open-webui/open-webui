@@ -106,6 +106,7 @@
 				// IndexedDB Not Found
 			}
 
+			await models.set(await getModels());
 			await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 
 			await modelfiles.set(await getModelfiles(localStorage.token));
