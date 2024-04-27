@@ -106,10 +106,6 @@ if app.state.RAG_EMBEDDING_ENGINE == "":
         trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     )
 
-elif app.state.RAG_EMBEDDING_ENGINE in ["ollama", "openai"]:
-    app.state.RAG_EMBEDDING_MODEL = app.state.RAG_EMBEDDING_MODEL
-    app.state.sentence_transformer_ef = None
-
 origins = ["*"]
 
 app.add_middleware(
