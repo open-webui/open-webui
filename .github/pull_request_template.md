@@ -45,6 +45,6 @@
 
 ### Additional Information
 
-* [Insert any additional context, notes, or explanations for the changes]
+- [Insert any additional context, notes, or explanations for the changes]
 
-* [Reference any related issues, commits, or other relevant information]
+- [Reference any related issues, commits, or other relevant information]
