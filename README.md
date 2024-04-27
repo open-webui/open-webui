@@ -150,7 +150,7 @@ docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=
 
 We offer various installation alternatives, including non-Docker methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
 
-**To deploy on OpenShift**:
+**To deploy on OpenShift**:  
 Open webui container needs to run as a root. Most Kubernetes distributions do not let containers run as a root by default (which is a good security practice). If you are just looking to run open-webui in a non-prod environment, a simple solution can be to add an `anyuid` security context to `default` service account in your project.
 ```bash
 # Login to Openshift
