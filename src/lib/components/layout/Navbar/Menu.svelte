@@ -4,8 +4,6 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { jsPDF } from 'jspdf';
-
 	import { showSettings } from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 
