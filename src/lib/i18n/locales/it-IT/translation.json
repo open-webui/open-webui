@@ -239,6 +239,7 @@
 	"pending": "in sospeso",
 	"Permission denied when accessing microphone: {{error}}": "Autorizzazione negata durante l'accesso al microfono: {{error}}",
 	"Playground": "Playground",
+	"ModelStatus": "ModelStatus",
 	"Profile": "Profilo",
 	"Prompt Content": "Contenuto del prompt",
 	"Prompt suggestions": "Suggerimenti prompt",

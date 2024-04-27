@@ -238,6 +238,7 @@
 	"pending": "보류 중",
 	"Permission denied when accessing microphone: {{error}}": "마이크 액세스가 거부되었습니다: {{error}}",
 	"Playground": "놀이터",
+	"ModelStatus": "모델 상태",
 	"Profile": "프로필",
 	"Prompt Content": "프롬프트 내용",
 	"Prompt suggestions": "프롬프트 제안",

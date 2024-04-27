@@ -244,6 +244,7 @@
 	"pending": "oczekujące",
 	"Permission denied when accessing microphone: {{error}}": "Odmowa dostępu do mikrofonu: {{error}}",
 	"Playground": "Plac zabaw",
+	"ModelStatus": "Stan modelu",
 	"Profile": "Profil",
 	"Prompt Content": "Zawartość prompta",
 	"Prompt suggestions": "Sugestie prompta",

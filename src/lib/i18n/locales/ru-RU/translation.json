@@ -239,6 +239,7 @@
 	"pending": "ожидание",
 	"Permission denied when accessing microphone: {{error}}": "Отказано в доступе к микрофону: {{error}}",
 	"Playground": "Площадка",
+	"ModelStatus": "Статус модели",
 	"Profile": "Профиль",
 	"Prompt Content": "Содержание промпта",
 	"Prompt suggestions": "Предложения промптов",

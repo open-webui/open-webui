@@ -239,6 +239,7 @@
 	"pending": "beklemede",
 	"Permission denied when accessing microphone: {{error}}": "Mikrofona erişim izni reddedildi: {{error}}",
 	"Playground": "Oyun Alanı",
+	"ModelStatus": "Model durumu",
 	"Profile": "Profil",
 	"Prompt Content": "Prompt İçeriği",
 	"Prompt suggestions": "Prompt önerileri",
