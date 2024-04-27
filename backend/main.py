@@ -117,18 +117,14 @@ class RAGMiddleware(BaseHTTPMiddleware):
             if "docs" in data:
                 data = {**data}
                 data["messages"] = rag_messages(
-                    data["docs"],
-                    data["messages"],
-                    rag_app.state.RAG_TEMPLATE,
-                    rag_app.state.TOP_K,
-                    rag_app.state.RELEVANCE_THRESHOLD,
-                    rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
-                    rag_app.state.RAG_EMBEDDING_ENGINE,
-                    rag_app.state.RAG_EMBEDDING_MODEL,
-                    rag_app.state.sentence_transformer_ef,
-                    rag_app.state.sentence_transformer_rf,
-                    rag_app.state.OPENAI_API_KEY,
-                    rag_app.state.OPENAI_API_BASE_URL,
+                    docs=data["docs"],
+                    messages=data["messages"],
+                    template=rag_app.state.RAG_TEMPLATE,
+                    embedding_function=rag_app.state.EMBEDDING_FUNCTION,
+                    k=rag_app.state.TOP_K,
+                    reranking_function=rag_app.state.sentence_transformer_rf,
+                    r=rag_app.state.RELEVANCE_THRESHOLD,
+                    hybrid_search=rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
                 )
                 del data["docs"]
 
