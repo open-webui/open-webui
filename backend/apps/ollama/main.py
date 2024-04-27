@@ -16,6 +16,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict
 
 import os
+import re
 import copy
 import random
 import requests
@@ -216,7 +217,9 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
         if len(responses) > 0:
             lowest_version = min(
                 responses,
-                key=lambda x: tuple(map(int, x["version"].split("-")[0].split("."))),
+                key=lambda x: tuple(
+                    map(int, re.sub(r"^v|-.*", "", x["version"]).split("."))
+                ),
             )
 
             return {"version": lowest_version["version"]}
