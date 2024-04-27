@@ -2,7 +2,7 @@
 
 - [ ] **Description:** Briefly describe the changes in this pull request.
 - [ ] **Changelog:** Ensure a changelog entry following the format of [Keep a Changelog](https://keepachangelog.com/) is added at the bottom of the PR description.
-- [ ] **Documentation:** Have you updated relevant documentation, including [README](https://github.com/open-webui/open-webui/blob/main/README.md), [Open WebUI Docs](https://docs.openwebui.com/), or other documentation sources?
+- [ ] **Documentation:** Have you updated relevant documentation [Open WebUI Docs](https://github.com/open-webui/docs), or other documentation sources?
 - [ ] **Dependencies:** Are there any new dependencies? Have you updated the dependency versions in the documentation?
 - [ ] **Testing:** Have you written and run sufficient tests for the changes?
 - [ ] **Code Review:** Have you self-reviewed your code and addressed any coding standard issues?
