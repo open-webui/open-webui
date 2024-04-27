@@ -2,6 +2,7 @@
 	import { downloadDatabase } from '$lib/apis/utils';
 	import { onMount, getContext } from 'svelte';
 	import { config } from '$lib/stores';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -32,7 +33,9 @@
 						on:click={() => {
 							// exportAllUserChats();
 
-							downloadDatabase(localStorage.token);
+							downloadDatabase(localStorage.token).catch((error) => {
+								toast.error(error);
+							});
 						}}
 					>
 						<div class=" self-center mr-3">
