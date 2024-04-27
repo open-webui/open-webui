@@ -164,7 +164,7 @@ def rag_template(template: str, context: str, query: str):
     return template
 
 
-def query_embeddings_function(
+def get_embeddings_function(
     embedding_engine,
     embedding_model,
     embedding_function,
@@ -243,7 +243,7 @@ def rag_messages(
         content_type = None
         query = ""
 
-    embeddings_function = query_embeddings_function(
+    embeddings_function = get_embeddings_function(
         embedding_engine,
         embedding_model,
         embedding_function,

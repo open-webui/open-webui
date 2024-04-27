@@ -48,7 +48,7 @@ from apps.web.models.documents import (
 from apps.rag.utils import (
     get_model_path,
     query_embeddings_doc,
-    query_embeddings_function,
+    get_embeddings_function,
     query_embeddings_collection,
 )
 
@@ -367,7 +367,7 @@ def query_doc_handler(
     user=Depends(get_current_user),
 ):
     try:
-        embeddings_function = query_embeddings_function(
+        embeddings_function = get_embeddings_function(
             app.state.RAG_EMBEDDING_ENGINE,
             app.state.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
@@ -410,7 +410,7 @@ def query_collection_handler(
     user=Depends(get_current_user),
 ):
     try:
-        embeddings_function = query_embeddings_function(
+        embeddings_function = get_embeddings_function(
             app.state.RAG_EMBEDDING_ENGINE,
             app.state.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
@@ -508,7 +508,7 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
 
         collection = CHROMA_CLIENT.create_collection(name=collection_name)
 
-        embedding_func = query_embeddings_function(
+        embedding_func = get_embeddings_function(
             app.state.RAG_EMBEDDING_ENGINE,
             app.state.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
