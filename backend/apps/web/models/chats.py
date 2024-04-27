@@ -17,11 +17,11 @@ from apps.web.internal.db import DB
 class Chat(Model):
     id = CharField(unique=True)
     user_id = CharField()
-    title = CharField()
+    title = TextField()
     chat = TextField()  # Save Chat JSON as Text
 
-    created_at = DateTimeField()
-    updated_at = DateTimeField()
+    created_at = BigIntegerField()
+    updated_at = BigIntegerField()
 
     share_id = CharField(null=True, unique=True)
     archived = BooleanField(default=False)

@@ -21,6 +21,8 @@ from utils.utils import get_verified_user, get_current_user, get_admin_user
 from config import SRC_LOG_LEVELS, ENV
 from constants import MESSAGES
 
+import os
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["LITELLM"])
 
@@ -62,6 +64,13 @@ app.state.CONFIG = litellm_config
 # Global variable to store the subprocess reference
 background_process = None
 
+CONFLICT_ENV_VARS = [
+    # Uvicorn uses PORT, so LiteLLM might use it as well
+    "PORT",
+    # LiteLLM uses DATABASE_URL for Prisma connections
+    "DATABASE_URL",
+]
+
 
 async def run_background_process(command):
     global background_process
@@ -70,9 +79,11 @@ async def run_background_process(command):
     try:
         # Log the command to be executed
         log.info(f"Executing command: {command}")
+        # Filter environment variables known to conflict with litellm
+        env = {k: v for k, v in os.environ.items() if k not in CONFLICT_ENV_VARS}
         # Execute the command and create a subprocess
         process = await asyncio.create_subprocess_exec(
-            *command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            *command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
         )
         background_process = process
         log.info("Subprocess started successfully.")
