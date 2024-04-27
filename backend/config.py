@@ -445,7 +445,7 @@ CHROMA_CLIENT = chromadb.PersistentClient(
     settings=Settings(allow_reset=True, anonymized_telemetry=False),
 )
 
-PDF_EXTRACT_IMAGES = os.environ.get("PDF_EXTRACT_IMAGES", "True").lower() == "true"
+PDF_EXTRACT_IMAGES = os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true"
 
 CHUNK_SIZE = os.environ.get("CHUNK_SIZE", 1500)
 
@@ -489,6 +489,7 @@ IMAGES_GENERATION_ENGINE = os.getenv("IMAGES_GENERATION_ENGINE", "")
 ENABLE_IMAGE_GENERATION = (
     os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true"
 )
+
 AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
 
 COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
