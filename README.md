@@ -163,7 +163,9 @@ oc adm policy add-scc-to-user anyuid -z default
 helm install open-webui ./kubernetes/helm 
 # Create route
 oc create route edge --service open-webui 
-# Rollback
+# Get route
+oc get routes.route.openshift.io open-webui -o json | jq -r '.spec.host' | sed 's/^/https:\/\//'
+# To ROLLBACK!
 helm uninstall open-webui
 oc delete project open-webui
 ```
