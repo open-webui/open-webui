@@ -179,7 +179,7 @@
 		<div class="px-2 flex justify-center space-x-2">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
+				class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				href="/"
 				on:click={async () => {
 					selectedChatId = null;
@@ -224,7 +224,7 @@
 		{#if $user?.role === 'admin'}
 			<div class="px-2 flex justify-center mt-0.5">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/modelfiles"
 					on:click={() => {
 						selectedChatId = null;
@@ -256,7 +256,7 @@
 
 			<div class="px-2 flex justify-center">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/prompts"
 					on:click={() => {
 						selectedChatId = null;
@@ -288,7 +288,7 @@
 
 			<div class="px-2 flex justify-center mb-1">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/documents"
 					on:click={() => {
 						selectedChatId = null;
@@ -335,7 +335,7 @@
 
 						<div class="mt-3">
 							<button
-								class="flex justify-center items-center space-x-1.5 px-3 py-2.5 rounded-lg text-xs bg-gray-200 hover:bg-gray-300 transition text-gray-800 font-medium w-full"
+								class="flex justify-center items-center space-x-1.5 px-3 py-2.5 rounded-lg text-xs bg-gray-100 hover:bg-gray-200 transition text-gray-800 font-medium w-full"
 								type="button"
 								on:click={() => {
 									saveSettings({
@@ -445,7 +445,7 @@
 								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
 								chat.id === chatTitleEditId ||
 								chat.id === chatDeleteId
-									? 'bg-gray-300 dark:bg-gray-900'
+									? 'bg-gray-200 dark:bg-gray-900'
 									: chat.id === selectedChatId
 									? 'bg-gray-100 dark:bg-gray-950'
 									: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
@@ -457,7 +457,7 @@
 								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
 								chat.id === chatTitleEditId ||
 								chat.id === chatDeleteId
-									? 'bg-gray-300 dark:bg-gray-900'
+									? 'bg-gray-200 dark:bg-gray-900'
 									: chat.id === selectedChatId
 									? 'bg-gray-100 dark:bg-gray-950'
 									: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
@@ -482,7 +482,7 @@
 							class="
 
 							{chat.id === $chatId || chat.id === chatTitleEditId || chat.id === chatDeleteId
-								? 'from-gray-300 dark:from-gray-900'
+								? 'from-gray-200 dark:from-gray-900'
 								: chat.id === selectedChatId
 								? 'from-gray-100 dark:from-gray-950'
 								: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
@@ -635,7 +635,7 @@
 			<div class="flex flex-col">
 				{#if $user !== undefined}
 					<button
-						class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-900 transition"
+						class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						on:click={() => {
 							showDropdown = !showDropdown;
 						}}
