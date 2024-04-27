@@ -7,11 +7,11 @@
 
 	import { goto } from '$app/navigation';
 
-	import { getOllamaModels, getOllamaVersion } from '$lib/apis/ollama';
+	import { getModels as _getModels } from '$lib/utils';
+	import { getOllamaVersion } from '$lib/apis/ollama';
 	import { getModelfiles } from '$lib/apis/modelfiles';
 	import { getPrompts } from '$lib/apis/prompts';
-	import { getOpenAIModels } from '$lib/apis/openai';
-	import { getLiteLLMModels } from '$lib/apis/litellm';
+
 	import { getDocs } from '$lib/apis/documents';
 	import { getAllChatTags } from '$lib/apis/chats';
 
@@ -47,26 +47,7 @@
 	let showShortcuts = false;
 
 	const getModels = async () => {
-		let models = await Promise.all([
-			await getOllamaModels(localStorage.token).catch((error) => {
-				console.log(error);
-				return null;
-			}),
-			await getOpenAIModels(localStorage.token).catch((error) => {
-				console.log(error);
-				return null;
-			}),
-			await getLiteLLMModels(localStorage.token).catch((error) => {
-				console.log(error);
-				return null;
-			})
-		]);
-
-		models = models
-			.filter((models) => models)
-			.reduce((a, e, i, arr) => a.concat(e, ...(i < arr.length - 1 ? [{ name: 'hr' }] : [])), []);
-
-		return models;
+		return _getModels(localStorage.token);
 	};
 
 	const setOllamaVersion = async (version: string = '') => {
