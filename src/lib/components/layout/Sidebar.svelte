@@ -29,6 +29,7 @@
 	import ArchiveBox from '../icons/ArchiveBox.svelte';
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 
+	const BREAKPOINT = 1024;
 	let show = false;
 	let navElement;
 
@@ -49,9 +50,7 @@
 	let isEditing = false;
 
 	onMount(async () => {
-		if (window.innerWidth > 1024) {
-			show = true;
-		}
+		show = window.innerWidth > BREAKPOINT;
 		await chats.set(await getChatList(localStorage.token));
 
 		let touchstartX = 0;
@@ -79,12 +78,20 @@
 			checkDirection();
 		};
 
+		const onResize = () => {
+			if(show && window.innerWidth < BREAKPOINT) {
+				show = false;
+			}
+		}
+
 		document.addEventListener('touchstart', onTouchStart);
 		document.addEventListener('touchend', onTouchEnd);
+		window.addEventListener('resize', onResize);
 
 		return () => {
 			document.removeEventListener('touchstart', onTouchStart);
 			document.removeEventListener('touchend', onTouchEnd);
+			document.removeEventListener('resize', onResize);
 		};
 	});
 
@@ -473,14 +480,14 @@
 
 						<div
 							class="
-							
+
 							{chat.id === $chatId || chat.id === chatTitleEditId || chat.id === chatDeleteId
 								? 'from-gray-300 dark:from-gray-900'
 								: chat.id === selectedChatId
 								? 'from-gray-100 dark:from-gray-950'
 								: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
 								absolute right-[10px] top-[10px] pr-2 pl-5 bg-gradient-to-l from-80%
-								
+
 								  to-transparent"
 						>
 							{#if chatTitleEditId === chat.id}
