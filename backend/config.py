@@ -417,6 +417,19 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
 ####################################
 
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
+CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
+CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
+CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
+CHROMA_HTTP_PORT = int(os.environ.get("CHROMA_HTTP_PORT", "8000"))
+# Comma-separated list of header=value pairs
+CHROMA_HTTP_HEADERS = os.environ.get("CHROMA_HTTP_HEADERS", "")
+if CHROMA_HTTP_HEADERS:
+    CHROMA_HTTP_HEADERS = dict(
+        [pair.split("=") for pair in CHROMA_HTTP_HEADERS.split(",")]
+    )
+else:
+    CHROMA_HTTP_HEADERS = None
+CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
 RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "5"))
@@ -461,10 +474,23 @@ if USE_CUDA.lower() == "true":
 else:
     DEVICE_TYPE = "cpu"
 
-CHROMA_CLIENT = chromadb.PersistentClient(
-    path=CHROMA_DATA_PATH,
-    settings=Settings(allow_reset=True, anonymized_telemetry=False),
-)
+if CHROMA_HTTP_HOST != "":
+    CHROMA_CLIENT = chromadb.HttpClient(
+        host=CHROMA_HTTP_HOST,
+        port=CHROMA_HTTP_PORT,
+        headers=CHROMA_HTTP_HEADERS,
+        ssl=CHROMA_HTTP_SSL,
+        tenant=CHROMA_TENANT,
+        database=CHROMA_DATABASE,
+        settings=Settings(allow_reset=True, anonymized_telemetry=False),
+    )
+else:
+    CHROMA_CLIENT = chromadb.PersistentClient(
+        path=CHROMA_DATA_PATH,
+        settings=Settings(allow_reset=True, anonymized_telemetry=False),
+        tenant=CHROMA_TENANT,
+        database=CHROMA_DATABASE,
+    )
 
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "1500"))
 CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "100"))
