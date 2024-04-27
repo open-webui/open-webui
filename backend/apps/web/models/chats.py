@@ -270,6 +270,15 @@ class ChatTable:
             # .limit(limit).offset(skip)
         ]
 
+    def delete_chat_by_id(self, id: str) -> bool:
+        try:
+            query = Chat.delete().where((Chat.id == id))
+            query.execute()  # Remove the rows, return number of rows removed.
+
+            return True and self.delete_shared_chat_by_chat_id(id)
+        except:
+            return False
+
     def delete_chat_by_id_and_user_id(self, id: str, user_id: str) -> bool:
         try:
             query = Chat.delete().where((Chat.id == id) & (Chat.user_id == user_id))
