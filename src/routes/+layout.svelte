@@ -20,8 +20,6 @@
 	let loaded = false;
 
 	onMount(async () => {
-		document.getElementById('splash-screen')?.remove();
-
 		theme.set(localStorage.theme);
 		// Check Backend Status
 		const backendConfig = await getBackendConfig();
@@ -64,6 +62,8 @@
 		}
 
 		await tick();
+
+		document.getElementById('splash-screen')?.remove();
 		loaded = true;
 	});
 </script>
@@ -80,17 +80,6 @@
 
 {#if loaded}
 	<slot />
-{:else}
-	<div class=" min-h-screen h-[100dvh] flex">
-		<div class="m-auto">
-			<img
-				src="/logo.svg"
-				alt="logo"
-				class=" size-24 rounded-full border-[1px] border-gray-200 dark:border-none mx-auto mb-8"
-				draggable="false"
-			/>
-		</div>
-	</div>
 {/if}
 
 <Toaster richColors position="top-center" />
