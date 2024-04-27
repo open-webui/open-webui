@@ -154,7 +154,7 @@ def query_embeddings_collection(
         except:
             pass
 
-    reverse = hybrid and reranking_function is not None
+    reverse = hybrid_search and reranking_function is not None
     return merge_and_sort_query_results(results, k=k, reverse=reverse)
 
 
