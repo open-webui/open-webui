@@ -531,7 +531,7 @@ WHISPER_MODEL_AUTO_UPDATE = (
 # Images
 ####################################
 
-IMAGES_GENERATION_ENGINE = os.getenv("IMAGES_GENERATION_ENGINE", "")
+IMAGE_GENERATION_ENGINE = os.getenv("IMAGE_GENERATION_ENGINE", "")
 
 ENABLE_IMAGE_GENERATION = (
     os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true"
@@ -549,7 +549,7 @@ IMAGE_SIZE = os.getenv("IMAGE_SIZE", "512x512")
 
 IMAGE_STEPS = int(os.getenv("IMAGE_STEPS", 50))
 
-IMAGES_MODEL = os.getenv("IMAGES_MODEL", "")
+IMAGE_GENERATION_MODEL = os.getenv("IMAGE_GENERATION_MODEL", "")
 
 ####################################
 # Audio
