@@ -7,18 +7,21 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
 
-	import '../app.css';
 	import '../tailwind.css';
+	import '../app.css';
+
 	import 'tippy.js/dist/tippy.css';
+
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import i18n, { initI18n } from '$lib/i18n';
-	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	setContext('i18n', i18n);
 
 	let loaded = false;
 
 	onMount(async () => {
+		document.getElementById('splash-screen')?.remove();
+
 		theme.set(localStorage.theme);
 		// Check Backend Status
 		const backendConfig = await getBackendConfig();
