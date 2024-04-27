@@ -79,10 +79,10 @@
 		};
 
 		const onResize = () => {
-			if(show && window.innerWidth < BREAKPOINT) {
+			if (show && window.innerWidth < BREAKPOINT) {
 				show = false;
 			}
-		}
+		};
 
 		document.addEventListener('touchstart', onTouchStart);
 		document.addEventListener('touchend', onTouchEnd);
