@@ -321,7 +321,7 @@ async def get_all_tags(user=Depends(get_current_user)):
 
 
 @router.get("/tags/tag/{tag_name}", response_model=List[ChatTitleIdResponse])
-async def get_user_chats_by_tag_name(
+async def get_user_chat_list_by_tag_name(
     tag_name: str, user=Depends(get_current_user), skip: int = 0, limit: int = 50
 ):
     chat_ids = [
