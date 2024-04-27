@@ -49,6 +49,27 @@ async def get_session_user_chat_list(
 
 
 ############################
+# DeleteAllChats
+############################
+
+
+@router.delete("/", response_model=bool)
+async def delete_all_user_chats(request: Request, user=Depends(get_current_user)):
+
+    if (
+        user.role == "user"
+        and not request.app.state.USER_PERMISSIONS["chat"]["deletion"]
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    result = Chats.delete_chats_by_user_id(user.id)
+    return result
+
+
+############################
 # GetUserChatList
 ############################
 
@@ -118,45 +139,6 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
-
-
-############################
-# GetAllTags
-############################
-
-
-@router.get("/tags/all", response_model=List[TagModel])
-async def get_all_tags(user=Depends(get_current_user)):
-    try:
-        tags = Tags.get_tags_by_user_id(user.id)
-        return tags
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
-
-
-############################
-# GetChatsByTags
-############################
-
-
-@router.get("/tags/tag/{tag_name}", response_model=List[ChatTitleIdResponse])
-async def get_user_chats_by_tag_name(
-    tag_name: str, user=Depends(get_current_user), skip: int = 0, limit: int = 50
-):
-    chat_ids = [
-        chat_id_tag.chat_id
-        for chat_id_tag in Tags.get_chat_ids_by_tag_name_and_user_id(tag_name, user.id)
-    ]
-
-    chats = Chats.get_chat_list_by_chat_ids(chat_ids, skip, limit)
-
-    if len(chats) == 0:
-        Tags.delete_tag_by_tag_name_and_user_id(tag_name, user.id)
-
-    return chats
 
 
 ############################
@@ -317,6 +299,45 @@ async def get_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
 
 
 ############################
+# GetAllTags
+############################
+
+
+@router.get("/tags/all", response_model=List[TagModel])
+async def get_all_tags(user=Depends(get_current_user)):
+    try:
+        tags = Tags.get_tags_by_user_id(user.id)
+        return tags
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
+# GetChatsByTags
+############################
+
+
+@router.get("/tags/tag/{tag_name}", response_model=List[ChatTitleIdResponse])
+async def get_user_chats_by_tag_name(
+    tag_name: str, user=Depends(get_current_user), skip: int = 0, limit: int = 50
+):
+    chat_ids = [
+        chat_id_tag.chat_id
+        for chat_id_tag in Tags.get_chat_ids_by_tag_name_and_user_id(tag_name, user.id)
+    ]
+
+    chats = Chats.get_chat_list_by_chat_ids(chat_ids, skip, limit)
+
+    if len(chats) == 0:
+        Tags.delete_tag_by_tag_name_and_user_id(tag_name, user.id)
+
+    return chats
+
+
+############################
 # GetChatTagsById
 ############################
 
@@ -396,24 +417,3 @@ async def delete_all_chat_tags_by_id(id: str, user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
-
-
-############################
-# DeleteAllChats
-############################
-
-
-@router.delete("/", response_model=bool)
-async def delete_all_user_chats(request: Request, user=Depends(get_current_user)):
-
-    if (
-        user.role == "user"
-        and not request.app.state.USER_PERMISSIONS["chat"]["deletion"]
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
-    result = Chats.delete_chats_by_user_id(user.id)
-    return result
