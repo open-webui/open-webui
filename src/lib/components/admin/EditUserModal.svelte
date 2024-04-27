@@ -86,7 +86,7 @@
 
 							<div class="text-xs text-gray-500">
 								{$i18n.t('Created at')}
-								{dayjs(selectedUser.timestamp * 1000).format($i18n.t('MMMM DD, YYYY'))}
+								{dayjs(selectedUser.created_at * 1000).format($i18n.t('MMMM DD, YYYY'))}
 							</div>
 						</div>
 					</div>
