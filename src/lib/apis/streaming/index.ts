@@ -26,7 +26,11 @@ async function* openAIStreamToIterator(
 			break;
 		}
 		const lines = value.split('\n');
-		for (const line of lines) {
+		for (let line of lines) {
+			if (line.endsWith('\r')) {
+				// Remove trailing \r
+				line = line.slice(0, -1);
+			}
 			if (line !== '') {
 				console.log(line);
 				if (line === 'data: [DONE]') {
