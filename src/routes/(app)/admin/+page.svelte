@@ -165,8 +165,9 @@
 											<th scope="col" class="px-3 py-2"> {$i18n.t('Role')} </th>
 											<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
 											<th scope="col" class="px-3 py-2"> {$i18n.t('Email')} </th>
-											<th scope="col" class="px-3 py-2"> {$i18n.t('Created at')} </th>
 											<th scope="col" class="px-3 py-2"> {$i18n.t('Last Active')} </th>
+
+											<th scope="col" class="px-3 py-2"> {$i18n.t('Created at')} </th>
 
 											<th scope="col" class="px-3 py-2 text-right" />
 										</tr>
@@ -225,11 +226,11 @@
 												<td class=" px-3 py-2"> {user.email} </td>
 
 												<td class=" px-3 py-2">
-													{dayjs(user.created_at * 1000).format($i18n.t('MMMM DD, YYYY'))}
+													{dayjs(user.last_active_at * 1000).fromNow()}
 												</td>
 
 												<td class=" px-3 py-2">
-													{dayjs(user.last_active_at * 1000).fromNow()}
+													{dayjs(user.created_at * 1000).format($i18n.t('MMMM DD, YYYY'))}
 												</td>
 
 												<td class="px-3 py-2 text-right">
