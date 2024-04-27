@@ -69,6 +69,7 @@ from config import (
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     RAG_OPENAI_API_BASE_URL,
     RAG_OPENAI_API_KEY,
+    PDF_EXTRACT_IMAGES,
     DEVICE_TYPE,
     CHROMA_CLIENT,
     CHUNK_SIZE,
@@ -96,7 +97,7 @@ app.state.RAG_TEMPLATE = RAG_TEMPLATE
 app.state.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
 app.state.OPENAI_API_KEY = RAG_OPENAI_API_KEY
 
-app.state.PDF_EXTRACT_IMAGES = False
+app.state.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
 
 if app.state.RAG_EMBEDDING_ENGINE == "":
     app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
@@ -105,6 +106,9 @@ if app.state.RAG_EMBEDDING_ENGINE == "":
         trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     )
 
+elif app.state.RAG_EMBEDDING_ENGINE in ["ollama", "openai"]:
+    app.state.RAG_EMBEDDING_MODEL = app.state.RAG_EMBEDDING_MODEL
+    app.state.sentence_transformer_ef = None
 
 origins = ["*"]
 

@@ -444,8 +444,12 @@ CHROMA_CLIENT = chromadb.PersistentClient(
     path=CHROMA_DATA_PATH,
     settings=Settings(allow_reset=True, anonymized_telemetry=False),
 )
-CHUNK_SIZE = 1500
-CHUNK_OVERLAP = 100
+
+PDF_EXTRACT_IMAGES = os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true"
+
+CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", 1500))
+
+CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", 100))
 
 
 RAG_TEMPLATE = """Use the following context as your learned knowledge, inside <context></context> XML tags.
@@ -480,17 +484,26 @@ WHISPER_MODEL_AUTO_UPDATE = (
 # Images
 ####################################
 
+IMAGES_GENERATION_ENGINE = os.getenv("IMAGES_GENERATION_ENGINE", "")
+
 ENABLE_IMAGE_GENERATION = (
     os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true"
 )
 AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
-COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
 
+COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
 
 IMAGES_OPENAI_API_BASE_URL = os.getenv(
     "IMAGES_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL
 )
+
 IMAGES_OPENAI_API_KEY = os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY)
+
+IMAGE_SIZE = os.getenv("IMAGE_SIZE", "512×512")
+
+IMAGE_STEPS = int(os.getenv("IMAGE_STEPS", 50))
+
+IMAGES_MODEL = os.getenv("IMAGES_MODEL", "")
 
 
 ####################################
