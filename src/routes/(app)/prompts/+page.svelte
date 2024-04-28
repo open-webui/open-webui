@@ -304,7 +304,8 @@
 				</div>
 			</div>
 
-			<div class=" my-16">
+		<!-- 	关闭社区入口 -->
+			<!-- <div class=" my-16">
 				<div class=" text-2xl font-semibold mb-3">{$i18n.t('Made by OpenWebUI Community')}</div>
 
 				<a
@@ -336,7 +337,7 @@
 						<div class=" text-sm">{$i18n.t('Discover, download, and explore custom prompts')}</div>
 					</div>
 				</a>
-			</div>
+			</div> -->
 		</div>
 	</div>
 </div>

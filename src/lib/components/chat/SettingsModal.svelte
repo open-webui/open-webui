@@ -296,7 +296,8 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center">{$i18n.t('About')}</div>
+					<!-- 关于屏蔽 -->
+					<!-- <div class=" self-center">{$i18n.t('About')}</div> -->
 				</button>
 			</div>
 			<div class="flex-1 md:min-h-[25rem]">
