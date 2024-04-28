@@ -135,7 +135,7 @@ def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
         email = pw.CharField(max_length=255)
         role = pw.CharField(max_length=255)
         profile_image_url = pw.CharField(max_length=255)
-        timestamp = pw.DateField()
+        timestamp = pw.BigIntegerField()
 
         class Meta:
             table_name = "user"
