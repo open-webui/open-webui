@@ -317,14 +317,14 @@ class GenerateImageForm(BaseModel):
 
 def save_b64_image(b64_str):
     try:
-        header, encoded = b64_str.split(',', 1)
-        mime_type = header.split(';')[0]
+        header, encoded = b64_str.split(",", 1)
+        mime_type = header.split(";")[0]
 
         image_format = mimetypes.guess_extension(mime_type)
         img_data = base64.b64decode(encoded)
         image_id = str(uuid.uuid4())
         file_path = IMAGE_CACHE_DIR / f"{image_id}{image_format}"
-        with open(file_path, 'wb') as f:
+        with open(file_path, "wb") as f:
             f.write(img_data)
         return image_id, image_format
     except Exception as e:
@@ -337,9 +337,9 @@ def save_url_image(url):
     try:
         r = requests.get(url)
         r.raise_for_status()
-        if r.headers['content-type'].split('/')[0] == 'image':
+        if r.headers["content-type"].split("/")[0] == "image":
 
-            mime_type = r.headers['content-type']
+            mime_type = r.headers["content-type"]
             image_format = mimetypes.guess_extension(mime_type)
 
             if not image_format:
@@ -396,7 +396,9 @@ def generate_image(
 
             for image in res["data"]:
                 image_id, image_format = save_b64_image(image["b64_json"])
-                images.append({"url": f"/cache/image/generations/{image_id}{image_format}"})
+                images.append(
+                    {"url": f"/cache/image/generations/{image_id}{image_format}"}
+                )
                 file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
 
                 with open(file_body_path, "w") as f:
@@ -433,7 +435,9 @@ def generate_image(
 
             for image in res["data"]:
                 image_id, image_format = save_url_image(image["url"])
-                images.append({"url": f"/cache/image/generations/{image_id}{image_format}"})
+                images.append(
+                    {"url": f"/cache/image/generations/{image_id}{image_format}"}
+                )
                 file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
 
                 with open(file_body_path, "w") as f:
@@ -471,7 +475,9 @@ def generate_image(
 
             for image in res["images"]:
                 image_id, image_format = save_b64_image(image)
-                images.append({"url": f"/cache/image/generations/{image_id}{image_format}"})
+                images.append(
+                    {"url": f"/cache/image/generations/{image_id}{image_format}"}
+                )
                 file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
 
                 with open(file_body_path, "w") as f:
