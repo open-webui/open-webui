@@ -377,6 +377,9 @@ ENABLE_MODEL_FILTER = os.environ.get("ENABLE_MODEL_FILTER", "False").lower() == 
 MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
 MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 
+ADMIN_MODEL_FILTER_LIST = os.environ.get("ADMIN_MODEL_FILTER_LIST", "")
+ADMIN_MODEL_FILTER_LIST = [model.strip() for model in ADMIN_MODEL_FILTER_LIST.split(";")]
+
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"

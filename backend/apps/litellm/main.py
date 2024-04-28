@@ -31,6 +31,7 @@ from config import (
     ENABLE_LITELLM,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
+    ADMIN_MODEL_FILTER_LIST,
     DATA_DIR,
     LITELLM_PROXY_PORT,
     LITELLM_PROXY_HOST,
@@ -146,6 +147,7 @@ async def startup_event():
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.ADMIN_MODEL_FILTER_LIST = ADMIN_MODEL_FILTER_LIST
 
 
 @app.get("/")
@@ -233,7 +235,13 @@ async def get_models(user=Depends(get_current_user)):
                             data["data"],
                         )
                     )
-
+                elif user and user.role == "admin":
+                    data["data"] = list(
+                        filter(
+                            lambda model: model["id"] in app.state.ADMIN_MODEL_FILTER_LIST,
+                            data["data"],
+                        )
+                    )
             return data
         except Exception as e:
 

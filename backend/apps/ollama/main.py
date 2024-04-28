@@ -39,6 +39,7 @@ from config import (
     OLLAMA_BASE_URLS,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
+    ADMIN_MODEL_FILTER_LIST,
     UPLOAD_DIR,
 )
 from utils.misc import calculate_sha256
@@ -58,6 +59,7 @@ app.add_middleware(
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.ADMIN_MODEL_FILTER_LIST = ADMIN_MODEL_FILTER_LIST
 
 app.state.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.MODELS = {}
@@ -177,7 +179,14 @@ async def get_ollama_tags(
                         models["models"],
                     )
                 )
-                return models
+            elif user.role == "admin":
+                models["models"] = list(
+                    filter(
+                        lambda model: model["name"] in app.state.ADMIN_MODEL_FILTER_LIST,
+                        models["models"],
+                    )
+                )
+            return models
         return models
     else:
         url = app.state.OLLAMA_BASE_URLS[url_idx]

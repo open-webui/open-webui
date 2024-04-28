@@ -26,6 +26,7 @@ from config import (
     CACHE_DIR,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
+    ADMIN_MODEL_FILTER_LIST
 )
 from typing import List, Optional
 
@@ -47,6 +48,7 @@ app.add_middleware(
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.ADMIN_MODEL_FILTER_LIST = ADMIN_MODEL_FILTER_LIST
 
 app.state.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.OPENAI_API_KEYS = OPENAI_API_KEYS
@@ -233,7 +235,14 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
                         models["data"],
                     )
                 )
-                return models
+            elif user.role == "admin":
+                models["data"] = list(
+                    filter(
+                        lambda model: model["id"] in app.state.ADMIN_MODEL_FILTER_LIST,
+                        models["data"],
+                    )
+                )
+            return models
         return models
     else:
         url = app.state.OPENAI_API_BASE_URLS[url_idx]
