@@ -168,7 +168,11 @@ except:
 
 STATIC_DIR = str(Path(os.getenv("STATIC_DIR", "./static")).resolve())
 
-shutil.copyfile(f"{FRONTEND_BUILD_DIR}/favicon.png", f"{STATIC_DIR}/favicon.png")
+frontend_favicon = f"{FRONTEND_BUILD_DIR}/favicon.png"
+if os.path.exists(frontend_favicon):
+    shutil.copyfile(frontend_favicon, f"{STATIC_DIR}/favicon.png")
+else:
+    logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
 ####################################
 # CUSTOM_NAME
