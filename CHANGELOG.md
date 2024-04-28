@@ -5,9 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.122] - 2024-04-24
+## [0.1.122] - 2024-04-27
 
-- **🌟 Enhanced RAG Pipeline**: Added hybrid searching with `BM25`, reranking using `CrossEncoder`, and relevance score thresholds.
+- **🌟 Enhanced RAG Pipeline**: Now with hybrid searching via `BM25`, reranking powered by `CrossEncoder`, and configurable relevance score thresholds.
+- **🛢️ External Database Support**: Seamlessly connect to custom SQLite or Postgres databases using the DATABASE_URL environment variable.
+- **🌐 Remote ChromaDB Support**: Access remote ChromaDB servers for expanded functionality.
+- **👨‍💼 Improved Admin Panel**: Admins can now conveniently check users' chat lists and last active status directly from the admin panel.
+- **🌍 Language Support Expansion**: Added support for Bangla (bn-BD), along with enhancements to Chinese, Spanish, and Ukrainian translations.
+- **💻 Improved LaTeX Rendering Performance**: Enjoy faster rendering times for LaTeX equations.
+- **🔧 More Environment Variables**: Explore additional environment variables in our documentation (https://docs.openwebui.com), including the 'ENABLE_LITELLM' option to manage memory usage.
+
+### Fixed
+
+- **🔧 Ollama Compatibility**: Resolved errors occurring when Ollama server version isn't an integer, such as SHA builds or RCs.
+- **🐛 Various OpenAI API Issues**: Addressed several issues related to the OpenAI API.
+- **🛑 Stop Sequence Issue**: Fixed the problem where the stop sequence with a backslash '\' was not functioning.
+- **🔤 Font Fallback**: Corrected font fallback issue.
+
+### Changed
+
+- **⌨️ Prompt Submission Update**: Enter key prompt submission disabled on mobile devices for improved user experience.
 
 ## [0.1.121] - 2024-04-24
 
