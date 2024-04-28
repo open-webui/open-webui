@@ -145,7 +145,7 @@
 					</div>
 
 					<div class=" mt-1 text-gray-400">
-						{dayjs(chat.chat.timestamp).format('MMMM D, YYYY')}
+						{dayjs(chat.chat.timestamp).format($i18n.t('MMMM DD, YYYY'))}
 					</div>
 				</div>
 
