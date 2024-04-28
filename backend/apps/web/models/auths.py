@@ -23,7 +23,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class Auth(Model):
     id = CharField(unique=True)
     email = CharField()
-    password = CharField()
+    password = TextField()
     active = BooleanField()
 
     class Meta:

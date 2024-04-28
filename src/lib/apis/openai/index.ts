@@ -211,10 +211,12 @@ export const generateOpenAIChatCompletion = async (
 	token: string = '',
 	body: object,
 	url: string = OPENAI_API_BASE_URL
-) => {
+): Promise<[Response | null, AbortController]> => {
+	const controller = new AbortController();
 	let error = null;
 
 	const res = await fetch(`${url}/chat/completions`, {
+		signal: controller.signal,
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -231,7 +233,7 @@ export const generateOpenAIChatCompletion = async (
 		throw error;
 	}
 
-	return res;
+	return [res, controller];
 };
 
 export const synthesizeOpenAISpeech = async (

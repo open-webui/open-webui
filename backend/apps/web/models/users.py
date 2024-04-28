@@ -18,8 +18,12 @@ class User(Model):
     name = CharField()
     email = CharField()
     role = CharField()
-    profile_image_url = CharField()
-    timestamp = DateField()
+    profile_image_url = TextField()
+
+    last_active_at = BigIntegerField()
+    updated_at = BigIntegerField()
+    created_at = BigIntegerField()
+
     api_key = CharField(null=True, unique=True)
 
     class Meta:
@@ -32,7 +36,11 @@ class UserModel(BaseModel):
     email: str
     role: str = "pending"
     profile_image_url: str
-    timestamp: int  # timestamp in epoch
+
+    last_active_at: int  # timestamp in epoch
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
+
     api_key: Optional[str] = None
 
 
@@ -73,7 +81,9 @@ class UsersTable:
                 "email": email,
                 "role": role,
                 "profile_image_url": profile_image_url,
-                "timestamp": int(time.time()),
+                "last_active_at": int(time.time()),
+                "created_at": int(time.time()),
+                "updated_at": int(time.time()),
             }
         )
         result = User.create(**user.model_dump())
@@ -130,6 +140,16 @@ class UsersTable:
             query = User.update(profile_image_url=profile_image_url).where(
                 User.id == id
             )
+            query.execute()
+
+            user = User.get(User.id == id)
+            return UserModel(**model_to_dict(user))
+        except:
+            return None
+
+    def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
+        try:
+            query = User.update(last_active_at=int(time.time())).where(User.id == id)
             query.execute()
 
             user = User.get(User.id == id)

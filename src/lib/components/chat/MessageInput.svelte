@@ -13,6 +13,7 @@
 	import Models from './MessageInput/Models.svelte';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import Tooltip from '../common/Tooltip.svelte';
+	import Page from '../../../routes/(app)/+page.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -688,11 +689,13 @@
 								: $i18n.t('Send a Message')}
 							bind:value={prompt}
 							on:keypress={(e) => {
-								if (e.keyCode == 13 && !e.shiftKey) {
-									e.preventDefault();
-								}
-								if (prompt !== '' && e.keyCode == 13 && !e.shiftKey) {
-									submitPrompt(prompt, user);
+								if (window.innerWidth > 1024) {
+									if (e.keyCode == 13 && !e.shiftKey) {
+										e.preventDefault();
+									}
+									if (prompt !== '' && e.keyCode == 13 && !e.shiftKey) {
+										submitPrompt(prompt, user);
+									}
 								}
 							}}
 							on:keydown={async (e) => {
@@ -756,7 +759,11 @@
 										...document.getElementsByClassName('selected-command-option-button')
 									]?.at(-1);
 
-									commandOptionButton?.click();
+									if (commandOptionButton) {
+										commandOptionButton?.click();
+									} else {
+										document.getElementById('send-message-button')?.click();
+									}
 								}
 
 								if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'Tab') {
@@ -895,6 +902,7 @@
 
 								<Tooltip content={$i18n.t('Send message')}>
 									<button
+										id="send-message-button"
 										class="{prompt !== ''
 											? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 											: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-full p-1.5 self-center"
