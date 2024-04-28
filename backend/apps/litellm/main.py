@@ -28,6 +28,7 @@ log.setLevel(SRC_LOG_LEVELS["LITELLM"])
 
 
 from config import (
+    ENABLE_LITELLM,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     DATA_DIR,
@@ -59,6 +60,8 @@ LITELLM_CONFIG_DIR = f"{DATA_DIR}/litellm/config.yaml"
 with open(LITELLM_CONFIG_DIR, "r") as file:
     litellm_config = yaml.safe_load(file)
 
+
+app.state.ENABLE = ENABLE_LITELLM
 app.state.CONFIG = litellm_config
 
 # Global variable to store the subprocess reference
@@ -209,49 +212,56 @@ async def update_config(form_data: LiteLLMConfigForm, user=Depends(get_admin_use
 @app.get("/models")
 @app.get("/v1/models")
 async def get_models(user=Depends(get_current_user)):
-    while not background_process:
-        await asyncio.sleep(0.1)
 
-    url = f"http://localhost:{LITELLM_PROXY_PORT}/v1"
-    r = None
-    try:
-        r = requests.request(method="GET", url=f"{url}/models")
-        r.raise_for_status()
+    if app.state.ENABLE:
+        while not background_process:
+            await asyncio.sleep(0.1)
 
-        data = r.json()
+        url = f"http://localhost:{LITELLM_PROXY_PORT}/v1"
+        r = None
+        try:
+            r = requests.request(method="GET", url=f"{url}/models")
+            r.raise_for_status()
 
-        if app.state.ENABLE_MODEL_FILTER:
-            if user and user.role == "user":
-                data["data"] = list(
-                    filter(
-                        lambda model: model["id"] in app.state.MODEL_FILTER_LIST,
-                        data["data"],
+            data = r.json()
+
+            if app.state.ENABLE_MODEL_FILTER:
+                if user and user.role == "user":
+                    data["data"] = list(
+                        filter(
+                            lambda model: model["id"] in app.state.MODEL_FILTER_LIST,
+                            data["data"],
+                        )
                     )
-                )
 
-        return data
-    except Exception as e:
+            return data
+        except Exception as e:
 
-        log.exception(e)
-        error_detail = "Open WebUI: Server Connection Error"
-        if r is not None:
-            try:
-                res = r.json()
-                if "error" in res:
-                    error_detail = f"External: {res['error']}"
-            except:
-                error_detail = f"External: {e}"
+            log.exception(e)
+            error_detail = "Open WebUI: Server Connection Error"
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "error" in res:
+                        error_detail = f"External: {res['error']}"
+                except:
+                    error_detail = f"External: {e}"
 
+            return {
+                "data": [
+                    {
+                        "id": model["model_name"],
+                        "object": "model",
+                        "created": int(time.time()),
+                        "owned_by": "openai",
+                    }
+                    for model in app.state.CONFIG["model_list"]
+                ],
+                "object": "list",
+            }
+    else:
         return {
-            "data": [
-                {
-                    "id": model["model_name"],
-                    "object": "model",
-                    "created": int(time.time()),
-                    "owned_by": "openai",
-                }
-                for model in app.state.CONFIG["model_list"]
-            ],
+            "data": [],
             "object": "list",
         }
 
