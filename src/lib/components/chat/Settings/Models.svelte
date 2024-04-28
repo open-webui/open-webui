@@ -13,7 +13,7 @@
 		uploadModel
 	} from '$lib/apis/ollama';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, models, user } from '$lib/stores';
+	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { addLiteLLMModel, deleteLiteLLMModel, getLiteLLMModelInfo } from '$lib/apis/litellm';
@@ -35,7 +35,7 @@
 	let liteLLMRPM = '';
 	let liteLLMMaxTokens = '';
 
-	let deleteLiteLLMModelId = '';
+	let deleteLiteLLMModelName = '';
 
 	$: liteLLMModelName = liteLLMModel;
 
@@ -50,12 +50,6 @@
 	let showExperimentalOllama = false;
 	let ollamaVersion = '';
 	const MAX_PARALLEL_DOWNLOADS = 3;
-	const modelDownloadQueue = queue(
-		(task: { modelName: string }, cb) =>
-			pullModelHandlerProcessor({ modelName: task.modelName, callback: cb }),
-		MAX_PARALLEL_DOWNLOADS
-	);
-	let modelDownloadStatus: Record<string, any> = {};
 
 	let modelTransferring = false;
 	let modelTag = '';
@@ -140,7 +134,8 @@
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = modelTag.trim().replace(/^ollama\s+(run|pull)\s+/, '');
-		if (modelDownloadStatus[sanitizedModelTag]) {
+		console.log($MODEL_DOWNLOAD_POOL);
+		if ($MODEL_DOWNLOAD_POOL[sanitizedModelTag]) {
 			toast.error(
 				$i18n.t(`Model '{{modelTag}}' is already in queue for downloading.`, {
 					modelTag: sanitizedModelTag
@@ -148,40 +143,117 @@
 			);
 			return;
 		}
-		if (Object.keys(modelDownloadStatus).length === 3) {
+		if (Object.keys($MODEL_DOWNLOAD_POOL).length === MAX_PARALLEL_DOWNLOADS) {
 			toast.error(
 				$i18n.t('Maximum of 3 models can be downloaded simultaneously. Please try again later.')
 			);
 			return;
 		}
 
-		modelTransferring = true;
+		const res = await pullModel(localStorage.token, sanitizedModelTag, '0').catch((error) => {
+			toast.error(error);
+			return null;
+		});
 
-		modelDownloadQueue.push(
-			{ modelName: sanitizedModelTag },
-			async (data: { modelName: string; success: boolean; error?: Error }) => {
-				const { modelName } = data;
-				// Remove the downloaded model
-				delete modelDownloadStatus[modelName];
+		if (res) {
+			const reader = res.body
+				.pipeThrough(new TextDecoderStream())
+				.pipeThrough(splitStream('\n'))
+				.getReader();
 
-				modelDownloadStatus = { ...modelDownloadStatus };
+			while (true) {
+				try {
+					const { value, done } = await reader.read();
+					if (done) break;
 
-				if (!data.success) {
-					toast.error(data.error);
-				} else {
-					toast.success(
-						$i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, { modelName })
-					);
+					let lines = value.split('\n');
 
-					const notification = new Notification($WEBUI_NAME, {
-						body: $i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, { modelName }),
-						icon: `${WEBUI_BASE_URL}/static/favicon.png`
-					});
+					for (const line of lines) {
+						if (line !== '') {
+							let data = JSON.parse(line);
+							console.log(data);
+							if (data.error) {
+								throw data.error;
+							}
+							if (data.detail) {
+								throw data.detail;
+							}
 
-					models.set(await getModels());
+							if (data.id) {
+								MODEL_DOWNLOAD_POOL.set({
+									...$MODEL_DOWNLOAD_POOL,
+									[sanitizedModelTag]: {
+										...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
+										requestId: data.id,
+										reader,
+										done: false
+									}
+								});
+								console.log(data);
+							}
+
+							if (data.status) {
+								if (data.digest) {
+									let downloadProgress = 0;
+									if (data.completed) {
+										downloadProgress = Math.round((data.completed / data.total) * 1000) / 10;
+									} else {
+										downloadProgress = 100;
+									}
+
+									MODEL_DOWNLOAD_POOL.set({
+										...$MODEL_DOWNLOAD_POOL,
+										[sanitizedModelTag]: {
+											...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
+											pullProgress: downloadProgress,
+											digest: data.digest
+										}
+									});
+								} else {
+									toast.success(data.status);
+
+									MODEL_DOWNLOAD_POOL.set({
+										...$MODEL_DOWNLOAD_POOL,
+										[sanitizedModelTag]: {
+											...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
+											done: data.status === 'success'
+										}
+									});
+								}
+							}
+						}
+					}
+				} catch (error) {
+					console.log(error);
+					if (typeof error !== 'string') {
+						error = error.message;
+					}
+
+					toast.error(error);
+					// opts.callback({ success: false, error, modelName: opts.modelName });
 				}
 			}
-		);
+
+			console.log($MODEL_DOWNLOAD_POOL[sanitizedModelTag]);
+
+			if ($MODEL_DOWNLOAD_POOL[sanitizedModelTag].done) {
+				toast.success(
+					$i18n.t(`Model '{{modelName}}' has been successfully downloaded.`, {
+						modelName: sanitizedModelTag
+					})
+				);
+
+				models.set(await getModels(localStorage.token));
+			} else {
+				toast.error('Download canceled');
+			}
+
+			delete $MODEL_DOWNLOAD_POOL[sanitizedModelTag];
+
+			MODEL_DOWNLOAD_POOL.set({
+				...$MODEL_DOWNLOAD_POOL
+			});
+		}
 
 		modelTag = '';
 		modelTransferring = false;
@@ -352,88 +424,18 @@
 		models.set(await getModels());
 	};
 
-	const pullModelHandlerProcessor = async (opts: { modelName: string; callback: Function }) => {
-		const res = await pullModel(localStorage.token, opts.modelName, selectedOllamaUrlIdx).catch(
-			(error) => {
-				opts.callback({ success: false, error, modelName: opts.modelName });
-				return null;
-			}
-		);
+	const cancelModelPullHandler = async (model: string) => {
+		const { reader, requestId } = $MODEL_DOWNLOAD_POOL[model];
+		if (reader) {
+			await reader.cancel();
 
-		if (res) {
-			const reader = res.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
-
-			while (true) {
-				try {
-					const { value, done } = await reader.read();
-					if (done) break;
-
-					let lines = value.split('\n');
-
-					for (const line of lines) {
-						if (line !== '') {
-							let data = JSON.parse(line);
-							console.log(data);
-							if (data.error) {
-								throw data.error;
-							}
-							if (data.detail) {
-								throw data.detail;
-							}
-
-							if (data.id) {
-								modelDownloadStatus[opts.modelName] = {
-									...modelDownloadStatus[opts.modelName],
-									requestId: data.id,
-									reader,
-									done: false
-								};
-								console.log(data);
-							}
-
-							if (data.status) {
-								if (data.digest) {
-									let downloadProgress = 0;
-									if (data.completed) {
-										downloadProgress = Math.round((data.completed / data.total) * 1000) / 10;
-									} else {
-										downloadProgress = 100;
-									}
-									modelDownloadStatus[opts.modelName] = {
-										...modelDownloadStatus[opts.modelName],
-										pullProgress: downloadProgress,
-										digest: data.digest
-									};
-								} else {
-									toast.success(data.status);
-
-									modelDownloadStatus[opts.modelName] = {
-										...modelDownloadStatus[opts.modelName],
-										done: data.status === 'success'
-									};
-								}
-							}
-						}
-					}
-				} catch (error) {
-					console.log(error);
-					if (typeof error !== 'string') {
-						error = error.message;
-					}
-					opts.callback({ success: false, error, modelName: opts.modelName });
-				}
-			}
-
-			console.log(modelDownloadStatus[opts.modelName]);
-
-			if (modelDownloadStatus[opts.modelName].done) {
-				opts.callback({ success: true, modelName: opts.modelName });
-			} else {
-				opts.callback({ success: false, error: 'Download canceled', modelName: opts.modelName });
-			}
+			await cancelOllamaRequest(localStorage.token, requestId);
+			delete $MODEL_DOWNLOAD_POOL[model];
+			MODEL_DOWNLOAD_POOL.set({
+				...$MODEL_DOWNLOAD_POOL
+			});
+			await deleteModel(localStorage.token, model);
+			toast.success(`${model} download has been canceled`);
 		}
 	};
 
@@ -472,7 +474,7 @@
 	};
 
 	const deleteLiteLLMModelHandler = async () => {
-		const res = await deleteLiteLLMModel(localStorage.token, deleteLiteLLMModelId).catch(
+		const res = await deleteLiteLLMModel(localStorage.token, deleteLiteLLMModelName).catch(
 			(error) => {
 				toast.error(error);
 				return null;
@@ -485,7 +487,7 @@
 			}
 		}
 
-		deleteLiteLLMModelId = '';
+		deleteLiteLLMModelName = '';
 		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
 		models.set(await getModels());
 	};
@@ -503,18 +505,6 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
 	});
-
-	const cancelModelPullHandler = async (model: string) => {
-		const { reader, requestId } = modelDownloadStatus[model];
-		if (reader) {
-			await reader.cancel();
-
-			await cancelOllamaRequest(localStorage.token, requestId);
-			delete modelDownloadStatus[model];
-			await deleteModel(localStorage.token, model);
-			toast.success(`${model} download has been canceled`);
-		}
-	};
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
@@ -643,9 +633,9 @@
 							>
 						</div>
 
-						{#if Object.keys(modelDownloadStatus).length > 0}
-							{#each Object.keys(modelDownloadStatus) as model}
-								{#if 'pullProgress' in modelDownloadStatus[model]}
+						{#if Object.keys($MODEL_DOWNLOAD_POOL).length > 0}
+							{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
+								{#if 'pullProgress' in $MODEL_DOWNLOAD_POOL[model]}
 									<div class="flex flex-col">
 										<div class="font-medium mb-1">{model}</div>
 										<div class="">
@@ -655,10 +645,10 @@
 														class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
 														style="width: {Math.max(
 															15,
-															modelDownloadStatus[model].pullProgress ?? 0
+															$MODEL_DOWNLOAD_POOL[model].pullProgress ?? 0
 														)}%"
 													>
-														{modelDownloadStatus[model].pullProgress ?? 0}%
+														{$MODEL_DOWNLOAD_POOL[model].pullProgress ?? 0}%
 													</div>
 												</div>
 
@@ -689,9 +679,9 @@
 													</button>
 												</Tooltip>
 											</div>
-											{#if 'digest' in modelDownloadStatus[model]}
+											{#if 'digest' in $MODEL_DOWNLOAD_POOL[model]}
 												<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
-													{modelDownloadStatus[model].digest}
+													{$MODEL_DOWNLOAD_POOL[model].digest}
 												</div>
 											{/if}
 										</div>
@@ -1099,14 +1089,14 @@
 								<div class="flex-1 mr-2">
 									<select
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-										bind:value={deleteLiteLLMModelId}
+										bind:value={deleteLiteLLMModelName}
 										placeholder={$i18n.t('Select a model')}
 									>
-										{#if !deleteLiteLLMModelId}
+										{#if !deleteLiteLLMModelName}
 											<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 										{/if}
 										{#each liteLLMModelInfo as model}
-											<option value={model.model_info.id} class="bg-gray-100 dark:bg-gray-700"
+											<option value={model.model_name} class="bg-gray-100 dark:bg-gray-700"
 												>{model.model_name}</option
 											>
 										{/each}
