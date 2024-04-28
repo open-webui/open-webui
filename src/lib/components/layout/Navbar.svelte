@@ -42,7 +42,7 @@
 				<div class="flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" />
 
 				{#if !shareEnabled}
-					<Tooltip content="Settings">
+					<Tooltip content={$i18n.t('Settings')}>
 						<button
 							class="cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
 							id="open-settings-button"
@@ -104,7 +104,7 @@
 						</button>
 					</Menu>
 				{/if}
-				<Tooltip content="New Chat">
+				<Tooltip content={$i18n.t('New Chat')}>
 					<button
 						id="new-chat-button"
 						class=" cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"

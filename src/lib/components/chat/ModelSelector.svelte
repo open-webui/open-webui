@@ -57,7 +57,7 @@
 
 			{#if selectedModelIdx === 0}
 				<div class="  self-center mr-2 disabled:text-gray-600 disabled:hover:text-gray-600">
-					<Tooltip content="Add Model">
+					<Tooltip content={$i18n.t('Add Model')}>
 						<button
 							class=" "
 							{disabled}

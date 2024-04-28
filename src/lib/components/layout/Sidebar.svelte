@@ -610,7 +610,7 @@
 										</button>
 									</ChatMenu>
 
-									<Tooltip content="Archive">
+									<Tooltip content={$i18n.t('Archive')}>
 										<button
 											aria-label="Archive"
 											class=" self-center dark:hover:text-white transition"
