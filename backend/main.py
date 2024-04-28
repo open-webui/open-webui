@@ -220,7 +220,7 @@ async def get_model_filter_config(user=Depends(get_admin_user)):
     return {
         "enabled": app.state.ENABLE_MODEL_FILTER,
         "models": app.state.MODEL_FILTER_LIST,
-        "admin_models": app.state.ADMIN_MODEL_FILTER_LIST
+        "admin_models": app.state.ADMIN_MODEL_FILTER_LIST,
     }
 
 
@@ -253,7 +253,7 @@ async def update_model_filter_config(
     return {
         "enabled": app.state.ENABLE_MODEL_FILTER,
         "models": app.state.MODEL_FILTER_LIST,
-        "admin_models": app.state.ADMIN_MODEL_FILTER_LIST
+        "admin_models": app.state.ADMIN_MODEL_FILTER_LIST,
     }
 
 

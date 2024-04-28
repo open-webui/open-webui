@@ -182,7 +182,8 @@ async def get_ollama_tags(
             elif user.role == "admin":
                 models["models"] = list(
                     filter(
-                        lambda model: model["name"] in app.state.ADMIN_MODEL_FILTER_LIST,
+                        lambda model: model["name"] 
+                        in app.state.ADMIN_MODEL_FILTER_LIST,
                         models["models"],
                     )
                 )
