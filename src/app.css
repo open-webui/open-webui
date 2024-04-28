@@ -26,6 +26,9 @@ math {
 
 .hljs {
 	@apply rounded-lg;
+	border-radius: 0rem;
+	border-bottom-left-radius: .5rem;
+	border-bottom-right-radius: .5rem;
 }
 
 ol > li {
