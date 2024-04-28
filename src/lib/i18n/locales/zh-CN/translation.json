@@ -240,7 +240,7 @@
 	"Permission denied when accessing microphone: {{error}}": "访问麦克风时权限被拒绝：{{error}}",
 	"Playground": "AI 游乐场",
 	"Archived Chats": "聊天记录",
-	"ModelStatus": "模型状态",
+	"Model Status": "模型状态",
 	"Profile": "个人资料",
 	"Prompt Content": "提示词内容",
 	"Prompt suggestions": "提示词建议",

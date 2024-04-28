@@ -239,7 +239,7 @@
 	"pending": "保留中",
 	"Permission denied when accessing microphone: {{error}}": "マイクへのアクセス時に権限が拒否されました: {{error}}",
 	"Playground": "プレイグラウンド",
-	"ModelStatus": "モデルの状態",
+	"Model Status": "モデルの状態",
 	"Profile": "プロフィール",
 	"Prompt Content": "プロンプトの内容",
 	"Prompt suggestions": "プロンプトの提案",

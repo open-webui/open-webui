@@ -734,7 +734,7 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center font-medium">{$i18n.t('ModelStatus')}</div>
+									<div class=" self-center font-medium">{$i18n.t('Model Status')}</div>
 								</button>
 
 								<button

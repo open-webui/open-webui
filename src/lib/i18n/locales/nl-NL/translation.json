@@ -239,7 +239,7 @@
 	"pending": "wachtend",
 	"Permission denied when accessing microphone: {{error}}": "Toestemming geweigerd bij toegang tot microfoon: {{error}}",
 	"Playground": "Speeltuin",
-	"ModelStatus": "Status van het model",
+	"Model Status": "Status van het model",
 	"Profile": "Profiel",
 	"Prompt Content": "Prompt Inhoud",
 	"Prompt suggestions": "Prompt suggesties",

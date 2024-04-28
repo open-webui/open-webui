@@ -239,7 +239,7 @@
 	"pending": "на розгляді",
 	"Permission denied when accessing microphone: {{error}}": "Доступ до мікрофона заборонено: {{error}}",
 	"Playground": "Майданчик",
-	"ModelStatus": "Статус моделі",
+	"Model Status": "Статус моделі",
 	"Profile": "Профіль",
 	"Prompt Content": "Зміст промту",
 	"Prompt suggestions": "Швидкі промти",
