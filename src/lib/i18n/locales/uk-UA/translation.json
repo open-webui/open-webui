@@ -240,6 +240,7 @@
 	"Permission denied when accessing microphone: {{error}}": "Доступ до мікрофона заборонено: {{error}}",
 	"Playground": "Майданчик",
 	"Model Status": "Статус моделі",
+	"Archived Chats": "запис чату",
 	"Profile": "Профіль",
 	"Prompt Content": "Зміст промту",
 	"Prompt suggestions": "Швидкі промти",

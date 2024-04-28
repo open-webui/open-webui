@@ -239,6 +239,7 @@
 	"pending": "en attente",
 	"Permission denied when accessing microphone: {{error}}": "Permission refusée lors de l'accès au microphone : {{error}}",
 	"Playground": "Aire de jeu",
+	"Archived Chats": "enregistrement du chat",
 	"Profile": "Profil",
 	"Prompt Content": "Contenu du prompt",
 	"Prompt suggestions": "Suggestions de prompt",

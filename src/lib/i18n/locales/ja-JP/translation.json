@@ -240,6 +240,7 @@
 	"Permission denied when accessing microphone: {{error}}": "マイクへのアクセス時に権限が拒否されました: {{error}}",
 	"Playground": "プレイグラウンド",
 	"Model Status": "モデルの状態",
+	"Archived Chats": "チャット記録",
 	"Profile": "プロフィール",
 	"Prompt Content": "プロンプトの内容",
 	"Prompt suggestions": "プロンプトの提案",

@@ -245,6 +245,7 @@
 	"Permission denied when accessing microphone: {{error}}": "ნებართვა უარყოფილია მიკროფონზე წვდომისას: {{error}}",
 	"Playground": "სათამაშო მოედანი",
 	"Model Status": "მოდელის სტატუსი",
+	"Archived Chats": "ჩატის ისტორიის არქივი",
 	"Profile": "პროფილი",
 	"Prompt Content": "მოთხოვნის შინაარსი",
 	"Prompt suggestions": "მოთხოვნის რჩევები",

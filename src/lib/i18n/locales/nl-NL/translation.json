@@ -240,6 +240,7 @@
 	"Permission denied when accessing microphone: {{error}}": "Toestemming geweigerd bij toegang tot microfoon: {{error}}",
 	"Playground": "Speeltuin",
 	"Model Status": "Status van het model",
+	"Archived Chats": "chatrecord",
 	"Profile": "Profiel",
 	"Prompt Content": "Prompt Inhoud",
 	"Prompt suggestions": "Prompt suggesties",
