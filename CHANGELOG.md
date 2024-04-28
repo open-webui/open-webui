@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **⌨️ Prompt Submission Update**: Enter key prompt submission disabled on mobile devices for improved user experience.
+- **⌨️ Prompt Input Behavior on Mobile**: Enter key prompt submission disabled on mobile devices for improved user experience.
 
 ## [0.1.121] - 2024-04-24
 
