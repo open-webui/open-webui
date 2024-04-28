@@ -5,7 +5,7 @@ cd "$SCRIPT_DIR" || exit
 
 KEY_FILE=.webui_secret_key
 
-PORT="${PORT:-8080}"
+PORT="${PORT:-8000}"
 if test "$WEBUI_SECRET_KEY $WEBUI_JWT_SECRET_KEY" = " "; then
   echo "No WEBUI_SECRET_KEY provided"
 
