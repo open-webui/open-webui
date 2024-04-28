@@ -133,7 +133,7 @@
 						{/each} -->
 					</div>
 				{:else}
-					<div class="text-left text-sm w-full mb-8">You have no archived conversations.</div>
+					<div class="text-left text-sm w-full mb-8">{user.name} has no conversations.</div>
 				{/if}
 			</div>
 		</div>
