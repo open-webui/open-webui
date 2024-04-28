@@ -11,7 +11,6 @@
 	import { onMount, tick, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
-	let messageElement: HTMLElement;
 
 	const dispatch = createEventDispatcher();
 
@@ -134,8 +133,9 @@
 	};
 
 	const renderLatex = () => {
-		let chatMessageElements = messageElement.getElementsByClassName('chat-assistant');
-		// let lastChatMessageElement = chatMessageElements[chatMessageElements.length - 1];
+		let chatMessageElements = document
+			.getElementById(`message-${message.id}`)
+			?.getElementsByClassName('chat-assistant');
 
 		for (const element of chatMessageElements) {
 			auto_render(element, {
@@ -323,7 +323,7 @@
 </script>
 
 {#key message.id}
-	<div class=" flex w-full message-{message.id}" bind:this={messageElement}>
+	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
 		<ProfileImage
 			src={modelfiles[message.model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
 		/>
