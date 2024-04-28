@@ -73,7 +73,11 @@ async function* streamLargeDeltasAsRandomChunks(
 			const chunkSize = Math.min(Math.floor(Math.random() * 3) + 1, content.length);
 			const chunk = content.slice(0, chunkSize);
 			yield { done: false, value: chunk };
-			await sleep(5);
+			// Do not sleep if the tab is hidden
+			// Timers are throttled to 1s in hidden tabs
+			if (document?.visibilityState !== 'hidden') {
+				await sleep(5);
+			}
 			content = content.slice(chunkSize);
 		}
 	}
