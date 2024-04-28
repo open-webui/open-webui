@@ -65,7 +65,7 @@ def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
         user_id = pw.CharField(max_length=255)
         title = pw.CharField()
         chat = pw.TextField()
-        timestamp = pw.DateField()
+        timestamp = pw.BigIntegerField()
 
         class Meta:
             table_name = "chat"
@@ -76,7 +76,7 @@ def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
         tag_name = pw.CharField(max_length=255)
         chat_id = pw.CharField(max_length=255)
         user_id = pw.CharField(max_length=255)
-        timestamp = pw.DateField()
+        timestamp = pw.BigIntegerField()
 
         class Meta:
             table_name = "chatidtag"
@@ -90,7 +90,7 @@ def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
         filename = pw.CharField()
         content = pw.TextField(null=True)
         user_id = pw.CharField(max_length=255)
-        timestamp = pw.DateField()
+        timestamp = pw.BigIntegerField()
 
         class Meta:
             table_name = "document"
@@ -101,7 +101,7 @@ def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
         tag_name = pw.CharField(max_length=255, unique=True)
         user_id = pw.CharField(max_length=255)
         modelfile = pw.TextField()
-        timestamp = pw.DateField()
+        timestamp = pw.BigIntegerField()
 
         class Meta:
             table_name = "modelfile"
@@ -113,7 +113,7 @@ def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
         user_id = pw.CharField(max_length=255)
         title = pw.CharField()
         content = pw.TextField()
-        timestamp = pw.DateField()
+        timestamp = pw.BigIntegerField()
 
         class Meta:
             table_name = "prompt"
