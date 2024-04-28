@@ -83,9 +83,9 @@ export const downloadDatabase = async (token: string) => {
 			Authorization: `Bearer ${token}`
 		}
 	})
-		.then((response) => {
+		.then(async (response) => {
 			if (!response.ok) {
-				throw new Error('Network response was not ok');
+				throw await response.json();
 			}
 			return response.blob();
 		})
@@ -100,7 +100,11 @@ export const downloadDatabase = async (token: string) => {
 		})
 		.catch((err) => {
 			console.log(err);
-			error = err;
+			error = err.detail;
 			return null;
 		});
+
+	if (error) {
+		throw error;
+	}
 };

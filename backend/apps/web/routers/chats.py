@@ -36,15 +36,49 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 router = APIRouter()
 
 ############################
-# GetChats
+# GetChatList
 ############################
 
 
 @router.get("/", response_model=List[ChatTitleIdResponse])
-async def get_user_chats(
+@router.get("/list", response_model=List[ChatTitleIdResponse])
+async def get_session_user_chat_list(
     user=Depends(get_current_user), skip: int = 0, limit: int = 50
 ):
-    return Chats.get_chat_lists_by_user_id(user.id, skip, limit)
+    return Chats.get_chat_list_by_user_id(user.id, skip, limit)
+
+
+############################
+# DeleteAllChats
+############################
+
+
+@router.delete("/", response_model=bool)
+async def delete_all_user_chats(request: Request, user=Depends(get_current_user)):
+
+    if (
+        user.role == "user"
+        and not request.app.state.USER_PERMISSIONS["chat"]["deletion"]
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    result = Chats.delete_chats_by_user_id(user.id)
+    return result
+
+
+############################
+# GetUserChatList
+############################
+
+
+@router.get("/list/user/{user_id}", response_model=List[ChatTitleIdResponse])
+async def get_user_chat_list_by_user_id(
+    user_id: str, user=Depends(get_admin_user), skip: int = 0, limit: int = 50
+):
+    return Chats.get_chat_list_by_user_id(user_id, skip, limit)
 
 
 ############################
@@ -53,22 +87,22 @@ async def get_user_chats(
 
 
 @router.get("/archived", response_model=List[ChatTitleIdResponse])
-async def get_archived_user_chats(
+async def get_archived_session_user_chat_list(
     user=Depends(get_current_user), skip: int = 0, limit: int = 50
 ):
-    return Chats.get_archived_chat_lists_by_user_id(user.id, skip, limit)
+    return Chats.get_archived_chat_list_by_user_id(user.id, skip, limit)
 
 
 ############################
-# GetAllChats
+# GetChats
 ############################
 
 
 @router.get("/all", response_model=List[ChatResponse])
-async def get_all_user_chats(user=Depends(get_current_user)):
+async def get_user_chats(user=Depends(get_current_user)):
     return [
         ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
-        for chat in Chats.get_all_chats_by_user_id(user.id)
+        for chat in Chats.get_chats_by_user_id(user.id)
     ]
 
 
@@ -86,7 +120,7 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
         )
     return [
         ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
-        for chat in Chats.get_all_chats()
+        for chat in Chats.get_chats()
     ]
 
 
@@ -105,45 +139,6 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
-
-
-############################
-# GetAllTags
-############################
-
-
-@router.get("/tags/all", response_model=List[TagModel])
-async def get_all_tags(user=Depends(get_current_user)):
-    try:
-        tags = Tags.get_tags_by_user_id(user.id)
-        return tags
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
-
-
-############################
-# GetChatsByTags
-############################
-
-
-@router.get("/tags/tag/{tag_name}", response_model=List[ChatTitleIdResponse])
-async def get_user_chats_by_tag_name(
-    tag_name: str, user=Depends(get_current_user), skip: int = 0, limit: int = 50
-):
-    chat_ids = [
-        chat_id_tag.chat_id
-        for chat_id_tag in Tags.get_chat_ids_by_tag_name_and_user_id(tag_name, user.id)
-    ]
-
-    chats = Chats.get_chat_lists_by_chat_ids(chat_ids, skip, limit)
-
-    if len(chats) == 0:
-        Tags.delete_tag_by_tag_name_and_user_id(tag_name, user.id)
-
-    return chats
 
 
 ############################
@@ -193,17 +188,18 @@ async def update_chat_by_id(
 @router.delete("/{id}", response_model=bool)
 async def delete_chat_by_id(request: Request, id: str, user=Depends(get_current_user)):
 
-    if (
-        user.role == "user"
-        and not request.app.state.USER_PERMISSIONS["chat"]["deletion"]
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+    if user.role == "admin":
+        result = Chats.delete_chat_by_id(id)
+        return result
+    else:
+        if not request.app.state.USER_PERMISSIONS["chat"]["deletion"]:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
 
-    result = Chats.delete_chat_by_id_and_user_id(id, user.id)
-    return result
+        result = Chats.delete_chat_by_id_and_user_id(id, user.id)
+        return result
 
 
 ############################
@@ -304,6 +300,45 @@ async def get_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
 
 
 ############################
+# GetAllTags
+############################
+
+
+@router.get("/tags/all", response_model=List[TagModel])
+async def get_all_tags(user=Depends(get_current_user)):
+    try:
+        tags = Tags.get_tags_by_user_id(user.id)
+        return tags
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
+# GetChatsByTags
+############################
+
+
+@router.get("/tags/tag/{tag_name}", response_model=List[ChatTitleIdResponse])
+async def get_user_chat_list_by_tag_name(
+    tag_name: str, user=Depends(get_current_user), skip: int = 0, limit: int = 50
+):
+    chat_ids = [
+        chat_id_tag.chat_id
+        for chat_id_tag in Tags.get_chat_ids_by_tag_name_and_user_id(tag_name, user.id)
+    ]
+
+    chats = Chats.get_chat_list_by_chat_ids(chat_ids, skip, limit)
+
+    if len(chats) == 0:
+        Tags.delete_tag_by_tag_name_and_user_id(tag_name, user.id)
+
+    return chats
+
+
+############################
 # GetChatTagsById
 ############################
 
@@ -383,24 +418,3 @@ async def delete_all_chat_tags_by_id(id: str, user=Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
-
-
-############################
-# DeleteAllChats
-############################
-
-
-@router.delete("/", response_model=bool)
-async def delete_all_user_chats(request: Request, user=Depends(get_current_user)):
-
-    if (
-        user.role == "user"
-        and not request.app.state.USER_PERMISSIONS["chat"]["deletion"]
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
-    result = Chats.delete_chats_by_user_id(user.id)
-    return result

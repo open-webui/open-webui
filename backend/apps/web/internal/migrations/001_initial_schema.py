@@ -37,6 +37,18 @@ with suppress(ImportError):
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
+    # We perform different migrations for SQLite and other databases
+    # This is because SQLite is very loose with enforcing its schema, and trying to migrate other databases like SQLite
+    # will require per-database SQL queries.
+    # Instead, we assume that because external DB support was added at a later date, it is safe to assume a newer base
+    # schema instead of trying to migrate from an older schema.
+    if isinstance(database, pw.SqliteDatabase):
+        migrate_sqlite(migrator, database, fake=fake)
+    else:
+        migrate_external(migrator, database, fake=fake)
+
+
+def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
     @migrator.create_model
     class Auth(pw.Model):
         id = pw.CharField(max_length=255, unique=True)
@@ -124,6 +136,99 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         role = pw.CharField(max_length=255)
         profile_image_url = pw.CharField(max_length=255)
         timestamp = pw.DateField()
+
+        class Meta:
+            table_name = "user"
+
+
+def migrate_external(migrator: Migrator, database: pw.Database, *, fake=False):
+    @migrator.create_model
+    class Auth(pw.Model):
+        id = pw.CharField(max_length=255, unique=True)
+        email = pw.CharField(max_length=255)
+        password = pw.TextField()
+        active = pw.BooleanField()
+
+        class Meta:
+            table_name = "auth"
+
+    @migrator.create_model
+    class Chat(pw.Model):
+        id = pw.CharField(max_length=255, unique=True)
+        user_id = pw.CharField(max_length=255)
+        title = pw.TextField()
+        chat = pw.TextField()
+        timestamp = pw.BigIntegerField()
+
+        class Meta:
+            table_name = "chat"
+
+    @migrator.create_model
+    class ChatIdTag(pw.Model):
+        id = pw.CharField(max_length=255, unique=True)
+        tag_name = pw.CharField(max_length=255)
+        chat_id = pw.CharField(max_length=255)
+        user_id = pw.CharField(max_length=255)
+        timestamp = pw.BigIntegerField()
+
+        class Meta:
+            table_name = "chatidtag"
+
+    @migrator.create_model
+    class Document(pw.Model):
+        id = pw.AutoField()
+        collection_name = pw.CharField(max_length=255, unique=True)
+        name = pw.CharField(max_length=255, unique=True)
+        title = pw.TextField()
+        filename = pw.TextField()
+        content = pw.TextField(null=True)
+        user_id = pw.CharField(max_length=255)
+        timestamp = pw.BigIntegerField()
+
+        class Meta:
+            table_name = "document"
+
+    @migrator.create_model
+    class Modelfile(pw.Model):
+        id = pw.AutoField()
+        tag_name = pw.CharField(max_length=255, unique=True)
+        user_id = pw.CharField(max_length=255)
+        modelfile = pw.TextField()
+        timestamp = pw.BigIntegerField()
+
+        class Meta:
+            table_name = "modelfile"
+
+    @migrator.create_model
+    class Prompt(pw.Model):
+        id = pw.AutoField()
+        command = pw.CharField(max_length=255, unique=True)
+        user_id = pw.CharField(max_length=255)
+        title = pw.TextField()
+        content = pw.TextField()
+        timestamp = pw.BigIntegerField()
+
+        class Meta:
+            table_name = "prompt"
+
+    @migrator.create_model
+    class Tag(pw.Model):
+        id = pw.CharField(max_length=255, unique=True)
+        name = pw.CharField(max_length=255)
+        user_id = pw.CharField(max_length=255)
+        data = pw.TextField(null=True)
+
+        class Meta:
+            table_name = "tag"
+
+    @migrator.create_model
+    class User(pw.Model):
+        id = pw.CharField(max_length=255, unique=True)
+        name = pw.CharField(max_length=255)
+        email = pw.CharField(max_length=255)
+        role = pw.CharField(max_length=255)
+        profile_image_url = pw.TextField()
+        timestamp = pw.BigIntegerField()
 
         class Meta:
             table_name = "user"
