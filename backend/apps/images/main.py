@@ -24,11 +24,11 @@ from utils.misc import calculate_sha256
 from typing import Optional
 from pydantic import BaseModel
 from pathlib import Path
+import mimetypes
 import uuid
 import base64
 import json
 import logging
-import os
 
 from config import (
     SRC_LOG_LEVELS,
@@ -317,41 +317,35 @@ class GenerateImageForm(BaseModel):
 
 def save_b64_image(b64_str):
     try:
-        # get the image_format of b64_str
-        header, encoded = b64_str.split(',', 1)
+        header, encoded = b64_str.split(",", 1)
+        mime_type = header.split(";")[0]
 
-        image_format = f".{header.split(';')[0].split('/')[1]}"
-
+        image_format = mimetypes.guess_extension(mime_type)
         img_data = base64.b64decode(encoded)
-
         image_id = str(uuid.uuid4())
-
         file_path = IMAGE_CACHE_DIR / f"{image_id}{image_format}"
-
-        # Write the image data to a file
-        with open(file_path, 'wb') as f:
+        with open(file_path, "wb") as f:
             f.write(img_data)
-
         return image_id, image_format
     except Exception as e:
-        log.error('Error saving image: {}'.format(e))
+        log.exception(f"Error saving image: {e}")
         return None, None
 
 
 def save_url_image(url):
     image_id = str(uuid.uuid4())
-
-    # parse the url and split the image_format
-    file_name = os.path.basename(url)
-
-    file_name, image_format = os.path.splitext(file_name)
-
-    file_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}{image_format}")
-
     try:
         r = requests.get(url)
         r.raise_for_status()
-        if r.headers['content-type'].split('/')[0] == 'image':
+        if r.headers["content-type"].split("/")[0] == "image":
+
+            mime_type = r.headers["content-type"]
+            image_format = mimetypes.guess_extension(mime_type)
+
+            if not image_format:
+                raise ValueError("Could not determine image type from MIME type")
+
+            file_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}{image_format}")
             with open(file_path, "wb") as image_file:
                 for chunk in r.iter_content(chunk_size=8192):
                     image_file.write(chunk)
@@ -402,7 +396,9 @@ def generate_image(
 
             for image in res["data"]:
                 image_id, image_format = save_b64_image(image["b64_json"])
-                images.append({"url": f"/cache/image/generations/{image_id}{image_format}"})
+                images.append(
+                    {"url": f"/cache/image/generations/{image_id}{image_format}"}
+                )
                 file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
 
                 with open(file_body_path, "w") as f:
@@ -439,7 +435,9 @@ def generate_image(
 
             for image in res["data"]:
                 image_id, image_format = save_url_image(image["url"])
-                images.append({"url": f"/cache/image/generations/{image_id}{image_format}"})
+                images.append(
+                    {"url": f"/cache/image/generations/{image_id}{image_format}"}
+                )
                 file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
 
                 with open(file_body_path, "w") as f:
@@ -477,7 +475,9 @@ def generate_image(
 
             for image in res["images"]:
                 image_id, image_format = save_b64_image(image)
-                images.append({"url": f"/cache/image/generations/{image_id}{image_format}"})
+                images.append(
+                    {"url": f"/cache/image/generations/{image_id}{image_format}"}
+                )
                 file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
 
                 with open(file_body_path, "w") as f:
