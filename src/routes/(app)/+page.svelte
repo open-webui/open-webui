@@ -347,9 +347,6 @@
 			)
 			.flat(1);
 
-		console.log($settings.options.stop);
-		// console.log($settings.options.stop.map((str) => str));
-
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
 			model: model,
 			messages: messagesBody,

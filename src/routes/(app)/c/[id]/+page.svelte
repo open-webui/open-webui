@@ -365,7 +365,13 @@
 			model: model,
 			messages: messagesBody,
 			options: {
-				...($settings.options ?? {})
+				...($settings.options ?? {}),
+				stop:
+					$settings?.options?.stop ?? undefined
+						? $settings.options.stop.map((str) =>
+								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+						  )
+						: undefined
 			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
@@ -588,7 +594,12 @@
 							  })
 					})),
 				seed: $settings?.options?.seed ?? undefined,
-				stop: $settings?.options?.stop ?? undefined,
+				stop:
+					$settings?.options?.stop ?? undefined
+						? $settings.options.stop.map((str) =>
+								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+						  )
+						: undefined,
 				temperature: $settings?.options?.temperature ?? undefined,
 				top_p: $settings?.options?.top_p ?? undefined,
 				num_ctx: $settings?.options?.num_ctx ?? undefined,
