@@ -320,22 +320,22 @@ def save_b64_image(b64_str):
         # get the file_format of b64_str
         header, encoded = b64_str.split(',', 1)
 
-        file_format = header.split(';')[0].split('/')[1]
+        file_format = f".{header.split(';')[0].split('/')[1]}"
 
         img_data = base64.b64decode(encoded)
 
         image_id = str(uuid.uuid4())
 
-        file_path = IMAGE_CACHE_DIR / f"{image_id}.{file_format}"
+        file_path = IMAGE_CACHE_DIR / f"{image_id}{file_format}"
 
         # Write the image data to a file
         with open(file_path, 'wb') as f:
             f.write(img_data)
 
-        return image_id
+        return image_id, file_format
     except Exception as e:
         log.error('Error saving image: {}'.format(e))
-        return None
+        return None, None
 
 
 def save_url_image(url):
@@ -355,14 +355,14 @@ def save_url_image(url):
             with open(file_path, "wb") as image_file:
                 for chunk in r.iter_content(chunk_size=8192):
                     image_file.write(chunk)
-            return image_id
+            return image_id, file_format
         else:
             log.error(f"Url does not point to an image.")
-            return None
+            return None, None
 
     except Exception as e:
         log.exception(f"Error saving image: {e}")
-        return None
+        return None, None
 
 
 @app.post("/generations")
@@ -401,8 +401,8 @@ def generate_image(
             images = []
 
             for image in res["data"]:
-                image_id = save_b64_image(image["b64_json"])
-                images.append({"url": f"/cache/image/generations/{image_id}.png"})
+                image_id, file_format = save_b64_image(image["b64_json"])
+                images.append({"url": f"/cache/image/generations/{image_id}{file_format}"})
                 file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
 
                 with open(file_body_path, "w") as f:
@@ -438,8 +438,8 @@ def generate_image(
             images = []
 
             for image in res["data"]:
-                image_id = save_url_image(image["url"])
-                images.append({"url": f"/cache/image/generations/{image_id}.png"})
+                image_id, file_format = save_url_image(image["url"])
+                images.append({"url": f"/cache/image/generations/{image_id}{file_format}"})
                 file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
 
                 with open(file_body_path, "w") as f:
