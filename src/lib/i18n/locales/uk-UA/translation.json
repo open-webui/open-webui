@@ -239,6 +239,7 @@
 	"pending": "на розгляді",
 	"Permission denied when accessing microphone: {{error}}": "Доступ до мікрофона заборонено: {{error}}",
 	"Playground": "Майданчик",
+	"Archived Chats": "запис чату",
 	"Profile": "Профіль",
 	"Prompt Content": "Зміст промту",
 	"Prompt suggestions": "Швидкі промти",

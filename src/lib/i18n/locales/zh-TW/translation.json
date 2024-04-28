@@ -240,6 +240,7 @@
 	"pending": "待審查",
 	"Permission denied when accessing microphone: {{error}}": "存取麥克風時被拒絕權限: {{error}}",
 	"Playground": "AI 對話遊樂場",
+	"Archived Chats": "聊天記錄存檔",
 	"Profile": "個人資料",
 	"Prompt Content": "提示詞內容",
 	"Prompt suggestions": "提示詞建議",
