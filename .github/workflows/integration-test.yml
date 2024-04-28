@@ -106,9 +106,12 @@ jobs:
 
       - name: Test backend with SQLite
         id: sqlite
+        env:
+          WEBUI_SECRET_KEY: secret-key
+          GLOBAL_LOG_LEVEL: debug
         run: |
           cd backend
-          WEBUI_SECRET_KEY=secret-key GLOBAL_LOG_LEVEL=debug uvicorn main:app --port "8080" --forwarded-allow-ips '*' &
+          uvicorn main:app --port "8080" --forwarded-allow-ips '*' &
           UVICORN_PID=$!
           # Wait up to 20 seconds for the server to start
           for i in {1..20}; do
@@ -130,10 +133,13 @@ jobs:
 
       - name: Test backend with Postgres
         if: success() || steps.sqlite.conclusion == 'failure'
+        env:
+          WEBUI_SECRET_KEY: secret-key
+          GLOBAL_LOG_LEVEL: debug
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
         run: |
           cd backend
-          export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
-          WEBUI_SECRET_KEY=secret-key GLOBAL_LOG_LEVEL=debug uvicorn main:app --port "8081" --forwarded-allow-ips '*' &
+          uvicorn main:app --port "8081" --forwarded-allow-ips '*' &
           UVICORN_PID=$!
           # Wait up to 20 seconds for the server to start
           for i in {1..20}; do
@@ -154,10 +160,13 @@ jobs:
 
 #      - name: Test backend with MySQL
 #        if: success() || steps.sqlite.conclusion == 'failure' || steps.postgres.conclusion == 'failure'
+#        env:
+#          WEBUI_SECRET_KEY: secret-key
+#          GLOBAL_LOG_LEVEL: debug
+#          DATABASE_URL: mysql://root:mysql@localhost:3306/mysql
 #        run: |
 #          cd backend
-#          export DATABASE_URL=mysql://root:mysql@localhost:3306/mysql
-#          WEBUI_SECRET_KEY=secret-key GLOBAL_LOG_LEVEL=debug uvicorn main:app --port "8083" --forwarded-allow-ips '*' &
+#          uvicorn main:app --port "8083" --forwarded-allow-ips '*' &
 #          UVICORN_PID=$!
 #          # Wait up to 20 seconds for the server to start
 #          for i in {1..20}; do
