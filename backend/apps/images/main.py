@@ -28,6 +28,7 @@ import uuid
 import base64
 import json
 import logging
+import os
 
 from config import (
     SRC_LOG_LEVELS,
@@ -315,35 +316,50 @@ class GenerateImageForm(BaseModel):
 
 
 def save_b64_image(b64_str):
-    image_id = str(uuid.uuid4())
-    file_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.png")
-
     try:
-        # Split the base64 string to get the actual image data
-        img_data = base64.b64decode(b64_str)
+        # get the file_format of b64_str
+        header, encoded = b64_str.split(',', 1)
+
+        file_format = header.split(';')[0].split('/')[1]
+
+        img_data = base64.b64decode(encoded)
+
+        image_id = str(uuid.uuid4())
+
+        file_path = IMAGE_CACHE_DIR / f"{image_id}.{file_format}"
 
         # Write the image data to a file
-        with open(file_path, "wb") as f:
+        with open(file_path, 'wb') as f:
             f.write(img_data)
 
         return image_id
     except Exception as e:
-        log.error(f"Error saving image: {e}")
+        log.error('Error saving image: {}'.format(e))
         return None
 
 
 def save_url_image(url):
     image_id = str(uuid.uuid4())
-    file_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.png")
+
+    # parse the url and split the file_format
+    file_name = os.path.basename(url)
+
+    file_name, file_format = os.path.splitext(file_name)
+
+    file_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}{file_format}")
 
     try:
         r = requests.get(url)
         r.raise_for_status()
+        if r.headers['content-type'].split('/')[0] == 'image':
+            with open(file_path, "wb") as image_file:
+                for chunk in r.iter_content(chunk_size=8192):
+                    image_file.write(chunk)
+            return image_id
+        else:
+            log.error(f"Url does not point to an image.")
+            return None
 
-        with open(file_path, "wb") as image_file:
-            image_file.write(r.content)
-
-        return image_id
     except Exception as e:
         log.exception(f"Error saving image: {e}")
         return None
