@@ -689,12 +689,13 @@
 								: $i18n.t('Send a Message')}
 							bind:value={prompt}
 							on:keypress={(e) => {
-								if (e.keyCode == 13 && !e.shiftKey) {
-									e.preventDefault();
-								}
-								if (prompt !== '' && e.keyCode == 13 && !e.shiftKey) {
-									// TODO: Only if screensize > xl
-									submitPrompt(prompt, user);
+								if (window.innerWidth > 1024) {
+									if (e.keyCode == 13 && !e.shiftKey) {
+										e.preventDefault();
+									}
+									if (prompt !== '' && e.keyCode == 13 && !e.shiftKey) {
+										submitPrompt(prompt, user);
+									}
 								}
 							}}
 							on:keydown={async (e) => {
