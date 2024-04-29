@@ -137,9 +137,15 @@
 		if (res) {
 			console.log('rerankingModelUpdateHandler:', res);
 			if (res.status === true) {
-				toast.success($i18n.t('Reranking model set to "{{reranking_model}}"', res), {
-					duration: 1000 * 10
-				});
+				if (rerankingModel === '') {
+					toast.success($i18n.t('Reranking model disabled', res), {
+						duration: 1000 * 10
+					});
+				} else {
+					toast.success($i18n.t('Reranking model set to "{{reranking_model}}"', res), {
+						duration: 1000 * 10
+					});
+				}
 			}
 		}
 	};
@@ -584,12 +590,12 @@
 
 				<hr class=" dark:border-gray-700 my-3" />
 
-				<div>
+				<div class=" ">
 					<div class=" text-sm font-medium">{$i18n.t('Query Params')}</div>
 
 					<div class=" flex">
 						<div class="  flex w-full justify-between">
-							<div class="self-center text-xs font-medium flex-1">{$i18n.t('Top K')}</div>
+							<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('Top K')}</div>
 
 							<div class="self-center p-3">
 								<input
@@ -602,13 +608,11 @@
 								/>
 							</div>
 						</div>
-					</div>
 
-					{#if querySettings.hybrid === true}
-						<div class=" flex">
-							<div class="  flex w-full justify-between">
-								<div class="self-center text-xs font-medium flex-1">
-									{$i18n.t('Relevance Threshold')}
+						{#if querySettings.hybrid === true}
+							<div class="flex w-full">
+								<div class=" self-center text-xs font-medium min-w-fit">
+									{$i18n.t('Minimum Score')}
 								</div>
 
 								<div class="self-center p-3">
@@ -616,14 +620,25 @@
 										class=" w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 										type="number"
 										step="0.01"
-										placeholder={$i18n.t('Enter Relevance Threshold')}
+										placeholder={$i18n.t('Enter Score')}
 										bind:value={querySettings.r}
 										autocomplete="off"
 										min="0.0"
+										title={$i18n.t('The score should be a value between 0.0 (0%) and 1.0 (100%).')}
 									/>
 								</div>
 							</div>
+						{/if}
+					</div>
+
+					{#if querySettings.hybrid === true}
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t(
+								'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
+							)}
 						</div>
+
+						<hr class=" dark:border-gray-700 my-3" />
 					{/if}
 
 					<div>
@@ -635,8 +650,6 @@
 						/>
 					</div>
 				</div>
-
-				<hr class=" dark:border-gray-700 my-3" />
 
 				{#if showResetConfirm}
 					<div class="flex justify-between rounded-md items-center py-2 px-3.5 w-full transition">
