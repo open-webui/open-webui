@@ -493,7 +493,7 @@
 						id="steps-range"
 						type="range"
 						min="-1"
-						max="1024000"
+						max="10240000"
 						step="1"
 						bind:value={options.num_ctx}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
@@ -505,8 +505,7 @@
 						type="number"
 						class=" bg-transparent text-center w-14"
 						min="-1"
-						max="1024000"
-						step="1"
+						step="10"
 					/>
 				</div>
 			</div>
