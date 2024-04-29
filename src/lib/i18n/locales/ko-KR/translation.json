@@ -153,6 +153,7 @@
 	"Focus chat input": "채팅 입력 포커스",
 	"Format your variables using square brackets like this:": "이렇게 대괄호를 사용하여 변수를 형식화하세요:",
 	"From (Base Model)": "출처(기본 모델)",
+	"Fluidly stream large external response chunks": "대규모 외부 응답 청크를 유동적으로 스트리밍",
 	"Full Screen Mode": "전체 화면 모드",
 	"General": "일반",
 	"General Settings": "일반 설정",

@@ -153,6 +153,7 @@
 	"File not found.": "Plik nie został znaleziony.",
 	"Fingerprint spoofing detected: Unable to use initials as avatar. Defaulting to default profile image.": "Wykryto podszywanie się pod odcisk palca: Nie można używać inicjałów jako awatara. Przechodzenie do domyślnego obrazu profilowego.",
 	"Focus chat input": "Skoncentruj na czacie",
+	"Fluidly stream large external response chunks": "Płynnie przesyłaj strumieniowo duże fragmenty odpowiedzi zewnętrznych",
 	"Format your variables using square brackets like this:": "Formatuj swoje zmienne, używając nawiasów kwadratowych, np.",
 	"From (Base Model)": "Z (Model Podstawowy)",
 	"Full Screen Mode": "Tryb pełnoekranowy",
