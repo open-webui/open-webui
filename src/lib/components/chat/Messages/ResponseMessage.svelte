@@ -494,7 +494,7 @@
 										{/if}
 
 										{#if !readOnly}
-											<Tooltip content="Edit" placement="bottom">
+											<Tooltip content={$i18n.t('Edit')} placement="bottom">
 												<button
 													class="{isLastMessage
 														? 'visible'
@@ -521,7 +521,7 @@
 											</Tooltip>
 										{/if}
 
-										<Tooltip content="Copy" placement="bottom">
+										<Tooltip content={$i18n.t('Copy')} placement="bottom">
 											<button
 												class="{isLastMessage
 													? 'visible'
@@ -548,7 +548,7 @@
 										</Tooltip>
 
 										{#if !readOnly}
-											<Tooltip content="Good Response" placement="bottom">
+											<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 												<button
 													class="{isLastMessage
 														? 'visible'
@@ -583,7 +583,7 @@
 												</button>
 											</Tooltip>
 
-											<Tooltip content="Bad Response" placement="bottom">
+											<Tooltip content={$i18n.t('Bad Response')} placement="bottom">
 												<button
 													class="{isLastMessage
 														? 'visible'
@@ -618,7 +618,7 @@
 											</Tooltip>
 										{/if}
 
-										<Tooltip content="Read Aloud" placement="bottom">
+										<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 											<button
 												id="speak-button-{message.id}"
 												class="{isLastMessage
@@ -767,7 +767,7 @@
 										{/if}
 
 										{#if message.info}
-											<Tooltip content="Generation Info" placement="bottom">
+											<Tooltip content={$i18n.t('Generation Info')} placement="bottom">
 												<button
 													class=" {isLastMessage
 														? 'visible'
@@ -796,7 +796,7 @@
 										{/if}
 
 										{#if isLastMessage && !readOnly}
-											<Tooltip content="Continue Response" placement="bottom">
+											<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 												<button
 													type="button"
 													class="{isLastMessage
@@ -828,7 +828,7 @@
 												</button>
 											</Tooltip>
 
-											<Tooltip content="Regenerate" placement="bottom">
+											<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 												<button
 													type="button"
 													class="{isLastMessage
