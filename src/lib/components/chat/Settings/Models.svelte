@@ -10,8 +10,7 @@
 		getOllamaVersion,
 		pullModel,
 		cancelOllamaRequest,
-		uploadModel,
-		scrapeModelsList
+		uploadModel
 	} from '$lib/apis/ollama';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user } from '$lib/stores';
@@ -67,16 +66,6 @@
 	let uploadMessage = '';
 
 	let deleteModelTag = '';
-
-	let modelsList = ["gemma"];
-
-	const fetchAvailableModels = async () => {
-		const response = await scrapeModelsList(localStorage.token);
-		if (response && response.ok) {
-			modelsList = await response.json();
-			console.log(modelsList);
-		}
-	};
 
 	const updateModelsHandler = async () => {
 		for (const model of $models.filter(
@@ -515,7 +504,6 @@
 
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
-		await fetchAvailableModels();
 	});
 </script>
 
@@ -583,13 +571,7 @@
 										modelTag: 'mistral:7b'
 									})}
 									bind:value={modelTag}
-									list="model-tags"
 								/>
-								<datalist id="model-tags">
-									{#each modelsList as model}
-										<option value={model}></option>
-									{/each}
-								</datalist>
 							</div>
 							<button
 								class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
