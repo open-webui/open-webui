@@ -493,7 +493,7 @@
 						id="steps-range"
 						type="range"
 						min="1"
-						max="16000"
+						max="256000"
 						step="1"
 						bind:value={options.num_ctx}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
