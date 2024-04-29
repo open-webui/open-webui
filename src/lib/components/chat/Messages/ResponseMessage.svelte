@@ -379,7 +379,7 @@
 
 								<div class=" mt-2 mb-1 flex justify-center space-x-2 text-sm font-medium">
 									<button
-										class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg-lg"
+										class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 										on:click={() => {
 											editMessageConfirmHandler();
 										}}
