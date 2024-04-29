@@ -133,7 +133,10 @@
 						{/each} -->
 					</div>
 				{:else}
-					<div class="text-left text-sm w-full mb-8">{user.name} {$i18n.t('has no conversations.')}</div>
+					<div class="text-left text-sm w-full mb-8">
+						{user.name}
+						{$i18n.t('has no conversations.')}
+					</div>
 				{/if}
 			</div>
 		</div>

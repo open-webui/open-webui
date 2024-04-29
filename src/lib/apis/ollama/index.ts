@@ -493,7 +493,7 @@ export const scrapeModelsList = async (token: string) => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		},
+		}
 	}).catch((err) => {
 		console.log(err);
 		error = err;
@@ -508,7 +508,7 @@ export const scrapeModelsList = async (token: string) => {
 		throw error;
 	}
 	return res;
-}
+};
 
 // export const pullModel = async (token: string, tagName: string) => {
 // 	return await fetch(`${OLLAMA_API_BASE_URL}/pull`, {
