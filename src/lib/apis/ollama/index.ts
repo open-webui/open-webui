@@ -484,6 +484,32 @@ export const uploadModel = async (token: string, file: File, urlIdx: string | nu
 	return res;
 };
 
+export const scrapeModelsList = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/scrape`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+	}).catch((err) => {
+		console.log(err);
+		error = err;
+
+		if ('detail' in err) {
+			error = err.detail;
+		}
+
+		return null;
+	});
+	if (error) {
+		throw error;
+	}
+	return res;
+}
+
 // export const pullModel = async (token: string, tagName: string) => {
 // 	return await fetch(`${OLLAMA_API_BASE_URL}/pull`, {
 // 		method: 'POST',
