@@ -505,7 +505,7 @@
 						type="number"
 						class=" bg-transparent text-center w-14"
 						min="1"
-						max="16000"
+						max="256000"
 						step="1"
 					/>
 				</div>
