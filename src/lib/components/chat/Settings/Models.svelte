@@ -10,7 +10,8 @@
 		getOllamaVersion,
 		pullModel,
 		cancelOllamaRequest,
-		uploadModel
+		uploadModel,
+		scrapeModelsList
 	} from '$lib/apis/ollama';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user } from '$lib/stores';
@@ -67,7 +68,15 @@
 
 	let deleteModelTag = '';
 
-	let modelsList = ["gemma","llama2","mistral","mixtral","llava","neural-chat","codellama","dolphin-mixtral","qwen","llama2-uncensored","mistral-openorca","deepseek-coder","nous-hermes2","phi","orca-mini","dolphin-mistral","wizard-vicuna-uncensored","vicuna","tinydolphin","llama2-chinese","openhermes","zephyr","nomic-embed-text","tinyllama","openchat","wizardcoder","phind-codellama","starcoder","yi","orca2","starcoder2","falcon","wizard-math","dolphin-phi","nous-hermes","starling-lm","stable-code","medllama2","bakllava","codeup","wizardlm-uncensored","solar","everythinglm","sqlcoder","nous-hermes2-mixtral","stable-beluga","yarn-mistral","stablelm2","samantha-mistral","meditron","stablelm-zephyr","magicoder","yarn-llama2","wizard-vicuna","llama-pro","deepseek-llm","dolphincoder","codebooga","mistrallite","nexusraven","open-orca-platypus2","all-minilm","goliath","notux","alfred","megadolphin","xwinlm","wizardlm","duckdb-nsql","notus"];
+	let modelsList = ["gemma"];
+
+	const fetchAvailableModels = async () => {
+		const response = await scrapeModelsList(localStorage.token);
+		if (response && response.ok) {
+			modelsList = await response.json();
+			console.log(modelsList);
+		}
+	};
 
 	const updateModelsHandler = async () => {
 		for (const model of $models.filter(
@@ -506,6 +515,7 @@
 
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
+		await fetchAvailableModels();
 	});
 </script>
 
