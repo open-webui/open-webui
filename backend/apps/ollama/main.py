@@ -161,8 +161,9 @@ async def get_all_models():
 
     return models
 
+
 @app.get("/api/scrape")
-async def scrape_models(url = "https://ollama.com/library"):
+async def scrape_models(url="https://ollama.com/library"):
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -176,6 +177,7 @@ async def scrape_models(url = "https://ollama.com/library"):
             status_code=500,
             detail="Error scraping models",
         )
+
 
 @app.get("/api/tags")
 @app.get("/api/tags/{url_idx}")
