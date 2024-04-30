@@ -277,7 +277,7 @@
 	// };
 </script>
 
-<div class="h-full">
+<div class="h-full flex">
 	{#if messages.length == 0}
 		<Placeholder
 			models={selectedModels}
@@ -297,7 +297,7 @@
 			}}
 		/>
 	{:else}
-		<div class="pt-2 pb-10">
+		<div class="pt-2 pb-28">
 			{#key chatId}
 				{#each messages as message, messageIdx}
 					<div class=" w-full">
@@ -355,7 +355,7 @@
 				{/each}
 
 				{#if bottomPadding}
-					<div class=" mb-10" />
+					<div class="  mb-20" />
 				{/if}
 			{/key}
 		</div>

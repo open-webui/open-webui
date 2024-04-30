@@ -24,68 +24,66 @@
 </script>
 
 {#if models.length > 0}
-	<div class=" text-center py-24 md:py-36">
-		<div class="m-auto max-w-3xl px-8">
-			<div class="flex justify-start mt-8">
-				<div class="flex -space-x-4 mb-0.5">
-					{#each models as model, modelIdx}
-						<button
-							on:click={() => {
-								selectedModelIdx = modelIdx;
-							}}
-						>
-							{#if model in modelfiles}
-								<img
-									src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
-									alt="modelfile"
-									class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
-									draggable="false"
-								/>
-							{:else}
-								<img
-									src={$i18n.language === 'dg-DG'
-										? `/doge.png`
-										: `${WEBUI_BASE_URL}/static/favicon.png`}
-									class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
-									alt="logo"
-									draggable="false"
-								/>
-							{/if}
-						</button>
-					{/each}
-				</div>
-			</div>
-			<div
-				class=" mt-2 mb-4 text-2xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4"
-			>
-				<div>
-					{#if modelfile}
-						<span class=" capitalize">
-							{modelfile.title}
-						</span>
-						<div class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400">
-							{modelfile.desc}
-						</div>
-						{#if modelfile.user}
-							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
-								By <a href="https://openwebui.com/m/{modelfile.user.username}"
-									>{modelfile.user.name ? modelfile.user.name : `@${modelfile.user.username}`}</a
-								>
-							</div>
+	<div class="m-auto w-full max-w-3xl px-8 pb-24">
+		<div class="flex justify-start">
+			<div class="flex -space-x-4 mb-0.5">
+				{#each models as model, modelIdx}
+					<button
+						on:click={() => {
+							selectedModelIdx = modelIdx;
+						}}
+					>
+						{#if model in modelfiles}
+							<img
+								src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+								alt="modelfile"
+								class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
+								draggable="false"
+							/>
+						{:else}
+							<img
+								src={$i18n.language === 'dg-DG'
+									? `/doge.png`
+									: `${WEBUI_BASE_URL}/static/favicon.png`}
+								class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
+								alt="logo"
+								draggable="false"
+							/>
 						{/if}
-					{:else}
-						<div class=" line-clamp-1">{$i18n.t('Hello, {{name}}', { name: $user.name })}</div>
-
-						<div class=" font-medium text-gray-400 dark:text-gray-500">
-							{$i18n.t('How can I help you today?')}
+					</button>
+				{/each}
+			</div>
+		</div>
+		<div
+			class=" mt-2 mb-4 text-2xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4"
+		>
+			<div>
+				{#if modelfile}
+					<span class=" capitalize">
+						{modelfile.title}
+					</span>
+					<div class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400">
+						{modelfile.desc}
+					</div>
+					{#if modelfile.user}
+						<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
+							By <a href="https://openwebui.com/m/{modelfile.user.username}"
+								>{modelfile.user.name ? modelfile.user.name : `@${modelfile.user.username}`}</a
+							>
 						</div>
 					{/if}
-				</div>
-			</div>
+				{:else}
+					<div class=" line-clamp-1">{$i18n.t('Hello, {{name}}', { name: $user.name })}</div>
 
-			<div class=" max-w-full">
-				<Suggestions {suggestionPrompts} {submitPrompt} />
+					<div class=" font-medium text-gray-400 dark:text-gray-500">
+						{$i18n.t('How can I help you today?')}
+					</div>
+				{/if}
 			</div>
+		</div>
+
+		<div class=" w-full">
+			<Suggestions {suggestionPrompts} {submitPrompt} />
 		</div>
 	</div>
 {/if}
