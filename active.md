@@ -73,11 +73,23 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 **Moonshot Challenges**
 Are you ready to [take the leap?](/community/projects/)
+<br>
 
 
-<hr style="margin-bottom: 20px;">
+# Parallel Modeling Environments
 
-<h1>State Data Services</h1>
+| Inflow | Basket of Goods| Outflow | Predicted Results |
+| ----------- | ----------- | ----------- | ----------- |
+| [Ingredients](/data-commons/docs/food/) | [Healthy Meals](/OpenFootprint) | [Nutrients](/balance/) | [Impact on Body](/balance/label_checker.html) |
+| [Suppliers](/data-pipeline/research/economy/) | [Commodities](/localsite/info/) | [Products](https://github.com/ModelEarth/OpenFootprint/tree/main/products/US) | [Impact on Environment](/community/tools/) |
+| [Stimulus ML](/RealityStream/) | Brain Waves | [Brain Voxels Firing](/RealityStream/models/random-bits-forest/) | [Eye Blinks](/RealityStream/output/blinks/) |
+| [Local Industries](/localsite/info/) | Honey Bees | [Population Change](/data-pipeline/research/bees/) | [Healthy Bee Population](/RealityStream/output/bees) |
+| [Local Industries](/localsite/info/) | [Tree Canopy](/data-commons/docs/conservation/) | Biodiversity Change | Healthy Forest Growth |
+
+<br>
+
+
+<h1>US EPA State Data Services</h1>
 
 In Feb 2024, US EPA Engineer Wes Ingwersen shared with the state partners that all data files for v1.0 of the USEEIO State Models are now published. [View Report](https://cfpub.epa.gov/si/si_public_record_Report.cfm?dirEntryId=360453&Lab=CESER) which includes [Excel versions of 2020 models](http://doi.org/10.23719/1530076) for all states.
 
@@ -97,3 +109,5 @@ Office of Research and Development
 US Environmental Protection Agency
 
 [Contact our Model.earth Team](../io/team/)
+
+

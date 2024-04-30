@@ -14,6 +14,28 @@ if(location.host.indexOf('model.georgia') >= 0) {
 
 <script type="text/javascript" src="https://model.earth/localsite/js/localsite.js?showheader=true"></script>
 
+<style>
+.mTable table {
+  border: 1px solid #ddd;
+  padding: 20px;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+.mTable tr {
+  text-align: left;
+}
+.mTable td, .mTable th {
+  text-align: left;
+  padding-right: 20px;
+}
+.mTable tr td
+{
+  border-bottom: 1px solid #ddd;
+}
+.mTable tr:last-child td {
+  border-bottom: 0px solid #ddd;
+}
+</style>
 <script>
 loadMarkdown("active.md", "activeDiv", "_parent");
 </script>
@@ -33,7 +55,7 @@ loadMarkdown("active.md", "activeDiv", "_parent");
 <body>
 
 <div class="content contentpadding">
-  <div id="activeDiv"></div>
+  <div id="activeDiv" class="mTable"></div>
 </div>
 
 </body>
