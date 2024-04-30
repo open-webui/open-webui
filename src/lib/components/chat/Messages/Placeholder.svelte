@@ -31,7 +31,7 @@
 					>
 						{#if model in modelfiles}
 							<img
-								src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+								src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/favicon.png`}
 								alt="modelfile"
 								class=" size-12 rounded-full border-[1px] border-gray-200 dark:border-none"
 								draggable="false"
@@ -39,8 +39,8 @@
 						{:else}
 							<img
 								src={models.length === 1
-									? `${WEBUI_BASE_URL}/static/favicon.png`
-									: `${WEBUI_BASE_URL}/static/favicon.png`}
+									? `${WEBUI_BASE_URL}/favicon.png`
+									: `${WEBUI_BASE_URL}/favicon.png`}
 								class=" size-12 rounded-full border-[1px] border-gray-200 dark:border-none"
 								alt="logo"
 								draggable="false"

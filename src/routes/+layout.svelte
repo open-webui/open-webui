@@ -70,7 +70,7 @@
 
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
-	<link rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<link rel="icon" href="{WEBUI_BASE_URL}/favicon.png" />
 
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
 	<!-- feel free to make a PR to fix if anyone wants to see it return -->
