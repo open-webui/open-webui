@@ -37,10 +37,22 @@
 	let title: string = 'UI';
 	let search = '';
 
-	let backendConfig = await getBackendConfig(localStorage.token);
-	if (backendConfig === null || backendConfig === undefined) {
-		console.log('backendConfig is null or undefined');
-	}
+	let modelStatus = '';
+
+	const init = async () => {
+		try {
+			const backendConfig = await getBackendConfig(localStorage.token);
+			if (backendConfig) {
+				modelStatus = backendConfig.model_status;
+			} else {
+				console.log('backendConfig is null or undefined');
+			}
+		} catch (err) {
+			console.error('Error fetching backendConfig:', err);
+		}
+	};
+
+	init();
 
 	let shareChatId = null;
 
@@ -720,7 +732,7 @@
 								<button
 									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 									on:click={() => {
-										window.open(backendConfig.model_status, '_blank');
+										window.open(modelStatus, '_blank');
 										showDropdown = false;
 									}}
 								>
