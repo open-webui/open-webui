@@ -56,7 +56,7 @@
 				</div>
 			</div>
 			<div
-				class=" mt-2 mb-3.5 text-2xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4"
+				class=" mt-2 mb-4 text-2xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4"
 			>
 				<div>
 					{#if modelfile}
