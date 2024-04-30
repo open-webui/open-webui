@@ -447,8 +447,8 @@
 								chat.id === chatDeleteId
 									? 'bg-gray-200 dark:bg-gray-900'
 									: chat.id === selectedChatId
-										? 'bg-gray-100 dark:bg-gray-950'
-										: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+									? 'bg-gray-100 dark:bg-gray-950'
+									: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 							>
 								<input bind:value={chatTitle} class=" bg-transparent w-full outline-none mr-10" />
 							</div>
@@ -459,8 +459,8 @@
 								chat.id === chatDeleteId
 									? 'bg-gray-200 dark:bg-gray-900'
 									: chat.id === selectedChatId
-										? 'bg-gray-100 dark:bg-gray-950'
-										: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+									? 'bg-gray-100 dark:bg-gray-950'
+									: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 								href="/c/{chat.id}"
 								on:click={() => {
 									selectedChatId = chat.id;
@@ -484,8 +484,8 @@
 							{chat.id === $chatId || chat.id === chatTitleEditId || chat.id === chatDeleteId
 								? 'from-gray-200 dark:from-gray-900'
 								: chat.id === selectedChatId
-									? 'from-gray-100 dark:from-gray-950'
-									: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+								? 'from-gray-100 dark:from-gray-950'
+								: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
 								absolute right-[10px] top-[10px] pr-2 pl-5 bg-gradient-to-l from-80%
 
 								  to-transparent"
@@ -714,7 +714,7 @@
 								<button
 									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 									on:click={() => {
-										window.location.href = 'https://status.clivia.fun/status/lamb-status';
+										window.open('https://status.clivia.fun/status/lamb-status', '_blank');
 										showDropdown = false;
 									}}
 								>
