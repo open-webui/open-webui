@@ -137,20 +137,22 @@
 			.getElementById(`message-${message.id}`)
 			?.getElementsByClassName('chat-assistant');
 
-		for (const element of chatMessageElements) {
-			auto_render(element, {
-				// customised options
-				// • auto-render specific keys, e.g.:
-				delimiters: [
-					{ left: '$$', right: '$$', display: false },
-					{ left: '$ ', right: ' $', display: false },
-					{ left: '\\(', right: '\\)', display: false },
-					{ left: '\\[', right: '\\]', display: false },
-					{ left: '[ ', right: ' ]', display: false }
-				],
-				// • rendering keys, e.g.:
-				throwOnError: false
-			});
+		if (chatMessageElements) {
+			for (const element of chatMessageElements) {
+				auto_render(element, {
+					// customised options
+					// • auto-render specific keys, e.g.:
+					delimiters: [
+						{ left: '$$', right: '$$', display: false },
+						{ left: '$ ', right: ' $', display: false },
+						{ left: '\\(', right: '\\)', display: false },
+						{ left: '\\[', right: '\\]', display: false },
+						{ left: '[ ', right: ' ]', display: false }
+					],
+					// • rendering keys, e.g.:
+					throwOnError: false
+				});
+			}
 		}
 	};
 

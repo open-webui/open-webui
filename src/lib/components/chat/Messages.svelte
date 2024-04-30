@@ -295,7 +295,7 @@
 		}}
 	/>
 {:else}
-	<div class=" pb-10">
+	<div class="pt-2 pb-10">
 		{#key chatId}
 			{#each messages as message, messageIdx}
 				<div class=" w-full">
