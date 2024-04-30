@@ -1,5 +1,5 @@
-Our weekly meetups: [Thursdays Noon EDT and Sundays 10 PM EDT](/io/coders/)
-Focused meetings on Mondays and Wednesdays at [10 PM EDT](/io/coders)
+Our weekly meetups: [Thursdays at NOON EDT and Sundays at 10 PM EDT](/io/coders/)
+Focused coding meetings on Mondays and Wednesdays at [10 PM EDT](/io/coders)
 
 <hr style="margin-bottom:20px">
 
