@@ -322,6 +322,8 @@ def rag_messages(
     context_string = ""
     for context in relevant_contexts:
         items = context["documents"][0]
+        # Using list comprehension to remove None items
+        items = [item for item in items if item is not None]
         context_string += "\n\n".join(items)
     context_string = context_string.strip()
 
