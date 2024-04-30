@@ -1,13 +1,11 @@
-Regular meetings: [Sunday 10 PM ET and Thursday Noon ET](/io/coders/)
-<!--Overview Session on Tuesday at Noon ET for new team members.-->
+Our weekly meetups: [Thursdays Noon EDT and Sundays 10 PM EDT](/io/coders/)
+Focused meetings on Mondays and Wednesdays at [10 PM EDT](/io/coders)
 
 <hr style="margin-bottom:20px">
 
-Of Interest: [CrewAI+Ollama](https://lightning.ai/lightning-ai/studios/ai-agents-powered-by-crewai)
-
 # Active Projects
 
-[Local Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research)
+[Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
 <!--
 CSV Files to use for Timelines, Observable, and AI Training at: [industries/naics/US/counties](https://github.com/ModelEarth/community-data/tree/master/industries/naics/US/counties)  
@@ -23,8 +21,8 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [Top Commodities by State (hide sort columns)](/data-pipeline/research/economy) - Dinesh
 - [State Regions using Sets of Counties](/community-data/us/edd/) - Dinesh
 - [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - Honglin, Rupesh
-
 - [3D Force Graph](https://github.com/vasturiano/3d-force-graph) for [Balanced Diets](/balance/) - Rakesh, Anshit
+- [CrewAI+Ollama integrated within Open WebUI](https://lightning.ai/lightning-ai/studios/ai-agents-powered-by-crewai)
 
 **Observable Framework + GDC Visualization Projects**
 
@@ -57,13 +55,14 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [ChatAll - Share simultaneous AI Chats with Chatbot UI](https://github.com/sunner/ChatALL)
 -->
 
-**Storyboard Team - Image and Video Generation**
-- [Storyboard Generator](/data-pipeline/research/) - [Kishor's Repo](https://github.com/mannurkishorreddy/streamlit-replicate-img-app) and [Our Fork](https://github.com/ModelEarth/replicate)
-- [Image Gallery (React)](/react-gallery/view/) - Anthony
+**Storyboard Generator - Images and Video for Request Visualization**
 - [Image Gallery (JQuery) and Video (Leonardo)](/data-pipeline/research/stream)
+- [Our Storyboard Generator](/data-pipeline/research/) and [Request Visualizer for Meals and City Planning](/requests/)
+- [Open Webui image generation](https://docs.openwebui.com/tutorial/images/) - Integrate our image .csv process
+<!-- [Kishor's Repo](https://github.com/mannurkishorreddy/streamlit-replicate-img-app)-->
+<!--- [Image Gallery (React)](/react-gallery/view/) - Anthony -->
 
 **React, Tabulator, Industry Timelines**
-Our React Team meets Wednesdays at [10 PM EDT](coders)
 - [React Team - Impact Side Navigation](/io/charts/inflow-outflow/#set=prosperity&indicators=VADD,JOBS) - Ziyao
 - [React Team - Mosic column checkboxes](/io/charts) - Fanyi
 - [React Team - Commodity Totals](/localsite/info/data/totals/) in [Jobs Reports](/localsite/info/#indicators=JOBS)
