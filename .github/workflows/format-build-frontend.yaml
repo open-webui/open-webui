@@ -29,6 +29,9 @@ jobs:
       - name: Format Frontend
         run: npm run format
 
+      - name: Run i18next
+        run: npm run i18n:parse
+
       - name: Check for Changes After Format
         run: git diff --exit-code
 

@@ -31,6 +31,11 @@ from langchain_community.document_loaders import (
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
+import validators
+import urllib.parse
+import socket
+
+
 from pydantic import BaseModel
 from typing import Optional
 import mimetypes
@@ -84,6 +89,7 @@ from config import (
     CHUNK_SIZE,
     CHUNK_OVERLAP,
     RAG_TEMPLATE,
+    ENABLE_LOCAL_WEB_FETCH,
 )
 
 from constants import ERROR_MESSAGES
@@ -391,16 +397,16 @@ def query_doc_handler(
             return query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
                 query=form_data.query,
-                embeddings_function=app.state.EMBEDDING_FUNCTION,
-                reranking_function=app.state.sentence_transformer_rf,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
                 k=form_data.k if form_data.k else app.state.TOP_K,
+                reranking_function=app.state.sentence_transformer_rf,
                 r=form_data.r if form_data.r else app.state.RELEVANCE_THRESHOLD,
             )
         else:
             return query_doc(
                 collection_name=form_data.collection_name,
                 query=form_data.query,
-                embeddings_function=app.state.EMBEDDING_FUNCTION,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
                 k=form_data.k if form_data.k else app.state.TOP_K,
             )
     except Exception as e:
@@ -429,16 +435,16 @@ def query_collection_handler(
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 query=form_data.query,
-                embeddings_function=app.state.EMBEDDING_FUNCTION,
-                reranking_function=app.state.sentence_transformer_rf,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
                 k=form_data.k if form_data.k else app.state.TOP_K,
+                reranking_function=app.state.sentence_transformer_rf,
                 r=form_data.r if form_data.r else app.state.RELEVANCE_THRESHOLD,
             )
         else:
             return query_collection(
                 collection_names=form_data.collection_names,
                 query=form_data.query,
-                embeddings_function=app.state.EMBEDDING_FUNCTION,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
                 k=form_data.k if form_data.k else app.state.TOP_K,
             )
 
@@ -454,7 +460,7 @@ def query_collection_handler(
 def store_web(form_data: StoreWebForm, user=Depends(get_current_user)):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
     try:
-        loader = WebBaseLoader(form_data.url)
+        loader = get_web_loader(form_data.url)
         data = loader.load()
 
         collection_name = form_data.collection_name
@@ -473,6 +479,37 @@ def store_web(form_data: StoreWebForm, user=Depends(get_current_user)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+
+
+def get_web_loader(url: str):
+    # Check if the URL is valid
+    if isinstance(validators.url(url), validators.ValidationError):
+        raise ValueError(ERROR_MESSAGES.INVALID_URL)
+    if not ENABLE_LOCAL_WEB_FETCH:
+        # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
+        parsed_url = urllib.parse.urlparse(url)
+        # Get IPv4 and IPv6 addresses
+        ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
+        # Check if any of the resolved addresses are private
+        # This is technically still vulnerable to DNS rebinding attacks, as we don't control WebBaseLoader
+        for ip in ipv4_addresses:
+            if validators.ipv4(ip, private=True):
+                raise ValueError(ERROR_MESSAGES.INVALID_URL)
+        for ip in ipv6_addresses:
+            if validators.ipv6(ip, private=True):
+                raise ValueError(ERROR_MESSAGES.INVALID_URL)
+    return WebBaseLoader(url)
+
+
+def resolve_hostname(hostname):
+    # Get address information
+    addr_info = socket.getaddrinfo(hostname, None)
+
+    # Extract IP addresses from address information
+    ipv4_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET]
+    ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
+
+    return ipv4_addresses, ipv6_addresses
 
 
 def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> bool:

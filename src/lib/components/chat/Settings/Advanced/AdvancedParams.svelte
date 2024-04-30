@@ -492,8 +492,8 @@
 					<input
 						id="steps-range"
 						type="range"
-						min="1"
-						max="16000"
+						min="-1"
+						max="10240000"
 						step="1"
 						bind:value={options.num_ctx}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
@@ -504,9 +504,8 @@
 						bind:value={options.num_ctx}
 						type="number"
 						class=" bg-transparent text-center w-14"
-						min="1"
-						max="16000"
-						step="1"
+						min="-1"
+						step="10"
 					/>
 				</div>
 			</div>

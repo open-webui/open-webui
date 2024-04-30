@@ -168,7 +168,11 @@ except:
 
 STATIC_DIR = str(Path(os.getenv("STATIC_DIR", "./static")).resolve())
 
-shutil.copyfile(f"{FRONTEND_BUILD_DIR}/favicon.png", f"{STATIC_DIR}/favicon.png")
+frontend_favicon = f"{FRONTEND_BUILD_DIR}/favicon.png"
+if os.path.exists(frontend_favicon):
+    shutil.copyfile(frontend_favicon, f"{STATIC_DIR}/favicon.png")
+else:
+    logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
 ####################################
 # CUSTOM_NAME
@@ -515,6 +519,8 @@ RAG_TEMPLATE = os.environ.get("RAG_TEMPLATE", DEFAULT_RAG_TEMPLATE)
 
 RAG_OPENAI_API_BASE_URL = os.getenv("RAG_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
 RAG_OPENAI_API_KEY = os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY)
+
+ENABLE_LOCAL_WEB_FETCH = os.getenv("ENABLE_LOCAL_WEB_FETCH", "False").lower() == "true"
 
 ####################################
 # Transcribe
