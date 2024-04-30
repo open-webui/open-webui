@@ -24,7 +24,7 @@
 </script>
 
 {#if models.length > 0}
-	<div class=" my-auto text-center pb-10 md:pb-24">
+	<div class=" my-auto text-center pb-10 md:pb-32">
 		<div class="m-auto max-w-3xl px-8">
 			<div class="flex justify-start mt-8">
 				<div class="flex -space-x-4 mb-0.5">
@@ -76,7 +76,7 @@
 					{:else}
 						<div class=" line-clamp-1">{$i18n.t('Hello, {{name}}', { name: $user.name })}</div>
 
-						<div class=" font-medium text-gray-400 dark:">
+						<div class=" font-medium text-gray-400 dark:text-gray-500">
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}

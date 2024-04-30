@@ -15,7 +15,7 @@
 		{#each prompts as prompt, promptIdx}
 			<div class="shrink-0">
 				<button
-					class="flex flex-1 shrink-0 w-64 justify-between h-full px-5 py-3 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 rounded-3xl transition group"
+					class="flex flex-1 shrink-0 w-64 justify-between h-full px-5 py-3 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 rounded-2xl transition group"
 					on:click={() => {
 						submitPrompt(prompt.content);
 					}}
