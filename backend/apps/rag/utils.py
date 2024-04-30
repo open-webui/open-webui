@@ -321,8 +321,12 @@ def rag_messages(
 
     context_string = ""
     for context in relevant_contexts:
-        items = context["documents"][0]
-        context_string += "\n\n".join(items)
+        try:
+            if "documents" in context:
+                items = [item for item in context["documents"][0] if item is not None]
+                context_string += "\n\n".join(items)
+        except Exception as e:
+            log.exception(e)
     context_string = context_string.strip()
 
     ra_content = rag_template(
