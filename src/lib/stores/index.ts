@@ -78,6 +78,7 @@ type Settings = {
 	saveChatHistory?: boolean;
 	notificationEnabled?: boolean;
 	title?: TitleSettings;
+	splitLargeDeltas?: boolean;
 
 	system?: string;
 	requestFormat?: string;
