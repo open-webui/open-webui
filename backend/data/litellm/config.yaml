@@ -1,4 +1,16 @@
 general_settings: {}
 litellm_settings: {}
-model_list: []
 router_settings: {}
+model_list:
+  - model_name: gpt-4-32k-litellm ### RECEIVED MODEL NAME ###
+    litellm_params: # all params accepted by litellm.completion() - https://docs.litellm.ai/docs/completion/input
+      model: azure/gpt-4-32k ### MODEL NAME sent to `litellm.completion()` ###
+      api_base: "os.environ/AZURE_API_BASE" # https://your-account-name.openai.azure.com/
+      api_key: "os.environ/AZURE_API_KEY" # does os.getenv("AZURE_API_KEY_EU")
+      api_version: "os.environ/AZURE_API_VERSION" # 2024-03-01-preview
+      rpm: 3000      # [OPTIONAL] Rate limit for this deployment: in requests per minute (rpm)
+litellm_settings: # module level litellm settings - https://github.com/BerriAI/litellm/blob/main/litellm/__init__.py
+  drop_params: True
+  set_verbose: False
+
+general_settings: {}
