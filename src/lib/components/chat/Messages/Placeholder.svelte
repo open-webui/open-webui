@@ -24,7 +24,7 @@
 </script>
 
 {#if models.length > 0}
-	<div class=" my-auto text-center pb-10 md:pb-32">
+	<div class=" text-center py-24 md:py-36">
 		<div class="m-auto max-w-3xl px-8">
 			<div class="flex justify-start mt-8">
 				<div class="flex -space-x-4 mb-0.5">
