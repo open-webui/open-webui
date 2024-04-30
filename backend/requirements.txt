@@ -28,9 +28,10 @@ argon2-cffi
 apscheduler
 google-generativeai
 
-langchain
+langchain==0.1.16
+langchain-community==0.0.34
 langchain-chroma
-langchain-community
+
 fake_useragent
 chromadb
 sentence_transformers
