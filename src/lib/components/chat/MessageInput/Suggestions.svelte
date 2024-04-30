@@ -13,7 +13,7 @@
 <div class="w-full">
 	<div class="relative w-full flex gap-2 snap-x overflow-x-auto tabs">
 		{#each prompts as prompt, promptIdx}
-			<div class="snap-center shrink-0">
+			<div class="shrink-0">
 				<button
 					class="flex flex-1 shrink-0 w-60 justify-between h-full px-4 py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 rounded-2xl transition group"
 					on:click={() => {
