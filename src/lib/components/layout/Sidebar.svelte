@@ -1,12 +1,6 @@
 <script lang="ts">
-	import { v4 as uuidv4 } from 'uuid';
-
-	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
-
-	import { goto, invalidateAll } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { user, chats, settings, showSettings, chatId, tags } from '$lib/stores';
+	import { goto } from '$app/navigation';
+	import { user, chats, settings, showSettings, chatId, tags, showSidebar } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -30,6 +24,7 @@
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 
 	const BREAKPOINT = 1024;
+
 	let show = false;
 	let navElement;
 
@@ -50,7 +45,7 @@
 	let isEditing = false;
 
 	onMount(async () => {
-		show = window.innerWidth > BREAKPOINT;
+		showSidebar.set(window.innerWidth > BREAKPOINT);
 		await chats.set(await getChatList(localStorage.token));
 
 		let touchstart;
@@ -61,10 +56,10 @@
 			const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
 			if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 4) {
 				if (touchend.screenX < touchstart.screenX) {
-					show = false;
+					showSidebar.set(false);
 				}
 				if (touchend.screenX > touchstart.screenX) {
-					show = true;
+					showSidebar.set(true);
 				}
 			}
 		}
@@ -80,8 +75,8 @@
 		};
 
 		const onResize = () => {
-			if (show && window.innerWidth < BREAKPOINT) {
-				show = false;
+			if ($showSidebar && window.innerWidth < BREAKPOINT) {
+				showSidebar.set(false);
 			}
 		};
 
@@ -167,13 +162,15 @@
 
 <div
 	bind:this={navElement}
-	class="h-screen max-h-[100dvh] min-h-screen {show
+	id="sidebar"
+	class="h-screen max-h-[100dvh] min-h-screen {$showSidebar
 		? 'lg:relative w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0
         "
+	data-state={$showSidebar}
 >
 	<div
-		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] {show
+		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
@@ -466,7 +463,7 @@
 								on:click={() => {
 									selectedChatId = chat.id;
 									if (window.innerWidth < 1024) {
-										show = false;
+										showSidebar.set(false);
 									}
 								}}
 								draggable="false"
@@ -803,14 +800,14 @@
 	>
 		<Tooltip
 			placement="right"
-			content={`${show ? $i18n.t('Close') : $i18n.t('Open')} ${$i18n.t('sidebar')}`}
+			content={`${$showSidebar ? $i18n.t('Close') : $i18n.t('Open')} ${$i18n.t('sidebar')}`}
 			touch={false}
 		>
 			<button
 				id="sidebar-toggle-button"
 				class=" group"
 				on:click={() => {
-					show = !show;
+					showSidebar.set(!$showSidebar);
 				}}
 				><span class="" data-state="closed"
 					><div

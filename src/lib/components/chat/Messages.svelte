@@ -297,7 +297,7 @@
 			}}
 		/>
 	{:else}
-		<div class="pt-2 pb-28">
+		<div class="{$settings?.fullScreenMode ?? null ? 'w-full' : 'mx-auto'} pt-2 pb-28">
 			{#key chatId}
 				{#each messages as message, messageIdx}
 					<div class=" w-full">

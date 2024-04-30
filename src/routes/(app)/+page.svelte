@@ -877,7 +877,6 @@
 				/>
 			</div>
 		</div>
-
-		<MessageInput bind:files bind:prompt bind:autoScroll {messages} {submitPrompt} {stopResponse} />
 	</div>
 </div>
+<MessageInput bind:files bind:prompt bind:autoScroll {messages} {submitPrompt} {stopResponse} />

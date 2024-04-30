@@ -900,17 +900,16 @@
 					/>
 				</div>
 			</div>
-
-			<MessageInput
-				bind:files
-				bind:prompt
-				bind:autoScroll
-				suggestionPrompts={selectedModelfile?.suggestionPrompts ??
-					$config.default_prompt_suggestions}
-				{messages}
-				{submitPrompt}
-				{stopResponse}
-			/>
 		</div>
 	</div>
+
+	<MessageInput
+		bind:files
+		bind:prompt
+		bind:autoScroll
+		suggestionPrompts={selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
+		{messages}
+		{submitPrompt}
+		{stopResponse}
+	/>
 {/if}
