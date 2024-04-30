@@ -238,8 +238,7 @@ async def get_models(user=Depends(get_current_user)):
                 elif user and user.role == "admin":
                     data["data"] = list(
                         filter(
-                            lambda model: model["id"] 
-                            in app.state.ADMIN_MODEL_FILTER_LIST,
+                            lambda model: model["id"] in app.state.ADMIN_MODEL_FILTER_LIST,
                             data["data"],
                         )
                     )

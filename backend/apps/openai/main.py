@@ -26,7 +26,7 @@ from config import (
     CACHE_DIR,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
-    ADMIN_MODEL_FILTER_LIST
+    ADMIN_MODEL_FILTER_LIST,
 )
 from typing import List, Optional
 
