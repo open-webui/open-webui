@@ -22,6 +22,8 @@
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
 
+	export let prompt;
+	export let suggestionPrompts;
 	export let processing = '';
 	export let bottomPadding = false;
 	export let autoScroll;
@@ -276,7 +278,22 @@
 </script>
 
 {#if messages.length == 0}
-	<Placeholder models={selectedModels} modelfiles={selectedModelfiles} />
+	<Placeholder
+		models={selectedModels}
+		modelfiles={selectedModelfiles}
+		{suggestionPrompts}
+		submitPrompt={async (p) => {
+			const chatTextAreaElement = document.getElementById('chat-textarea');
+			if (chatTextAreaElement) {
+				prompt = p;
+
+				await tick();
+
+				chatTextAreaElement.style.height = '';
+				chatTextAreaElement.style.height = Math.min(chatTextAreaElement.scrollHeight, 200) + 'px';
+			}
+		}}
+	/>
 {:else}
 	<div class=" pb-10">
 		{#key chatId}

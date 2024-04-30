@@ -867,7 +867,10 @@
 					bind:history
 					bind:messages
 					bind:autoScroll
+					bind:prompt
 					bottomPadding={files.length > 0}
+					suggestionPrompts={selectedModelfile?.suggestionPrompts ??
+						$config.default_prompt_suggestions}
 					{sendPrompt}
 					{continueGeneration}
 					{regenerateResponse}
@@ -875,14 +878,6 @@
 			</div>
 		</div>
 
-		<MessageInput
-			bind:files
-			bind:prompt
-			bind:autoScroll
-			suggestionPrompts={selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
-			{messages}
-			{submitPrompt}
-			{stopResponse}
-		/>
+		<MessageInput bind:files bind:prompt bind:autoScroll {messages} {submitPrompt} {stopResponse} />
 	</div>
 </div>

@@ -20,7 +20,6 @@
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
 
-	export let suggestionPrompts = [];
 	export let autoScroll = true;
 	let chatTextAreaElement: HTMLTextAreaElement;
 	let filesInputElement;
@@ -453,9 +452,9 @@
 					/>
 				{/if}
 
-				{#if messages.length == 0 && suggestionPrompts.length !== 0}
+				<!-- {#if messages.length == 0 && suggestionPrompts.length !== 0}
 					<Suggestions {suggestionPrompts} {submitPrompt} />
-				{/if}
+				{/if} -->
 			</div>
 		</div>
 	</div>

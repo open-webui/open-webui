@@ -10,14 +10,12 @@
 			: suggestionPrompts.sort(() => Math.random() - 0.5).slice(0, 4);
 </script>
 
-<div class=" mb-3 md:p-1 text-left w-full">
-	<div class=" flex flex-wrap-reverse px-2 text-left">
+<div class="w-full">
+	<div class="relative w-full flex gap-2 snap-x overflow-x-auto tabs">
 		{#each prompts as prompt, promptIdx}
-			<div
-				class="{promptIdx > 1 ? 'hidden sm:inline-flex' : ''} basis-full sm:basis-1/2 p-[5px] px-1"
-			>
+			<div class="snap-center shrink-0">
 				<button
-					class=" flex-1 flex justify-between w-full h-full px-4 py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 rounded-2xl transition group"
+					class="flex flex-1 shrink-0 w-60 justify-between h-full px-4 py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 rounded-2xl transition group"
 					on:click={() => {
 						submitPrompt(prompt.content);
 					}}
@@ -25,7 +23,7 @@
 					<div class="flex flex-col text-left self-center">
 						{#if prompt.title && prompt.title[0] !== ''}
 							<div class="text-sm font-medium dark:text-gray-300">{prompt.title[0]}</div>
-							<div class="text-sm text-gray-500 line-clamp-1">{prompt.title[1]}</div>
+							<div class="text-sm text-gray-500 font-normal line-clamp-1">{prompt.title[1]}</div>
 						{:else}
 							<div class=" self-center text-sm font-medium dark:text-gray-300 line-clamp-2">
 								{prompt.content}
@@ -52,5 +50,22 @@
 				</button>
 			</div>
 		{/each}
+		<!-- <div class="snap-center shrink-0">
+		<img
+			class="shrink-0 w-80 h-40 rounded-lg shadow-xl bg-white"
+			src="https://images.unsplash.com/photo-1604999565976-8913ad2ddb7c?ixlib=rb-1.2.1&amp;ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&amp;auto=format&amp;fit=crop&amp;w=320&amp;h=160&amp;q=80"
+		/>
+	</div> -->
 	</div>
 </div>
+
+<style>
+	.tabs::-webkit-scrollbar {
+		display: none; /* for Chrome, Safari and Opera */
+	}
+
+	.tabs {
+		-ms-overflow-style: none; /* IE and Edge */
+		scrollbar-width: none; /* Firefox */
+	}
+</style>
