@@ -53,28 +53,29 @@
 		show = window.innerWidth > BREAKPOINT;
 		await chats.set(await getChatList(localStorage.token));
 
-		let touchstartX = 0;
-		let touchendX = 0;
+		let touchstart;
+		let touchend;
 
 		function checkDirection() {
 			const screenWidth = window.innerWidth;
-			const swipeDistance = Math.abs(touchendX - touchstartX);
-			if (swipeDistance >= screenWidth / 4) {
-				if (touchendX < touchstartX) {
+			const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
+			if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 4) {
+				if (touchend.screenX < touchstart.screenX) {
 					show = false;
 				}
-				if (touchendX > touchstartX) {
+				if (touchend.screenX > touchstart.screenX) {
 					show = true;
 				}
 			}
 		}
 
 		const onTouchStart = (e) => {
-			touchstartX = e.changedTouches[0].screenX;
+			touchstart = e.changedTouches[0];
+			console.log(touchstart.clientX);
 		};
 
 		const onTouchEnd = (e) => {
-			touchendX = e.changedTouches[0].screenX;
+			touchend = e.changedTouches[0];
 			checkDirection();
 		};
 
@@ -84,14 +85,14 @@
 			}
 		};
 
-		document.addEventListener('touchstart', onTouchStart);
-		document.addEventListener('touchend', onTouchEnd);
+		window.addEventListener('touchstart', onTouchStart);
+		window.addEventListener('touchend', onTouchEnd);
 		window.addEventListener('resize', onResize);
 
 		return () => {
-			document.removeEventListener('touchstart', onTouchStart);
-			document.removeEventListener('touchend', onTouchEnd);
-			document.removeEventListener('resize', onResize);
+			window.removeEventListener('touchstart', onTouchStart);
+			window.removeEventListener('touchend', onTouchEnd);
+			window.removeEventListener('resize', onResize);
 		};
 	});
 

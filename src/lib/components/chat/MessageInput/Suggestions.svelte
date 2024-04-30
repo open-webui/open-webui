@@ -4,10 +4,10 @@
 
 	let prompts = [];
 
-	$: prompts =
-		suggestionPrompts.length <= 4
-			? suggestionPrompts
-			: suggestionPrompts.sort(() => Math.random() - 0.5).slice(0, 4);
+	$: prompts = suggestionPrompts;
+	// suggestionPrompts.length <= 4
+	// 	? suggestionPrompts
+	// 	: suggestionPrompts.sort(() => Math.random() - 0.5).slice(0, 4);
 </script>
 
 <div class="w-full">
