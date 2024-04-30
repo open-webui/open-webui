@@ -399,7 +399,7 @@
 							await chats.set(await getChatList(localStorage.token));
 						}}
 					>
-						all
+					{$i18n.t('all')}
 					</button>
 					{#each $tags as tag}
 						<button
@@ -610,7 +610,7 @@
 										</button>
 									</ChatMenu>
 
-									<Tooltip content="Archive">
+									<Tooltip content={$i18n.t('Archive')}>
 										<button
 											aria-label="Archive"
 											class=" self-center dark:hover:text-white transition"

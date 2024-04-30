@@ -21,7 +21,7 @@
 	export let value = '';
 	export let placeholder = 'Select a model';
 	export let searchEnabled = true;
-	export let searchPlaceholder = 'Search a model';
+	export let searchPlaceholder = $i18n.t(`Search a model`);
 
 	export let items = [{ value: 'mango', label: 'Mango' }];
 
@@ -291,7 +291,7 @@
 				{:else}
 					<div>
 						<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
-							No results found
+							{$i18n.t('No results found')}
 						</div>
 					</div>
 				{/each}
@@ -303,7 +303,8 @@
 							pullModelHandler();
 						}}
 					>
-						Pull "{searchValue}" from Ollama.com
+						{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}
+
 					</button>
 				{/if}
 
