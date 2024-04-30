@@ -56,7 +56,7 @@ ENV OPENAI_API_KEY="" \
 
 # Use locally bundled version of the LiteLLM cost map json
 # to avoid repetitive startup connections
-ENV LITELLM_LOCAL_MODEL_COST_MAP="true"
+ENV LITELLM_LOCAL_MODEL_COST_MAP="True"
 
 
 #### Other models #########################################################
