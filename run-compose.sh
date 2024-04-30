@@ -82,6 +82,7 @@ usage() {
     echo "Examples:"
     echo "  $0 --drop"
     echo "  $0 --enable-gpu[count=1]"
+    echo "  $0 --enable-gpu[count=all]"
     echo "  $0 --enable-api[port=11435]"
     echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=3000]"
     echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=3000] --data[folder=./ollama-data]"
@@ -160,7 +161,7 @@ else
     if [[ $enable_gpu == true ]]; then
         # Validate and process command-line arguments
         if [[ -n $gpu_count ]]; then
-            if ! [[ $gpu_count =~ ^[0-9]+$ ]]; then
+            if ! [[ $gpu_count =~ ^([0-9]+|all)$ ]]; then
                 echo "Invalid GPU count: $gpu_count"
                 exit 1
             fi

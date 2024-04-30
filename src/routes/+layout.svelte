@@ -7,9 +7,11 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
 
-	import '../app.css';
 	import '../tailwind.css';
+	import '../app.css';
+
 	import 'tippy.js/dist/tippy.css';
+
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import i18n, { initI18n } from '$lib/i18n';
 
@@ -60,6 +62,8 @@
 		}
 
 		await tick();
+
+		document.getElementById('splash-screen')?.remove();
 		loaded = true;
 	});
 </script>
@@ -68,8 +72,10 @@
 	<title>{$WEBUI_NAME}</title>
 	<link rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
 
-	<link rel="stylesheet" type="text/css" href="/themes/rosepine.css" />
-	<link rel="stylesheet" type="text/css" href="/themes/rosepine-dawn.css" />
+	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
+	<!-- feel free to make a PR to fix if anyone wants to see it return -->
+	<!-- <link rel="stylesheet" type="text/css" href="/themes/rosepine.css" />
+	<link rel="stylesheet" type="text/css" href="/themes/rosepine-dawn.css" /> -->
 </svelte:head>
 
 {#if loaded}

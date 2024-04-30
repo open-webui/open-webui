@@ -20,12 +20,17 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
 
-from apps.litellm.main import app as litellm_app, startup as litellm_app_startup
+from apps.litellm.main import (
+    app as litellm_app,
+    start_litellm_background,
+    shutdown_litellm_background,
+)
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
 from apps.web.main import app as webui_app
 
+import asyncio
 from pydantic import BaseModel
 from typing import List
 
@@ -42,11 +47,13 @@ from config import (
     FRONTEND_BUILD_DIR,
     CACHE_DIR,
     STATIC_DIR,
-    MODEL_FILTER_ENABLED,
+    ENABLE_LITELLM,
+    ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     GLOBAL_LOG_LEVEL,
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
+    ENABLE_ADMIN_EXPORT,
 )
 from constants import ERROR_MESSAGES
 
@@ -83,7 +90,7 @@ https://github.com/open-webui/open-webui
 
 app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
-app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
+app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.WEBHOOK_URL = WEBHOOK_URL
@@ -110,15 +117,14 @@ class RAGMiddleware(BaseHTTPMiddleware):
             if "docs" in data:
                 data = {**data}
                 data["messages"] = rag_messages(
-                    data["docs"],
-                    data["messages"],
-                    rag_app.state.RAG_TEMPLATE,
-                    rag_app.state.TOP_K,
-                    rag_app.state.RAG_EMBEDDING_ENGINE,
-                    rag_app.state.RAG_EMBEDDING_MODEL,
-                    rag_app.state.sentence_transformer_ef,
-                    rag_app.state.RAG_OPENAI_API_KEY,
-                    rag_app.state.RAG_OPENAI_API_BASE_URL,
+                    docs=data["docs"],
+                    messages=data["messages"],
+                    template=rag_app.state.RAG_TEMPLATE,
+                    embedding_function=rag_app.state.EMBEDDING_FUNCTION,
+                    k=rag_app.state.TOP_K,
+                    reranking_function=rag_app.state.sentence_transformer_rf,
+                    r=rag_app.state.RELEVANCE_THRESHOLD,
+                    hybrid_search=rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
                 )
                 del data["docs"]
 
@@ -170,7 +176,8 @@ async def check_url(request: Request, call_next):
 
 @app.on_event("startup")
 async def on_startup():
-    await litellm_app_startup()
+    if ENABLE_LITELLM:
+        asyncio.create_task(start_litellm_background())
 
 
 app.mount("/api/v1", webui_app)
@@ -202,13 +209,14 @@ async def get_app_config():
         "default_models": webui_app.state.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
         "trusted_header_auth": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
+        "admin_export_enabled": ENABLE_ADMIN_EXPORT,
     }
 
 
 @app.get("/api/config/model/filter")
 async def get_model_filter_config(user=Depends(get_admin_user)):
     return {
-        "enabled": app.state.MODEL_FILTER_ENABLED,
+        "enabled": app.state.ENABLE_MODEL_FILTER,
         "models": app.state.MODEL_FILTER_LIST,
     }
 
@@ -222,20 +230,20 @@ class ModelFilterConfigForm(BaseModel):
 async def update_model_filter_config(
     form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
 ):
-    app.state.MODEL_FILTER_ENABLED = form_data.enabled
+    app.state.ENABLE_MODEL_FILTER = form_data.enabled
     app.state.MODEL_FILTER_LIST = form_data.models
 
-    ollama_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    ollama_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
     ollama_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
-    openai_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    openai_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
     openai_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
-    litellm_app.state.MODEL_FILTER_ENABLED = app.state.MODEL_FILTER_ENABLED
+    litellm_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
     litellm_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
     return {
-        "enabled": app.state.MODEL_FILTER_ENABLED,
+        "enabled": app.state.ENABLE_MODEL_FILTER,
         "models": app.state.MODEL_FILTER_LIST,
     }
 
@@ -315,3 +323,9 @@ app.mount(
     SPAStaticFiles(directory=FRONTEND_BUILD_DIR, html=True),
     name="spa-static-files",
 )
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    if ENABLE_LITELLM:
+        await shutdown_litellm_background()

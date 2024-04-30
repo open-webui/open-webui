@@ -24,7 +24,7 @@ from config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     CACHE_DIR,
-    MODEL_FILTER_ENABLED,
+    ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
 )
 from typing import List, Optional
@@ -45,7 +45,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.state.MODEL_FILTER_ENABLED = MODEL_FILTER_ENABLED
+app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
@@ -80,6 +80,7 @@ async def get_openai_urls(user=Depends(get_admin_user)):
 
 @app.post("/urls/update")
 async def update_openai_urls(form_data: UrlsUpdateForm, user=Depends(get_admin_user)):
+    await get_all_models()
     app.state.OPENAI_API_BASE_URLS = form_data.urls
     return {"OPENAI_API_BASE_URLS": app.state.OPENAI_API_BASE_URLS}
 
@@ -224,7 +225,7 @@ async def get_all_models():
 async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_user)):
     if url_idx == None:
         models = await get_all_models()
-        if app.state.MODEL_FILTER_ENABLED:
+        if app.state.ENABLE_MODEL_FILTER:
             if user.role == "user":
                 models["data"] = list(
                     filter(
@@ -341,7 +342,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             try:
                 res = r.json()
                 if "error" in res:
-                    error_detail = f"External: {res['error']}"
+                    error_detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
             except:
                 error_detail = f"External: {e}"
 

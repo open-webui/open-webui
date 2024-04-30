@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.122] - 2024-04-27
+
+### Added
+
+- **🌟 Enhanced RAG Pipeline**: Now with hybrid searching via 'BM25', reranking powered by 'CrossEncoder', and configurable relevance score thresholds.
+- **🛢️ External Database Support**: Seamlessly connect to custom SQLite or Postgres databases using the 'DATABASE_URL' environment variable.
+- **🌐 Remote ChromaDB Support**: Introducing the capability to connect to remote ChromaDB servers.
+- **👨‍💼 Improved Admin Panel**: Admins can now conveniently check users' chat lists and last active status directly from the admin panel.
+- **🎨 Splash Screen**: Introducing a loading splash screen for a smoother user experience.
+- **🌍 Language Support Expansion**: Added support for Bangla (bn-BD), along with enhancements to Chinese, Spanish, and Ukrainian translations.
+- **💻 Improved LaTeX Rendering Performance**: Enjoy faster rendering times for LaTeX equations.
+- **🔧 More Environment Variables**: Explore additional environment variables in our documentation (https://docs.openwebui.com), including the 'ENABLE_LITELLM' option to manage memory usage.
+
+### Fixed
+
+- **🔧 Ollama Compatibility**: Resolved errors occurring when Ollama server version isn't an integer, such as SHA builds or RCs.
+- **🐛 Various OpenAI API Issues**: Addressed several issues related to the OpenAI API.
+- **🛑 Stop Sequence Issue**: Fixed the problem where the stop sequence with a backslash '\' was not functioning.
+- **🔤 Font Fallback**: Corrected font fallback issue.
+
+### Changed
+
+- **⌨️ Prompt Input Behavior on Mobile**: Enter key prompt submission disabled on mobile devices for improved user experience.
+
+## [0.1.121] - 2024-04-24
+
+### Fixed
+
+- **🔧 Translation Issues**: Addressed various translation discrepancies.
+- **🔒 LiteLLM Security Fix**: Updated LiteLLM version to resolve a security vulnerability.
+- **🖥️ HTML Tag Display**: Rectified the issue where the '< br >' tag wasn't displaying correctly.
+- **🔗 WebSocket Connection**: Resolved the failure of WebSocket connection under HTTPS security for ComfyUI server.
+- **📜 FileReader Optimization**: Implemented FileReader initialization per image in multi-file drag & drop to ensure reusability.
+- **🏷️ Tag Display**: Corrected tag display inconsistencies.
+- **📦 Archived Chat Styling**: Fixed styling issues in archived chat.
+- **🔖 Safari Copy Button Bug**: Addressed the bug where the copy button failed to copy links in Safari.
+
+## [0.1.120] - 2024-04-20
+
+### Added
+
+- **📦 Archive Chat Feature**: Easily archive chats with a new sidebar button, and access archived chats via the profile button > archived chats.
+- **🔊 Configurable Text-to-Speech Endpoint**: Customize your Text-to-Speech experience with configurable OpenAI endpoints.
+- **🛠️ Improved Error Handling**: Enhanced error message handling for connection failures.
+- **⌨️ Enhanced Shortcut**: When editing messages, use ctrl/cmd+enter to save and submit, and esc to close.
+- **🌐 Language Support**: Added support for Georgian and enhanced translations for Portuguese and Vietnamese.
+
+### Fixed
+
+- **🔧 Model Selector**: Resolved issue where default model selection was not saving.
+- **🔗 Share Link Copy Button**: Fixed bug where the copy button wasn't copying links in Safari.
+- **🎨 Light Theme Styling**: Addressed styling issue with the light theme.
+
 ## [0.1.119] - 2024-04-16
 
 ### Added
