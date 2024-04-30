@@ -31,7 +31,9 @@
 			>
 		</div>
 
-		<pre class=" rounded-b-lg hljs p-4 px-5 overflow-x-auto rounded-t-none"><code
+		<pre
+			class=" hljs p-4 px-5 overflow-x-auto"
+			style="border-top-left-radius: 0px; border-top-right-radius: 0px;"><code
 				class="language-{lang} rounded-t-none whitespace-pre">{@html highlightedCode || code}</code
 			></pre>
 	</div>

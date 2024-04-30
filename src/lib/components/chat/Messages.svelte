@@ -238,43 +238,6 @@
 			history: history
 		});
 	};
-
-	// const messageDeleteHandler = async (messageId) => {
-	// 	const message = history.messages[messageId];
-	// 	const parentId = message.parentId;
-	// 	const childrenIds = message.childrenIds ?? [];
-	// 	const grandchildrenIds = [];
-
-	// 	// Iterate through childrenIds to find grandchildrenIds
-	// 	for (const childId of childrenIds) {
-	// 		const childMessage = history.messages[childId];
-	// 		const grandChildrenIds = childMessage.childrenIds ?? [];
-
-	// 		for (const grandchildId of grandchildrenIds) {
-	// 			const childMessage = history.messages[grandchildId];
-	// 			childMessage.parentId = parentId;
-	// 		}
-	// 		grandchildrenIds.push(...grandChildrenIds);
-	// 	}
-
-	// 	history.messages[parentId].childrenIds.push(...grandchildrenIds);
-	// 	history.messages[parentId].childrenIds = history.messages[parentId].childrenIds.filter(
-	// 		(id) => id !== messageId
-	// 	);
-
-	// 	// Select latest message
-	// 	let currentMessageId = grandchildrenIds.at(-1);
-	// 	if (currentMessageId) {
-	// 		let messageChildrenIds = history.messages[currentMessageId].childrenIds;
-	// 		while (messageChildrenIds.length !== 0) {
-	// 			currentMessageId = messageChildrenIds.at(-1);
-	// 			messageChildrenIds = history.messages[currentMessageId].childrenIds;
-	// 		}
-	// 		history.currentId = currentMessageId;
-	// 	}
-
-	// 	await updateChatById(localStorage.token, chatId, { messages, history });
-	// };
 </script>
 
 <div class="h-full flex">
@@ -297,10 +260,10 @@
 			}}
 		/>
 	{:else}
-		<div class="{$settings?.fullScreenMode ?? null ? 'w-full' : 'mx-auto'} pt-2 pb-28">
+		<div class="w-full pt-2">
 			{#key chatId}
 				{#each messages as message, messageIdx}
-					<div class=" w-full">
+					<div class=" w-full {messageIdx === messages.length - 1 ? 'pb-28' : ''}">
 						<div
 							class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
 								? 'max-w-full'
@@ -355,7 +318,7 @@
 				{/each}
 
 				{#if bottomPadding}
-					<div class="  mb-20" />
+					<div class="  pb-20" />
 				{/if}
 			{/key}
 		</div>
