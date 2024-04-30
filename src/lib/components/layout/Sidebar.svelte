@@ -417,7 +417,7 @@
 				</div>
 			{/if}
 
-			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto">
+			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-none">
 				{#each $chats.filter((chat) => {
 					if (search === '') {
 						return true;
@@ -831,3 +831,14 @@
 		</Tooltip>
 	</div>
 </div>
+
+<style>
+	.scrollbar-none::-webkit-scrollbar {
+		display: none; /* for Chrome, Safari and Opera */
+	}
+
+	.scrollbar-none {
+		-ms-overflow-style: none; /* IE and Edge */
+		scrollbar-width: none; /* Firefox */
+	}
+</style>
