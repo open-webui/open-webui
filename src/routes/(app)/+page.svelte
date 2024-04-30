@@ -605,14 +605,8 @@
 
 		scrollToBottom();
 
-		if (res && res.ok) {
-			const reader = res.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
-
-			const textStream = await createOpenAITextStream(reader, $settings.splitLargeChunks);
-			console.log(textStream);
+		if (res && res.ok && res.body) {
+			const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 
 			for await (const update of textStream) {
 				const { value, done } = update;
