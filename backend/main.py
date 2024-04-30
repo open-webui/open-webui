@@ -43,6 +43,7 @@ from config import (
     WEBUI_NAME,
     ENV,
     VERSION,
+    MODEL_STATUS,
     CHANGELOG,
     FRONTEND_BUILD_DIR,
     CACHE_DIR,
@@ -94,7 +95,6 @@ app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 app.state.ADMIN_MODEL_FILTER_LIST = ADMIN_MODEL_FILTER_LIST
-
 app.state.WEBHOOK_URL = WEBHOOK_URL
 
 origins = ["*"]
@@ -205,6 +205,7 @@ async def get_app_config():
     return {
         "status": True,
         "name": WEBUI_NAME,
+        "model_status": MODEL_STATUS,
         "version": VERSION,
         "default_locale": default_locale,
         "images": images_app.state.ENABLED,

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -10,6 +9,8 @@
 	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
+
+	import { getBackendConfig } from '$lib/apis';
 
 	import {
 		deleteChatById,
@@ -35,6 +36,11 @@
 
 	let title: string = 'UI';
 	let search = '';
+
+	let backendConfig = await getBackendConfig(localStorage.token);
+	if (backendConfig === null || backendConfig === undefined) {
+		console.log('backendConfig is null or undefined');
+	}
 
 	let shareChatId = null;
 
@@ -714,7 +720,7 @@
 								<button
 									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 									on:click={() => {
-										window.open('https://status.clivia.fun/status/lamb-status', '_blank');
+										window.open(backendConfig.model_status, '_blank');
 										showDropdown = false;
 									}}
 								>

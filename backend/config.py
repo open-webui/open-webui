@@ -197,6 +197,7 @@ if CUSTOM_NAME:
         log.exception(e)
         pass
 
+MODEL_STATUS = os.environ.get("MODEL_STATUS", "")
 
 ####################################
 # File Upload DIR
