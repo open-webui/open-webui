@@ -247,7 +247,7 @@
 															</button>
 														</Tooltip>
 
-														<Tooltip content="Edit User">
+														<Tooltip content={$i18n.t('Edit User')}>
 															<button
 																class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																on:click={async () => {
@@ -272,7 +272,7 @@
 															</button>
 														</Tooltip>
 
-														<Tooltip content="Delete User">
+														<Tooltip content={$i18n.t('Delete User')}>
 															<button
 																class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																on:click={async () => {
