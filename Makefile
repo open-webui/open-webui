@@ -1,27 +1,33 @@
+
+ifneq ($(shell which docker-compose 2>/dev/null),)
+    DOCKER_COMPOSE := docker-compose
+else
+    DOCKER_COMPOSE := docker compose
+endif
+
 install:
-	@docker-compose up -d
+	$(DOCKER_COMPOSE) up -d
 
 remove:
 	@chmod +x confirm_remove.sh
 	@./confirm_remove.sh
 
-
 start:
-	@docker-compose start
+	$(DOCKER_COMPOSE) start
 startAndBuild: 
-	docker-compose up -d --build
+	$(DOCKER_COMPOSE) up -d --build
 
 stop:
-	@docker-compose stop
+	$(DOCKER_COMPOSE) stop
 
 update:
 	# Calls the LLM update script
 	chmod +x update_ollama_models.sh
 	@./update_ollama_models.sh
 	@git pull
-	@docker-compose down
+	$(DOCKER_COMPOSE) down
 	# Make sure the ollama-webui container is stopped before rebuilding
 	@docker stop open-webui || true
-	@docker-compose up --build -d
-	@docker-compose start
+	$(DOCKER_COMPOSE) up --build -d
+	$(DOCKER_COMPOSE) start
 

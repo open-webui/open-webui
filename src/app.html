@@ -43,9 +43,46 @@
 			})();
 		</script>
 
+		<title>Open WebUI</title>
+
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
+
+		<div
+			id="splash-screen"
+			style="
+				position: fixed;
+				z-index: 100;
+				background: #fff;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+			"
+		>
+			<style type="text/css" nonce="">
+				html {
+					overflow-y: scroll !important;
+				}
+			</style>
+
+			<img
+				style="
+					position: absolute;
+					width: 6rem;
+					height: 6rem;
+					top: 46%;
+					left: 50%;
+					margin: -40px 0 0 -40px;
+				"
+				src="/logo.svg"
+			/>
+
+			<!-- <span style="position: absolute; bottom: 32px; left: 50%; margin: -36px 0 0 -36px">
+				Footer content
+			</span> -->
+		</div>
 	</body>
 </html>

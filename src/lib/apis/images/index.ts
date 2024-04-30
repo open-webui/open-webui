@@ -72,10 +72,10 @@ export const updateImageGenerationConfig = async (
 	return res;
 };
 
-export const getOpenAIKey = async (token: string = '') => {
+export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/key`, {
+	const res = await fetch(`${IMAGES_API_BASE_URL}/openai/config`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -101,13 +101,13 @@ export const getOpenAIKey = async (token: string = '') => {
 		throw error;
 	}
 
-	return res.OPENAI_API_KEY;
+	return res;
 };
 
-export const updateOpenAIKey = async (token: string = '', key: string) => {
+export const updateOpenAIConfig = async (token: string = '', url: string, key: string) => {
 	let error = null;
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/key/update`, {
+	const res = await fetch(`${IMAGES_API_BASE_URL}/openai/config/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -115,6 +115,7 @@ export const updateOpenAIKey = async (token: string = '', key: string) => {
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
+			url: url,
 			key: key
 		})
 	})
@@ -136,7 +137,7 @@ export const updateOpenAIKey = async (token: string = '', key: string) => {
 		throw error;
 	}
 
-	return res.OPENAI_API_KEY;
+	return res;
 };
 
 export const getImageGenerationEngineUrls = async (token: string = '') => {

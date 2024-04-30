@@ -8,6 +8,10 @@
 		"title": "Bulgarian (BG)"
 	},
 	{
+		"code": "bn-BD",
+		"title": "Banlga (বাংলা)"
+	},
+	{
 		"code": "ca-ES",
 		"title": "Catalan"
 	},
@@ -42,6 +46,10 @@
 	{
 		"code": "ja-JP",
 		"title": "Japanese"
+	},
+	{
+		"code": "ka-GE",
+		"title": "Georgian"
 	},
 	{
 		"code": "ko-KR",

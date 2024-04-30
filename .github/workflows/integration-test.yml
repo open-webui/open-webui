@@ -1,0 +1,55 @@
+name: Integration Test
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  cypress-run:
+    name: Run Cypress Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build and run Compose Stack
+        run: |
+          docker compose up --detach --build
+
+      - name: Preload Ollama model
+        run: |
+          docker exec ollama ollama pull qwen:0.5b-chat-v1.5-q2_K
+
+      - name: Cypress run
+        uses: cypress-io/github-action@v6
+        with:
+          browser: chrome
+          wait-on: 'http://localhost:3000'
+          config: baseUrl=http://localhost:3000
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        name: Upload Cypress videos
+        with:
+          name: cypress-videos
+          path: cypress/videos
+          if-no-files-found: ignore
+
+      - name: Extract Compose logs
+        if: always()
+        run: |
+          docker compose logs > compose-logs.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        name: Upload Compose logs
+        with:
+          name: compose-logs
+          path: compose-logs.txt
+          if-no-files-found: ignore

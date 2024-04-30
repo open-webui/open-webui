@@ -42,6 +42,7 @@
 		OLLAMA_API_BASE_URL,
 		WEBUI_BASE_URL
 	} from '$lib/constants';
+	import { createOpenAITextStream } from '$lib/apis/streaming';
 
 	const i18n = getContext('i18n');
 
@@ -364,7 +365,13 @@
 			model: model,
 			messages: messagesBody,
 			options: {
-				...($settings.options ?? {})
+				...($settings.options ?? {}),
+				stop:
+					$settings?.options?.stop ?? undefined
+						? $settings.options.stop.map((str) =>
+								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+						  )
+						: undefined
 			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
@@ -543,7 +550,7 @@
 
 		console.log(docs);
 
-		const res = await generateOpenAIChatCompletion(
+		const [res, controller] = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
 				model: model.id,
@@ -587,7 +594,12 @@
 							  })
 					})),
 				seed: $settings?.options?.seed ?? undefined,
-				stop: $settings?.options?.stop ?? undefined,
+				stop:
+					$settings?.options?.stop ?? undefined
+						? $settings.options.stop.map((str) =>
+								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+						  )
+						: undefined,
 				temperature: $settings?.options?.temperature ?? undefined,
 				top_p: $settings?.options?.top_p ?? undefined,
 				num_ctx: $settings?.options?.num_ctx ?? undefined,
@@ -611,38 +623,27 @@
 				.pipeThrough(splitStream('\n'))
 				.getReader();
 
-			while (true) {
-				const { value, done } = await reader.read();
+			const textStream = await createOpenAITextStream(reader, $settings.splitLargeChunks);
+			console.log(textStream);
+
+			for await (const update of textStream) {
+				const { value, done } = update;
 				if (done || stopResponseFlag || _chatId !== $chatId) {
 					responseMessage.done = true;
 					messages = messages;
+
+					if (stopResponseFlag) {
+						controller.abort('User: Stop Response');
+					}
+
 					break;
 				}
 
-				try {
-					let lines = value.split('\n');
-
-					for (const line of lines) {
-						if (line !== '') {
-							console.log(line);
-							if (line === 'data: [DONE]') {
-								responseMessage.done = true;
-								messages = messages;
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
-
-								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
-									continue;
-								} else {
-									responseMessage.content += data.choices[0].delta.content ?? '';
-									messages = messages;
-								}
-							}
-						}
-					}
-				} catch (error) {
-					console.log(error);
+				if (responseMessage.content == '' && value == '\n') {
+					continue;
+				} else {
+					responseMessage.content += value;
+					messages = messages;
 				}
 
 				if ($settings.notificationEnabled && !document.hasFocus()) {
@@ -693,16 +694,18 @@
 				}
 			} else {
 				toast.error(
-					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: model })
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+						provider: model.name ?? model.id
+					})
 				);
 				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-					provider: model
+					provider: model.name ?? model.id
 				});
 			}
 
 			responseMessage.error = true;
 			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-				provider: model
+				provider: model.name ?? model.id
 			});
 			responseMessage.done = true;
 			messages = messages;

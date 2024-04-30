@@ -1,14 +1,24 @@
 import os
-import re
 import logging
-from typing import List
 import requests
 
+from typing import List
+
+from apps.ollama.main import (
+    generate_ollama_embeddings,
+    GenerateEmbeddingsForm,
+)
 
 from huggingface_hub import snapshot_download
-from apps.ollama.main import generate_ollama_embeddings, GenerateEmbeddingsForm
 
+from langchain_core.documents import Document
+from langchain_community.retrievers import BM25Retriever
+from langchain.retrievers import (
+    ContextualCompressionRetriever,
+    EnsembleRetriever,
+)
 
+from typing import Optional
 from config import SRC_LOG_LEVELS, CHROMA_CLIENT
 
 
@@ -16,128 +26,164 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def query_doc(collection_name: str, query: str, k: int, embedding_function):
+def query_doc(
+    collection_name: str,
+    query: str,
+    embedding_function,
+    k: int,
+):
     try:
-        # if you use docker use the model from the environment variable
-        collection = CHROMA_CLIENT.get_collection(
-            name=collection_name,
-            embedding_function=embedding_function,
-        )
-        result = collection.query(
-            query_texts=[query],
-            n_results=k,
-        )
-        return result
-    except Exception as e:
-        raise e
-
-
-def query_embeddings_doc(collection_name: str, query_embeddings, k: int):
-    try:
-        # if you use docker use the model from the environment variable
-        log.info(f"query_embeddings_doc {query_embeddings}")
-        collection = CHROMA_CLIENT.get_collection(
-            name=collection_name,
-        )
+        collection = CHROMA_CLIENT.get_collection(name=collection_name)
+        query_embeddings = embedding_function(query)
         result = collection.query(
             query_embeddings=[query_embeddings],
             n_results=k,
         )
 
-        log.info(f"query_embeddings_doc:result {result}")
+        log.info(f"query_doc:result {result}")
         return result
     except Exception as e:
         raise e
 
 
-def merge_and_sort_query_results(query_results, k):
+def query_doc_with_hybrid_search(
+    collection_name: str,
+    query: str,
+    embedding_function,
+    k: int,
+    reranking_function,
+    r: int,
+):
+    try:
+        collection = CHROMA_CLIENT.get_collection(name=collection_name)
+        documents = collection.get()  # get all documents
+
+        bm25_retriever = BM25Retriever.from_texts(
+            texts=documents.get("documents"),
+            metadatas=documents.get("metadatas"),
+        )
+        bm25_retriever.k = k
+
+        chroma_retriever = ChromaRetriever(
+            collection=collection,
+            embedding_function=embedding_function,
+            top_n=k,
+        )
+
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[bm25_retriever, chroma_retriever], weights=[0.5, 0.5]
+        )
+
+        compressor = RerankCompressor(
+            embedding_function=embedding_function,
+            reranking_function=reranking_function,
+            r_score=r,
+            top_n=k,
+        )
+
+        compression_retriever = ContextualCompressionRetriever(
+            base_compressor=compressor, base_retriever=ensemble_retriever
+        )
+
+        result = compression_retriever.invoke(query)
+        result = {
+            "distances": [[d.metadata.get("score") for d in result]],
+            "documents": [[d.page_content for d in result]],
+            "metadatas": [[d.metadata for d in result]],
+        }
+        log.info(f"query_doc_with_hybrid_search:result {result}")
+        return result
+    except Exception as e:
+        raise e
+
+
+def merge_and_sort_query_results(query_results, k, reverse=False):
     # Initialize lists to store combined data
-    combined_ids = []
     combined_distances = []
-    combined_metadatas = []
     combined_documents = []
+    combined_metadatas = []
 
-    # Combine data from each dictionary
     for data in query_results:
-        combined_ids.extend(data["ids"][0])
         combined_distances.extend(data["distances"][0])
-        combined_metadatas.extend(data["metadatas"][0])
         combined_documents.extend(data["documents"][0])
+        combined_metadatas.extend(data["metadatas"][0])
 
-    # Create a list of tuples (distance, id, metadata, document)
-    combined = list(
-        zip(combined_distances, combined_ids, combined_metadatas, combined_documents)
-    )
+    # Create a list of tuples (distance, document, metadata)
+    combined = list(zip(combined_distances, combined_documents, combined_metadatas))
 
     # Sort the list based on distances
-    combined.sort(key=lambda x: x[0])
+    combined.sort(key=lambda x: x[0], reverse=reverse)
 
-    # Unzip the sorted list
-    sorted_distances, sorted_ids, sorted_metadatas, sorted_documents = zip(*combined)
+    # We don't have anything :-(
+    if not combined:
+        sorted_distances = []
+        sorted_documents = []
+        sorted_metadatas = []
+    else:
+        # Unzip the sorted list
+        sorted_distances, sorted_documents, sorted_metadatas = zip(*combined)
 
-    # Slicing the lists to include only k elements
-    sorted_distances = list(sorted_distances)[:k]
-    sorted_ids = list(sorted_ids)[:k]
-    sorted_metadatas = list(sorted_metadatas)[:k]
-    sorted_documents = list(sorted_documents)[:k]
+        # Slicing the lists to include only k elements
+        sorted_distances = list(sorted_distances)[:k]
+        sorted_documents = list(sorted_documents)[:k]
+        sorted_metadatas = list(sorted_metadatas)[:k]
 
     # Create the output dictionary
-    merged_query_results = {
-        "ids": [sorted_ids],
+    result = {
         "distances": [sorted_distances],
-        "metadatas": [sorted_metadatas],
         "documents": [sorted_documents],
-        "embeddings": None,
-        "uris": None,
-        "data": None,
+        "metadatas": [sorted_metadatas],
     }
 
-    return merged_query_results
+    return result
 
 
 def query_collection(
-    collection_names: List[str], query: str, k: int, embedding_function
+    collection_names: List[str],
+    query: str,
+    embedding_function,
+    k: int,
+):
+    results = []
+    for collection_name in collection_names:
+        try:
+            result = query_doc(
+                collection_name=collection_name,
+                query=query,
+                k=k,
+                embedding_function=embedding_function,
+            )
+            results.append(result)
+        except:
+            pass
+    return merge_and_sort_query_results(results, k=k)
+
+
+def query_collection_with_hybrid_search(
+    collection_names: List[str],
+    query: str,
+    embedding_function,
+    k: int,
+    reranking_function,
+    r: float,
 ):
 
     results = []
-
     for collection_name in collection_names:
         try:
-            # if you use docker use the model from the environment variable
-            collection = CHROMA_CLIENT.get_collection(
-                name=collection_name,
+            result = query_doc_with_hybrid_search(
+                collection_name=collection_name,
+                query=query,
                 embedding_function=embedding_function,
-            )
-
-            result = collection.query(
-                query_texts=[query],
-                n_results=k,
+                k=k,
+                reranking_function=reranking_function,
+                r=r,
             )
             results.append(result)
         except:
             pass
 
-    return merge_and_sort_query_results(results, k)
-
-
-def query_embeddings_collection(collection_names: List[str], query_embeddings, k: int):
-
-    results = []
-    log.info(f"query_embeddings_collection {query_embeddings}")
-
-    for collection_name in collection_names:
-        try:
-            collection = CHROMA_CLIENT.get_collection(name=collection_name)
-
-            result = collection.query(
-                query_embeddings=[query_embeddings],
-                n_results=k,
-            )
-            results.append(result)
-        except:
-            pass
-
-    return merge_and_sort_query_results(results, k)
+    return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
 def rag_template(template: str, context: str, query: str):
@@ -146,20 +192,53 @@ def rag_template(template: str, context: str, query: str):
     return template
 
 
-def rag_messages(
-    docs,
-    messages,
-    template,
-    k,
+def get_embedding_function(
     embedding_engine,
     embedding_model,
     embedding_function,
     openai_key,
     openai_url,
 ):
-    log.debug(
-        f"docs: {docs} {messages} {embedding_engine} {embedding_model} {embedding_function} {openai_key} {openai_url}"
-    )
+    if embedding_engine == "":
+        return lambda query: embedding_function.encode(query).tolist()
+    elif embedding_engine in ["ollama", "openai"]:
+        if embedding_engine == "ollama":
+            func = lambda query: generate_ollama_embeddings(
+                GenerateEmbeddingsForm(
+                    **{
+                        "model": embedding_model,
+                        "prompt": query,
+                    }
+                )
+            )
+        elif embedding_engine == "openai":
+            func = lambda query: generate_openai_embeddings(
+                model=embedding_model,
+                text=query,
+                key=openai_key,
+                url=openai_url,
+            )
+
+        def generate_multiple(query, f):
+            if isinstance(query, list):
+                return [f(q) for q in query]
+            else:
+                return f(query)
+
+        return lambda query: generate_multiple(query, func)
+
+
+def rag_messages(
+    docs,
+    messages,
+    template,
+    embedding_function,
+    k,
+    reranking_function,
+    r,
+    hybrid_search,
+):
+    log.debug(f"docs: {docs} {messages} {embedding_function} {reranking_function}")
 
     last_user_message_idx = None
     for i in range(len(messages) - 1, -1, -1):
@@ -186,81 +265,73 @@ def rag_messages(
         content_type = None
         query = ""
 
+    extracted_collections = []
     relevant_contexts = []
 
     for doc in docs:
         context = None
 
-        try:
+        collection = doc.get("collection_name")
+        if collection:
+            collection = [collection]
+        else:
+            collection = doc.get("collection_names", [])
 
+        collection = set(collection).difference(extracted_collections)
+        if not collection:
+            log.debug(f"skipping {doc} as it has already been extracted")
+            continue
+
+        try:
             if doc["type"] == "text":
                 context = doc["content"]
             else:
-                if embedding_engine == "":
-                    if doc["type"] == "collection":
-                        context = query_collection(
-                            collection_names=doc["collection_names"],
-                            query=query,
-                            k=k,
-                            embedding_function=embedding_function,
-                        )
-                    else:
-                        context = query_doc(
-                            collection_name=doc["collection_name"],
-                            query=query,
-                            k=k,
-                            embedding_function=embedding_function,
-                        )
-
+                if hybrid_search:
+                    context = query_collection_with_hybrid_search(
+                        collection_names=(
+                            doc["collection_names"]
+                            if doc["type"] == "collection"
+                            else [doc["collection_name"]]
+                        ),
+                        query=query,
+                        embedding_function=embedding_function,
+                        k=k,
+                        reranking_function=reranking_function,
+                        r=r,
+                    )
                 else:
-                    if embedding_engine == "ollama":
-                        query_embeddings = generate_ollama_embeddings(
-                            GenerateEmbeddingsForm(
-                                **{
-                                    "model": embedding_model,
-                                    "prompt": query,
-                                }
-                            )
-                        )
-                    elif embedding_engine == "openai":
-                        query_embeddings = generate_openai_embeddings(
-                            model=embedding_model,
-                            text=query,
-                            key=openai_key,
-                            url=openai_url,
-                        )
-
-                    if doc["type"] == "collection":
-                        context = query_embeddings_collection(
-                            collection_names=doc["collection_names"],
-                            query_embeddings=query_embeddings,
-                            k=k,
-                        )
-                    else:
-                        context = query_embeddings_doc(
-                            collection_name=doc["collection_name"],
-                            query_embeddings=query_embeddings,
-                            k=k,
-                        )
-
+                    context = query_collection(
+                        collection_names=(
+                            doc["collection_names"]
+                            if doc["type"] == "collection"
+                            else [doc["collection_name"]]
+                        ),
+                        query=query,
+                        embedding_function=embedding_function,
+                        k=k,
+                    )
         except Exception as e:
             log.exception(e)
             context = None
 
-        relevant_contexts.append(context)
+        if context:
+            relevant_contexts.append(context)
 
-    log.debug(f"relevant_contexts: {relevant_contexts}")
+        extracted_collections.extend(collection)
 
     context_string = ""
     for context in relevant_contexts:
-        if context:
-            context_string += " ".join(context["documents"][0]) + "\n"
+        items = context["documents"][0]
+        context_string += "\n\n".join(items)
+    context_string = context_string.strip()
 
     ra_content = rag_template(
         template=template,
         context=context_string,
         query=query,
     )
+
+    log.debug(f"ra_content: {ra_content}")
 
     if content_type == "list":
         new_content = []
@@ -283,52 +354,50 @@ def rag_messages(
     return messages
 
 
-def get_embedding_model_path(
-    embedding_model: str, update_embedding_model: bool = False
-):
+def get_model_path(model: str, update_model: bool = False):
     # Construct huggingface_hub kwargs with local_files_only to return the snapshot path
     cache_dir = os.getenv("SENTENCE_TRANSFORMERS_HOME")
 
-    local_files_only = not update_embedding_model
+    local_files_only = not update_model
 
     snapshot_kwargs = {
         "cache_dir": cache_dir,
         "local_files_only": local_files_only,
     }
 
-    log.debug(f"embedding_model: {embedding_model}")
+    log.debug(f"model: {model}")
     log.debug(f"snapshot_kwargs: {snapshot_kwargs}")
 
     # Inspiration from upstream sentence_transformers
     if (
-        os.path.exists(embedding_model)
-        or ("\\" in embedding_model or embedding_model.count("/") > 1)
+        os.path.exists(model)
+        or ("\\" in model or model.count("/") > 1)
         and local_files_only
     ):
         # If fully qualified path exists, return input, else set repo_id
-        return embedding_model
-    elif "/" not in embedding_model:
+        return model
+    elif "/" not in model:
         # Set valid repo_id for model short-name
-        embedding_model = "sentence-transformers" + "/" + embedding_model
+        model = "sentence-transformers" + "/" + model
 
-    snapshot_kwargs["repo_id"] = embedding_model
+    snapshot_kwargs["repo_id"] = model
 
     # Attempt to query the huggingface_hub library to determine the local path and/or to update
     try:
-        embedding_model_repo_path = snapshot_download(**snapshot_kwargs)
-        log.debug(f"embedding_model_repo_path: {embedding_model_repo_path}")
-        return embedding_model_repo_path
+        model_repo_path = snapshot_download(**snapshot_kwargs)
+        log.debug(f"model_repo_path: {model_repo_path}")
+        return model_repo_path
     except Exception as e:
-        log.exception(f"Cannot determine embedding model snapshot path: {e}")
-        return embedding_model
+        log.exception(f"Cannot determine model snapshot path: {e}")
+        return model
 
 
 def generate_openai_embeddings(
-    model: str, text: str, key: str, url: str = "https://api.openai.com"
+    model: str, text: str, key: str, url: str = "https://api.openai.com/v1"
 ):
     try:
         r = requests.post(
-            f"{url}/v1/embeddings",
+            f"{url}/embeddings",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {key}",
@@ -344,3 +413,99 @@ def generate_openai_embeddings(
     except Exception as e:
         print(e)
         return None
+
+
+from typing import Any
+
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
+
+
+class ChromaRetriever(BaseRetriever):
+    collection: Any
+    embedding_function: Any
+    top_n: int
+
+    def _get_relevant_documents(
+        self,
+        query: str,
+        *,
+        run_manager: CallbackManagerForRetrieverRun,
+    ) -> List[Document]:
+        query_embeddings = self.embedding_function(query)
+
+        results = self.collection.query(
+            query_embeddings=[query_embeddings],
+            n_results=self.top_n,
+        )
+
+        ids = results["ids"][0]
+        metadatas = results["metadatas"][0]
+        documents = results["documents"][0]
+
+        return [
+            Document(
+                metadata=metadatas[idx],
+                page_content=documents[idx],
+            )
+            for idx in range(len(ids))
+        ]
+
+
+import operator
+
+from typing import Optional, Sequence
+
+from langchain_core.documents import BaseDocumentCompressor, Document
+from langchain_core.callbacks import Callbacks
+from langchain_core.pydantic_v1 import Extra
+
+from sentence_transformers import util
+
+
+class RerankCompressor(BaseDocumentCompressor):
+    embedding_function: Any
+    reranking_function: Any
+    r_score: float
+    top_n: int
+
+    class Config:
+        extra = Extra.forbid
+        arbitrary_types_allowed = True
+
+    def compress_documents(
+        self,
+        documents: Sequence[Document],
+        query: str,
+        callbacks: Optional[Callbacks] = None,
+    ) -> Sequence[Document]:
+        if self.reranking_function:
+            scores = self.reranking_function.predict(
+                [(query, doc.page_content) for doc in documents]
+            )
+        else:
+            query_embedding = self.embedding_function(query)
+            document_embedding = self.embedding_function(
+                [doc.page_content for doc in documents]
+            )
+            scores = util.cos_sim(query_embedding, document_embedding)[0]
+
+        docs_with_scores = list(zip(documents, scores.tolist()))
+        if self.r_score:
+            docs_with_scores = [
+                (d, s) for d, s in docs_with_scores if s >= self.r_score
+            ]
+
+        reverse = self.reranking_function is not None
+        result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=reverse)
+
+        final_results = []
+        for doc, doc_score in result[: self.top_n]:
+            metadata = doc.metadata
+            metadata["score"] = doc_score
+            doc = Document(
+                page_content=doc.page_content,
+                metadata=metadata,
+            )
+            final_results.append(doc)
+        return final_results
