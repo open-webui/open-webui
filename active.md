@@ -1,5 +1,5 @@
-Our weekly meetups: [Thursdays at NOON EDT and Sundays at 10 PM EDT](/io/coders/)
-Focused coding meetings on Mondays and Wednesdays at [10 PM EDT](/io/coders)
+Our weekly meetups are [Thursdays at NOON EDT](/io/coders/) and [Sundays at 10 PM EDT](/io/coders/)
+Our focused coding meetings are on Mondays and Wednesdays at [10 PM EDT](/io/coders)
 
 <hr style="margin-bottom:20px">
 
@@ -31,7 +31,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [Sankey Industry Chart](/io/charts/sankey/) - Chenbohan
 - [Balanced Food](/balance/) - [World Nutrition](/data-commons/dist/food) - Kargil, Meiru
 - [Chord Chart Data Prep](/io/charts/chord/) - [ask Kargil for location](https://github.com/modelearth/Observables-DataLoader/tree/master/docs)
-- [International Google Data Commons API](/data-pipeline/international/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
+- [International Google Data Commons API](/data-commons/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
 
 
 **BuildingTransparency and Open Footprint labels**
@@ -95,11 +95,12 @@ In Feb 2024, US EPA Engineer Wes Ingwersen shared with the state partners that a
 
 Wes wrote: We have files with models for all states for a given year in a native useeior Model format on a public server as well.
 
-TO DO: Locate the annual files Wes mentioned. How far back do they go? We recently placed 2020 matrix json in the [Open Footprint](/OpenFootprint/) "impacts/2020" folder.
+TO DO: Locate the annual files Wes mentioned. How far back do they go?  
+Our 2020 matrix json resides in the [Open Footprint](/OpenFootprint/) "impacts/2020" folder.
 
 TO DO: Create interactive version of the supporting figures [including maps of the U.S.](https://doi.org/10.6084/m9.figshare.c.7041473) showing environmental pressure intensity grouped by indicator and commodity for all states and rankings of sectors by consumption by environmental pressure for 2020.
 
-The matrix JSON API that drives our [industry comparisons](../localsite/info/) use EPA data prepared and presented using useeior (R Language),  [useeio.js](/useeio.js/footprint) and the [useeio-widgets](../io/charts/) (Javascript and HTML using the USEEIO-API).
+The matrix JSON API that drives our [industry comparisons](../localsite/info/) uses EPA data prepared and presented using useeior (R Language),  [useeio.js](/useeio.js/footprint) and the [useeio-widgets](../io/charts/) (Javascript and HTML using the USEEIO-API).
 
 Wes wrote: As a reminder (and mentioned in the report) we’re working on Consumption-based GHG inventories (CBEI) for Maine and other Northeast states as an application of these models but the functionalities we develop and describe will be available for all States. We anticipate that being completed by early summer. 
 
@@ -108,6 +109,6 @@ Center for Environmental Solutions and Emergency Response (CESER)
 Office of Research and Development
 US Environmental Protection Agency
 
-[Contact our Model.earth Team](../io/team/)
+[Participate through DemocracyLab](https://www.democracylab.org/projects/834) - [Contact our ModelEarth Team](../io/team/)
 
 
