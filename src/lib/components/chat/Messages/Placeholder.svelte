@@ -27,7 +27,7 @@
 	<div class=" my-auto text-center pb-10 md:pb-24">
 		<div class="m-auto max-w-3xl px-8">
 			<div class="flex justify-start mt-8">
-				<div class="flex -space-x-4 mb-1">
+				<div class="flex -space-x-4 mb-0.5">
 					{#each models as model, modelIdx}
 						<button
 							on:click={() => {
@@ -38,7 +38,7 @@
 								<img
 									src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
 									alt="modelfile"
-									class=" size-12 rounded-full border-[1px] border-gray-200 dark:border-none"
+									class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
 									draggable="false"
 								/>
 							{:else}
@@ -46,7 +46,7 @@
 									src={$i18n.language === 'dg-DG'
 										? `/doge.png`
 										: `${WEBUI_BASE_URL}/static/favicon.png`}
-									class=" size-12 rounded-full border-[1px] border-gray-200 dark:border-none"
+									class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
 									alt="logo"
 									draggable="false"
 								/>
