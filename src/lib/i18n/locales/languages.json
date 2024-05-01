@@ -76,6 +76,10 @@
 		"title": "Russian (Russia)"
 	},
 	{
+		"code": "sv-SE",
+		"title": "Swedish"
+	},	
+	{
 		"code": "tr-TR",
 		"title": "Turkish"
 	},
@@ -94,9 +98,5 @@
 	{
 		"code": "zh-TW",
 		"title": "Chinese (Traditional)"
-	}
-	{
-		"code": "sv-SE",
-		"title": "Swedish"
 	}
 ]
