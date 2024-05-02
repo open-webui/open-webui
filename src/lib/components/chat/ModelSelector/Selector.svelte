@@ -227,6 +227,7 @@
 			<div class="px-3 my-2 max-h-72 overflow-y-auto scrollbar-none">
 				{#each filteredItems as item}
 					<button
+						aria-label="model-item"
 						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
 						on:click={() => {
 							value = item.value;
