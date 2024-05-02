@@ -317,19 +317,31 @@ class GenerateImageForm(BaseModel):
 
 def save_b64_image(b64_str):
     try:
-        header, encoded = b64_str.split(",", 1)
-        mime_type = header.split(";")[0]
-
-        img_data = base64.b64decode(encoded)
-
         image_id = str(uuid.uuid4())
-        image_format = mimetypes.guess_extension(mime_type)
 
-        image_filename = f"{image_id}{image_format}"
-        file_path = IMAGE_CACHE_DIR / f"{image_filename}"
-        with open(file_path, "wb") as f:
-            f.write(img_data)
-        return image_filename
+        if "," in b64_str:
+            header, encoded = b64_str.split(",", 1)
+            mime_type = header.split(";")[0]
+
+            img_data = base64.b64decode(encoded)
+            image_format = mimetypes.guess_extension(mime_type)
+
+            image_filename = f"{image_id}{image_format}"
+            file_path = IMAGE_CACHE_DIR / f"{image_filename}"
+            with open(file_path, "wb") as f:
+                f.write(img_data)
+            return image_filename
+        else:
+            image_filename = f"{image_id}.png"
+            file_path = IMAGE_CACHE_DIR.joinpath(image_filename)
+
+            img_data = base64.b64decode(b64_str)
+
+            # Write the image data to a file
+            with open(file_path, "wb") as f:
+                f.write(img_data)
+            return image_filename
+
     except Exception as e:
         log.exception(f"Error saving image: {e}")
         return None
