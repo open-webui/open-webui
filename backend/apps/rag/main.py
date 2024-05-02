@@ -28,6 +28,7 @@ from langchain_community.document_loaders import (
     UnstructuredXMLLoader,
     UnstructuredRSTLoader,
     UnstructuredExcelLoader,
+    YoutubeLoader,
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
@@ -181,7 +182,7 @@ class CollectionNameForm(BaseModel):
     collection_name: Optional[str] = "test"
 
 
-class StoreWebForm(CollectionNameForm):
+class UrlForm(CollectionNameForm):
     url: str
 
 
@@ -456,8 +457,32 @@ def query_collection_handler(
         )
 
 
+@app.post("/youtube")
+def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
+    try:
+        loader = YoutubeLoader.from_youtube_url(form_data.url, add_video_info=False)
+        data = loader.load()
+
+        collection_name = form_data.collection_name
+        if collection_name == "":
+            collection_name = calculate_sha256_string(form_data.url)[:63]
+
+        store_data_in_vector_db(data, collection_name, overwrite=True)
+        return {
+            "status": True,
+            "collection_name": collection_name,
+            "filename": form_data.url,
+        }
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
 @app.post("/web")
-def store_web(form_data: StoreWebForm, user=Depends(get_current_user)):
+def store_web(form_data: UrlForm, user=Depends(get_current_user)):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
     try:
         loader = get_web_loader(form_data.url)

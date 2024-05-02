@@ -20,6 +20,7 @@
 	"Add message": "Ajouter un message",
 	"Add Model": "",
 	"Add Tags": "ajouter des tags",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "L'ajustement de ces paramètres appliquera les changements à tous les utilisateurs.",
 	"admin": "Administrateur",
 	"Admin Panel": "Panneau d'administration",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "Cliquez ici pour vérifier d'autres fichiers de modèle.",
 	"Click here to select": "Cliquez ici pour sélectionner",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "Cliquez ici pour sélectionner des documents.",
 	"click here.": "cliquez ici.",
 	"Click on the user role button to change a user's role.": "Cliquez sur le bouton de rôle d'utilisateur pour changer le rôle d'un utilisateur.",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "Activer l'historique des discussions",
 	"Enable New Sign Ups": "Activer les nouvelles inscriptions",
 	"Enabled": "Activé",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "Entrez le message {{role}} ici",
 	"Enter Chunk Overlap": "Entrez le chevauchement de bloc",
 	"Enter Chunk Size": "Entrez la taille du bloc",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "Entrez votre adresse email",
 	"Enter Your Full Name": "Entrez votre nom complet",
 	"Enter Your Password": "Entrez votre mot de passe",
+	"Enter Your Role": "",
 	"Experimental": "Expérimental",
 	"Export All Chats (All Users)": "Exporter toutes les discussions (Tous les utilisateurs)",
 	"Export Chats": "Exporter les discussions",
@@ -450,5 +454,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "Vous êtes un assistant utile",
-	"You're now logged in.": "Vous êtes maintenant connecté."
+	"You're now logged in.": "Vous êtes maintenant connecté.",
+	"Youtube": ""
 }

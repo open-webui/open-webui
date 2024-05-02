@@ -20,6 +20,7 @@
 	"Add message": "মেসেজ যোগ করুন",
 	"Add Model": "",
 	"Add Tags": "ট্যাগ যোগ করুন",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "এই সেটিংগুলো পরিবর্তন করলে তা সব ইউজারের উপরেই প্রয়োগ করা হবে",
 	"admin": "এডমিন",
 	"Admin Panel": "এডমিন প্যানেল",
@@ -40,7 +41,7 @@
 	"API keys": "",
 	"API RPM": "এপিআই আরপিএম",
 	"Archive": "",
-	"Archived Chats": "",
+	"Archived Chats": "চ্যাট ইতিহাস সংরক্ষণাগার",
 	"are allowed - Activate this command by typing": "অনুমোদিত - কমান্ডটি চালু করার জন্য লিখুন",
 	"Are you sure?": "আপনি নিশ্চিত?",
 	"Attention to detail": "",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "অন্যান্য মডেলফাইল চেক করার জন্য এখানে ক্লিক করুন",
 	"Click here to select": "নির্বাচন করার জন্য এখানে ক্লিক করুন",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "ডকুমেন্টগুলো নির্বাচন করার জন্য এখানে ক্লিক করুন",
 	"click here.": "এখানে ক্লিক করুন",
 	"Click on the user role button to change a user's role.": "ইউজারের পদবি পরিবর্তন করার জন্য ইউজারের পদবি বাটনে ক্লিক করুন",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "চ্যাট হিস্টোরি চালু করুন",
 	"Enable New Sign Ups": "নতুন সাইনআপ চালু করুন",
 	"Enabled": "চালু করা হয়েছে",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "{{role}} মেসেজ এখানে লিখুন",
 	"Enter Chunk Overlap": "চাঙ্ক ওভারল্যাপ লিখুন",
 	"Enter Chunk Size": "চাংক সাইজ লিখুন",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "আপনার ইমেইল লিখুন",
 	"Enter Your Full Name": "আপনার পূর্ণ নাম লিখুন",
 	"Enter Your Password": "আপনার পাসওয়ার্ড লিখুন",
+	"Enter Your Role": "",
 	"Experimental": "পরিক্ষামূলক",
 	"Export All Chats (All Users)": "সব চ্যাট এক্সপোর্ট করুন (সব ইউজারের)",
 	"Export Chats": "চ্যাটগুলো এক্সপোর্ট করুন",
@@ -450,5 +454,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "আপনি একজন উপকারী এসিস্ট্যান্ট",
-	"You're now logged in.": "আপনি এখন লগইন করা অবস্থায় আছেন"
+	"You're now logged in.": "আপনি এখন লগইন করা অবস্থায় আছেন",
+	"Youtube": ""
 }

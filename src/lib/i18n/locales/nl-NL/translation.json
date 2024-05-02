@@ -20,6 +20,7 @@
 	"Add message": "Voeg bericht toe",
 	"Add Model": "",
 	"Add Tags": "voeg tags toe",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "Het aanpassen van deze instellingen zal universeel worden toegepast op alle gebruikers.",
 	"admin": "admin",
 	"Admin Panel": "Administratieve Paneel",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "Klik hier om andere modelfiles te controleren.",
 	"Click here to select": "Klik hier om te selecteren",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "Klik hier om documenten te selecteren",
 	"click here.": "klik hier.",
 	"Click on the user role button to change a user's role.": "Klik op de gebruikersrol knop om de rol van een gebruiker te wijzigen.",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "Schakel Chat Geschiedenis in",
 	"Enable New Sign Ups": "Schakel Nieuwe Registraties in",
 	"Enabled": "Ingeschakeld",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "Voeg {{role}} bericht hier toe",
 	"Enter Chunk Overlap": "Voeg Chunk Overlap toe",
 	"Enter Chunk Size": "Voeg Chunk Size toe",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "Voer je Email in",
 	"Enter Your Full Name": "Voer je Volledige Naam in",
 	"Enter Your Password": "Voer je Wachtwoord in",
+	"Enter Your Role": "",
 	"Experimental": "Experimenteel",
 	"Export All Chats (All Users)": "Exporteer Alle Chats (Alle Gebruikers)",
 	"Export Chats": "Exporteer Chats",
@@ -450,5 +454,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "Jij bent een behulpzame assistent.",
-	"You're now logged in.": "Je bent nu ingelogd."
+	"You're now logged in.": "Je bent nu ingelogd.",
+	"Youtube": ""
 }

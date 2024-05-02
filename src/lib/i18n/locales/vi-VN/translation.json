@@ -20,6 +20,7 @@
 	"Add message": "Thêm tin nhắn",
 	"Add Model": "",
 	"Add Tags": "thêm thẻ",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "Các thay đổi cài đặt này sẽ áp dụng cho tất cả người sử dụng.",
 	"admin": "quản trị viên",
 	"Admin Panel": "Trang Quản trị",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "Bấm vào đây để kiểm tra các tệp mô tả mô hình (modelfiles) khác.",
 	"Click here to select": "Bấm vào đây để chọn",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "Bấm vào đây để chọn tài liệu.",
 	"click here.": "bấm vào đây.",
 	"Click on the user role button to change a user's role.": "Bấm vào nút trong cột VAI TRÒ để thay đổi quyền của người sử dụng.",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "Bật Lịch sử chat",
 	"Enable New Sign Ups": "Cho phép đăng ký mới",
 	"Enabled": "Đã bật",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "Nhập yêu cầu của {{role}} ở đây",
 	"Enter Chunk Overlap": "Nhập Chunk chồng lấn (overlap)",
 	"Enter Chunk Size": "Nhập Kích thước Chunk",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "Nhập Email của bạn",
 	"Enter Your Full Name": "Nhập Họ và Tên của bạn",
 	"Enter Your Password": "Nhập Mật khẩu của bạn",
+	"Enter Your Role": "",
 	"Experimental": "Thử nghiệm",
 	"Export All Chats (All Users)": "Tải về tất cả nội dung chat (tất cả mọi người)",
 	"Export Chats": "Tải nội dung chat về máy",
@@ -450,5 +454,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "Bạn là một trợ lý hữu ích.",
-	"You're now logged in.": "Bạn đã đăng nhập."
+	"You're now logged in.": "Bạn đã đăng nhập.",
+	"Youtube": ""
 }

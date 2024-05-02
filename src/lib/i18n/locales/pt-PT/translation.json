@@ -20,6 +20,7 @@
 	"Add message": "Adicionar mensagem",
 	"Add Model": "",
 	"Add Tags": "adicionar tags",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "Ajustar essas configurações aplicará alterações universalmente a todos os usuários.",
 	"admin": "administrador",
 	"Admin Panel": "Painel do Administrador",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "Clique aqui para verificar outros arquivos de modelo.",
 	"Click here to select": "Clique aqui para selecionar",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "Clique aqui para selecionar documentos.",
 	"click here.": "clique aqui.",
 	"Click on the user role button to change a user's role.": "Clique no botão de função do usuário para alterar a função de um usuário.",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "Ativar Histórico de Bate-papo",
 	"Enable New Sign Ups": "Ativar Novas Inscrições",
 	"Enabled": "Ativado",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "Digite a mensagem de {{role}} aqui",
 	"Enter Chunk Overlap": "Digite a Sobreposição de Fragmento",
 	"Enter Chunk Size": "Digite o Tamanho do Fragmento",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "Digite seu E-mail",
 	"Enter Your Full Name": "Digite seu Nome Completo",
 	"Enter Your Password": "Digite sua Senha",
+	"Enter Your Role": "",
 	"Experimental": "Experimental",
 	"Export All Chats (All Users)": "Exportar Todos os Bate-papos (Todos os Usuários)",
 	"Export Chats": "Exportar Bate-papos",
@@ -229,7 +233,10 @@
 	"Manage Ollama Models": "Gerenciar Modelos Ollama",
 	"Max Tokens": "Máximo de Tokens",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "Máximo de 3 modelos podem ser baixados simultaneamente. Tente novamente mais tarde.",
+<<<<<<< HEAD
 	"Messages you send after creating your link won't be shared. Users with the URL will beable to view the shared chat.": "",
+=======
+>>>>>>> origin-dev
 	"Minimum Score": "",
 	"Mirostat": "Mirostat",
 	"Mirostat Eta": "Mirostat Eta",
@@ -450,5 +457,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "Você é um assistente útil.",
-	"You're now logged in.": "Você está conectado agora."
+	"You're now logged in.": "Você está conectado agora.",
+	"Youtube": ""
 }

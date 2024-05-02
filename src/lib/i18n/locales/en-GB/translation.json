@@ -20,6 +20,7 @@
 	"Add message": "",
 	"Add Model": "",
 	"Add Tags": "",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "",
 	"admin": "",
 	"Admin Panel": "",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "",
 	"Click here to select": "",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "",
 	"click here.": "",
 	"Click on the user role button to change a user's role.": "",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "",
 	"Enable New Sign Ups": "",
 	"Enabled": "",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "",
 	"Enter Chunk Overlap": "",
 	"Enter Chunk Size": "",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "",
 	"Enter Your Full Name": "",
 	"Enter Your Password": "",
+	"Enter Your Role": "",
 	"Experimental": "",
 	"Export All Chats (All Users)": "",
 	"Export Chats": "",
@@ -229,7 +233,10 @@
 	"Manage Ollama Models": "",
 	"Max Tokens": "",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "",
+<<<<<<< HEAD
 	"Messages you send after creating your link won't be shared. Users with the URL will beable to view the shared chat.": "",
+=======
+>>>>>>> origin-dev
 	"Minimum Score": "",
 	"Mirostat": "",
 	"Mirostat Eta": "",
@@ -450,5 +457,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "",
-	"You're now logged in.": ""
+	"You're now logged in.": "",
+	"Youtube": ""
 }

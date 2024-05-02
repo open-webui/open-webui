@@ -20,6 +20,7 @@
 	"Add message": "Add Prompt",
 	"Add Model": "",
 	"Add Tags": "",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "Adjusting these settings will apply changes to all users. Such universal, very wow.",
 	"admin": "admin",
 	"Admin Panel": "Admin Panel",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "Click to check other modelfiles.",
 	"Click here to select": "Click to select",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "Click to select documents",
 	"click here.": "click here. Such click.",
 	"Click on the user role button to change a user's role.": "Click user role button to change role.",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "Activate Chat Story",
 	"Enable New Sign Ups": "Enable New Bark Ups",
 	"Enabled": "So Activated",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "Enter {{role}} bork here",
 	"Enter Chunk Overlap": "Enter Overlap of Chunks",
 	"Enter Chunk Size": "Enter Size of Chunk",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "Enter Your Dogemail",
 	"Enter Your Full Name": "Enter Your Full Wow",
 	"Enter Your Password": "Enter Your Barkword",
+	"Enter Your Role": "",
 	"Experimental": "Much Experiment",
 	"Export All Chats (All Users)": "Export All Chats (All Doggos)",
 	"Export Chats": "Export Barks",
@@ -450,5 +454,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "You're a helpful assistant. Much helpful.",
-	"You're now logged in.": "You're now logged in. Much logged."
+	"You're now logged in.": "You're now logged in. Much logged.",
+	"Youtube": ""
 }

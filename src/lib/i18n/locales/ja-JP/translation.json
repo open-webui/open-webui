@@ -20,6 +20,7 @@
 	"Add message": "メッセージを追加",
 	"Add Model": "",
 	"Add Tags": "タグを追加",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "これらの設定を調整すると、すべてのユーザーに普遍的に変更が適用されます。",
 	"admin": "管理者",
 	"Admin Panel": "管理者パネル",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "他のモデルファイルを確認するにはここをクリックしてください。",
 	"Click here to select": "選択するにはここをクリックしてください",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "ドキュメントを選択するにはここをクリックしてください。",
 	"click here.": "ここをクリックしてください。",
 	"Click on the user role button to change a user's role.": "ユーザーの役割を変更するには、ユーザー役割ボタンをクリックしてください。",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "チャット履歴を有効化",
 	"Enable New Sign Ups": "新規登録を有効化",
 	"Enabled": "有効",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "{{role}} メッセージをここに入力してください",
 	"Enter Chunk Overlap": "チャンクオーバーラップを入力してください",
 	"Enter Chunk Size": "チャンクサイズを入力してください",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "メールアドレスを入力してください",
 	"Enter Your Full Name": "フルネームを入力してください",
 	"Enter Your Password": "パスワードを入力してください",
+	"Enter Your Role": "",
 	"Experimental": "実験的",
 	"Export All Chats (All Users)": "すべてのチャットをエクスポート (すべてのユーザー)",
 	"Export Chats": "チャットをエクスポート",
@@ -229,7 +233,10 @@
 	"Manage Ollama Models": "Ollama モデルを管理",
 	"Max Tokens": "最大トークン数",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "同時にダウンロードできるモデルは最大 3 つです。後でもう一度お試しください。",
+<<<<<<< HEAD
 	"Messages you send after creating your link won't be shared. Users with the URL will beable to view the shared chat.": "",
+=======
+>>>>>>> origin-dev
 	"Minimum Score": "",
 	"Mirostat": "ミロスタット",
 	"Mirostat Eta": "ミロスタット Eta",
@@ -450,5 +457,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "あなたは役に立つアシスタントです。",
-	"You're now logged in.": "ログインしました。"
+	"You're now logged in.": "ログインしました。",
+	"Youtube": ""
 }

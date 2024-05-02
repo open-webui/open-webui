@@ -20,6 +20,7 @@
 	"Add message": "Mesaj ekle",
 	"Add Model": "",
 	"Add Tags": "etiketler ekle",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "Bu ayarları ayarlamak değişiklikleri tüm kullanıcılara evrensel olarak uygular.",
 	"admin": "yönetici",
 	"Admin Panel": "Yönetici Paneli",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "Diğer model dosyalarını kontrol etmek için buraya tıklayın.",
 	"Click here to select": "Seçmek için buraya tıklayın",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "Belgeleri seçmek için buraya tıklayın.",
 	"click here.": "buraya tıklayın.",
 	"Click on the user role button to change a user's role.": "Bir kullanıcının rolünü değiştirmek için kullanıcı rolü düğmesine tıklayın.",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "Sohbet Geçmişini Etkinleştir",
 	"Enable New Sign Ups": "Yeni Kayıtları Etkinleştir",
 	"Enabled": "Etkin",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "Buraya {{role}} mesajını girin",
 	"Enter Chunk Overlap": "Chunk Örtüşmesini Girin",
 	"Enter Chunk Size": "Chunk Boyutunu Girin",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "E-postanızı Girin",
 	"Enter Your Full Name": "Tam Adınızı Girin",
 	"Enter Your Password": "Parolanızı Girin",
+	"Enter Your Role": "",
 	"Experimental": "Deneysel",
 	"Export All Chats (All Users)": "Tüm Sohbetleri Dışa Aktar (Tüm Kullanıcılar)",
 	"Export Chats": "Sohbetleri Dışa Aktar",
@@ -450,5 +454,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "Sen yardımcı bir asistansın.",
-	"You're now logged in.": "Şimdi oturum açtınız."
+	"You're now logged in.": "Şimdi oturum açtınız.",
+	"Youtube": ""
 }

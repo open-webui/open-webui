@@ -20,6 +20,7 @@
 	"Add message": "اضافه کردن پیغام",
 	"Add Model": "",
 	"Add Tags": "اضافه کردن تگ\u200cها",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "با تنظیم این تنظیمات، تغییرات به طور کلی برای همه کاربران اعمال می شود.",
 	"admin": "مدیر",
 	"Admin Panel": "پنل مدیریت",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "برای بررسی سایر فایل\u200cهای مدل اینجا را کلیک کنید.",
 	"Click here to select": "برای انتخاب اینجا کلیک کنید",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "برای انتخاب اسناد اینجا را کلیک کنید.",
 	"click here.": "اینجا کلیک کنید.",
 	"Click on the user role button to change a user's role.": "برای تغییر نقش کاربر، روی دکمه نقش کاربر کلیک کنید.",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "تاریخچه چت را فعال کنید",
 	"Enable New Sign Ups": "فعال کردن ثبت نام\u200cهای جدید",
 	"Enabled": "فعال",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "پیام {{role}} را اینجا وارد کنید",
 	"Enter Chunk Overlap": "مقدار Chunk Overlap را وارد کنید",
 	"Enter Chunk Size": "مقدار Chunk Size را وارد کنید",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "ایمیل خود را وارد کنید",
 	"Enter Your Full Name": "نام کامل خود را وارد کنید",
 	"Enter Your Password": "رمز عبور خود را وارد کنید",
+	"Enter Your Role": "",
 	"Experimental": "آزمایشی",
 	"Export All Chats (All Users)": "اکسپورت از همه گپ\u200cها(همه کاربران)",
 	"Export Chats": "اکسپورت از گپ\u200cها",
@@ -450,5 +454,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "تو یک دستیار سودمند هستی.",
-	"You're now logged in.": "شما اکنون وارد شده\u200cاید."
+	"You're now logged in.": "شما اکنون وارد شده\u200cاید.",
+	"Youtube": ""
 }

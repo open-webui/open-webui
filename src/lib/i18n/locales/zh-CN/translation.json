@@ -20,6 +20,7 @@
 	"Add message": "添加消息",
 	"Add Model": "",
 	"Add Tags": "添加标签",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "调整这些设置将会对所有用户应用更改。",
 	"admin": "管理员",
 	"Admin Panel": "管理员面板",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "点击这里检查其他模型文件。",
 	"Click here to select": "点击这里选择",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "点击这里选择文档。",
 	"click here.": "点击这里。",
 	"Click on the user role button to change a user's role.": "点击用户角色按钮以更改用户的角色。",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "启用聊天历史",
 	"Enable New Sign Ups": "启用新注册",
 	"Enabled": "启用",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "在此处输入 {{role}} 信息",
 	"Enter Chunk Overlap": "输入块重叠(Chunk Overlap)",
 	"Enter Chunk Size": "输入块大小(Chunk Size)",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "输入您的电子邮件",
 	"Enter Your Full Name": "输入您的全名",
 	"Enter Your Password": "输入您的密码",
+	"Enter Your Role": "",
 	"Experimental": "实验性",
 	"Export All Chats (All Users)": "导出所有聊天（所有用户）",
 	"Export Chats": "导出聊天",
@@ -450,5 +454,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "你是一个有帮助的助手。",
-	"You're now logged in.": "已登录。"
+	"You're now logged in.": "已登录。",
+	"Youtube": ""
 }

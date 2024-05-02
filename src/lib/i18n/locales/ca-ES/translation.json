@@ -20,6 +20,7 @@
 	"Add message": "Afegeix missatge",
 	"Add Model": "",
 	"Add Tags": "afegeix etiquetes",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "Ajustar aquests paràmetres aplicarà canvis de manera universal a tots els usuaris.",
 	"admin": "administrador",
 	"Admin Panel": "Panell d'Administració",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "Fes clic aquí per comprovar altres fitxers de model.",
 	"Click here to select": "Fes clic aquí per seleccionar",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "Fes clic aquí per seleccionar documents.",
 	"click here.": "fes clic aquí.",
 	"Click on the user role button to change a user's role.": "Fes clic al botó de rol d'usuari per canviar el rol d'un usuari.",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "Activa Historial de Xat",
 	"Enable New Sign Ups": "Permet Noves Inscripcions",
 	"Enabled": "Activat",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "Introdueix aquí el missatge de {{role}}",
 	"Enter Chunk Overlap": "Introdueix el Solapament de Blocs",
 	"Enter Chunk Size": "Introdueix la Mida del Bloc",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "Introdueix el Teu Correu Electrònic",
 	"Enter Your Full Name": "Introdueix el Teu Nom Complet",
 	"Enter Your Password": "Introdueix la Teva Contrasenya",
+	"Enter Your Role": "",
 	"Experimental": "Experimental",
 	"Export All Chats (All Users)": "Exporta Tots els Xats (Tots els Usuaris)",
 	"Export Chats": "Exporta Xats",
@@ -450,5 +454,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "Ets un assistent útil.",
-	"You're now logged in.": "Ara estàs connectat."
+	"You're now logged in.": "Ara estàs connectat.",
+	"Youtube": ""
 }

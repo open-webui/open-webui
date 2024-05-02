@@ -34,6 +34,8 @@ export const documents = writable([
 ]);
 
 export const settings: Writable<Settings> = writable({});
+
+export const showSidebar = writable(false);
 export const showSettings = writable(false);
 export const showChangelog = writable(false);
 
@@ -78,6 +80,7 @@ type Settings = {
 	saveChatHistory?: boolean;
 	notificationEnabled?: boolean;
 	title?: TitleSettings;
+	splitLargeDeltas?: boolean;
 
 	system?: string;
 	requestFormat?: string;

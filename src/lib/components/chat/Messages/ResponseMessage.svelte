@@ -137,20 +137,22 @@
 			.getElementById(`message-${message.id}`)
 			?.getElementsByClassName('chat-assistant');
 
-		for (const element of chatMessageElements) {
-			auto_render(element, {
-				// customised options
-				// • auto-render specific keys, e.g.:
-				delimiters: [
-					{ left: '$$', right: '$$', display: false },
-					{ left: '$ ', right: ' $', display: false },
-					{ left: '\\(', right: '\\)', display: false },
-					{ left: '\\[', right: '\\]', display: false },
-					{ left: '[ ', right: ' ]', display: false }
-				],
-				// • rendering keys, e.g.:
-				throwOnError: false
-			});
+		if (chatMessageElements) {
+			for (const element of chatMessageElements) {
+				auto_render(element, {
+					// customised options
+					// • auto-render specific keys, e.g.:
+					delimiters: [
+						{ left: '$$', right: '$$', display: false },
+						{ left: '$ ', right: ' $', display: false },
+						{ left: '\\(', right: '\\)', display: false },
+						{ left: '\\[', right: '\\]', display: false },
+						{ left: '[ ', right: ' ]', display: false }
+					],
+					// • rendering keys, e.g.:
+					throwOnError: false
+				});
+			}
 		}
 	};
 
@@ -325,9 +327,8 @@
 {#key message.id}
 	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
 		<ProfileImage
-			src={modelfiles[message.model]?.imageUrl ?? $i18n.language === 'dg-DG'
-				? `/doge.png`
-				: `${WEBUI_BASE_URL}/static/favicon.png`}
+			src={modelfiles[message.model]?.imageUrl ??
+				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
 		/>
 
 		<div class="w-full overflow-hidden">

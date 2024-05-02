@@ -20,6 +20,7 @@
 	"Add message": "Додати повідомлення",
 	"Add Model": "",
 	"Add Tags": "додати теги",
+	"Add User": "",
 	"Adjusting these settings will apply changes universally to all users.": "Зміни в цих налаштуваннях будуть застосовані для всіх користувачів.",
 	"admin": "адмін",
 	"Admin Panel": "Панель адміністратора",
@@ -73,6 +74,7 @@
 	"Click here to": "",
 	"Click here to check other modelfiles.": "Клацніть тут, щоб перевірити інші файли моделей.",
 	"Click here to select": "Натисніть тут, щоб вибрати",
+	"Click here to select a csv file.": "",
 	"Click here to select documents.": "Натисніть тут, щоб вибрати документи.",
 	"click here.": "клацніть тут.",
 	"Click on the user role button to change a user's role.": "Натисніть кнопку ролі користувача, щоб змінити роль користувача.",
@@ -154,6 +156,7 @@
 	"Enable Chat History": "Увімкнути історію чату",
 	"Enable New Sign Ups": "Дозволити нові реєстрації",
 	"Enabled": "Увімкнено",
+	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "",
 	"Enter {{role}} message here": "Введіть повідомлення {{role}} тут",
 	"Enter Chunk Overlap": "Введіть перекриття фрагменту",
 	"Enter Chunk Size": "Введіть розмір фрагменту",
@@ -173,6 +176,7 @@
 	"Enter Your Email": "Введіть вашу електронну пошту",
 	"Enter Your Full Name": "Введіть ваше ім'я",
 	"Enter Your Password": "Введіть ваш пароль",
+	"Enter Your Role": "",
 	"Experimental": "Експериментальне",
 	"Export All Chats (All Users)": "Експортувати всі чати (всі користувачі)",
 	"Export Chats": "Експортувати чати",
@@ -229,7 +233,10 @@
 	"Manage Ollama Models": "Керування моделями Ollama",
 	"Max Tokens": "Максимальна кількість токенів",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "Максимум 3 моделі можна завантажити одночасно. Будь ласка, спробуйте пізніше.",
+<<<<<<< HEAD
 	"Messages you send after creating your link won't be shared. Users with the URL will beable to view the shared chat.": "",
+=======
+>>>>>>> origin-dev
 	"Minimum Score": "",
 	"Mirostat": "Mirostat",
 	"Mirostat Eta": "Mirostat Eta",
@@ -450,5 +457,6 @@
 	"You have no archived conversations.": "",
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "Ви корисний асистент.",
-	"You're now logged in.": "Ви увійшли в систему."
+	"You're now logged in.": "Ви увійшли в систему.",
+	"Youtube": ""
 }

@@ -12,7 +12,7 @@
 	import Placeholder from './Messages/Placeholder.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { imageGenerations } from '$lib/apis/images';
-	import { copyToClipboard } from '$lib/utils';
+	import { copyToClipboard, findWordIndices } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -22,6 +22,8 @@
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
 
+	export let prompt;
+	export let suggestionPrompts;
 	export let processing = '';
 	export let bottomPadding = false;
 	export let autoScroll;
@@ -236,108 +238,111 @@
 			history: history
 		});
 	};
-
-	// const messageDeleteHandler = async (messageId) => {
-	// 	const message = history.messages[messageId];
-	// 	const parentId = message.parentId;
-	// 	const childrenIds = message.childrenIds ?? [];
-	// 	const grandchildrenIds = [];
-
-	// 	// Iterate through childrenIds to find grandchildrenIds
-	// 	for (const childId of childrenIds) {
-	// 		const childMessage = history.messages[childId];
-	// 		const grandChildrenIds = childMessage.childrenIds ?? [];
-
-	// 		for (const grandchildId of grandchildrenIds) {
-	// 			const childMessage = history.messages[grandchildId];
-	// 			childMessage.parentId = parentId;
-	// 		}
-	// 		grandchildrenIds.push(...grandChildrenIds);
-	// 	}
-
-	// 	history.messages[parentId].childrenIds.push(...grandchildrenIds);
-	// 	history.messages[parentId].childrenIds = history.messages[parentId].childrenIds.filter(
-	// 		(id) => id !== messageId
-	// 	);
-
-	// 	// Select latest message
-	// 	let currentMessageId = grandchildrenIds.at(-1);
-	// 	if (currentMessageId) {
-	// 		let messageChildrenIds = history.messages[currentMessageId].childrenIds;
-	// 		while (messageChildrenIds.length !== 0) {
-	// 			currentMessageId = messageChildrenIds.at(-1);
-	// 			messageChildrenIds = history.messages[currentMessageId].childrenIds;
-	// 		}
-	// 		history.currentId = currentMessageId;
-	// 	}
-
-	// 	await updateChatById(localStorage.token, chatId, { messages, history });
-	// };
 </script>
 
-{#if messages.length == 0}
-	<Placeholder models={selectedModels} modelfiles={selectedModelfiles} />
-{:else}
-	<div class=" pb-10">
-		{#key chatId}
-			{#each messages as message, messageIdx}
-				<div class=" w-full">
-					<div
-						class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
-							? 'max-w-full'
-							: 'max-w-3xl'} mx-auto rounded-lg group"
-					>
-						{#if message.role === 'user'}
-							<UserMessage
-								on:delete={() => messageDeleteHandler(message.id)}
-								user={$user}
-								{readOnly}
-								{message}
-								isFirstMessage={messageIdx === 0}
-								siblings={message.parentId !== null
-									? history.messages[message.parentId]?.childrenIds ?? []
-									: Object.values(history.messages)
-											.filter((message) => message.parentId === null)
-											.map((message) => message.id) ?? []}
-								{confirmEditMessage}
-								{showPreviousMessage}
-								{showNextMessage}
-								copyToClipboard={copyToClipboardWithToast}
-							/>
-						{:else}
-							<ResponseMessage
-								{message}
-								modelfiles={selectedModelfiles}
-								siblings={history.messages[message.parentId]?.childrenIds ?? []}
-								isLastMessage={messageIdx + 1 === messages.length}
-								{readOnly}
-								{updateChatMessages}
-								{confirmEditResponseMessage}
-								{showPreviousMessage}
-								{showNextMessage}
-								{rateMessage}
-								copyToClipboard={copyToClipboardWithToast}
-								{continueGeneration}
-								{regenerateResponse}
-								on:save={async (e) => {
-									console.log('save', e);
+<div class="h-full flex mb-16">
+	{#if messages.length == 0}
+		<Placeholder
+			models={selectedModels}
+			modelfiles={selectedModelfiles}
+			{suggestionPrompts}
+			submitPrompt={async (p) => {
+				let text = p;
 
-									const message = e.detail;
-									history.messages[message.id] = message;
-									await updateChatById(localStorage.token, chatId, {
-										messages: messages,
-										history: history
-									});
-								}}
-							/>
-						{/if}
+				if (p.includes('{{CLIPBOARD}}')) {
+					const clipboardText = await navigator.clipboard.readText().catch((err) => {
+						toast.error($i18n.t('Failed to read clipboard contents'));
+						return '{{CLIPBOARD}}';
+					});
+
+					text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
+				}
+
+				prompt = text;
+
+				await tick();
+
+				const chatInputElement = document.getElementById('chat-textarea');
+				if (chatInputElement) {
+					prompt = p;
+
+					chatInputElement.style.height = '';
+					chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 200) + 'px';
+					chatInputElement.focus();
+
+					const words = findWordIndices(prompt);
+
+					if (words.length > 0) {
+						const word = words.at(0);
+						chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
+					}
+				}
+
+				await tick();
+			}}
+		/>
+	{:else}
+		<div class="w-full pt-2">
+			{#key chatId}
+				{#each messages as message, messageIdx}
+					<div class=" w-full {messageIdx === messages.length - 1 ? 'pb-28' : ''}">
+						<div
+							class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
+								? 'max-w-full'
+								: 'max-w-5xl'} mx-auto rounded-lg group"
+						>
+							{#if message.role === 'user'}
+								<UserMessage
+									on:delete={() => messageDeleteHandler(message.id)}
+									user={$user}
+									{readOnly}
+									{message}
+									isFirstMessage={messageIdx === 0}
+									siblings={message.parentId !== null
+										? history.messages[message.parentId]?.childrenIds ?? []
+										: Object.values(history.messages)
+												.filter((message) => message.parentId === null)
+												.map((message) => message.id) ?? []}
+									{confirmEditMessage}
+									{showPreviousMessage}
+									{showNextMessage}
+									copyToClipboard={copyToClipboardWithToast}
+								/>
+							{:else}
+								<ResponseMessage
+									{message}
+									modelfiles={selectedModelfiles}
+									siblings={history.messages[message.parentId]?.childrenIds ?? []}
+									isLastMessage={messageIdx + 1 === messages.length}
+									{readOnly}
+									{updateChatMessages}
+									{confirmEditResponseMessage}
+									{showPreviousMessage}
+									{showNextMessage}
+									{rateMessage}
+									copyToClipboard={copyToClipboardWithToast}
+									{continueGeneration}
+									{regenerateResponse}
+									on:save={async (e) => {
+										console.log('save', e);
+
+										const message = e.detail;
+										history.messages[message.id] = message;
+										await updateChatById(localStorage.token, chatId, {
+											messages: messages,
+											history: history
+										});
+									}}
+								/>
+							{/if}
+						</div>
 					</div>
-				</div>
-			{/each}
+				{/each}
 
-			{#if bottomPadding}
-				<div class=" mb-10" />
-			{/if}
-		{/key}
-	</div>
-{/if}
+				{#if bottomPadding}
+					<div class="  pb-20" />
+				{/if}
+			{/key}
+		</div>
+	{/if}
+</div>
