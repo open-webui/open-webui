@@ -752,7 +752,7 @@
 							<textarea
 								id="chat-textarea"
 								bind:this={chatTextAreaElement}
-								class=" dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
+								class="scrollbar-none dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
 									? ''
 									: ' pl-4'} rounded-xl resize-none h-[48px]"
 								placeholder={chatInputPlaceholder !== ''
@@ -1035,3 +1035,14 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	.scrollbar-none:active::-webkit-scrollbar-thumb,
+	.scrollbar-none:focus::-webkit-scrollbar-thumb,
+	.scrollbar-none:hover::-webkit-scrollbar-thumb {
+		visibility: visible;
+	}
+	.scrollbar-none::-webkit-scrollbar-thumb {
+		visibility: hidden;
+	}
+</style>
