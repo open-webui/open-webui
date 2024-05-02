@@ -20,7 +20,7 @@
 		name: '',
 		email: '',
 		password: '',
-		role: 'pending'
+		role: 'user'
 	};
 
 	$: if (show) {
@@ -28,7 +28,7 @@
 			name: '',
 			email: '',
 			password: '',
-			role: 'pending'
+			role: 'user'
 		};
 	}
 
