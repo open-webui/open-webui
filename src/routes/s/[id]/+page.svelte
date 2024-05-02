@@ -152,10 +152,7 @@
 				<hr class=" dark:border-gray-800 mt-6 mb-2" />
 			</div>
 
-			<div
-				class=" flex flex-col justify-center w-full flex-auto overflow-auto h-0"
-				id="messages-container"
-			>
+			<div class=" flex flex-col w-full flex-auto overflow-auto h-0" id="messages-container">
 				<div class=" h-full w-full flex flex-col py-4">
 					<div class="py-2">
 						<Messages
