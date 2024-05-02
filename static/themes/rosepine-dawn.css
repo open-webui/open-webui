@@ -189,3 +189,16 @@
 .rose-pine-dawn .text-sm {
     color: #111827ba;
 }
+
+.rose-pine-dawn .w-60 {
+    width: 13rem;
+}
+
+.rose-pine-dawn .data-\[selected\]\:hover\:bg-black:hover[data-selected] {
+    background-color: #faf4ed;
+}
+
+.rose-pine-dawn .bg-emerald-600 {
+    --tw-bg-opacity: 1;
+    background-color: rgb(235 188 186);
+}
