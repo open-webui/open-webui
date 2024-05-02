@@ -53,7 +53,7 @@ def query_doc_with_hybrid_search(
     embedding_function,
     k: int,
     reranking_function,
-    r: int,
+    r: float,
 ):
     try:
         collection = CHROMA_CLIENT.get_collection(name=collection_name)
