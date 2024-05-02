@@ -39,6 +39,9 @@
 	let chatTitleEditId = null;
 	let chatTitle = '';
 
+	enum ChatListSortBy { Title, Created, Updated }
+	let chatListSortBy = ChatListSortBy.Updated
+
 	let showArchivedChatsModal = false;
 	let showShareChatModal = false;
 	let showDropdown = false;
@@ -317,6 +320,35 @@
 			</div>
 		{/if}
 
+		{#if chatListSortBy !== undefined }
+			{@const sortLabel =
+				chatListSortBy === ChatListSortBy.Created ?	$i18n.t("Creation") :
+				chatListSortBy === ChatListSortBy.Updated ? $i18n.t("Recent") :
+				$i18n.t("Alphabetical")
+			}
+			<div class="px-2 flex justify-center mb-1">
+				<button
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					on:click={()=>chatListSortBy= // cycle through enum values
+						(chatListSortBy.valueOf()+1) % (Object.keys(ChatListSortBy).length/2)
+					}>
+					<div class="flex self-center">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"	class="w-4 h-4"
+							fill="none" stroke-width="1.5" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" d=
+								"M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"
+							/>
+						</svg>
+					</div>
+					<div class="flex self-center flex-grow">
+						<div class=" self-center font-medium text-sm">{sortLabel}</div>
+					</div>
+				</button>
+			</div>
+		{/if}
+
 		<div class="relative flex flex-col flex-1 overflow-y-auto">
 			{#if !($settings.saveChatHistory ?? true)}
 				<div class="absolute z-40 w-full h-full bg-gray-50/90 dark:bg-black/90 flex justify-center">
@@ -436,6 +468,10 @@
 
 						return title.includes(query) || contentMatches;
 					}
+				}).sort((a,b)=>{ return (
+					chatListSortBy === ChatListSortBy.Title ? a.title.localeCompare(b.title) :
+					chatListSortBy === ChatListSortBy.Created ? a.created_at - b.created_at :
+					1 ) // unaltered
 				}) as chat, i}
 					<div class=" w-full pr-2 relative group">
 						{#if chatTitleEditId === chat.id}
