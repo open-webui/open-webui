@@ -21,14 +21,14 @@ describe('Settings', () => {
 			// Click on the model selector
 			cy.get('button[aria-label="Select a model"]').click();
 			// Select the first model
-			cy.get('div[role="menuitem"][data-value]').first().click();
+			cy.get('div[role="menuitem"]').first().click();
 		});
 
 		it('user can perform text chat', () => {
 			// Click on the model selector
 			cy.get('button[aria-label="Select a model"]').click();
 			// Select the first model
-			cy.get('div[role="menuitem"][data-value]').first().click();
+			cy.get('div[role="menuitem"]').first().click();
 			// Type a message
 			cy.get('#chat-textarea').type('Hi, what can you do? A single sentence only please.', {
 				force: true
