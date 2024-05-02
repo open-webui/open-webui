@@ -154,7 +154,7 @@
 				if (isCtrlPressed && event.key === '.') {
 					event.preventDefault();
 					console.log('openSettings');
-					document.getElementById('open-settings-button')?.click();
+					showSettings.set(!$showSettings);
 				}
 
 				// Check if Ctrl + / is pressed
