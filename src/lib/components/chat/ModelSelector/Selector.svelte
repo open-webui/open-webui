@@ -27,6 +27,8 @@
 
 	export let className = 'max-w-lg';
 
+	let show = false;
+
 	let selectedModel = '';
 	$: selectedModel = items.find((item) => item.value === value) ?? '';
 
@@ -181,6 +183,7 @@
 </script>
 
 <DropdownMenu.Root
+	bind:open={show}
 	onOpenChange={async () => {
 		searchValue = '';
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
@@ -214,6 +217,7 @@
 						bind:value={searchValue}
 						class="w-full text-sm bg-transparent outline-none"
 						placeholder={searchPlaceholder}
+						autocomplete="off"
 					/>
 				</div>
 
@@ -222,10 +226,12 @@
 
 			<div class="px-3 my-2 max-h-72 overflow-y-auto scrollbar-none">
 				{#each filteredItems as item}
-					<DropdownMenu.Item
-						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm  text-gray-700 dark:text-gray-100  outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+					<button
+						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
 						on:click={() => {
 							value = item.value;
+
+							show = false;
 						}}
 					>
 						<div class="flex items-center gap-2">
@@ -294,7 +300,7 @@
 								<Check />
 							</div>
 						{/if}
-					</DropdownMenu.Item>
+					</button>
 				{:else}
 					<div>
 						<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
