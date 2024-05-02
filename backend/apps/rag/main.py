@@ -476,9 +476,7 @@ def store_web(form_data: StoreWebForm, user=Depends(get_current_user)):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
     try:
         loader = WebBaseLoader(form_data.url)
-        if app.state.RAG_BYPASS_SSL_VERIFY:
-            loader.requests_kwargs = {'verify':False}
-
+        loader.requests_kwargs = {'verify': app.state.RAG_BYPASS_SSL_VERIFY}
         data = loader.load()
 
         collection_name = form_data.collection_name
