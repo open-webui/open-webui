@@ -6,7 +6,11 @@
 
 	import Prompts from './MessageInput/PromptCommands.svelte';
 	import Suggestions from './MessageInput/Suggestions.svelte';
-	import { uploadDocToVectorDB, uploadWebToVectorDB } from '$lib/apis/rag';
+	import {
+		uploadDocToVectorDB,
+		uploadWebToVectorDB,
+		uploadYoutubeTranscriptionToVectorDB
+	} from '$lib/apis/rag';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
 	import Documents from './MessageInput/Documents.svelte';
@@ -290,6 +294,34 @@
 		}
 	};
 
+	const uploadYoutubeTranscription = async (url) => {
+		console.log(url);
+
+		const doc = {
+			type: 'doc',
+			name: url,
+			collection_name: '',
+			upload_status: false,
+			url: url,
+			error: ''
+		};
+
+		try {
+			files = [...files, doc];
+			const res = await uploadYoutubeTranscriptionToVectorDB(localStorage.token, url);
+
+			if (res) {
+				doc.upload_status = true;
+				doc.collection_name = res.collection_name;
+				files = files;
+			}
+		} catch (e) {
+			// Remove the failed doc from the files array
+			files = files.filter((f) => f.name !== url);
+			toast.error(e);
+		}
+	};
+
 	onMount(() => {
 		console.log(document.getElementById('sidebar'));
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
@@ -428,6 +460,10 @@
 						<Documents
 							bind:this={documentsElement}
 							bind:prompt
+							on:youtube={(e) => {
+								console.log(e);
+								uploadYoutubeTranscription(e.detail);
+							}}
 							on:url={(e) => {
 								console.log(e);
 								uploadWeb(e.detail);

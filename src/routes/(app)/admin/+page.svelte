@@ -30,6 +30,7 @@
 	let page = 1;
 
 	let showSettingsModal = false;
+	let showAddUserModal = false;
 
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
@@ -100,45 +101,47 @@
 			<div class=" mx-auto w-full">
 				<div class="w-full">
 					<div class=" flex flex-col justify-center">
-						<div class=" px-5 pt-3">
+						<div class=" px-6 pt-4">
 							<div class=" flex justify-between items-center">
 								<div class="flex items-center text-2xl font-semibold">Dashboard</div>
 								<div>
-									<button
-										class="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
-										type="button"
-										on:click={() => {
-											showSettingsModal = !showSettingsModal;
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="w-4 h-4"
+									<Tooltip content={$i18n.t('Admin Settings')}>
+										<button
+											class="flex items-center space-x-1 p-2 md:px-3 md:py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
+											type="button"
+											on:click={() => {
+												showSettingsModal = !showSettingsModal;
+											}}
 										>
-											<path
-												fill-rule="evenodd"
-												d="M6.955 1.45A.5.5 0 0 1 7.452 1h1.096a.5.5 0 0 1 .497.45l.17 1.699c.484.12.94.312 1.356.562l1.321-1.081a.5.5 0 0 1 .67.033l.774.775a.5.5 0 0 1 .034.67l-1.08 1.32c.25.417.44.873.561 1.357l1.699.17a.5.5 0 0 1 .45.497v1.096a.5.5 0 0 1-.45.497l-1.699.17c-.12.484-.312.94-.562 1.356l1.082 1.322a.5.5 0 0 1-.034.67l-.774.774a.5.5 0 0 1-.67.033l-1.322-1.08c-.416.25-.872.44-1.356.561l-.17 1.699a.5.5 0 0 1-.497.45H7.452a.5.5 0 0 1-.497-.45l-.17-1.699a4.973 4.973 0 0 1-1.356-.562L4.108 13.37a.5.5 0 0 1-.67-.033l-.774-.775a.5.5 0 0 1-.034-.67l1.08-1.32a4.971 4.971 0 0 1-.561-1.357l-1.699-.17A.5.5 0 0 1 1 8.548V7.452a.5.5 0 0 1 .45-.497l1.699-.17c.12-.484.312-.94.562-1.356L2.629 4.107a.5.5 0 0 1 .034-.67l.774-.774a.5.5 0 0 1 .67-.033L5.43 3.71a4.97 4.97 0 0 1 1.356-.561l.17-1.699ZM6 8c0 .538.212 1.026.558 1.385l.057.057a2 2 0 0 0 2.828-2.828l-.058-.056A2 2 0 0 0 6 8Z"
-												clip-rule="evenodd"
-											/>
-										</svg>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M6.955 1.45A.5.5 0 0 1 7.452 1h1.096a.5.5 0 0 1 .497.45l.17 1.699c.484.12.94.312 1.356.562l1.321-1.081a.5.5 0 0 1 .67.033l.774.775a.5.5 0 0 1 .034.67l-1.08 1.32c.25.417.44.873.561 1.357l1.699.17a.5.5 0 0 1 .45.497v1.096a.5.5 0 0 1-.45.497l-1.699.17c-.12.484-.312.94-.562 1.356l1.082 1.322a.5.5 0 0 1-.034.67l-.774.774a.5.5 0 0 1-.67.033l-1.322-1.08c-.416.25-.872.44-1.356.561l-.17 1.699a.5.5 0 0 1-.497.45H7.452a.5.5 0 0 1-.497-.45l-.17-1.699a4.973 4.973 0 0 1-1.356-.562L4.108 13.37a.5.5 0 0 1-.67-.033l-.774-.775a.5.5 0 0 1-.034-.67l1.08-1.32a4.971 4.971 0 0 1-.561-1.357l-1.699-.17A.5.5 0 0 1 1 8.548V7.452a.5.5 0 0 1 .45-.497l1.699-.17c.12-.484.312-.94.562-1.356L2.629 4.107a.5.5 0 0 1 .034-.67l.774-.774a.5.5 0 0 1 .67-.033L5.43 3.71a4.97 4.97 0 0 1 1.356-.561l.17-1.699ZM6 8c0 .538.212 1.026.558 1.385l.057.057a2 2 0 0 0 2.828-2.828l-.058-.056A2 2 0 0 0 6 8Z"
+													clip-rule="evenodd"
+												/>
+											</svg>
 
-										<div class=" text-xs">{$i18n.t('Admin Settings')}</div>
-									</button>
+											<div class="hidden md:inline text-xs">{$i18n.t('Admin Settings')}</div>
+										</button>
+									</Tooltip>
 								</div>
 							</div>
 						</div>
 
-						<div class="px-5 flex text-sm gap-2.5">
+						<div class="px-6 flex text-sm gap-2.5">
 							<div class="py-3 border-b font-medium text-gray-100 cursor-pointer">Overview</div>
 							<!-- <div class="py-3 text-gray-300 cursor-pointer">Users</div> -->
 						</div>
 
 						<hr class=" mb-3 dark:border-gray-800" />
 
-						<div class="px-5">
-							<div class="mt-0.5 mb-3 flex justify-between">
+						<div class="px-6">
+							<div class="mt-0.5 mb-3 gap-1 flex flex-col md:flex-row justify-between">
 								<div class="flex text-lg font-medium px-0.5">
 									{$i18n.t('All Users')}
 									<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
@@ -147,12 +150,32 @@
 									>
 								</div>
 
-								<div class="">
+								<div class="flex gap-1">
 									<input
-										class=" w-60 rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full md:w-60 rounded-xl py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 										placeholder={$i18n.t('Search')}
 										bind:value={search}
 									/>
+
+									<div>
+										<button
+											class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition font-medium text-sm flex items-center space-x-1"
+											on:click={() => {
+												showAddUserModal = !showAddUserModal;
+											}}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+												/>
+											</svg>
+										</button>
+									</div>
 								</div>
 							</div>
 
