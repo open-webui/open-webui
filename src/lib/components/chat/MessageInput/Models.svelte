@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { createEventDispatcher } from 'svelte';
+
 	import { generatePrompt } from '$lib/apis/ollama';
 	import { models } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
@@ -7,13 +9,13 @@
 
 	const i18n = getContext('i18n');
 
+	const dispatch = createEventDispatcher();
+
 	export let prompt = '';
 	export let user = null;
 
 	export let chatInputPlaceholder = '';
 	export let messages = [];
-
-	let selectedModel = null;
 
 	let selectedIdx = 0;
 	let filteredModels = [];
@@ -36,9 +38,7 @@
 
 	const confirmSelect = async (model) => {
 		prompt = '';
-		selectedModel = model;
-
-		console.log(selectedModel);
+		dispatch('select', model);
 	};
 
 	const confirmSelectCollaborativeChat = async (model) => {
@@ -169,12 +169,4 @@
 			</div>
 		</div>
 	{/if}
-{/if}
-
-{#if selectedModel !== null}
-	<div class="md:px-2 mb-3 text-left w-full absolute bottom-0 left-0 right-0">
-		<div>
-			{JSON.stringify(selectedModel)}
-		</div>
-	</div>
 {/if}

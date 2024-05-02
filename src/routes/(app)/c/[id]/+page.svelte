@@ -57,6 +57,8 @@
 	// let chatId = $page.params.id;
 	let showModelSelector = true;
 	let selectedModels = [''];
+	let atSelectedModel = '';
+
 	let selectedModelfile = null;
 
 	$: selectedModelfile =
@@ -167,7 +169,8 @@
 		}
 	};
 
-	const scrollToBottom = () => {
+	const scrollToBottom = async () => {
+		await tick();
 		if (messagesContainerElement) {
 			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 		}
@@ -256,7 +259,7 @@
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
-			selectedModels.map(async (modelId) => {
+			(atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(async (modelId) => {
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
@@ -549,6 +552,8 @@
 			.flat(1);
 
 		console.log(docs);
+
+		scrollToBottom();
 
 		const [res, controller] = await generateOpenAIChatCompletion(
 			localStorage.token,
@@ -911,6 +916,7 @@
 		bind:files
 		bind:prompt
 		bind:autoScroll
+		bind:selectedModel={atSelectedModel}
 		suggestionPrompts={selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
 		{messages}
 		{submitPrompt}

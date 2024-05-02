@@ -1,23 +1,25 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { settings, showSidebar } from '$lib/stores';
+	import { modelfiles, settings, showSidebar } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
-	import Prompts from './MessageInput/PromptCommands.svelte';
-	import Suggestions from './MessageInput/Suggestions.svelte';
 	import {
 		uploadDocToVectorDB,
 		uploadWebToVectorDB,
 		uploadYoutubeTranscriptionToVectorDB
 	} from '$lib/apis/rag';
+	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS, WEBUI_BASE_URL } from '$lib/constants';
+
+	import { transcribeAudio } from '$lib/apis/audio';
+
+	import Prompts from './MessageInput/PromptCommands.svelte';
+	import Suggestions from './MessageInput/Suggestions.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
-	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
 	import Documents from './MessageInput/Documents.svelte';
 	import Models from './MessageInput/Models.svelte';
-	import { transcribeAudio } from '$lib/apis/audio';
 	import Tooltip from '../common/Tooltip.svelte';
-	import Page from '../../../routes/(app)/+page.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -25,6 +27,8 @@
 	export let stopResponse: Function;
 
 	export let autoScroll = true;
+	export let selectedModel = '';
+
 	let chatTextAreaElement: HTMLTextAreaElement;
 	let filesInputElement;
 
@@ -424,11 +428,11 @@
 
 <div class="fixed bottom-0 {$showSidebar ? 'left-0 lg:left-[260px]' : 'left-0'} right-0">
 	<div class="w-full">
-		<div class=" px-2.5 -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
+		<div class="px-2.5 lg:px-16 -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div class="flex flex-col max-w-5xl w-full">
 				<div class="relative">
 					{#if autoScroll === false && messages.length > 0}
-						<div class=" absolute -top-12 left-0 right-0 flex justify-center">
+						<div class=" absolute -top-12 left-0 right-0 flex justify-center z-30">
 							<button
 								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full"
 								on:click={() => {
@@ -488,14 +492,46 @@
 						bind:user
 						bind:chatInputPlaceholder
 						{messages}
+						on:select={(e) => {
+							selectedModel = e.detail;
+							chatTextAreaElement?.focus();
+						}}
 					/>
 
-					<!-- {#if messages.length == 0 && suggestionPrompts.length !== 0}
-						<Suggestions {suggestionPrompts} {submitPrompt} />
-					{/if} -->
+					{#if selectedModel !== ''}
+						<div
+							class="md:px-3 py-2.5 text-left w-full flex justify-between items-center absolute bottom-0 left-0 right-0 bg-gradient-to-t from-50% from-white dark:from-gray-900"
+						>
+							<div class="flex items-center gap-2 text-sm dark:text-gray-500">
+								<img
+									alt="model profile"
+									class="size-5 max-w-[28px] object-cover rounded-full"
+									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedModel.id)
+										?.imageUrl ??
+										($i18n.language === 'dg-DG'
+											? `/doge.png`
+											: `${WEBUI_BASE_URL}/static/favicon.png`)}
+								/>
+								<div>
+									Talking to <span class=" font-medium">{selectedModel.name} </span>
+								</div>
+							</div>
+							<div>
+								<button
+									class="flex items-center"
+									on:click={() => {
+										selectedModel = '';
+									}}
+								>
+									<XMark />
+								</button>
+							</div>
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
+
 		<div class="bg-white dark:bg-gray-900">
 			<div class="max-w-6xl px-2.5 lg:px-16 mx-auto inset-x-0">
 				<div class=" pb-2">
@@ -831,6 +867,11 @@
 
 										e.target.style.height = '';
 										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+									}
+
+									if (e.key === 'Escape') {
+										console.log('Escape');
+										selectedModel = '';
 									}
 								}}
 								rows="1"
