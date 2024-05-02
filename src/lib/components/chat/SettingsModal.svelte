@@ -359,7 +359,6 @@
 					/>
 				{:else if selectedTab === 'rag'}
 					<RAG
-						{saveSettings}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
