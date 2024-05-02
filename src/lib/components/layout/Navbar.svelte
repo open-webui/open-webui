@@ -9,6 +9,7 @@
 	import ModelSelector from '../chat/ModelSelector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Menu from './Navbar/Menu.svelte';
+	import { page } from '$app/stores';
 
 	const i18n = getContext('i18n');
 
@@ -31,7 +32,7 @@
 		<div class="flex items-center w-full max-w-full">
 			<div class="flex-1 overflow-hidden max-w-full">
 				{#if showModelSelector}
-					<ModelSelector bind:selectedModels />
+					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 				{/if}
 			</div>
 

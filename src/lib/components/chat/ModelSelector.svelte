@@ -13,6 +13,8 @@
 	export let selectedModels = [''];
 	export let disabled = false;
 
+	export let showSetDefault = true;
+
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
 		if (hasEmptyModel.length) {
@@ -106,6 +108,8 @@
 	{/each}
 </div>
 
-<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
-	<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
-</div>
+{#if showSetDefault}
+	<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
+		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
+	</div>
+{/if}
