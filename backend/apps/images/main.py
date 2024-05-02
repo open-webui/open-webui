@@ -348,18 +348,20 @@ def save_url_image(url):
             if not image_format:
                 raise ValueError("Could not determine image type from MIME type")
 
-            file_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}{image_format}")
+            image_filename = f"{image_id}{image_format}"
+
+            file_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}")
             with open(file_path, "wb") as image_file:
                 for chunk in r.iter_content(chunk_size=8192):
                     image_file.write(chunk)
-            return image_id, image_format
+            return image_filename
         else:
             log.error(f"Url does not point to an image.")
-            return None, None
+            return None
 
     except Exception as e:
         log.exception(f"Error saving image: {e}")
-        return None, None
+        return None
 
 
 @app.post("/generations")
@@ -435,11 +437,9 @@ def generate_image(
             images = []
 
             for image in res["data"]:
-                image_id, image_format = save_url_image(image["url"])
-                images.append(
-                    {"url": f"/cache/image/generations/{image_id}{image_format}"}
-                )
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
+                image_filename = save_url_image(image["url"])
+                images.append({"url": f"/cache/image/generations/{image_filename}"})
+                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
 
                 with open(file_body_path, "w") as f:
                     json.dump(data.model_dump(exclude_none=True), f)
