@@ -854,12 +854,12 @@
 </div>
 
 <style>
-	.scrollbar-none::-webkit-scrollbar {
-		display: none; /* for Chrome, Safari and Opera */
+	.scrollbar-none:active::-webkit-scrollbar-thumb,
+	.scrollbar-none:focus::-webkit-scrollbar-thumb,
+	.scrollbar-none:hover::-webkit-scrollbar-thumb {
+		visibility: visible;
 	}
-
-	.scrollbar-none {
-		-ms-overflow-style: none; /* IE and Edge */
-		scrollbar-width: none; /* Firefox */
+	.scrollbar-none::-webkit-scrollbar-thumb {
+		visibility: hidden;
 	}
 </style>
