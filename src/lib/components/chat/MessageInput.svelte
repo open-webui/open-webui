@@ -762,7 +762,13 @@
 									: $i18n.t('Send a Message')}
 								bind:value={prompt}
 								on:keypress={(e) => {
-									if (window.innerWidth > 1024) {
+									if (
+										!(
+											'ontouchstart' in window ||
+											navigator.maxTouchPoints > 0 ||
+											navigator.msMaxTouchPoints > 0
+										)
+									) {
 										if (e.keyCode == 13 && !e.shiftKey) {
 											e.preventDefault();
 										}
