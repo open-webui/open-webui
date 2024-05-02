@@ -402,7 +402,7 @@ def generate_image(
             for image in res["data"]:
                 image_filename = save_b64_image(image["b64_json"])
                 images.append({"url": f"/cache/image/generations/{image_filename}"})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
+                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
 
                 with open(file_body_path, "w") as f:
                     json.dump(data, f)
@@ -477,7 +477,7 @@ def generate_image(
             for image in res["images"]:
                 image_filename = save_b64_image(image)
                 images.append({"url": f"/cache/image/generations/{image_filename}"})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
+                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
 
                 with open(file_body_path, "w") as f:
                     json.dump({**data, "info": res["info"]}, f)
