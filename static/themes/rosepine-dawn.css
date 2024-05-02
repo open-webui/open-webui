@@ -18,6 +18,10 @@
 	background: #f2e9e1;
 }
 
+.rose-pine-dawn .bg-emerald-700 {
+	background-color: rgb(235 188 186);
+}
+
 .rose-pine-dawn .bg-white {
     --tw-bg-opacity: 1;
     background-color: #fffaf3;

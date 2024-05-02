@@ -1,5 +1,4 @@
 .rose-pine * {
-	color: #e0def4 !important;
 	stroke: #907aa9 !important;
 }
 
@@ -13,6 +12,10 @@
 
 .rose-pine .py-2\.5.my-auto.flex.flex-col.justify-between.h-screen {
 	background: #191724;
+}
+
+.rose-pine-dawn .bg-emerald-700 {
+    background-color: rgb(196 167 231);
 }
 
 .rose-pine .bg-white.dark\:bg-gray-800 {
@@ -128,4 +131,14 @@
 .rose-pine .svelte-11kvm4p {
 	--primary: #9ccfd8 !important;
 	--secondary: #1f1d2e !important;
+}
+
+
+.rose-pine .hover\:bg-emerald-800:hover {
+    --tw-bg-opacity: 1;
+    background-color: #aa78e6;
+}
+
+.rose-pine :is(.dark .dark\:bg-gray-900) {
+    background-color: #191724;
 }
