@@ -199,6 +199,9 @@
 }
 
 .rose-pine-dawn .bg-emerald-600 {
-    --tw-bg-opacity: 1;
     background-color: rgb(235 188 186);
+}
+
+.rose-pine-dawn .data-\[selected\]\:bg-black[data-selected] {
+    background-color: #faf4ed;
 }
