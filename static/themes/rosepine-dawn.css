@@ -151,3 +151,13 @@
 	--primary: #56949f !important;
 	--secondary: #fffaf3 !important;
 }
+
+.rose-pine-dawn .rounded-r-xl {
+	border-radius: 0 0.75rem 0.75rem 0;
+}
+
+.rose-pine-dawn [data-rich-colors=true] [data-sonner-toast][data-type=success], [data-rich-colors=true] [data-sonner-toast][data-type=success] [data-close-button] {
+    background: hsl(2.45deg 55.06% 82.55%);
+    border-color: hsl(0deg 23.98% 70.06%);
+    color: hsl(0deg 0% 100%);
+}

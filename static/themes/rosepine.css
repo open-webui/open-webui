@@ -14,6 +14,11 @@
 	background: #191724;
 }
 
+.rose-pine-dawn .bg-red-400 {
+    --tw-bg-opacity: 1;
+    background-color: rgb(196 167 231);
+}
+
 .rose-pine-dawn .bg-emerald-700 {
     background-color: rgb(196 167 231);
 }
@@ -141,4 +146,14 @@
 
 .rose-pine :is(.dark .dark\:bg-gray-900) {
     background-color: #191724;
+}
+
+.rose-pine .rounded-r-xl {
+	border-radius: 0 0.75rem 0.75rem 0;
+}
+
+.rose-pine-dawn .[data-rich-colors=true] [data-sonner-toast][data-type=success], [data-rich-colors=true] [data-sonner-toast][data-type=success] [data-close-button] {
+    background: hsl(2.45deg 55.06% 82.55%);
+    border-color: hsl(0deg 23.98% 70.06%);
+    color: hsl(0deg 0% 100%);
 }
