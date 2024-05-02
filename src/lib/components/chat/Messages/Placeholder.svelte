@@ -32,7 +32,7 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-3xl px-8 pb-32">
+	<div class="m-auto w-full max-w-3xl px-8 lg:px-0 pb-16">
 		<div class="flex justify-start">
 			<div class="flex -space-x-4 mb-1" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}

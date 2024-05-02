@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Bolt from '$lib/components/icons/Bolt.svelte';
+	import { onMount } from 'svelte';
 
 	export let submitPrompt: Function;
 	export let suggestionPrompts = [];
@@ -12,6 +13,21 @@
 	// suggestionPrompts.length <= 4
 	// 	? suggestionPrompts
 	// 	: suggestionPrompts.sort(() => Math.random() - 0.5).slice(0, 4);
+
+	onMount(() => {
+		const containerElement = document.getElementById('suggestions-container');
+
+		if (containerElement) {
+			containerElement.addEventListener('wheel', function (event) {
+				if (event.deltaY !== 0) {
+					// If scrolling vertically, prevent default behavior
+					event.preventDefault();
+					// Adjust horizontal scroll position based on vertical scroll
+					containerElement.scrollLeft += event.deltaY;
+				}
+			});
+		}
+	});
 </script>
 
 {#if prompts.length > 0}
@@ -22,7 +38,10 @@
 {/if}
 
 <div class="w-full">
-	<div class="relative w-full flex gap-2 snap-x snap-mandatory overflow-x-auto tabs">
+	<div
+		class="relative w-full flex gap-2 snap-x snap-mandatory md:snap-none overflow-x-auto tabs"
+		id="suggestions-container"
+	>
 		{#each prompts as prompt, promptIdx}
 			<div class="snap-center shrink-0">
 				<button

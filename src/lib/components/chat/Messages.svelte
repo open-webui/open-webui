@@ -240,7 +240,7 @@
 	};
 </script>
 
-<div class="h-full flex">
+<div class="h-full flex mb-16">
 	{#if messages.length == 0}
 		<Placeholder
 			models={selectedModels}
