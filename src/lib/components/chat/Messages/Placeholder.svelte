@@ -25,9 +25,9 @@
 </script>
 
 {#if models.length > 0}
-	<div class="m-auto w-full max-w-3xl px-8 pb-24">
-		<!-- <div class="flex justify-start">
-			<div class="flex -space-x-4 mb-0.5">
+	<div class="m-auto w-full max-w-3xl px-8 pb-32">
+		<div class="flex justify-start">
+			<div class="flex -space-x-4 mb-1">
 				{#each models as model, modelIdx}
 					<button
 						on:click={() => {
@@ -54,7 +54,8 @@
 					</button>
 				{/each}
 			</div>
-		</div> -->
+		</div>
+
 		<div
 			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4"
 		>
@@ -84,10 +85,6 @@
 		</div>
 
 		<div class=" w-full">
-			<div class="mb-2 flex gap-1 text-sm font-medium items-center dark:text-gray-600">
-				<Bolt />
-				Suggested
-			</div>
 			<Suggestions {suggestionPrompts} {submitPrompt} />
 		</div>
 	</div>
