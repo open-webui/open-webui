@@ -90,7 +90,7 @@ class SignupForm(BaseModel):
 
 
 class AddUserForm(SignupForm):
-    role: str = "pending"
+    role: Optional[str] = "pending"
 
 
 class AuthsTable:

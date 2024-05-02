@@ -223,14 +223,15 @@ async def signup(form_data: AddUserForm, user=Depends(get_admin_user)):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
-        role = form_data.role
+
+        print(form_data)
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
             form_data.name,
             form_data.profile_image_url,
-            role,
+            form_data.role,
         )
 
         if user:

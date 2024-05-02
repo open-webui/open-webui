@@ -100,14 +100,15 @@ export const addUser = async (
 	name: string,
 	email: string,
 	password: string,
-	role: string
+	role: string = 'pending'
 ) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/add`, {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
 			name: name,

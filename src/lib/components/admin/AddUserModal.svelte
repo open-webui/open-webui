@@ -15,8 +15,17 @@
 		name: '',
 		email: '',
 		password: '',
-		role: ''
+		role: 'pending'
 	};
+
+	$: if (show) {
+		_user = {
+			name: '',
+			email: '',
+			password: '',
+			role: 'pending'
+		};
+	}
 
 	const submitHandler = async () => {
 		const res = await addUser(
@@ -38,7 +47,7 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-3">
+		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Add User')}</div>
 			<button
 				class="self-center"
@@ -69,6 +78,23 @@
 				>
 					<div class=" ">
 						<div class="flex flex-col w-full">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+
+							<div class="flex-1">
+								<select
+									class="w-full capitalize rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+									bind:value={_user.role}
+									placeholder={$i18n.t('Enter Your Role')}
+									required
+								>
+									<option value="pending"> pending </option>
+									<option value="user"> user </option>
+									<option value="admin"> admin </option>
+								</select>
+							</div>
+						</div>
+
+						<div class="flex flex-col w-full mt-2">
 							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
 
 							<div class="flex-1">
