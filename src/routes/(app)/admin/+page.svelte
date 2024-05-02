@@ -18,6 +18,7 @@
 	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import UserChatsModal from '$lib/components/admin/UserChatsModal.svelte';
+	import AddUserModal from '$lib/components/admin/AddUserModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -92,6 +93,12 @@
 	/>
 {/key}
 
+<AddUserModal
+	bind:show={showAddUserModal}
+	on:save={async () => {
+		users = await getUsers(localStorage.token);
+	}}
+/>
 <UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
 <SettingsModal bind:show={showSettingsModal} />
 

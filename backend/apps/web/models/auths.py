@@ -89,6 +89,10 @@ class SignupForm(BaseModel):
     profile_image_url: Optional[str] = "/user.png"
 
 
+class AddUserForm(SignupForm):
+    role: str = "pending"
+
+
 class AuthsTable:
     def __init__(self, db):
         self.db = db

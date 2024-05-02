@@ -9,7 +9,7 @@
 
 <Modal bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
+		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Keyboard shortcuts')}</div>
 			<button
 				class="self-center"
@@ -29,7 +29,6 @@
 				</svg>
 			</button>
 		</div>
-		<hr class=" dark:border-gray-800" />
 
 		<div class="flex flex-col md:flex-row w-full p-5 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
