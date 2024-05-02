@@ -763,7 +763,7 @@
 								bind:value={prompt}
 								on:keypress={(e) => {
 									if (
-										window.innerWidth > 1024 &&
+										window.innerWidth > 1024 ||
 										!(
 											'ontouchstart' in window ||
 											navigator.maxTouchPoints > 0 ||
