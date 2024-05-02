@@ -15,7 +15,8 @@
 		chatId,
 		config,
 		WEBUI_NAME,
-		tags as _tags
+		tags as _tags,
+		showSidebar
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream, convertMessagesToHistory } from '$lib/utils';
 
@@ -857,7 +858,11 @@
 </svelte:head>
 
 {#if loaded}
-	<div class="min-h-screen max-h-screen w-full flex flex-col">
+	<div
+		class="min-h-screen max-h-screen {$showSidebar
+			? 'max-w-[calc(100%-260px)]'
+			: 'max-w-full'} flex flex-col"
+	>
 		<Navbar
 			{title}
 			{chat}
@@ -875,7 +880,7 @@
 		/>
 		<div class="flex flex-col flex-auto">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full"
 				id="messages-container"
 				bind:this={messagesContainerElement}
 				on:scroll={(e) => {

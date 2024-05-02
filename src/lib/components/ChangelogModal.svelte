@@ -22,7 +22,7 @@
 </script>
 
 <Modal bind:show>
-	<div class="px-5 py-4 dark:text-gray-300">
+	<div class="px-5 py-4 dark:text-gray-300 text-gray-700">
 		<div class="flex justify-between items-start">
 			<div class="text-xl font-bold">
 				{$i18n.t('What’s New in')}

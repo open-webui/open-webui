@@ -192,6 +192,8 @@
 </div>
 
 <ShortcutsModal bind:show={showShortcuts} />
+<SettingsModal bind:show={$showSettings} />
+<ChangelogModal bind:show={$showChangelog} />
 
 <div class="app relative">
 	<div
@@ -292,8 +294,7 @@
 			{/if}
 
 			<Sidebar />
-			<SettingsModal bind:show={$showSettings} />
-			<ChangelogModal bind:show={$showChangelog} />
+
 			<slot />
 		{/if}
 	</div>
