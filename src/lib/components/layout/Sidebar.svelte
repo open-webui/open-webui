@@ -54,7 +54,7 @@
 		function checkDirection() {
 			const screenWidth = window.innerWidth;
 			const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
-			if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 4) {
+			if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 8) {
 				if (touchend.screenX < touchstart.screenX) {
 					showSidebar.set(false);
 				}
