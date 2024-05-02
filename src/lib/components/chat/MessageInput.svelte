@@ -828,6 +828,9 @@
 											e.preventDefault();
 											e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
 										}
+
+										e.target.style.height = '';
+										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 									}
 								}}
 								rows="1"
