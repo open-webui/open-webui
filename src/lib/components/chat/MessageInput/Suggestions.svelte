@@ -33,17 +33,27 @@
 				>
 					<div class="flex flex-col text-left">
 						{#if prompt.title && prompt.title[0] !== ''}
-							<div class="  font-medium dark:text-gray-300">{prompt.title[0]}</div>
+							<div
+								class="  font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition"
+							>
+								{prompt.title[0]}
+							</div>
 							<div class="text-sm text-gray-600 font-normal line-clamp-2">{prompt.title[1]}</div>
 						{:else}
-							<div class=" self-center text-sm font-medium dark:text-gray-300 line-clamp-2">
+							<div
+								class=" self-center text-sm font-medium dark:text-gray-300 dark:group-hover:text-gray-100 transition line-clamp-2"
+							>
 								{prompt.content}
 							</div>
 						{/if}
 					</div>
 
 					<div class="w-full flex justify-between">
-						<div class="text-xs text-gray-400 dark:text-gray-600 self-center">Prompt</div>
+						<div
+							class="text-xs text-gray-400 group-hover:text-gray-500 dark:text-gray-600 dark:group-hover:text-gray-500 transition self-center"
+						>
+							Prompt
+						</div>
 
 						<div
 							class="self-end p-1 rounded-lg text-gray-300 group-hover:text-gray-800 dark:text-gray-700 dark:group-hover:text-gray-100 transition"

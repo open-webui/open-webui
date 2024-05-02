@@ -2,8 +2,10 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { user } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
+
+	import { blur, fade } from 'svelte/transition';
+
 	import Suggestions from '../MessageInput/Suggestions.svelte';
-	import Bolt from '$lib/components/icons/Bolt.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -13,6 +15,7 @@
 	export let submitPrompt;
 	export let suggestionPrompts;
 
+	let mounted = false;
 	let modelfile = null;
 	let selectedModelIdx = 0;
 
@@ -22,12 +25,16 @@
 	$: if (models.length > 0) {
 		selectedModelIdx = models.length - 1;
 	}
+
+	onMount(() => {
+		mounted = true;
+	});
 </script>
 
-{#if models.length > 0}
+{#key mounted}
 	<div class="m-auto w-full max-w-3xl px-8 pb-32">
 		<div class="flex justify-start">
-			<div class="flex -space-x-4 mb-1">
+			<div class="flex -space-x-4 mb-1" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
 					<button
 						on:click={() => {
@@ -60,32 +67,37 @@
 			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4"
 		>
 			<div>
-				{#if modelfile}
-					<span class=" capitalize">
+				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
+					{#if modelfile}
 						{modelfile.title}
-					</span>
-					<div class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400">
-						{modelfile.desc}
-					</div>
-					{#if modelfile.user}
-						<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
-							By <a href="https://openwebui.com/m/{modelfile.user.username}"
-								>{modelfile.user.name ? modelfile.user.name : `@${modelfile.user.username}`}</a
-							>
+					{:else}
+						{$i18n.t('Hello, {{name}}', { name: $user.name })}
+					{/if}
+				</div>
+
+				<div in:fade={{ duration: 200, delay: 200 }}>
+					{#if modelfile}
+						<div class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400">
+							{modelfile.desc}
+						</div>
+						{#if modelfile.user}
+							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
+								By <a href="https://openwebui.com/m/{modelfile.user.username}"
+									>{modelfile.user.name ? modelfile.user.name : `@${modelfile.user.username}`}</a
+								>
+							</div>
+						{/if}
+					{:else}
+						<div class=" font-medium text-gray-400 dark:text-gray-500">
+							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}
-				{:else}
-					<div class=" line-clamp-1">{$i18n.t('Hello, {{name}}', { name: $user.name })}</div>
-
-					<div class=" font-medium text-gray-400 dark:text-gray-500">
-						{$i18n.t('How can I help you today?')}
-					</div>
-				{/if}
+				</div>
 			</div>
 		</div>
 
-		<div class=" w-full">
+		<div class=" w-full" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions {suggestionPrompts} {submitPrompt} />
 		</div>
 	</div>
-{/if}
+{/key}

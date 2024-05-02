@@ -294,7 +294,6 @@
 			{/if}
 
 			<Sidebar />
-
 			<slot />
 		{/if}
 	</div>

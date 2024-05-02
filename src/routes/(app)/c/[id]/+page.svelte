@@ -5,7 +5,6 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-
 	import {
 		models,
 		modelfiles,
@@ -860,8 +859,8 @@
 {#if loaded}
 	<div
 		class="min-h-screen max-h-screen {$showSidebar
-			? 'max-w-[calc(100%-260px)]'
-			: 'max-w-full'} flex flex-col"
+			? ' lg:max-w-[calc(100%-260px)]'
+			: ''} max-w-full flex flex-col"
 	>
 		<Navbar
 			{title}
