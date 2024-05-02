@@ -28,7 +28,7 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
-	<div class=" flex max-w-full w-full mx-auto px-6 pt-1">
+	<div class=" flex max-w-full w-full mx-auto px-5 pt-0.5 md:px-[1.3rem]">
 		<div class="flex items-center w-full max-w-full">
 			<div class="flex-1 overflow-hidden max-w-full">
 				{#if showModelSelector}
