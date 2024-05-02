@@ -336,7 +336,7 @@
 	"Trouble accessing Ollama?": "访问Ollama时遇到问题？",
 	"TTS Settings": "文本转语音设置",
 	"Type Hugging Face Resolve (Download) URL": "输入Hugging Face解析（下载）URL",
-	"Uh-oh! There was an issue connecting to {{provider}}.": "哎呀！连接到{{provider}}时出现问题。",
+	"Uh-oh! There was an issue connecting to {{provider}}.": "哎呀！连接到{{provider}}时出现问题，请点击模型状态查看模型是否正常",
 	"Unknown File Type '{{file_type}}', but accepting and treating as plain text": "未知文件类型'{{file_type}}'，将视为纯文本进行处理",
 	"Update password": "更新密码",
 	"Upload a GGUF model": "上传一个GGUF模型",
