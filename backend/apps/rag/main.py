@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os, shutil, logging, re
 import nc_py_api
 import psycopg2
-from psycopg2 import sql
+from pgvector.psycopg2 import register_vector
 import tempfile
 import requests
 
@@ -446,39 +446,40 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
     try:
         # Establish a connection to the PostgreSQL database
         conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
+        cur = conn.cursor()
 
-        # Create a cursor to execute SQL queries
-        with conn.cursor() as cursor:
-            if overwrite:
-                # If overwrite is True, delete the existing collection
-                cursor.execute("DROP TABLE IF EXISTS %s CASCADE", (collection_name,))
-                conn.commit()
+        # Create the pgvector extension
+        # cur.execute('CREATE EXTENSION IF NOT EXISTS pgvector')
+        register_vector(conn)
 
-            # Create a new table for the collection
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS %s (
-                    id UUID PRIMARY KEY,
-                    text TEXT,
-                    metadata JSONB
-                )
-            """, (collection_name,))
+        # Create a new table for the collection
+        if overwrite:
+            # If overwrite is True, delete the existing collection
+            cur.execute(f"DROP TABLE IF EXISTS {collection_name} CASCADE")
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {collection_name} (
+                id UUID PRIMARY KEY,
+                text TEXT,
+                metadata JSONB
+            )
+        """)
+        conn.commit()
+
+        # Insert documents into the collection table
+        for doc in docs:
+            doc_id = uuid.uuid1()
+            cur.execute(f"""
+                INSERT INTO {collection_name} (id, text, metadata)
+                VALUES (%s, %s, %s)
+            """, (doc_id, doc.page_content, doc.metadata))
             conn.commit()
-
-            # Insert documents into the collection table
-            for text, metadata in zip(texts, metadatas):
-                doc_id = uuid.uuid1()
-                cursor.execute("""
-                    INSERT INTO %s (id, text, metadata)
-                    VALUES (%s, %s, %s)
-                """, (collection_name, doc_id, text, metadata))
-                conn.commit()
 
         # Close the PostgreSQL connection
         conn.close()
         return True
     except Exception as e:
-        print(f"An error occurred: {e}")
-        return False
+            print(f"An error occurred: {e}")
+            return False
 
 
 def get_loader(filename: str, file_content_type: str, file_path: str):
@@ -572,26 +573,24 @@ def store_doc(
     file: UploadFile = File(...),
     user=Depends(get_current_user),
 ):
-    # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
-
     log.info(f"file.content_type: {file.content_type}")
     try:
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
-
-        file_path = f"{UPLOAD_DIR}/{filename}"
-
         contents = file.file.read()
-       # Create a temporary file to write the contents
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_file.write(contents)
-
-        # If `collection_name` is None, calculate SHA256 hash of the temporary file's contents
-        if collection_name is None:
-            with open(temp_file, "rb") as f:
-                collection_name = calculate_sha256(f)[:63]
-
-        loader, known_type = get_loader(file.filename, file.content_type, temp_file)
+        
+        # Create a temporary file to write the contents
+        local_file_path = "test.txt"  # Set the path to your local file
+        with open(local_file_path, "wb") as local_file:
+            local_file.write(contents)
+            local_file.close()
+            
+        f = open(local_file_path, "rb")
+        if collection_name == None:
+            collection_name = calculate_sha256(f)[:63]
+        f.close()
+        
+        loader, known_type = get_loader(file.filename, file.content_type, local_file_path)
         data = loader.load()
 
         try:
@@ -604,6 +603,7 @@ def store_doc(
                     "filename": filename,
                     "known_type": known_type,
                 }
+            os.remove(local_file_path)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -614,13 +614,14 @@ def store_doc(
         if "No pandoc was found" in str(e):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+                detail="Pandoc not installed",
             )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
-            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unknown error",
+        )
+
 
 
 class TextRAGForm(BaseModel):

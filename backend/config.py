@@ -489,27 +489,6 @@ RAG_EMBEDDING_MODEL_DEVICE_TYPE = os.environ.get(
 )
 # Initialize RAG tokenizer
 tokenizer = BertTokenizer.from_pretrained(RAG_EMBEDDING_MODEL)
-
-# Function to insert vectors into PostgreSQL
-def insert_vectors(vectors):
-    with pg_connection.cursor() as cursor:
-        for vector_id, vector in vectors.items():
-            cursor.execute(
-                SQL("INSERT INTO vectors (id, vector) VALUES (%s, %s)"),
-                (vector_id, vector),
-            )
-        pg_connection.commit()
- 
-# Function to retrieve vectors from PostgreSQL
-def retrieve_vectors(ids):
-    with pg_connection.cursor(cursor_factory=DictCursor) as cursor:
-        cursor.execute(
-            SQL("SELECT id, vector FROM vectors WHERE id IN %s"),
-            (tuple(ids),),
-        )
-        results = cursor.fetchall()
-        vectors = {result["id"]: result["vector"] for result in results}
-        return vectors
     
 # device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
 USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
