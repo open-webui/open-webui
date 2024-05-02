@@ -74,7 +74,7 @@
 }
 
 .rose-pine-dawn .text-xs.text-gray-700.uppercase.bg-gray-50.dark\:bg-gray-700.dark\:text-gray-400 {
-	background-color: #403d52;
+	background-color: rgb(253 231 231);
 }
 
 .rose-pine-dawn .scrollbar-hidden.relative.overflow-x-auto.whitespace-nowrap.svelte-3g4avz {
@@ -156,4 +156,36 @@
     background: hsl(2.45deg 55.06% 82.55%);
     border-color: hsl(0deg 23.98% 70.06%);
     color: hsl(0deg 0% 100%);
+}
+
+.rose-pine-dawn .w-4 {
+    color: #fff;
+}
+
+.rose-pine-dawn .w-5 {
+    color: #fff;
+}
+
+.rose-pine-dawn .w-3\.5 {
+    color: #fff;
+}
+
+.rose-pine-dawn .font-semibold {
+    color: #111827ba;
+}
+
+.rose-pine-dawn .text-gray-800 {
+    color: #111827ba;
+}
+
+.rose-pine-dawn .font-bold {
+    color: #111827ba;
+}
+
+.rose-pine-dawn .font-medium {
+    color: #111827ba;
+}
+
+.rose-pine-dawn .text-sm {
+    color: #111827ba;
 }
