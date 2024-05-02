@@ -29,7 +29,7 @@
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div
 		class=" flex {$settings?.fullScreenMode ?? null ? 'max-w-full' : 'max-w-3xl'} 
-		 w-full mx-auto px-3"
+		 w-full mx-auto px-5"
 	>
 		<div class="flex items-center w-full max-w-full">
 			<div class="flex-1 overflow-hidden max-w-full">

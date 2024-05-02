@@ -480,15 +480,15 @@
 								];
 							}}
 						/>
-					{:else if prompt.charAt(0) === '@'}
-						<Models
-							bind:this={modelsElement}
-							bind:prompt
-							bind:user
-							bind:chatInputPlaceholder
-							{messages}
-						/>
 					{/if}
+
+					<Models
+						bind:this={modelsElement}
+						bind:prompt
+						bind:user
+						bind:chatInputPlaceholder
+						{messages}
+					/>
 
 					<!-- {#if messages.length == 0 && suggestionPrompts.length !== 0}
 						<Suggestions {suggestionPrompts} {submitPrompt} />

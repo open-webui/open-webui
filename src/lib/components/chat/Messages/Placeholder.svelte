@@ -3,6 +3,7 @@
 	import { user } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import Suggestions from '../MessageInput/Suggestions.svelte';
+	import Bolt from '$lib/components/icons/Bolt.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -25,7 +26,7 @@
 
 {#if models.length > 0}
 	<div class="m-auto w-full max-w-3xl px-8 pb-24">
-		<div class="flex justify-start">
+		<!-- <div class="flex justify-start">
 			<div class="flex -space-x-4 mb-0.5">
 				{#each models as model, modelIdx}
 					<button
@@ -53,9 +54,9 @@
 					</button>
 				{/each}
 			</div>
-		</div>
+		</div> -->
 		<div
-			class=" mt-2 mb-4 text-2xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4"
+			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4"
 		>
 			<div>
 				{#if modelfile}
@@ -83,6 +84,10 @@
 		</div>
 
 		<div class=" w-full">
+			<div class="mb-2 flex gap-1 text-sm font-medium items-center dark:text-gray-600">
+				<Bolt />
+				Suggested
+			</div>
 			<Suggestions {suggestionPrompts} {submitPrompt} />
 		</div>
 	</div>
