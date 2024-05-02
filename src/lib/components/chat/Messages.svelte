@@ -12,7 +12,7 @@
 	import Placeholder from './Messages/Placeholder.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { imageGenerations } from '$lib/apis/images';
-	import { copyToClipboard } from '$lib/utils';
+	import { copyToClipboard, findWordIndices } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -247,16 +247,38 @@
 			modelfiles={selectedModelfiles}
 			{suggestionPrompts}
 			submitPrompt={async (p) => {
-				const chatTextAreaElement = document.getElementById('chat-textarea');
-				if (chatTextAreaElement) {
+				let text = p;
+
+				if (p.includes('{{CLIPBOARD}}')) {
+					const clipboardText = await navigator.clipboard.readText().catch((err) => {
+						toast.error($i18n.t('Failed to read clipboard contents'));
+						return '{{CLIPBOARD}}';
+					});
+
+					text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
+				}
+
+				prompt = text;
+
+				await tick();
+
+				const chatInputElement = document.getElementById('chat-textarea');
+				if (chatInputElement) {
 					prompt = p;
 
-					await tick();
+					chatInputElement.style.height = '';
+					chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 200) + 'px';
+					chatInputElement.focus();
 
-					chatTextAreaElement.style.height = '';
-					chatTextAreaElement.style.height = Math.min(chatTextAreaElement.scrollHeight, 200) + 'px';
-					chatTextAreaElement.focus();
+					const words = findWordIndices(prompt);
+
+					if (words.length > 0) {
+						const word = words.at(0);
+						chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
+					}
 				}
+
+				await tick();
 			}}
 		/>
 	{:else}
