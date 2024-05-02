@@ -50,7 +50,7 @@
 
 .rose-pine
 	.bg-black.text-white.hover\:bg-gray-900.dark\:bg-white.dark\:text-black.dark\:hover\:bg-gray-100.transition.rounded-lg.p-1.mr-0\.5.w-7.h-7.self-center {
-	background-color: #286983;
+	background-color: rgb(196 167 231);
 	transition: background-color 0.2s ease-out linear;
 }
 
@@ -121,7 +121,7 @@
 }
 
 .rose-pine .px-4.py-2.bg-emerald-600.hover\:bg-emerald-700.text-gray-100.transition.rounded {
-	background-color: #31748f;
+	background-color: #c4a7e7;
 }
 
 .rose-pine #chat-search > * {
@@ -150,10 +150,4 @@
 
 .rose-pine .rounded-r-xl {
 	border-radius: 0 0.75rem 0.75rem 0;
-}
-
-.rose-pine-dawn .[data-rich-colors=true] [data-sonner-toast][data-type=success], [data-rich-colors=true] [data-sonner-toast][data-type=success] [data-close-button] {
-    background: hsl(2.45deg 55.06% 82.55%);
-    border-color: hsl(0deg 23.98% 70.06%);
-    color: hsl(0deg 0% 100%);
 }
