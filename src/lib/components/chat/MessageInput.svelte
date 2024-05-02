@@ -425,7 +425,7 @@
 <div class="fixed bottom-0 {$showSidebar ? 'left-0 lg:left-[260px]' : 'left-0'} right-0">
 	<div class="w-full">
 		<div class=" px-2.5 -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
-			<div class="flex flex-col max-w-3xl w-full">
+			<div class="flex flex-col max-w-5xl w-full">
 				<div class="relative">
 					{#if autoScroll === false && messages.length > 0}
 						<div class=" absolute -top-12 left-0 right-0 flex justify-center">
@@ -497,7 +497,7 @@
 			</div>
 		</div>
 		<div class="bg-white dark:bg-gray-900">
-			<div class="max-w-3xl px-2.5 mx-auto inset-x-0">
+			<div class="max-w-6xl px-2.5 lg:px-16 mx-auto inset-x-0">
 				<div class=" pb-2">
 					<input
 						bind:this={filesInputElement}

@@ -267,7 +267,7 @@
 						<div
 							class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
 								? 'max-w-full'
-								: 'max-w-3xl'} mx-auto rounded-lg group"
+								: 'max-w-4xl'} mx-auto rounded-lg group"
 						>
 							{#if message.role === 'user'}
 								<UserMessage
