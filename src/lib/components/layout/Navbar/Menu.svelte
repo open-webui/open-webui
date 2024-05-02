@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
+	import { getContext } from 'svelte';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -11,6 +12,8 @@
 	import Tags from '$lib/components/chat/Tags.svelte';
 
 	import { downloadChatAsPDF } from '$lib/apis/utils';
+
+	const i18n = getContext('i18n');
 
 	export let shareEnabled: boolean = false;
 	export let shareHandler: Function;
@@ -104,7 +107,7 @@
 						d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
 					/>
 				</svg>
-				<div class="flex items-center">Settings</div>
+				<div class="flex items-center">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item>
 
 			{#if shareEnabled}
@@ -126,7 +129,7 @@
 							clip-rule="evenodd"
 						/>
 					</svg>
-					<div class="flex items-center">Share</div>
+					<div class="flex items-center">{$i18n.t('Share')}</div>
 				</DropdownMenu.Item>
 
 				<!-- <DropdownMenu.Item
@@ -154,7 +157,7 @@
 							/>
 						</svg>
 
-						<div class="flex items-center">Download</div>
+						<div class="flex items-center">{$i18n.t('Download')}</div>
 					</DropdownMenu.SubTrigger>
 					<DropdownMenu.SubContent
 						class="w-full rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-900 dark:text-white shadow-lg"
@@ -167,7 +170,7 @@
 								downloadTxt();
 							}}
 						>
-							<div class="flex items-center line-clamp-1">Plain text (.txt)</div>
+							<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
 						</DropdownMenu.Item>
 
 						<DropdownMenu.Item
@@ -176,7 +179,7 @@
 								downloadPdf();
 							}}
 						>
-							<div class="flex items-center line-clamp-1">PDF document (.pdf)</div>
+							<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
 						</DropdownMenu.Item>
 					</DropdownMenu.SubContent>
 				</DropdownMenu.Sub>

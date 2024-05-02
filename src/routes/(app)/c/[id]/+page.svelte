@@ -5,7 +5,6 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-
 	import {
 		models,
 		modelfiles,
@@ -15,7 +14,8 @@
 		chatId,
 		config,
 		WEBUI_NAME,
-		tags as _tags
+		tags as _tags,
+		showSidebar
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream, convertMessagesToHistory } from '$lib/utils';
 
@@ -57,6 +57,8 @@
 	// let chatId = $page.params.id;
 	let showModelSelector = true;
 	let selectedModels = [''];
+	let atSelectedModel = '';
+
 	let selectedModelfile = null;
 
 	$: selectedModelfile =
@@ -167,7 +169,8 @@
 		}
 	};
 
-	const scrollToBottom = () => {
+	const scrollToBottom = async () => {
+		await tick();
 		if (messagesContainerElement) {
 			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 		}
@@ -256,7 +259,7 @@
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
-			selectedModels.map(async (modelId) => {
+			(atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(async (modelId) => {
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
@@ -550,6 +553,8 @@
 
 		console.log(docs);
 
+		scrollToBottom();
+
 		const [res, controller] = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -617,14 +622,8 @@
 
 		scrollToBottom();
 
-		if (res && res.ok) {
-			const reader = res.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
-
-			const textStream = await createOpenAITextStream(reader, $settings.splitLargeChunks);
-			console.log(textStream);
+		if (res && res.ok && res.body) {
+			const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 
 			for await (const update of textStream) {
 				const { value, done } = update;
@@ -863,7 +862,11 @@
 </svelte:head>
 
 {#if loaded}
-	<div class="min-h-screen max-h-screen w-full flex flex-col">
+	<div
+		class="min-h-screen max-h-screen {$showSidebar
+			? 'lg:max-w-[calc(100%-260px)]'
+			: ''} w-full max-w-full flex flex-col"
+	>
 		<Navbar
 			{title}
 			{chat}
@@ -881,7 +884,7 @@
 		/>
 		<div class="flex flex-col flex-auto">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full"
 				id="messages-container"
 				bind:this={messagesContainerElement}
 				on:scroll={(e) => {
@@ -906,17 +909,17 @@
 					/>
 				</div>
 			</div>
-
-			<MessageInput
-				bind:files
-				bind:prompt
-				bind:autoScroll
-				suggestionPrompts={selectedModelfile?.suggestionPrompts ??
-					$config.default_prompt_suggestions}
-				{messages}
-				{submitPrompt}
-				{stopResponse}
-			/>
 		</div>
 	</div>
+
+	<MessageInput
+		bind:files
+		bind:prompt
+		bind:autoScroll
+		bind:selectedModel={atSelectedModel}
+		suggestionPrompts={selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
+		{messages}
+		{submitPrompt}
+		{stopResponse}
+	/>
 {/if}

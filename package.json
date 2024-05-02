@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.1.122",
+	"version": "0.1.123",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev --host",
@@ -49,6 +49,7 @@
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
 		"dayjs": "^1.11.10",
+		"eventsource-parser": "^1.1.2",
 		"file-saver": "^2.0.5",
 		"highlight.js": "^11.9.0",
 		"i18next": "^23.10.0",

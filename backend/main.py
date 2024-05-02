@@ -311,18 +311,23 @@ async def get_manifest_json():
         "background_color": "#343541",
         "theme_color": "#343541",
         "orientation": "portrait-primary",
-        "icons": [{"src": "/favicon.png", "type": "image/png", "sizes": "844x884"}],
+        "icons": [{"src": "/static/logo.png", "type": "image/png", "sizes": "500x500"}],
     }
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
 
-app.mount(
-    "/",
-    SPAStaticFiles(directory=FRONTEND_BUILD_DIR, html=True),
-    name="spa-static-files",
-)
+if os.path.exists(FRONTEND_BUILD_DIR):
+    app.mount(
+        "/",
+        SPAStaticFiles(directory=FRONTEND_BUILD_DIR, html=True),
+        name="spa-static-files",
+    )
+else:
+    log.warning(
+        f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
+    )
 
 
 @app.on_event("shutdown")
