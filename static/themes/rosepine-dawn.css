@@ -32,10 +32,6 @@
     background-color: rgb(255 174 174);
 }
 
-.rose-pine-dawn .w-4.h-4 {
-	fill: #ebbcba;
-}
-
 .rose-pine-dawn #chat-textarea {
 	background: #f9f9f9;
 	margin: 0.3rem;
@@ -62,7 +58,7 @@
 .rose-pine-dawn
 	.bg-black.text-white.hover\:bg-gray-900.dark\:bg-white.dark\:text-black.dark\:hover\:bg-gray-100.transition.rounded-lg.p-1.mr-0\.5.w-7.h-7.self-center
 	> * {
-	fill: #56949f !important;
+	fill: rgb(235 188 186) !important;
 	transition: fill 0.2s ease-out linear;
 }
 

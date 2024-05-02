@@ -27,10 +27,6 @@
 	background: #26233a;
 }
 
-.rose-pine .w-4.h-4 {
-	fill: #c4a7e7;
-}
-
 .rose-pine #chat-textarea {
 	background: #393552;
 	margin: 0.3rem;
@@ -57,7 +53,7 @@
 .rose-pine
 	.bg-black.text-white.hover\:bg-gray-900.dark\:bg-white.dark\:text-black.dark\:hover\:bg-gray-100.transition.rounded-lg.p-1.mr-0\.5.w-7.h-7.self-center
 	> * {
-	fill: #9ccfd8 !important;
+	fill: rgb(196 167 231) !important;
 	transition: fill 0.2s ease-out linear;
 }
 
