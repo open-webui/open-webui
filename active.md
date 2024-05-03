@@ -5,6 +5,8 @@ Our focused coding meetings are on Mondays and Wednesdays at [10 PM EDT](/io/cod
 
 # Active Projects
 
+**New Project!** &nbsp;[Feed Player](../feed/) - for Video, Images, JSON, YAML, CSS, RSS news feeds and [more!](../feed/view/)
+
 [Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
 <!--
@@ -140,4 +142,4 @@ Create 8 categories that all news stories fall in, and calculate the percentage 
 
 <!-- npm run preview didn't have an api. flower -->
 
-[Full Documentation](src)
+[Full Documentation](https://docs.openwebui.com/)
