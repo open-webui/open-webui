@@ -218,7 +218,7 @@
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<div class="flex flex-col space-y-3 w-full self-start">
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Document retrieval')}</div>
+						<div class=" text-sm">{$i18n.t('Symbol startup prompt to activate RAG')}</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
@@ -230,7 +230,7 @@
 					</div>
 
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Add chat prompts')}</div>
+						<div class=" text-sm">{$i18n.t('Symbol startup prompt to activate Chat Prompts')}</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
@@ -242,7 +242,9 @@
 					</div>
 
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Request model integration')}</div>
+						<div class=" text-sm">
+							{$i18n.t('Symbol startup prompt to activate Specific Models')}
+						</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
