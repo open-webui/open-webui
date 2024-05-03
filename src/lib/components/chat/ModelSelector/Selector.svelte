@@ -398,6 +398,9 @@
 					</div>
 				{/each}
 			</div>
+
+			<div class="hidden w-[42rem]" />
+			<div class="hidden w-[32rem]" />
 		</slot>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>
