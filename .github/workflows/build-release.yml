@@ -1,10 +1,12 @@
 name: Release
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - main # or whatever branch you want to use
-
+      - main
+    tags:
+      - v*
 jobs:
   release:
     runs-on: ubuntu-latest
