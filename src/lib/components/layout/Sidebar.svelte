@@ -836,12 +836,12 @@
 					>
 						<div class="flex h-6 w-6 flex-col items-center">
 							<div
-								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {show
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {$showSidebar
 									? 'group-hover:rotate-[15deg]'
 									: 'group-hover:rotate-[-15deg]'}"
 							/>
 							<div
-								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {show
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {$showSidebar
 									? 'group-hover:rotate-[-15deg]'
 									: 'group-hover:rotate-[15deg]'}"
 							/>
