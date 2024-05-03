@@ -220,13 +220,16 @@ export const getAllChatTags = async (token: string) => {
 export const getChatListByTagName = async (token: string = '', tagName: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/tags/tag/${tagName}`, {
-		method: 'GET',
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/tags`, {
+		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		body: JSON.stringify({
+			name: tagName
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

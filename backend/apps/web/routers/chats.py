@@ -321,19 +321,28 @@ async def get_all_tags(user=Depends(get_current_user)):
 ############################
 
 
-@router.get("/tags/tag/{tag_name}", response_model=List[ChatTitleIdResponse])
+class TagNameForm(BaseModel):
+    name: str
+
+
+@router.post("/tags", response_model=List[ChatTitleIdResponse])
 async def get_user_chat_list_by_tag_name(
-    tag_name: str, user=Depends(get_current_user), skip: int = 0, limit: int = 50
+    form_data: TagNameForm,
+    user=Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 50,
 ):
     chat_ids = [
         chat_id_tag.chat_id
-        for chat_id_tag in Tags.get_chat_ids_by_tag_name_and_user_id(tag_name, user.id)
+        for chat_id_tag in Tags.get_chat_ids_by_tag_name_and_user_id(
+            form_data.name, user.id
+        )
     ]
 
     chats = Chats.get_chat_list_by_chat_ids(chat_ids, skip, limit)
 
     if len(chats) == 0:
-        Tags.delete_tag_by_tag_name_and_user_id(tag_name, user.id)
+        Tags.delete_tag_by_tag_name_and_user_id(form_data.name, user.id)
 
     return chats
 
