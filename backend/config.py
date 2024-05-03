@@ -487,6 +487,11 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
 ####################################
 POSTGRES_CONNECTION_STRING = f"dbname='{os.environ.get('POSTGRES_DB')}' user='{os.environ.get('POSTGRES_USER')}' host='{os.environ.get('POSTGRES_HOST')}'  password='{os.environ.get('POSTGRES_PASSWORD')}' port='{os.environ.get('POSTGRES_PORT')}'"
 pg_connection = psycopg2.connect(POSTGRES_CONNECTION_STRING)
+
+def adapt_numpy_array(arr):
+    return AsIs(arr)
+
+register_adapter(np.ndarray, adapt_numpy_array)
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
 RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "5"))
@@ -495,11 +500,6 @@ RAG_RELEVANCE_THRESHOLD = float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "0.0")
 ENABLE_RAG_HYBRID_SEARCH = (
     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true"
 )
-
-def adapt_numpy_array(arr):
-    return AsIs(arr)
-
-register_adapter(np.ndarray, adapt_numpy_array)
 
 PDF_EXTRACT_IMAGES = os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true"
 
