@@ -330,7 +330,7 @@
 												info: model
 											}))}
 										bind:value={selectedModelId}
-										className="max-w-2xl"
+										className="w-[42rem]"
 									/>
 								</div>
 							</div>
