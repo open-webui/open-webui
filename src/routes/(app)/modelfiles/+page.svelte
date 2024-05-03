@@ -28,7 +28,7 @@
 		});
 
 		if (success) {
-			toast.success($i18n.t(`Deleted {tagName}`, { tagName }));
+			toast.success($i18n.t(`Deleted {{tagName}}`, { tagName }));
 		}
 
 		return success;

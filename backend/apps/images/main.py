@@ -24,6 +24,7 @@ from utils.misc import calculate_sha256
 from typing import Optional
 from pydantic import BaseModel
 from pathlib import Path
+import mimetypes
 import uuid
 import base64
 import json
@@ -41,9 +42,13 @@ from config import (
     NEXTCLOUD_USERNAME,
     HEADERS,
     NEXTCLOUD_URL,
+    IMAGE_GENERATION_ENGINE,
     ENABLE_IMAGE_GENERATION,
     IMAGES_OPENAI_API_BASE_URL,
     IMAGES_OPENAI_API_KEY,
+    IMAGE_GENERATION_MODEL,
+    IMAGE_SIZE,
+    IMAGE_STEPS,
 ) 
 
 
@@ -76,21 +81,21 @@ app.add_middleware(
     allow_headers=["*"],
 ) 
 
-app.state.ENGINE = ""
+app.state.ENGINE = IMAGE_GENERATION_ENGINE
 app.state.ENABLED = ENABLE_IMAGE_GENERATION
 
 app.state.OPENAI_API_BASE_URL = IMAGES_OPENAI_API_BASE_URL
 app.state.OPENAI_API_KEY = IMAGES_OPENAI_API_KEY
 
-app.state.MODEL = ""
+app.state.MODEL = IMAGE_GENERATION_MODEL
 
 
 app.state.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
 app.state.COMFYUI_BASE_URL = COMFYUI_BASE_URL
 
 
-app.state.IMAGE_SIZE = "512x512"
-app.state.IMAGE_STEPS = 50
+app.state.IMAGE_SIZE = IMAGE_SIZE
+app.state.IMAGE_STEPS = IMAGE_STEPS
 
 
 @app.get("/config")
@@ -359,7 +364,7 @@ def save_b64_image(b64_str):
             log.error(f"Failed to upload image. Status code: {response.status_code}")
             return None
     except Exception as e:
-        log.error(f"Error saving image: {e}")
+        log.exception(f"Error saving image: {e}")
         return None
 
 

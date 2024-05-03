@@ -1,6 +1,7 @@
 from peewee import *
 from peewee_migrate import Router
-from config import SRC_LOG_LEVELS
+from playhouse.db_url import connect
+from config import SRC_LOG_LEVELS, DATABASE_URL
 import os
 import logging
 

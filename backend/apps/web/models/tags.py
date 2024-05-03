@@ -35,7 +35,7 @@ class ChatIdTag(Model):
     tag_name = CharField()
     chat_id = CharField()
     user_id = CharField()
-    timestamp = DateField()
+    timestamp = BigIntegerField()
 
     class Meta:
         database = DB

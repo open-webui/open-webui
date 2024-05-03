@@ -96,7 +96,7 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
+		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Add Docs')}</div>
 			<button
 				class="self-center"
@@ -116,8 +116,6 @@
 				</svg>
 			</button>
 		</div>
-		<hr class=" dark:border-gray-800" />
-
 		<div class="flex flex-col md:flex-row w-full px-5 py-4 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
@@ -161,7 +159,7 @@
 
 					<div class="flex justify-end pt-5 text-sm font-medium">
 						<button
-							class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
+							class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 							type="submit"
 						>
 							{$i18n.t('Save')}
