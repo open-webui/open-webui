@@ -25,6 +25,8 @@ from apps.litellm.main import (
     start_litellm_background,
     shutdown_litellm_background,
 )
+
+
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
@@ -74,7 +76,7 @@ class SPAStaticFiles(StaticFiles):
 
 
 print(
-    f"""
+    rf"""
   ___                    __        __   _     _   _ ___ 
  / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
 | | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || | 
