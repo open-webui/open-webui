@@ -1,15 +1,22 @@
+import { EventSourceParserStream } from 'eventsource-parser/stream';
+import type { ParsedEvent } from 'eventsource-parser';
+
 type TextStreamUpdate = {
 	done: boolean;
 	value: string;
 };
 
-// createOpenAITextStream takes a ReadableStreamDefaultReader from an SSE response,
+// createOpenAITextStream takes a responseBody with a SSE response,
 // and returns an async generator that emits delta updates with large deltas chunked into random sized chunks
 export async function createOpenAITextStream(
-	messageStream: ReadableStreamDefaultReader,
+	responseBody: ReadableStream<Uint8Array>,
 	splitLargeDeltas: boolean
 ): Promise<AsyncGenerator<TextStreamUpdate>> {
-	let iterator = openAIStreamToIterator(messageStream);
+	const eventStream = responseBody
+		.pipeThrough(new TextDecoderStream())
+		.pipeThrough(new EventSourceParserStream())
+		.getReader();
+	let iterator = openAIStreamToIterator(eventStream);
 	if (splitLargeDeltas) {
 		iterator = streamLargeDeltasAsRandomChunks(iterator);
 	}
@@ -17,7 +24,7 @@ export async function createOpenAITextStream(
 }
 
 async function* openAIStreamToIterator(
-	reader: ReadableStreamDefaultReader
+	reader: ReadableStreamDefaultReader<ParsedEvent>
 ): AsyncGenerator<TextStreamUpdate> {
 	while (true) {
 		const { value, done } = await reader.read();
@@ -25,31 +32,22 @@ async function* openAIStreamToIterator(
 			yield { done: true, value: '' };
 			break;
 		}
-		const lines = value.split('\n');
-		for (let line of lines) {
-			if (line.endsWith('\r')) {
-				// Remove trailing \r
-				line = line.slice(0, -1);
-			}
-			if (line !== '') {
-				console.log(line);
-				if (line === 'data: [DONE]') {
-					yield { done: true, value: '' };
-				} else if (line.startsWith(':')) {
-					// Events starting with : are comments https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#event_stream_format
-					// OpenRouter sends heartbeats like ": OPENROUTER PROCESSING"
-					continue;
-				} else {
-					try {
-						const data = JSON.parse(line.replace(/^data: /, ''));
-						console.log(data);
+		if (!value) {
+			continue;
+		}
+		const data = value.data;
+		if (data.startsWith('[DONE]')) {
+			yield { done: true, value: '' };
+			break;
+		}
 
-						yield { done: false, value: data.choices?.[0]?.delta?.content ?? '' };
-					} catch (e) {
-						console.error('Error extracting delta from SSE event:', e);
-					}
-				}
-			}
+		try {
+			const parsedData = JSON.parse(data);
+			console.log(parsedData);
+
+			yield { done: false, value: parsedData.choices?.[0]?.delta?.content ?? '' };
+		} catch (e) {
+			console.error('Error extracting delta from SSE event:', e);
 		}
 	}
 }
@@ -73,7 +71,11 @@ async function* streamLargeDeltasAsRandomChunks(
 			const chunkSize = Math.min(Math.floor(Math.random() * 3) + 1, content.length);
 			const chunk = content.slice(0, chunkSize);
 			yield { done: false, value: chunk };
-			await sleep(5);
+			// Do not sleep if the tab is hidden
+			// Timers are throttled to 1s in hidden tabs
+			if (document?.visibilityState !== 'hidden') {
+				await sleep(5);
+			}
 			content = content.slice(chunkSize);
 		}
 	}

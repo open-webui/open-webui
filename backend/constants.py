@@ -71,3 +71,7 @@ class ERROR_MESSAGES(str, Enum):
     EMPTY_CONTENT = "The content provided is empty. Please ensure that there is text or data present before proceeding."
 
     DB_NOT_SQLITE = "This feature is only available when running with SQLite databases."
+
+    INVALID_URL = (
+        "Oops! The URL you provided is invalid. Please double-check and try again."
+    )

@@ -221,6 +221,37 @@ export const uploadWebToVectorDB = async (token: string, collection_name: string
 	return res;
 };
 
+export const uploadYoutubeTranscriptionToVectorDB = async (token: string, url: string) => {
+	let error = null;
+
+	const res = await fetch(`${RAG_API_BASE_URL}/youtube`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const queryDoc = async (
 	token: string,
 	collection_name: string,
