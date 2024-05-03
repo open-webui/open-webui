@@ -202,16 +202,37 @@
 }
 
 .rose-pine-dawn .bg-black {
-    background-color: rgb(215 130 126);
+	background-color: rgb(215 130 126);
 }
 
 .rose-pine-dawn .bg-gray-100 {
-    background-color: rgb(255 242 242);
+	background-color: rgb(255 242 242);
 }
 
 .rose-pine-dawn .px-2\.5.py-2\.5.min-w-fit.rounded-lg.flex-1.md\:flex-none.flex.text-right.transition.bg-gray-200.dark\:bg-gray-700 {
-    background-color: #ffffff;
+	background-color: #ffffff;
 }
+
+.rose-pine-dawn .bg-gray-50 {
+	background-color: #ffffff;
+}
+
+.rose-pine-dawn .bg-gray-200 {
+	background-color: rgb(255 249 249);
+}
+
+.rose-pine-dawn .from-gray-200 {
+	--tw-gradient-from: rgb(255 249 249) var(--tw-gradient-from-position);
+}
+
+.rose-pine-dawn .hover\:bg-gray-100:hover {
+	background-color: rgb(255 249 249);
+}
+
+.rose-pine-dawn .group:hover .group-hover\:bg-gray-100 {
+	background-color: rgb(255 249 249);
+}
+
 /* .rose-pine-dawn .bg-white {
     --tw-bg-opacity: 1;
     background-color: rgb(235 188 186 / 39%);
