@@ -222,7 +222,11 @@
 }
 
 .rose-pine-dawn .from-gray-200 {
-	--tw-gradient-from: rgb(255 249 249) var(--tw-gradient-from-position);
+	--tw-gradient-from: rgb(255 249 249);
+}
+
+.rose-pine-dawn .from-gray-100 {
+	--tw-gradient-from: rgb(255 249 249);
 }
 
 .rose-pine-dawn .hover\:bg-gray-100:hover {
@@ -230,6 +234,10 @@
 }
 
 .rose-pine-dawn .group:hover .group-hover\:bg-gray-100 {
+	background-color: rgb(255 249 249);
+}
+
+.rose-pine-dawn .group:hover .group-hover\:from-gray-200:hover {
 	background-color: rgb(255 249 249);
 }
 
