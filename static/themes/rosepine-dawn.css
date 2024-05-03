@@ -200,3 +200,7 @@
 .rose-pine-dawn .data-\[selected\]\:bg-black[data-selected] {
 	background-color: #faf4ed;
 }
+
+.rose-pine-dawn .bg-black {
+    background-color: rgb(215 130 126);
+}
