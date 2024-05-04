@@ -473,6 +473,8 @@ export const blobToFile = (blob, fileName) => {
 };
 
 export const promptTemplate = (template: string, prompt: string) => {
+	prompt = prompt.replace(/{{prompt}}|{{prompt:start:\d+}}|{{prompt:end:\d+}}/g, '');
+
 	template = template.replace(/{{prompt}}/g, prompt);
 
 	// Replace all instances of {{prompt:start:<length>}} with the first <length> characters of the prompt
