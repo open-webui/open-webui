@@ -39,7 +39,7 @@
 	let chatTitleEditId = null;
 	let chatTitle = '';
 
-	enum ChatListSortBy { Title, Created, Updated }
+	enum ChatListSortBy { Updated, Created, Title }
 	let chatListSortBy = ChatListSortBy.Updated
 
 	let showArchivedChatsModal = false;
@@ -391,20 +391,20 @@
 					/>
 					{#if chatListSortBy !== undefined }
 						{@const sortLabel =
-							chatListSortBy === ChatListSortBy.Created ?	$i18n.t("Sort by Creation") :
+							chatListSortBy === ChatListSortBy.Created ? $i18n.t("Sort by Creation") :
 							chatListSortBy === ChatListSortBy.Updated ? $i18n.t("Sort by Update") :
 							$i18n.t("Sort Alphabetically")
 						}
 						{@const sortIcon =
 							chatListSortBy === ChatListSortBy.Created ? // calendar
 							"M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
-							:	chatListSortBy === ChatListSortBy.Updated ? // clock
+							: chatListSortBy === ChatListSortBy.Updated ? // clock
 							"M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
 							: // arrows-up-down
 							"M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"
 						}					
 						<button
-							aria-label="Sorting"
+							aria-label="{sortLabel}"
 							class="self-center dark:hover:text-white transition p-2 mr-2"
 							on:click={()=>chatListSortBy= // cycle through enum values
 								(chatListSortBy.valueOf()+1) % (Object.keys(ChatListSortBy).length/2)
