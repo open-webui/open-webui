@@ -145,7 +145,7 @@
 									<input
 										bind:value={name}
 										type="text"
-										class=" px-5 py-3 rounded-2xl w-full text-sm border dark:border-none dark:bg-gray-900"
+										class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
 										autocomplete="name"
 										placeholder={$i18n.t('Enter Your Full Name')}
 										required
@@ -160,7 +160,7 @@
 								<input
 									bind:value={email}
 									type="email"
-									class=" px-5 py-3 rounded-2xl w-full text-sm border dark:border-none dark:bg-gray-900"
+									class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
 									autocomplete="email"
 									placeholder={$i18n.t('Enter Your Email')}
 									required
@@ -173,7 +173,7 @@
 								<input
 									bind:value={password}
 									type="password"
-									class=" px-5 py-3 rounded-2xl w-full text-sm border dark:border-none dark:bg-gray-900"
+									class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
 									placeholder={$i18n.t('Enter Your Password')}
 									autocomplete="current-password"
 									required
