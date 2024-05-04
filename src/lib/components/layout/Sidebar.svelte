@@ -382,13 +382,45 @@
 					</div>
 
 					<input
-						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm dark:text-gray-300 dark:bg-gray-950 outline-none"
+						class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm dark:text-gray-300 dark:bg-gray-950 outline-none"
 						placeholder={$i18n.t('Search')}
 						bind:value={search}
 						on:focus={() => {
 							enrichChatsWithContent($chats);
 						}}
 					/>
+					{#if chatListSortBy !== undefined }
+						{@const sortLabel =
+							chatListSortBy === ChatListSortBy.Created ?	$i18n.t("Sort by Creation") :
+							chatListSortBy === ChatListSortBy.Updated ? $i18n.t("Sort by Update") :
+							$i18n.t("Sort Alphabetically")
+						}
+						{@const sortIcon =
+							chatListSortBy === ChatListSortBy.Created ? // calendar
+							"M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
+							:	chatListSortBy === ChatListSortBy.Updated ? // clock
+							"M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+							: // arrows-up-down
+							"M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"
+						}					
+						<button
+							aria-label="Sorting"
+							class="self-center dark:hover:text-white transition p-2 mr-2"
+							on:click={()=>chatListSortBy= // cycle through enum values
+								(chatListSortBy.valueOf()+1) % (Object.keys(ChatListSortBy).length/2)
+							}>
+							<Tooltip placement="top" content={sortLabel} touch={false}>
+								<div class="self-center opacity-50 flex flex-row">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 24 24" class="w-4 h-4"
+										fill="none" stroke-width="1.5" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" d={sortIcon} />
+									</svg>
+								</div>						
+							</Tooltip>
+						</button>
+					{/if}
 				</div>
 			</div>
 
@@ -749,31 +781,6 @@
 									</div>
 									<div class=" self-center font-medium">{$i18n.t('Archived Chats')}</div>
 								</button>
-
-								{#if chatListSortBy !== undefined }
-									{@const sortLabel =
-										chatListSortBy === ChatListSortBy.Created ? $i18n.t("Creation") :
-										chatListSortBy === ChatListSortBy.Updated ? $i18n.t("Recent") :
-										$i18n.t("Alphabetical")
-									}
-									<button
-										class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-										on:click={()=>chatListSortBy= // cycle through enum values
-											(chatListSortBy.valueOf()+1) % (Object.keys(ChatListSortBy).length/2)
-										}>
-										<div class=" self-center mr-3">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 24 24"	class="w-5 h-5"
-												fill="none" stroke-width="1.5" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" d=
-													"M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"
-												/>
-											</svg>
-										</div>
-										<div class=" self-center font-medium">{sortLabel}</div>
-									</button>
-								{/if}
 
 								<button
 									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
