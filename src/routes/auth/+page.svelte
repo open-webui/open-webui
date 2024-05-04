@@ -81,7 +81,7 @@
 		</div>
 	</div>
 
-	<div class=" bg-white dark:bg-gray-900 min-h-screen w-full flex justify-center font-mona">
+	<div class=" bg-white dark:bg-gray-950 min-h-screen w-full flex justify-center font-mona">
 		<!-- <div class="hidden lg:flex lg:flex-1 px-10 md:px-16 w-full bg-yellow-50 justify-center">
 			<div class=" my-auto pb-16 text-left">
 				<div>
@@ -96,7 +96,7 @@
 			</div>
 		</div> -->
 
-		<div class="w-full sm:max-w-lg px-4 min-h-screen flex flex-col">
+		<div class="w-full sm:max-w-md px-10 min-h-screen flex flex-col text-center">
 			{#if $config?.trusted_header_auth ?? false}
 				<div class=" my-auto pb-10 w-full">
 					<div
@@ -114,27 +114,29 @@
 					</div>
 				</div>
 			{:else}
-				<div class=" my-auto pb-10 w-full">
+				<div class="  my-auto pb-10 w-full dark:text-gray-100">
 					<form
-						class=" flex flex-col justify-center bg-white py-6 sm:py-16 px-6 sm:px-16 rounded-2xl"
+						class=" flex flex-col justify-center"
 						on:submit|preventDefault={() => {
 							submitHandler();
 						}}
 					>
-						<div class=" text-xl sm:text-2xl font-bold">
-							{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Sign up')}
-							{$i18n.t('to')}
-							{$WEBUI_NAME}
-						</div>
-
-						{#if mode === 'signup'}
-							<div class=" mt-1 text-xs font-medium text-gray-500">
-								ⓘ {$WEBUI_NAME}
-								{$i18n.t(
-									'does not make any external connections, and your data stays securely on your locally hosted server.'
-								)}
+						<div class="mb-1">
+							<div class=" text-2xl font-bold">
+								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Sign up')}
+								{$i18n.t('to')}
+								{$WEBUI_NAME}
 							</div>
-						{/if}
+
+							{#if mode === 'signup'}
+								<div class=" mt-1 text-xs font-medium text-gray-500">
+									ⓘ {$WEBUI_NAME}
+									{$i18n.t(
+										'does not make any external connections, and your data stays securely on your locally hosted server.'
+									)}
+								</div>
+							{/if}
+						</div>
 
 						<div class="flex flex-col mt-4">
 							{#if mode === 'signup'}
@@ -143,14 +145,14 @@
 									<input
 										bind:value={name}
 										type="text"
-										class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+										class=" px-5 py-3 rounded-2xl w-full text-sm border dark:border-none dark:bg-gray-900"
 										autocomplete="name"
 										placeholder={$i18n.t('Enter Your Full Name')}
 										required
 									/>
 								</div>
 
-								<hr class=" my-3" />
+								<hr class=" my-3 dark:border-gray-900" />
 							{/if}
 
 							<div class="mb-2">
@@ -158,7 +160,7 @@
 								<input
 									bind:value={email}
 									type="email"
-									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+									class=" px-5 py-3 rounded-2xl w-full text-sm border dark:border-none dark:bg-gray-900"
 									autocomplete="email"
 									placeholder={$i18n.t('Enter Your Email')}
 									required
@@ -167,10 +169,11 @@
 
 							<div>
 								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
+
 								<input
 									bind:value={password}
 									type="password"
-									class=" border px-4 py-2.5 rounded-2xl w-full text-sm"
+									class=" px-5 py-3 rounded-2xl w-full text-sm border dark:border-none dark:bg-gray-900"
 									placeholder={$i18n.t('Enter Your Password')}
 									autocomplete="current-password"
 									required
@@ -180,7 +183,7 @@
 
 						<div class="mt-5">
 							<button
-								class=" bg-gray-900 hover:bg-gray-800 w-full rounded-full text-white font-semibold text-sm py-3 transition"
+								class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-semibold text-sm py-3 transition"
 								type="submit"
 							>
 								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}

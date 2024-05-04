@@ -201,11 +201,11 @@
 	>
 		{#if loaded}
 			{#if !['user', 'admin'].includes($user.role)}
-				<div class="fixed w-full h-full flex z-50">
+				<div class="fixed w-full h-full flex z-[999]">
 					<div
-						class="absolute w-full h-full backdrop-blur-md bg-white/20 dark:bg-gray-900/50 flex justify-center"
+						class="absolute w-full h-full backdrop-blur-lg bg-white/10 dark:bg-gray-900/50 flex justify-center"
 					>
-						<div class="m-auto pb-44 flex flex-col justify-center">
+						<div class="m-auto pb-10 flex flex-col justify-center">
 							<div class="max-w-md">
 								<div class="text-center dark:text-white text-2xl font-medium z-50">
 									Account Activation Pending<br /> Contact Admin for WebUI Access
