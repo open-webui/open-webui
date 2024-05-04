@@ -441,7 +441,7 @@
 
 			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-none">
 				{#each filteredChatList as chat, idx}
-					{#if idx === 0 || (idx > 1 && chat.time_range !== filteredChatList[idx - 1].time_range)}
+					{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
 						<div
 							class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
 								? ''
