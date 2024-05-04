@@ -445,7 +445,7 @@
 						<div
 							class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
 								? ''
-								: 'pt-4'} pb-1"
+								: 'pt-5'} pb-0.5"
 						>
 							{chat.time_range}
 						</div>
