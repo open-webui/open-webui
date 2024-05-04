@@ -472,29 +472,18 @@ export const blobToFile = (blob, fileName) => {
 	return file;
 };
 
-// promptTemplate replaces any occurrences of the following in the template with the prompt
-// {{prompt}} will be replaced with the prompt
-// {{prompt:start:<length>}} will be replaced with the first <length> characters of the prompt
-// {{prompt:end:<length>}} will be replaced with the last <length> characters of the prompt
-// Character length is used as we don't have the ability to tokenize the prompt
 export const promptTemplate = (template: string, prompt: string) => {
 	template = template.replace(/{{prompt}}/g, prompt);
 
 	// Replace all instances of {{prompt:start:<length>}} with the first <length> characters of the prompt
-	const startRegex = /{{prompt:start:(\d+)}}/g;
-	let startMatch: RegExpMatchArray | null;
-	while ((startMatch = startRegex.exec(template)) !== null) {
-		const length = parseInt(startMatch[1]);
-		template = template.replace(startMatch[0], prompt.substring(0, length));
-	}
+	template = template.replace(/{{prompt:start:(\d+)}}/g, (match, length) =>
+		prompt.substring(0, parseInt(length))
+	);
 
 	// Replace all instances of {{prompt:end:<length>}} with the last <length> characters of the prompt
-	const endRegex = /{{prompt:end:(\d+)}}/g;
-	let endMatch: RegExpMatchArray | null;
-	while ((endMatch = endRegex.exec(template)) !== null) {
-		const length = parseInt(endMatch[1]);
-		template = template.replace(endMatch[0], prompt.substring(prompt.length - length));
-	}
+	template = template.replace(/{{prompt:end:(\d+)}}/g, (match, length) =>
+		prompt.slice(-parseInt(length))
+	);
 
 	return template;
 };
