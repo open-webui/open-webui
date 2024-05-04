@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
@@ -8,6 +9,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Tags from '$lib/components/chat/Tags.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let shareHandler: Function;
 	export let renameHandler: Function;
@@ -27,7 +30,7 @@
 		}
 	}}
 >
-	<Tooltip content="More">
+	<Tooltip content={$i18n.t('More')}>
 		<slot />
 	</Tooltip>
 

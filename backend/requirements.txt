@@ -1,59 +1,62 @@
-fastapi
-uvicorn[standard]
-pydantic
-python-multipart
+fastapi==0.109.2
+uvicorn[standard]==0.22.0
+pydantic==2.7.1
+python-multipart==0.0.9
 
-flask
-flask_cors
+Flask==3.0.3
+Flask-Cors==4.0.0
 
-python-socketio
-python-jose
-passlib[bcrypt]
-uuid
+python-socketio==5.11.2
+python-jose==3.3.0
+passlib[bcrypt]==1.7.4
+uuid==1.30
 
-requests
-aiohttp
-peewee
-peewee-migrate
-psycopg2-binary
-pymysql
-bcrypt
+requests==2.31.0
+aiohttp==3.9.5
+peewee==3.17.3
+peewee-migrate==1.12.2
+psycopg2-binary==2.9.9
+PyMySQL==1.1.0
+bcrypt==4.1.2
 
-litellm==1.35.17
-litellm[proxy]==1.35.17
+litellm==1.35.28
+litellm[proxy]==1.35.28
 
-boto3
+boto3==1.34.95
 
-argon2-cffi
-apscheduler
-google-generativeai
+argon2-cffi==23.1.0
+APScheduler==3.10.4
+google-generativeai==0.5.2
 
-langchain
-langchain-chroma
-langchain-community
-fake_useragent
-chromadb
-sentence_transformers
-pypdf
-docx2txt
-unstructured
-markdown
-pypandoc
-pandas
-openpyxl
-pyxlsb
-xlrd
+langchain==0.1.16
+langchain-community==0.0.34
+langchain-chroma==0.1.0
 
-opencv-python-headless
-rapidocr-onnxruntime
+fake-useragent==1.5.1
+chromadb==0.4.24
+sentence-transformers==2.7.0
+pypdf==4.2.0
+docx2txt==0.8
+unstructured==0.11.8
+Markdown==3.6
+pypandoc==1.13
+pandas==2.2.2
+openpyxl==3.1.2
+pyxlsb==1.0.10
+xlrd==2.0.1
+validators==0.28.1
 
-fpdf2
-rank_bm25
+opencv-python-headless==4.9.0.80
+rapidocr-onnxruntime==1.2.3
 
-faster-whisper
+fpdf2==2.7.8
+rank-bm25==0.2.2
 
-PyJWT
-pyjwt[crypto]
+faster-whisper==1.0.1
 
-black
-langfuse
+PyJWT==2.8.0
+PyJWT[crypto]==2.8.0
+
+black==24.4.2
+langfuse==2.27.3
+youtube-transcript-api

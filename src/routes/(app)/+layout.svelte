@@ -154,7 +154,7 @@
 				if (isCtrlPressed && event.key === '.') {
 					event.preventDefault();
 					console.log('openSettings');
-					document.getElementById('open-settings-button')?.click();
+					showSettings.set(!$showSettings);
 				}
 
 				// Check if Ctrl + / is pressed
@@ -192,6 +192,8 @@
 </div>
 
 <ShortcutsModal bind:show={showShortcuts} />
+<SettingsModal bind:show={$showSettings} />
+<ChangelogModal bind:show={$showChangelog} />
 
 <div class="app relative">
 	<div
@@ -292,8 +294,6 @@
 			{/if}
 
 			<Sidebar />
-			<SettingsModal bind:show={$showSettings} />
-			<ChangelogModal bind:show={$showChangelog} />
 			<slot />
 		{/if}
 	</div>
