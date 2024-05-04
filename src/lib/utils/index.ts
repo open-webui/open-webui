@@ -520,3 +520,26 @@ export const approximateToHumanReadable = (nanoseconds: number) => {
 
 	return results.reverse().join(' ');
 };
+
+export const getTimeRange = (timestamp) => {
+	const now = new Date();
+	const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds
+
+	// Calculate the difference in milliseconds
+	const diffTime = now.getTime() - date.getTime();
+	const diffDays = diffTime / (1000 * 3600 * 24);
+
+	if (diffDays < 1) {
+		return 'Today';
+	} else if (diffDays < 2) {
+		return 'Yesterday';
+	} else if (diffDays <= 7) {
+		return 'Previous 7 days';
+	} else if (diffDays <= 30) {
+		return 'Previous 30 days';
+	} else if (date.getFullYear() === now.getFullYear()) {
+		return date.toLocaleString('default', { month: 'long' });
+	} else {
+		return date.getFullYear().toString();
+	}
+};
