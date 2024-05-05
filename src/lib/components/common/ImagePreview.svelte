@@ -3,11 +3,40 @@
 	export let src = '';
 	export let alt = '';
 
-	const downloadImage = (url, filename) => {
+	const MimeTypes: { [index: string]: string } = {
+		jpeg: 'image/jpeg',
+		jpg: 'image/jpeg',
+		png: 'image/png',
+		gif: 'image/gif',
+		bmp: 'image/bmp',
+		ico: 'image/x-icon',
+		tif: 'image/tiff',
+		tiff: 'image/tiff',
+		webp: 'image/webp',
+		svg: 'image/svg+xml',
+		avif: 'image/avif',
+		heic: 'image/heic',
+		heif: 'image/heif',
+		raw: 'image/x-raw'
+	};
+
+	function getMimeType(extension: string) {
+		return MimeTypes[extension.toLowerCase()] || 'image/png';
+	}
+
+	const downloadImage = (url) => {
+		const urlParts = url.split('/');
+		const fileNameWithExt = urlParts.pop().trim() || '';
+		const splitted = fileNameWithExt.split('.');
+		const extension = `${(splitted[splitted.length - 1] || 'png').toLowerCase()}`;
+		const filename = `image.${extension}`;
+
 		fetch(url)
 			.then((response) => response.blob())
 			.then((blob) => {
-				const objectUrl = window.URL.createObjectURL(blob);
+				const mimeType = getMimeType(extension);
+				const newBlob = new Blob([blob], { type: mimeType });
+				const objectUrl = window.URL.createObjectURL(newBlob);
 				const link = document.createElement('a');
 				link.href = objectUrl;
 				link.download = filename;
@@ -51,7 +80,7 @@
 				<button
 					class=" p-5"
 					on:click={() => {
-						downloadImage(src, 'Image.png');
+						downloadImage(src);
 					}}
 				>
 					<svg
