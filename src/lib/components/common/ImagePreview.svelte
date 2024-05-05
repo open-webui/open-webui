@@ -1,4 +1,5 @@
 <script lang="ts">
+	import mime from 'mime-types';
 	export let show = false;
 	export let src = '';
 	export let alt = '';
@@ -13,7 +14,9 @@
 		fetch(url)
 			.then((response) => response.blob())
 			.then((blob) => {
-				const objectUrl = window.URL.createObjectURL(blob);
+				const mimeType = mime.lookup(filename);
+				const newBlob = new Blob([blob], { type: mimeType });
+				const objectUrl = window.URL.createObjectURL(newBlob);
 				const link = document.createElement('a');
 				link.href = objectUrl;
 				link.download = filename;

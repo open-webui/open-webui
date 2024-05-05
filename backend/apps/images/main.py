@@ -326,7 +326,7 @@ def save_b64_image(b64_str):
             if mime_type == 'image/webp':
                 image_format = '.webp'
             else:
-                image_format = mimetypes.guess_extension(mime_type)
+                image_format = mimetypes.guess_extension(mime_type) or '.png'
 
             image_filename = f"{image_id}{image_format}"
             file_path = IMAGE_CACHE_DIR / f"{image_filename}"
