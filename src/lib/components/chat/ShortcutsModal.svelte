@@ -209,6 +209,38 @@
 				</div>
 			</div>
 		</div>
+		
+		<section>
+			<header class="flex justify-between dark:text-gray-300 px-5 py-4 border-b border-b-gray-800">
+				<div class="text-lg font-medium self-center">{$i18n.t('Prompt shortcuts')}</div>
+				<hr class=" dark:border-gray-800" />
+			</header>
+			<div class="flex flex-col md:flex-row w-full p-5 md:space-x-4 dark:text-gray-200">
+				<div class="flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
+					<div class="flex flex-col space-y-3 w-full self-start">
+						<div class="w-full flex justify-between items-center">
+							<div class=" text-sm">{$i18n.t('My Prompts')}</div>
+							<div class="flex space-x-1 text-xs">
+								<div class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300" >
+									/
+								</div>
+							</div>						
+						</div>
+					</div>
+					<div class="flex flex-col space-y-3 w-full self-start pt-3 sm:pt-0">
+						<div class="w-full flex justify-between items-center">
+							<div class="text-sm">{$i18n.t('Input from Agent')}</div>
+							<div class="flex space-x-1 text-xs">
+								<div class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300" >
+									@
+								</div>
+							</div>						
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
 	</div>
 </Modal>
 
