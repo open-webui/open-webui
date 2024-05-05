@@ -3,7 +3,13 @@
 	export let src = '';
 	export let alt = '';
 
-	const downloadImage = (url, filename) => {
+	const downloadImage = (url) => {
+		const urlParts = url.split('/');
+		const fileNameWithExt = urlParts.pop().trim() || '';
+		const splitted = fileNameWithExt.split('.');
+		const extension = `.${(splitted[splitted.length - 1] || 'png').toLowerCase()}`;
+		const filename = `image${extension}`;
+
 		fetch(url)
 			.then((response) => response.blob())
 			.then((blob) => {
@@ -51,7 +57,7 @@
 				<button
 					class=" p-5"
 					on:click={() => {
-						downloadImage(src, 'Image.png');
+						downloadImage(src);
 					}}
 				>
 					<svg
