@@ -323,11 +323,11 @@ def save_b64_image(b64_str):
             header, encoded = b64_str.split(",", 1)
             mime_type = header.split(";")[0].split(":")[1]
             img_data = base64.b64decode(encoded)
-            if mime_type == 'image/webp':
-                image_format = '.webp'
-            else:
-                image_format = mimetypes.guess_extension(mime_type) or '.png'
-
+            image_format = (
+                ".webp"
+                if mime_type == "image/webp"
+                else mimetypes.guess_extension(mime_type) or ".png"
+            )
             image_filename = f"{image_id}{image_format}"
             file_path = IMAGE_CACHE_DIR / f"{image_filename}"
             with open(file_path, "wb") as f:
@@ -375,7 +375,7 @@ def save_url_image(url):
 
     except Exception as e:
         log.exception(f"Error saving image: {e}")
-        return None, None
+        return None
 
 
 @app.post("/generations")
