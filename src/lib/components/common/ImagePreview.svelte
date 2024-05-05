@@ -1,5 +1,4 @@
 <script lang="ts">
-	import mime from 'mime-types';
 	export let show = false;
 	export let src = '';
 	export let alt = '';
@@ -8,13 +7,14 @@
 		const urlParts = url.split('/');
 		const fileNameWithExt = urlParts.pop().trim() || '';
 		const splitted = fileNameWithExt.split('.');
-		const extension = `.${(splitted[splitted.length - 1] || 'png').toLowerCase()}`;
-		const filename = `image${extension}`;
+		const extension = `${(splitted[splitted.length - 1] || 'png').toLowerCase()}`;
+		const filename = `image.${extension}`;
 
 		fetch(url)
 			.then((response) => response.blob())
 			.then((blob) => {
-				const mimeType = "image/png";
+				const mime = require('mime-types');
+				const mimeType = mime.lookup(extension);
 				const newBlob = new Blob([blob], { type: mimeType });
 				const objectUrl = window.URL.createObjectURL(newBlob);
 				const link = document.createElement('a');
