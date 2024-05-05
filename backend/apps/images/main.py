@@ -321,8 +321,7 @@ def save_b64_image(b64_str):
 
         if "," in b64_str:
             header, encoded = b64_str.split(",", 1)
-            mime_type = header.split(";")[0]
-
+            mime_type = header.split(";")[0].split(":")[1]
             img_data = base64.b64decode(encoded)
             image_format = mimetypes.guess_extension(mime_type)
 

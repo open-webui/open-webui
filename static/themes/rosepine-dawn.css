@@ -201,10 +201,6 @@
 	background-color: #faf4ed;
 }
 
-.rose-pine-dawn .bg-black {
-	background-color: rgb(215 130 126);
-}
-
 .rose-pine-dawn .bg-gray-100 {
 	background-color: rgb(255 242 242);
 }
@@ -243,6 +239,10 @@
 
 .rose-pine-dawn .hover\:bg-gray-900:hover {
 	background-color: rgb(255 249 249);
+}
+
+.rose-pine-dawn .bg-black {
+    background-color: rgb(255 249 249);
 }
 /* .rose-pine-dawn .bg-white {
     --tw-bg-opacity: 1;
