@@ -258,10 +258,15 @@
 						bind:value={titleAutoGenerateModelExternal}
 						placeholder={$i18n.t('Select a model')}
 					>
-						<option value="" selected>{$i18n.t('Current Model')}</option>
+						<option value="">{$i18n.t('Current Model')}</option>
 						{#each $models as model}
 							{#if model.name !== 'hr'}
-								<option value={model.name} class="bg-gray-100 dark:bg-gray-700">
+								<option
+									value={model.name}
+									class={model.name === 'gpt-3.5-turbo'
+										? 'selected bg-gray-100 dark:bg-gray-700'
+										: 'bg-gray-100 dark:bg-gray-700'}
+								>
 									{model.name}
 								</option>
 							{/if}

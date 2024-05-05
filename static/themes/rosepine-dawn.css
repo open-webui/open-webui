@@ -244,6 +244,10 @@
 .rose-pine-dawn .bg-black {
     background-color: rgb(255 249 249);
 }
+
+.rose-pine-dawn .bg-gray-900 {
+	background-color: rgb(255 207 205);
+}
 /* .rose-pine-dawn .bg-white {
     --tw-bg-opacity: 1;
     background-color: rgb(235 188 186 / 39%);
