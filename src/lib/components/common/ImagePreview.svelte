@@ -3,6 +3,24 @@
 	export let src = '';
 	export let alt = '';
 
+	const MimeTypes: { [index: string]: string } = {
+		jpeg: 'image/jpeg',
+		jpg: 'image/jpeg',
+		png: 'image/png',
+		gif: 'image/gif',
+		bmp: 'image/bmp',
+		ico: 'image/x-icon',
+		tif: 'image/tiff',
+		tiff: 'image/tiff',
+		webp: 'image/webp',
+		svg: 'image/svg+xml',
+		avif: 'image/avif'
+	};
+
+	function getMimeType(extension: string) {
+		return MimeTypes[extension.toLowerCase()] || 'image/png';
+	}
+
 	const downloadImage = (url) => {
 		const urlParts = url.split('/');
 		const fileNameWithExt = urlParts.pop().trim() || '';
@@ -13,8 +31,7 @@
 		fetch(url)
 			.then((response) => response.blob())
 			.then((blob) => {
-				const mimeType = blob.type;
-				console.log('mimeType=' + mimeType);
+				const mimeType = getMimeType(extension)
 				const newBlob = new Blob([blob], { type: mimeType });
 				const objectUrl = window.URL.createObjectURL(newBlob);
 				const link = document.createElement('a');
