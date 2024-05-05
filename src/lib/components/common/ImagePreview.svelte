@@ -29,7 +29,7 @@
 		const fileNameWithExt = urlParts.pop().trim() || '';
 		const splitted = fileNameWithExt.split('.');
 		const extension = `${(splitted[splitted.length - 1] || 'png').toLowerCase()}`;
-		const filename = `image.${extension}`;
+		const filename = `Image.${extension}`;
 
 		fetch(url)
 			.then((response) => response.blob())
