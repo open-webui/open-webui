@@ -14,7 +14,7 @@
 		fetch(url)
 			.then((response) => response.blob())
 			.then((blob) => {
-				const mimeType = mime.lookup(filename);
+				const mimeType = mime.getType(filename);
 				const newBlob = new Blob([blob], { type: mimeType });
 				const objectUrl = window.URL.createObjectURL(newBlob);
 				const link = document.createElement('a');
