@@ -14,7 +14,11 @@
 		tiff: 'image/tiff',
 		webp: 'image/webp',
 		svg: 'image/svg+xml',
-		avif: 'image/avif'
+		avif: 'image/avif',
+		heic: 'image/heic',
+		heif: 'image/heif',
+		jxl: 'image/jxl',
+		raw: 'image/x-raw'
 	};
 
 	function getMimeType(extension: string) {
@@ -31,7 +35,7 @@
 		fetch(url)
 			.then((response) => response.blob())
 			.then((blob) => {
-				const mimeType = getMimeType(extension)
+				const mimeType = getMimeType(extension);
 				const newBlob = new Blob([blob], { type: mimeType });
 				const objectUrl = window.URL.createObjectURL(newBlob);
 				const link = document.createElement('a');
