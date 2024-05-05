@@ -323,7 +323,13 @@ def save_b64_image(b64_str):
             header, encoded = b64_str.split(",", 1)
             mime_type = header.split(";")[0].split(":")[1]
             img_data = base64.b64decode(encoded)
-            image_format = mimetypes.guess_extension(mime_type)
+            log.info(f"mime_type: {mime_type}")
+            if mime_type == 'image/webp':
+                image_format = '.webp'
+            else:
+                image_format = mimetypes.guess_extension(mime_type)
+
+            log.info(f"image_format: {mimetypes.guess_extension(mime_type)}")
 
             image_filename = f"{image_id}{image_format}"
             file_path = IMAGE_CACHE_DIR / f"{image_filename}"
