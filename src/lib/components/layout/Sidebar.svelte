@@ -44,6 +44,28 @@
 	let showDropdown = false;
 	let isEditing = false;
 
+	let filteredChatList = [];
+
+	$: filteredChatList = $chats.filter((chat) => {
+		if (search === '') {
+			return true;
+		} else {
+			let title = chat.title.toLowerCase();
+			const query = search.toLowerCase();
+
+			let contentMatches = false;
+			// Access the messages within chat.chat.messages
+			if (chat.chat && chat.chat.messages && Array.isArray(chat.chat.messages)) {
+				contentMatches = chat.chat.messages.some((message) => {
+					// Check if message.content exists and includes the search query
+					return message.content && message.content.toLowerCase().includes(query);
+				});
+			}
+
+			return title.includes(query) || contentMatches;
+		}
+	});
+
 	onMount(async () => {
 		showSidebar.set(window.innerWidth > BREAKPOINT);
 		await chats.set(await getChatList(localStorage.token));
@@ -418,25 +440,17 @@
 			{/if}
 
 			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-none">
-				{#each $chats.filter((chat) => {
-					if (search === '') {
-						return true;
-					} else {
-						let title = chat.title.toLowerCase();
-						const query = search.toLowerCase();
+				{#each filteredChatList as chat, idx}
+					{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
+						<div
+							class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
+								? ''
+								: 'pt-5'} pb-0.5"
+						>
+							{chat.time_range}
+						</div>
+					{/if}
 
-						let contentMatches = false;
-						// Access the messages within chat.chat.messages
-						if (chat.chat && chat.chat.messages && Array.isArray(chat.chat.messages)) {
-							contentMatches = chat.chat.messages.some((message) => {
-								// Check if message.content exists and includes the search query
-								return message.content && message.content.toLowerCase().includes(query);
-							});
-						}
-
-						return title.includes(query) || contentMatches;
-					}
-				}) as chat, i}
 					<div class=" w-full pr-2 relative group">
 						{#if chatTitleEditId === chat.id}
 							<div
@@ -836,12 +850,12 @@
 					>
 						<div class="flex h-6 w-6 flex-col items-center">
 							<div
-								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {show
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {$showSidebar
 									? 'group-hover:rotate-[15deg]'
 									: 'group-hover:rotate-[-15deg]'}"
 							/>
 							<div
-								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {show
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {$showSidebar
 									? 'group-hover:rotate-[-15deg]'
 									: 'group-hover:rotate-[15deg]'}"
 							/>

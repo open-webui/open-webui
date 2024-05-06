@@ -411,7 +411,9 @@
 
 {#if dragged}
 	<div
-		class="fixed lg:w-[calc(100%-260px)] w-full h-full flex z-50 touch-none pointer-events-none"
+		class="fixed {$showSidebar
+			? 'left-0 lg:left-[260px] lg:w-[calc(100%-260px)]'
+			: 'left-0'}  w-full h-full flex z-50 touch-none pointer-events-none"
 		id="dropzone"
 		role="region"
 		aria-label="Drag and Drop Container"
@@ -763,6 +765,7 @@
 								bind:value={prompt}
 								on:keypress={(e) => {
 									if (
+										window.innerWidth > 1024 ||
 										!(
 											'ontouchstart' in window ||
 											navigator.maxTouchPoints > 0 ||

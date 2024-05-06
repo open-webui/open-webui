@@ -75,7 +75,13 @@
 			<hr class="border-gray-100 dark:border-gray-800 mt-2.5 mb-1.5" />
 
 			<div class="flex p-1">
-				<Tags {chatId} />
+				<Tags
+					{chatId}
+					on:close={() => {
+						show = false;
+						onClose();
+					}}
+				/>
 			</div>
 		</DropdownMenu.Content>
 	</div>

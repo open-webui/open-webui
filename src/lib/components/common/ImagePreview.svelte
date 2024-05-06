@@ -51,7 +51,7 @@
 				<button
 					class=" p-5"
 					on:click={() => {
-						downloadImage(src, 'Image.png');
+						downloadImage(src, src.substring(src.lastIndexOf('/') + 1));
 					}}
 				>
 					<svg
