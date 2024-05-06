@@ -2,6 +2,8 @@
 	import { getContext } from 'svelte';
 	import Modal from '../common/Modal.svelte';
 	import General from './Settings/General.svelte';
+	import ChunkParams from './Settings/ChunkParams.svelte';
+	import QueryParams from './Settings/QueryParams.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -62,25 +64,73 @@
 					</div>
 					<div class=" self-center">{$i18n.t('General')}</div>
 				</button>
+
+				<button
+					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+					'chunk'
+						? 'bg-gray-200 dark:bg-gray-700'
+						: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+					on:click={() => {
+						selectedTab = 'chunk';
+					}}
+				>
+					<div class=" self-center mr-2">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M5.625 1.5H9a3.75 3.75 0 0 1 3.75 3.75v1.875c0 1.036.84 1.875 1.875 1.875H16.5a3.75 3.75 0 0 1 3.75 3.75v7.875c0 1.035-.84 1.875-1.875 1.875H5.625a1.875 1.875 0 0 1-1.875-1.875V3.375c0-1.036.84-1.875 1.875-1.875ZM12.75 12a.75.75 0 0 0-1.5 0v2.25H9a.75.75 0 0 0 0 1.5h2.25V18a.75.75 0 0 0 1.5 0v-2.25H15a.75.75 0 0 0 0-1.5h-2.25V12Z"
+								clip-rule="evenodd"
+							/>
+							<path
+								d="M14.25 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 16.5 7.5h-1.875a.375.375 0 0 1-.375-.375V5.25Z"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center">{$i18n.t('Chunk Params')}</div>
+				</button>
+
+				<button
+					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+					'query'
+						? 'bg-gray-200 dark:bg-gray-700'
+						: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+					on:click={() => {
+						selectedTab = 'query';
+					}}
+				>
+					<div class=" self-center mr-2">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path d="M11.625 16.5a1.875 1.875 0 1 0 0-3.75 1.875 1.875 0 0 0 0 3.75Z" />
+							<path
+								fill-rule="evenodd"
+								d="M5.625 1.5H9a3.75 3.75 0 0 1 3.75 3.75v1.875c0 1.036.84 1.875 1.875 1.875H16.5a3.75 3.75 0 0 1 3.75 3.75v7.875c0 1.035-.84 1.875-1.875 1.875H5.625a1.875 1.875 0 0 1-1.875-1.875V3.375c0-1.036.84-1.875 1.875-1.875Zm6 16.5c.66 0 1.277-.19 1.797-.518l1.048 1.048a.75.75 0 0 0 1.06-1.06l-1.047-1.048A3.375 3.375 0 1 0 11.625 18Z"
+								clip-rule="evenodd"
+							/>
+							<path
+								d="M14.25 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 16.5 7.5h-1.875a.375.375 0 0 1-.375-.375V5.25Z"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center">{$i18n.t('Query Params')}</div>
+				</button>
 			</div>
 			<div class="flex-1 md:min-h-[380px]">
 				{#if selectedTab === 'general'}
-					<General
-						saveHandler={() => {
-							show = false;
-						}}
-					/>
-					<!-- <General
-						saveHandler={() => {
-							show = false;
-						}}
-					/> -->
-					<!-- {:else if selectedTab === 'users'}
-					<Users
-						saveHandler={() => {
-							show = false;
-						}}
-					/> -->
+					<General saveHandler={() => {}} />
+				{:else if selectedTab === 'chunk'}
+					<ChunkParams saveHandler={() => {}} />
+				{:else if selectedTab === 'query'}
+					<QueryParams saveHandler={() => {}} />
 				{/if}
 			</div>
 		</div>

@@ -141,7 +141,9 @@
 						</div>
 
 						<div class="px-5 flex text-sm gap-2.5">
-							<div class="py-3 border-b font-medium text-gray-100 cursor-pointer">{$i18n.t('Overview')}</div>
+							<div class="py-3 border-b font-medium text-gray-100 cursor-pointer">
+								{$i18n.t('Overview')}
+							</div>
 							<!-- <div class="py-3 text-gray-300 cursor-pointer">Users</div> -->
 						</div>
 
