@@ -5,12 +5,11 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let citation: any[];
+	export let citation;
 
 	let mergedDocuments = [];
 
-	onMount(async () => {
-		// Merge the document with its metadata
+	$: if (citation) {
 		mergedDocuments = citation.document?.map((c, i) => {
 			return {
 				source: citation.source,
@@ -18,7 +17,7 @@
 				metadata: citation.metadata?.[i]
 			};
 		});
-	});
+	}
 </script>
 
 <Modal size="lg" bind:show>

@@ -66,8 +66,8 @@
 
 	let showRateComment = false;
 
-	// Backend returns a list of citations per collection, we flatten it to citations per source
-	let citations = {};
+	let showCitationModal = false;
+	let selectedCitation = null;
 
 	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
 
@@ -132,24 +132,6 @@
 											message.info.total_duration
 										)}</span>`,
 				allowHTML: true
-			});
-		}
-
-		if (message.citations) {
-			message.citations.forEach((citation) => {
-				citation.document.forEach((document, index) => {
-					const metadata = citation.metadata?.[index];
-					const source = citation?.source?.name ?? metadata?.source ?? 'N/A';
-
-					citations[source] = citations[source] || {
-						source: citation.source,
-						document: [],
-						metadata: []
-					};
-
-					citations[source].document.push(document);
-					citations[source].metadata.push(metadata);
-				});
 			});
 		}
 	};
@@ -346,6 +328,8 @@
 	});
 </script>
 
+<CitationsModal bind:show={showCitationModal} citation={selectedCitation} />
+
 {#key message.id}
 	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
 		<ProfileImage
@@ -467,13 +451,43 @@
 					</div>
 				</div>
 
-				{#if Object.keys(citations).length > 0}
+				<!-- if (message.citations) {
+					citations = message.citations.forEach((citation) => {
+						citation.document.forEach((document, index) => {
+							const metadata = citation.metadata?.[index];
+							const source = citation?.source?.name ?? metadata?.source ?? 'N/A';
+		
+							citations[source] = citations[source] || {
+								source: citation.source,
+								document: [],
+								metadata: []
+							};
+		
+							citations[source].document.push(document);
+							citations[source].metadata.push(metadata);
+						});
+					});
+				} -->
+
+				{#if message.citations}
 					<hr class="  dark:border-gray-800" />
-
 					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
-						{#each Object.keys(citations) as source, idx}
-							<CitationsModal bind:show={citations[source].show} citation={citations[source]} />
+						{#each message.citations.reduce((acc, citation) => {
+							citation.document.forEach((document, index) => {
+								const metadata = citation.metadata?.[index];
+								const id = metadata?.source ?? 'N/A';
 
+								const existingSource = acc.find((item) => item.id === id);
+
+								if (existingSource) {
+									existingSource.document.push(document);
+									existingSource.metadata.push(metadata);
+								} else {
+									acc.push( { id: id, source: citation?.source, document: [document], metadata: metadata ? [metadata] : [] } );
+								}
+							});
+							return acc;
+						}, []) as citation, idx}
 							<div class="flex gap-1 text-xs font-semibold">
 								<div>
 									[{idx + 1}]
@@ -482,10 +496,11 @@
 								<button
 									class="dark:text-gray-500 underline"
 									on:click={() => {
-										citations[source].show = !citations[source].show;
+										showCitationModal = true;
+										selectedCitation = citation;
 									}}
 								>
-									{citations[source].source.name}
+									{citation.source.name}
 								</button>
 							</div>
 						{/each}
