@@ -43,6 +43,7 @@ from config import (
     DEVICE_TYPE,
     AUDIO_OPENAI_API_BASE_URL,
     AUDIO_OPENAI_API_KEY,
+    AUDIO_OPENAI_API_MODEL,
 )
 
 log = logging.getLogger(__name__)
@@ -60,6 +61,7 @@ app.add_middleware(
 
 app.state.OPENAI_API_BASE_URL = AUDIO_OPENAI_API_BASE_URL
 app.state.OPENAI_API_KEY = AUDIO_OPENAI_API_KEY
+app.state.OPENAI_API_MODEL = AUDIO_OPENAI_API_MODEL
 
 # setting device type for whisper model
 whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
@@ -79,6 +81,7 @@ async def get_openai_config(user=Depends(get_admin_user)):
     return {
         "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
         "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
+        "OPENAI_API_MODEL": app.state.OPENAI_API_MODEL,
     }
 
 
@@ -91,11 +94,13 @@ async def update_openai_config(
 
     app.state.OPENAI_API_BASE_URL = form_data.url
     app.state.OPENAI_API_KEY = form_data.key
+    app.state.OPENAI_API_MODEL = form_data.model
 
     return {
         "status": True,
         "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
         "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
+        "OPENAI_API_MODEL": app.state.OPENAI_API_MODEL,
     }
 
 
