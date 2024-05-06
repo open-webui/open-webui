@@ -49,7 +49,6 @@
 
 		<div class="flex flex-col w-full px-5 py-4 dark:text-gray-200 overflow-y-scroll max-h-[22rem]">
 			{#each mergedDocuments as document}
-				<!-- Source from document.metadata.source -->
 				<div class="flex flex-col w-full">
 					<div class="text-lg font-medium dark:text-gray-300">
 						{$i18n.t('Source')}
@@ -58,7 +57,6 @@
 						{document.metadata?.source ?? $i18n.t('No source available')}
 					</div>
 				</div>
-				<!-- Content from document.document.content -->
 				<div class="flex flex-col w-full">
 					<div class="text-lg font-medium dark:text-gray-300">
 						{$i18n.t('Content')}

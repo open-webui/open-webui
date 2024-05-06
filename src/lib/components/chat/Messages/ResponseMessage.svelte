@@ -67,6 +67,8 @@
 	let showRateComment = false;
 
 	let showCitations = {};
+	// Backend returns a list of citations per collection, we flatten it to citations per source
+	let flattenedCitations = {};
 
 	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
 
@@ -132,6 +134,28 @@
 										)}</span>`,
 				allowHTML: true
 			});
+		}
+
+		if (message.citations) {
+			for (const citation of message.citations) {
+				const zipped = (citation?.document ?? []).map(function (document, index) {
+					return [document, citation.metadata?.[index]];
+				});
+				for (const [document, metadata] of zipped) {
+					const source = metadata?.source ?? 'N/A';
+					if (source in flattenedCitations) {
+						flattenedCitations[source].document.push(document);
+						flattenedCitations[source].metadata.push(metadata);
+					} else {
+						flattenedCitations[source] = {
+							document: [document],
+							metadata: [metadata]
+						};
+					}
+				}
+			}
+			console.log(flattenedCitations);
+			console.log(Object.keys(flattenedCitations));
 		}
 	};
 
@@ -363,16 +387,19 @@
 						{/each}
 					</div>
 				{/if}
-				{#if message.citations}
+				{#if flattenedCitations}
 					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
-						{#each message.citations as citation}
+						{#each [...Object.keys(flattenedCitations)] as source}
 							<div>
-								<CitationsModal bind:show={showCitations[citation]} {citation} />
+								<CitationsModal
+									bind:show={showCitations[source]}
+									citation={flattenedCitations[source]}
+								/>
 								<button
 									class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none text-left"
 									type="button"
 									on:click={() => {
-										showCitations[citation] = !showCitations[citation];
+										showCitations[source] = !showCitations[source];
 									}}
 								>
 									<div class="p-2.5 bg-red-400 text-white rounded-lg">
@@ -395,7 +422,7 @@
 
 									<div class="flex flex-col justify-center -space-y-0.5">
 										<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
-											{citation.metadata?.[0]?.source ?? 'N/A'}
+											{source}
 										</div>
 
 										<div class=" text-gray-500 text-sm">{$i18n.t('Document')}</div>
