@@ -44,7 +44,7 @@ from config import (
     AUDIO_OPENAI_API_BASE_URL,
     AUDIO_OPENAI_API_KEY,
     AUDIO_OPENAI_API_MODEL,
-    AUDIO_OPENAI_API_SPEAKER
+    AUDIO_OPENAI_API_SPEAKER,
 )
 
 log = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ async def get_openai_config(user=Depends(get_admin_user)):
         "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
         "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
         "OPENAI_API_MODEL": app.state.OPENAI_API_MODEL,
-        "OPENAI_API_SPEAKER": app.state.OPENAI_API_SPEAKER
+        "OPENAI_API_SPEAKER": app.state.OPENAI_API_SPEAKER,
     }
 
 
