@@ -74,6 +74,7 @@ SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 class OpenAIConfigUpdateForm(BaseModel):
     url: str
     key: str
+    model: str
 
 
 @app.get("/config")
