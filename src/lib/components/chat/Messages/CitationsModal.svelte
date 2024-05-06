@@ -18,7 +18,6 @@
 				metadata: citation.metadata?.[i]
 			};
 		});
-		console.log(mergedDocuments);
 	});
 </script>
 
@@ -56,7 +55,7 @@
 						{$i18n.t('Source')}
 					</div>
 					<div class="text-sm dark:text-gray-400">
-						{document.metadata.source}
+						{document.metadata?.source ?? $i18n.t('No source available')}
 					</div>
 				</div>
 				<!-- Content from document.document.content -->
