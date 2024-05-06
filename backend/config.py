@@ -456,7 +456,7 @@ ENABLE_RAG_HYBRID_SEARCH = (
 
 
 ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
-    os.environ.get("ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION", "").lower() == "true"
+    os.environ.get("ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION", "True").lower() == "true"
 )
 
 RAG_EMBEDDING_ENGINE = os.environ.get("RAG_EMBEDDING_ENGINE", "")

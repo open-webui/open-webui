@@ -313,6 +313,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
             "chunk_size": app.state.CHUNK_SIZE,
             "chunk_overlap": app.state.CHUNK_OVERLAP,
         },
+        "web_loader_ssl_verification": app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     }
 
 
@@ -322,15 +323,34 @@ class ChunkParamUpdateForm(BaseModel):
 
 
 class ConfigUpdateForm(BaseModel):
-    pdf_extract_images: bool
-    chunk: ChunkParamUpdateForm
+    pdf_extract_images: Optional[bool] = None
+    chunk: Optional[ChunkParamUpdateForm] = None
+    web_loader_ssl_verification: Optional[bool] = None
 
 
 @app.post("/config/update")
 async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_user)):
-    app.state.PDF_EXTRACT_IMAGES = form_data.pdf_extract_images
-    app.state.CHUNK_SIZE = form_data.chunk.chunk_size
-    app.state.CHUNK_OVERLAP = form_data.chunk.chunk_overlap
+    app.state.PDF_EXTRACT_IMAGES = (
+        form_data.pdf_extract_images
+        if form_data.pdf_extract_images != None
+        else app.state.PDF_EXTRACT_IMAGES
+    )
+
+    app.state.CHUNK_SIZE = (
+        form_data.chunk.chunk_size if form_data.chunk != None else app.state.CHUNK_SIZE
+    )
+
+    app.state.CHUNK_OVERLAP = (
+        form_data.chunk.chunk_overlap
+        if form_data.chunk != None
+        else app.state.CHUNK_OVERLAP
+    )
+
+    app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+        form_data.web_loader_ssl_verification
+        if form_data.web_loader_ssl_verification != None
+        else app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+    )
 
     return {
         "status": True,
@@ -339,6 +359,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             "chunk_size": app.state.CHUNK_SIZE,
             "chunk_overlap": app.state.CHUNK_OVERLAP,
         },
+        "web_loader_ssl_verification": app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     }
 
 
@@ -490,10 +511,9 @@ def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
 def store_web(form_data: UrlForm, user=Depends(get_current_user)):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
     try:
-        loader = get_web_loader(form_data.url)
-        loader.requests_kwargs = {
-            "verify": app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
-        }
+        loader = get_web_loader(
+            form_data.url, verify_ssl=app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+        )
         data = loader.load()
 
         collection_name = form_data.collection_name
@@ -514,7 +534,7 @@ def store_web(form_data: UrlForm, user=Depends(get_current_user)):
         )
 
 
-def get_web_loader(url: str):
+def get_web_loader(url: str, verify_ssl: bool = True):
     # Check if the URL is valid
     if isinstance(validators.url(url), validators.ValidationError):
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
@@ -531,7 +551,7 @@ def get_web_loader(url: str):
         for ip in ipv6_addresses:
             if validators.ipv6(ip, private=True):
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
-    return WebBaseLoader(url)
+    return WebBaseLoader(url, verify_ssl=verify_ssl)
 
 
 def resolve_hostname(hostname):
