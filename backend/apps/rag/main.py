@@ -556,7 +556,14 @@ def resolve_hostname(hostname):
 @app.post("/websearch")
 def store_websearch(form_data: SearchForm, user=Depends(get_current_user)):
     try:
-        web_results = search_web(form_data.query)
+        try:
+            web_results = search_web(form_data.query)
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.WEB_SEARCH_ERROR,
+            )
         urls = [result.link for result in web_results]
         loader = get_web_loader(urls)
         data = loader.load()
