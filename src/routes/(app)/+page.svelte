@@ -782,7 +782,7 @@
 				titleModel?.external ?? false
 					? titleModel?.source?.toLowerCase() === 'litellm'
 						? `${LITELLM_API_BASE_URL}/v1`
-						: titleModel?.azure?? false
+						: titleModel?.azure ?? false
 						? `${AZURE_OPENAI_API_BASE_URL}`
 						: `${OPENAI_API_BASE_URL}`
 					: `${OLLAMA_API_BASE_URL}/v1`
