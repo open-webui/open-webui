@@ -79,6 +79,7 @@ from config import (
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     ENABLE_RAG_HYBRID_SEARCH,
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     RAG_RERANKING_MODEL,
     PDF_EXTRACT_IMAGES,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
@@ -90,7 +91,7 @@ from config import (
     CHUNK_SIZE,
     CHUNK_OVERLAP,
     RAG_TEMPLATE,
-    ENABLE_LOCAL_WEB_FETCH,
+    ENABLE_RAG_LOCAL_WEB_FETCH,
 )
 
 from constants import ERROR_MESSAGES
@@ -104,6 +105,9 @@ app.state.TOP_K = RAG_TOP_K
 app.state.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 
 app.state.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
+app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+)
 
 app.state.CHUNK_SIZE = CHUNK_SIZE
 app.state.CHUNK_OVERLAP = CHUNK_OVERLAP
@@ -112,6 +116,7 @@ app.state.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.RAG_TEMPLATE = RAG_TEMPLATE
+
 
 app.state.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
 app.state.OPENAI_API_KEY = RAG_OPENAI_API_KEY
@@ -486,6 +491,9 @@ def store_web(form_data: UrlForm, user=Depends(get_current_user)):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
     try:
         loader = get_web_loader(form_data.url)
+        loader.requests_kwargs = {
+            "verify": app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+        }
         data = loader.load()
 
         collection_name = form_data.collection_name
@@ -510,7 +518,7 @@ def get_web_loader(url: str):
     # Check if the URL is valid
     if isinstance(validators.url(url), validators.ValidationError):
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
-    if not ENABLE_LOCAL_WEB_FETCH:
+    if not ENABLE_RAG_LOCAL_WEB_FETCH:
         # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
         parsed_url = urllib.parse.urlparse(url)
         # Get IPv4 and IPv6 addresses
