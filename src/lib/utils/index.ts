@@ -3,6 +3,7 @@ import sha256 from 'js-sha256';
 import { getOllamaModels } from '$lib/apis/ollama';
 import { getOpenAIModels } from '$lib/apis/openai';
 import { getLiteLLMModels } from '$lib/apis/litellm';
+import { getAzureOpenAIModels } from '$lib/apis/azureopenai';
 
 export const getModels = async (token: string) => {
 	let models = await Promise.all([
@@ -11,6 +12,10 @@ export const getModels = async (token: string) => {
 			return null;
 		}),
 		await getOpenAIModels(token).catch((error) => {
+			console.log(error);
+			return null;
+		}),
+		await getAzureOpenAIModels(token).catch((error) => {
 			console.log(error);
 			return null;
 		}),

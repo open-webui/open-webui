@@ -1,17 +1,13 @@
-from bs4 import BeautifulSoup
 import json
-import markdown
 import time
 import os
 import sys
 import logging
 import aiohttp
-import requests
 
 from fastapi import FastAPI, Request, Depends, status
 from fastapi.staticfiles import StaticFiles
 from fastapi import HTTPException
-from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -19,6 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
+from apps.azure.main import app as azure_app
 
 from apps.litellm.main import (
     app as litellm_app,
@@ -185,6 +182,7 @@ app.mount("/litellm/api", litellm_app)
 
 app.mount("/ollama", ollama_app)
 app.mount("/openai/api", openai_app)
+app.mount("/azureopenai/api", azure_app)
 
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
@@ -238,6 +236,9 @@ async def update_model_filter_config(
 
     openai_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
     openai_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
+
+    azure_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
+    azure_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
 
     litellm_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
     litellm_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST

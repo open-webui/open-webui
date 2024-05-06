@@ -44,6 +44,7 @@ log_sources = [
     "MODELS",
     "OLLAMA",
     "OPENAI",
+    "AZUREOPENAI",
     "RAG",
     "WEBHOOK",
 ]
@@ -338,6 +339,50 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 
 ####################################
+# AZURE_OPENAI_API
+####################################
+
+AZURE_OPENAI_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY", "")
+AZURE_OPENAI_API_BASE_URL = os.environ.get("AZURE_OPENAI_API_BASE_URL", "https://your_account_name.openai.azure.com/")
+AZURE_OPENAI_API_VERSION = os.environ.get("AZURE_OPENAI_API_VERSION", "2024-02-01")
+AZURE_OPENAI_DEPLOYMENT_MODEL_NAME = os.environ.get("AZURE_OPENAI_DEPLOYMENT_MODEL_NAME", "")
+
+
+AZURE_OPENAI_API_KEYS = os.environ.get("AZURE_OPENAI_API_KEYS", "")
+AZURE_OPENAI_API_KEYS = AZURE_OPENAI_API_KEYS if AZURE_OPENAI_API_KEYS != "" else AZURE_OPENAI_API_KEY
+AZURE_OPENAI_API_KEYS = [url.strip() for url in AZURE_OPENAI_API_KEYS.split(";")]
+
+AZURE_OPENAI_API_BASE_URLS = os.environ.get("AZURE_OPENAI_API_BASE_URLS", "")
+AZURE_OPENAI_API_BASE_URLS = (
+    AZURE_OPENAI_API_BASE_URLS if AZURE_OPENAI_API_BASE_URLS != "" else AZURE_OPENAI_API_BASE_URL
+)
+
+AZURE_OPENAI_API_BASE_URLS = [
+    url.strip() if url != "" else "https://back_end_your_account_name.openai.azure.com/"
+    for url in AZURE_OPENAI_API_BASE_URLS.split(";")
+]
+
+AZURE_OPENAI_API_VERSIONS = os.environ.get("AZURE_OPENAI_API_VERSIONS", "")
+AZURE_OPENAI_API_VERSIONS = (
+    AZURE_OPENAI_API_VERSIONS if AZURE_OPENAI_API_VERSIONS != "" else AZURE_OPENAI_API_VERSION
+)
+AZURE_OPENAI_API_VERSIONS = [
+    url.strip() if url != "" else "2024-02-01"
+    for url in AZURE_OPENAI_API_VERSIONS.split(";")
+]
+
+AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES = os.environ.get("AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES", "")
+AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES = (
+    AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES if AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES != "" else AZURE_OPENAI_DEPLOYMENT_MODEL_NAME
+)
+
+AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES = [
+    [model_name.strip() if model_name != "" else "" for model_name in url.split(":")]
+    for url in AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES.split(";")
+]
+
+
+####################################
 # WEBUI
 ####################################
 
@@ -393,6 +438,10 @@ USER_PERMISSIONS = {"chat": {"deletion": USER_PERMISSIONS_CHAT_DELETION}}
 ENABLE_MODEL_FILTER = os.environ.get("ENABLE_MODEL_FILTER", "False").lower() == "true"
 MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
 MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
+
+AZURE_MODEL_FILTER_ENABLED = os.environ.get("AZURE_MODEL_FILTER_ENABLED", "False").lower() == "true"
+AZURE_MODEL_FILTER_LIST = os.environ.get("AZURE_MODEL_FILTER_LIST", "")
+AZURE_MODEL_FILTER_LIST = [model.strip() for model in AZURE_MODEL_FILTER_LIST.split(";")]
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
