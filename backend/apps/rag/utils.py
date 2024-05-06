@@ -19,8 +19,24 @@ from langchain.retrievers import (
 )
 
 from typing import Optional
-from config import SRC_LOG_LEVELS, CHROMA_CLIENT
 
+from apps.rag.search.brave import search_brave
+from apps.rag.search.google_pse import search_google_pse
+from apps.rag.search.main import SearchResult
+from apps.rag.search.searxng import search_searxng
+from apps.rag.search.serper import search_serper
+from apps.rag.search.serpstack import search_serpstack
+from config import (
+    SRC_LOG_LEVELS,
+    CHROMA_CLIENT,
+    SEARXNG_QUERY_URL,
+    GOOGLE_PSE_API_KEY,
+    GOOGLE_PSE_ENGINE_ID,
+    BRAVE_SEARCH_API_KEY,
+    SERPSTACK_API_KEY,
+    SERPSTACK_HTTPS,
+    SERPER_API_KEY,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -515,3 +531,35 @@ class RerankCompressor(BaseDocumentCompressor):
             )
             final_results.append(doc)
         return final_results
+
+
+def search_web(query: str) -> list[SearchResult]:
+    """Search the web using a search engine and return the results as a list of SearchResult objects.
+    Will look for a search engine API key in environment variables in the following order:
+    - SEARXNG_QUERY_URL
+    - GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID
+    - BRAVE_SEARCH_API_KEY
+    - SERPSTACK_API_KEY
+    - SERPER_API_KEY
+
+    Args:
+        query (str): The query to search for
+    """
+    try:
+        if SEARXNG_QUERY_URL:
+            return search_searxng(SEARXNG_QUERY_URL, query)
+        elif GOOGLE_PSE_API_KEY and GOOGLE_PSE_ENGINE_ID:
+            return search_google_pse(GOOGLE_PSE_API_KEY, GOOGLE_PSE_ENGINE_ID, query)
+        elif BRAVE_SEARCH_API_KEY:
+            return search_brave(BRAVE_SEARCH_API_KEY, query)
+        elif SERPSTACK_API_KEY:
+            return search_serpstack(
+                SERPSTACK_API_KEY, query, https_enabled=SERPSTACK_HTTPS
+            )
+        elif SERPER_API_KEY:
+            return search_serper(SERPER_API_KEY, query)
+        else:
+            raise Exception("No search engine API key found in environment variables")
+    except Exception as e:
+        log.error(f"Web search failed: {e}")
+        return []

@@ -533,6 +533,14 @@ RAG_OPENAI_API_KEY = os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY)
 
 ENABLE_LOCAL_WEB_FETCH = os.getenv("ENABLE_LOCAL_WEB_FETCH", "False").lower() == "true"
 
+SEARXNG_QUERY_URL = os.getenv("SEARXNG_QUERY_URL", "")
+GOOGLE_PSE_API_KEY = os.getenv("GOOGLE_PSE_API_KEY", "")
+GOOGLE_PSE_ENGINE_ID = os.getenv("GOOGLE_PSE_ENGINE_ID", "")
+BRAVE_SEARCH_API_KEY = os.getenv("BRAVE_SEARCH_API_KEY", "")
+SERPSTACK_API_KEY = os.getenv("SERPSTACK_API_KEY", "")
+SERPSTACK_HTTPS = os.getenv("SERPSTACK_HTTPS", "True").lower() == "true"
+SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
+
 ####################################
 # Transcribe
 ####################################
