@@ -320,6 +320,7 @@ def rag_messages(
         extracted_collections.extend(collection)
 
     context_string = ""
+
     citations = []
     for context in relevant_contexts:
         try:
@@ -335,6 +336,7 @@ def rag_messages(
                     )
         except Exception as e:
             log.exception(e)
+
     context_string = context_string.strip()
 
     ra_content = rag_template(

@@ -23,7 +23,7 @@
 
 <Modal size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
+		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center capitalize">
 				{$i18n.t('Citation')}
 			</div>
@@ -45,29 +45,32 @@
 				</svg>
 			</button>
 		</div>
-		<div class="flex flex-col w-full px-5 py-4 dark:text-gray-200 overflow-y-scroll max-h-[22rem]">
-			{#each mergedDocuments as document, documentIdx}
-				<div class="flex flex-col w-full">
-					<div class=" font-medium dark:text-gray-300">
-						{$i18n.t('Source')}
-					</div>
-					<div class="text-sm dark:text-gray-400">
-						{document.metadata?.source ?? $i18n.t('No source available')}
-					</div>
-				</div>
-				<div class="flex flex-col w-full">
-					<div class=" font-medium dark:text-gray-300">
-						{$i18n.t('Content')}
-					</div>
-					<pre class="text-sm dark:text-gray-400">
-						{document.document}
-					</pre>
-				</div>
 
-				{#if documentIdx !== mergedDocuments.length - 1}
-					<hr class=" dark:border-gray-850" />
-				{/if}
-			{/each}
+		<div class="flex flex-col md:flex-row w-full px-5 pb-5 md:space-x-4">
+			<div class="flex flex-col w-full dark:text-gray-200 overflow-y-scroll max-h-[22rem]">
+				{#each mergedDocuments as document, documentIdx}
+					<div class="flex flex-col w-full">
+						<div class="text-sm font-medium dark:text-gray-300">
+							{$i18n.t('Source')}
+						</div>
+						<div class="text-sm dark:text-gray-400">
+							{document.metadata?.source ?? $i18n.t('No source available')}
+						</div>
+					</div>
+					<div class="flex flex-col w-full">
+						<div class=" text-sm font-medium dark:text-gray-300">
+							{$i18n.t('Content')}
+						</div>
+						<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
+							{document.document}
+						</pre>
+					</div>
+
+					{#if documentIdx !== mergedDocuments.length - 1}
+						<hr class=" dark:border-gray-850 my-3" />
+					{/if}
+				{/each}
+			</div>
 		</div>
 	</div>
 </Modal>

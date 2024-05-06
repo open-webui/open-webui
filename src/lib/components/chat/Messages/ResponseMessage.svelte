@@ -141,6 +141,7 @@
 				const zipped = (citation?.document ?? []).map(function (document, index) {
 					return [document, citation.metadata?.[index]];
 				});
+
 				for (const [document, metadata] of zipped) {
 					const source = metadata?.source ?? 'N/A';
 					if (source in flattenedCitations) {
@@ -154,6 +155,7 @@
 					}
 				}
 			}
+
 			console.log(flattenedCitations);
 			console.log(Object.keys(flattenedCitations));
 		}
