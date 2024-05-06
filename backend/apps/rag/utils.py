@@ -545,21 +545,15 @@ def search_web(query: str) -> list[SearchResult]:
     Args:
         query (str): The query to search for
     """
-    try:
-        if SEARXNG_QUERY_URL:
-            return search_searxng(SEARXNG_QUERY_URL, query)
-        elif GOOGLE_PSE_API_KEY and GOOGLE_PSE_ENGINE_ID:
-            return search_google_pse(GOOGLE_PSE_API_KEY, GOOGLE_PSE_ENGINE_ID, query)
-        elif BRAVE_SEARCH_API_KEY:
-            return search_brave(BRAVE_SEARCH_API_KEY, query)
-        elif SERPSTACK_API_KEY:
-            return search_serpstack(
-                SERPSTACK_API_KEY, query, https_enabled=SERPSTACK_HTTPS
-            )
-        elif SERPER_API_KEY:
-            return search_serper(SERPER_API_KEY, query)
-        else:
-            raise Exception("No search engine API key found in environment variables")
-    except Exception as e:
-        log.error(f"Web search failed: {e}")
-        return []
+    if SEARXNG_QUERY_URL:
+        return search_searxng(SEARXNG_QUERY_URL, query)
+    elif GOOGLE_PSE_API_KEY and GOOGLE_PSE_ENGINE_ID:
+        return search_google_pse(GOOGLE_PSE_API_KEY, GOOGLE_PSE_ENGINE_ID, query)
+    elif BRAVE_SEARCH_API_KEY:
+        return search_brave(BRAVE_SEARCH_API_KEY, query)
+    elif SERPSTACK_API_KEY:
+        return search_serpstack(SERPSTACK_API_KEY, query, https_enabled=SERPSTACK_HTTPS)
+    elif SERPER_API_KEY:
+        return search_serper(SERPER_API_KEY, query)
+    else:
+        raise Exception("No search engine API key found in environment variables")

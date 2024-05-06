@@ -31,9 +31,9 @@ def search_serper(api_key: str, query: str) -> list[SearchResult]:
     )
     return [
         SearchResult(
-            link=result["url"],
+            link=result["link"],
             title=result.get("title"),
             snippet=result.get("description"),
         )
-        for result in results
+        for result in results[:5]
     ]

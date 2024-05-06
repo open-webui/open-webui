@@ -30,14 +30,16 @@ def search_google_pse(
         "num": 5,
     }
 
-    response = requests.request("POST", url, headers=headers, params=params)
+    response = requests.request("GET", url, headers=headers, params=params)
     response.raise_for_status()
 
     json_response = response.json()
     results = json_response.get("items", [])
     return [
         SearchResult(
-            link=result["url"], title=result.get("title"), snippet=result.get("snippet")
+            link=result["link"],
+            title=result.get("title"),
+            snippet=result.get("snippet"),
         )
         for result in results
     ]
