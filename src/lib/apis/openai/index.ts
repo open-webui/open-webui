@@ -316,5 +316,5 @@ export const generateTitle = async (
 		throw error;
 	}
 
-	return res?.choices[0]?.message?.content ?? 'New Chat';
+	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? 'New Chat';
 };

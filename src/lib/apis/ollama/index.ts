@@ -182,7 +182,7 @@ export const generateTitle = async (
 		throw error;
 	}
 
-	return res?.response ?? 'New Chat';
+	return res?.response.replace(/["']/g, '') ?? 'New Chat';
 };
 
 export const generatePrompt = async (token: string = '', model: string, conversation: string) => {
