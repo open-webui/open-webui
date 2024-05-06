@@ -162,7 +162,7 @@ export const generateTitle = async (
 			stream: false,
 			options: {
 				// Restrict the number of tokens generated to 50
-				num_predict: 50,
+				num_predict: 50
 			}
 		})
 	})

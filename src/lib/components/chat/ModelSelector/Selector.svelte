@@ -318,7 +318,6 @@
 						}}
 					>
 						{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}
-
 					</button>
 				{/if}
 

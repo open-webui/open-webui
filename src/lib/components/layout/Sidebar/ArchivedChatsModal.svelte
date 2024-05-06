@@ -161,7 +161,9 @@
 						{/each} -->
 					</div>
 				{:else}
-					<div class="text-left text-sm w-full mb-8">{$i18n.t('You have no archived conversations.')}</div>
+					<div class="text-left text-sm w-full mb-8">
+						{$i18n.t('You have no archived conversations.')}
+					</div>
 				{/if}
 			</div>
 		</div>
