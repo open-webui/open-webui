@@ -14,6 +14,7 @@
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import i18n, { initI18n } from '$lib/i18n';
+	import { page } from '$app/stores';
 
 	setContext('i18n', i18n);
 
@@ -65,10 +66,14 @@
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
-						await goto('/auth');
+						if (!$page.route.id?.startsWith('/auth')) {
+							await goto('/auth');
+						}
 					}
 				} else {
-					await goto('/auth');
+					if (!$page.route.id?.startsWith('/auth')) {
+						await goto('/auth');
+					}
 				}
 			}
 		} else {

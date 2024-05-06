@@ -1,6 +1,6 @@
 <script>
 	import { goto } from '$app/navigation';
-	import { userSignIn, userSignUp } from '$lib/apis/auths';
+	import { userSignIn, userSignUp, userForgotPassword } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
@@ -11,6 +11,7 @@
 	const i18n = getContext('i18n');
 
 	let loaded = false;
+	/** @type {'signin' | 'signup' | 'forgot-password'} */
 	let mode = 'signin';
 
 	let name = '';
@@ -47,11 +48,28 @@
 		await setSessionUser(sessionUser);
 	};
 
+	const forgotPasswordHandler = async () => {
+		await userForgotPassword(email).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		toast.success(
+			$i18n.t('An email has been sent to your email address with further instructions.')
+		);
+	};
+
 	const submitHandler = async () => {
-		if (mode === 'signin') {
-			await signInHandler();
-		} else {
-			await signUpHandler();
+		switch (mode) {
+			case 'signin':
+				await signInHandler();
+				break;
+			case 'signup':
+				await signUpHandler();
+				break;
+			case 'forgot-password':
+				await forgotPasswordHandler();
+				break;
 		}
 	};
 
@@ -172,18 +190,19 @@
 								/>
 							</div>
 
-							<div>
-								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
-
-								<input
-									bind:value={password}
-									type="password"
-									class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
-									placeholder={$i18n.t('Enter Your Password')}
-									autocomplete="current-password"
-									required
-								/>
-							</div>
+							{#if mode !== 'forgot-password'}
+								<div>
+									<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
+									<input
+										bind:value={password}
+										type="password"
+										class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
+										placeholder={$i18n.t('Enter Your Password')}
+										autocomplete="current-password"
+										required
+									/>
+								</div>
+							{/if}
 						</div>
 
 						<div class="mt-5">
@@ -191,13 +210,19 @@
 								class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-semibold text-sm py-3 transition"
 								type="submit"
 							>
-								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
+								{mode === 'signin'
+									? $i18n.t('Sign in')
+									: mode === 'signup'
+									? $i18n.t('Create Account')
+									: $i18n.t('Send Reset Email')}
 							</button>
 
 							<div class=" mt-4 text-sm text-center">
 								{mode === 'signin'
 									? $i18n.t("Don't have an account?")
-									: $i18n.t('Already have an account?')}
+									: mode === 'signup'
+									? $i18n.t('Already have an account?')
+									: ''}
 
 								<button
 									class=" font-medium underline"
@@ -210,9 +235,26 @@
 										}
 									}}
 								>
-									{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
+									{mode === 'signin'
+										? $i18n.t('Sign up')
+										: mode === 'signup'
+										? $i18n.t('Sign in')
+										: $i18n.t('Back to login')}
 								</button>
 							</div>
+							{#if ($config?.email_enabled ?? false) && mode !== 'forgot-password'}
+								<div class=" mt-4 text-sm text-center">
+									<button
+										class=" font-medium underline"
+										type="button"
+										on:click={() => {
+											mode = 'forgot-password';
+										}}
+									>
+										{$i18n.t('Forgot your password?')}
+									</button>
+								</div>
+							{/if}
 						</div>
 					</form>
 				</div>

@@ -133,6 +133,7 @@ type Config = {
 	default_models?: string[];
 	default_prompt_suggestions?: PromptSuggestion[];
 	trusted_header_auth?: boolean;
+	email_enabled?: boolean;
 };
 
 type PromptSuggestion = {

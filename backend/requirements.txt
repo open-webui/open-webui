@@ -2,6 +2,7 @@ fastapi==0.109.2
 uvicorn[standard]==0.22.0
 pydantic==2.7.1
 python-multipart==0.0.9
+fastapi-mail==1.4.1
 
 Flask==3.0.3
 Flask-Cors==4.0.0

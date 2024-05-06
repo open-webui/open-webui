@@ -1,13 +1,12 @@
 import logging
 
-from fastapi import Request, UploadFile, File
+from fastapi import BackgroundTasks, Request
 from fastapi import Depends, HTTPException, status
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 import re
 import uuid
-import csv
 
 
 from apps.web.models.auths import (
@@ -23,6 +22,7 @@ from apps.web.models.auths import (
 )
 from apps.web.models.users import Users
 
+from utils.reset_password import send_password_reset_mail, validate_password_reset_token
 from utils.utils import (
     get_password_hash,
     get_current_user,
@@ -33,7 +33,7 @@ from utils.utils import (
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from config import WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+from config import FRONTEND_URL, MAIL_CONFIG, WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 
 router = APIRouter()
 
@@ -231,7 +231,6 @@ async def signup(request: Request, form_data: SignupForm):
 
 @router.post("/add", response_model=SigninResponse)
 async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
-
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -241,7 +240,6 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
-
         print(form_data)
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(
@@ -373,3 +371,50 @@ async def get_api_key(user=Depends(get_current_user)):
         }
     else:
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+
+############################
+# Forgot Password
+############################
+
+if MAIL_CONFIG and FRONTEND_URL:
+
+    class ForgetPassword(BaseModel):
+        email: EmailStr
+
+    class ForgetPasswordResponse(BaseModel):
+        message: str
+
+    @router.post("/request-password-reset", response_model=ForgetPasswordResponse)
+    async def request_password_reset(
+        body: ForgetPassword, background_tasks: BackgroundTasks
+    ):
+        background_tasks.add_task(
+            send_password_reset_mail,
+            email=body.email,
+            frontend_url=FRONTEND_URL,
+            email_conf=MAIL_CONFIG,
+        )
+        return {
+            "message": "If the email is registered, you will receive a password reset link."
+        }
+
+    class ResetPassword(BaseModel):
+        token: str
+        new_password: str
+
+    class ResetPasswordResponse(BaseModel):
+        message: str
+
+    @router.post("/reset-password", response_model=ResetPasswordResponse)
+    def reset_password(body: ResetPassword):
+        exception = HTTPException(status_code=400, detail="Invalid or expired token")
+        try:
+            user_id = validate_password_reset_token(body.token)
+        except:
+            raise exception
+
+        hashed_password = get_password_hash(body.new_password)
+        success = Auths.update_user_password_by_id(user_id, hashed_password)
+        if success:
+            return {"message": "Password has been reset successfully."}

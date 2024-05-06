@@ -9,6 +9,7 @@ from typing import TypeVar, Generic, Union
 
 from pathlib import Path
 import json
+from fastapi_mail import ConnectionConfig
 import yaml
 
 import markdown
@@ -831,3 +832,28 @@ LITELLM_PROXY_HOST = os.getenv("LITELLM_PROXY_HOST", "127.0.0.1")
 ####################################
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+
+####################################
+# Mail
+####################################
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL")
+
+ENABLE_MAIL = os.environ.get("ENABLE_MAIL", "False").lower() == "true"
+
+## Validate mail settings. ConnectionConfig takes the configuration from these environment variables:
+# MAIL_USERNAME: str
+# MAIL_PASSWORD: str
+# MAIL_PORT: int
+# MAIL_SERVER: str
+# MAIL_STARTTLS: bool
+# MAIL_SSL_TLS: bool
+# MAIL_DEBUG: conint(gt=-1, lt=2) = 0
+# MAIL_FROM: EmailStr
+# MAIL_FROM_NAME: Optional[str] = None
+# TEMPLATE_FOLDER: Optional[DirectoryPath] = None
+# SUPPRESS_SEND: conint(gt=-1, lt=2) = 0
+# USE_CREDENTIALS: bool = True
+# VALIDATE_CERTS: bool = True
+# TIMEOUT: int = DEFAULT_TIMEOUT
+MAIL_CONFIG = ConnectionConfig() if ENABLE_MAIL else None

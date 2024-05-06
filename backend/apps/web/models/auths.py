@@ -4,6 +4,7 @@ import time
 import uuid
 import logging
 from peewee import *
+import hashlib
 
 from apps.web.models.users import UserModel, Users
 from utils.utils import verify_password
@@ -192,6 +193,12 @@ class AuthsTable:
                 return False
         except:
             return False
+
+    def get_hash_of_password(self, email: str) -> str:
+        auth = Auth.get(Auth.email == email)
+        password = auth.password if auth is not None else ""
+
+        return hashlib.sha256(password.encode()).hexdigest()[:10]
 
 
 Auths = AuthsTable(DB)

@@ -95,6 +95,42 @@ export const userSignUp = async (
 	return res;
 };
 
+export const userForgotPassword = async (email: string) => {
+  try {
+    const res = await fetch(`${WEBUI_API_BASE_URL}/auths/request-password-reset`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email })
+    })
+    const json = await res.json();
+    if (!res.ok) throw json;
+    return json;
+  } catch (err) {
+    console.log(err);
+    throw err.detail;
+  }
+};
+
+export const userResetPassword = async (password: string, token: string) => {
+  try {
+    const res = await fetch(`${WEBUI_API_BASE_URL}/auths/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ token, new_password: password })
+    })
+    const json = await res.json();
+    if (!res.ok) throw json;
+    return json;
+  } catch (err) {
+    console.log(err);
+    throw err.detail;
+  }
+};
+
 export const addUser = async (
 	token: string,
 	name: string,
