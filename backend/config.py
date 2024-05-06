@@ -19,6 +19,18 @@ from constants import ERROR_MESSAGES
 
 
 ####################################
+# Load .env file
+####################################
+
+try:
+    from dotenv import load_dotenv, find_dotenv
+
+    load_dotenv(find_dotenv("../.env"))
+except ImportError:
+    print("dotenv not installed, skipping...")
+
+
+####################################
 # LOGGING
 ####################################
 
@@ -59,16 +71,6 @@ for source in log_sources:
 
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
-####################################
-# Load .env file
-####################################
-
-try:
-    from dotenv import load_dotenv, find_dotenv
-
-    load_dotenv(find_dotenv("../.env"))
-except ImportError:
-    log.warning("dotenv not installed, skipping...")
 
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 if WEBUI_NAME != "Open WebUI":
