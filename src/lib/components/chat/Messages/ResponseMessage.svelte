@@ -223,7 +223,8 @@
 					const res = await synthesizeOpenAISpeech(
 						localStorage.token,
 						$settings?.audio?.speaker,
-						sentence
+						sentence,
+						$settings?.audio?.OpenAIModel
 					).catch((error) => {
 						toast.error(error);
 

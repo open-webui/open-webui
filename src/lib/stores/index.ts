@@ -102,6 +102,7 @@ type AudioSettings = {
 	STTEngine?: string;
 	TTSEngine?: string;
 	speaker?: string;
+	OpenAIModel?: string;
 };
 
 type TitleSettings = {

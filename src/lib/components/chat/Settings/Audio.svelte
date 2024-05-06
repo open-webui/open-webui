@@ -26,6 +26,8 @@
 
 	let voices = [];
 	let speaker = '';
+	let models = [];
+	let OpenAIModel = '';
 
 	const getOpenAIVoices = () => {
 		voices = [
@@ -36,6 +38,10 @@
 			{ name: 'nova' },
 			{ name: 'shimmer' }
 		];
+	};
+
+	const getOpenAIVoicesModel = () => {
+		models = [{ name: 'tts-1' }, { name: 'tts-1-hd' }];
 	};
 
 	const getWebAPIVoices = () => {
@@ -78,12 +84,16 @@
 		if (TTSEngine === 'openai') {
 			const res = await updateAudioConfig(localStorage.token, {
 				url: OpenAIUrl,
-				key: OpenAIKey
+				key: OpenAIKey,
+				model: OpenAIModel,
+				speaker: speaker,
 			});
 
 			if (res) {
 				OpenAIUrl = res.OPENAI_API_BASE_URL;
 				OpenAIKey = res.OPENAI_API_KEY;
+				OpenAIModel = res.OPENAI_API_MODEL;
+				speaker = res.OPENAI_API_SPEAKER;
 			}
 		}
 	};
@@ -98,9 +108,11 @@
 		STTEngine = settings?.audio?.STTEngine ?? '';
 		TTSEngine = settings?.audio?.TTSEngine ?? '';
 		speaker = settings?.audio?.speaker ?? '';
+		OpenAIModel = settings?.audio?.OpenAIModel ?? '';
 
 		if (TTSEngine === 'openai') {
 			getOpenAIVoices();
+			getOpenAIVoicesModel();
 		} else {
 			getWebAPIVoices();
 		}
@@ -111,6 +123,8 @@
 			if (res) {
 				OpenAIUrl = res.OPENAI_API_BASE_URL;
 				OpenAIKey = res.OPENAI_API_KEY;
+				OpenAIModel = res.OPENAI_API_MODEL;
+				speaker = res.OPENAI_API_SPEAKER;
 			}
 		}
 	});
@@ -126,7 +140,8 @@
 			audio: {
 				STTEngine: STTEngine !== '' ? STTEngine : undefined,
 				TTSEngine: TTSEngine !== '' ? TTSEngine : undefined,
-				speaker: speaker !== '' ? speaker : undefined
+				speaker: speaker !== '' ? speaker : undefined,
+				OpenAIModel: OpenAIModel !== '' ? OpenAIModel : undefined
 			}
 		});
 		dispatch('save');
@@ -215,6 +230,7 @@
 							if (e.target.value === 'openai') {
 								getOpenAIVoices();
 								speaker = 'alloy';
+								OpenAIModel = 'tts-1';
 							} else {
 								getWebAPIVoices();
 								speaker = '';
@@ -302,6 +318,25 @@
 						<datalist id="voice-list">
 							{#each voices as voice}
 								<option value={voice.name} />
+							{/each}
+						</datalist>
+					</div>
+				</div>
+			</div>
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Model')}</div>
+				<div class="flex w-full">
+					<div class="flex-1">
+						<input
+							list="model-list"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							bind:value={OpenAIModel}
+							placeholder="Select a model"
+						/>
+
+						<datalist id="model-list">
+							{#each models as OpenAIMode}
+								<option value={OpenAIMode.name} />
 							{/each}
 						</datalist>
 					</div>
