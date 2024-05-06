@@ -10,10 +10,10 @@
 	let mergedDocuments = [];
 
 	onMount(async () => {
-		console.log(citation);
 		// Merge the document with its metadata
 		mergedDocuments = citation.document?.map((c, i) => {
 			return {
+				source: citation.source,
 				document: c,
 				metadata: citation.metadata?.[i]
 			};
@@ -54,7 +54,7 @@
 							{$i18n.t('Source')}
 						</div>
 						<div class="text-sm dark:text-gray-400">
-							{document.metadata?.source ?? $i18n.t('No source available')}
+							{document.source?.name ?? $i18n.t('No source available')}
 						</div>
 					</div>
 					<div class="flex flex-col w-full">

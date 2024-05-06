@@ -66,9 +66,8 @@
 
 	let showRateComment = false;
 
-	let showCitations = {};
 	// Backend returns a list of citations per collection, we flatten it to citations per source
-	let flattenedCitations = {};
+	let citations = {};
 
 	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
 
@@ -137,27 +136,21 @@
 		}
 
 		if (message.citations) {
-			for (const citation of message.citations) {
-				const zipped = (citation?.document ?? []).map(function (document, index) {
-					return [document, citation.metadata?.[index]];
+			message.citations.forEach((citation) => {
+				citation.document.forEach((document, index) => {
+					const metadata = citation.metadata?.[index];
+					const source = citation?.source?.name ?? metadata?.source ?? 'N/A';
+
+					citations[source] = citations[source] || {
+						source: citation.source,
+						document: [],
+						metadata: []
+					};
+
+					citations[source].document.push(document);
+					citations[source].metadata.push(metadata);
 				});
-
-				for (const [document, metadata] of zipped) {
-					const source = metadata?.source ?? 'N/A';
-					if (source in flattenedCitations) {
-						flattenedCitations[source].document.push(document);
-						flattenedCitations[source].metadata.push(metadata);
-					} else {
-						flattenedCitations[source] = {
-							document: [document],
-							metadata: [metadata]
-						};
-					}
-				}
-			}
-
-			console.log(flattenedCitations);
-			console.log(Object.keys(flattenedCitations));
+			});
 		}
 	};
 
@@ -474,15 +467,12 @@
 					</div>
 				</div>
 
-				{#if Object.keys(flattenedCitations).length > 0}
+				{#if Object.keys(citations).length > 0}
 					<hr class="  dark:border-gray-800" />
 
 					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
-						{#each [...Object.keys(flattenedCitations)] as source, idx}
-							<CitationsModal
-								bind:show={showCitations[source]}
-								citation={flattenedCitations[source]}
-							/>
+						{#each Object.keys(citations) as source, idx}
+							<CitationsModal bind:show={citations[source].show} citation={citations[source]} />
 
 							<div class="flex gap-1 text-xs font-semibold">
 								<div>
@@ -492,10 +482,10 @@
 								<button
 									class="dark:text-gray-500 underline"
 									on:click={() => {
-										showCitations[source] = !showCitations[source];
+										citations[source].show = !citations[source].show;
 									}}
 								>
-									{source}
+									{citations[source].source.name}
 								</button>
 							</div>
 						{/each}
