@@ -32,6 +32,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
+	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
 
 	export let modelfiles = [];
 	export let message;
@@ -64,6 +65,8 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
+
+	let showCitations = {};
 
 	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
 
@@ -360,6 +363,48 @@
 						{/each}
 					</div>
 				{/if}
+				{#if message.citations}
+					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
+						{#each message.citations as citation}
+							<div>
+								<CitationsModal bind:show={showCitations[citation]} {citation} />
+								<button
+									class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none text-left"
+									type="button"
+									on:click={() => {
+										showCitations[citation] = !showCitations[citation];
+									}}
+								>
+									<div class="p-2.5 bg-red-400 text-white rounded-lg">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 24 24"
+											fill="currentColor"
+											class="w-6 h-6"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75 2.25a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z"
+												clip-rule="evenodd"
+											/>
+											<path
+												d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z"
+											/>
+										</svg>
+									</div>
+
+									<div class="flex flex-col justify-center -space-y-0.5">
+										<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
+											{citation.metadata?.[0]?.source ?? 'N/A'}
+										</div>
+
+										<div class=" text-gray-500 text-sm">{$i18n.t('Document')}</div>
+									</div>
+								</button>
+							</div>
+						{/each}
+					</div>
+				{/if}
 
 				<div
 					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
@@ -577,10 +622,11 @@
 														stroke-linejoin="round"
 														class="w-4 h-4"
 														xmlns="http://www.w3.org/2000/svg"
-														><path
-															d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-														/></svg
 													>
+														<path
+															d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
+														/>
+													</svg>
 												</button>
 											</Tooltip>
 
@@ -611,10 +657,11 @@
 														stroke-linejoin="round"
 														class="w-4 h-4"
 														xmlns="http://www.w3.org/2000/svg"
-														><path
-															d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
-														/></svg
 													>
+														<path
+															d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
+														/>
+													</svg>
 												</button>
 											</Tooltip>
 										{/if}
@@ -637,35 +684,32 @@
 														fill="currentColor"
 														viewBox="0 0 24 24"
 														xmlns="http://www.w3.org/2000/svg"
-														><style>
+													>
+														<style>
 															.spinner_S1WN {
 																animation: spinner_MGfb 0.8s linear infinite;
 																animation-delay: -0.8s;
 															}
+
 															.spinner_Km9P {
 																animation-delay: -0.65s;
 															}
+
 															.spinner_JApP {
 																animation-delay: -0.5s;
 															}
+
 															@keyframes spinner_MGfb {
 																93.75%,
 																100% {
 																	opacity: 0.2;
 																}
 															}
-														</style><circle class="spinner_S1WN" cx="4" cy="12" r="3" /><circle
-															class="spinner_S1WN spinner_Km9P"
-															cx="12"
-															cy="12"
-															r="3"
-														/><circle
-															class="spinner_S1WN spinner_JApP"
-															cx="20"
-															cy="12"
-															r="3"
-														/></svg
-													>
+														</style>
+														<circle class="spinner_S1WN" cx="4" cy="12" r="3" />
+														<circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3" />
+														<circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" />
+													</svg>
 												{:else if speaking}
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
@@ -718,35 +762,32 @@
 															fill="currentColor"
 															viewBox="0 0 24 24"
 															xmlns="http://www.w3.org/2000/svg"
-															><style>
+														>
+															<style>
 																.spinner_S1WN {
 																	animation: spinner_MGfb 0.8s linear infinite;
 																	animation-delay: -0.8s;
 																}
+
 																.spinner_Km9P {
 																	animation-delay: -0.65s;
 																}
+
 																.spinner_JApP {
 																	animation-delay: -0.5s;
 																}
+
 																@keyframes spinner_MGfb {
 																	93.75%,
 																	100% {
 																		opacity: 0.2;
 																	}
 																}
-															</style><circle class="spinner_S1WN" cx="4" cy="12" r="3" /><circle
-																class="spinner_S1WN spinner_Km9P"
-																cx="12"
-																cy="12"
-																r="3"
-															/><circle
-																class="spinner_S1WN spinner_JApP"
-																cx="20"
-																cy="12"
-																r="3"
-															/></svg
-														>
+															</style>
+															<circle class="spinner_S1WN" cx="4" cy="12" r="3" />
+															<circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3" />
+															<circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" />
+														</svg>
 													{:else}
 														<svg
 															xmlns="http://www.w3.org/2000/svg"

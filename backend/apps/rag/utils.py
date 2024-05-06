@@ -320,11 +320,19 @@ def rag_messages(
         extracted_collections.extend(collection)
 
     context_string = ""
+    citations = []
     for context in relevant_contexts:
         try:
             if "documents" in context:
                 items = [item for item in context["documents"][0] if item is not None]
                 context_string += "\n\n".join(items)
+                if "metadatas" in context:
+                    citations.append(
+                        {
+                            "document": context["documents"][0],
+                            "metadata": context["metadatas"][0],
+                        }
+                    )
         except Exception as e:
             log.exception(e)
     context_string = context_string.strip()
@@ -355,7 +363,7 @@ def rag_messages(
 
     messages[last_user_message_idx] = new_user_message
 
-    return messages
+    return messages, citations
 
 
 def get_model_path(model: str, update_model: bool = False):
