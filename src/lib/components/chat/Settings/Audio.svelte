@@ -324,7 +324,7 @@
 				</div>
 			</div>
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set model')}</div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Model')}</div>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<input
