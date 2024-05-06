@@ -23,7 +23,7 @@
 
 <Modal size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
+		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
 			<div class=" text-lg font-medium self-center capitalize">
 				{$i18n.t('Citation')}
 			</div>
@@ -45,12 +45,10 @@
 				</svg>
 			</button>
 		</div>
-		<hr class=" dark:border-gray-850" />
-
 		<div class="flex flex-col w-full px-5 py-4 dark:text-gray-200 overflow-y-scroll max-h-[22rem]">
-			{#each mergedDocuments as document}
+			{#each mergedDocuments as document, documentIdx}
 				<div class="flex flex-col w-full">
-					<div class="text-lg font-medium dark:text-gray-300">
+					<div class=" font-medium dark:text-gray-300">
 						{$i18n.t('Source')}
 					</div>
 					<div class="text-sm dark:text-gray-400">
@@ -58,14 +56,17 @@
 					</div>
 				</div>
 				<div class="flex flex-col w-full">
-					<div class="text-lg font-medium dark:text-gray-300">
+					<div class=" font-medium dark:text-gray-300">
 						{$i18n.t('Content')}
 					</div>
 					<pre class="text-sm dark:text-gray-400">
 						{document.document}
 					</pre>
 				</div>
-				<hr class=" dark:border-gray-850" />
+
+				{#if documentIdx !== mergedDocuments.length - 1}
+					<hr class=" dark:border-gray-850" />
+				{/if}
 			{/each}
 		</div>
 	</div>
