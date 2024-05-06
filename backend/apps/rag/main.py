@@ -80,6 +80,7 @@ from config import (
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     ENABLE_RAG_HYBRID_SEARCH,
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     RAG_RERANKING_MODEL,
     PDF_EXTRACT_IMAGES,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
@@ -91,7 +92,7 @@ from config import (
     CHUNK_SIZE,
     CHUNK_OVERLAP,
     RAG_TEMPLATE,
-    ENABLE_LOCAL_WEB_FETCH,
+    ENABLE_RAG_LOCAL_WEB_FETCH,
 )
 
 from constants import ERROR_MESSAGES
@@ -105,6 +106,9 @@ app.state.TOP_K = RAG_TOP_K
 app.state.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 
 app.state.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
+app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+)
 
 app.state.CHUNK_SIZE = CHUNK_SIZE
 app.state.CHUNK_OVERLAP = CHUNK_OVERLAP
@@ -113,6 +117,7 @@ app.state.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.RAG_TEMPLATE = RAG_TEMPLATE
+
 
 app.state.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
 app.state.OPENAI_API_KEY = RAG_OPENAI_API_KEY
@@ -313,6 +318,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
             "chunk_size": app.state.CHUNK_SIZE,
             "chunk_overlap": app.state.CHUNK_OVERLAP,
         },
+        "web_loader_ssl_verification": app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     }
 
 
@@ -322,15 +328,34 @@ class ChunkParamUpdateForm(BaseModel):
 
 
 class ConfigUpdateForm(BaseModel):
-    pdf_extract_images: bool
-    chunk: ChunkParamUpdateForm
+    pdf_extract_images: Optional[bool] = None
+    chunk: Optional[ChunkParamUpdateForm] = None
+    web_loader_ssl_verification: Optional[bool] = None
 
 
 @app.post("/config/update")
 async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_user)):
-    app.state.PDF_EXTRACT_IMAGES = form_data.pdf_extract_images
-    app.state.CHUNK_SIZE = form_data.chunk.chunk_size
-    app.state.CHUNK_OVERLAP = form_data.chunk.chunk_overlap
+    app.state.PDF_EXTRACT_IMAGES = (
+        form_data.pdf_extract_images
+        if form_data.pdf_extract_images != None
+        else app.state.PDF_EXTRACT_IMAGES
+    )
+
+    app.state.CHUNK_SIZE = (
+        form_data.chunk.chunk_size if form_data.chunk != None else app.state.CHUNK_SIZE
+    )
+
+    app.state.CHUNK_OVERLAP = (
+        form_data.chunk.chunk_overlap
+        if form_data.chunk != None
+        else app.state.CHUNK_OVERLAP
+    )
+
+    app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+        form_data.web_loader_ssl_verification
+        if form_data.web_loader_ssl_verification != None
+        else app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+    )
 
     return {
         "status": True,
@@ -339,6 +364,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             "chunk_size": app.state.CHUNK_SIZE,
             "chunk_overlap": app.state.CHUNK_OVERLAP,
         },
+        "web_loader_ssl_verification": app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     }
 
 
@@ -490,7 +516,9 @@ def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
 def store_web(form_data: UrlForm, user=Depends(get_current_user)):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
     try:
-        loader = get_web_loader(form_data.url)
+        loader = get_web_loader(
+            form_data.url, verify_ssl=app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+        )
         data = loader.load()
 
         collection_name = form_data.collection_name
@@ -510,12 +538,11 @@ def store_web(form_data: UrlForm, user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
 
-
-def get_web_loader(url: Union[str, Sequence[str]]):
+def get_web_loader(url: Union[str, Sequence[str]], verify_ssl: bool = True):
     # Check if the URL is valid
     if not validate_url(url):
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
-    return WebBaseLoader(url)
+    return WebBaseLoader(url, verify_ssl=verify_ssl)
 
 
 def validate_url(url: Union[str, Sequence[str]]):

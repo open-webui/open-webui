@@ -295,7 +295,9 @@ export const generateTitle = async (
 					content: template
 				}
 			],
-			stream: false
+			stream: false,
+			// Restricting the max tokens to 50 to avoid long titles
+			max_tokens: 50
 		})
 	})
 		.then(async (res) => {

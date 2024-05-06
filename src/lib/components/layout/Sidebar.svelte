@@ -419,7 +419,7 @@
 							await chats.set(await getChatList(localStorage.token));
 						}}
 					>
-						all
+						{$i18n.t('all')}
 					</button>
 					{#each $tags as tag}
 						<button

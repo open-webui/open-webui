@@ -110,7 +110,7 @@
 					<div class=" flex flex-col justify-center">
 						<div class=" px-6 pt-4">
 							<div class=" flex justify-between items-center">
-								<div class="flex items-center text-2xl font-semibold">Dashboard</div>
+								<div class="flex items-center text-2xl font-semibold">{$i18n.t('Dashboard')}</div>
 								<div>
 									<Tooltip content={$i18n.t('Admin Settings')}>
 										<button
@@ -140,8 +140,10 @@
 							</div>
 						</div>
 
-						<div class="px-6 flex text-sm gap-2.5">
-							<div class="py-3 border-b font-medium text-gray-100 cursor-pointer">Overview</div>
+						<div class="px-5 flex text-sm gap-2.5">
+							<div class="py-3 border-b font-medium text-gray-100 cursor-pointer">
+								{$i18n.t('Overview')}
+							</div>
 							<!-- <div class="py-3 text-gray-300 cursor-pointer">Users</div> -->
 						</div>
 
@@ -268,7 +270,7 @@
 												<td class="px-3 py-2 text-right">
 													<div class="flex justify-end w-full">
 														{#if user.role !== 'admin'}
-															<Tooltip content="Chats">
+															<Tooltip content={$i18n.t('Chats')}>
 																<button
 																	class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																	on:click={async () => {
