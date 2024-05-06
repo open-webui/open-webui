@@ -120,78 +120,7 @@ async def update_azure_openai_deployment_model_names(form_data: DeploymentModelN
     app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES = form_data.deploymentmodelnames
     return {"AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES": app.state.AZURE_OPENAI_DEPLOYMENT_MODEL_NAMES}
 
-@app.post("/audio/speech")
-async def speech(request: Request, user=Depends(get_verified_user)):
-    idx = None
-    try:
-        idx = app.state.AZURE_OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
-        body = await request.body()
-        name = hashlib.sha256(body).hexdigest()
 
-        SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
-        SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
-        file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
-
-        # Check if the file already exists in the cache
-        if file_path.is_file():
-            return FileResponse(file_path)
-
-        headers = {}
-        headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEYS[idx]}"
-        headers["Content-Type"] = "application/json"
-
-        r = None
-        try:
-            r = requests.post(
-                url=f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech",
-                data=body,
-                headers=headers,
-                stream=True,
-            )
-
-            r.raise_for_status()
-
-            # Save the streaming content to a file
-            with open(file_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-
-            with open(file_body_path, "w") as f:
-                json.dump(json.loads(body.decode("utf-8")), f)
-
-            # Return the saved file
-            return FileResponse(file_path)
-
-        except Exception as e:
-            log.exception(e)
-            error_detail = "Open WebUI: Server Connection Error"
-            if r is not None:
-                try:
-                    res = r.json()
-                    if "error" in res:
-                        error_detail = f"External: {res['error']}"
-                except:
-                    error_detail = f"External: {e}"
-
-            raise HTTPException(
-                status_code=r.status_code if r else 500, detail=error_detail
-            )
-
-    except ValueError:
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
-
-
-# async def fetch_url(url, key):
-#     try:
-#         headers = {"Authorization": f"Bearer {key}"}
-#         async with aiohttp.ClientSession() as session:
-#             async with session.get(url, headers=headers) as response:
-#                 return await response.json()
-#     except Exception as e:
-#         # Handle connection error here
-#         log.error(f"Connection error: {e}")
-#         return None
 async def fetch_url(url_idx):
     level_models= []
     try:
@@ -206,7 +135,6 @@ async def fetch_url(url_idx):
         # Handle connection error here
         log.error(f"Connection error: {e}")
         return None
-
 
 
 def merge_models_lists(model_lists):
@@ -227,36 +155,21 @@ def merge_models_lists(model_lists):
 
 
 async def get_all_models():
-    log.info("azure openAI get_all_models()")
+    log.info("Azure OpenAI get_all_models()")
 
-    if len(app.state.AZURE_OPENAI_API_KEYS) == 1 and app.state.AZURE_OPENAI_API_KEYS[0] == "":
-        models = {"data": []}
-    else:
-        tasks = [
-            fetch_url(idx)
-            for idx, url in enumerate(app.state.AZURE_OPENAI_API_BASE_URLS)
-        ]
+    if app.state.AZURE_OPENAI_API_KEYS[0] == "":
+        return {"data": []}
 
-        responses = await asyncio.gather(*tasks)
-        models = {
-            "data": merge_models_lists(
-                list(
-                    map(
-                        lambda response: (
-                            response["data"]
-                            if response and "data" in response
-                            else None
-                        ),
-                        responses,
-                    )
-                )
-            )
-        }
+    tasks = [fetch_url(idx) for idx in range(len(app.state.AZURE_OPENAI_API_BASE_URLS))]
+    responses = await asyncio.gather(*tasks)
 
-        log.info(f"models: {models}")
-        app.state.MODELS = {model["id"]: model for model in models["data"]}
+    models_data = [response.get("data", None) for response in responses if response]
+    models = {"data": merge_models_lists(models_data)}
 
-        return models
+    log.info(f"models: {models}")
+    app.state.MODELS = {model["id"]: model for model in models["data"]}
+
+    return models
 
 
 @app.get("/models")
@@ -346,12 +259,6 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     if key == "":
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
-
-    # chat_client = AsyncAzureOpenAI(
-    #     api_key=  key,
-    #     api_version= api_version,
-    #     azure_endpoint = url
-    # )
 
     headers = {}
     headers["api-key"] = f"{key}"
