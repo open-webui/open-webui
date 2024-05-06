@@ -45,8 +45,10 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-5 pb-5 md:space-x-4">
-			<div class="flex flex-col w-full dark:text-gray-200 overflow-y-scroll max-h-[22rem]">
+		<div class="flex flex-col md:flex-row w-full px-6 pb-5 md:space-x-4">
+			<div
+				class="flex flex-col w-full dark:text-gray-200 overflow-y-scroll max-h-[22rem] scrollbar-none"
+			>
 				{#each mergedDocuments as document, documentIdx}
 					<div class="flex flex-col w-full">
 						<div class="text-sm font-medium dark:text-gray-300">
