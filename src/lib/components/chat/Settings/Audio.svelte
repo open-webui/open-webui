@@ -106,7 +106,7 @@
 		STTEngine = settings?.audio?.STTEngine ?? '';
 		TTSEngine = settings?.audio?.TTSEngine ?? '';
 		speaker = settings?.audio?.speaker ?? '';
-		OpenAIModel = settings?.audio?.model ?? 'tts-1';
+		OpenAIModel = settings?.audio?.OpenAIModel ?? '';
 
 		if (TTSEngine === 'openai') {
 			getOpenAIVoices();
