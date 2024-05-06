@@ -472,7 +472,7 @@
 					</div>
 				</div>
 
-				{#if flattenedCitations}
+				{#if Object.keys(flattenedCitations).length > 0}
 					<hr class="  dark:border-gray-800" />
 
 					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
