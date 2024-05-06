@@ -31,6 +31,7 @@ type OpenAIConfigForm = {
 	url: string;
 	key: string;
 	model: string;
+	speaker: string;
 };
 
 export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {

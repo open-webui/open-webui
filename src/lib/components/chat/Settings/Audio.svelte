@@ -85,13 +85,15 @@
 			const res = await updateAudioConfig(localStorage.token, {
 				url: OpenAIUrl,
 				key: OpenAIKey,
-				model: OpenAIModel
+				model: OpenAIModel,
+				speaker: speaker,
 			});
 
 			if (res) {
 				OpenAIUrl = res.OPENAI_API_BASE_URL;
 				OpenAIKey = res.OPENAI_API_KEY;
 				OpenAIModel = res.OPENAI_API_MODEL;
+				speaker = res.OPENAI_API_SPEAKER;
 			}
 		}
 	};
@@ -122,6 +124,7 @@
 				OpenAIUrl = res.OPENAI_API_BASE_URL;
 				OpenAIKey = res.OPENAI_API_KEY;
 				OpenAIModel = res.OPENAI_API_MODEL;
+				speaker = res.OPENAI_API_SPEAKER;
 			}
 		}
 	});
