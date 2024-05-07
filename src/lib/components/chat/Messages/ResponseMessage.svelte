@@ -470,7 +470,7 @@
 				} -->
 
 				{#if message.citations}
-					<hr class="  dark:border-gray-800" />
+					<hr class="  dark:border-gray-800 mt-1" />
 					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
 						{#each message.citations.reduce((acc, citation) => {
 							citation.document.forEach((document, index) => {
