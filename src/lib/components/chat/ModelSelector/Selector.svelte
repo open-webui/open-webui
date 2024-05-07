@@ -368,7 +368,7 @@
 						</div>
 
 						<div class="mr-2 translate-y-0.5">
-							<Tooltip content="Cancel">
+							<Tooltip content={$i18n.t('Cancel')}>
 								<button
 									class="text-gray-800 dark:text-gray-100"
 									on:click={() => {

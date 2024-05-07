@@ -652,7 +652,7 @@
 													</div>
 												</div>
 
-												<Tooltip content="Cancel">
+												<Tooltip content={$i18n.t('Cancel')}>
 													<button
 														class="text-gray-800 dark:text-gray-100"
 														on:click={() => {
