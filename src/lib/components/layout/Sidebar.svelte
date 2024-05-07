@@ -134,7 +134,7 @@
 
 	const editChatTitle = async (id, _title) => {
 		if (_title === '') {
-			toast.error('Title cannot be an empty string.');
+			toast.error($i18n.t('Title cannot be an empty string.'));
 		} else {
 			title = _title;
 

@@ -245,7 +245,7 @@
 
 				models.set(await getModels(localStorage.token));
 			} else {
-				toast.error('Download canceled');
+				toast.error($i18n.t('Download canceled'));
 			}
 
 			delete $MODEL_DOWNLOAD_POOL[sanitizedModelTag];
