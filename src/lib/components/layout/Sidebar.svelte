@@ -447,7 +447,7 @@
 								? ''
 								: 'pt-5'} pb-0.5"
 						>
-							{chat.time_range}
+						{$i18n.t(chat.time_range)}
 						</div>
 					{/if}
 
