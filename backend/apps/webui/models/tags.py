@@ -88,7 +88,7 @@ class TagTable:
                 return tag
             else:
                 return None
-        except Exception as e:
+        except Exception:
             return None
 
     def get_tag_by_name_and_user_id(
@@ -97,7 +97,7 @@ class TagTable:
         try:
             tag = Tag.get(Tag.name == name, Tag.user_id == user_id)
             return TagModel(**model_to_dict(tag))
-        except Exception as e:
+        except Exception:
             return None
 
     def add_tag_to_chat(
