@@ -224,7 +224,7 @@
 						localStorage.token,
 						$settings?.audio?.speaker,
 						sentence,
-						$settings?.audio?.OpenAIModel
+						$settings?.audio?.model
 					).catch((error) => {
 						toast.error(error);
 
