@@ -136,7 +136,7 @@
 			<a
 				class=" text-gray-500 dark:text-gray-300 font-medium"
 				href="https://github.com/open-webui/open-webui"
-				target="_blank">open-webui</a
+				target="_blank">Open WebUI</a
 			>
 		</div>
 	</div>
