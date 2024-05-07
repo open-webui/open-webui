@@ -42,7 +42,6 @@ class PromptForm(BaseModel):
 
 
 class PromptsTable:
-
     def __init__(self, db):
         self.db = db
         self.db.create_tables([Prompt])

@@ -76,7 +76,6 @@ def title_generation_template(
 def search_query_generation_template(
     template: str, prompt: str, user: Optional[dict] = None
 ) -> str:
-
     def replacement_function(match):
         full_match = match.group(0)
         start_length = match.group(1)

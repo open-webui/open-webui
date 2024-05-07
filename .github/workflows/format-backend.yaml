@@ -28,12 +28,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install black
+        run: grep '^ruff' backend/requirements.txt | xargs python -m pip install
 
       - name: Format backend
         run: npm run format:backend
+        env:
+          RUFF_OUTPUT_FORMAT: github
 
       - name: Check for changes after format
         run: git diff --exit-code

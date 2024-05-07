@@ -873,7 +873,6 @@ def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
 
 
 def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> bool:
-
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.config.CHUNK_SIZE,
         chunk_overlap=app.state.config.CHUNK_OVERLAP,
@@ -1116,7 +1115,6 @@ def store_text(
     form_data: TextRAGForm,
     user=Depends(get_current_user),
 ):
-
     collection_name = form_data.collection_name
     if collection_name == None:
         collection_name = calculate_sha256_string(form_data.content)

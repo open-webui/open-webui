@@ -51,7 +51,6 @@ async def user_join(sid, data):
             user = Users.get_user_by_id(data["id"])
 
         if user:
-
             SESSION_POOL[sid] = user.id
             if user.id in USER_POOL:
                 USER_POOL[user.id].append(sid)
@@ -79,7 +78,6 @@ def get_models_in_use():
 
 @sio.on("usage")
 async def usage(sid, data):
-
     model_id = data["model"]
 
     # Cancel previous callback if there is one

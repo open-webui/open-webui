@@ -326,7 +326,6 @@ class ChatTable:
 
     def delete_chats_by_user_id(self, user_id: str) -> bool:
         try:
-
             self.delete_shared_chats_by_user_id(user_id)
 
             query = Chat.delete().where(Chat.user_id == user_id)

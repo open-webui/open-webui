@@ -396,6 +396,7 @@ def generate_openai_batch_embeddings(
         print(e)
         return None
 
+
 class ChromaRetriever(BaseRetriever):
     collection: Any
     embedding_function: Any
@@ -427,6 +428,7 @@ class ChromaRetriever(BaseRetriever):
                 )
             )
         return results
+
 
 class RerankCompressor(BaseDocumentCompressor):
     embedding_function: Any

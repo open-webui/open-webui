@@ -45,7 +45,6 @@ async def get_session_user_chat_list(
 
 @router.delete("/", response_model=bool)
 async def delete_all_user_chats(request: Request, user=Depends(get_current_user)):
-
     if (
         user.role == "user"
         and not request.app.state.config.USER_PERMISSIONS["chat"]["deletion"]
@@ -196,7 +195,6 @@ class TagNameForm(BaseModel):
 async def get_user_chat_list_by_tag_name(
     form_data: TagNameForm, user=Depends(get_current_user)
 ):
-
     print(form_data)
     chat_ids = [
         chat_id_tag.chat_id
@@ -276,7 +274,6 @@ async def update_chat_by_id(
 
 @router.delete("/{id}", response_model=bool)
 async def delete_chat_by_id(request: Request, id: str, user=Depends(get_current_user)):
-
     if user.role == "admin":
         result = Chats.delete_chat_by_id(id)
         return result
@@ -300,7 +297,6 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_current_
 async def clone_chat_by_id(id: str, user=Depends(get_current_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
-
         chat_body = json.loads(chat.chat)
         updated_chat = {
             **chat_body,

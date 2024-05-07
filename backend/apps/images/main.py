@@ -119,7 +119,6 @@ async def get_engine_url(user=Depends(get_admin_user)):
 async def update_engine_url(
     form_data: EngineUrlUpdateForm, user=Depends(get_admin_user)
 ):
-
     if form_data.AUTOMATIC1111_BASE_URL == None:
         app.state.config.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
     else:
@@ -240,7 +239,6 @@ def get_models(user=Depends(get_current_user)):
                 {"id": "dall-e-3", "name": "DALL·E 3"},
             ]
         elif app.state.config.ENGINE == "comfyui":
-
             r = requests.get(url=f"{app.state.config.COMFYUI_BASE_URL}/object_info")
             info = r.json()
 
@@ -367,7 +365,6 @@ def save_url_image(url):
         r = requests.get(url)
         r.raise_for_status()
         if r.headers["content-type"].split("/")[0] == "image":
-
             mime_type = r.headers["content-type"]
             image_format = mimetypes.guess_extension(mime_type)
 
@@ -395,13 +392,11 @@ def generate_image(
     form_data: GenerateImageForm,
     user=Depends(get_current_user),
 ):
-
     width, height = tuple(map(int, app.state.config.IMAGE_SIZE.split("x")))
 
     r = None
     try:
         if app.state.config.ENGINE == "openai":
-
             headers = {}
             headers["Authorization"] = f"Bearer {app.state.config.OPENAI_API_KEY}"
             headers["Content-Type"] = "application/json"
@@ -442,7 +437,6 @@ def generate_image(
             return images
 
         elif app.state.config.ENGINE == "comfyui":
-
             data = {
                 "prompt": form_data.prompt,
                 "width": width,
