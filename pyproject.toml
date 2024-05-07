@@ -115,3 +115,18 @@ exclude = [
     "chroma.sqlite3",
 ]
 force-include = { "CHANGELOG.md" = "open_webui/CHANGELOG.md", build = "open_webui/frontend" }
+
+[tool.ruff.lint]
+extend-select = [
+    "I",
+]
+extend-ignore = [
+    "E711", # Comparison to None (TODO: enable & fix!)
+    "E712", # Comparison to bools (TODO: enable & fix!)
+    "E722", # Do not use bare except (TODO: enable & fix!)
+    "E731", # Do not assign lambda expression
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+# Let imports in auto-generated files be as-is
+"backend/apps/web/internal/migrations/*" = ["I",  "F401"]
