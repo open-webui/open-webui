@@ -1,5 +1,6 @@
 ## Pull Request Checklist
 
+- [ ] **Target branch:** Pull requests should target the `dev` branch.
 - [ ] **Description:** Briefly describe the changes in this pull request.
 - [ ] **Changelog:** Ensure a changelog entry following the format of [Keep a Changelog](https://keepachangelog.com/) is added at the bottom of the PR description.
 - [ ] **Documentation:** Have you updated relevant documentation [Open WebUI Docs](https://github.com/open-webui/docs), or other documentation sources?
