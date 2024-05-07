@@ -33,8 +33,9 @@ type ChunkConfigForm = {
 };
 
 type RAGConfigForm = {
-	pdf_extract_images: boolean;
-	chunk: ChunkConfigForm;
+	pdf_extract_images?: boolean;
+	chunk?: ChunkConfigForm;
+	web_loader_ssl_verification?: boolean;
 };
 
 export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {

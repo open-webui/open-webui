@@ -24,7 +24,7 @@
 					{
 						name: 'All Documents',
 						type: 'collection',
-						title: 'All Documents',
+						title: $i18n.t('All Documents'),
 						collection_names: $documents.map((doc) => doc.collection_name)
 					}
 			  ]

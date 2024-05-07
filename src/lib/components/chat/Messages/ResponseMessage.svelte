@@ -23,15 +23,16 @@
 		revertSanitizedResponseContent,
 		sanitizeResponseContent
 	} from '$lib/utils';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import Skeleton from './Skeleton.svelte';
 	import CodeBlock from './CodeBlock.svelte';
 	import Image from '$lib/components/common/Image.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
+	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
 
 	export let modelfiles = [];
 	export let message;
@@ -64,6 +65,9 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
+
+	let showCitationModal = false;
+	let selectedCitation = null;
 
 	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
 
@@ -324,6 +328,8 @@
 	});
 </script>
 
+<CitationsModal bind:show={showCitationModal} citation={selectedCitation} />
+
 {#key message.id}
 	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
 		<ProfileImage
@@ -440,6 +446,44 @@
 										{/if}
 									{/each}
 									<!-- {@html marked(message.content.replaceAll('\\', '\\\\'))} -->
+								{/if}
+
+								{#if message.citations}
+									<hr class="  dark:border-gray-800 my-1" />
+									<div class="my-2.5 w-full flex flex-col gap-1">
+										{#each message.citations.reduce((acc, citation) => {
+											citation.document.forEach((document, index) => {
+												const metadata = citation.metadata?.[index];
+												const id = metadata?.source ?? 'N/A';
+
+												const existingSource = acc.find((item) => item.id === id);
+
+												if (existingSource) {
+													existingSource.document.push(document);
+													existingSource.metadata.push(metadata);
+												} else {
+													acc.push( { id: id, source: citation?.source, document: [document], metadata: metadata ? [metadata] : [] } );
+												}
+											});
+											return acc;
+										}, []) as citation, idx}
+											<div class="flex gap-1 text-xs font-semibold">
+												<div>
+													[{idx + 1}]
+												</div>
+
+												<button
+													class="dark:text-gray-500 underline"
+													on:click={() => {
+														showCitationModal = true;
+														selectedCitation = citation;
+													}}
+												>
+													{citation.source.name}
+												</button>
+											</div>
+										{/each}
+									</div>
 								{/if}
 
 								{#if message.done}

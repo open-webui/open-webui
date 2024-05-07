@@ -164,7 +164,7 @@
 						<div class="flex gap-1.5">
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder="Enter URL (e.g. http://localhost:11434)"
+								placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
 								bind:value={url}
 							/>
 
