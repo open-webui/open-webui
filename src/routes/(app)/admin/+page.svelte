@@ -3,8 +3,8 @@
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
-  import type { Writable } from 'svelte/store';
-  import type { i18n as i18nType } from 'i18next'
+  	import type { Writable } from 'svelte/store';
+  	import type { i18n as i18nType } from 'i18next'
 
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -33,8 +33,8 @@
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
 	
-  enum View { Overview, Plugins };
-  let view:any = View.Overview;
+  	enum View { Overview, Plugins };
+  	let view:any = View.Overview;
 
 	onMount(async ()=>{
 		if ($user?.role!=='admin') await goto('/');
