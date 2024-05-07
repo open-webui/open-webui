@@ -14,7 +14,7 @@
 	"Add a model tag name": "Benenne deinen Modell-Tag",
 	"Add a short description about what this modelfile does": "Füge eine kurze Beschreibung hinzu, was dieses Modelfile kann",
 	"Add a short title for this prompt": "Füge einen kurzen Titel für diesen Prompt hinzu",
-	"Add a tag": "Tag hinzufügen",
+	"Add a tag": "benenne",
 	"Add custom prompt": "Eigenen Prompt hinzufügen",
 	"Add Docs": "Dokumente hinzufügen",
 	"Add Files": "Dateien hinzufügen",
@@ -466,5 +466,8 @@
 	"You're a helpful assistant.": "Du bist ein hilfreicher Assistent.",
 	"You're now logged in.": "Du bist nun eingeloggt.",
 	"Youtube": "YouTube",
-	"Help": "Hilfe"
+	"Help": "Hilfe",
+	"All Documents": "Alle Dokumente",
+	"Suggested": "Vorgeschlagen",
+	"Prompt": "Prompt"
 }
