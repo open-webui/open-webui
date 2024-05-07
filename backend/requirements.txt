@@ -9,7 +9,6 @@ Flask-Cors==4.0.0
 python-socketio==5.11.2
 python-jose==3.3.0
 passlib[bcrypt]==1.7.4
-uuid==1.30
 
 requests==2.31.0
 aiohttp==3.9.5
