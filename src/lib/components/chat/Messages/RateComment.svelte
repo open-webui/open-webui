@@ -123,7 +123,7 @@
 				submitHandler();
 			}}
 		>
-		{$i18n.t('Submit')}
+			{$i18n.t('Submit')}
 		</button>
 	</div>
 </div>

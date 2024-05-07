@@ -447,7 +447,7 @@
 								? ''
 								: 'pt-5'} pb-0.5"
 						>
-						{$i18n.t(chat.time_range)}
+							{$i18n.t(chat.time_range)}
 							<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
 							{$i18n.t('Today')}
 							{$i18n.t('Yesterday')}
