@@ -27,7 +27,7 @@
 	let voices = [];
 	let speaker = '';
 	let models = [];
-	let OpenAIModel = '';
+	let model = '';
 
 	const getOpenAIVoices = () => {
 		voices = [
@@ -85,15 +85,15 @@
 			const res = await updateAudioConfig(localStorage.token, {
 				url: OpenAIUrl,
 				key: OpenAIKey,
-				model: OpenAIModel,
-				speaker: speaker,
+				model: model,
+				speaker: speaker
 			});
 
 			if (res) {
 				OpenAIUrl = res.OPENAI_API_BASE_URL;
 				OpenAIKey = res.OPENAI_API_KEY;
-				OpenAIModel = res.OPENAI_API_MODEL;
-				speaker = res.OPENAI_API_SPEAKER;
+				model = res.OPENAI_API_MODEL;
+				speaker = res.OPENAI_API_VOICE;
 			}
 		}
 	};
@@ -108,7 +108,7 @@
 		STTEngine = settings?.audio?.STTEngine ?? '';
 		TTSEngine = settings?.audio?.TTSEngine ?? '';
 		speaker = settings?.audio?.speaker ?? '';
-		OpenAIModel = settings?.audio?.OpenAIModel ?? '';
+		model = settings?.audio?.model ?? '';
 
 		if (TTSEngine === 'openai') {
 			getOpenAIVoices();
@@ -123,8 +123,8 @@
 			if (res) {
 				OpenAIUrl = res.OPENAI_API_BASE_URL;
 				OpenAIKey = res.OPENAI_API_KEY;
-				OpenAIModel = res.OPENAI_API_MODEL;
-				speaker = res.OPENAI_API_SPEAKER;
+				model = res.OPENAI_API_MODEL;
+				speaker = res.OPENAI_API_VOICE;
 			}
 		}
 	});
@@ -141,7 +141,7 @@
 				STTEngine: STTEngine !== '' ? STTEngine : undefined,
 				TTSEngine: TTSEngine !== '' ? TTSEngine : undefined,
 				speaker: speaker !== '' ? speaker : undefined,
-				OpenAIModel: OpenAIModel !== '' ? OpenAIModel : undefined
+				model: model !== '' ? model : undefined
 			}
 		});
 		dispatch('save');
@@ -230,7 +230,7 @@
 							if (e.target.value === 'openai') {
 								getOpenAIVoices();
 								speaker = 'alloy';
-								OpenAIModel = 'tts-1';
+								model = 'tts-1';
 							} else {
 								getWebAPIVoices();
 								speaker = '';
@@ -330,13 +330,13 @@
 						<input
 							list="model-list"
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={OpenAIModel}
+							bind:value={model}
 							placeholder="Select a model"
 						/>
 
 						<datalist id="model-list">
-							{#each models as OpenAIMode}
-								<option value={OpenAIMode.name} />
+							{#each models as model}
+								<option value={model.name} />
 							{/each}
 						</datalist>
 					</div>
