@@ -451,24 +451,6 @@
 					</div>
 				</div>
 
-				<!-- if (message.citations) {
-					citations = message.citations.forEach((citation) => {
-						citation.document.forEach((document, index) => {
-							const metadata = citation.metadata?.[index];
-							const source = citation?.source?.name ?? metadata?.source ?? 'N/A';
-		
-							citations[source] = citations[source] || {
-								source: citation.source,
-								document: [],
-								metadata: []
-							};
-		
-							citations[source].document.push(document);
-							citations[source].metadata.push(metadata);
-						});
-					});
-				} -->
-
 				{#if message.citations}
 					<hr class="  dark:border-gray-800 my-1" />
 					<div class="my-2.5 w-full flex flex-col gap-1">
