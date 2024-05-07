@@ -219,12 +219,12 @@ class ImageStepsUpdateForm(BaseModel):
 
 
 @app.get("/steps")
-async def get_image_size(user=Depends(get_admin_user)):
-    return {"IMAGE_STEPS": app.state.config.IMAGE_STEPS}
+async def get_image_steps(user=Depends(get_admin_user)):
+    return {"IMAGE_STEPS": app.state.IMAGE_STEPS}
 
 
 @app.post("/steps/update")
-async def update_image_size(
+async def update_image_steps(
     form_data: ImageStepsUpdateForm, user=Depends(get_admin_user)
 ):
     if form_data.steps >= 0:

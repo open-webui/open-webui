@@ -119,7 +119,7 @@ async def get_user_chats(user=Depends(get_current_user)):
 
 
 @router.get("/all/archived", response_model=List[ChatResponse])
-async def get_user_chats(user=Depends(get_current_user)):
+async def get_user_archived_chats(user=Depends(get_current_user)):
     return [
         ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
         for chat in Chats.get_archived_chats_by_user_id(user.id)
