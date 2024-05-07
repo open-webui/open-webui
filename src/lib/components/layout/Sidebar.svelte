@@ -43,6 +43,49 @@
 	let showShareChatModal = false;
 	let showDropdown = false;
 	let isEditing = false;
+	let showMoreDoc = false;
+
+	let arrowClass = ''
+	let documentsMock = [
+		{
+			collection_name: 'collection_name',
+			filename: 'filename',
+			name: 'name',
+			title: 'title'
+		},
+		{
+			collection_name: 'collection_name1',
+			filename: 'filename1',
+			name: 'name1',
+			title: 'title1'
+		},
+		{
+			collection_name: 'collection_name1',
+			filename: 'filename1',
+			name: 'name1',
+			title: 'title1'
+		},
+		{
+			collection_name: 'collection_name1',
+			filename: 'filename1',
+			name: 'name1',
+			title: 'title1'
+		},
+		{
+			collection_name: 'collection_name1',
+			filename: 'filename1',
+			name: 'name1',
+			title: 'title1'
+		},
+		{
+			collection_name: 'collection_name1',
+			filename: 'filename1',
+			name: 'name1',
+			title: 'title1'
+		}
+		]
+	let filteredDocs;
+	$: filteredDocs = documentsMock.slice(0,5)
 
 	onMount(async () => {
 		showSidebar.set(window.innerWidth > BREAKPOINT);
@@ -170,7 +213,7 @@
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] {$showSidebar
+		class="py-2.5 my-auto flex flex-col h-screen min-h-screen w-[260px] {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
@@ -190,7 +233,7 @@
 				}}
 			>
 				<div class="flex self-center">
-					<div class="self-center mr-1.5">
+					<!-- <div class="self-center mr-1.5">
 						<img
 							src="{WEBUI_BASE_URL}/static/favicon.png"
 							class=" size-6 -translate-x-1.5 rounded-full"
@@ -198,10 +241,19 @@
 						/>
 					</div>
 
-					<div class=" self-center font-medium text-sm">{$i18n.t('New Chat')}</div>
+					<div class=" self-center font-medium text-sm">{$i18n.t('New Chat')}</div> -->
+					<img
+						src="/logo-mbzuai.svg"
+						alt="logo-mbzuai"
+					/>
+					<img
+						src="/logo-ciai.svg"
+						class="ml-4 size-14"
+						alt="logo-ciai"
+					/>
 				</div>
 
-				<div class="self-center">
+				<!-- <div class="self-center">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 20 20"
@@ -215,12 +267,12 @@
 							d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"
 						/>
 					</svg>
-				</div>
+				</div> -->
 			</a>
 		</div>
 
 		{#if $user?.role === 'admin'}
-			<div class="px-2 flex justify-center mt-0.5">
+			<!-- <div class="px-2 flex justify-center mt-0.5">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/modelfiles"
@@ -250,9 +302,9 @@
 						<div class=" self-center font-medium text-sm">{$i18n.t('Modelfiles')}</div>
 					</div>
 				</a>
-			</div>
+			</div> -->
 
-			<div class="px-2 flex justify-center">
+			<!-- <div class="px-2 flex justify-center">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/prompts"
@@ -282,9 +334,9 @@
 						<div class=" self-center font-medium text-sm">{$i18n.t('Prompts')}</div>
 					</div>
 				</a>
-			</div>
+			</div> -->
 
-			<div class="px-2 flex justify-center mb-1">
+			<!-- <div class="px-2 flex justify-center mb-1">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/documents"
@@ -314,11 +366,33 @@
 						<div class=" self-center font-medium text-sm">{$i18n.t('Documents')}</div>
 					</div>
 				</a>
-			</div>
+			</div> -->
 		{/if}
 
-		<div class="relative flex flex-col flex-1 overflow-y-auto">
-			{#if !($settings.saveChatHistory ?? true)}
+		<!-- FILE LIST -->
+		<div class="relative flex flex-col overflow-y-auto px-2">
+			<div class="px-3.5 py-2 text-black">Recent Documents</div>
+			{#each filteredDocs as doc}
+				<button 
+				class=" flex space-x-3 rounded-xl px-3.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				>
+					<div class="self-center">
+						<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<g clip-path="url(#clip0_1_16)">
+							<path d="M10.7775 11.1525H1.2225C0.924135 11.1525 0.637987 11.034 0.427009 10.823C0.21603 10.612 0.0975037 10.3259 0.0975037 10.0275V1.9875C0.0975037 1.68913 0.21603 1.40298 0.427009 1.19201C0.637987 0.981027 0.924135 0.862501 1.2225 0.862501H4.5C4.66304 0.861414 4.82429 0.896503 4.97214 0.965238C5.11999 1.03397 5.25075 1.13465 5.355 1.26L6.0225 2.01C6.05773 2.05087 6.10153 2.08349 6.15079 2.10552C6.20005 2.12756 6.25355 2.13848 6.3075 2.1375L10.755 2.0925C11.0548 2.09447 11.3417 2.21441 11.5536 2.42637C11.7656 2.63833 11.8855 2.92525 11.8875 3.225V9.975C11.8935 10.1256 11.8694 10.2759 11.8166 10.417C11.7638 10.5582 11.6834 10.6874 11.58 10.797C11.4766 10.9067 11.3524 10.9946 11.2146 11.0557C11.0768 11.1167 10.9282 11.1496 10.7775 11.1525ZM1.2225 1.6125C1.12305 1.6125 1.02766 1.65201 0.957339 1.72234C0.887012 1.79266 0.847504 1.88804 0.847504 1.9875V10.0275C0.847504 10.127 0.887012 10.2223 0.957339 10.2927C1.02766 10.363 1.12305 10.4025 1.2225 10.4025H10.7775C10.8777 10.4025 10.9738 10.3633 11.0454 10.2931C11.1169 10.223 11.158 10.1276 11.16 10.0275V3.2775C11.16 3.17606 11.1197 3.07877 11.048 3.00703C10.9762 2.9353 10.8789 2.895 10.7775 2.895L6.3375 2.94C6.17052 2.9448 6.00485 2.9091 5.85465 2.83596C5.70446 2.76283 5.5742 2.65442 5.475 2.52L4.815 1.77C4.77813 1.72131 4.73053 1.68178 4.6759 1.65446C4.62127 1.62715 4.56108 1.61279 4.5 1.6125H1.2225Z" fill="#323333"/>
+							</g>
+							<defs>
+							<clipPath id="clip0_1_16">
+							<rect width="12" height="12" fill="white"/>
+							</clipPath>
+							</defs>
+							</svg>
+					</div>
+
+					<div class="ml-2 font-medium text-sm text-[#555]">{doc.name}</div>
+				</button>
+			{/each}
+			<!-- {#if !($settings.saveChatHistory ?? true)}
 				<div class="absolute z-40 w-full h-full bg-gray-50/90 dark:bg-black/90 flex justify-center">
 					<div class=" text-left px-5 py-2">
 						<div class=" font-medium">{$i18n.t('Chat History is off for this browser.')}</div>
@@ -359,9 +433,9 @@
 						</div>
 					</div>
 				</div>
-			{/if}
+			{/if} -->
 
-			<div class="px-2 mt-1 mb-2 flex justify-center space-x-2">
+			<!-- <div class="px-2 mt-1 mb-2 flex justify-center space-x-2">
 				<div class="flex w-full" id="chat-search">
 					<div class="self-center pl-3 py-2 rounded-l-xl bg-white dark:bg-gray-950">
 						<svg
@@ -387,7 +461,7 @@
 						}}
 					/>
 				</div>
-			</div>
+			</div> -->
 
 			{#if $tags.length > 0}
 				<div class="px-2.5 mt-0.5 mb-2 flex gap-1 flex-wrap">
@@ -648,10 +722,55 @@
 			</div>
 		</div>
 
-		<div class="px-2.5">
+		<!-- SHOW MORE -->
+		<button
+			class="px-3.5 py-2 text-gray flex items-center"
+			on:click={() => {
+				showMoreDoc = !showMoreDoc
+				filteredDocs = showMoreDoc ? 
+					documentsMock.concat(documentsMock).concat(documentsMock).concat(documentsMock).concat(documentsMock) 
+					: documentsMock
+				arrowClass = showMoreDoc ? 'rotate-180' : ''
+			}}
+		>
+			<div class={arrowClass}>
+				<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M6.06666 9.33333C5.53333 9.33333 5.06666 9.13333 4.66666 8.73333L0.866659 4.46667C0.599993 4.2 0.666659 3.8 0.933326 3.53333C1.19999 3.26667 1.59999 3.33333 1.86666 3.6L5.73333 7.86666C5.79999 7.93333 5.93333 8 6.06666 8C6.19999 8 6.33333 7.93333 6.46666 7.8L10.1333 3.53333C10.4 3.26667 10.8 3.2 11.0667 3.46667C11.3333 3.73333 11.4 4.13333 11.1333 4.4L7.46666 8.66667C7.13333 9.13333 6.66666 9.33333 6.06666 9.33333Z" fill="#555555"/>
+				</svg>
+			</div>
+			<span class="ml-2 text-[#555]">{showMoreDoc ? 'Show less' : 'Show more'}</span>
+		</button>
+		<div class="px-2.5 flex-1 flex flex-col justify-end">
 			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
-
-			<div class="flex flex-col">
+				<!-- <button
+					class="cursor-pointer p-1.5 flex items-center dark:hover:bg-gray-700 rounded-full transition"
+					id="open-settings-button"
+					on:click={async () => {
+						await showSettings.set(!$showSettings);
+					}}
+				>
+					<svg width="24" height="24" viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path d="M15 3V6L16.05 6.3C16.35 6.45 16.5 6.45 16.8 6.6L17.7 7.05L18.45 6.3L19.8 4.95L21 6.15L22.05 7.2L20.55 8.7L19.8 9.45L20.25 10.35C20.4 10.5 20.4 10.8 20.55 10.95L21 12H24V15H21L20.7 16.05C20.55 16.35 20.55 16.5 20.4 16.8L19.95 17.7L20.7 18.45L22.2 19.95L20.1 22.05L18.6 20.55L17.85 19.8L16.95 20.25C16.65 20.4 16.5 20.4 16.2 20.55L15 21V24H12V21L10.95 20.7C10.8 20.7 10.5 20.55 10.35 20.4L9.45 19.95L8.7 20.7L7.2 22.2L6.15 21L5.1 19.95L6.45 18.6L7.2 17.85L6.75 16.95C6.6 16.65 6.6 16.5 6.45 16.2L6 15H3V12H6L6.3 10.95C6.45 10.8 6.6 10.5 6.75 10.2L7.2 9.3L6.45 8.55L5.1 7.2L7.2 5.1L8.55 6.45L9.3 7.2L10.2 6.75C10.5 6.6 10.8 6.45 10.95 6.45L12 6V3H15ZM16.5 1.5H10.5V4.95L9.6 5.4L7.2 3L3 7.2L5.4 9.6L4.95 10.5H1.5V16.5H4.95C5.1 16.8 5.25 17.1 5.25 17.4L2.7 19.95L4.8 22.05L6.9 24.15L9.45 21.6C9.75 21.75 9.9 21.75 10.2 21.9V25.5H16.2V22.05C16.5 21.9 16.8 21.75 17.1 21.75L19.65 24.3L23.85 20.1L21.3 17.55C21.45 17.25 21.6 16.95 21.6 16.65H25.5V10.5H22.05C21.9 10.2 21.9 10.05 21.75 9.75L24.3 7.2L22.2 5.1L20.1 3L17.55 5.55C17.25 5.4 16.95 5.25 16.65 5.25V1.5H16.5Z" fill="#545454"/>
+						<path d="M13.5 18C10.95 18 9 16.05 9 13.5C9 10.95 10.95 9 13.5 9C16.05 9 18 10.95 18 13.5C18 16.05 16.05 18 13.5 18ZM13.5 16.5C15.15 16.5 16.5 15.15 16.5 13.5C16.5 11.85 15.15 10.5 13.5 10.5C11.85 10.5 10.5 11.85 10.5 13.5C10.5 15.15 11.85 16.5 13.5 16.5Z" fill="#545454"/>
+					</svg>
+					<span class="ml-3">{$i18n.t('Settings')}</span>
+				</button> -->
+				<button
+					class="cursor-pointer p-1 flex items-center dark:hover:bg-gray-700 rounded-full transition"
+					id="open-settings-button"
+					on:click={async () => {
+						await showSettings.set(!$showSettings);
+					}}
+				>
+					<svg width="28" height="28" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M16.609 18.445L4.64099 12.359L17.017 5.21899L28.968 11.9L16.609 18.445ZM8.53399 12.257L16.592 16.354L25.092 11.866L17.034 7.36099L8.53399 12.257Z" fill="#545454"/>
+					<path d="M16.575 23.069L5.032 17.17L5.882 15.521L16.558 20.978L27.727 15.062L28.594 16.694L16.575 23.069Z" fill="#545454"/>
+					<path d="M16.575 28.526L5.032 22.423L5.899 20.774L16.558 26.435L27.71 20.315L28.611 21.93L16.575 28.526Z" fill="#545454"/>
+					</svg>
+					
+					<span class="ml-3">LLama3 (Model name here)</span>
+				</button>
+			<!-- <div class="flex flex-col">
 				{#if $user !== undefined}
 					<button
 						class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -811,7 +930,7 @@
 						</div>
 					{/if}
 				{/if}
-			</div>
+			</div> -->
 		</div>
 	</div>
 
