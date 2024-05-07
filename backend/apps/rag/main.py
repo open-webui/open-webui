@@ -622,7 +622,7 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
 
         for batch in create_batches(
             api=CHROMA_CLIENT,
-            ids=[str(uuid.uuid1()) for _ in texts],
+            ids=[str(uuid.uuid4()) for _ in texts],
             metadatas=metadatas,
             embeddings=embeddings,
             documents=texts,
