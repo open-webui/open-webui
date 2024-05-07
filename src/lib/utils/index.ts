@@ -472,29 +472,20 @@ export const blobToFile = (blob, fileName) => {
 	return file;
 };
 
-// promptTemplate replaces any occurrences of the following in the template with the prompt
-// {{prompt}} will be replaced with the prompt
-// {{prompt:start:<length>}} will be replaced with the first <length> characters of the prompt
-// {{prompt:end:<length>}} will be replaced with the last <length> characters of the prompt
-// Character length is used as we don't have the ability to tokenize the prompt
 export const promptTemplate = (template: string, prompt: string) => {
+	prompt = prompt.replace(/{{prompt}}|{{prompt:start:\d+}}|{{prompt:end:\d+}}/g, '');
+
 	template = template.replace(/{{prompt}}/g, prompt);
 
 	// Replace all instances of {{prompt:start:<length>}} with the first <length> characters of the prompt
-	const startRegex = /{{prompt:start:(\d+)}}/g;
-	let startMatch: RegExpMatchArray | null;
-	while ((startMatch = startRegex.exec(template)) !== null) {
-		const length = parseInt(startMatch[1]);
-		template = template.replace(startMatch[0], prompt.substring(0, length));
-	}
+	template = template.replace(/{{prompt:start:(\d+)}}/g, (match, length) =>
+		prompt.substring(0, parseInt(length))
+	);
 
 	// Replace all instances of {{prompt:end:<length>}} with the last <length> characters of the prompt
-	const endRegex = /{{prompt:end:(\d+)}}/g;
-	let endMatch: RegExpMatchArray | null;
-	while ((endMatch = endRegex.exec(template)) !== null) {
-		const length = parseInt(endMatch[1]);
-		template = template.replace(endMatch[0], prompt.substring(prompt.length - length));
-	}
+	template = template.replace(/{{prompt:end:(\d+)}}/g, (match, length) =>
+		prompt.slice(-parseInt(length))
+	);
 
 	return template;
 };
@@ -519,4 +510,35 @@ export const approximateToHumanReadable = (nanoseconds: number) => {
 	}
 
 	return results.reverse().join(' ');
+};
+
+export const getTimeRange = (timestamp) => {
+	const now = new Date();
+	const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds
+
+	// Calculate the difference in milliseconds
+	const diffTime = now.getTime() - date.getTime();
+	const diffDays = diffTime / (1000 * 3600 * 24);
+
+	const nowDate = now.getDate();
+	const nowMonth = now.getMonth();
+	const nowYear = now.getFullYear();
+
+	const dateDate = date.getDate();
+	const dateMonth = date.getMonth();
+	const dateYear = date.getFullYear();
+
+	if (nowYear === dateYear && nowMonth === dateMonth && nowDate === dateDate) {
+		return 'Today';
+	} else if (nowYear === dateYear && nowMonth === dateMonth && nowDate - dateDate === 1) {
+		return 'Yesterday';
+	} else if (diffDays <= 7) {
+		return 'Previous 7 days';
+	} else if (diffDays <= 30) {
+		return 'Previous 30 days';
+	} else if (nowYear === dateYear) {
+		return date.toLocaleString('default', { month: 'long' });
+	} else {
+		return date.getFullYear().toString();
+	}
 };

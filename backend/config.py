@@ -19,6 +19,18 @@ from constants import ERROR_MESSAGES
 
 
 ####################################
+# Load .env file
+####################################
+
+try:
+    from dotenv import load_dotenv, find_dotenv
+
+    load_dotenv(find_dotenv("../.env"))
+except ImportError:
+    print("dotenv not installed, skipping...")
+
+
+####################################
 # LOGGING
 ####################################
 
@@ -59,22 +71,15 @@ for source in log_sources:
 
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
-####################################
-# Load .env file
-####################################
-
-try:
-    from dotenv import load_dotenv, find_dotenv
-
-    load_dotenv(find_dotenv("../.env"))
-except ImportError:
-    log.warning("dotenv not installed, skipping...")
 
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 if WEBUI_NAME != "Open WebUI":
     WEBUI_NAME += " (Open WebUI)"
 
+WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
+
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+
 
 ####################################
 # ENV (dev,test,prod)
@@ -454,6 +459,11 @@ ENABLE_RAG_HYBRID_SEARCH = (
     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true"
 )
 
+
+ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+    os.environ.get("ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION", "True").lower() == "true"
+)
+
 RAG_EMBEDDING_ENGINE = os.environ.get("RAG_EMBEDDING_ENGINE", "")
 
 PDF_EXTRACT_IMAGES = os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true"
@@ -531,7 +541,9 @@ RAG_TEMPLATE = os.environ.get("RAG_TEMPLATE", DEFAULT_RAG_TEMPLATE)
 RAG_OPENAI_API_BASE_URL = os.getenv("RAG_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
 RAG_OPENAI_API_KEY = os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY)
 
-ENABLE_LOCAL_WEB_FETCH = os.getenv("ENABLE_LOCAL_WEB_FETCH", "False").lower() == "true"
+ENABLE_RAG_LOCAL_WEB_FETCH = (
+    os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
+)
 
 ####################################
 # Transcribe

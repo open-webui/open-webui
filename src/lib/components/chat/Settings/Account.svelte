@@ -447,7 +447,7 @@
 								{/if}
 							</button>
 
-							<Tooltip content="Create new key">
+							<Tooltip content={$i18n.t('Create new key')}>
 								<button
 									class=" px-1.5 py-1 dark:hover:bg-gray-850transition rounded-lg"
 									on:click={() => {
@@ -479,7 +479,7 @@
 							>
 								<Plus strokeWidth="2" className=" size-3.5" />
 
-								Create new secret key</button
+								{$i18n.t('Create new secret key')}</button
 							>
 						{/if}
 					</div>

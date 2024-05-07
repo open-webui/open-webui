@@ -295,7 +295,9 @@ export const generateTitle = async (
 					content: template
 				}
 			],
-			stream: false
+			stream: false,
+			// Restricting the max tokens to 50 to avoid long titles
+			max_tokens: 50
 		})
 	})
 		.then(async (res) => {
@@ -314,5 +316,5 @@ export const generateTitle = async (
 		throw error;
 	}
 
-	return res?.choices[0]?.message?.content ?? 'New Chat';
+	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? 'New Chat';
 };

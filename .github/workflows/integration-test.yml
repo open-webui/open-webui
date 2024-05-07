@@ -20,7 +20,16 @@ jobs:
 
       - name: Build and run Compose Stack
         run: |
-          docker compose up --detach --build
+          docker compose --file docker-compose.yaml --file docker-compose.api.yaml up --detach --build
+          
+      - name: Wait for Ollama to be up
+        timeout-minutes: 5
+        run: |
+          until curl --output /dev/null --silent --fail http://localhost:11434; do
+            printf '.'
+            sleep 1
+          done
+          echo "Service is up!"
 
       - name: Preload Ollama model
         run: |
