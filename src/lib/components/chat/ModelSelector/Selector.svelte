@@ -305,7 +305,7 @@
 				{:else}
 					<div>
 						<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
-							No results found
+							{$i18n.t('No results found')}
 						</div>
 					</div>
 				{/each}

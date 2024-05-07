@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Bolt from '$lib/components/icons/Bolt.svelte';
-	import { onMount } from 'svelte';
+	import {getContext, onMount } from 'svelte';
 
 	export let submitPrompt: Function;
 	export let suggestionPrompts = [];
@@ -28,12 +28,13 @@
 			});
 		}
 	});
+	const i18n = getContext('i18n');
 </script>
 
 {#if prompts.length > 0}
 	<div class="mb-2 flex gap-1 text-sm font-medium items-center text-gray-400 dark:text-gray-600">
 		<Bolt />
-		Suggested
+		{$i18n.t('Suggested')}
 	</div>
 {/if}
 
@@ -94,13 +95,6 @@
 				</button>
 			</div>
 		{/each}
-
-		<!-- <div class="snap-center shrink-0">
-		<img
-			class="shrink-0 w-80 h-40 rounded-lg shadow-xl bg-white"
-			src="https://images.unsplash.com/photo-1604999565976-8913ad2ddb7c?ixlib=rb-1.2.1&amp;ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&amp;auto=format&amp;fit=crop&amp;w=320&amp;h=160&amp;q=80"
-		/>
-	</div> -->
 	</div>
 </div>
 

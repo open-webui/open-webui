@@ -110,7 +110,7 @@
 					<div class=" flex flex-col justify-center">
 						<div class=" px-6 pt-4">
 							<div class=" flex justify-between items-center">
-								<div class="flex items-center text-2xl font-semibold">Dashboard</div>
+								<div class="flex items-center text-2xl font-semibold">{$i18n.t('Dashboard')}</div>
 								<div>
 									<Tooltip content={$i18n.t('Admin Settings')}>
 										<button
@@ -141,8 +141,7 @@
 						</div>
 
 						<div class="px-6 flex text-sm gap-2.5">
-							<div class="py-3 border-b font-medium text-gray-100 cursor-pointer">Overview</div>
-							<!-- <div class="py-3 text-gray-300 cursor-pointer">Users</div> -->
+							<div class="py-3 border-b font-medium text-gray-100 cursor-pointer">{$i18n.t('Overview')}</div>
 						</div>
 
 						<hr class=" mb-3 dark:border-gray-800" />

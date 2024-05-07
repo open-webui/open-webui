@@ -154,14 +154,9 @@
 								</tbody>
 							</table>
 						</div>
-						<!-- {#each chats as chat}
-							<div>
-								{JSON.stringify(chat)}
-							</div>
-						{/each} -->
 					</div>
 				{:else}
-					<div class="text-left text-sm w-full mb-8">You have no archived conversations.</div>
+					<div class="text-left text-sm w-full mb-8">{$i18n.t('You have no archived conversations.')}</div>
 				{/if}
 			</div>
 		</div>
