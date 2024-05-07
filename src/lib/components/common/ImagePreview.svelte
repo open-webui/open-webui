@@ -1,7 +1,11 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+
 	export let show = false;
 	export let src = '';
 	export let alt = '';
+
+	let mounted = false;
 
 	const downloadImage = (url, filename) => {
 		fetch(url)
@@ -18,6 +22,27 @@
 			})
 			.catch((error) => console.error('Error downloading image:', error));
 	};
+
+	const handleKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'Escape') {
+			console.log('Escape');
+			show = false;
+		}
+	};
+
+	onMount(() => {
+		mounted = true;
+	});
+
+	$: if (mounted) {
+		if (show) {
+			window.addEventListener('keydown', handleKeyDown);
+			document.body.style.overflow = 'hidden';
+		} else {
+			window.removeEventListener('keydown', handleKeyDown);
+			document.body.style.overflow = 'unset';
+		}
+	}
 </script>
 
 {#if show}
