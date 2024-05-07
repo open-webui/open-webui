@@ -391,7 +391,7 @@ def save_url_image(url):
                     image_file.write(chunk)
             return image_filename
         else:
-            log.error(f"Url does not point to an image.")
+            log.error("Url does not point to an image.")
             return None
 
     except Exception as e:
