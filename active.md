@@ -136,7 +136,7 @@ Open your local build at [localhost:3000](http://localhost:3000)
 ### Train with a web page
 
 Type # followed by any https:// domain path to ask questions about a specific web page. 
-Allow a couple minutes to process each question. You couold ask some questions about today's headlines:
+Allow a couple minutes to process each question. You can ask questions about today's headlines:
 
 	#https://yahoo.com
 
