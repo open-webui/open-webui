@@ -34,7 +34,7 @@
 	let selectedTab = 'general';
 </script>
 
-<Modal bind:show>
+<Modal bind:show size="lg">
 	<div class="text-gray-700 dark:text-gray-100">
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>

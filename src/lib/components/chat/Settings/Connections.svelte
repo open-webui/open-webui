@@ -249,24 +249,6 @@
                                 </div>
                                 <div class="flex-1">
                                     <!-- Add input for deployment models -->
-                                    <!--
-                                    <input
-                                        class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-                                        placeholder={$i18n.t('AZURE API DEPLOYMENT MODEL NAMES')}
-                                        bind:value={AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES[idx]}
-                                        autocomplete="off"
-                                    />
-                                    -->
-                                    <!-- Add input for deployment models -->
-                                    <!--
-                                    {#each AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES[idx] as modelName, modelIdx}
-                                    <input
-                                        class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-                                        placeholder={$i18n.t('AZURE API Deployment Model')}
-                                        bind:value={modelName}
-                                        autocomplete="off" />
-                                    {/each}
-                                    -->
                                     {#each AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES[idx] as modelName, modelIdx}
                                     <div class="relative">
                                         <input
@@ -292,21 +274,6 @@
                                         {/if}
                                     </div>
                                     {/each}
-                                    <button
-                                        class="px-1"
-                                        on:click={() => {
-                                            AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES[idx] = [...AZURE_OPENAI_API_DEPLOYMENT_MODEL_NAMES[idx], ''];
-                                        }}
-                                        type="button">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 16 16"
-                                            fill="currentColor"
-                                            class="w-4 h-4">
-                                            <path
-                                                d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-                                        </svg>
-                                    </button>
                                 </div>
                                 <div class="self-center flex items-center">
                                     {#if idx === 0}
