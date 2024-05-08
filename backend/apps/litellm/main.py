@@ -36,6 +36,10 @@ from config import (
     LITELLM_PROXY_HOST,
 )
 
+import warnings
+
+warnings.simplefilter("ignore")
+
 from litellm.utils import get_llm_provider
 
 import asyncio

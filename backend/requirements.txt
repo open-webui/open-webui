@@ -9,7 +9,6 @@ Flask-Cors==4.0.0
 python-socketio==5.11.2
 python-jose==3.3.0
 passlib[bcrypt]==1.7.4
-uuid==1.30
 
 requests==2.31.0
 aiohttp==3.9.5
@@ -19,7 +18,6 @@ psycopg2-binary==2.9.9
 PyMySQL==1.1.0
 bcrypt==4.1.2
 
-litellm==1.35.28
 litellm[proxy]==1.35.28
 
 boto3==1.34.95
@@ -54,9 +52,9 @@ rank-bm25==0.2.2
 
 faster-whisper==1.0.1
 
-PyJWT==2.8.0
 PyJWT[crypto]==2.8.0
 
 black==24.4.2
 langfuse==2.27.3
-youtube-transcript-api
+youtube-transcript-api==0.6.2
+pytube

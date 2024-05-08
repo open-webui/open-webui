@@ -97,9 +97,10 @@
 				<div class=" text-sm dark:text-gray-300 mb-1">
 					{#if chat.share_id}
 						<a href="/s/{chat.share_id}" target="_blank"
-							>You have shared this chat <span class=" underline">before</span>.</a
+							>{$i18n.t('You have shared this chat')}
+							<span class=" underline">{$i18n.t('before')}</span>.</a
 						>
-						Click here to
+						{$i18n.t('Click here to')}
 						<button
 							class="underline"
 							on:click={async () => {
@@ -108,11 +109,14 @@
 								if (res) {
 									chat = await getChatById(localStorage.token, chatId);
 								}
-							}}>delete this link</button
-						> and create a new shared link.
+							}}
+							>{$i18n.t('delete this link')}
+						</button>
+						{$i18n.t('and create a new shared link.')}
 					{:else}
-						Messages you send after creating your link won't be shared. Users with the URL will be
-						able to view the shared chat.
+						{$i18n.t(
+							"Messages you send after creating your link won't be shared. Users with the URL will beable to view the shared chat."
+						)}
 					{/if}
 				</div>
 
