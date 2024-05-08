@@ -4,6 +4,14 @@
 		"title": "English (US)"
 	},
 	{
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+  	{
+		"code": "ar-BH",
+		"title": "العربية (AR)"
+	},
+	{
 		"code": "bg-BG",
 		"title": "Bulgarian (BG)"
 	},
@@ -18,10 +26,6 @@
 	{
 		"code": "de-DE",
 		"title": "Deutsch"
-	},
-	{
-		"code": "en-GB",
-		"title": "English (GB)"
 	},
 	{
 		"code": "es-ES",

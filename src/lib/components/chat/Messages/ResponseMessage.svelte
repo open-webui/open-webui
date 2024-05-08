@@ -23,15 +23,16 @@
 		revertSanitizedResponseContent,
 		sanitizeResponseContent
 	} from '$lib/utils';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import Skeleton from './Skeleton.svelte';
 	import CodeBlock from './CodeBlock.svelte';
 	import Image from '$lib/components/common/Image.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
+	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
 
 	export let modelfiles = [];
 	export let message;
@@ -64,6 +65,9 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
+
+	let showCitationModal = false;
+	let selectedCitation = null;
 
 	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
 
@@ -324,6 +328,8 @@
 	});
 </script>
 
+<CitationsModal bind:show={showCitationModal} citation={selectedCitation} />
+
 {#key message.id}
 	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
 		<ProfileImage
@@ -346,154 +352,192 @@
 				{/if}
 			</Name>
 
-			{#if message.content === ''}
-				<Skeleton />
-			{:else}
-				{#if message.files}
-					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
-						{#each message.files as file}
-							<div>
-								{#if file.type === 'image'}
-									<Image src={file.url} />
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{/if}
+			{#if message.files}
+				<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
+					{#each message.files as file}
+						<div>
+							{#if file.type === 'image'}
+								<Image src={file.url} />
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
 
-				<div
-					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
-				>
-					<div>
-						{#if edit === true}
-							<div class=" w-full">
-								<textarea
-									id="message-edit-{message.id}"
-									bind:this={editTextAreaElement}
-									class=" bg-transparent outline-none w-full resize-none"
-									bind:value={editedContent}
-									on:input={(e) => {
-										e.target.style.height = '';
-										e.target.style.height = `${e.target.scrollHeight}px`;
+			<div
+				class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
+			>
+				<div>
+					{#if edit === true}
+						<div class=" w-full">
+							<textarea
+								id="message-edit-{message.id}"
+								bind:this={editTextAreaElement}
+								class=" bg-transparent outline-none w-full resize-none"
+								bind:value={editedContent}
+								on:input={(e) => {
+									e.target.style.height = '';
+									e.target.style.height = `${e.target.scrollHeight}px`;
+								}}
+							/>
+
+							<div class=" mt-2 mb-1 flex justify-center space-x-2 text-sm font-medium">
+								<button
+									class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+									on:click={() => {
+										editMessageConfirmHandler();
 									}}
-								/>
+								>
+									{$i18n.t('Save')}
+								</button>
 
-								<div class=" mt-2 mb-1 flex justify-center space-x-2 text-sm font-medium">
-									<button
-										class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
-										on:click={() => {
-											editMessageConfirmHandler();
-										}}
-									>
-										{$i18n.t('Save')}
-									</button>
-
-									<button
-										class=" px-4 py-2 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-100 transition outline outline-1 outline-gray-200 dark:outline-gray-600 rounded-lg"
-										on:click={() => {
-											cancelEditMessage();
-										}}
-									>
-										{$i18n.t('Cancel')}
-									</button>
-								</div>
+								<button
+									class=" px-4 py-2 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-100 transition outline outline-1 outline-gray-200 dark:outline-gray-600 rounded-lg"
+									on:click={() => {
+										cancelEditMessage();
+									}}
+								>
+									{$i18n.t('Cancel')}
+								</button>
 							</div>
-						{:else}
-							<div class="w-full">
-								{#if message?.error === true}
-									<div
-										class="flex mt-2 mb-4 space-x-2 border px-4 py-3 border-red-800 bg-red-800/30 font-medium rounded-lg"
+						</div>
+					{:else}
+						<div class="w-full">
+							{#if message?.error === true}
+								<div
+									class="flex mt-2 mb-4 space-x-2 border px-4 py-3 border-red-800 bg-red-800/30 font-medium rounded-lg"
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="w-5 h-5 self-center"
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="1.5"
-											stroke="currentColor"
-											class="w-5 h-5 self-center"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-											/>
-										</svg>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+										/>
+									</svg>
 
-										<div class=" self-center">
-											{message.content}
-										</div>
+									<div class=" self-center">
+										{message.content}
 									</div>
-								{:else}
-									{#each tokens as token}
-										{#if token.type === 'code'}
-											<CodeBlock
-												lang={token.lang}
-												code={revertSanitizedResponseContent(token.text)}
-											/>
-										{:else}
-											{@html marked.parse(token.raw, {
-												...defaults,
-												gfm: true,
-												breaks: true,
-												renderer
-											})}
-										{/if}
-									{/each}
-									<!-- {@html marked(message.content.replaceAll('\\', '\\\\'))} -->
-								{/if}
+								</div>
+							{:else if message.content === ''}
+								<Skeleton />
+							{:else}
+								{#each tokens as token}
+									{#if token.type === 'code'}
+										<CodeBlock
+											lang={token.lang}
+											code={revertSanitizedResponseContent(token.text)}
+										/>
+									{:else}
+										{@html marked.parse(token.raw, {
+											...defaults,
+											gfm: true,
+											breaks: true,
+											renderer
+										})}
+									{/if}
+								{/each}
+								<!-- {@html marked(message.content.replaceAll('\\', '\\\\'))} -->
+							{/if}
 
-								{#if message.done}
-									<div
-										class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
-									>
-										{#if siblings.length > 1}
-											<div class="flex self-center min-w-fit">
-												<button
-													class="self-center dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														showPreviousMessage(message);
-													}}
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</button>
+							{#if message.citations}
+								<hr class="  dark:border-gray-800 my-1" />
+								<div class="my-2.5 w-full flex flex-col gap-1">
+									{#each message.citations.reduce((acc, citation) => {
+										citation.document.forEach((document, index) => {
+											const metadata = citation.metadata?.[index];
+											const id = metadata?.source ?? 'N/A';
 
-												<div class="text-xs font-bold self-center min-w-fit dark:text-gray-100">
-													{siblings.indexOf(message.id) + 1} / {siblings.length}
-												</div>
+											const existingSource = acc.find((item) => item.id === id);
 
-												<button
-													class="self-center dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														showNextMessage(message);
-													}}
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</button>
+											if (existingSource) {
+												existingSource.document.push(document);
+												existingSource.metadata.push(metadata);
+											} else {
+												acc.push( { id: id, source: citation?.source, document: [document], metadata: metadata ? [metadata] : [] } );
+											}
+										});
+										return acc;
+									}, []) as citation, idx}
+										<div class="flex gap-1 text-xs font-semibold">
+											<div>
+												[{idx + 1}]
 											</div>
-										{/if}
 
+											<button
+												class="dark:text-gray-500 underline"
+												on:click={() => {
+													showCitationModal = true;
+													selectedCitation = citation;
+												}}
+											>
+												{citation.source.name}
+											</button>
+										</div>
+									{/each}
+								</div>
+							{/if}
+
+							{#if message.done || siblings.length > 1}
+								<div
+									class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
+								>
+									{#if siblings.length > 1}
+										<div class="flex self-center min-w-fit">
+											<button
+												class="self-center dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													showPreviousMessage(message);
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</button>
+
+											<div class="text-xs font-bold self-center min-w-fit dark:text-gray-100">
+												{siblings.indexOf(message.id) + 1} / {siblings.length}
+											</div>
+
+											<button
+												class="self-center dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													showNextMessage(message);
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</button>
+										</div>
+									{/if}
+
+									{#if message.done}
 										{#if !readOnly}
 											<Tooltip content={$i18n.t('Edit')} placement="bottom">
 												<button
@@ -854,24 +898,24 @@
 												</button>
 											</Tooltip>
 										{/if}
-									</div>
-								{/if}
+									{/if}
+								</div>
+							{/if}
 
-								{#if showRateComment}
-									<RateComment
-										messageId={message.id}
-										bind:show={showRateComment}
-										bind:message
-										on:submit={() => {
-											updateChatMessages();
-										}}
-									/>
-								{/if}
-							</div>
-						{/if}
-					</div>
+							{#if showRateComment}
+								<RateComment
+									messageId={message.id}
+									bind:show={showRateComment}
+									bind:message
+									on:submit={() => {
+										updateChatMessages();
+									}}
+								/>
+							{/if}
+						</div>
+					{/if}
 				</div>
-			{/if}
+			</div>
 		</div>
 	</div>
 {/key}

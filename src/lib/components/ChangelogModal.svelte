@@ -22,7 +22,7 @@
 </script>
 
 <Modal bind:show>
-	<div class="px-5 py-4 dark:text-gray-300 text-gray-700">
+	<div class="px-5 pt-4 dark:text-gray-300 text-gray-700">
 		<div class="flex justify-between items-start">
 			<div class="text-xl font-bold">
 				{$i18n.t('What’s New in')}
@@ -57,10 +57,8 @@
 		</div>
 	</div>
 
-	<hr class=" dark:border-gray-800" />
-
 	<div class=" w-full p-4 px-5 text-gray-700 dark:text-gray-100">
-		<div class=" overflow-y-scroll max-h-80">
+		<div class=" overflow-y-scroll max-h-80 scrollbar-none">
 			<div class="mb-3">
 				{#if changelog}
 					{#each Object.keys(changelog) as version}
