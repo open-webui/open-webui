@@ -143,7 +143,11 @@
 						</button>
 					{/each}
 
-					{#if prompt.split(' ')?.at(0)?.substring(1).startsWith('https://www.youtube.com')}
+					{#if prompt
+						.split(' ')
+						.some((s) => s.substring(1).startsWith('https://www.youtube.com') || s
+									.substring(1)
+									.startsWith('https://youtu.be'))}
 						<button
 							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-100 selected-command-option-button"
 							type="button"
