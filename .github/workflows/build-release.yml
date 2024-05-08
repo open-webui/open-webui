@@ -51,7 +51,7 @@ jobs:
           console.log(`Created release ${release.data.html_url}`)
 
     - name: Upload package to GitHub release
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: package
         path: .
