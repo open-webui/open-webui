@@ -106,7 +106,7 @@
 		responseAutoCopy = settings.responseAutoCopy ?? false;
 		showUsername = settings.showUsername ?? false;
 		fullScreenMode = settings.fullScreenMode ?? false;
-		splitLargeChunks = settings.splitLargeChunks ?? false;
+		splitLargeChunks = settings.splitLargeChunks ?? true;
 	});
 </script>
 

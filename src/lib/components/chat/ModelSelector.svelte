@@ -59,7 +59,7 @@
 
 			{#if selectedModelIdx === 0}
 				<div class="  self-center mr-2 disabled:text-gray-600 disabled:hover:text-gray-600">
-					<Tooltip content={$i18n.t('Add Model')}>
+					<!-- <Tooltip content={$i18n.t('Add Model')}>
 						<button
 							class=" "
 							{disabled}
@@ -78,7 +78,7 @@
 								<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
 							</svg>
 						</button>
-					</Tooltip>
+					</Tooltip> -->
 				</div>
 			{:else}
 				<div class="  self-center disabled:text-gray-600 disabled:hover:text-gray-600 mr-2">
