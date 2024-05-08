@@ -4,7 +4,7 @@ pydantic==2.7.1
 python-multipart==0.0.9
 
 Flask==3.0.3
-Flask-Cors==4.0.0
+Flask-Cors==4.0.1
 
 python-socketio==5.11.2
 python-jose==3.3.0
