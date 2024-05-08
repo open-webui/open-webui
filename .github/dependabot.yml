@@ -3,8 +3,7 @@ updates:
   - package-ecosystem: pip
     directory: '/backend'
     schedule:
-      interval: daily
-      time: '13:00'
+      interval: weekly
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
