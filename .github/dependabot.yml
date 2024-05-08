@@ -5,3 +5,8 @@ updates:
   schedule:
     interval: daily
     time: "13:00"
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    # Check for updates to GitHub Actions every week
+    interval: "weekly"
