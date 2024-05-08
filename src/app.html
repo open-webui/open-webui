@@ -7,8 +7,20 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 		<meta name="robots" content="noindex,nofollow" />
 		<script>
-			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
-			localStorage.setItem('settings', JSON.stringify({"splitLargeChunks":true}));
+			// Get existing settings from local storage
+			const existingSettings = localStorage.getItem('settings');
+
+			// Check if 'splitLargeChunks' is not already set to true
+			if (!existingSettings || (existingSettings && !JSON.parse(existingSettings).splitLargeChunks)) {
+				// Update settings with splitLargeChunks set to true
+				const updatedSettings = existingSettings
+					? { ...JSON.parse(existingSettings), splitLargeChunks: true }
+					: { splitLargeChunks: true };
+		
+				// Save updated settings to local storage
+				localStorage.setItem('settings', JSON.stringify(updatedSettings));
+			}
+			
 			(() => {
 				if (localStorage?.theme && localStorage?.theme.includes('oled')) {
 					document.documentElement.style.setProperty('--color-gray-900', '#000000');
