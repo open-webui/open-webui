@@ -4,10 +4,6 @@
 		"title": "English (US)"
 	},
 	{
-		"code": "en-GB",
-		"title": "English (GB)"
-	},
-	{
 		"code": "bg-BG",
 		"title": "Bulgarian (BG)"
 	},
@@ -20,20 +16,16 @@
 		"title": "Catalan"
 	},
 	{
-		"code": "zh-CN",
-		"title": "Chinese (Simplified)"
-	},
-	{
-		"code": "zh-TW",
-		"title": "Chinese (Traditional)"
-	},
-	{
 		"code": "de-DE",
 		"title": "Deutsch"
 	},
 	{
-		"code": "nl-NL",
-		"title": "Dutch (Netherlands)"
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+	{
+		"code": "es-ES",
+		"title": "Spanish"
 	},
 	{
 		"code": "fa-IR",
@@ -48,10 +40,6 @@
 		"title": "French (France)"
 	},
 	{
-		"code": "ka-GE",
-		"title": "Georgian"
-	},
-	{
 		"code": "hi-IN",
 		"title": "Hindi (हिंदी)"
 	},
@@ -64,8 +52,16 @@
 		"title": "Japanese"
 	},
 	{
+		"code": "ka-GE",
+		"title": "Georgian"
+	},
+	{
 		"code": "ko-KR",
 		"title": "Korean"
+	},
+	{
+		"code": "nl-NL",
+		"title": "Dutch (Netherlands)"
 	},
 	{
 		"code": "pl-PL",
@@ -84,16 +80,8 @@
 		"title": "Russian (Russia)"
 	},
 	{
-		"code": "es-ES",
-		"title": "Spanish"
-	},
-	{
 		"code": "sv-SE",
 		"title": "Swedish"
-	},
-	{
-		"code": "vi-VN",
-		"title": "Tiếng Việt"
 	},
 	{
 		"code": "tr-TR",
@@ -102,6 +90,18 @@
 	{
 		"code": "uk-UA",
 		"title": "Ukrainian"
+	},
+	{
+		"code": "vi-VN",
+		"title": "Tiếng Việt"
+	},
+	{
+		"code": "zh-CN",
+		"title": "Chinese (Simplified)"
+	},
+	{
+		"code": "zh-TW",
+		"title": "Chinese (Traditional)"
 	},
 	{
 		"code": "dg-DG",
