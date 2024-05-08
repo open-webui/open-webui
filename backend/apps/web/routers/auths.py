@@ -118,23 +118,22 @@ async def signin(request: Request, form_data: SigninForm):
                 ),
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
-
-    if WEBUI_AUTH == False:
-
-        if Users.get_num_users() != 0:
-            raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
-
-        admin_email = "admin@localhost"
-        admin_password = "admin"
-
-        if not Users.get_user_by_email(admin_email.lower()):
-            await signup(
-                request,
-                SignupForm(email=admin_email, password=admin_password, name="User"),
-            )
-        user = Auths.authenticate_user(admin_email.lower(), admin_password)
     else:
-        user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
+        if WEBUI_AUTH == False:
+            if Users.get_num_users() != 0:
+                raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
+
+            admin_email = "admin@localhost"
+            admin_password = "admin"
+
+            if not Users.get_user_by_email(admin_email.lower()):
+                await signup(
+                    request,
+                    SignupForm(email=admin_email, password=admin_password, name="User"),
+                )
+            user = Auths.authenticate_user(admin_email.lower(), admin_password)
+        else:
+            user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
         token = create_token(
