@@ -49,7 +49,7 @@
 				}}
 			>
 				<Share />
-				<div class="flex items-center">Share</div>
+				<div class="flex items-center">{$i18n.t('Share')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
@@ -59,7 +59,7 @@
 				}}
 			>
 				<Pencil strokeWidth="2" />
-				<div class="flex items-center">Rename</div>
+				<div class="flex items-center">{$i18n.t('Rename')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
@@ -69,13 +69,19 @@
 				}}
 			>
 				<GarbageBin strokeWidth="2" />
-				<div class="flex items-center">Delete</div>
+				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
 
 			<hr class="border-gray-100 dark:border-gray-800 mt-2.5 mb-1.5" />
 
 			<div class="flex p-1">
-				<Tags {chatId} />
+				<Tags
+					{chatId}
+					on:close={() => {
+						show = false;
+						onClose();
+					}}
+				/>
 			</div>
 		</DropdownMenu.Content>
 	</div>
