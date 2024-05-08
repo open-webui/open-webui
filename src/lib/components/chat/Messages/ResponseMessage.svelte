@@ -227,7 +227,8 @@
 					const res = await synthesizeOpenAISpeech(
 						localStorage.token,
 						$settings?.audio?.speaker,
-						sentence
+						sentence,
+						$settings?.audio?.model
 					).catch((error) => {
 						toast.error(error);
 
