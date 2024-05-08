@@ -82,7 +82,13 @@
 			filename: 'filename1',
 			name: 'name1',
 			title: 'title1'
-		}
+		},
+		{
+			collection_name: 'collection_name1',
+			filename: 'filename1',
+			name: 'name1',
+			title: 'title1'
+		},
 		]
 	let filteredDocs;
 	$: filteredDocs = documentsMock.slice(0,5)
@@ -218,61 +224,63 @@
 			: 'invisible'}"
 	>
 		<div class="px-2 flex justify-center space-x-2">
-			<a
-				id="sidebar-new-chat-button"
-				class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-				href="/"
-				on:click={async () => {
-					selectedChatId = null;
+			<Tooltip content="Start a new chat" placement="right">
+				<a
+					id="sidebar-new-chat-button"
+					class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					href="/"
+					on:click={async () => {
+						selectedChatId = null;
 
-					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
-					setTimeout(() => {
-						newChatButton?.click();
-					}, 0);
-				}}
-			>
-				<div class="flex self-center">
-					<!-- <div class="self-center mr-1.5">
+						await goto('/');
+						const newChatButton = document.getElementById('new-chat-button');
+						setTimeout(() => {
+							newChatButton?.click();
+						}, 0);
+					}}
+				>
+					<div class="flex self-center">
+						<!-- <div class="self-center mr-1.5">
+							<img
+								src="{WEBUI_BASE_URL}/static/favicon.png"
+								class=" size-6 -translate-x-1.5 rounded-full"
+								alt="logo"
+							/>
+						</div>
+
+						<div class=" self-center font-medium text-sm">{$i18n.t('New Chat')}</div> -->
 						<img
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-6 -translate-x-1.5 rounded-full"
-							alt="logo"
+							src="/logo-mbzuai.svg"
+							alt="logo-mbzuai"
+						/>
+						<img
+							src="/logo-ciai.svg"
+							class="ml-4 size-14"
+							alt="logo-ciai"
 						/>
 					</div>
 
-					<div class=" self-center font-medium text-sm">{$i18n.t('New Chat')}</div> -->
-					<img
-						src="/logo-mbzuai.svg"
-						alt="logo-mbzuai"
-					/>
-					<img
-						src="/logo-ciai.svg"
-						class="ml-4 size-14"
-						alt="logo-ciai"
-					/>
-				</div>
-
-				<!-- <div class="self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"
-						/>
-						<path
-							d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"
-						/>
-					</svg>
-				</div> -->
-			</a>
+					<!-- <div class="self-center">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"
+							/>
+							<path
+								d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"
+							/>
+						</svg>
+					</div> -->
+				</a>
+			</Tooltip>
 		</div>
 
-		{#if $user?.role === 'admin'}
-			<!-- <div class="px-2 flex justify-center mt-0.5">
+		<!-- {#if $user?.role === 'admin'}
+			<div class="px-2 flex justify-center mt-0.5">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/modelfiles"
@@ -302,9 +310,9 @@
 						<div class=" self-center font-medium text-sm">{$i18n.t('Modelfiles')}</div>
 					</div>
 				</a>
-			</div> -->
+			</div>
 
-			<!-- <div class="px-2 flex justify-center">
+			<div class="px-2 flex justify-center">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/prompts"
@@ -334,9 +342,9 @@
 						<div class=" self-center font-medium text-sm">{$i18n.t('Prompts')}</div>
 					</div>
 				</a>
-			</div> -->
+			</div>
 
-			<!-- <div class="px-2 flex justify-center mb-1">
+			<div class="px-2 flex justify-center mb-1">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/documents"
@@ -366,103 +374,11 @@
 						<div class=" self-center font-medium text-sm">{$i18n.t('Documents')}</div>
 					</div>
 				</a>
-			</div> -->
-		{/if}
+			</div>
+		{/if} -->
 
-		<!-- FILE LIST -->
-		<div class="relative flex flex-col overflow-y-auto px-2">
-			<div class="px-3.5 py-2 text-black">Recent Documents</div>
-			{#each filteredDocs as doc}
-				<button 
-				class=" flex space-x-3 rounded-xl px-3.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-				>
-					<div class="self-center">
-						<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<g clip-path="url(#clip0_1_16)">
-							<path d="M10.7775 11.1525H1.2225C0.924135 11.1525 0.637987 11.034 0.427009 10.823C0.21603 10.612 0.0975037 10.3259 0.0975037 10.0275V1.9875C0.0975037 1.68913 0.21603 1.40298 0.427009 1.19201C0.637987 0.981027 0.924135 0.862501 1.2225 0.862501H4.5C4.66304 0.861414 4.82429 0.896503 4.97214 0.965238C5.11999 1.03397 5.25075 1.13465 5.355 1.26L6.0225 2.01C6.05773 2.05087 6.10153 2.08349 6.15079 2.10552C6.20005 2.12756 6.25355 2.13848 6.3075 2.1375L10.755 2.0925C11.0548 2.09447 11.3417 2.21441 11.5536 2.42637C11.7656 2.63833 11.8855 2.92525 11.8875 3.225V9.975C11.8935 10.1256 11.8694 10.2759 11.8166 10.417C11.7638 10.5582 11.6834 10.6874 11.58 10.797C11.4766 10.9067 11.3524 10.9946 11.2146 11.0557C11.0768 11.1167 10.9282 11.1496 10.7775 11.1525ZM1.2225 1.6125C1.12305 1.6125 1.02766 1.65201 0.957339 1.72234C0.887012 1.79266 0.847504 1.88804 0.847504 1.9875V10.0275C0.847504 10.127 0.887012 10.2223 0.957339 10.2927C1.02766 10.363 1.12305 10.4025 1.2225 10.4025H10.7775C10.8777 10.4025 10.9738 10.3633 11.0454 10.2931C11.1169 10.223 11.158 10.1276 11.16 10.0275V3.2775C11.16 3.17606 11.1197 3.07877 11.048 3.00703C10.9762 2.9353 10.8789 2.895 10.7775 2.895L6.3375 2.94C6.17052 2.9448 6.00485 2.9091 5.85465 2.83596C5.70446 2.76283 5.5742 2.65442 5.475 2.52L4.815 1.77C4.77813 1.72131 4.73053 1.68178 4.6759 1.65446C4.62127 1.62715 4.56108 1.61279 4.5 1.6125H1.2225Z" fill="#323333"/>
-							</g>
-							<defs>
-							<clipPath id="clip0_1_16">
-							<rect width="12" height="12" fill="white"/>
-							</clipPath>
-							</defs>
-							</svg>
-					</div>
-
-					<div class="ml-2 font-medium text-sm text-[#555]">{doc.name}</div>
-				</button>
-			{/each}
-			<!-- {#if !($settings.saveChatHistory ?? true)}
-				<div class="absolute z-40 w-full h-full bg-gray-50/90 dark:bg-black/90 flex justify-center">
-					<div class=" text-left px-5 py-2">
-						<div class=" font-medium">{$i18n.t('Chat History is off for this browser.')}</div>
-						<div class="text-xs mt-2">
-							{$i18n.t(
-								"When history is turned off, new chats on this browser won't appear in your history on any of your devices."
-							)}
-							<span class=" font-semibold"
-								>{$i18n.t('This setting does not sync across browsers or devices.')}</span
-							>
-						</div>
-
-						<div class="mt-3">
-							<button
-								class="flex justify-center items-center space-x-1.5 px-3 py-2.5 rounded-lg text-xs bg-gray-100 hover:bg-gray-200 transition text-gray-800 font-medium w-full"
-								type="button"
-								on:click={() => {
-									saveSettings({
-										saveChatHistory: true
-									});
-								}}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 16 16"
-									fill="currentColor"
-									class="w-3 h-3"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M8 1a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5A.75.75 0 0 1 8 1ZM4.11 3.05a.75.75 0 0 1 0 1.06 5.5 5.5 0 1 0 7.78 0 .75.75 0 0 1 1.06-1.06 7 7 0 1 1-9.9 0 .75.75 0 0 1 1.06 0Z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-
-								<div>{$i18n.t('Enable Chat History')}</div>
-							</button>
-						</div>
-					</div>
-				</div>
-			{/if} -->
-
-			<!-- <div class="px-2 mt-1 mb-2 flex justify-center space-x-2">
-				<div class="flex w-full" id="chat-search">
-					<div class="self-center pl-3 py-2 rounded-l-xl bg-white dark:bg-gray-950">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
-
-					<input
-						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm dark:text-gray-300 dark:bg-gray-950 outline-none"
-						placeholder={$i18n.t('Search')}
-						bind:value={search}
-						on:focus={() => {
-							enrichChatsWithContent($chats);
-						}}
-					/>
-				</div>
-			</div> -->
-
+		<div class="px-5 py-2 text-gray">Recent Chats</div>
+		<div class="relative flex flex-col overflow-y-auto px-2 max-h-[40%]">
 			{#if $tags.length > 0}
 				<div class="px-2.5 mt-0.5 mb-2 flex gap-1 flex-wrap">
 					<button
@@ -722,14 +638,111 @@
 			</div>
 		</div>
 
+		<div class="px-5 py-2 text-gray">Recent Documents</div>
+			<!-- FILE LIST -->
+		<div class="relative flex flex-col overflow-y-auto px-2 max-h-[38%]">
+			{#each filteredDocs as doc}
+				<button 
+				class=" flex space-x-3 rounded-xl px-3.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				>
+					<div class="self-center">
+						<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<g clip-path="url(#clip0_1_16)">
+							<path d="M10.7775 11.1525H1.2225C0.924135 11.1525 0.637987 11.034 0.427009 10.823C0.21603 10.612 0.0975037 10.3259 0.0975037 10.0275V1.9875C0.0975037 1.68913 0.21603 1.40298 0.427009 1.19201C0.637987 0.981027 0.924135 0.862501 1.2225 0.862501H4.5C4.66304 0.861414 4.82429 0.896503 4.97214 0.965238C5.11999 1.03397 5.25075 1.13465 5.355 1.26L6.0225 2.01C6.05773 2.05087 6.10153 2.08349 6.15079 2.10552C6.20005 2.12756 6.25355 2.13848 6.3075 2.1375L10.755 2.0925C11.0548 2.09447 11.3417 2.21441 11.5536 2.42637C11.7656 2.63833 11.8855 2.92525 11.8875 3.225V9.975C11.8935 10.1256 11.8694 10.2759 11.8166 10.417C11.7638 10.5582 11.6834 10.6874 11.58 10.797C11.4766 10.9067 11.3524 10.9946 11.2146 11.0557C11.0768 11.1167 10.9282 11.1496 10.7775 11.1525ZM1.2225 1.6125C1.12305 1.6125 1.02766 1.65201 0.957339 1.72234C0.887012 1.79266 0.847504 1.88804 0.847504 1.9875V10.0275C0.847504 10.127 0.887012 10.2223 0.957339 10.2927C1.02766 10.363 1.12305 10.4025 1.2225 10.4025H10.7775C10.8777 10.4025 10.9738 10.3633 11.0454 10.2931C11.1169 10.223 11.158 10.1276 11.16 10.0275V3.2775C11.16 3.17606 11.1197 3.07877 11.048 3.00703C10.9762 2.9353 10.8789 2.895 10.7775 2.895L6.3375 2.94C6.17052 2.9448 6.00485 2.9091 5.85465 2.83596C5.70446 2.76283 5.5742 2.65442 5.475 2.52L4.815 1.77C4.77813 1.72131 4.73053 1.68178 4.6759 1.65446C4.62127 1.62715 4.56108 1.61279 4.5 1.6125H1.2225Z" fill="#323333"/>
+							</g>
+							<defs>
+							<clipPath id="clip0_1_16">
+							<rect width="12" height="12" fill="white"/>
+							</clipPath>
+							</defs>
+							</svg>
+					</div>
+
+					<div class="ml-2 font-medium text-sm text-[#555]">{doc.name}</div>
+				</button>
+			{/each}
+			<!-- {#if !($settings.saveChatHistory ?? true)}
+				<div class="absolute z-40 w-full h-full bg-gray-50/90 dark:bg-black/90 flex justify-center">
+					<div class=" text-left px-5 py-2">
+						<div class=" font-medium">{$i18n.t('Chat History is off for this browser.')}</div>
+						<div class="text-xs mt-2">
+							{$i18n.t(
+								"When history is turned off, new chats on this browser won't appear in your history on any of your devices."
+							)}
+							<span class=" font-semibold"
+								>{$i18n.t('This setting does not sync across browsers or devices.')}</span
+							>
+						</div>
+
+						<div class="mt-3">
+							<button
+								class="flex justify-center items-center space-x-1.5 px-3 py-2.5 rounded-lg text-xs bg-gray-100 hover:bg-gray-200 transition text-gray-800 font-medium w-full"
+								type="button"
+								on:click={() => {
+									saveSettings({
+										saveChatHistory: true
+									});
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-3 h-3"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M8 1a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5A.75.75 0 0 1 8 1ZM4.11 3.05a.75.75 0 0 1 0 1.06 5.5 5.5 0 1 0 7.78 0 .75.75 0 0 1 1.06-1.06 7 7 0 1 1-9.9 0 .75.75 0 0 1 1.06 0Z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+
+								<div>{$i18n.t('Enable Chat History')}</div>
+							</button>
+						</div>
+					</div>
+				</div>
+			{/if} -->
+
+			<!-- <div class="px-2 mt-1 mb-2 flex justify-center space-x-2">
+				<div class="flex w-full" id="chat-search">
+					<div class="self-center pl-3 py-2 rounded-l-xl bg-white dark:bg-gray-950">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+
+					<input
+						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm dark:text-gray-300 dark:bg-gray-950 outline-none"
+						placeholder={$i18n.t('Search')}
+						bind:value={search}
+						on:focus={() => {
+							enrichChatsWithContent($chats);
+						}}
+					/>
+				</div>
+			</div> -->
+
+			
+		</div>
+
 		<!-- SHOW MORE -->
 		<button
-			class="px-3.5 py-2 text-gray flex items-center"
+			class="px-5 py-2 text-gray flex items-center"
 			on:click={() => {
 				showMoreDoc = !showMoreDoc
 				filteredDocs = showMoreDoc ? 
-					documentsMock.concat(documentsMock).concat(documentsMock).concat(documentsMock).concat(documentsMock) 
-					: documentsMock
+					documentsMock
+					: documentsMock.slice(0,5)
 				arrowClass = showMoreDoc ? 'rotate-180' : ''
 			}}
 		>
