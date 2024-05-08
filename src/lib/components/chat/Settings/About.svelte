@@ -5,6 +5,7 @@
 	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
+	import { user } from '$lib/stores';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -79,15 +80,16 @@
 						<div>{$i18n.t("See what's new")}</div>
 					</button>
 				</div>
-
-				<button
-					class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-					on:click={() => {
-						checkForVersionUpdates();
-					}}
-				>
-					{$i18n.t('Check for updates')}
-				</button>
+				{#if $user.role === 'admin'}
+					<button
+						class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+						on:click={() => {
+							checkForVersionUpdates();
+						}}
+					>
+						{$i18n.t('Check for updates')}
+					</button>
+				{/if}
 			</div>
 		</div>
 
