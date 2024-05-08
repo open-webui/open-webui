@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **📝 Title Generation**: Limited output to 50 tokens for more concise results.
+- **📝 Title Generation**: Limited output to 50 tokens.
 - **📦 Helm Charts**: Removed Helm charts, now available in a separate repository (https://github.com/open-webui/helm-charts).
 
 ## [0.1.123] - 2024-05-02
