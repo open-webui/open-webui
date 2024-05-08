@@ -25,6 +25,7 @@ import uuid
 import aiohttp
 import asyncio
 import logging
+import time
 from urllib.parse import urlparse
 from typing import Optional, List, Union
 
@@ -1029,6 +1030,75 @@ async def generate_openai_chat_completion(
             status_code=r.status_code if r else 500,
             detail=error_detail,
         )
+
+
+@app.get("/v1/models")
+@app.get("/v1/models/{url_idx}")
+async def get_openai_models(
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+):
+    if url_idx == None:
+        models = await get_all_models()
+
+        if app.state.ENABLE_MODEL_FILTER:
+            if user.role == "user":
+                models["models"] = list(
+                    filter(
+                        lambda model: model["name"] in app.state.MODEL_FILTER_LIST,
+                        models["models"],
+                    )
+                )
+
+        return {
+            "data": [
+                {
+                    "id": model["model"],
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "openai",
+                }
+                for model in models["models"]
+            ],
+            "object": "list",
+        }
+
+    else:
+        url = app.state.OLLAMA_BASE_URLS[url_idx]
+        try:
+            r = requests.request(method="GET", url=f"{url}/api/tags")
+            r.raise_for_status()
+
+            models = r.json()
+
+            return {
+                "data": [
+                    {
+                        "id": model["model"],
+                        "object": "model",
+                        "created": int(time.time()),
+                        "owned_by": "openai",
+                    }
+                    for model in models["models"]
+                ],
+                "object": "list",
+            }
+
+        except Exception as e:
+            log.exception(e)
+            error_detail = "Open WebUI: Server Connection Error"
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "error" in res:
+                        error_detail = f"Ollama: {res['error']}"
+                except:
+                    error_detail = f"Ollama: {e}"
+
+            raise HTTPException(
+                status_code=r.status_code if r else 500,
+                detail=error_detail,
+            )
 
 
 class UrlForm(BaseModel):
