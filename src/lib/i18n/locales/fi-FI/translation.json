@@ -387,6 +387,7 @@
 	"Set Default Model": "Aseta oletusmalli",
 	"Set embedding model (e.g. {{model}})": "Aseta upotusmalli (esim. {{model}})",
 	"Set Image Size": "Aseta kuvan koko",
+	"Set Model": "",
 	"Set reranking model (e.g. {{model}})": "Aseta uudelleenpisteytysmalli (esim. {{model}})",
 	"Set Steps": "Aseta askelmäärä",
 	"Set Title Auto-Generation Model": "Aseta otsikon automaattisen luonnin malli",
