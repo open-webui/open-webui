@@ -510,7 +510,7 @@
 										?.imageUrl ??
 										($i18n.language === 'dg-DG'
 											? `/doge.png`
-											: `${WEBUI_BASE_URL}/static/favicon.png`)}
+											: `${WEBUI_BASE_URL}/static/favicon.ico`)}
 								/>
 								<div>
 									Talking to <span class=" font-medium">{selectedModel.name} </span>

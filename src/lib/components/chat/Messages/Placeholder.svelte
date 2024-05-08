@@ -44,7 +44,7 @@
 					>
 						{#if model in modelfiles}
 							<img
-								src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+								src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.ico`}
 								alt="modelfile"
 								class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
 								draggable="false"
@@ -53,7 +53,7 @@
 							<img
 								src={$i18n.language === 'dg-DG'
 									? `/doge.png`
-									: `${WEBUI_BASE_URL}/static/favicon.png`}
+									: `${WEBUI_BASE_URL}/static/favicon.ico`}
 								class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
 								alt="logo"
 								draggable="false"

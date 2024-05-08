@@ -70,11 +70,11 @@ try:
 except ImportError:
     log.warning("dotenv not installed, skipping...")
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
-if WEBUI_NAME != "Open WebUI":
-    WEBUI_NAME += " (Open WebUI)"
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "HR/IT Service")
+if WEBUI_NAME != "HR/IT Service":
+    WEBUI_NAME += " (HR/IT Service)"
 
-WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+WEBUI_FAVICON_URL = "https://mbzuai.ac.ae/wp-content/uploads/2022/06/favicon.ico"
 
 ####################################
 # ENV (dev,test,prod)
@@ -168,9 +168,9 @@ except:
 
 STATIC_DIR = str(Path(os.getenv("STATIC_DIR", "./static")).resolve())
 
-frontend_favicon = f"{FRONTEND_BUILD_DIR}/favicon.png"
+frontend_favicon = f"{FRONTEND_BUILD_DIR}/favicon.ico"
 if os.path.exists(frontend_favicon):
-    shutil.copyfile(frontend_favicon, f"{STATIC_DIR}/favicon.png")
+    shutil.copyfile(frontend_favicon, f"{STATIC_DIR}/favicon.ico")
 else:
     logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
@@ -194,7 +194,7 @@ if CUSTOM_NAME:
 
                 r = requests.get(url, stream=True)
                 if r.status_code == 200:
-                    with open(f"{STATIC_DIR}/favicon.png", "wb") as f:
+                    with open(f"{STATIC_DIR}/favicon.ico", "wb") as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
 
