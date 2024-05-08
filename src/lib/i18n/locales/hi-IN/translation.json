@@ -171,6 +171,7 @@
 	"Enter Chunk Overlap": "चंक ओवरलैप दर्ज करें",
 	"Enter Chunk Size": "खंड आकार दर्ज करें",
 	"Enter Image Size (e.g. 512x512)": "छवि का आकार दर्ज करें (उदा. 512x512)",
+	"Enter language codes": "",
 	"Enter LiteLLM API Base URL (litellm_params.api_base)": "LiteLLM API Base URL दर्ज करें (litellm_params.api_base)",
 	"Enter LiteLLM API Key (litellm_params.api_key)": "LiteLLM API Key दर्ज करें (litellm_params.api_key)",
 	"Enter LiteLLM API RPM (litellm_params.rpm)": "LiteLLM API RPM दर्ज करें (litellm_params.rpm) ",
@@ -356,7 +357,6 @@
 	"Reranking model set to \"{{reranking_model}}\"": "रीरैंकिंग मॉडल को \"{{reranking_model}}\" पर \u200b\u200bसेट किया गया",
 	"Reset Vector Storage": "वेक्टर संग्रहण रीसेट करें",
 	"Response AutoCopy to Clipboard": "क्लिपबोर्ड पर प्रतिक्रिया ऑटोकॉपी",
-	"Retrieval Augmented Generation Settings": "",
 	"Role": "भूमिका",
 	"Rosé Pine": "",
 	"Rosé Pine Dawn": "",
@@ -473,6 +473,7 @@
 	"Version": "संस्करण",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "चेतावनी: यदि आप अपने एम्बेडिंग मॉडल को अपडेट या बदलते हैं, तो आपको सभी दस्तावेज़ों को फिर से आयात करने की आवश्यकता होगी।",
 	"Web": "वेब",
+	"Web Loader Settings": "",
 	"Web Params": "",
 	"Webhook URL": "",
 	"WebUI Add-ons": "",
@@ -489,5 +490,6 @@
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "आप एक सहायक सहायक हैं",
 	"You're now logged in.": "अब आप लॉग इन हो गए हैं",
-	"Youtube": ""
+	"Youtube": "",
+	"Youtube Loader Settings": ""
 }

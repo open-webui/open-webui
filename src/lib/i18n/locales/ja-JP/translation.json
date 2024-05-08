@@ -171,6 +171,7 @@
 	"Enter Chunk Overlap": "チャンクオーバーラップを入力してください",
 	"Enter Chunk Size": "チャンクサイズを入力してください",
 	"Enter Image Size (e.g. 512x512)": "画像サイズを入力してください (例: 512x512)",
+	"Enter language codes": "",
 	"Enter LiteLLM API Base URL (litellm_params.api_base)": "LiteLLM API ベース URL を入力してください (litellm_params.api_base)",
 	"Enter LiteLLM API Key (litellm_params.api_key)": "LiteLLM API キーを入力してください (litellm_params.api_key)",
 	"Enter LiteLLM API RPM (litellm_params.rpm)": "LiteLLM API RPM を入力してください (litellm_params.rpm)",
@@ -356,7 +357,6 @@
 	"Reranking model set to \"{{reranking_model}}\"": "",
 	"Reset Vector Storage": "ベクトルストレージをリセット",
 	"Response AutoCopy to Clipboard": "クリップボードへの応答の自動コピー",
-	"Retrieval Augmented Generation Settings": "",
 	"Role": "役割",
 	"Rosé Pine": "Rosé Pine",
 	"Rosé Pine Dawn": "Rosé Pine Dawn",
@@ -473,6 +473,7 @@
 	"Version": "バージョン",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "ウェブ",
+	"Web Loader Settings": "",
 	"Web Params": "",
 	"Webhook URL": "",
 	"WebUI Add-ons": "WebUI アドオン",
@@ -489,5 +490,6 @@
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "あなたは役に立つアシスタントです。",
 	"You're now logged in.": "ログインしました。",
-	"Youtube": ""
+	"Youtube": "",
+	"Youtube Loader Settings": ""
 }

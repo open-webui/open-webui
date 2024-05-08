@@ -171,6 +171,7 @@
 	"Enter Chunk Overlap": "청크 오버랩 입력",
 	"Enter Chunk Size": "청크 크기 입력",
 	"Enter Image Size (e.g. 512x512)": "이미지 크기 입력(예: 512x512)",
+	"Enter language codes": "",
 	"Enter LiteLLM API Base URL (litellm_params.api_base)": "LiteLLM API 기본 URL 입력(litellm_params.api_base)",
 	"Enter LiteLLM API Key (litellm_params.api_key)": "LiteLLM API 키 입력(litellm_params.api_key)",
 	"Enter LiteLLM API RPM (litellm_params.rpm)": "LiteLLM API RPM 입력(litellm_params.rpm)",
@@ -356,7 +357,6 @@
 	"Reranking model set to \"{{reranking_model}}\"": "",
 	"Reset Vector Storage": "벡터 스토리지 초기화",
 	"Response AutoCopy to Clipboard": "응답 자동 클립보드 복사",
-	"Retrieval Augmented Generation Settings": "",
 	"Role": "역할",
 	"Rosé Pine": "로제 파인",
 	"Rosé Pine Dawn": "로제 파인 던",
@@ -473,6 +473,7 @@
 	"Version": "버전",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "웹",
+	"Web Loader Settings": "",
 	"Web Params": "",
 	"Webhook URL": "",
 	"WebUI Add-ons": "WebUI 애드온",
@@ -489,5 +490,6 @@
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "당신은 유용한 어시스턴트입니다.",
 	"You're now logged in.": "로그인되었습니다.",
-	"Youtube": ""
+	"Youtube": "",
+	"Youtube Loader Settings": ""
 }

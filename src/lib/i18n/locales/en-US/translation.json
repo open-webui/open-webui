@@ -171,6 +171,7 @@
 	"Enter Chunk Overlap": "",
 	"Enter Chunk Size": "",
 	"Enter Image Size (e.g. 512x512)": "",
+	"Enter language codes": "",
 	"Enter LiteLLM API Base URL (litellm_params.api_base)": "",
 	"Enter LiteLLM API Key (litellm_params.api_key)": "",
 	"Enter LiteLLM API RPM (litellm_params.rpm)": "",
@@ -356,7 +357,6 @@
 	"Reranking model set to \"{{reranking_model}}\"": "",
 	"Reset Vector Storage": "",
 	"Response AutoCopy to Clipboard": "",
-	"Retrieval Augmented Generation Settings": "",
 	"Role": "",
 	"Rosé Pine": "",
 	"Rosé Pine Dawn": "",
@@ -473,6 +473,7 @@
 	"Version": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "",
+	"Web Loader Settings": "",
 	"Web Params": "",
 	"Webhook URL": "",
 	"WebUI Add-ons": "",
@@ -489,5 +490,6 @@
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "",
 	"You're now logged in.": "",
-	"Youtube": ""
+	"Youtube": "",
+	"Youtube Loader Settings": ""
 }

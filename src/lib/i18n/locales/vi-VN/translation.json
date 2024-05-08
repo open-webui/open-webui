@@ -171,6 +171,7 @@
 	"Enter Chunk Overlap": "Nhập Chunk chồng lấn (overlap)",
 	"Enter Chunk Size": "Nhập Kích thước Chunk",
 	"Enter Image Size (e.g. 512x512)": "Nhập Kích thước ảnh (vd: 512x512)",
+	"Enter language codes": "",
 	"Enter LiteLLM API Base URL (litellm_params.api_base)": "Nhập URL Cơ bản API LiteLLM (litellm_params.api_base)",
 	"Enter LiteLLM API Key (litellm_params.api_key)": "Nhập Khóa API LiteLLM (litellm_params.api_key)",
 	"Enter LiteLLM API RPM (litellm_params.rpm)": "Nhập RPM API LiteLLM (litellm_params.rpm)",
@@ -356,7 +357,6 @@
 	"Reranking model set to \"{{reranking_model}}\"": "",
 	"Reset Vector Storage": "Cài đặt lại Vector Storage",
 	"Response AutoCopy to Clipboard": "Tự động Sao chép Phản hồi vào clipboard",
-	"Retrieval Augmented Generation Settings": "",
 	"Role": "Vai trò",
 	"Rosé Pine": "Rosé Pine",
 	"Rosé Pine Dawn": "Rosé Pine Dawn",
@@ -473,6 +473,7 @@
 	"Version": "Version",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "Web",
+	"Web Loader Settings": "",
 	"Web Params": "",
 	"Webhook URL": "",
 	"WebUI Add-ons": "Tiện ích WebUI",
@@ -489,5 +490,6 @@
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "Bạn là một trợ lý hữu ích.",
 	"You're now logged in.": "Bạn đã đăng nhập.",
-	"Youtube": ""
+	"Youtube": "",
+	"Youtube Loader Settings": ""
 }

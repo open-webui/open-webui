@@ -171,6 +171,7 @@
 	"Enter Chunk Overlap": "Enter Overlap of Chunks",
 	"Enter Chunk Size": "Enter Size of Chunk",
 	"Enter Image Size (e.g. 512x512)": "Enter Size of Wow (e.g. 512x512)",
+	"Enter language codes": "",
 	"Enter LiteLLM API Base URL (litellm_params.api_base)": "Enter Base URL of LiteLLM API (litellm_params.api_base)",
 	"Enter LiteLLM API Key (litellm_params.api_key)": "Enter API Bark of LiteLLM (litellm_params.api_key)",
 	"Enter LiteLLM API RPM (litellm_params.rpm)": "Enter RPM of LiteLLM API (litellm_params.rpm)",
@@ -356,7 +357,6 @@
 	"Reranking model set to \"{{reranking_model}}\"": "",
 	"Reset Vector Storage": "Reset Vector Storage",
 	"Response AutoCopy to Clipboard": "Copy Bark Auto Bark",
-	"Retrieval Augmented Generation Settings": "",
 	"Role": "Role",
 	"Rosé Pine": "Rosé Pine",
 	"Rosé Pine Dawn": "Rosé Pine Dawn",
@@ -473,6 +473,7 @@
 	"Version": "Version much version",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "Web very web",
+	"Web Loader Settings": "",
 	"Web Params": "",
 	"Webhook URL": "",
 	"WebUI Add-ons": "WebUI Add-ons very add-ons",
@@ -489,5 +490,6 @@
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "You're a helpful assistant. Much helpful.",
 	"You're now logged in.": "You're now logged in. Much logged.",
-	"Youtube": ""
+	"Youtube": "",
+	"Youtube Loader Settings": ""
 }

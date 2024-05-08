@@ -493,13 +493,6 @@ RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
 
-# device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
-USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
-
-if USE_CUDA.lower() == "true":
-    DEVICE_TYPE = "cuda"
-else:
-    DEVICE_TYPE = "cpu"
 
 if CHROMA_HTTP_HOST != "":
     CHROMA_CLIENT = chromadb.HttpClient(
@@ -518,6 +511,16 @@ else:
         tenant=CHROMA_TENANT,
         database=CHROMA_DATABASE,
     )
+
+
+# device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
+USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
+
+if USE_CUDA.lower() == "true":
+    DEVICE_TYPE = "cuda"
+else:
+    DEVICE_TYPE = "cpu"
+
 
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "1500"))
 CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "100"))
@@ -544,6 +547,8 @@ RAG_OPENAI_API_KEY = os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY)
 ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
 )
+
+YOUTUBE_LOADER_LANGUAGE = os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(",")
 
 ####################################
 # Transcribe

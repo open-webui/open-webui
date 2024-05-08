@@ -171,6 +171,7 @@
 	"Enter Chunk Overlap": "Введите перекрытие фрагмента",
 	"Enter Chunk Size": "Введите размер фрагмента",
 	"Enter Image Size (e.g. 512x512)": "Введите размер изображения (например, 512x512)",
+	"Enter language codes": "",
 	"Enter LiteLLM API Base URL (litellm_params.api_base)": "Введите базовый URL API LiteLLM (litellm_params.api_base)",
 	"Enter LiteLLM API Key (litellm_params.api_key)": "Введите ключ API LiteLLM (litellm_params.api_key)",
 	"Enter LiteLLM API RPM (litellm_params.rpm)": "Введите RPM API LiteLLM (litellm_params.rpm)",
@@ -356,7 +357,6 @@
 	"Reranking model set to \"{{reranking_model}}\"": "",
 	"Reset Vector Storage": "Сбросить векторное хранилище",
 	"Response AutoCopy to Clipboard": "Автоматическое копирование ответа в буфер обмена",
-	"Retrieval Augmented Generation Settings": "",
 	"Role": "Роль",
 	"Rosé Pine": "Розовое сосновое дерево",
 	"Rosé Pine Dawn": "Розовое сосновое дерево рассвет",
@@ -473,6 +473,7 @@
 	"Version": "Версия",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "Веб",
+	"Web Loader Settings": "",
 	"Web Params": "",
 	"Webhook URL": "",
 	"WebUI Add-ons": "Дополнения для WebUI",
@@ -489,5 +490,6 @@
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "Вы полезный ассистент.",
 	"You're now logged in.": "Вы вошли в систему.",
-	"Youtube": ""
+	"Youtube": "",
+	"Youtube Loader Settings": ""
 }

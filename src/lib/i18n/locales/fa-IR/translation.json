@@ -171,6 +171,7 @@
 	"Enter Chunk Overlap": "مقدار Chunk Overlap را وارد کنید",
 	"Enter Chunk Size": "مقدار Chunk Size را وارد کنید",
 	"Enter Image Size (e.g. 512x512)": "اندازه تصویر را وارد کنید (مثال: 512x512)",
+	"Enter language codes": "",
 	"Enter LiteLLM API Base URL (litellm_params.api_base)": "URL پایه مربوط به LiteLLM API را وارد کنید (litellm_params.api_base)",
 	"Enter LiteLLM API Key (litellm_params.api_key)": "کلید API مربوط به LiteLLM را وارد کنید (litellm_params.api_key)",
 	"Enter LiteLLM API RPM (litellm_params.rpm)": "RPM API مربوط به LiteLLM را وارد کنید (litellm_params.rpm)",
@@ -356,7 +357,6 @@
 	"Reranking model set to \"{{reranking_model}}\"": "",
 	"Reset Vector Storage": "بازنشانی ذخیره سازی برداری",
 	"Response AutoCopy to Clipboard": "کپی خودکار پاسخ به کلیپ بورد",
-	"Retrieval Augmented Generation Settings": "",
 	"Role": "نقش",
 	"Rosé Pine": "Rosé Pine",
 	"Rosé Pine Dawn": "Rosé Pine Dawn",
@@ -473,6 +473,7 @@
 	"Version": "نسخه",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "وب",
+	"Web Loader Settings": "",
 	"Web Params": "",
 	"Webhook URL": "",
 	"WebUI Add-ons": "WebUI افزونه\u200cهای",
@@ -489,5 +490,6 @@
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "تو یک دستیار سودمند هستی.",
 	"You're now logged in.": "شما اکنون وارد شده\u200cاید.",
-	"Youtube": ""
+	"Youtube": "",
+	"Youtube Loader Settings": ""
 }

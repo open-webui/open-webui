@@ -171,6 +171,7 @@
 	"Enter Chunk Overlap": "Введіть перекриття фрагменту",
 	"Enter Chunk Size": "Введіть розмір фрагменту",
 	"Enter Image Size (e.g. 512x512)": "Введіть розмір зображення (напр. 512x512)",
+	"Enter language codes": "",
 	"Enter LiteLLM API Base URL (litellm_params.api_base)": "Введіть URL-адресу API LiteLLM (litellm_params.api_base)",
 	"Enter LiteLLM API Key (litellm_params.api_key)": "Введіть ключ API LiteLLM (litellm_params.api_key)",
 	"Enter LiteLLM API RPM (litellm_params.rpm)": "Введіть RPM API LiteLLM (litellm_params.rpm)",
@@ -356,7 +357,6 @@
 	"Reranking model set to \"{{reranking_model}}\"": "",
 	"Reset Vector Storage": "Скинути векторне сховище",
 	"Response AutoCopy to Clipboard": "Автокопіювання відповіді в буфер обміну",
-	"Retrieval Augmented Generation Settings": "",
 	"Role": "Роль",
 	"Rosé Pine": "Rosé Pine",
 	"Rosé Pine Dawn": "Rosé Pine Dawn",
@@ -473,6 +473,7 @@
 	"Version": "Версія",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "Веб",
+	"Web Loader Settings": "",
 	"Web Params": "",
 	"Webhook URL": "",
 	"WebUI Add-ons": "Додатки WebUI",
@@ -489,5 +490,6 @@
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "Ви корисний асистент.",
 	"You're now logged in.": "Ви увійшли в систему.",
-	"Youtube": ""
+	"Youtube": "",
+	"Youtube Loader Settings": ""
 }

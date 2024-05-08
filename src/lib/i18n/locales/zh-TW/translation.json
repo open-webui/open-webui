@@ -171,6 +171,7 @@
 	"Enter Chunk Overlap": "輸入 Chunk Overlap",
 	"Enter Chunk Size": "輸入 Chunk 大小",
 	"Enter Image Size (e.g. 512x512)": "輸入圖片大小（例如 512x512）",
+	"Enter language codes": "",
 	"Enter LiteLLM API Base URL (litellm_params.api_base)": "輸入 LiteLLM API 基本 URL（litellm_params.api_base）",
 	"Enter LiteLLM API Key (litellm_params.api_key)": "輸入 LiteLLM API 金鑰（litellm_params.api_key）",
 	"Enter LiteLLM API RPM (litellm_params.rpm)": "輸入 LiteLLM API RPM（litellm_params.rpm）",
@@ -356,7 +357,6 @@
 	"Reranking model set to \"{{reranking_model}}\"": "",
 	"Reset Vector Storage": "重置向量儲存空間",
 	"Response AutoCopy to Clipboard": "自動複製回答到剪貼簿",
-	"Retrieval Augmented Generation Settings": "",
 	"Role": "Role",
 	"Rosé Pine": "玫瑰松",
 	"Rosé Pine Dawn": "黎明玫瑰松",
@@ -473,6 +473,7 @@
 	"Version": "版本",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "網頁",
+	"Web Loader Settings": "",
 	"Web Params": "",
 	"Webhook URL": "",
 	"WebUI Add-ons": "WebUI 擴充套件",
@@ -489,5 +490,6 @@
 	"You have shared this chat": "",
 	"You're a helpful assistant.": "你是一位善於協助他人的助手。",
 	"You're now logged in.": "已登入。",
-	"Youtube": ""
+	"Youtube": "",
+	"Youtube Loader Settings": ""
 }
