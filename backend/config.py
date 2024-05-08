@@ -154,6 +154,23 @@ for version in soup.find_all("h2"):
 
 CHANGELOG = changelog_json
 
+
+####################################
+# WEBUI_VERSION
+####################################
+
+WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
+
+####################################
+# WEBUI_AUTH (Required for security)
+####################################
+
+WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
+WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
+    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
+)
+
+
 ####################################
 # DATA/FRONTEND BUILD DIR
 ####################################
@@ -346,7 +363,11 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 # WEBUI
 ####################################
 
-ENABLE_SIGNUP = os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
+ENABLE_SIGNUP = (
+    False
+    if WEBUI_AUTH == False
+    else os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
+)
 DEFAULT_MODELS = os.environ.get("DEFAULT_MODELS", None)
 
 
@@ -402,21 +423,6 @@ MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
-
-####################################
-# WEBUI_VERSION
-####################################
-
-WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
-
-####################################
-# WEBUI_AUTH (Required for security)
-####################################
-
-WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
-WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
-    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
-)
 
 ####################################
 # WEBUI_SECRET_KEY
