@@ -131,7 +131,9 @@ async def signin(request: Request, form_data: SigninForm):
                     request,
                     SignupForm(email=admin_email, password=admin_password, name="User"),
                 )
+
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
+
         else:
             user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
@@ -161,7 +163,7 @@ async def signin(request: Request, form_data: SigninForm):
 
 @router.post("/signup", response_model=SigninResponse)
 async def signup(request: Request, form_data: SignupForm):
-    if not request.app.state.ENABLE_SIGNUP:
+    if not request.app.state.ENABLE_SIGNUP and WEBUI_AUTH:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
         )
