@@ -444,12 +444,10 @@
 										})}
 									{/if}
 								{/each}
-								<!-- {@html marked(message.content.replaceAll('\\', '\\\\'))} -->
 							{/if}
 
 							{#if message.citations}
-								<hr class="  dark:border-gray-800 my-1" />
-								<div class="my-2.5 w-full flex flex-col gap-1">
+								<div class="mt-1 mb-2 w-full flex gap-1 items-center">
 									{#each message.citations.reduce((acc, citation) => {
 										citation.document.forEach((document, index) => {
 											const metadata = citation.metadata?.[index];
@@ -467,18 +465,19 @@
 										return acc;
 									}, []) as citation, idx}
 										<div class="flex gap-1 text-xs font-semibold">
-											<div>
-												[{idx + 1}]
-											</div>
-
 											<button
-												class="dark:text-gray-500 underline"
+												class="flex dark:text-gray-300 py-0.5 px-0.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl"
 												on:click={() => {
 													showCitationModal = true;
 													selectedCitation = citation;
 												}}
 											>
-												{citation.source.name}
+												<div class="bg-white dark:bg-gray-700 rounded-full size-4 mr-1.5">
+													{idx + 1}
+												</div>
+												<div class=" mr-1.5">
+													{citation.source.name}
+												</div>
 											</button>
 										</div>
 									{/each}
