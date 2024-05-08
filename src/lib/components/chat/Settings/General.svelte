@@ -206,6 +206,7 @@
 
 		<hr class=" dark:border-gray-700 my-3" />
 
+		{#if $user.role === 'admin'}
 		<div>
 			<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 			<textarea
@@ -214,6 +215,7 @@
 				rows="4"
 			/>
 		</div>
+		{/if}
 
 		<div class="mt-2 space-y-3 pr-1.5">
 			<div class="flex justify-between items-center text-sm">
