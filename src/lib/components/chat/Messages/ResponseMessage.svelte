@@ -467,16 +467,16 @@
 									}, []) as citation, idx}
 										<div class="flex gap-1 text-xs font-semibold">
 											<button
-												class="flex dark:text-gray-300 py-0.5 px-0.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl"
+												class="flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl"
 												on:click={() => {
 													showCitationModal = true;
 													selectedCitation = citation;
 												}}
 											>
-												<div class="bg-white dark:bg-gray-700 rounded-full size-4 mr-1.5">
+												<div class="bg-white dark:bg-gray-700 rounded-full size-4">
 													{idx + 1}
 												</div>
-												<div class=" mr-1.5">
+												<div class=" mx-2">
 													{citation.source.name}
 												</div>
 											</button>
