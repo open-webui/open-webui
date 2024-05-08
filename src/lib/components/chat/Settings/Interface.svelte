@@ -17,7 +17,7 @@
 	let titleAutoGenerateModelExternal = '';
 	let fullScreenMode = false;
 	let titleGenerationPrompt = '';
-	let splitLargeChunks = false;
+	let splitLargeChunks = true;
 
 	// Interface
 	let promptSuggestions = [];
