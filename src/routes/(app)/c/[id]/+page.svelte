@@ -15,7 +15,8 @@
 		config,
 		WEBUI_NAME,
 		tags as _tags,
-		showSidebar
+		showSidebar,
+		type Model
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream, convertMessagesToHistory } from '$lib/utils';
 
@@ -57,7 +58,7 @@
 	// let chatId = $page.params.id;
 	let showModelSelector = true;
 	let selectedModels = [''];
-	let atSelectedModel = '';
+	let atSelectedModel: Model | undefined;
 
 	let selectedModelfile = null;
 
@@ -259,43 +260,58 @@
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
-			(atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(async (modelId) => {
-				const model = $models.filter((m) => m.id === modelId).at(0);
+			(atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels).map(
+				async (modelId) => {
+					const model = $models.filter((m) => m.id === modelId).at(0);
 
-				if (model) {
-					// Create response message
-					let responseMessageId = uuidv4();
-					let responseMessage = {
-						parentId: parentId,
-						id: responseMessageId,
-						childrenIds: [],
-						role: 'assistant',
-						content: '',
-						model: model.id,
-						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-					};
+					if (model) {
+						// If there are image files, check if model is vision capable
+						const hasImages = messages.some((message) =>
+							message.files?.some((file) => file.type === 'image')
+						);
+						if (hasImages && !(model.custom_info?.vision_capable ?? true)) {
+							toast.error(
+								$i18n.t('Model {{modelName}} is not vision capable', {
+									modelName: model.custom_info?.displayName ?? model.name ?? model.id
+								})
+							);
+						}
 
-					// Add message to history and Set currentId to messageId
-					history.messages[responseMessageId] = responseMessage;
-					history.currentId = responseMessageId;
+						// Create response message
+						let responseMessageId = uuidv4();
+						let responseMessage = {
+							parentId: parentId,
+							id: responseMessageId,
+							childrenIds: [],
+							role: 'assistant',
+							content: '',
+							model: model.id,
+							modelName: model.custom_info?.displayName ?? model.name ?? model.id,
+							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+						};
 
-					// Append messageId to childrenIds of parent message
-					if (parentId !== null) {
-						history.messages[parentId].childrenIds = [
-							...history.messages[parentId].childrenIds,
-							responseMessageId
-						];
+						// Add message to history and Set currentId to messageId
+						history.messages[responseMessageId] = responseMessage;
+						history.currentId = responseMessageId;
+
+						// Append messageId to childrenIds of parent message
+						if (parentId !== null) {
+							history.messages[parentId].childrenIds = [
+								...history.messages[parentId].childrenIds,
+								responseMessageId
+							];
+						}
+
+						if (model?.external) {
+							await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+						} else if (model) {
+							await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+						}
+					} else {
+						toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 					}
-
-					if (model?.external) {
-						await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-					} else if (model) {
-						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
-					}
-				} else {
-					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
-			})
+			)
 		);
 
 		await chats.set(await getChatList(localStorage.token));
@@ -706,17 +722,17 @@
 			} else {
 				toast.error(
 					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-						provider: model.name ?? model.id
+						provider: model.custom_info?.displayName ?? model.name ?? model.id
 					})
 				);
 				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-					provider: model.name ?? model.id
+					provider: model.custom_info?.displayName ?? model.name ?? model.id
 				});
 			}
 
 			responseMessage.error = true;
 			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-				provider: model.name ?? model.id
+				provider: model.custom_info?.displayName ?? model.name ?? model.id
 			});
 			responseMessage.done = true;
 			messages = messages;

@@ -58,6 +58,7 @@ from config import (
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
+    MODEL_CONFIG,
 )
 from constants import ERROR_MESSAGES
 

@@ -46,6 +46,7 @@ from config import (
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     UPLOAD_DIR,
+    MODEL_CONFIG,
 )
 from utils.misc import calculate_sha256
 
@@ -64,6 +65,7 @@ app.add_middleware(
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.MODEL_CONFIG = MODEL_CONFIG.get("ollama", [])
 
 app.state.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.MODELS = {}
@@ -158,13 +160,24 @@ async def get_all_models():
 
     models = {
         "models": merge_models_lists(
-            map(lambda response: response["models"] if response else None, responses)
+            map(
+                lambda response: (response["models"] if response else None),
+                responses,
+            )
         )
     }
+    for model in models["models"]:
+        add_custom_info_to_model(model)
 
     app.state.MODELS = {model["model"]: model for model in models["models"]}
 
     return models
+
+
+def add_custom_info_to_model(model: dict):
+    model["custom_info"] = next(
+        (item for item in app.state.MODEL_CONFIG if item["name"] == model["model"]), {}
+    )
 
 
 @app.get("/api/tags")

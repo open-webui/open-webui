@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 
 from utils.utils import get_verified_user, get_current_user, get_admin_user
-from config import SRC_LOG_LEVELS, ENV
+from config import SRC_LOG_LEVELS, ENV, MODEL_CONFIG
 from constants import MESSAGES
 
 import os
@@ -67,6 +67,7 @@ with open(LITELLM_CONFIG_DIR, "r") as file:
 
 app.state.ENABLE = ENABLE_LITELLM
 app.state.CONFIG = litellm_config
+app.state.MODEL_CONFIG = MODEL_CONFIG.get("litellm", [])
 
 # Global variable to store the subprocess reference
 background_process = None
@@ -238,6 +239,8 @@ async def get_models(user=Depends(get_current_user)):
                         )
                     )
 
+            for model in data["data"]:
+                add_custom_info_to_model(model)
             return data
         except Exception as e:
 
@@ -258,6 +261,14 @@ async def get_models(user=Depends(get_current_user)):
                         "object": "model",
                         "created": int(time.time()),
                         "owned_by": "openai",
+                        "custom_info": next(
+                            (
+                                item
+                                for item in app.state.MODEL_CONFIG
+                                if item["name"] == model["model_name"]
+                            ),
+                            {},
+                        ),
                     }
                     for model in app.state.CONFIG["model_list"]
                 ],
@@ -268,6 +279,12 @@ async def get_models(user=Depends(get_current_user)):
             "data": [],
             "object": "list",
         }
+
+
+def add_custom_info_to_model(model: dict):
+    model["custom_info"] = next(
+        (item for item in app.state.MODEL_CONFIG if item["name"] == model["id"]), {}
+    )
 
 
 @app.get("/model/info")

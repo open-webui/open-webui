@@ -26,6 +26,7 @@ from config import (
     CACHE_DIR,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
+    MODEL_CONFIG,
 )
 from typing import List, Optional
 
@@ -47,6 +48,7 @@ app.add_middleware(
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.MODEL_CONFIG = MODEL_CONFIG.get("openai", [])
 
 app.state.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.OPENAI_API_KEYS = OPENAI_API_KEYS
@@ -217,10 +219,19 @@ async def get_all_models():
             )
         }
 
+        for model in models["data"]:
+            add_custom_info_to_model(model)
+
         log.info(f"models: {models}")
         app.state.MODELS = {model["id"]: model for model in models["data"]}
 
-        return models
+    return models
+
+
+def add_custom_info_to_model(model: dict):
+    model["custom_info"] = next(
+        (item for item in app.state.MODEL_CONFIG if item["name"] == model["id"]), {}
+    )
 
 
 @app.get("/models")

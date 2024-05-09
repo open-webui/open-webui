@@ -13,7 +13,7 @@
 		uploadModel
 	} from '$lib/apis/ollama';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user } from '$lib/stores';
+	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user, config } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { addLiteLLMModel, deleteLiteLLMModel, getLiteLLMModelInfo } from '$lib/apis/litellm';
@@ -66,6 +66,8 @@
 	let uploadMessage = '';
 
 	let deleteModelTag = '';
+
+	let showModelInfo = false;
 
 	const updateModelsHandler = async () => {
 		for (const model of $models.filter(
@@ -587,24 +589,28 @@
 											viewBox="0 0 24 24"
 											fill="currentColor"
 											xmlns="http://www.w3.org/2000/svg"
-											><style>
+										>
+											<style>
 												.spinner_ajPY {
 													transform-origin: center;
 													animation: spinner_AtaB 0.75s infinite linear;
 												}
+
 												@keyframes spinner_AtaB {
 													100% {
 														transform: rotate(360deg);
 													}
 												}
-											</style><path
+											</style>
+											<path
 												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
 												opacity=".25"
-											/><path
+											/>
+											<path
 												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
 												class="spinner_ajPY"
-											/></svg
-										>
+											/>
+										</svg>
 									</div>
 								{:else}
 									<svg
@@ -705,7 +711,10 @@
 									{/if}
 									{#each $models.filter((m) => m.size != null && (selectedOllamaUrlIdx === null ? true : (m?.urls ?? []).includes(selectedOllamaUrlIdx))) as model}
 										<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
-											>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
+											>{(model.custom_info?.displayName ?? model.name) +
+												' (' +
+												(model.size / 1024 ** 3).toFixed(1) +
+												' GB)'}</option
 										>
 									{/each}
 								</select>
@@ -833,24 +842,28 @@
 													viewBox="0 0 24 24"
 													fill="currentColor"
 													xmlns="http://www.w3.org/2000/svg"
-													><style>
+												>
+													<style>
 														.spinner_ajPY {
 															transform-origin: center;
 															animation: spinner_AtaB 0.75s infinite linear;
 														}
+
 														@keyframes spinner_AtaB {
 															100% {
 																transform: rotate(360deg);
 															}
 														}
-													</style><path
+													</style>
+													<path
 														d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
 														opacity=".25"
-													/><path
+													/>
+													<path
 														d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
 														class="spinner_ajPY"
-													/></svg
-												>
+													/>
+												</svg>
 											</div>
 										{:else}
 											<svg
@@ -932,6 +945,7 @@
 			<hr class=" dark:border-gray-700 my-2" />
 		{/if}
 
+		<!--TODO: Hide LiteLLM options when ENABLE_LITELLM=false-->
 		<div class=" space-y-3">
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div>
@@ -1126,6 +1140,79 @@
 					{/if}
 				</div>
 			</div>
+			<hr class=" dark:border-gray-700 my-2" />
 		</div>
+
+		<!--        <div class=" space-y-3">-->
+		<!--            <div class="mt-2 space-y-3 pr-1.5">-->
+		<!--                <div>-->
+		<!--                    <div class="mb-2">-->
+		<!--                        <div class="flex justify-between items-center text-xs">-->
+		<!--                            <div class=" text-sm font-medium">{$i18n.t('Manage Model Information')}</div>-->
+		<!--                            <button-->
+		<!--                                    class=" text-xs font-medium text-gray-500"-->
+		<!--                                    type="button"-->
+		<!--                                    on:click={() => {-->
+		<!--									showModelInfo = !showModelInfo;-->
+		<!--								}}>{showModelInfo ? $i18n.t('Hide') : $i18n.t('Show')}</button-->
+		<!--                            >-->
+		<!--                        </div>-->
+		<!--                    </div>-->
+
+		<!--                    {#if showModelInfo}-->
+		<!--                        <div>-->
+		<!--                            <div class="flex justify-between items-center text-xs">-->
+		<!--                                <div class=" text-sm font-medium">{$i18n.t('Current Models')}</div>-->
+		<!--                            </div>-->
+
+		<!--                            <div class="flex gap-2">-->
+		<!--                                <div class="flex-1 pb-1">-->
+		<!--                                    <select-->
+		<!--                                            class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"-->
+		<!--                                            bind:value={selectedOllamaUrlIdx}-->
+		<!--                                            placeholder={$i18n.t('Select an existing model')}-->
+		<!--                                    >-->
+		<!--                                        {#each $config. as url, idx}-->
+		<!--                                            <option value={idx} class="bg-gray-100 dark:bg-gray-700">{url}</option>-->
+		<!--                                        {/each}-->
+		<!--                                    </select>-->
+		<!--                                </div>-->
+
+		<!--                                <div>-->
+		<!--                                    <div class="flex w-full justify-end">-->
+		<!--                                        <Tooltip content="Update All Models" placement="top">-->
+		<!--                                            <button-->
+		<!--                                                    class="p-2.5 flex gap-2 items-center bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"-->
+		<!--                                                    on:click={() => {-->
+		<!--											updateModelsHandler();-->
+		<!--										}}-->
+		<!--                                            >-->
+		<!--                                                <svg-->
+		<!--                                                        xmlns="http://www.w3.org/2000/svg"-->
+		<!--                                                        viewBox="0 0 16 16"-->
+		<!--                                                        fill="currentColor"-->
+		<!--                                                        class="w-4 h-4"-->
+		<!--                                                >-->
+		<!--                                                    <path-->
+		<!--                                                            d="M7 1a.75.75 0 0 1 .75.75V6h-1.5V1.75A.75.75 0 0 1 7 1ZM6.25 6v2.94L5.03 7.72a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06L7.75 8.94V6H10a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2.25Z"-->
+		<!--                                                    />-->
+		<!--                                                    <path-->
+		<!--                                                            d="M4.268 14A2 2 0 0 0 6 15h6a2 2 0 0 0 2-2v-3a2 2 0 0 0-1-1.732V11a3 3 0 0 1-3 3H4.268Z"-->
+		<!--                                                    />-->
+		<!--                                                </svg>-->
+		<!--                                            </button>-->
+		<!--                                        </Tooltip>-->
+		<!--                                    </div>-->
+		<!--                                </div>-->
+		<!--                            </div>-->
+
+		<!--                            {#if updateModelId}-->
+		<!--                                Updating "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}-->
+		<!--                            {/if}-->
+		<!--                        </div>-->
+		<!--                    {/if}-->
+		<!--                </div>-->
+		<!--            </div>-->
+		<!--        </div>-->
 	</div>
 </div>

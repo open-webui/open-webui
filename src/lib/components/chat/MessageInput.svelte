@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { modelfiles, settings, showSidebar } from '$lib/stores';
+	import { type Model, modelfiles, settings, showSidebar } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
@@ -27,7 +27,7 @@
 	export let stopResponse: Function;
 
 	export let autoScroll = true;
-	export let selectedModel = '';
+	export let selectedModel: Model | undefined;
 
 	let chatTextAreaElement: HTMLTextAreaElement;
 	let filesInputElement;
@@ -359,6 +359,12 @@
 					inputFiles.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
 						if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+							if (selectedModel !== undefined) {
+								if (!(selectedModel.custom_info?.vision_capable ?? true)) {
+									toast.error($i18n.t('Selected model does not support image inputs.'));
+									return;
+								}
+							}
 							let reader = new FileReader();
 							reader.onload = (event) => {
 								files = [
@@ -500,7 +506,7 @@
 						}}
 					/>
 
-					{#if selectedModel !== ''}
+					{#if selectedModel !== undefined}
 						<div
 							class="px-3 py-2.5 text-left w-full flex justify-between items-center absolute bottom-0 left-0 right-0 bg-gradient-to-t from-50% from-white dark:from-gray-900"
 						>
@@ -515,14 +521,16 @@
 											: `${WEBUI_BASE_URL}/static/favicon.png`)}
 								/>
 								<div>
-									Talking to <span class=" font-medium">{selectedModel.name} </span>
+									Talking to <span class=" font-medium"
+										>{selectedModel.custom_info?.displayName ?? selectedModel.name}
+									</span>
 								</div>
 							</div>
 							<div>
 								<button
 									class="flex items-center"
 									on:click={() => {
-										selectedModel = '';
+										selectedModel = undefined;
 									}}
 								>
 									<XMark />
@@ -548,6 +556,12 @@
 								const _inputFiles = Array.from(inputFiles);
 								_inputFiles.forEach((file) => {
 									if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+										if (selectedModel !== undefined) {
+											if (!(selectedModel.custom_info?.vision_capable ?? true)) {
+												toast.error($i18n.t('Selected model does not support image inputs.'));
+												return;
+											}
+										}
 										let reader = new FileReader();
 										reader.onload = (event) => {
 											files = [
@@ -880,7 +894,7 @@
 
 									if (e.key === 'Escape') {
 										console.log('Escape');
-										selectedModel = '';
+										selectedModel = undefined;
 									}
 								}}
 								rows="1"

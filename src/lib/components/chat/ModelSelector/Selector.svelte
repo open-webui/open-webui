@@ -247,7 +247,11 @@
 							<!-- {JSON.stringify(item.info)} -->
 
 							{#if item.info.external}
-								<Tooltip content={item.info?.source ?? 'External'}>
+								<Tooltip
+									content={`${item.info?.source ?? 'External'}${
+										item.info.custom_info?.description ? '<br>' : ''
+									}${item.info.custom_info?.description?.replaceAll('\n', '<br>') ?? ''}`}
+								>
 									<div class=" mr-2">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
@@ -274,7 +278,9 @@
 										item.info?.details?.quantization_level
 											? item.info?.details?.quantization_level + ' '
 											: ''
-									}${item.info.size ? `(${(item.info.size / 1024 ** 3).toFixed(1)}GB)` : ''}`}
+									}${item.info.size ? `(${(item.info.size / 1024 ** 3).toFixed(1)}GB)` : ''}${
+										item.info.custom_info?.description ? '<br>' : ''
+									}${item.info.custom_info?.description?.replaceAll('\n', '<br>') ?? ''}`}
 								>
 									<div class=" mr-2">
 										<svg

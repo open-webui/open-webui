@@ -163,7 +163,12 @@ export const getOpenAIModels = async (token: string = '') => {
 
 	return models
 		? models
-				.map((model) => ({ id: model.id, name: model.name ?? model.id, external: true }))
+				.map((model) => ({
+					id: model.id,
+					name: model.name ?? model.id,
+					external: true,
+					custom_info: model.custom_info ?? {}
+				}))
 				.sort((a, b) => {
 					return a.name.localeCompare(b.name);
 				})

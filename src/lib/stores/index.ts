@@ -39,27 +39,34 @@ export const showSidebar = writable(false);
 export const showSettings = writable(false);
 export const showChangelog = writable(false);
 
-type Model = OpenAIModel | OllamaModel;
+export type Model = OpenAIModel | OllamaModel;
 
-type OpenAIModel = {
-	id: string;
-	name: string;
-	external: boolean;
-	source?: string;
+type ModelCustomInfo = {
+	name?: string;
+	displayName?: string;
+	description?: string;
+	vision_capable?: boolean;
 };
 
-type OllamaModel = {
+type BaseModel = {
 	id: string;
 	name: string;
+	custom_info?: ModelCustomInfo;
+};
 
-	// Ollama specific fields
+interface OpenAIModel extends BaseModel {
+	external: boolean;
+	source?: string;
+}
+
+interface OllamaModel extends BaseModel {
 	details: OllamaModelDetails;
 	size: number;
 	description: string;
 	model: string;
 	modified_at: string;
 	digest: string;
-};
+}
 
 type OllamaModelDetails = {
 	parent_model: string;
@@ -129,6 +136,20 @@ type Config = {
 	default_models?: string[];
 	default_prompt_suggestions?: PromptSuggestion[];
 	trusted_header_auth?: boolean;
+	model_config?: GlobalModelConfig;
+};
+
+type GlobalModelConfig = {
+	ollama?: ModelConfig[];
+	litellm?: ModelConfig[];
+	openai?: ModelConfig[];
+};
+
+type ModelConfig = {
+	id?: string;
+	name?: string;
+	description?: string;
+	vision_capable?: boolean;
 };
 
 type PromptSuggestion = {
