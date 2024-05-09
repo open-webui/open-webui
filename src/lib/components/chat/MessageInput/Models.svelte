@@ -24,9 +24,7 @@
 		.filter((p) =>
 			(p.custom_info?.name ?? p.name).includes(prompt.split(' ')?.at(0)?.substring(1) ?? '')
 		)
-		.sort((a, b) =>
-			(a.custom_info?.name ?? a.name).localeCompare(b.custom_info?.name ?? b.name)
-		);
+		.sort((a, b) => (a.custom_info?.name ?? a.name).localeCompare(b.custom_info?.name ?? b.name));
 
 	$: if (prompt) {
 		selectedIdx = 0;

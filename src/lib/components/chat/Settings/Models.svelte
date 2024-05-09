@@ -1247,9 +1247,7 @@
 													: model.source === 'LiteLLM'
 													? 'LiteLLM'
 													: 'OpenAI'}: {model.name}{`${
-													model.custom_info?.name
-														? ' - ' + model.custom_info?.name
-														: ''
+													model.custom_info?.name ? ' - ' + model.custom_info?.name : ''
 												}`}</option
 											>
 										{/each}
