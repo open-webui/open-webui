@@ -4,7 +4,8 @@
 	export let show = false;
 	export let src = '';
 	export let alt = '';
-
+	
+	let mounted = false;
 	const MimeTypes: { [index: string]: string } = {
 		jpeg: 'image/jpeg',
 		jpg: 'image/jpeg',
