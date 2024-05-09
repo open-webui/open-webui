@@ -78,42 +78,6 @@ Are you ready to [take the leap?](/community/projects/)
 <br>
 
 
-# Parallel Modeling Environments
-
-| Inflow | Basket of Goods| Outflow | Predicted Results |
-| ----------- | ----------- | ----------- | ----------- |
-| [Ingredients](/data-commons/docs/food/) | [Healthy Meals](/OpenFootprint) | [Nutrients](/balance/) | [Impact on Body](/balance/label_checker.html) |
-| [Suppliers](/data-pipeline/research/economy/) | [Commodities](/localsite/info/) | [Products](https://github.com/ModelEarth/OpenFootprint/tree/main/products/US) | [Impact on Environment](/community/tools/) |
-| [Stimulus ML](/RealityStream/) | Brain Waves | [Brain Voxels Firing](/RealityStream/models/random-bits-forest/) | [Eye Blinks](/RealityStream/output/blinks/) |
-| [Local Industries](/localsite/info/) | Honey Bees | [Population Change](/data-pipeline/research/bees/) | [Healthy Bee Population](/RealityStream/output/bees) |
-| [Local Industries](/localsite/info/) | [Tree Canopy](/data-commons/docs/conservation/) | Biodiversity Change | Healthy Forest Growth |
-
-<br>
-
-
-<h1>US EPA State Data Services</h1>
-
-In Feb 2024, US EPA Engineer Wes Ingwersen shared with the state partners that all data files for v1.0 of the USEEIO State Models are now published. [View Report](https://cfpub.epa.gov/si/si_public_record_Report.cfm?dirEntryId=360453&Lab=CESER) which includes [Excel versions of 2020 models](http://doi.org/10.23719/1530076) for all states.
-
-Wes wrote: We have files with models for all states for a given year in a native useeior Model format on a public server as well.
-
-TO DO: Locate the annual files Wes mentioned. How far back do they go?  
-Our 2020 matrix json resides in the [Open Footprint](/OpenFootprint/) "impacts/2020" folder.
-
-TO DO: Create interactive version of the supporting figures [including maps of the U.S.](https://doi.org/10.6084/m9.figshare.c.7041473) showing environmental pressure intensity grouped by indicator and commodity for all states and rankings of sectors by consumption by environmental pressure for 2020.
-
-The matrix JSON API that drives our [industry comparisons](../localsite/info/) uses EPA data prepared and presented using useeior (R Language),  [useeio.js](/useeio.js/footprint) and the [useeio-widgets](../io/charts/) (Javascript and HTML using the USEEIO-API).
-
-Wes wrote: As a reminder (and mentioned in the report) we’re working on Consumption-based GHG inventories (CBEI) for Maine and other Northeast states as an application of these models but the functionalities we develop and describe will be available for all States. We anticipate that being completed by early summer. 
-
-Wesley W. Ingwersen, Ph.D.
-Center for Environmental Solutions and Emergency Response (CESER)
-Office of Research and Development
-US Environmental Protection Agency
-
-[Participate through DemocracyLab](https://www.democracylab.org/projects/834) - [Contact our ModelEarth Team](../io/team/)
-<br>
-
 # Open WebUI Install
 
 If you don't have Ollama installed yet, you can run the following in your local projects folder.  
