@@ -551,6 +551,7 @@
 		toast.success(
 			$i18n.t('Model info for {{modelName}} deleted successfully', { modelName: selectedModelId })
 		);
+		models.set(await getModels());
 	};
 
 	const toggleIsVisionCapable = () => {
