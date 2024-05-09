@@ -82,7 +82,7 @@
 				</div>
 			{:else}
 				<div class="  self-center disabled:text-gray-600 disabled:hover:text-gray-600 mr-2">
-					<Tooltip content="Remove Model">
+					<Tooltip content={$i18n.t('Remove Model')}>
 						<button
 							{disabled}
 							on:click={() => {

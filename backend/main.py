@@ -15,7 +15,7 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
-
+from starlette.responses import StreamingResponse, Response
 
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
@@ -25,6 +25,8 @@ from apps.litellm.main import (
     start_litellm_background,
     shutdown_litellm_background,
 )
+
+
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
@@ -41,6 +43,8 @@ from apps.rag.utils import rag_messages
 from config import (
     CONFIG_DATA,
     WEBUI_NAME,
+    WEBUI_URL,
+    WEBUI_AUTH,
     ENV,
     VERSION,
     CHANGELOG,
@@ -74,7 +78,7 @@ class SPAStaticFiles(StaticFiles):
 
 
 print(
-    f"""
+    rf"""
   ___                    __        __   _     _   _ ___ 
  / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
 | | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || | 
@@ -100,6 +104,8 @@ origins = ["*"]
 
 class RAGMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        return_citations = False
+
         if request.method == "POST" and (
             "/api/chat" in request.url.path or "/chat/completions" in request.url.path
         ):
@@ -112,11 +118,15 @@ class RAGMiddleware(BaseHTTPMiddleware):
             # Parse string to JSON
             data = json.loads(body_str) if body_str else {}
 
+            return_citations = data.get("citations", False)
+            if "citations" in data:
+                del data["citations"]
+
             # Example: Add a new key-value pair or modify existing ones
             # data["modified"] = True  # Example modification
             if "docs" in data:
                 data = {**data}
-                data["messages"] = rag_messages(
+                data["messages"], citations = rag_messages(
                     docs=data["docs"],
                     messages=data["messages"],
                     template=rag_app.state.RAG_TEMPLATE,
@@ -128,7 +138,9 @@ class RAGMiddleware(BaseHTTPMiddleware):
                 )
                 del data["docs"]
 
-                log.debug(f"data['messages']: {data['messages']}")
+                log.debug(
+                    f"data['messages']: {data['messages']}, citations: {citations}"
+                )
 
             modified_body_bytes = json.dumps(data).encode("utf-8")
 
@@ -146,10 +158,35 @@ class RAGMiddleware(BaseHTTPMiddleware):
             ]
 
         response = await call_next(request)
+
+        if return_citations:
+            # Inject the citations into the response
+            if isinstance(response, StreamingResponse):
+                # If it's a streaming response, inject it as SSE event or NDJSON line
+                content_type = response.headers.get("Content-Type")
+                if "text/event-stream" in content_type:
+                    return StreamingResponse(
+                        self.openai_stream_wrapper(response.body_iterator, citations),
+                    )
+                if "application/x-ndjson" in content_type:
+                    return StreamingResponse(
+                        self.ollama_stream_wrapper(response.body_iterator, citations),
+                    )
+
         return response
 
     async def _receive(self, body: bytes):
         return {"type": "http.request", "body": body, "more_body": False}
+
+    async def openai_stream_wrapper(self, original_generator, citations):
+        yield f"data: {json.dumps({'citations': citations})}\n\n"
+        async for data in original_generator:
+            yield data
+
+    async def ollama_stream_wrapper(self, original_generator, citations):
+        yield f"{json.dumps({'citations': citations})}\n"
+        async for data in original_generator:
+            yield data
 
 
 app.add_middleware(RAGMiddleware)
@@ -204,6 +241,7 @@ async def get_app_config():
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
+        "auth": WEBUI_AUTH,
         "default_locale": default_locale,
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
@@ -313,6 +351,21 @@ async def get_manifest_json():
         "orientation": "portrait-primary",
         "icons": [{"src": "/static/logo.png", "type": "image/png", "sizes": "500x500"}],
     }
+
+
+@app.get("/opensearch.xml")
+async def get_opensearch_xml():
+    xml_content = rf"""
+    <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">
+    <ShortName>{WEBUI_NAME}</ShortName>
+    <Description>Search {WEBUI_NAME}</Description>
+    <InputEncoding>UTF-8</InputEncoding>
+    <Image width="16" height="16" type="image/x-icon">{WEBUI_URL}/favicon.png</Image>
+    <Url type="text/html" method="get" template="{WEBUI_URL}/?q={"{searchTerms}"}"/>
+    <moz:SearchForm>{WEBUI_URL}</moz:SearchForm>
+    </OpenSearchDescription>
+    """
+    return Response(content=xml_content, media_type="application/xml")
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

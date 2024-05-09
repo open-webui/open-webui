@@ -151,7 +151,7 @@
 
 				models.set(await getModels(localStorage.token));
 			} else {
-				toast.error('Download canceled');
+				toast.error($i18n.t('Download canceled'));
 			}
 
 			delete $MODEL_DOWNLOAD_POOL[sanitizedModelTag];
@@ -317,7 +317,7 @@
 							pullModelHandler();
 						}}
 					>
-						Pull "{searchValue}" from Ollama.com
+						{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}
 					</button>
 				{/if}
 
@@ -368,7 +368,7 @@
 						</div>
 
 						<div class="mr-2 translate-y-0.5">
-							<Tooltip content="Cancel">
+							<Tooltip content={$i18n.t('Cancel')}>
 								<button
 									class="text-gray-800 dark:text-gray-100"
 									on:click={() => {

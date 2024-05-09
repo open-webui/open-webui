@@ -82,3 +82,12 @@ select {
 .katex-mathml {
 	display: none;
 }
+
+.scrollbar-none:active::-webkit-scrollbar-thumb,
+.scrollbar-none:focus::-webkit-scrollbar-thumb,
+.scrollbar-none:hover::-webkit-scrollbar-thumb {
+	visibility: visible;
+}
+.scrollbar-none::-webkit-scrollbar-thumb {
+	visibility: hidden;
+}

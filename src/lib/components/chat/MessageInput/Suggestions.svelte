@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Bolt from '$lib/components/icons/Bolt.svelte';
-	import {getContext, onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	export let submitPrompt: Function;
 	export let suggestionPrompts = [];
@@ -28,7 +30,6 @@
 			});
 		}
 	});
-	const i18n = getContext('i18n');
 </script>
 
 {#if prompts.length > 0}
@@ -72,7 +73,7 @@
 						<div
 							class="text-xs text-gray-400 group-hover:text-gray-500 dark:text-gray-600 dark:group-hover:text-gray-500 transition self-center"
 						>
-							Prompt
+							{$i18n.t('Prompt')}
 						</div>
 
 						<div

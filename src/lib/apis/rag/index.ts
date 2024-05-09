@@ -32,9 +32,16 @@ type ChunkConfigForm = {
 	chunk_overlap: number;
 };
 
+type YoutubeConfigForm = {
+	language: string[];
+	translation?: string | null;
+};
+
 type RAGConfigForm = {
-	pdf_extract_images: boolean;
-	chunk: ChunkConfigForm;
+	pdf_extract_images?: boolean;
+	chunk?: ChunkConfigForm;
+	web_loader_ssl_verification?: boolean;
+	youtube?: YoutubeConfigForm;
 };
 
 export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {

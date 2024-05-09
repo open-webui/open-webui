@@ -107,7 +107,7 @@
 
 				reader.readAsText(file);
 			} else {
-				toast.error(`File not found.`);
+				toast.error($i18n.t('File not found.'));
 			}
 		}
 	};
