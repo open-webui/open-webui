@@ -29,6 +29,7 @@ import uuid
 import base64
 import json
 import logging
+import os
 
 from config import (
     SRC_LOG_LEVELS,
@@ -43,7 +44,6 @@ from config import (
     IMAGE_SIZE,
     IMAGE_STEPS,
 )
-
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["IMAGES"])
@@ -68,14 +68,20 @@ app.state.OPENAI_API_KEY = IMAGES_OPENAI_API_KEY
 
 app.state.MODEL = IMAGE_GENERATION_MODEL
 
-
 app.state.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
 app.state.COMFYUI_BASE_URL = COMFYUI_BASE_URL
-
 
 app.state.IMAGE_SIZE = IMAGE_SIZE
 app.state.IMAGE_STEPS = IMAGE_STEPS
 
+app.state.AUTOMATIC1111_API_AUTH = os.getenv("AUTOMATIC1111_API_AUTH")
+
+def get_automatic1111_session():
+    session = requests.Session()
+    if app.state.AUTOMATIC1111_API_AUTH:
+        username, password = app.state.AUTOMATIC1111_API_AUTH.split(":")
+        session.auth = (username, password)
+    return session
 
 @app.get("/config")
 async def get_config(request: Request, user=Depends(get_admin_user)):
@@ -244,9 +250,8 @@ def get_models(user=Depends(get_current_user)):
             )
 
         else:
-            r = requests.get(
-                url=f"{app.state.AUTOMATIC1111_BASE_URL}/sdapi/v1/sd-models"
-            )
+            session = get_automatic1111_session()
+            r = session.get(url=f"{app.state.AUTOMATIC1111_BASE_URL}/sd-models")
             models = r.json()
             return list(
                 map(
@@ -267,7 +272,8 @@ async def get_default_model(user=Depends(get_admin_user)):
         elif app.state.ENGINE == "comfyui":
             return {"model": app.state.MODEL if app.state.MODEL else ""}
         else:
-            r = requests.get(url=f"{app.state.AUTOMATIC1111_BASE_URL}/sdapi/v1/options")
+            session = get_automatic1111_session()
+            r = session.get(url=f"{app.state.AUTOMATIC1111_BASE_URL}/sdapi/v1/options")
             options = r.json()
             return {"model": options["sd_model_checkpoint"]}
     except Exception as e:
@@ -287,12 +293,13 @@ def set_model_handler(model: str):
         app.state.MODEL = model
         return app.state.MODEL
     else:
-        r = requests.get(url=f"{app.state.AUTOMATIC1111_BASE_URL}/sdapi/v1/options")
+        session = get_automatic1111_session()
+        r = session.get(url=f"{app.state.AUTOMATIC1111_BASE_URL}/sdapi/v1/options")
         options = r.json()
 
         if model != options["sd_model_checkpoint"]:
             options["sd_model_checkpoint"] = model
-            r = requests.post(
+            r = session.post(
                 url=f"{app.state.AUTOMATIC1111_BASE_URL}/sdapi/v1/options", json=options
             )
 
@@ -374,7 +381,6 @@ def save_url_image(url):
     except Exception as e:
         log.exception(f"Error saving image: {e}")
         return None
-
 
 @app.post("/generations")
 def generate_image(
@@ -475,7 +481,8 @@ def generate_image(
             if form_data.negative_prompt != None:
                 data["negative_prompt"] = form_data.negative_prompt
 
-            r = requests.post(
+            session = get_automatic1111_session()
+            r = session.post(
                 url=f"{app.state.AUTOMATIC1111_BASE_URL}/sdapi/v1/txt2img",
                 json=data,
             )
