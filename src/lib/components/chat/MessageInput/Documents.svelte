@@ -100,7 +100,7 @@
 	};
 
 	const confirmSelectBilibili = async (url) => {
-		dispatch('bilibili', url);
+		dispatch('Bilibili', url);
 
 		prompt = removeFirstHashWord(prompt);
 		const chatInputElement = document.getElementById('chat-textarea');
