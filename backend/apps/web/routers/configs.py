@@ -35,19 +35,6 @@ class SetDefaultSuggestionsForm(BaseModel):
     suggestions: List[PromptSuggestion]
 
 
-class ModelConfig(BaseModel):
-    id: str
-    name: str
-    description: str
-    vision_capable: bool
-
-
-class SetModelConfigForm(BaseModel):
-    ollama: List[ModelConfig]
-    litellm: List[ModelConfig]
-    openai: List[ModelConfig]
-
-
 ############################
 # SetDefaultModels
 ############################
@@ -70,14 +57,3 @@ async def set_global_default_suggestions(
     data = form_data.model_dump()
     request.app.state.DEFAULT_PROMPT_SUGGESTIONS = data["suggestions"]
     return request.app.state.DEFAULT_PROMPT_SUGGESTIONS
-
-
-@router.post("/models", response_model=SetModelConfigForm)
-async def set_global_default_suggestions(
-    request: Request,
-    form_data: SetModelConfigForm,
-    user=Depends(get_admin_user),
-):
-    data = form_data.model_dump()
-    request.app.state.MODEL_CONFIG = data
-    return request.app.state.MODEL_CONFIG
