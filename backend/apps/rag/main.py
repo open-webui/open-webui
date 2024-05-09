@@ -157,10 +157,8 @@ def update_reranking_model(
         app.state.sentence_transformer_rf = None
 
 
-update_embedding_model(
-    app.state.RAG_EMBEDDING_MODEL,
-    RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-)
+# Temporarily remove the call of `update_embedding_model`
+app.state.sentence_transformer_ef = None
 
 update_reranking_model(
     app.state.RAG_RERANKING_MODEL,
