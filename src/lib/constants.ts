@@ -1,10 +1,10 @@
 import { dev } from '$app/environment';
 // import { version } from '../../package.json';
 
-export const APP_NAME = 'HR/IT Service';
-// export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
+export const APP_NAME = 'IT/HR RAG Service';
+export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
 // temp backend server
-export const WEBUI_BASE_URL = dev ? `http://192.168.100.14:30392` : ``;
+// export const WEBUI_BASE_URL = dev ? `http://192.168.100.14:30392` : ``;
 
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 

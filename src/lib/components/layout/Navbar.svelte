@@ -33,7 +33,7 @@
 	<div class=" flex max-w-full w-full mx-auto px-5 pt-3 md:px-[1.3rem]">
 		<div class="flex items-center w-full max-w-full">
 			<div class="w-[30%] overflow-hidden max-w-full text-xl font-bold text-black">
-				HR/IT service application
+				IT/HR RAG Service
 			</div>
 			<ModelSelector bind:selectedModels showSetDefault={false} />
 
