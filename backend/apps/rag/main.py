@@ -29,13 +29,13 @@ from langchain_community.document_loaders import (
     UnstructuredRSTLoader,
     UnstructuredExcelLoader,
     YoutubeLoader,
+    BiliBiliLoader
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 import validators
 import urllib.parse
 import socket
-
 
 from pydantic import BaseModel
 from typing import Optional
@@ -119,20 +119,18 @@ app.state.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.RAG_TEMPLATE = RAG_TEMPLATE
 
-
 app.state.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
 app.state.OPENAI_API_KEY = RAG_OPENAI_API_KEY
 
 app.state.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
-
 
 app.state.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
 app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 
 def update_embedding_model(
-    embedding_model: str,
-    update_model: bool = False,
+        embedding_model: str,
+        update_model: bool = False,
 ):
     if embedding_model and app.state.RAG_EMBEDDING_ENGINE == "":
         app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
@@ -145,8 +143,8 @@ def update_embedding_model(
 
 
 def update_reranking_model(
-    reranking_model: str,
-    update_model: bool = False,
+        reranking_model: str,
+        update_model: bool = False,
 ):
     if reranking_model:
         app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
@@ -168,7 +166,6 @@ update_reranking_model(
     RAG_RERANKING_MODEL_AUTO_UPDATE,
 )
 
-
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.RAG_EMBEDDING_ENGINE,
     app.state.RAG_EMBEDDING_MODEL,
@@ -178,7 +175,6 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
 )
 
 origins = ["*"]
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -241,7 +237,7 @@ class EmbeddingModelUpdateForm(BaseModel):
 
 @app.post("/embedding/update")
 async def update_embedding_config(
-    form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
+        form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
 ):
     log.info(
         f"Updating embedding model: {app.state.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
@@ -288,7 +284,7 @@ class RerankingModelUpdateForm(BaseModel):
 
 @app.post("/reranking/update")
 async def update_reranking_config(
-    form_data: RerankingModelUpdateForm, user=Depends(get_admin_user)
+        form_data: RerankingModelUpdateForm, user=Depends(get_admin_user)
 ):
     log.info(
         f"Updating reranking model: {app.state.RAG_RERANKING_MODEL} to {form_data.reranking_model}"
@@ -423,7 +419,7 @@ class QuerySettingsForm(BaseModel):
 
 @app.post("/query/settings/update")
 async def update_query_settings(
-    form_data: QuerySettingsForm, user=Depends(get_admin_user)
+        form_data: QuerySettingsForm, user=Depends(get_admin_user)
 ):
     app.state.RAG_TEMPLATE = form_data.template if form_data.template else RAG_TEMPLATE
     app.state.TOP_K = form_data.k if form_data.k else 4
@@ -448,8 +444,8 @@ class QueryDocForm(BaseModel):
 
 @app.post("/query/doc")
 def query_doc_handler(
-    form_data: QueryDocForm,
-    user=Depends(get_current_user),
+        form_data: QueryDocForm,
+        user=Depends(get_current_user),
 ):
     try:
         if app.state.ENABLE_RAG_HYBRID_SEARCH:
@@ -486,8 +482,8 @@ class QueryCollectionsForm(BaseModel):
 
 @app.post("/query/collection")
 def query_collection_handler(
-    form_data: QueryCollectionsForm,
-    user=Depends(get_current_user),
+        form_data: QueryCollectionsForm,
+        user=Depends(get_current_user),
 ):
     try:
         if app.state.ENABLE_RAG_HYBRID_SEARCH:
@@ -524,6 +520,31 @@ def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
             language=app.state.YOUTUBE_LOADER_LANGUAGE,
             translation=app.state.YOUTUBE_LOADER_TRANSLATION,
         )
+        data = loader.load()
+
+        collection_name = form_data.collection_name
+        if collection_name == "":
+            collection_name = calculate_sha256_string(form_data.url)[:63]
+
+        store_data_in_vector_db(data, collection_name, overwrite=True)
+        return {
+            "status": True,
+            "collection_name": collection_name,
+            "filename": form_data.url,
+        }
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+@app.post("/bilibili")
+def store_bilibili_video(form_data: UrlForm, user=Depends(get_current_user)):
+    try:
+        url_list = [form_data.url]
+        loader = BiliBiliLoader(url_list)
         data = loader.load()
 
         collection_name = form_data.collection_name
@@ -603,7 +624,6 @@ def resolve_hostname(hostname):
 
 
 def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> bool:
-
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.CHUNK_SIZE,
         chunk_overlap=app.state.CHUNK_OVERLAP,
@@ -620,7 +640,7 @@ def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> b
 
 
 def store_text_in_vector_db(
-    text, metadata, collection_name, overwrite: bool = False
+        text, metadata, collection_name, overwrite: bool = False
 ) -> bool:
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.CHUNK_SIZE,
@@ -658,11 +678,11 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
         embeddings = embedding_func(embedding_texts)
 
         for batch in create_batches(
-            api=CHROMA_CLIENT,
-            ids=[str(uuid.uuid4()) for _ in texts],
-            metadatas=metadatas,
-            embeddings=embeddings,
-            documents=texts,
+                api=CHROMA_CLIENT,
+                ids=[str(uuid.uuid4()) for _ in texts],
+                metadatas=metadatas,
+                embeddings=embeddings,
+                documents=texts,
         ):
             collection.add(*batch)
 
@@ -739,9 +759,9 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
     elif file_content_type == "application/epub+zip":
         loader = UnstructuredEPubLoader(file_path)
     elif (
-        file_content_type
-        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        or file_ext in ["doc", "docx"]
+            file_content_type
+            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            or file_ext in ["doc", "docx"]
     ):
         loader = Docx2txtLoader(file_path)
     elif file_content_type in [
@@ -750,7 +770,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
     ] or file_ext in ["xls", "xlsx"]:
         loader = UnstructuredExcelLoader(file_path)
     elif file_ext in known_source_ext or (
-        file_content_type and file_content_type.find("text/") >= 0
+            file_content_type and file_content_type.find("text/") >= 0
     ):
         loader = TextLoader(file_path, autodetect_encoding=True)
     else:
@@ -762,9 +782,9 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
 
 @app.post("/doc")
 def store_doc(
-    collection_name: Optional[str] = Form(None),
-    file: UploadFile = File(...),
-    user=Depends(get_current_user),
+        collection_name: Optional[str] = Form(None),
+        file: UploadFile = File(...),
+        user=Depends(get_current_user),
 ):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
 
@@ -825,10 +845,9 @@ class TextRAGForm(BaseModel):
 
 @app.post("/text")
 def store_text(
-    form_data: TextRAGForm,
-    user=Depends(get_current_user),
+        form_data: TextRAGForm,
+        user=Depends(get_current_user),
 ):
-
     collection_name = form_data.collection_name
     if collection_name == None:
         collection_name = calculate_sha256_string(form_data.content)
