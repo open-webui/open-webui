@@ -559,6 +559,8 @@
 										if (selectedModel !== undefined) {
 											if (!(selectedModel.custom_info?.vision_capable ?? true)) {
 												toast.error($i18n.t('Selected model does not support image inputs.'));
+												inputFiles = null;
+												filesInputElement.value = '';
 												return;
 											}
 										}
