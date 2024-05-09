@@ -25,13 +25,19 @@ import uuid
 import aiohttp
 import asyncio
 import logging
+import time
 from urllib.parse import urlparse
 from typing import Optional, List, Union
 
 
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
-from utils.utils import decode_token, get_current_user, get_admin_user
+from utils.utils import (
+    decode_token,
+    get_current_user,
+    get_verified_user,
+    get_admin_user,
+)
 
 
 from config import (
@@ -166,7 +172,7 @@ async def get_all_models():
 @app.get("/api/tags")
 @app.get("/api/tags/{url_idx}")
 async def get_ollama_tags(
-    url_idx: Optional[int] = None, user=Depends(get_current_user)
+    url_idx: Optional[int] = None, user=Depends(get_verified_user)
 ):
     if url_idx == None:
         models = await get_all_models()
@@ -573,7 +579,7 @@ async def delete_model(
 
 
 @app.post("/api/show")
-async def show_model_info(form_data: ModelNameForm, user=Depends(get_current_user)):
+async def show_model_info(form_data: ModelNameForm, user=Depends(get_verified_user)):
     if form_data.name not in app.state.MODELS:
         raise HTTPException(
             status_code=400,
@@ -622,7 +628,7 @@ class GenerateEmbeddingsForm(BaseModel):
 async def generate_embeddings(
     form_data: GenerateEmbeddingsForm,
     url_idx: Optional[int] = None,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     if url_idx == None:
         model = form_data.model
@@ -740,7 +746,7 @@ class GenerateCompletionForm(BaseModel):
 async def generate_completion(
     form_data: GenerateCompletionForm,
     url_idx: Optional[int] = None,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
 
     if url_idx == None:
@@ -843,7 +849,7 @@ class GenerateChatCompletionForm(BaseModel):
 async def generate_chat_completion(
     form_data: GenerateChatCompletionForm,
     url_idx: Optional[int] = None,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
 
     if url_idx == None:
@@ -952,7 +958,7 @@ class OpenAIChatCompletionForm(BaseModel):
 async def generate_openai_chat_completion(
     form_data: OpenAIChatCompletionForm,
     url_idx: Optional[int] = None,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
 
     if url_idx == None:
@@ -1034,6 +1040,75 @@ async def generate_openai_chat_completion(
             status_code=r.status_code if r else 500,
             detail=error_detail,
         )
+
+
+@app.get("/v1/models")
+@app.get("/v1/models/{url_idx}")
+async def get_openai_models(
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+):
+    if url_idx == None:
+        models = await get_all_models()
+
+        if app.state.ENABLE_MODEL_FILTER:
+            if user.role == "user":
+                models["models"] = list(
+                    filter(
+                        lambda model: model["name"] in app.state.MODEL_FILTER_LIST,
+                        models["models"],
+                    )
+                )
+
+        return {
+            "data": [
+                {
+                    "id": model["model"],
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "openai",
+                }
+                for model in models["models"]
+            ],
+            "object": "list",
+        }
+
+    else:
+        url = app.state.OLLAMA_BASE_URLS[url_idx]
+        try:
+            r = requests.request(method="GET", url=f"{url}/api/tags")
+            r.raise_for_status()
+
+            models = r.json()
+
+            return {
+                "data": [
+                    {
+                        "id": model["model"],
+                        "object": "model",
+                        "created": int(time.time()),
+                        "owned_by": "openai",
+                    }
+                    for model in models["models"]
+                ],
+                "object": "list",
+            }
+
+        except Exception as e:
+            log.exception(e)
+            error_detail = "Open WebUI: Server Connection Error"
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "error" in res:
+                        error_detail = f"Ollama: {res['error']}"
+                except:
+                    error_detail = f"Ollama: {e}"
+
+            raise HTTPException(
+                status_code=r.status_code if r else 500,
+                detail=error_detail,
+            )
 
 
 class UrlForm(BaseModel):
@@ -1251,7 +1326,9 @@ def upload_model(file: UploadFile = File(...), url_idx: Optional[int] = None):
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
-async def deprecated_proxy(path: str, request: Request, user=Depends(get_current_user)):
+async def deprecated_proxy(
+    path: str, request: Request, user=Depends(get_verified_user)
+):
     url = app.state.OLLAMA_BASE_URLS[0]
     target_url = f"{url}/{path}"
 

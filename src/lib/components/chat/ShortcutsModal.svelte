@@ -210,15 +210,17 @@
 			</div>
 		</div>
 
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Symbol startup prompt')}</div>
+		<div class=" flex justify-between dark:text-gray-300 px-5">
+			<div class=" text-lg font-medium self-center">{$i18n.t('Input commands')}</div>
 		</div>
 
 		<div class="flex flex-col md:flex-row w-full p-5 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<div class="flex flex-col space-y-3 w-full self-start">
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Symbol startup prompt to activate RAG')}</div>
+						<div class=" text-sm">
+							{$i18n.t('Attach file')}
+						</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
@@ -230,7 +232,9 @@
 					</div>
 
 					<div class="w-full flex justify-between items-center">
-						<div class=" text-sm">{$i18n.t('Symbol startup prompt to activate Chat Prompts')}</div>
+						<div class=" text-sm">
+							{$i18n.t('Add custom prompt')}
+						</div>
 
 						<div class="flex space-x-1 text-xs">
 							<div
@@ -243,7 +247,7 @@
 
 					<div class="w-full flex justify-between items-center">
 						<div class=" text-sm">
-							{$i18n.t('Symbol startup prompt to activate Specific Models')}
+							{$i18n.t('Select model')}
 						</div>
 
 						<div class="flex space-x-1 text-xs">
