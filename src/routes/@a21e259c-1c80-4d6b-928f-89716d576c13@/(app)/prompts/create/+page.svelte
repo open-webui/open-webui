@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { prompts } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import { createNewPrompt, getPrompts } from '$lib/apis/prompts';
 
@@ -35,7 +36,7 @@
 
 			if (prompt) {
 				await prompts.set(await getPrompts(localStorage.token));
-				await goto('/prompts');
+				await goto(WEBUI_BASE_PATH+'/prompts');
 			}
 		} else {
 			toast.error(

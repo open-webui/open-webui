@@ -8,6 +8,7 @@
 
 	import { settings, user, config, modelfiles } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import { createModel } from '$lib/apis/ollama';
 	import { getModelfiles, updateModelfileByTagName } from '$lib/apis/modelfiles';
@@ -80,7 +81,7 @@
 				categories[category.toLowerCase()] = true;
 			}
 		} else {
-			goto('/modelfiles');
+			goto(WEBUI_BASE_PATH+'/modelfiles');
 		}
 	});
 
@@ -174,7 +175,7 @@
 					suggestionPrompts: suggestions.filter((prompt) => prompt.content !== ''),
 					categories: Object.keys(categories).filter((category) => categories[category])
 				});
-				await goto('/modelfiles');
+				await goto(WEBUI_BASE_PATH+'/modelfiles');
 			}
 		}
 		loading = false;

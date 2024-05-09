@@ -15,7 +15,8 @@ const config = {
 			pages: 'build',
 			assets: 'build',
 			fallback: 'index.html'
-		})
+		}),
+		appDir: '@a21e259c-1c80-4d6b-928f-89716d576c13@/app'
 	},
 	onwarn: (warning, handler) => {
 		const { code, _ } = warning;

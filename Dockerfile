@@ -11,6 +11,9 @@ ARG USE_CUDA_VER=cu121
 # IMPORTANT: If you change the embedding model (sentence-transformers/all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
 ARG USE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ARG USE_RERANKING_MODEL=""
+# Set the uid/gid used (requirement while mounting shared directory)
+ARG UID=5000
+ARG GID=5000
 
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:21-alpine3.19 as build
@@ -20,7 +23,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY . .
+COPY src src
+COPY static static
+COPY *.js *.json *.ts .npmrc CHANGELOG.md ./
 RUN npm run build
 
 ######## WebUI backend ########
@@ -32,6 +37,8 @@ ARG USE_OLLAMA
 ARG USE_CUDA_VER
 ARG USE_EMBEDDING_MODEL
 ARG USE_RERANKING_MODEL
+ARG UID
+ARG GID
 
 ## Basis ##
 ENV ENV=prod \
@@ -74,6 +81,9 @@ ENV HF_HOME="/app/backend/data/cache/embedding/models"
 #### Other models ##########################################################
 
 WORKDIR /app/backend
+# To run as root creates uses while mounting 
+RUN groupadd -g ${GID} -o webui
+RUN useradd -u ${UID} -g ${GID} webui -m -d /app/backend
 
 ENV HOME /root
 RUN mkdir -p $HOME/.cache/chroma
@@ -131,7 +141,9 @@ COPY --from=build /app/package.json /app/package.json
 
 # copy backend files
 COPY ./backend .
+RUN cp -p /app/build/index.html /app/build/index.html.am ; chown -R webui:webui /app
 
+USER webui
 EXPOSE 8080
 
 CMD [ "bash", "start.sh"]

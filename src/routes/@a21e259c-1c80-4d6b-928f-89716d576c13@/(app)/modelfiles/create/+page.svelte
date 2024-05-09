@@ -3,6 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { settings, user, config, modelfiles, models } from '$lib/stores';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import { splitStream } from '$lib/utils';
@@ -204,7 +205,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 					categories: Object.keys(categories).filter((category) => categories[category]),
 					user: modelfileCreator !== null ? modelfileCreator : undefined
 				});
-				await goto('/modelfiles');
+				await goto(WEBUI_BASE_PATH+'/modelfiles');
 			}
 		}
 		loading = false;

@@ -6,6 +6,7 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { WEBUI_NAME, modelfiles, settings, user } from '$lib/stores';
+        import { WEBUI_DEFAULT_USER_ICON, WEBUI_BASE_PATH } from '$lib/constants';
 	import { createModel, deleteModel } from '$lib/apis/ollama';
 	import {
 		createNewModelfile,
@@ -85,7 +86,7 @@
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<div class=" text-2xl font-semibold mb-3">{$i18n.t('My Modelfiles')}</div>
 
-			<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2" href="/modelfiles/create">
+			<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2" href="{WEBUI_BASE_PATH+'/modelfiles/create'}">
 				<div class=" self-center w-10">
 					<div
 						class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
@@ -120,12 +121,12 @@
 					>
 						<a
 							class=" flex flex-1 space-x-4 cursor-pointer w-full"
-							href={`/?models=${encodeURIComponent(modelfile.tagName)}`}
+							href={WEBUI_BASE_PATH+`/?models=${encodeURIComponent(modelfile.tagName)}`}
 						>
 							<div class=" self-center w-10">
 								<div class=" rounded-full bg-stone-700">
 									<img
-										src={modelfile.imageUrl ?? '/user.png'}
+										src={modelfile.imageUrl ?? WEBUI_DEFAULT_USER_ICON}
 										alt="modelfile profile"
 										class=" rounded-full w-full h-auto object-cover"
 									/>
@@ -143,7 +144,7 @@
 							<a
 								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 								type="button"
-								href={`/modelfiles/edit?tag=${encodeURIComponent(modelfile.tagName)}`}
+								href={WEBUI_BASE_PATH+`/modelfiles/edit?tag=${encodeURIComponent(modelfile.tagName)}`}
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -167,7 +168,7 @@
 								on:click={() => {
 									// console.log(modelfile);
 									sessionStorage.modelfile = JSON.stringify(modelfile);
-									goto('/modelfiles/create');
+									goto(WEBUI_BASE_PATH+'/modelfiles/create');
 								}}
 							>
 								<svg

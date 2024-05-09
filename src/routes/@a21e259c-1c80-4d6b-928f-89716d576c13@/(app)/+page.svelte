@@ -19,6 +19,7 @@
 		showSidebar
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import { generateChatCompletion, cancelOllamaRequest } from '$lib/apis/ollama';
 	import {
@@ -112,7 +113,7 @@
 			await cancelOllamaRequest(localStorage.token, currentRequestId);
 			currentRequestId = null;
 		}
-		window.history.replaceState(history.state, '', `/`);
+		window.history.replaceState(history.state, '', WEBUI_BASE_PATH+'/');
 		await chatId.set('');
 
 		autoScroll = true;
@@ -537,7 +538,7 @@
 		}
 
 		if (messages.length == 2 && messages.at(1).content !== '') {
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			window.history.replaceState(history.state, '', `${WEBUI_BASE_PATH}/c/${_chatId}`);
 			const _title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, _title);
 		}
@@ -726,7 +727,7 @@
 		}
 
 		if (messages.length == 2) {
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			window.history.replaceState(history.state, '', `${WEBUI_BASE_PATH}/c/${_chatId}`);
 
 			const _title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, _title);

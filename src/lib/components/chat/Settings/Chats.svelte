@@ -3,6 +3,7 @@
 	const { saveAs } = fileSaver;
 
 	import { chats, user, config } from '$lib/stores';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import {
 		createNewChat,
@@ -76,7 +77,7 @@
 	};
 
 	const deleteChats = async () => {
-		await goto('/');
+		await goto(WEBUI_BASE_PATH+'/');
 		await deleteAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
 		});
@@ -88,7 +89,7 @@
 		console.log(saveChatHistory);
 
 		if (saveChatHistory === false) {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH+'/');
 		}
 		saveSettings({ saveChatHistory: saveChatHistory });
 	};

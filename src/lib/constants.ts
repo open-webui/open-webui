@@ -4,7 +4,12 @@ import { dev } from '$app/environment';
 export const APP_NAME = 'Open WebUI';
 export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
 
+export const WEBUI_PREFIX = '@a21e259c-1c80-4d6b-928f-89716d576c13@';
+export const WEBUI_BASE_PATH = '/'+WEBUI_PREFIX+'/app';
+export const WEBUI_BASE_URL = (dev ? `http://${location.hostname}:8080` : '')+'/'+WEBUI_PREFIX;
+
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
+export const WEBUI_DEFAULT_USER_ICON = '/'+WEBUI_PREFIX+'/user.png';
 
 export const LITELLM_API_BASE_URL = `${WEBUI_BASE_URL}/litellm/api`;
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;

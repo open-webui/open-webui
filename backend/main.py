@@ -49,6 +49,7 @@ from config import (
     VERSION,
     CHANGELOG,
     FRONTEND_BUILD_DIR,
+    FRONTEND_APP_ROOT,
     CACHE_DIR,
     STATIC_DIR,
     ENABLE_LITELLM,
@@ -93,6 +94,7 @@ https://github.com/open-webui/open-webui
 )
 
 app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
+app = FastAPI(root_path=FRONTEND_APP_ROOT, docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST

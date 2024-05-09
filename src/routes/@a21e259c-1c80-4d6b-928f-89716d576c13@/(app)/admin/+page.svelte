@@ -1,5 +1,5 @@
 <script>
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_PATH } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
@@ -70,7 +70,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH+'/');
 		} else {
 			users = await getUsers(localStorage.token);
 		}

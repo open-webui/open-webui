@@ -177,6 +177,7 @@ WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
 
 DATA_DIR = str(Path(os.getenv("DATA_DIR", "./data")).resolve())
 FRONTEND_BUILD_DIR = str(Path(os.getenv("FRONTEND_BUILD_DIR", "../build")))
+FRONTEND_APP_ROOT = str(Path(os.getenv("FRONTEND_APP_ROOT", "/@a21e259c-1c80-4d6b-928f-89716d576c13@")))
 
 try:
     with open(f"{DATA_DIR}/config.json", "r") as f:

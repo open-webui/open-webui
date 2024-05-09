@@ -12,7 +12,7 @@
 
 	import 'tippy.js/dist/tippy.css';
 
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_BASE_PATH } from '$lib/constants';
 	import i18n, { initI18n } from '$lib/i18n';
 
 	setContext('i18n', i18n);
@@ -50,15 +50,15 @@
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
-						await goto('/auth');
+						await goto(WEBUI_BASE_PATH+'/auth');
 					}
 				} else {
-					await goto('/auth');
+					await goto(WEBUI_BASE_PATH+'/auth');
 				}
 			}
 		} else {
 			// Redirect to /error when Backend Not Detected
-			await goto(`/error`);
+			await goto(WEBUI_BASE_PATH+'/error');
 		}
 
 		await tick();
@@ -74,8 +74,8 @@
 
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
 	<!-- feel free to make a PR to fix if anyone wants to see it return -->
-	<!-- <link rel="stylesheet" type="text/css" href="/themes/rosepine.css" />
-	<link rel="stylesheet" type="text/css" href="/themes/rosepine-dawn.css" /> -->
+	<!-- <link rel="stylesheet" type="text/css" href="{WEBUI_BASE_PATH}/themes/rosepine.css" />
+	<link rel="stylesheet" type="text/css" href="{WEBUI_BASE_PATH}/themes/rosepine-dawn.css" /> -->
 </svelte:head>
 
 {#if loaded}

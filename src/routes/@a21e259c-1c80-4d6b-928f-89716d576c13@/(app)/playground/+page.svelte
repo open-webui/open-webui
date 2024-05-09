@@ -9,6 +9,7 @@
 		LITELLM_API_BASE_URL,
 		OLLAMA_API_BASE_URL,
 		OPENAI_API_BASE_URL,
+		WEBUI_BASE_PATH,
 		WEBUI_API_BASE_URL
 	} from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
@@ -248,7 +249,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH+'/');
 		}
 
 		if ($settings?.models) {

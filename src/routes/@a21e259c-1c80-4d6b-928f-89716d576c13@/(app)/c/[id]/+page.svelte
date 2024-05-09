@@ -40,6 +40,7 @@
 		LITELLM_API_BASE_URL,
 		OPENAI_API_BASE_URL,
 		OLLAMA_API_BASE_URL,
+		WEBUI_BASE_PATH,
 		WEBUI_BASE_URL
 	} from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
@@ -115,7 +116,7 @@
 				const chatInput = document.getElementById('chat-textarea');
 				chatInput?.focus();
 			} else {
-				await goto('/');
+				await goto(WEBUI_BASE_PATH+'/');
 			}
 		})();
 	}
@@ -127,7 +128,7 @@
 	const loadChat = async () => {
 		await chatId.set($page.params.id);
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH+'/');
 			return null;
 		});
 
@@ -541,7 +542,7 @@
 		}
 
 		if (messages.length == 2 && messages.at(1).content !== '') {
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			window.history.replaceState(history.state, '', `${WEBUI_BASE_PATH}/c/${_chatId}`);
 			const _title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, _title);
 		}
@@ -730,7 +731,7 @@
 		}
 
 		if (messages.length == 2) {
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			window.history.replaceState(history.state, '', `${WEBUI_BASE_PATH}/c/${_chatId}`);
 
 			const _title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, _title);
@@ -860,7 +861,7 @@
 
 	onMount(async () => {
 		if (!($settings.saveChatHistory ?? true)) {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH+'/');
 		}
 	});
 </script>
@@ -891,7 +892,7 @@
 					currentRequestId = null;
 				}
 
-				goto('/');
+				goto(WEBUI_BASE_PATH+'/');
 			}}
 		/>
 		<div class="flex flex-col flex-auto">

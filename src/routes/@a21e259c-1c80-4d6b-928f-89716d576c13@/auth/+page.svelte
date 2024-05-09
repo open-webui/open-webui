@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { userSignIn, userSignUp } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_BASE_PATH } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -23,7 +23,7 @@
 			toast.success($i18n.t(`You're now logged in.`));
 			localStorage.token = sessionUser.token;
 			await user.set(sessionUser);
-			goto('/');
+			goto(WEBUI_BASE_PATH+'/');
 		}
 	};
 
@@ -57,7 +57,7 @@
 
 	onMount(async () => {
 		if ($user !== undefined) {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH+'/');
 		}
 		loaded = true;
 		if (($config?.trusted_header_auth ?? false) || $config?.auth === false) {

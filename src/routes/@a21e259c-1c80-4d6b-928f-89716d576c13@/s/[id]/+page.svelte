@@ -7,6 +7,7 @@
 
 	import { modelfiles, settings, chatId, WEBUI_NAME } from '$lib/stores';
 	import { convertMessagesToHistory } from '$lib/utils';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 
 	import { getChatByShareId } from '$lib/apis/chats';
 
@@ -71,7 +72,7 @@
 				const chatInput = document.getElementById('chat-textarea');
 				chatInput?.focus();
 			} else {
-				await goto('/');
+				await goto(WEBUI_BASE_PATH+'/');
 			}
 		})();
 	}
@@ -83,7 +84,7 @@
 	const loadSharedChat = async () => {
 		await chatId.set($page.params.id);
 		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+			await goto(WEBUI_BASE_PATH+'/');
 			return null;
 		});
 

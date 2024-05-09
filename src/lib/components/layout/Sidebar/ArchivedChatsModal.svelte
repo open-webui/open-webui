@@ -5,6 +5,7 @@
 
 	const dispatch = createEventDispatcher();
 
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { archiveChatById, deleteChatById, getArchivedChatList } from '$lib/apis/chats';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -85,7 +86,7 @@
 												'border-b'} dark:bg-gray-900 dark:border-gray-850 text-xs"
 										>
 											<td class="px-3 py-1 w-2/3">
-												<a href="/c/{chat.id}" target="_blank">
+												<a href="{WEBUI_BASE_PATH+'/c/'+chat.id}" target="_blank">
 													<div class=" underline line-clamp-1">
 														{chat.title}
 													</div>

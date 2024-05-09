@@ -4,6 +4,7 @@
 
 	import { user } from '$lib/stores';
 	import { updateUserProfile, createAPIKey, getAPIKey } from '$lib/apis/auths';
+        import { WEBUI_DEFAULT_USER_ICON } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
@@ -207,7 +208,7 @@
 						<button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
 							on:click={async () => {
-								profileImageUrl = '/user.png';
+								profileImageUrl = WEBUI_DEFAULT_USER_ICON;
 							}}>{$i18n.t('Remove')}</button
 						>
 					</div>

@@ -1,5 +1,6 @@
 <script lang="ts">
-	export let src = '/user.png';
+        import { WEBUI_DEFAULT_USER_ICON } from '$lib/constants';
+	export let src = WEBUI_DEFAULT_USER_ICON;
 </script>
 
 <div class=" mr-4">

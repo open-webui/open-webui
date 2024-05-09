@@ -1,12 +1,12 @@
 @font-face {
 	font-family: 'Arimo';
-	src: url('/assets/fonts/Arimo-Variable.ttf');
+	src: url('/@a21e259c-1c80-4d6b-928f-89716d576c13@/assets/fonts/Arimo-Variable.ttf');
 	font-display: swap;
 }
 
 @font-face {
 	font-family: 'Mona Sans';
-	src: url('/assets/fonts/Mona-Sans.woff2');
+	src: url('/@a21e259c-1c80-4d6b-928f-89716d576c13@/assets/fonts/Mona-Sans.woff2');
 	font-display: swap;
 }
 

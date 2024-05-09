@@ -6,6 +6,7 @@
 	import ProfileImage from './ProfileImage.svelte';
 	import { modelfiles, settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+        import { WEBUI_DEFAULT_USER_ICON } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -57,8 +58,8 @@
 <div class=" flex w-full">
 	<ProfileImage
 		src={message.user
-			? $modelfiles.find((modelfile) => modelfile.tagName === message.user)?.imageUrl ?? '/user.png'
-			: user?.profile_image_url ?? '/user.png'}
+			? $modelfiles.find((modelfile) => modelfile.tagName === message.user)?.imageUrl ?? WEBUI_DEFAULT_USER_ICON
+			: user?.profile_image_url ?? WEBUI_DEFAULT_USER_ICON}
 	/>
 
 	<div class="w-full overflow-hidden">
