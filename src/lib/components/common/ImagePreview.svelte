@@ -4,7 +4,7 @@
 	export let show = false;
 	export let src = '';
 	export let alt = '';
-	
+
 	let mounted = false;
 	const MimeTypes: { [index: string]: string } = {
 		jpeg: 'image/jpeg',
@@ -33,7 +33,7 @@
 		const fileNameWithExt = urlParts.pop().trim() || '';
 		const splitted = fileNameWithExt.split('.');
 		const extension = `${(splitted[splitted.length - 1] || 'png').toLowerCase()}`;
-		const filename = `Image.${extension}`;
+		const filename = `${(splitted[splitted.length - 2] || 'Image').toLowerCase()}.${extension}`;
 
 		fetch(url)
 			.then((response) => response.blob())
