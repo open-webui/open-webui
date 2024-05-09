@@ -55,10 +55,9 @@
 </script>
 
 <div class=" flex w-full">
+	<!-- Customization: change user icon -->
 	<ProfileImage
-		src={message.user
-			? $modelfiles.find((modelfile) => modelfile.tagName === message.user)?.imageUrl ?? '/user.png'
-			: user?.profile_image_url ?? '/user.png'}
+		src="/user-ava.png"
 	/>
 
 	<div class="w-full overflow-hidden">
@@ -88,7 +87,8 @@
 		<div
 			class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-p:-mb-4 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-6 prose-li:-mb-4 whitespace-pre-line"
 		>
-			{#if message.files}
+			<!-- Customization: Hide docs in chat  -->
+			<!-- {#if message.files}
 				<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
 					{#each message.files as file}
 						<div>
@@ -163,7 +163,7 @@
 						</div>
 					{/each}
 				</div>
-			{/if}
+			{/if} -->
 
 			{#if edit === true}
 				<div class=" w-full">

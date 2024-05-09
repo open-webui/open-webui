@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { modelfiles, settings, showSidebar } from '$lib/stores';
+	import { modelfiles, settings, showSidebar, documents } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
@@ -57,6 +57,19 @@
 			chatTextAreaElement.style.height = '';
 			chatTextAreaElement.style.height = Math.min(chatTextAreaElement.scrollHeight, 200) + 'px';
 		}
+	}
+
+	// customization: auto select for all uploaded docs
+	$: if ($documents.length) {
+		files = [
+			{
+				name: 'All Documents',
+				type: 'collection',
+				title: 'All Documents',
+				collection_names: $documents.map((doc) => doc.collection_name),
+				upload_status: true
+			},
+		];
 	}
 
 	let mediaRecorder;
@@ -587,7 +600,8 @@
 							submitPrompt(prompt, user);
 						}}
 					>
-						{#if files.length > 0}
+						<!-- Customization: Hide uploaded files -->
+						<!-- {#if files.length > 0}
 							<div class="mx-2 mt-2 mb-1 flex flex-wrap gap-2">
 								{#each files as file, fileIdx}
 									<div class=" relative group">
@@ -721,10 +735,11 @@
 									</div>
 								{/each}
 							</div>
-						{/if}
+						{/if} -->
 
+						<!-- Customization: Hide upload button  -->
 						<div class=" flex">
-							{#if fileUploadEnabled}
+							<!-- {#if fileUploadEnabled}
 								<div class=" self-end mb-2 ml-1">
 									<Tooltip content={$i18n.t('Upload files')}>
 										<button
@@ -747,7 +762,7 @@
 										</button>
 									</Tooltip>
 								</div>
-							{/if}
+							{/if} -->
 
 							<textarea
 								id="chat-textarea"

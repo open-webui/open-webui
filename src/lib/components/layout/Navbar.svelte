@@ -32,12 +32,10 @@
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div class=" flex max-w-full w-full mx-auto px-5 pt-3 md:px-[1.3rem]">
 		<div class="flex items-center w-full max-w-full">
-			<div class="flex-1 overflow-hidden max-w-full text-xl font-bold text-black">
+			<div class="w-[30%] overflow-hidden max-w-full text-xl font-bold text-black">
 				HR/IT service application
-				<!-- {#if showModelSelector}
-					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
-				{/if} -->
 			</div>
+			<ModelSelector bind:selectedModels showSetDefault={false} />
 
 			<div class="self-start flex flex-none items-center">
 				<div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" />
@@ -51,18 +49,18 @@
 					>
 						<div class=" self-center mr-3">
 							<img
-								src={$user.profile_image_url}
+								src="/user-ava.png"
 								class=" max-w-[30px] object-cover rounded-full"
 								alt="User profile"
 							/>
 						</div>
-						<div class=" self-center font-semibold">{$user.name}</div>
+						<!-- <div class=" self-center font-semibold">{$user.name}</div> -->
 					</button>
 
 					{#if showDropdown}
 						<div
 							id="dropdownDots"
-							class="absolute z-40 top-[80px] rounded-lg shadow w-[160px] bg-white dark:bg-gray-900"
+							class="absolute z-40 top-[80px] right-[20px] rounded-lg shadow w-[160px] bg-white dark:bg-gray-900"
 							transition:fade|slide={{ duration: 100 }}
 						>
 							<div class="p-1 py-2 w-full">

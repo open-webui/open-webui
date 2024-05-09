@@ -141,27 +141,14 @@
 		};
 	});
 
-	let filteredDocs = [
-		{
-		collection_name: 'collection_name',
-		filename: 'filename',
-		name: 'name',
-		title: 'title'
-	},
-	{
-		collection_name: 'collection_name1',
-		filename: 'filename1',
-		name: 'name1',
-		title: 'title1'
-	}
-	];
+	let filteredDocs;
 
-	// $: filteredDocs = $documents.filter(
-	// 	(doc) =>
-	// 		(selectedTag === '' ||
-	// 			(doc?.content?.tags ?? []).map((tag) => tag.name).includes(selectedTag)) &&
-	// 		(query === '' || doc.name.includes(query))
-	// );
+	$: filteredDocs = $documents.filter(
+		(doc) =>
+			(selectedTag === '' ||
+				(doc?.content?.tags ?? []).map((tag) => tag.name).includes(selectedTag)) &&
+			(query === '' || doc.name.includes(query))
+	);
 </script>
 
 <svelte:head>
