@@ -326,7 +326,7 @@
 											.filter((model) => model.name !== 'hr')
 											.map((model) => ({
 												value: model.id,
-												label: model.custom_info?.displayName ?? model.name,
+												label: model.custom_info?.name ?? model.name,
 												info: model
 											}))}
 										bind:value={selectedModelId}

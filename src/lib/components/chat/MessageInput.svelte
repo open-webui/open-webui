@@ -522,7 +522,7 @@
 								/>
 								<div>
 									Talking to <span class=" font-medium"
-										>{selectedModel.custom_info?.displayName ?? selectedModel.name}
+										>{selectedModel.custom_info?.name ?? selectedModel.name}
 									</span>
 								</div>
 							</div>

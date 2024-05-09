@@ -268,7 +268,7 @@
 						if (hasImages && !(model.custom_info?.vision_capable ?? true)) {
 							toast.error(
 								$i18n.t('Model {{modelName}} is not vision capable', {
-									modelName: model.custom_info?.displayName ?? model.name ?? model.id
+									modelName: model.custom_info?.name ?? model.name ?? model.id
 								})
 							);
 						}
@@ -282,7 +282,7 @@
 							role: 'assistant',
 							content: '',
 							model: model.id,
-							modelName: model.custom_info?.displayName ?? model.name ?? model.id,
+							modelName: model.custom_info?.name ?? model.name ?? model.id,
 							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 						};
 
@@ -314,7 +314,7 @@
 	};
 
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
-		const modelName = model.custom_info?.displayName ?? model.name ?? model.id;
+		const modelName = model.custom_info?.name ?? model.name ?? model.id;
 		model = model.id;
 		const responseMessage = history.messages[responseMessageId];
 
@@ -719,17 +719,17 @@
 			} else {
 				toast.error(
 					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-						provider: model.custom_info?.displayName ?? model.name ?? model.id
+						provider: model.custom_info?.name ?? model.name ?? model.id
 					})
 				);
 				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-					provider: model.custom_info?.displayName ?? model.name ?? model.id
+					provider: model.custom_info?.name ?? model.name ?? model.id
 				});
 			}
 
 			responseMessage.error = true;
 			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-				provider: model.custom_info?.displayName ?? model.name ?? model.id
+				provider: model.custom_info?.name ?? model.name ?? model.id
 			});
 			responseMessage.done = true;
 			messages = messages;

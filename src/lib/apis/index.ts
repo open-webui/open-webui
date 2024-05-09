@@ -196,3 +196,71 @@ export const updateWebhookUrl = async (token: string, url: string) => {
 
 	return res.url;
 };
+
+export const getModelConfig = async (token: string): Promise<GlobalModelConfig> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/config/models`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.models;
+};
+
+export interface ModelConfig {
+	id: string;
+	name?: string;
+	description?: string;
+	vision_capable?: boolean;
+}
+
+export interface GlobalModelConfig {
+	ollama: ModelConfig[];
+	litellm: ModelConfig[];
+	openai: ModelConfig[];
+}
+
+export const updateModelConfig = async (token: string, config: GlobalModelConfig) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/config/models`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

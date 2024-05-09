@@ -42,8 +42,8 @@ export const showChangelog = writable(false);
 export type Model = OpenAIModel | OllamaModel;
 
 type ModelCustomInfo = {
+	id?: string;
 	name?: string;
-	displayName?: string;
 	description?: string;
 	vision_capable?: boolean;
 };
@@ -54,12 +54,12 @@ type BaseModel = {
 	custom_info?: ModelCustomInfo;
 };
 
-interface OpenAIModel extends BaseModel {
+export interface OpenAIModel extends BaseModel {
 	external: boolean;
 	source?: string;
 }
 
-interface OllamaModel extends BaseModel {
+export interface OllamaModel extends BaseModel {
 	details: OllamaModelDetails;
 	size: number;
 	description: string;

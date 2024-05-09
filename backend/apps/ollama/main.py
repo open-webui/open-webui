@@ -176,7 +176,7 @@ async def get_all_models():
 
 def add_custom_info_to_model(model: dict):
     model["custom_info"] = next(
-        (item for item in app.state.MODEL_CONFIG if item["name"] == model["model"]), {}
+        (item for item in app.state.MODEL_CONFIG if item["id"] == model["model"]), {}
     )
 
 

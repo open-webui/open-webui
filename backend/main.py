@@ -58,6 +58,7 @@ from config import (
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
+    MODEL_CONFIG,
 )
 from constants import ERROR_MESSAGES
 
@@ -96,6 +97,8 @@ app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+
+app.state.MODEL_CONFIG = MODEL_CONFIG
 
 app.state.WEBHOOK_URL = WEBHOOK_URL
 
@@ -311,11 +314,18 @@ async def update_model_config(
 
     litellm_app.state.MODEL_CONFIG = data.get("litellm", [])
 
-    return {
+    app.state.MODEL_CONFIG = {
         "ollama": ollama_app.state.MODEL_CONFIG,
         "openai": openai_app.state.MODEL_CONFIG,
         "litellm": litellm_app.state.MODEL_CONFIG,
     }
+
+    return {"models": app.state.MODEL_CONFIG}
+
+
+@app.get("/api/config/models")
+async def get_model_config(user=Depends(get_admin_user)):
+    return {"models": app.state.MODEL_CONFIG}
 
 
 @app.get("/api/webhook")
