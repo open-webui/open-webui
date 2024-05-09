@@ -161,10 +161,6 @@
 	color: #fff;
 }
 
-.rose-pine-dawn .size-4 {
-	color: #fff;
-}
-
 .rose-pine-dawn .font-semibold {
 	color: #111827ba;
 }
@@ -247,6 +243,10 @@
 
 .rose-pine-dawn .bg-gray-900 {
 	background-color: rgb(255 207 205);
+}
+
+.rose-pine-dawn .size-4 {
+    color: #cf9191;
 }
 /* .rose-pine-dawn .bg-white {
     --tw-bg-opacity: 1;
