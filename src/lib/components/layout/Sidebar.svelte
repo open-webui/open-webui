@@ -16,7 +16,7 @@
 	} from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	import { fade, slide } from 'svelte/transition';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_PATH } from '$lib/constants';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ChatMenu from './Sidebar/ChatMenu.svelte';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -130,7 +130,7 @@
 	};
 
 	const loadChat = async (id) => {
-		goto(`${WEBUI_BASE_URL}/c/${id}`);
+		goto(`${WEBUI_BASE_PATH}/c/${id}`);
 	};
 
 	const editChatTitle = async (id, _title) => {
@@ -156,7 +156,7 @@
 
 		if (res) {
 			if ($chatId === id) {
-				goto(WEBUI_BASE_URL+'/');
+				goto(WEBUI_BASE_PATH+'/');
 			}
 
 			await chats.set(await getChatList(localStorage.token));
@@ -166,7 +166,7 @@
 	const saveSettings = async (updated) => {
 		await settings.set({ ...$settings, ...updated });
 		localStorage.setItem('settings', JSON.stringify($settings));
-		location.href = WEBUI_BASE_URL+'/';
+		location.href = WEBUI_BASE_PATH+'/';
 	};
 
 	const archiveChatHandler = async (id) => {
@@ -201,11 +201,11 @@
 			<a
 				id="sidebar-new-chat-button"
 				class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-				href="{WEBUI_BASE_URL+'/'}"
+				href="{WEBUI_BASE_PATH+'/'}"
 				on:click={async () => {
 					selectedChatId = null;
 
-					await goto(WEBUI_BASE_URL+'/');
+					await goto(WEBUI_BASE_PATH+'/');
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
 						newChatButton?.click();
@@ -215,7 +215,7 @@
 				<div class="flex self-center">
 					<div class="self-center mr-1.5">
 						<img
-							src="{WEBUI_BASE_URL}/static/favicon.png"
+							src="{WEBUI_BASE_PATH}/static/favicon.png"
 							class=" size-6 -translate-x-1.5 rounded-full"
 							alt="logo"
 						/>
@@ -246,7 +246,7 @@
 			<div class="px-2 flex justify-center mt-0.5">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="{WEBUI_BASE_URL+'/modelfiles'}"
+					href="{WEBUI_BASE_PATH+'/modelfiles'}"
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
@@ -278,7 +278,7 @@
 			<div class="px-2 flex justify-center">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="{WEBUI_BASE_URL+'/prompts'}"
+					href="{WEBUI_BASE_PATH+'/prompts'}"
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
@@ -310,7 +310,7 @@
 			<div class="px-2 flex justify-center mb-1">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="{WEBUI_BASE_URL+'/documents'}"
+					href="{WEBUI_BASE_PATH+'/documents'}"
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
@@ -492,7 +492,7 @@
 									: chat.id === selectedChatId
 									? 'bg-gray-100 dark:bg-gray-950'
 									: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-								href="{WEBUI_BASE_URL+'/c/'+chat.id}"
+								href="{WEBUI_BASE_PATH+'/c/'+chat.id}"
 								on:click={() => {
 									selectedChatId = chat.id;
 									if (window.innerWidth < 1024) {
