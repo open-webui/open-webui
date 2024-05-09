@@ -2,7 +2,6 @@ import { dev } from '$app/environment';
 // import { version } from '../../package.json';
 
 export const APP_NAME = 'Open WebUI';
-export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
 
 export const WEBUI_PREFIX = '@a21e259c-1c80-4d6b-928f-89716d576c13@';
 export const WEBUI_BASE_PATH = '/'+WEBUI_PREFIX+'/app';
