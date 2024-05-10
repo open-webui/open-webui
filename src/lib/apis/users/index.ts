@@ -146,6 +146,8 @@ type UserUpdateForm = {
 	profile_image_url: string;
 	email: string;
 	name: string;
+	models: string;
+	whitelist_enabled: boolean;
 	password: string;
 };
 
@@ -162,6 +164,8 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 			profile_image_url: user.profile_image_url,
 			email: user.email,
 			name: user.name,
+			models: user.models,
+			whitelist_enabled: user.whitelist_enabled,
 			password: user.password !== '' ? user.password : undefined
 		})
 	})
