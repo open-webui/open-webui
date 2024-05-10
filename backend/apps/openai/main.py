@@ -232,6 +232,8 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
         models = await get_all_models()
         
         model_filter_list = []
+        enabled = app.state.ENABLE_MODEL_FILTER
+        
         # Get the settings from the database using the AdminSettings class
         settings = AdminSettings.get_settings(["ENABLE_MODEL_FILTER", "MODEL_FILTER_LIST"])
         # Check if settings were found
@@ -246,23 +248,24 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
         else:
             model_filter_list = app.state.MODEL_FILTER_LIST
         
+        if user.whitelist_enabled:
+            models["data"] = list(
+                filter(
+                    lambda model: model["id"] in user.models,
+                    models["data"],
+                )
+            )
+            return models
+        
         if enabled:
             if user.role == "user":
-                
-                if user.whitelist_enabled:
-                        models["data"] = list(
-                        filter(
-                            lambda model: model["id"] in user.models,
-                            models["data"],
-                        )
-                    )
-                else:
-                    models["data"] = list(
+                models["data"] = list(
                         filter(
                             lambda model: model["id"] in model_filter_list,
                             models["data"],
                         )
                     )
+                    
                 return models
         return models
     else:

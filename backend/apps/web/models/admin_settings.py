@@ -63,8 +63,6 @@ class AdminSettingsTable:
     
         try:
             settings = AdminSetting.select().where(AdminSetting.name.in_(setting_names))
-            print("++++++++++++++++++++++++++++++++++++++++++++++")
-            print(settings)
             for setting in settings:
                 settings_dict[setting.name] = setting.value
         except Exception as e:
