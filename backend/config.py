@@ -29,6 +29,7 @@ try:
 except ImportError:
     print("dotenv not installed, skipping...")
 
+
 ####################################
 # LOGGING
 ####################################
@@ -77,6 +78,7 @@ if WEBUI_NAME != "Open WebUI":
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
 
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+
 
 ####################################
 # ENV (dev,test,prod)
@@ -148,7 +150,9 @@ for version in soup.find_all("h2"):
 
     changelog_json[version_number] = version_data
 
+
 CHANGELOG = changelog_json
+
 
 ####################################
 # WEBUI_VERSION
@@ -211,6 +215,19 @@ class WrappedConfig(Generic[T]):
 
     def __str__(self):
         return str(self.value)
+
+    @property
+    def __dict__(self):
+        raise TypeError(
+            "WrappedConfig object cannot be converted to dict, use config_get or .value instead."
+        )
+
+    def __getattribute__(self, item):
+        if item == "__dict__":
+            raise TypeError(
+                "WrappedConfig object cannot be converted to dict, use config_get or .value instead."
+            )
+        return super().__getattribute__(item)
 
     def save(self):
         # Don't save if the value is the same as the env value and the config value
@@ -297,6 +314,7 @@ if CUSTOM_NAME:
         log.exception(e)
         pass
 
+
 ####################################
 # File Upload DIR
 ####################################
@@ -304,12 +322,14 @@ if CUSTOM_NAME:
 UPLOAD_DIR = f"{DATA_DIR}/uploads"
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
+
 ####################################
 # Cache DIR
 ####################################
 
 CACHE_DIR = f"{DATA_DIR}/cache"
 Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
+
 
 ####################################
 # Docs DIR
@@ -351,6 +371,7 @@ if not os.path.exists(LITELLM_CONFIG_PATH):
     create_config_file(LITELLM_CONFIG_PATH)
     log.info("Config file created successfully.")
 
+
 ####################################
 # OLLAMA_BASE_URL
 ####################################
@@ -381,6 +402,7 @@ if ENV == "prod":
     elif K8S_FLAG:
         OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
 
+
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != "" else OLLAMA_BASE_URL
 
@@ -395,6 +417,7 @@ OLLAMA_BASE_URLS = WrappedConfig(
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
+
 
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
@@ -614,6 +637,7 @@ RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
 
+
 if CHROMA_HTTP_HOST != "":
     CHROMA_CLIENT = chromadb.HttpClient(
         host=CHROMA_HTTP_HOST,
@@ -631,6 +655,7 @@ else:
         tenant=CHROMA_TENANT,
         database=CHROMA_DATABASE,
     )
+
 
 # device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
 USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
@@ -699,6 +724,7 @@ WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models"
 WHISPER_MODEL_AUTO_UPDATE = (
     os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
 )
+
 
 ####################################
 # Images
@@ -788,6 +814,7 @@ LITELLM_PROXY_PORT = int(os.getenv("LITELLM_PROXY_PORT", "14365"))
 if LITELLM_PROXY_PORT < 0 or LITELLM_PROXY_PORT > 65535:
     raise ValueError("Invalid port number for LITELLM_PROXY_PORT")
 LITELLM_PROXY_HOST = os.getenv("LITELLM_PROXY_HOST", "127.0.0.1")
+
 
 ####################################
 # Database
