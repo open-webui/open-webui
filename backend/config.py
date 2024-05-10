@@ -246,19 +246,21 @@ class WrappedConfig(Generic[T]):
         self.config_value = self.value
 
 
-def config_set(config: Union[WrappedConfig[T], T], value: T, save_config=True):
-    if isinstance(config, WrappedConfig):
-        config.value = value
-        if save_config:
-            config.save()
-    else:
-        config = value
+class AppConfig:
+    _state: dict[str, WrappedConfig]
 
+    def __init__(self):
+        super().__setattr__("_state", {})
 
-def config_get(config: Union[WrappedConfig[T], T]) -> T:
-    if isinstance(config, WrappedConfig):
-        return config.value
-    return config
+    def __setattr__(self, key, value):
+        if isinstance(value, WrappedConfig):
+            self._state[key] = value
+        else:
+            self._state[key].value = value
+            self._state[key].save()
+
+    def __getattr__(self, key):
+        return self._state[key].value
 
 
 ####################################

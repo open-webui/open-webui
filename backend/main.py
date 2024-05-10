@@ -58,8 +58,7 @@ from config import (
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
-    config_get,
-    config_set,
+    AppConfig,
 )
 from constants import ERROR_MESSAGES
 
@@ -96,10 +95,11 @@ https://github.com/open-webui/open-webui
 
 app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
-app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.config = AppConfig()
+app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
+app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
-app.state.WEBHOOK_URL = WEBHOOK_URL
+app.state.config.WEBHOOK_URL = WEBHOOK_URL
 
 origins = ["*"]
 
@@ -245,11 +245,9 @@ async def get_app_config():
         "version": VERSION,
         "auth": WEBUI_AUTH,
         "default_locale": default_locale,
-        "images": config_get(images_app.state.ENABLED),
-        "default_models": config_get(webui_app.state.DEFAULT_MODELS),
-        "default_prompt_suggestions": config_get(
-            webui_app.state.DEFAULT_PROMPT_SUGGESTIONS
-        ),
+        "images": images_app.state.config.ENABLED,
+        "default_models": webui_app.state.config.DEFAULT_MODELS,
+        "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
         "trusted_header_auth": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
         "admin_export_enabled": ENABLE_ADMIN_EXPORT,
     }
@@ -258,8 +256,8 @@ async def get_app_config():
 @app.get("/api/config/model/filter")
 async def get_model_filter_config(user=Depends(get_admin_user)):
     return {
-        "enabled": config_get(app.state.ENABLE_MODEL_FILTER),
-        "models": config_get(app.state.MODEL_FILTER_LIST),
+        "enabled": app.state.config.ENABLE_MODEL_FILTER,
+        "models": app.state.config.MODEL_FILTER_LIST,
     }
 
 
@@ -272,28 +270,28 @@ class ModelFilterConfigForm(BaseModel):
 async def update_model_filter_config(
     form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
 ):
-    config_set(app.state.ENABLE_MODEL_FILTER, form_data.enabled)
-    config_set(app.state.MODEL_FILTER_LIST, form_data.models)
+    app.state.config.ENABLE_MODEL_FILTER, form_data.enabled
+    app.state.config.MODEL_FILTER_LIST, form_data.models
 
-    ollama_app.state.ENABLE_MODEL_FILTER = config_get(app.state.ENABLE_MODEL_FILTER)
-    ollama_app.state.MODEL_FILTER_LIST = config_get(app.state.MODEL_FILTER_LIST)
+    ollama_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
+    ollama_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
 
-    openai_app.state.ENABLE_MODEL_FILTER = config_get(app.state.ENABLE_MODEL_FILTER)
-    openai_app.state.MODEL_FILTER_LIST = config_get(app.state.MODEL_FILTER_LIST)
+    openai_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
+    openai_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
 
-    litellm_app.state.ENABLE_MODEL_FILTER = config_get(app.state.ENABLE_MODEL_FILTER)
-    litellm_app.state.MODEL_FILTER_LIST = config_get(app.state.MODEL_FILTER_LIST)
+    litellm_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
+    litellm_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
 
     return {
-        "enabled": config_get(app.state.ENABLE_MODEL_FILTER),
-        "models": config_get(app.state.MODEL_FILTER_LIST),
+        "enabled": app.state.config.ENABLE_MODEL_FILTER,
+        "models": app.state.config.MODEL_FILTER_LIST,
     }
 
 
 @app.get("/api/webhook")
 async def get_webhook_url(user=Depends(get_admin_user)):
     return {
-        "url": config_get(app.state.WEBHOOK_URL),
+        "url": app.state.config.WEBHOOK_URL,
     }
 
 
@@ -303,12 +301,12 @@ class UrlForm(BaseModel):
 
 @app.post("/api/webhook")
 async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
-    config_set(app.state.WEBHOOK_URL, form_data.url)
+    app.state.config.WEBHOOK_URL = form_data.url
 
-    webui_app.state.WEBHOOK_URL = config_get(app.state.WEBHOOK_URL)
+    webui_app.state.WEBHOOK_URL = app.state.config.WEBHOOK_URL
 
     return {
-        "url": config_get(app.state.WEBHOOK_URL),
+        "url": app.state.config.WEBHOOK_URL,
     }
 
 
