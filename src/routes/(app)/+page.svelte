@@ -448,7 +448,7 @@
 												: `${model}`,
 											{
 												body: responseMessage.content,
-												icon: selectedModelfile?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`
+												icon: selectedModelfile?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.ico`
 											}
 										);
 									}
@@ -636,7 +636,7 @@
 				if ($settings.notificationEnabled && !document.hasFocus()) {
 					const notification = new Notification(`OpenAI ${model}`, {
 						body: responseMessage.content,
-						icon: `${WEBUI_BASE_URL}/static/favicon.png`
+						icon: `${WEBUI_BASE_URL}/static/favicon.ico`
 					});
 				}
 

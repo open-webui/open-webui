@@ -33,8 +33,9 @@
 
 {#key mounted}
 	<div class="m-auto w-full max-w-6xl px-8 lg:px-24 pb-16">
-		<div class="flex justify-start">
-			<div class="flex -space-x-4 mb-1" in:fade={{ duration: 200 }}>
+		<div class="flex justify-center">
+			<img src="/logo-main.svg" alt="logo" />
+			<!-- <div class="flex -space-x-4 mb-1" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
 					<button
 						on:click={() => {
@@ -43,7 +44,7 @@
 					>
 						{#if model in modelfiles}
 							<img
-								src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+								src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.ico`}
 								alt="modelfile"
 								class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
 								draggable="false"
@@ -52,7 +53,7 @@
 							<img
 								src={$i18n.language === 'dg-DG'
 									? `/doge.png`
-									: `${WEBUI_BASE_URL}/static/favicon.png`}
+									: `${WEBUI_BASE_URL}/static/favicon.ico`}
 								class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
 								alt="logo"
 								draggable="false"
@@ -60,22 +61,24 @@
 						{/if}
 					</button>
 				{/each}
-			</div>
+			</div> -->
+
 		</div>
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4"
+			class=" mt-2 mb-4 text-4xl text-gray-800 dark:text-gray-100 font-semibold flex justify-center items-center gap-4"
 		>
 			<div>
 				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
-					{#if modelfile}
+					<!-- {#if modelfile}
 						{modelfile.title}
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user.name })}
-					{/if}
+					{/if} -->
+					IT/HR RAG Service
 				</div>
 
-				<div in:fade={{ duration: 200, delay: 200 }}>
+				<!-- <div in:fade={{ duration: 200, delay: 200 }}>
 					{#if modelfile}
 						<div class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400">
 							{modelfile.desc}
@@ -92,12 +95,15 @@
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}
+				</div> -->
+				<div class="text-lg font-medium text-gray-400 dark:text-gray-500 text-center" in:fade={{ duration: 200, delay: 200 }}>
+					Your AI-powered copilot for the web
 				</div>
 			</div>
 		</div>
 
-		<div class=" w-full" in:fade={{ duration: 200, delay: 300 }}>
+		<!-- <div class=" w-full" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions {suggestionPrompts} {submitPrompt} />
-		</div>
+		</div> -->
 	</div>
 {/key}

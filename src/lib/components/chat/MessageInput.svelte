@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { modelfiles, settings, showSidebar } from '$lib/stores';
+	import { modelfiles, settings, showSidebar, documents } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
@@ -57,6 +57,19 @@
 			chatTextAreaElement.style.height = '';
 			chatTextAreaElement.style.height = Math.min(chatTextAreaElement.scrollHeight, 200) + 'px';
 		}
+	}
+
+	// customization: auto select for all uploaded docs
+	$: if ($documents.length) {
+		files = [
+			{
+				name: 'All Documents',
+				type: 'collection',
+				title: 'All Documents',
+				collection_names: $documents.map((doc) => doc.collection_name),
+				upload_status: true
+			},
+		];
 	}
 
 	let mediaRecorder;
@@ -411,9 +424,7 @@
 
 {#if dragged}
 	<div
-		class="fixed {$showSidebar
-			? 'left-0 lg:left-[260px] lg:w-[calc(100%-260px)]'
-			: 'left-0'}  w-full h-full flex z-50 touch-none pointer-events-none"
+		class="fixed lg:w-[calc(100%-260px)] w-full h-full flex z-50 touch-none pointer-events-none"
 		id="dropzone"
 		role="region"
 		aria-label="Drag and Drop Container"
@@ -512,7 +523,7 @@
 										?.imageUrl ??
 										($i18n.language === 'dg-DG'
 											? `/doge.png`
-											: `${WEBUI_BASE_URL}/static/favicon.png`)}
+											: `${WEBUI_BASE_URL}/static/favicon.ico`)}
 								/>
 								<div>
 									Talking to <span class=" font-medium">{selectedModel.name} </span>
@@ -535,7 +546,7 @@
 		</div>
 
 		<div class="bg-white dark:bg-gray-900">
-			<div class="max-w-6xl px-2.5 lg:px-16 mx-auto inset-x-0">
+			<div class="max-w-5xl px-2.5 lg:px-16 mx-auto inset-x-0">
 				<div class=" pb-2">
 					<input
 						bind:this={filesInputElement}
@@ -584,12 +595,13 @@
 						}}
 					/>
 					<form
-						class=" flex flex-col relative w-full rounded-3xl px-1.5 border border-gray-100 dark:border-gray-850 bg-white dark:bg-gray-900 dark:text-gray-100"
+						class=" flex flex-col relative w-full rounded-3xl px-1.5 border border-gray-100 dark:border-gray-850 bg-[#f1f1f1] dark:bg-gray-900 dark:text-gray-100"
 						on:submit|preventDefault={() => {
 							submitPrompt(prompt, user);
 						}}
 					>
-						{#if files.length > 0}
+						<!-- Customization: Hide uploaded files -->
+						<!-- {#if files.length > 0}
 							<div class="mx-2 mt-2 mb-1 flex flex-wrap gap-2">
 								{#each files as file, fileIdx}
 									<div class=" relative group">
@@ -723,10 +735,11 @@
 									</div>
 								{/each}
 							</div>
-						{/if}
+						{/if} -->
 
+						<!-- Customization: Hide upload button  -->
 						<div class=" flex">
-							{#if fileUploadEnabled}
+							<!-- {#if fileUploadEnabled}
 								<div class=" self-end mb-2 ml-1">
 									<Tooltip content={$i18n.t('Upload files')}>
 										<button
@@ -749,12 +762,12 @@
 										</button>
 									</Tooltip>
 								</div>
-							{/if}
+							{/if} -->
 
 							<textarea
 								id="chat-textarea"
 								bind:this={chatTextAreaElement}
-								class="scrollbar-none dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
+								class="scrollbar-none bg-[#f1f1f1] dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
 									? ''
 									: ' pl-4'} rounded-xl resize-none h-[48px]"
 								placeholder={chatInputPlaceholder !== ''
@@ -921,7 +934,7 @@
 
 							<div class="self-end mb-2 flex space-x-1 mr-1">
 								{#if messages.length == 0 || messages.at(-1).done == true}
-									<Tooltip content={$i18n.t('Record voice')}>
+									<!-- <Tooltip content={$i18n.t('Record voice')}>
 										{#if speechRecognitionEnabled}
 											<button
 												id="voice-input-button"
@@ -988,14 +1001,14 @@
 												{/if}
 											</button>
 										{/if}
-									</Tooltip>
+									</Tooltip> -->
 
 									<Tooltip content={$i18n.t('Send message')}>
 										<button
 											id="send-message-button"
 											class="{prompt !== ''
 												? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-												: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-full p-1.5 self-center"
+												: 'text-white bg-[#979797] dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-full p-1.5 self-center"
 											type="submit"
 											disabled={prompt === ''}
 										>
