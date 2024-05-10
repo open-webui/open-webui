@@ -21,6 +21,8 @@ from config import (
     USER_PERMISSIONS,
     WEBHOOK_URL,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
+    JWT_EXPIRES_IN,
+    config_get,
 )
 
 app = FastAPI()
@@ -28,7 +30,7 @@ app = FastAPI()
 origins = ["*"]
 
 app.state.ENABLE_SIGNUP = ENABLE_SIGNUP
-app.state.JWT_EXPIRES_IN = "-1"
+app.state.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 
 app.state.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
@@ -61,6 +63,6 @@ async def get_status():
     return {
         "status": True,
         "auth": WEBUI_AUTH,
-        "default_models": app.state.DEFAULT_MODELS,
-        "default_prompt_suggestions": app.state.DEFAULT_PROMPT_SUGGESTIONS,
+        "default_models": config_get(app.state.DEFAULT_MODELS),
+        "default_prompt_suggestions": config_get(app.state.DEFAULT_PROMPT_SUGGESTIONS),
     }

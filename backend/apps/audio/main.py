@@ -45,6 +45,8 @@ from config import (
     AUDIO_OPENAI_API_KEY,
     AUDIO_OPENAI_API_MODEL,
     AUDIO_OPENAI_API_VOICE,
+    config_get,
+    config_set,
 )
 
 log = logging.getLogger(__name__)
@@ -83,10 +85,10 @@ class OpenAIConfigUpdateForm(BaseModel):
 @app.get("/config")
 async def get_openai_config(user=Depends(get_admin_user)):
     return {
-        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
-        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
-        "OPENAI_API_MODEL": app.state.OPENAI_API_MODEL,
-        "OPENAI_API_VOICE": app.state.OPENAI_API_VOICE,
+        "OPENAI_API_BASE_URL": config_get(app.state.OPENAI_API_BASE_URL),
+        "OPENAI_API_KEY": config_get(app.state.OPENAI_API_KEY),
+        "OPENAI_API_MODEL": config_get(app.state.OPENAI_API_MODEL),
+        "OPENAI_API_VOICE": config_get(app.state.OPENAI_API_VOICE),
     }
 
 
@@ -97,17 +99,22 @@ async def update_openai_config(
     if form_data.key == "":
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
-    app.state.OPENAI_API_BASE_URL = form_data.url
-    app.state.OPENAI_API_KEY = form_data.key
-    app.state.OPENAI_API_MODEL = form_data.model
-    app.state.OPENAI_API_VOICE = form_data.speaker
+    config_set(app.state.OPENAI_API_BASE_URL, form_data.url)
+    config_set(app.state.OPENAI_API_KEY, form_data.key)
+    config_set(app.state.OPENAI_API_MODEL, form_data.model)
+    config_set(app.state.OPENAI_API_VOICE, form_data.speaker)
+
+    app.state.OPENAI_API_BASE_URL.save()
+    app.state.OPENAI_API_KEY.save()
+    app.state.OPENAI_API_MODEL.save()
+    app.state.OPENAI_API_VOICE.save()
 
     return {
         "status": True,
-        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
-        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
-        "OPENAI_API_MODEL": app.state.OPENAI_API_MODEL,
-        "OPENAI_API_VOICE": app.state.OPENAI_API_VOICE,
+        "OPENAI_API_BASE_URL": config_get(app.state.OPENAI_API_BASE_URL),
+        "OPENAI_API_KEY": config_get(app.state.OPENAI_API_KEY),
+        "OPENAI_API_MODEL": config_get(app.state.OPENAI_API_MODEL),
+        "OPENAI_API_VOICE": config_get(app.state.OPENAI_API_VOICE),
     }
 
 

@@ -15,7 +15,7 @@ from apps.web.models.auths import Auths
 from utils.utils import get_current_user, get_password_hash, get_admin_user
 from constants import ERROR_MESSAGES
 
-from config import SRC_LOG_LEVELS
+from config import SRC_LOG_LEVELS, config_set, config_get
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -39,15 +39,15 @@ async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)
 
 @router.get("/permissions/user")
 async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
-    return request.app.state.USER_PERMISSIONS
+    return config_get(request.app.state.USER_PERMISSIONS)
 
 
 @router.post("/permissions/user")
 async def update_user_permissions(
     request: Request, form_data: dict, user=Depends(get_admin_user)
 ):
-    request.app.state.USER_PERMISSIONS = form_data
-    return request.app.state.USER_PERMISSIONS
+    config_set(request.app.state.USER_PERMISSIONS, form_data)
+    return config_get(request.app.state.USER_PERMISSIONS)
 
 
 ############################
