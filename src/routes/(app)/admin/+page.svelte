@@ -200,7 +200,7 @@
 											<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
 											<th scope="col" class="px-3 py-2"> {$i18n.t('Email')} </th>
 											<th scope="col" class="px-3 py-2"> {$i18n.t('Last Active')} </th>
-											<th scope="col" class="px-3 py-2"> {$i18n.t('Models')} </th>
+											<th scope="col" class="px-3 py-2"> {$i18n.t('Enable whitelist')} </th>
 
 											<th scope="col" class="px-3 py-2"> {$i18n.t('Created at')} </th>
 
@@ -265,7 +265,7 @@
 												</td>
 
 												<td class=" px-3 py-2">
-													{JSON.parse(user.models).join(',')}
+													{user.whitelist_enabled ? 'On' : 'Off'}
 												</td>
 
 												<td class=" px-3 py-2">
