@@ -511,10 +511,8 @@ DEFAULT_USER_ROLE = WrappedConfig(
     os.getenv("DEFAULT_USER_ROLE", "pending"),
 )
 
-USER_PERMISSIONS_CHAT_DELETION = WrappedConfig(
-    "USER_PERMISSIONS_CHAT_DELETION",
-    "ui.user_permissions.chat.deletion",
-    os.environ.get("USER_PERMISSIONS_CHAT_DELETION", "True").lower() == "true",
+USER_PERMISSIONS_CHAT_DELETION = (
+    os.environ.get("USER_PERMISSIONS_CHAT_DELETION", "True").lower() == "true"
 )
 
 USER_PERMISSIONS = WrappedConfig(
