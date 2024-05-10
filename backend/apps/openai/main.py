@@ -33,6 +33,8 @@ from typing import List, Optional
 import hashlib
 from pathlib import Path
 
+from apps.web.models.admin_settings import AdminSettings, AdminSettingsModel
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 
@@ -228,14 +230,39 @@ async def get_all_models():
 async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_user)):
     if url_idx == None:
         models = await get_all_models()
-        if app.state.ENABLE_MODEL_FILTER:
+        
+        model_filter_list = []
+        # Get the settings from the database using the AdminSettings class
+        settings = AdminSettings.get_settings(["ENABLE_MODEL_FILTER", "MODEL_FILTER_LIST"])
+        # Check if settings were found
+        if settings:
+            # Convert string value to boolean for ENABLE_MODEL_FILTER
+            enabled_value = settings.get("ENABLE_MODEL_FILTER", "False")
+            enabled = True if enabled_value.lower() == "true" else False
+            
+            # Convert JSON string to list for MODEL_FILTER_LIST
+            model_filter_list = json.loads(settings.get("MODEL_FILTER_LIST", "[]"))
+            
+        else:
+            model_filter_list = app.state.MODEL_FILTER_LIST
+        
+        if enabled:
             if user.role == "user":
-                models["data"] = list(
-                    filter(
-                        lambda model: model["id"] in app.state.MODEL_FILTER_LIST,
-                        models["data"],
+                
+                if user.whitelist_enabled:
+                        models["data"] = list(
+                        filter(
+                            lambda model: model["id"] in user.models,
+                            models["data"],
+                        )
                     )
-                )
+                else:
+                    models["data"] = list(
+                        filter(
+                            lambda model: model["id"] in model_filter_list,
+                            models["data"],
+                        )
+                    )
                 return models
         return models
     else:

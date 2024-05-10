@@ -17,6 +17,9 @@ from constants import ERROR_MESSAGES
 
 from config import SRC_LOG_LEVELS
 
+from apps.web.models.admin_settings import AdminSettings, AdminSettingsModel
+import json
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
@@ -39,15 +42,35 @@ async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)
 
 @router.get("/permissions/user")
 async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
-    return request.app.state.USER_PERMISSIONS
+    # Retrieve user permissions from the database using the AdminSettings class
+    permissions = AdminSettings.get_settings(["USER_PERMISSIONS"])
+    # Check if permissions were found
+    if permissions:
+        user_permissions_str = permissions.get("USER_PERMISSIONS", "{}")
+        
+        # Parse permissions string as JSON
+        user_permissions = json.loads(user_permissions_str)
+        return user_permissions
+    else:
+        return request.app.state.USER_PERMISSIONS
+    
 
 
 @router.post("/permissions/user")
 async def update_user_permissions(
     request: Request, form_data: dict, user=Depends(get_admin_user)
 ):
+    # Update user permissions in the app state
     request.app.state.USER_PERMISSIONS = form_data
+    
+    # Save user permissions in the database using the AdminSettings class
+    settings_to_save = [AdminSettingsModel(name="USER_PERMISSIONS", value=json.dumps(form_data))]
+    AdminSettings.save_settings(settings_to_save)
+
     return request.app.state.USER_PERMISSIONS
+    
+    # request.app.state.USER_PERMISSIONS = form_data
+    # return request.app.state.USER_PERMISSIONS
 
 
 ############################
@@ -99,6 +122,8 @@ async def update_user_by_id(
                 "name": form_data.name,
                 "email": form_data.email.lower(),
                 "profile_image_url": form_data.profile_image_url,
+                "models": form_data.models,
+                "whitelist_enabled": form_data.whitelist_enabled
             },
         )
 

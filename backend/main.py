@@ -60,6 +60,7 @@ from config import (
     ENABLE_ADMIN_EXPORT,
 )
 from constants import ERROR_MESSAGES
+from apps.web.models.admin_settings import AdminSettings, AdminSettingsModel
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -253,10 +254,30 @@ async def get_app_config():
 
 @app.get("/api/config/model/filter")
 async def get_model_filter_config(user=Depends(get_admin_user)):
-    return {
-        "enabled": app.state.ENABLE_MODEL_FILTER,
-        "models": app.state.MODEL_FILTER_LIST,
-    }
+    # Get the settings from the database using the AdminSettings class
+    settings = AdminSettings.get_settings(["ENABLE_MODEL_FILTER", "MODEL_FILTER_LIST"])
+
+    # Check if settings were found
+    if settings:
+        # Convert string value to boolean for ENABLE_MODEL_FILTER
+        enabled_value = settings.get("ENABLE_MODEL_FILTER", "False")
+        enabled = True if enabled_value.lower() == "true" else False
+        
+        # Convert JSON string to list for MODEL_FILTER_LIST
+        models = json.loads(settings.get("MODEL_FILTER_LIST", "[]"))
+
+        return {
+            "enabled": enabled,
+            "models": models,
+        }
+    else:
+        # If settings were not found, return default values
+        return {
+            "enabled": app.state.ENABLE_MODEL_FILTER,
+            "models": app.state.MODEL_FILTER_LIST,
+        }
+        
+    
 
 
 class ModelFilterConfigForm(BaseModel):
@@ -279,7 +300,16 @@ async def update_model_filter_config(
 
     litellm_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
     litellm_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
-
+    
+    # Create a list of AdminSettingsModel objects to save in the database
+    settings_to_save = [
+        AdminSettingsModel(name="ENABLE_MODEL_FILTER", value=str(app.state.ENABLE_MODEL_FILTER)),
+        AdminSettingsModel(name="MODEL_FILTER_LIST", value=json.dumps(app.state.MODEL_FILTER_LIST)),
+    ]
+    
+    # Save the settings using the save_settings method
+    saved_settings = AdminSettings.save_settings(settings_to_save)
+    
     return {
         "enabled": app.state.ENABLE_MODEL_FILTER,
         "models": app.state.MODEL_FILTER_LIST,
