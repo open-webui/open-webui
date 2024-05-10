@@ -170,7 +170,7 @@
 					</select>
 				</div>
 			</div>
-			<!-- {#if $i18n.language === 'en-US'}
+			{#if $i18n.language === 'en-US'}
 				<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
 					Couldn't find your language?
 					<a
@@ -181,7 +181,7 @@
 						Help us translate Open WebUI!
 					</a>
 				</div>
-			{/if} -->
+			{/if}
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -206,7 +206,6 @@
 
 		<hr class=" dark:border-gray-700 my-3" />
 
-		{#if $user.role === 'admin'}
 		<div>
 			<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 			<textarea
@@ -215,7 +214,6 @@
 				rows="4"
 			/>
 		</div>
-		{/if}
 
 		<div class="mt-2 space-y-3 pr-1.5">
 			<div class="flex justify-between items-center text-sm">
