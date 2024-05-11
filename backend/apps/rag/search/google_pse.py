@@ -4,7 +4,7 @@ import logging
 import requests
 
 from apps.rag.search.main import SearchResult
-from config import SRC_LOG_LEVELS
+from config import SRC_LOG_LEVELS, WEB_SEARCH_RESULT_COUNT
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -27,7 +27,7 @@ def search_google_pse(
         "cx": search_engine_id,
         "q": query,
         "key": api_key,
-        "num": 5,
+        "num": WEB_SEARCH_RESULT_COUNT,
     }
 
     response = requests.request("GET", url, headers=headers, params=params)

@@ -3,7 +3,7 @@ import logging
 import requests
 
 from apps.rag.search.main import SearchResult
-from config import SRC_LOG_LEVELS
+from config import SRC_LOG_LEVELS, WEB_SEARCH_RESULT_COUNT
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -22,7 +22,7 @@ def search_brave(api_key: str, query: str) -> list[SearchResult]:
         "Accept-Encoding": "gzip",
         "X-Subscription-Token": api_key,
     }
-    params = {"q": query, "count": 5}
+    params = {"q": query, "count": WEB_SEARCH_RESULT_COUNT}
 
     response = requests.get(url, headers=headers, params=params)
     response.raise_for_status()
@@ -33,5 +33,5 @@ def search_brave(api_key: str, query: str) -> list[SearchResult]:
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("snippet")
         )
-        for result in results[:5]
+        for result in results[:WEB_SEARCH_RESULT_COUNT]
     ]
