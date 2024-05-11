@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { getContext } from 'svelte';
 	import Modal from '../common/Modal.svelte';
 	import Database from './Settings/Database.svelte';
@@ -6,7 +6,10 @@
 	import General from './Settings/General.svelte';
 	import Users from './Settings/Users.svelte';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	export let show = false;
 

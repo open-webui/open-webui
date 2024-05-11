@@ -20,7 +20,10 @@
 	import ChatCompletion from '$lib/components/playground/ChatCompletion.svelte';
 	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	let mode = 'chat';
 	let loaded = false;

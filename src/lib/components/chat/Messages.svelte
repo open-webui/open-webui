@@ -14,7 +14,10 @@
 	import { imageGenerations } from '$lib/apis/images';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	export let chatId = '';
 	export let readOnly = false;

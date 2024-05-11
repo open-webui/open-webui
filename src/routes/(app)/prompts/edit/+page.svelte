@@ -1,11 +1,14 @@
-<script>
+<script lang="ts">
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
 	import { prompts } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	import { getPrompts, updatePromptByCommand } from '$lib/apis/prompts';
 	import { page } from '$app/stores';

@@ -9,7 +9,10 @@
 	import { error } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	let importFiles = '';
 	let query = '';

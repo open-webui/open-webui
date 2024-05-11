@@ -13,7 +13,10 @@
 	import { transformFileName } from '$lib/utils';
 	import { SUPPORTED_FILE_EXTENSIONS, SUPPORTED_FILE_TYPE } from '$lib/constants';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	export let show = false;
 	let uploadDocInputElement: HTMLInputElement;

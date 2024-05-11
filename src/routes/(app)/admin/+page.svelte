@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
@@ -20,7 +20,10 @@
 	import UserChatsModal from '$lib/components/admin/UserChatsModal.svelte';
 	import AddUserModal from '$lib/components/admin/AddUserModal.svelte';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	let loaded = false;
 	let users = [];

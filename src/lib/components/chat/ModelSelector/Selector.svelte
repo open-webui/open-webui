@@ -15,7 +15,10 @@
 	import { capitalizeFirstLetter, getModels, splitStream } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n: Writable<i18nType> = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let value = '';
