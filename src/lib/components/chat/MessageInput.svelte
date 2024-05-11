@@ -1036,9 +1036,10 @@
 						</div>
 					</form>
 
-				<!-- <div class="mt-1.5 text-xs text-gray-500 text-center">
-					{$i18n.t('LLMs can make mistakes. Verify important information.')}
-				</div> -->
+					<div class="mt-1.5 text-xs text-gray-500 text-center">
+						{$i18n.t('LLMs can make mistakes. Verify important information.')}
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
