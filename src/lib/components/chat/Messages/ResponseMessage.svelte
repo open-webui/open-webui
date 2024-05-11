@@ -453,6 +453,11 @@
 										citation.document.forEach((document, index) => {
 											const metadata = citation.metadata?.[index];
 											const id = metadata?.source ?? 'N/A';
+											let source = citation?.source;
+											// Check if ID looks like a URL
+											if (id.startsWith('http://') || id.startsWith('https://')) {
+												source = { name: id };
+											}
 
 											const existingSource = acc.find((item) => item.id === id);
 
@@ -460,7 +465,7 @@
 												existingSource.document.push(document);
 												existingSource.metadata.push(metadata);
 											} else {
-												acc.push( { id: id, source: citation?.source, document: [document], metadata: metadata ? [metadata] : [] } );
+												acc.push( { id: id, source: source, document: [document], metadata: metadata ? [metadata] : [] } );
 											}
 										});
 										return acc;
