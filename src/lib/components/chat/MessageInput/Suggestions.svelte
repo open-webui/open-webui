@@ -7,7 +7,7 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let submitPrompt: Function;
+	export let submitPrompt: (prompt: string) => void;
 	export let suggestionPrompts = [];
 
 	let prompts = [];
@@ -47,7 +47,7 @@
 		class="relative w-full flex gap-2 snap-x snap-mandatory md:snap-none overflow-x-auto tabs"
 		id="suggestions-container"
 	>
-		{#each prompts as prompt, promptIdx}
+		{#each prompts as prompt}
 			<div class="snap-center shrink-0">
 				<button
 					class="flex flex-col flex-1 shrink-0 w-64 justify-between h-36 p-5 px-6 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 rounded-3xl transition group"

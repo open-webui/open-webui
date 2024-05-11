@@ -19,13 +19,12 @@
 
 	export let chatId = '';
 	export let readOnly = false;
-	export let sendPrompt: Function;
-	export let continueGeneration: Function;
-	export let regenerateResponse: Function;
+	export let sendPrompt: (prompt: string, messageId: string) => void;
+	export let continueGeneration: () => void;
+	export let regenerateResponse: () => void;
 
 	export let prompt;
 	export let suggestionPrompts;
-	export let processing = '';
 	export let bottomPadding = false;
 	export let autoScroll;
 	export let selectedModels;
@@ -79,7 +78,7 @@
 		history.currentId = userMessageId;
 
 		await tick();
-		await sendPrompt(userPrompt, userMessageId, chatId);
+		await sendPrompt(userPrompt, userMessageId);
 	};
 
 	const updateChatMessages = async () => {
@@ -252,6 +251,7 @@
 
 				if (p.includes('{{CLIPBOARD}}')) {
 					const clipboardText = await navigator.clipboard.readText().catch((err) => {
+						console.error('Failed to read clipboard contents', err);
 						toast.error($i18n.t('Failed to read clipboard contents'));
 						return '{{CLIPBOARD}}';
 					});

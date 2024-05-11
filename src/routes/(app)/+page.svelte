@@ -7,7 +7,6 @@
 
 	import {
 		WEBUI_NAME,
-		tags as _tags,
 		chatId,
 		chats,
 		config,
@@ -19,15 +18,7 @@
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
 	import { cancelOllamaRequest, generateChatCompletion } from '$lib/apis/ollama';
-	import {
-		addTagById,
-		createNewChat,
-		deleteTagById,
-		getAllChatTags,
-		getChatList,
-		getTagsById,
-		updateChatById
-	} from '$lib/apis/chats';
+	import { createNewChat, getChatList, updateChatById } from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion, generateTitle } from '$lib/apis/openai';
 
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -44,7 +35,6 @@
 
 	let stopResponseFlag = false;
 	let autoScroll = true;
-	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 	let currentRequestId = null;
 
@@ -61,7 +51,7 @@
 			: null;
 
 	let selectedModelfiles = {};
-	$: selectedModelfiles = selectedModels.reduce((a, tagName, i, arr) => {
+	$: selectedModelfiles = selectedModels.reduce((a, tagName) => {
 		const modelfile =
 			$modelfiles.filter((modelfile) => modelfile.tagName === tagName)?.at(0) ?? undefined;
 
@@ -72,7 +62,6 @@
 	}, {});
 
 	let chat = null;
-	let tags = [];
 
 	let title = '';
 	let prompt = '';
@@ -366,7 +355,7 @@
 				stop:
 					$settings?.options?.stop ?? undefined
 						? $settings.options.stop.map((str) =>
-								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+								decodeURIComponent(JSON.parse('"' + str.replace(/"/g, '\\"') + '"'))
 						  )
 						: undefined
 			},
@@ -451,7 +440,7 @@
 									messages = messages;
 
 									if ($settings.notificationEnabled && !document.hasFocus()) {
-										const notification = new Notification(
+										new Notification(
 											selectedModelfile
 												? `${
 														selectedModelfile.title.charAt(0).toUpperCase() +
@@ -602,7 +591,7 @@
 				stop:
 					$settings?.options?.stop ?? undefined
 						? $settings?.options?.stop.map((str) =>
-								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+								decodeURIComponent(JSON.parse('"' + str.replace(/"/g, '\\"') + '"'))
 						  )
 						: undefined,
 				temperature: $settings?.options?.temperature ?? undefined,
@@ -652,7 +641,7 @@
 				}
 
 				if ($settings.notificationEnabled && !document.hasFocus()) {
-					const notification = new Notification(`OpenAI ${model}`, {
+					new Notification(`OpenAI ${model}`, {
 						body: responseMessage.content,
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
@@ -730,7 +719,6 @@
 			await setChatTitle(_chatId, _title);
 		}
 	};
-
 	const stopResponse = () => {
 		stopResponseFlag = true;
 		console.log('stopResponse');
@@ -777,7 +765,7 @@
 					);
 			}
 		} else {
-			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
+			toast.error($i18n.t(`Message not found to continue generation`));
 		}
 	};
 
@@ -823,34 +811,6 @@
 			await chats.set(await getChatList(localStorage.token));
 		}
 	};
-
-	const getTags = async () => {
-		return await getTagsById(localStorage.token, $chatId).catch(async (error) => {
-			return [];
-		});
-	};
-
-	const addTag = async (tagName) => {
-		const res = await addTagById(localStorage.token, $chatId, tagName);
-		tags = await getTags();
-
-		chat = await updateChatById(localStorage.token, $chatId, {
-			tags: tags
-		});
-
-		_tags.set(await getAllChatTags(localStorage.token));
-	};
-
-	const deleteTag = async (tagName) => {
-		const res = await deleteTagById(localStorage.token, $chatId, tagName);
-		tags = await getTags();
-
-		chat = await updateChatById(localStorage.token, $chatId, {
-			tags: tags
-		});
-
-		_tags.set(await getAllChatTags(localStorage.token));
-	};
 </script>
 
 <svelte:head>
@@ -879,7 +839,7 @@
 			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full"
 			id="messages-container"
 			bind:this={messagesContainerElement}
-			on:scroll={(e) => {
+			on:scroll={() => {
 				autoScroll =
 					messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
 					messagesContainerElement.clientHeight + 5;
@@ -890,7 +850,6 @@
 					chatId={$chatId}
 					{selectedModels}
 					{selectedModelfiles}
-					{processing}
 					bind:history
 					bind:messages
 					bind:autoScroll

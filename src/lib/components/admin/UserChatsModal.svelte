@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
-	import { createEventDispatcher, getContext } from 'svelte';
-
-	const dispatch = createEventDispatcher();
+	import { getContext } from 'svelte';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { deleteChatById, getChatListByUserId } from '$lib/apis/chats';
@@ -11,16 +9,17 @@
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import type { User } from '$lib/apis/users';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	export let show = false;
-	export let user;
+	export let user: User;
 
 	let chats = [];
 
-	const deleteChatHandler = async (chatId) => {
-		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
+	const deleteChatHandler = async (chatId: string) => {
+		await deleteChatById(localStorage.token, chatId).catch((error) => {
 			toast.error(error);
 		});
 

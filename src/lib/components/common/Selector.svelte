@@ -3,12 +3,9 @@
 
 	import { flyAndScale } from '$lib/utils/transitions';
 
-	import { createEventDispatcher } from 'svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Check from '../icons/Check.svelte';
 	import Search from '../icons/Search.svelte';
-
-	const dispatch = createEventDispatcher();
 
 	export let value = '';
 	export let placeholder = 'Select a model';

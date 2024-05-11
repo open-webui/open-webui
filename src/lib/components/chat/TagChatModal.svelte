@@ -4,8 +4,8 @@
 	import Tags from '../common/Tags.svelte';
 
 	export let tags;
-	export let deleteTag: Function;
-	export let addTag: Function;
+	export let deleteTag: (tag: string) => void;
+	export let addTag: (tag: string) => void;
 
 	export let show = false;
 </script>

@@ -18,20 +18,7 @@ export const models: Writable<Model[]> = writable([]);
 
 export const modelfiles = writable([]);
 export const prompts: Writable<Prompt[]> = writable([]);
-export const documents = writable([
-	{
-		collection_name: 'collection_name',
-		filename: 'filename',
-		name: 'name',
-		title: 'title'
-	},
-	{
-		collection_name: 'collection_name1',
-		filename: 'filename1',
-		name: 'name1',
-		title: 'title1'
-	}
-]);
+export const documents: Writable<Document[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});
 
@@ -39,7 +26,7 @@ export const showSidebar = writable(false);
 export const showSettings = writable(false);
 export const showChangelog = writable(false);
 
-type Model = OpenAIModel | OllamaModel;
+export type Model = OpenAIModel | OllamaModel;
 
 type OpenAIModel = {
 	id: string;
@@ -70,7 +57,7 @@ type OllamaModelDetails = {
 	quantization_level: string;
 };
 
-type Settings = {
+export type Settings = {
 	models?: string[];
 	conversationMode?: boolean;
 	speechAutoSend?: boolean;
@@ -95,7 +82,7 @@ type Settings = {
 };
 
 type ModelOptions = {
-	stop?: boolean;
+	stop?: string[];
 };
 
 type AudioSettings = {
@@ -129,6 +116,7 @@ type Config = {
 	default_models?: string[];
 	default_prompt_suggestions?: PromptSuggestion[];
 	trusted_header_auth?: boolean;
+	admin_export_enabled?: boolean;
 };
 
 type PromptSuggestion = {
@@ -136,10 +124,22 @@ type PromptSuggestion = {
 	title: [string, string];
 };
 
-type SessionUser = {
+export type SessionUser = {
 	id: string;
 	email: string;
 	name: string;
 	role: string;
 	profile_image_url: string;
 };
+
+export interface Document {
+	collection_name: string;
+	filename: string;
+	name: string;
+	title: string;
+	content?: {
+		tags?: {
+			name: string;
+		}[];
+	};
+}

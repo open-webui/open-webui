@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getBackendConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
-	import { config, models, settings, user } from '$lib/stores';
+	import { type Settings, config, models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
@@ -11,7 +11,7 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let saveSettings: Function;
+	export let saveSettings: (settings: Partial<Settings>) => void;
 
 	// Addons
 	let titleAutoGenerate = true;

@@ -44,6 +44,7 @@
 		dispatch('select', model);
 	};
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const confirmSelectCollaborativeChat = async (model) => {
 		// dispatch('select', model);
 		prompt = '';
@@ -58,7 +59,7 @@
 		chatInputElement?.focus();
 		await tick();
 
-		const convoText = messages.reduce((a, message, i, arr) => {
+		const convoText = messages.reduce((a, message) => {
 			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
 		}, '');
 

@@ -26,8 +26,6 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let saveSettings: Function;
-
 	let loading = false;
 
 	let imageGenerationEngine = '';
@@ -51,6 +49,7 @@
 			return null;
 		});
 		selectedModel = await getDefaultImageGenerationModel(localStorage.token).catch((error) => {
+			console.error('Error getting default image generation model', error);
 			return '';
 		});
 	};

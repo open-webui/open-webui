@@ -23,6 +23,7 @@
 		"@sveltejs/kit": "^1.30.0",
 		"@tailwindcss/typography": "^0.5.10",
 		"@types/bun": "latest",
+		"@types/file-saver": "^2.0.7",
 		"@typescript-eslint/eslint-plugin": "^6.17.0",
 		"@typescript-eslint/parser": "^6.17.0",
 		"autoprefixer": "^10.4.16",

@@ -13,7 +13,8 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let initNewChat: Function;
+	export let initNewChat: () => void;
+	// eslint-disable-next-line svelte/valid-compile
 	export let title: string = $WEBUI_NAME;
 	export let shareEnabled: boolean = false;
 
@@ -23,7 +24,6 @@
 	export let showModelSelector = true;
 
 	let showShareChatModal = false;
-	let showDownloadChatModal = false;
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -75,9 +75,6 @@
 						{shareEnabled}
 						shareHandler={() => {
 							showShareChatModal = !showShareChatModal;
-						}}
-						downloadHandler={() => {
-							showDownloadChatModal = !showDownloadChatModal;
 						}}
 					>
 						<button

@@ -24,6 +24,7 @@
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
+			console.error('Failed to check for updates:', error);
 			return {
 				current: WEBUI_VERSION,
 				latest: WEBUI_VERSION
@@ -38,6 +39,7 @@
 
 	onMount(async () => {
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
+			console.error('Failed to get Ollama version:', error);
 			return '';
 		});
 

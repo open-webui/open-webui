@@ -19,8 +19,6 @@
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	const shareLocalChat = async () => {
-		const _chat = chat;
-
 		const sharedChat = await shareChatById(localStorage.token, chatId);
 		shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
 		console.log(shareUrl);

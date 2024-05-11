@@ -20,10 +20,10 @@
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
 
-	export let confirmEditMessage: Function;
-	export let showPreviousMessage: Function;
-	export let showNextMessage: Function;
-	export let copyToClipboard: Function;
+	export let confirmEditMessage: (id: string, content: string) => void;
+	export let showPreviousMessage: (message: object) => void;
+	export let showNextMessage: (message: object) => void;
+	export let copyToClipboard: (content: string) => void;
 
 	let edit = false;
 	let editedContent = '';

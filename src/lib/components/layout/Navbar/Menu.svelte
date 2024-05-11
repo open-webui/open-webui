@@ -19,19 +19,18 @@
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	export let shareEnabled: boolean = false;
-	export let shareHandler: Function;
-	export let downloadHandler: Function;
+	export let shareHandler: () => void;
 
 	// export let tagHandler: Function;
 
 	export let chat;
-	export let onClose: Function = () => {};
+	export let onClose: () => void = () => {};
 
 	const downloadTxt = async () => {
 		const _chat = chat.chat;
 		console.log('download', chat);
 
-		const chatText = _chat.messages.reduce((a, message, i, arr) => {
+		const chatText = _chat.messages.reduce((a, message) => {
 			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
 		}, '');
 

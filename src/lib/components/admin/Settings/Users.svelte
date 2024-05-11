@@ -10,7 +10,7 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let saveHandler: Function;
+	export let saveHandler: () => void;
 
 	let whitelistEnabled = false;
 	let whitelistModels = [''];

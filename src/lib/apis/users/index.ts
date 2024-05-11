@@ -181,3 +181,17 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 
 	return res;
 };
+
+export interface User {
+	id: string;
+	name: string;
+	email: string;
+	role: string;
+	profile_image_url: string;
+
+	last_active_at: number;
+	updated_at: number;
+	created_at: number;
+
+	api_key?: string;
+}

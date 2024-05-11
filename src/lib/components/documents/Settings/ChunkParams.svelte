@@ -8,20 +8,14 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let saveHandler: Function;
-
-	let scanDirLoading = false;
-	let updateEmbeddingModelLoading = false;
-	let updateRerankingModelLoading = false;
-
-	let showResetConfirm = false;
+	export let saveHandler: () => void;
 
 	let chunkSize = 0;
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
 
 	const submitHandler = async () => {
-		const res = await updateRAGConfig(localStorage.token, {
+		await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
 			chunk: {
 				chunk_overlap: chunkOverlap,

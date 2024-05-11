@@ -15,7 +15,7 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let saveHandler: Function;
+	export let saveHandler: () => void;
 	let signUpEnabled = true;
 	let defaultUserRole = 'pending';
 	let JWTExpiresIn = '';
@@ -26,11 +26,11 @@
 		signUpEnabled = await toggleSignUpEnabledStatus(localStorage.token);
 	};
 
-	const updateDefaultUserRoleHandler = async (role) => {
+	const updateDefaultUserRoleHandler = async (role: string) => {
 		defaultUserRole = await updateDefaultUserRole(localStorage.token, role);
 	};
 
-	const updateJWTExpiresDurationHandler = async (duration) => {
+	const updateJWTExpiresDurationHandler = async (duration: string) => {
 		JWTExpiresIn = await updateJWTExpiresDuration(localStorage.token, duration);
 	};
 

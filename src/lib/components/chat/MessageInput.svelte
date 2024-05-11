@@ -25,8 +25,8 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let submitPrompt: Function;
-	export let stopResponse: Function;
+	export let submitPrompt: (prompt: string, user: string) => void;
+	export let stopResponse: () => void;
 
 	export let autoScroll = true;
 	export let selectedModel = '';
@@ -143,17 +143,6 @@
 		};
 
 		window.requestAnimationFrame(detectSound);
-	};
-
-	const saveRecording = (blob) => {
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		document.body.appendChild(a);
-		a.style = 'display: none';
-		a.href = url;
-		a.download = 'recording.wav';
-		a.click();
-		window.URL.revokeObjectURL(url);
 	};
 
 	const speechRecognitionHandler = () => {

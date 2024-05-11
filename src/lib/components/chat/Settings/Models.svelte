@@ -11,7 +11,7 @@
 		pullModel,
 		uploadModel
 	} from '$lib/apis/ollama';
-	import { MODEL_DOWNLOAD_POOL, models } from '$lib/stores';
+	import { MODEL_DOWNLOAD_POOL, type Model, models } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 	import { getContext, onMount } from 'svelte';
 	import { addLiteLLMModel, deleteLiteLLMModel, getLiteLLMModelInfo } from '$lib/apis/litellm';
@@ -22,7 +22,7 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let getModels: Function;
+	export let getModels: () => Promise<Model[]>;
 
 	let showLiteLLM = false;
 	let showLiteLLMParams = false;
@@ -54,8 +54,6 @@
 
 	let modelTransferring = false;
 	let modelTag = '';
-	let digest = '';
-	let pullProgress = null;
 
 	let modelUploadMode = 'file';
 	let modelInputFile: File[] | null = null;
@@ -227,6 +225,7 @@
 				} catch (error) {
 					console.log(error);
 					if (typeof error !== 'string') {
+						// eslint-disable-next-line no-ex-assign
 						error = error.message;
 					}
 
@@ -376,16 +375,6 @@
 										!data.status.includes('sha256')
 									) {
 										toast.success(data.status);
-									} else {
-										if (data.digest) {
-											digest = data.digest;
-
-											if (data.completed) {
-												pullProgress = Math.round((data.completed / data.total) * 1000) / 10;
-											} else {
-												pullProgress = 100;
-											}
-										}
 									}
 								}
 							}
@@ -503,7 +492,10 @@
 			selectedOllamaUrlIdx = 0;
 		}
 
-		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
+			console.error('Failed to get Ollama version', error);
+			return false;
+		});
 		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
 	});
 </script>

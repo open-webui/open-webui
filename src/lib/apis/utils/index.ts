@@ -1,8 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const getGravatarUrl = async (email: string) => {
-	let error = null;
-
 	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/gravatar?email=${email}`, {
 		method: 'GET',
 		headers: {
@@ -14,18 +12,15 @@ export const getGravatarUrl = async (email: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
-			error = err;
+			console.error('Failed to get gravatar url', err);
 			return null;
 		});
 
 	return res;
 };
 
-export const downloadChatAsPDF = async (chat: object) => {
-	let error = null;
-
-	const blob = await fetch(`${WEBUI_API_BASE_URL}/utils/pdf`, {
+export const downloadChatAsPDF = async (chat: { title: string; messages: never[] }) => {
+	return await fetch(`${WEBUI_API_BASE_URL}/utils/pdf`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
@@ -40,17 +35,12 @@ export const downloadChatAsPDF = async (chat: object) => {
 			return res.blob();
 		})
 		.catch((err) => {
-			console.log(err);
-			error = err;
+			console.error('Failed to download chat as pdf', err);
 			return null;
 		});
-
-	return blob;
 };
 
 export const getHTMLFromMarkdown = async (md: string) => {
-	let error = null;
-
 	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/markdown`, {
 		method: 'POST',
 		headers: {
@@ -65,8 +55,7 @@ export const getHTMLFromMarkdown = async (md: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
-			error = err;
+			console.error('Failed to get HTML from markdown', err);
 			return null;
 		});
 
@@ -76,7 +65,7 @@ export const getHTMLFromMarkdown = async (md: string) => {
 export const downloadDatabase = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/db/download`, {
+	await fetch(`${WEBUI_API_BASE_URL}/utils/db/download`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',

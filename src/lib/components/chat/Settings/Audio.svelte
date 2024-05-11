@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
-	import { user } from '$lib/stores';
+	import { type Settings, user } from '$lib/stores';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
@@ -10,21 +10,21 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let saveSettings: Function;
+	export let saveSettings: (settings: Partial<Settings>) => void;
 
 	// Audio
 
 	let OpenAIUrl = '';
 	let OpenAIKey = '';
 
-	let STTEngines = ['', 'openai'];
+	// let STTEngines = ['', 'openai'];
 	let STTEngine = '';
 
 	let conversationMode = false;
 	let speechAutoSend = false;
 	let responseAutoPlayback = false;
 
-	let TTSEngines = ['', 'openai'];
+	// let TTSEngines = ['', 'openai'];
 	let TTSEngine = '';
 
 	let voices = [];

@@ -44,15 +44,15 @@
 
 	export let readOnly = false;
 
-	export let updateChatMessages: Function;
-	export let confirmEditResponseMessage: Function;
-	export let showPreviousMessage: Function;
-	export let showNextMessage: Function;
-	export let rateMessage: Function;
+	export let updateChatMessages: () => void;
+	export let confirmEditResponseMessage: (id: string, content: string) => void;
+	export let showPreviousMessage: (message: object) => void;
+	export let showNextMessage: (message: object) => void;
+	export let rateMessage: (id: string, rating: number) => void;
 
-	export let copyToClipboard: Function;
-	export let continueGeneration: Function;
-	export let regenerateResponse: Function;
+	export let copyToClipboard: (content: string) => void;
+	export let continueGeneration: () => void;
+	export let regenerateResponse: () => void;
 
 	let edit = false;
 	let editedContent = '';
@@ -80,6 +80,7 @@
 		return `<code>${code.replaceAll('&amp;', '&')}</code>`;
 	};
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const { extensions, ...defaults } = marked.getDefaults() as marked.MarkedOptions & {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		extensions: any;
@@ -190,7 +191,9 @@
 
 				sentencesAudio[speakingIdx].pause();
 				sentencesAudio[speakingIdx].currentTime = 0;
-			} catch {}
+			} catch (error) {
+				console.error('Error stopping speech: ', error);
+			}
 
 			speaking = null;
 			speakingIdx = null;
@@ -218,7 +221,7 @@
 
 				console.log(sentences);
 
-				sentencesAudio = sentences.reduce((a, e, i, arr) => {
+				sentencesAudio = sentences.reduce((a, e, i) => {
 					a[i] = null;
 					return a;
 				}, {});
@@ -439,6 +442,7 @@
 											code={revertSanitizedResponseContent(token.text)}
 										/>
 									{:else}
+										<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 										{@html marked.parse(token.raw, {
 											...defaults,
 											gfm: true,

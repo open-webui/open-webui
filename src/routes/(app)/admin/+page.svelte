@@ -9,7 +9,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { deleteUserById, getUsers, updateUserRole } from '$lib/apis/users';
+	import { type User, deleteUserById, getUsers, updateUserRole } from '$lib/apis/users';
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
 	import SettingsModal from '$lib/components/admin/SettingsModal.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
@@ -24,10 +24,10 @@
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	let loaded = false;
-	let users = [];
+	let users: User[] = [];
 
 	let search = '';
-	let selectedUser = null;
+	let selectedUser: User | undefined = undefined;
 
 	let page = 1;
 
@@ -37,7 +37,7 @@
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
 
-	const updateRoleHandler = async (id, role) => {
+	const updateRoleHandler = async (id: string, role: string) => {
 		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
 			toast.error(error);
 			return null;
@@ -48,18 +48,7 @@
 		}
 	};
 
-	const editUserPasswordHandler = async (id, password) => {
-		const res = await deleteUserById(localStorage.token, id).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-		if (res) {
-			users = await getUsers(localStorage.token);
-			toast.success($i18n.t('Successfully updated.'));
-		}
-	};
-
-	const deleteUserHandler = async (id) => {
+	const deleteUserHandler = async (id: string) => {
 		const res = await deleteUserById(localStorage.token, id).catch((error) => {
 			toast.error(error);
 			return null;

@@ -304,7 +304,6 @@
 			<div class="flex-1 md:min-h-[25rem]">
 				{#if selectedTab === 'general'}
 					<General
-						{getModels}
 						{saveSettings}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
@@ -335,7 +334,6 @@
 					/>
 				{:else if selectedTab === 'images'}
 					<Images
-						{saveSettings}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
@@ -357,13 +355,6 @@
 </Modal>
 
 <style>
-	input::-webkit-outer-spin-button,
-	input::-webkit-inner-spin-button {
-		/* display: none; <- Crashes Chrome on hover */
-		-webkit-appearance: none;
-		margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
-	}
-
 	.tabs::-webkit-scrollbar {
 		display: none; /* for Chrome, Safari and Opera */
 	}
@@ -371,9 +362,5 @@
 	.tabs {
 		-ms-overflow-style: none; /* IE and Edge */
 		scrollbar-width: none; /* Firefox */
-	}
-
-	input[type='number'] {
-		-moz-appearance: textfield; /* Firefox */
 	}
 </style>

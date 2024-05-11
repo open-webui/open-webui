@@ -28,10 +28,8 @@
 
 	const BREAKPOINT = 1024;
 
-	let show = false;
 	let navElement;
 
-	let title: string = 'UI';
 	let search = '';
 
 	let shareChatId = null;
@@ -45,7 +43,6 @@
 	let showArchivedChatsModal = false;
 	let showShareChatModal = false;
 	let showDropdown = false;
-	let isEditing = false;
 
 	let filteredChatList = [];
 
@@ -120,7 +117,10 @@
 	const enrichChatsWithContent = async (chatList) => {
 		const enrichedChats = await Promise.all(
 			chatList.map(async (chat) => {
-				const chatDetails = await getChatById(localStorage.token, chat.id).catch((error) => null); // Handle error or non-existent chat gracefully
+				const chatDetails = await getChatById(localStorage.token, chat.id).catch((error) => {
+					console.error('Error fetching chat content:', error);
+					return null;
+				}); // Handle error or non-existent chat gracefully
 				if (chatDetails) {
 					chat.chat = chatDetails.chat; // Assuming chatDetails.chat contains the chat content
 				}
@@ -131,16 +131,10 @@
 		await chats.set(enrichedChats);
 	};
 
-	const loadChat = async (id) => {
-		goto(`/c/${id}`);
-	};
-
 	const editChatTitle = async (id, _title) => {
 		if (_title === '') {
 			toast.error($i18n.t('Title cannot be an empty string.'));
 		} else {
-			title = _title;
-
 			await updateChatById(localStorage.token, id, {
 				title: _title
 			});

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
 	import { deleteDB, openDB } from 'idb';
 	import fileSaver from 'file-saver';
@@ -8,7 +7,6 @@
 	import { goto } from '$app/navigation';
 
 	import { getModels as _getModels } from '$lib/utils';
-	import { getOllamaVersion } from '$lib/apis/ollama';
 	import { getModelfiles } from '$lib/apis/modelfiles';
 	import { getPrompts } from '$lib/apis/prompts';
 
@@ -27,8 +25,6 @@
 		tags,
 		user
 	} from '$lib/stores';
-	import { REQUIRED_OLLAMA_VERSION } from '$lib/constants';
-	import { compareVersion } from '$lib/utils';
 
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -41,7 +37,6 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	let ollamaVersion = '';
 	let loaded = false;
 	let showShortcutsButtonElement: HTMLButtonElement;
 	let DB = null;
@@ -51,21 +46,6 @@
 
 	const getModels = async () => {
 		return _getModels(localStorage.token);
-	};
-
-	const setOllamaVersion = async (version: string = '') => {
-		if (version === '') {
-			version = await getOllamaVersion(localStorage.token).catch((error) => {
-				return '';
-			});
-		}
-
-		ollamaVersion = version;
-
-		console.log(ollamaVersion);
-		if (compareVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion)) {
-			toast.error(`Ollama Version: ${ollamaVersion !== '' ? ollamaVersion : 'Not Detected'}`);
-		}
 	};
 
 	onMount(async () => {
@@ -303,45 +283,9 @@
 </div>
 
 <style>
-	.loading {
-		display: inline-block;
-		clip-path: inset(0 1ch 0 0);
-		animation: l 1s steps(3) infinite;
-		letter-spacing: -0.5px;
-	}
-
 	@keyframes l {
 		to {
 			clip-path: inset(0 -1ch 0 0);
 		}
-	}
-
-	pre[class*='language-'] {
-		position: relative;
-		overflow: auto;
-
-		/* make space  */
-		margin: 5px 0;
-		padding: 1.75rem 0 1.75rem 1rem;
-		border-radius: 10px;
-	}
-
-	pre[class*='language-'] button {
-		position: absolute;
-		top: 5px;
-		right: 5px;
-
-		font-size: 0.9rem;
-		padding: 0.15rem;
-		background-color: #828282;
-
-		border: ridge 1px #7b7b7c;
-		border-radius: 5px;
-		text-shadow: #c4c4c4 0 0 2px;
-	}
-
-	pre[class*='language-'] button:hover {
-		cursor: pointer;
-		background-color: #bcbabb;
 	}
 </style>

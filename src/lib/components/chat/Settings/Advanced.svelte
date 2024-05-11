@@ -4,11 +4,12 @@
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import type { Settings } from '$lib/stores';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	export let saveSettings: Function;
+	export let saveSettings: (settings: Partial<Settings>) => void;
 
 	// Advanced
 	let requestFormat = '';

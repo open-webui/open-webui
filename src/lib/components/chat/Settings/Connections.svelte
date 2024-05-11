@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { models, user } from '$lib/stores';
+	import { type Model, models, user } from '$lib/stores';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	const dispatch = createEventDispatcher();
 
@@ -17,14 +17,10 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let getModels: Function;
+	export let getModels: () => Promise<Model[]>;
 
 	// External
-	let OLLAMA_BASE_URL = '';
 	let OLLAMA_BASE_URLS = [''];
-
-	let OPENAI_API_KEY = '';
-	let OPENAI_API_BASE_URL = '';
 
 	let OPENAI_API_KEYS = [''];
 	let OPENAI_API_BASE_URLS = [''];

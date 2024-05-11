@@ -10,8 +10,8 @@
 
 	export let tags = [];
 
-	export let deleteTag: Function;
-	export let addTag: Function;
+	export let deleteTag: (tag: string) => void;
+	export let addTag: (tag: string) => void;
 </script>
 
 <div class="flex flex-row flex-wrap gap-0.5 line-clamp-1">

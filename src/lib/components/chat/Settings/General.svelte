@@ -4,7 +4,7 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { theme } from '$lib/stores';
+	import { type Settings, theme } from '$lib/stores';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -13,8 +13,7 @@
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 
-	export let saveSettings: Function;
-	export let getModels: Function;
+	export let saveSettings: (settings: Partial<Settings>) => void;
 
 	// General
 	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
@@ -163,7 +162,7 @@
 						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
 						bind:value={lang}
 						placeholder="Select a language"
-						on:change={(e) => {
+						on:change={() => {
 							$i18n.changeLanguage(lang);
 						}}
 					>

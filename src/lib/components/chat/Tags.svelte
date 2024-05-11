@@ -20,12 +20,13 @@
 
 	const getTags = async () => {
 		return await getTagsById(localStorage.token, chatId).catch(async (error) => {
+			console.error('Error getting tags', error);
 			return [];
 		});
 	};
 
 	const addTag = async (tagName) => {
-		const res = await addTagById(localStorage.token, chatId, tagName);
+		await addTagById(localStorage.token, chatId, tagName);
 		tags = await getTags();
 
 		await updateChatById(localStorage.token, chatId, {
@@ -36,7 +37,7 @@
 	};
 
 	const deleteTag = async (tagName) => {
-		const res = await deleteTagById(localStorage.token, chatId, tagName);
+		await deleteTagById(localStorage.token, chatId, tagName);
 		tags = await getTags();
 
 		await updateChatById(localStorage.token, chatId, {

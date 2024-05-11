@@ -2,7 +2,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { chats, config, user } from '$lib/stores';
+	import { type Settings, chats, config, user } from '$lib/stores';
 
 	import {
 		createNewChat,
@@ -21,7 +21,7 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let saveSettings: Function;
+	export let saveSettings: (settings: Partial<Settings>) => void;
 	// Chats
 	let saveChatHistory = true;
 	let importFiles;

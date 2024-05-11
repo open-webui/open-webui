@@ -258,6 +258,7 @@
 
 								for (const modelfile of savedModelfiles) {
 									await createNewModelfile(localStorage.token, modelfile).catch((error) => {
+										console.error('Error importing modelfile', error);
 										return null;
 									});
 								}
@@ -330,6 +331,7 @@
 								on:click={async () => {
 									for (const modelfile of localModelfiles) {
 										await createNewModelfile(localStorage.token, modelfile).catch((error) => {
+											console.error('Error importing modelfile', error);
 											return null;
 										});
 									}

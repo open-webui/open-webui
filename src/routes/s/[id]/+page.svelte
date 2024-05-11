@@ -21,14 +21,12 @@
 
 	let autoScroll = true;
 	let processing = '';
-	let messagesContainerElement: HTMLDivElement;
 
 	// let chatId = $page.params.id;
-	let showModelSelector = false;
 	let selectedModels = [''];
 
 	let selectedModelfiles = {};
-	$: selectedModelfiles = selectedModels.reduce((a, tagName, i, arr) => {
+	$: selectedModelfiles = selectedModels.reduce((a, tagName) => {
 		const modelfile =
 			$modelfiles.filter((modelfile) => modelfile.tagName === tagName)?.at(0) ?? undefined;
 
@@ -68,10 +66,6 @@
 			if (await loadSharedChat()) {
 				await tick();
 				loaded = true;
-
-				window.setTimeout(() => scrollToBottom(), 0);
-				const chatInput = document.getElementById('chat-textarea');
-				chatInput?.focus();
 			} else {
 				await goto('/');
 			}
@@ -84,7 +78,7 @@
 
 	const loadSharedChat = async () => {
 		await chatId.set($page.params.id);
-		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
+		chat = await getChatByShareId(localStorage.token, $chatId).catch(async () => {
 			await goto('/');
 			return null;
 		});

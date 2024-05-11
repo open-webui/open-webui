@@ -18,12 +18,14 @@
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	let mode = 'chat';
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	let loaded = false;
 	let text = '';
 
 	let selectedModelId = '';
 
 	let loading = false;
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	let currentRequestId = null;
 	let stopResponseFlag = false;
 

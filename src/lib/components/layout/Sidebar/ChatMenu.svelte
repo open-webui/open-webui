@@ -15,10 +15,10 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let shareHandler: Function;
-	export let renameHandler: Function;
-	export let deleteHandler: Function;
-	export let onClose: Function;
+	export let shareHandler: () => void;
+	export let renameHandler: () => void;
+	export let deleteHandler: () => void;
+	export let onClose: () => void;
 
 	export let chatId = '';
 

@@ -20,12 +20,6 @@
 	let inputFiles;
 	let tags = [];
 
-	let doc = {
-		name: '',
-		title: '',
-		content: null
-	};
-
 	const uploadDoc = async (file) => {
 		const res = await uploadDocToVectorDB(localStorage.token, '', file).catch((error) => {
 			toast.error(error);
@@ -177,18 +171,5 @@
 		/* display: none; <- Crashes Chrome on hover */
 		-webkit-appearance: none;
 		margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
-	}
-
-	.tabs::-webkit-scrollbar {
-		display: none; /* for Chrome, Safari and Opera */
-	}
-
-	.tabs {
-		-ms-overflow-style: none; /* IE and Edge */
-		scrollbar-width: none; /* Firefox */
-	}
-
-	input[type='number'] {
-		-moz-appearance: textfield; /* Firefox */
 	}
 </style>

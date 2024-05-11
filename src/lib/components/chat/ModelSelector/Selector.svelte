@@ -2,7 +2,7 @@
 	import { DropdownMenu } from 'bits-ui';
 
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { createEventDispatcher, getContext, onMount } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -19,7 +19,6 @@
 	import type { i18n as i18nType } from 'i18next';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
-	const dispatch = createEventDispatcher();
 
 	export let value = '';
 	export let placeholder = 'Select a model';
@@ -135,8 +134,9 @@
 						}
 					}
 				} catch (error) {
-					console.log(error);
+					console.error('Error reading Ollama stream', error);
 					if (typeof error !== 'string') {
+						// eslint-disable-next-line no-ex-assign
 						error = error.message;
 					}
 
@@ -166,7 +166,10 @@
 	};
 
 	onMount(async () => {
-		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
+			console.error('Failed to get Ollama version', error);
+			return false;
+		});
 	});
 
 	const cancelModelPullHandler = async (model: string) => {

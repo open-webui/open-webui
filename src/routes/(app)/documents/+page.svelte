@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { getContext, onMount } from 'svelte';
-	import { WEBUI_NAME, documents } from '$lib/stores';
+	import { type Document, WEBUI_NAME, documents } from '$lib/stores';
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
 	import { SUPPORTED_FILE_EXTENSIONS, SUPPORTED_FILE_TYPE } from '$lib/constants';
@@ -25,7 +25,6 @@
 
 	let importFiles = '';
 
-	let inputFiles = '';
 	let query = '';
 	let documentsImportInputElement: HTMLInputElement;
 	let tags = [];
@@ -44,7 +43,7 @@
 	};
 
 	const deleteDocs = async (docs) => {
-		const res = await Promise.all(
+		await Promise.all(
 			docs.map(async (doc) => {
 				return await deleteDocByName(localStorage.token, doc.name);
 			})
@@ -76,13 +75,13 @@
 
 	onMount(() => {
 		documents.subscribe((docs) => {
-			tags = docs.reduce((a, e, i, arr) => {
+			tags = docs.reduce((a: Document[], e) => {
 				return [...new Set([...a, ...(e?.content?.tags ?? []).map((tag) => tag.name)])];
 			}, []);
 		});
 		const dropZone = document.querySelector('body');
 
-		const onDragOver = (e) => {
+		const onDragOver = (e: DragEvent) => {
 			e.preventDefault();
 			dragged = true;
 		};
@@ -91,23 +90,11 @@
 			dragged = false;
 		};
 
-		const onDrop = async (e) => {
+		const onDrop = async (e: DragEvent) => {
 			e.preventDefault();
 			console.log(e);
 
 			if (e.dataTransfer?.files) {
-				let reader = new FileReader();
-
-				reader.onload = (event) => {
-					files = [
-						...files,
-						{
-							type: 'image',
-							url: `${event.target.result}`
-						}
-					];
-				};
-
 				const inputFiles = e.dataTransfer?.files;
 
 				if (inputFiles && inputFiles.length > 0) {
@@ -115,7 +102,7 @@
 						console.log(file, file.name.split('.').at(-1));
 						if (
 							SUPPORTED_FILE_TYPE.includes(file['type']) ||
-							SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+							SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1) ?? '')
 						) {
 							uploadDoc(file);
 						} else {
@@ -144,7 +131,7 @@
 		};
 	});
 
-	let filteredDocs;
+	let filteredDocs: Document[];
 
 	$: filteredDocs = $documents.filter(
 		(doc) =>

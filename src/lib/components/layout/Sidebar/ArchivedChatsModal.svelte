@@ -19,7 +19,7 @@
 	let chats = [];
 
 	const unarchiveChatHandler = async (chatId) => {
-		const res = await archiveChatById(localStorage.token, chatId).catch((error) => {
+		await archiveChatById(localStorage.token, chatId).catch((error) => {
 			toast.error(error);
 		});
 
@@ -29,7 +29,7 @@
 	};
 
 	const deleteChatHandler = async (chatId) => {
-		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
+		await deleteChatById(localStorage.token, chatId).catch((error) => {
 			toast.error(error);
 		});
 

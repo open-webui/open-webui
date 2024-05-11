@@ -8,7 +8,7 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let saveHandler: Function;
+	export let saveHandler: () => void;
 
 	let webLoaderSSLVerification = true;
 
@@ -16,7 +16,7 @@
 	let youtubeTranslation = null;
 
 	const submitHandler = async () => {
-		const res = await updateRAGConfig(localStorage.token, {
+		await updateRAGConfig(localStorage.token, {
 			web_loader_ssl_verification: webLoaderSSLVerification,
 			youtube: {
 				language: youtubeLanguage.split(',').map((lang) => lang.trim()),

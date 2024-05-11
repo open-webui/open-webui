@@ -35,6 +35,12 @@ module.exports = {
 				ignoreDeclarationSort: true
 			}
 		],
-		'unused-imports/no-unused-imports': 'error'
+		'unused-imports/no-unused-imports': 'error',
+		'no-constant-condition': [
+			'error',
+			{
+				checkLoops: false // Change to 'allExceptWhileTrue' when eslint is upgraded >= 9.1.0
+			}
+		]
 	}
 };

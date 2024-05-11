@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-at-html-tags */
 	import { copyToClipboard } from '$lib/utils';
 	import hljs from 'highlight.js';
 	import 'highlight.js/styles/github-dark.min.css';
