@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { fnStore } from '$lib/apis/functions';
+	import i18n from '$lib/i18n';
 
 	let editor: Monaco.editor.IStandaloneCodeEditor;
 	let monaco: typeof Monaco;
@@ -133,7 +134,7 @@
 		if (schema[schemaName]?.params !== undefined) {
 			params = Object.keys(schema[schemaName].params).reduce((acc, key) => {
 				const param = schema[schemaName].params[key];
-				const value = prompt(`Enter a value for ${key} (${param.type})`);
+				const value = prompt(`${key} (${param.type})`);
 				if (value === null) return acc;
 				acc[key] =
 					param.type === 'number'
@@ -157,7 +158,7 @@
 			class="p-2 px-4 flex gap-2 items-center bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition false"
 			on:click={test}
 		>
-			Test
+			{$i18n.t('Test')}
 		</button>
 		<a
 			href="/"
@@ -165,7 +166,7 @@
 			class="p-2 px-4 flex gap-2 items-center bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition false"
 			on:click={saveAndGoBack}
 		>
-			Save and go back
+			{$i18n.t('Save and go back')}
 		</a>
 	</div>
 </div>

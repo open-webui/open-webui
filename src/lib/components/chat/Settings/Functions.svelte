@@ -13,31 +13,6 @@
 		  }
 		: undefined;
 
-	const testFunction = async () => {
-		fnCaller.setFunctions(
-			{
-				getWeather: {
-					description: "Gets the weather at the user's location.",
-					params: {}
-				}
-			},
-			{
-				getWeather: {
-					fn: "() => { return 'Raining, temp is 20.5 celsius, cloudy'; }",
-					createdAt: new Date().getTime(),
-					enabled: true
-				}
-			}
-		);
-		const res = await fnCaller.getFunction(
-			"what's the weather like in my location?",
-			[],
-			'llama3:8b',
-			localStorage.token
-		);
-		console.log(await fnCaller.callFunction(res));
-	};
-
 	const createFunction = async () => {
 		// find an unused name
 		let i = 1;
@@ -165,7 +140,7 @@
 						<select
 							bind:value={selectedFnName}
 							class="dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
-							placeholder="Choose a function to edit"
+							placeholder={$i18n.t('Choose a function to edit')}
 						>
 							{#each Object.keys($fnStore.fns) as key}
 								<option value={key}>{key}</option>
@@ -257,7 +232,7 @@
 			</div>
 			{#if typeof selectedFnName !== 'undefined' && typeof selectedFn !== 'undefined' && selectedFn?.params}
 				<div>
-					<div class="mb-2 text-sm font-medium">Function name</div>
+					<div class="mb-2 text-sm font-medium">{$i18n.t('Function name')}</div>
 					<div class="flex w-full">
 						<input
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
@@ -280,7 +255,7 @@
 				</div> -->
 				</div>
 				<div class="!mb-4">
-					<div class="mb-2 text-sm font-medium">Function description</div>
+					<div class="mb-2 text-sm font-medium">{$i18n.t('Function description')}</div>
 					<div class="flex w-full">
 						<textarea
 							class="w-full rounded-lg py-2 px-4 resize-none h-28 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
@@ -302,10 +277,10 @@
 				</div>
 				<table class="w-full border-spacing-x-4 border-spacing-y-1 border-separate -ml-4">
 					<tr class="text-left whitespace-nowrap overflow-hidden text-ellipsis">
-						<th>Parameter</th>
-						<th>Type</th>
-						<th>Description</th>
-						<th>Required</th>
+						<th>{$i18n.t('Parameter')}</th>
+						<th>{$i18n.t('Type')}</th>
+						<th>{$i18n.t('Description')}</th>
+						<th>{$i18n.t('Required')}</th>
 					</tr>
 					{#each Object.entries(selectedFn.params).sort((a, b) => {
 						return a[1].createdAt - b[1].createdAt;
@@ -441,13 +416,13 @@
 						on:click={createParameter}
 						class="p-2 px-4 flex gap-2 items-center bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition {Object.keys(
 							selectedFn.params
-						).length === 0 && 'mt-[38px]'}">Create parameter</button
+						).length === 0 && 'mt-[38px]'}">{$i18n.t('Create parameter')}</button
 					>
 					<a
 						href="/editor/{selectedFnName}"
 						class="p-2 px-4 flex gap-2 items-center bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition {Object.keys(
 							selectedFn.params
-						).length === 0 && 'mt-[38px]'}">Enter code editor</a
+						).length === 0 && 'mt-[38px]'}">{$i18n.t('Enter code editor')}</a
 					>
 				</div>
 			{/if}
