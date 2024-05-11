@@ -3,19 +3,19 @@
 	import { toast } from 'svelte-sonner';
 
 	import {
+		cancelOllamaRequest,
 		createModel,
 		deleteModel,
 		downloadModel,
 		getOllamaUrls,
 		getOllamaVersion,
 		pullModel,
-		cancelOllamaRequest,
 		uploadModel
 	} from '$lib/apis/ollama';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user } from '$lib/stores';
+	import { MODEL_DOWNLOAD_POOL, WEBUI_NAME, models, user } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { addLiteLLMModel, deleteLiteLLMModel, getLiteLLMModelInfo } from '$lib/apis/litellm';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 

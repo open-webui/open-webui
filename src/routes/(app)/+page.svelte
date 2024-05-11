@@ -2,25 +2,25 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
-	import { onMount, tick, getContext } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import {
-		models,
-		modelfiles,
-		user,
-		settings,
-		chats,
-		chatId,
-		config,
 		WEBUI_NAME,
 		tags as _tags,
-		showSidebar
+		chatId,
+		chats,
+		config,
+		modelfiles,
+		models,
+		settings,
+		showSidebar,
+		user
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
-	import { generateChatCompletion, cancelOllamaRequest } from '$lib/apis/ollama';
+	import { cancelOllamaRequest, generateChatCompletion } from '$lib/apis/ollama';
 	import {
 		addTagById,
 		createNewChat,

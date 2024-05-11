@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 
-	import { onMount, tick, getContext } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 
@@ -11,7 +11,7 @@
 		OPENAI_API_BASE_URL,
 		WEBUI_API_BASE_URL
 	} from '$lib/constants';
-	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
+	import { WEBUI_NAME, config, models, settings, user } from '$lib/stores';
 
 	import { cancelOllamaRequest, generateChatCompletion } from '$lib/apis/ollama';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';

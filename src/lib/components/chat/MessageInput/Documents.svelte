@@ -2,8 +2,8 @@
 	import { createEventDispatcher } from 'svelte';
 
 	import { documents } from '$lib/stores';
-	import { removeFirstHashWord, isValidHttpUrl } from '$lib/utils';
-	import { tick, getContext } from 'svelte';
+	import { isValidHttpUrl, removeFirstHashWord } from '$lib/utils';
+	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import type { Writable } from 'svelte/store';

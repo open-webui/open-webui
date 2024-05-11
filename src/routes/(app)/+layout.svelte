@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext } from 'svelte';
-	import { openDB, deleteDB } from 'idb';
+	import { getContext, onMount, tick } from 'svelte';
+	import { deleteDB, openDB } from 'idb';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -16,16 +16,16 @@
 	import { getAllChatTags } from '$lib/apis/chats';
 
 	import {
-		user,
-		showSettings,
-		settings,
-		models,
-		modelfiles,
-		prompts,
+		config,
 		documents,
-		tags,
+		modelfiles,
+		models,
+		prompts,
+		settings,
 		showChangelog,
-		config
+		showSettings,
+		tags,
+		user
 	} from '$lib/stores';
 	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';

@@ -4,9 +4,9 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
+	import { canvasPixelTest, generateInitialsImage } from '$lib/utils';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';

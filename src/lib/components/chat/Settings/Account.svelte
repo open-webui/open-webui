@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 
 	import { user } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey } from '$lib/apis/auths';
+	import { createAPIKey, getAPIKey, updateUserProfile } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
-	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
+	import { canvasPixelTest, generateInitialsImage } from '$lib/utils';
 	import { copyToClipboard } from '$lib/utils';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';

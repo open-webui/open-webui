@@ -2,7 +2,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -10,7 +10,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
+	import { deleteUserById, getUsers, updateUserRole } from '$lib/apis/users';
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
 	import SettingsModal from '$lib/components/admin/SettingsModal.svelte';

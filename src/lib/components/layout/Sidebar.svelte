@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { user, chats, settings, showSettings, chatId, tags, showSidebar } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
+	import { chatId, chats, settings, showSettings, showSidebar, tags, user } from '$lib/stores';
+	import { getContext, onMount } from 'svelte';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -9,13 +9,13 @@
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	import {
+		archiveChatById,
 		deleteChatById,
-		getChatList,
-		getChatById,
-		getChatListByTagName,
-		updateChatById,
 		getAllChatTags,
-		archiveChatById
+		getChatById,
+		getChatList,
+		getChatListByTagName,
+		updateChatById
 	} from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	import { fade, slide } from 'svelte/transition';

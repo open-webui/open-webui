@@ -3,10 +3,10 @@
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { page } from '$app/stores';
 
-	import { settings, user, config, modelfiles } from '$lib/stores';
+	import { config, modelfiles, settings, user } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
 	import { createModel } from '$lib/apis/ollama';

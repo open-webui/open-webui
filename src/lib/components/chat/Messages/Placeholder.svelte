@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { user } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 
 	import { blur, fade } from 'svelte/transition';
 

@@ -4,7 +4,7 @@
 	import { generatePrompt } from '$lib/apis/ollama';
 	import { models } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
-	import { tick, getContext } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import type { Writable } from 'svelte/store';

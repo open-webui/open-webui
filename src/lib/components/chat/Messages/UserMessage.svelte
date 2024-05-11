@@ -1,7 +1,7 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 
-	import { tick, createEventDispatcher, getContext } from 'svelte';
+	import { createEventDispatcher, getContext, tick } from 'svelte';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import { modelfiles, settings } from '$lib/stores';

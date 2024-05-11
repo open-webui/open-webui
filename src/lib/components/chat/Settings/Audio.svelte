@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
 	import { user } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
 

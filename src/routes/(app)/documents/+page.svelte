@@ -3,11 +3,11 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { WEBUI_NAME, documents } from '$lib/stores';
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
-	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
+	import { SUPPORTED_FILE_EXTENSIONS, SUPPORTED_FILE_TYPE } from '$lib/constants';
 	import { uploadDocToVectorDB } from '$lib/apis/rag';
 	import { transformFileName } from '$lib/utils';
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 
 	import { createNewDoc, getDocs, tagDocByName, updateDocByName } from '$lib/apis/documents';
 	import Modal from '../common/Modal.svelte';

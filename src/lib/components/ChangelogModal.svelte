@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { Confetti } from 'svelte-confetti';
 
 	import { WEBUI_NAME, config } from '$lib/stores';

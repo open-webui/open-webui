@@ -3,7 +3,7 @@
 
 	import { goto } from '$app/navigation';
 	import { prompts } from '$lib/stores';
-	import { onMount, tick, getContext } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 
 	import { createNewPrompt, getPrompts } from '$lib/apis/prompts';
 

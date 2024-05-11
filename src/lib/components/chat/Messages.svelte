@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { chats, config, modelfiles, settings, user } from '$lib/stores';
-	import { tick, getContext } from 'svelte';
+	import { getContext, tick } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';

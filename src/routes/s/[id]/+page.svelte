@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { onMount, tick, getContext } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import dayjs from 'dayjs';
 
-	import { modelfiles, settings, chatId, WEBUI_NAME } from '$lib/stores';
+	import { WEBUI_NAME, chatId, modelfiles, settings } from '$lib/stores';
 	import { convertMessagesToHistory } from '$lib/utils';
 
 	import { getChatByShareId } from '$lib/apis/chats';

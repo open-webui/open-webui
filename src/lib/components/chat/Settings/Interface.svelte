@@ -2,7 +2,7 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, models, settings, user } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
 

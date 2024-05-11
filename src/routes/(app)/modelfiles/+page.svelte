@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 
 	import { WEBUI_NAME, modelfiles, settings, user } from '$lib/stores';
 	import { createModel, deleteModel } from '$lib/apis/ollama';

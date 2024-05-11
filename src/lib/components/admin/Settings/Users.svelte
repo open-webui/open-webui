@@ -3,7 +3,7 @@
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import { getUserPermissions, updateUserPermissions } from '$lib/apis/users';
 
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { models } from '$lib/stores';
 
 	import type { Writable } from 'svelte/store';

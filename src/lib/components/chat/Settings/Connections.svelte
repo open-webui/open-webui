@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { models, user } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { getOllamaUrls, getOllamaVersion, updateOllamaUrls } from '$lib/apis/ollama';

@@ -2,8 +2,8 @@
 	import { Collapsible } from 'bits-ui';
 
 	import { setDefaultModels } from '$lib/apis/configs';
-	import { models, showSettings, settings, user } from '$lib/stores';
-	import { onMount, tick, getContext } from 'svelte';
+	import { models, settings, showSettings, user } from '$lib/stores';
+	import { getContext, onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';

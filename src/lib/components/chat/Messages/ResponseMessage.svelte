@@ -8,7 +8,7 @@
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
-	import { onMount, tick, getContext } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';

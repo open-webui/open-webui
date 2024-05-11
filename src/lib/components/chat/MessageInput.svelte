@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import { modelfiles, settings, showSidebar } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
@@ -9,7 +9,7 @@
 		uploadWebToVectorDB,
 		uploadYoutubeTranscriptionToVectorDB
 	} from '$lib/apis/rag';
-	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS, WEBUI_BASE_URL } from '$lib/constants';
+	import { SUPPORTED_FILE_EXTENSIONS, SUPPORTED_FILE_TYPE, WEBUI_BASE_URL } from '$lib/constants';
 
 	import { transcribeAudio } from '$lib/apis/audio';
 

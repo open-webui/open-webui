@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { downloadDatabase } from '$lib/apis/utils';
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { config } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 

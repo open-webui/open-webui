@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { prompts } from '$lib/stores';
 	import { findWordIndices } from '$lib/utils';
-	import { tick, getContext } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import type { Writable } from 'svelte/store';

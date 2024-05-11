@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, user, theme } from '$lib/stores';
+	import { models, theme, user } from '$lib/stores';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';

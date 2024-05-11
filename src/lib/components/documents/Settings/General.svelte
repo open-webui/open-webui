@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { getDocs } from '$lib/apis/documents';
 	import {
-		getQuerySettings,
-		scanDocs,
-		updateQuerySettings,
-		resetVectorDB,
 		getEmbeddingConfig,
-		updateEmbeddingConfig,
+		getQuerySettings,
 		getRerankingConfig,
+		resetVectorDB,
+		scanDocs,
+		updateEmbeddingConfig,
+		updateQuerySettings,
 		updateRerankingConfig
 	} from '$lib/apis/rag';
 
 	import { documents, models } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import type { Writable } from 'svelte/store';
