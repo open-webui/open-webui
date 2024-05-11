@@ -43,6 +43,7 @@
 		WEBUI_BASE_URL
 	} from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
+	import { fnCaller, fnStore } from '$lib/apis/functions';
 
 	const i18n = getContext('i18n');
 
@@ -340,6 +341,28 @@
 
 				return baseMessage;
 			});
+
+		const fn = await fnCaller.getFunction(userPrompt, messagesBody, model, localStorage.token);
+
+		const construct = (context: string) =>
+			`Use the following between <context> XML tags to help answer the user's question. Do not reference the context, do not mention "context" to the user, do not output the full context XML, only use the facts inside of it.\n<context>\n  ${context}\n</context>`;
+
+		try {
+			const fnRes = await fnCaller.callFunction(fn);
+			if (Object.keys($fnStore.schema).length > 0) {
+				if (messagesBody[0]?.role === 'system') {
+					messagesBody[0].content += `\n${construct(fnRes)}`;
+				} else {
+					// push at beginning
+					messagesBody.unshift({
+						role: 'system',
+						content: construct(fnRes)
+					});
+				}
+			}
+		} catch (e) {
+			console.error(`Function ${fn.function} has failed with error: ${e}`);
+		}
 
 		let lastImageIndex = -1;
 

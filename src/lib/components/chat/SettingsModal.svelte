@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { models, settings, user } from '$lib/stores';
+	import { models, settings, user, type Settings } from '$lib/stores';
 
 	import { getModels as _getModels } from '$lib/utils';
 
@@ -15,12 +15,14 @@
 	import Chats from './Settings/Chats.svelte';
 	import Connections from './Settings/Connections.svelte';
 	import Images from './Settings/Images.svelte';
+	import type { Writable } from 'svelte/store';
+	import Functions from './Settings/Functions.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<any> = getContext('i18n');
 
 	export let show = false;
 
-	const saveSettings = async (updated) => {
+	const saveSettings = async (updated: Partial<Settings>) => {
 		console.log(updated);
 		await settings.set({ ...$settings, ...updated });
 		await models.set(await getModels());
@@ -141,6 +143,53 @@
 
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+					'functions'
+						? 'bg-gray-200 dark:bg-gray-700'
+						: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+					on:click={() => {
+						selectedTab = 'functions';
+					}}
+				>
+					<div class=" self-center mr-2">
+						<svg
+							class="w-4 h-4"
+							version="1.1"
+							id="_x32_"
+							xmlns="http://www.w3.org/2000/svg"
+							xmlns:xlink="http://www.w3.org/1999/xlink"
+							viewBox="0 0 512 512"
+							xml:space="preserve"
+						>
+							<g>
+								<path
+									fill="currentColor"
+									d="M256,0C114.614,0,0,114.614,0,256s114.614,256,256,256c141.386,0,256-114.614,256-256S397.386,0,256,0z
+		 M203.969,301.371c-8.697,35.561-31.53,78.796-90.924,73.485c-10.409-1.614-20.057-7.538-20.72-18.318
+		c-0.666-10.78,7.534-20.053,18.315-20.712c6.159-0.379,11.834,2.136,15.685,6.379c2.879,3.182,5.743,6.44,13.406,9.371
+		c19.564-2.561,25.439-39.659,29.606-60.318c1.424-7.046,3.879-20.409,6.768-35.833h-36.052l5.432-21.046h34.606
+		c4.716-24.56,9.81-49.583,13.276-60.902c9.178-29.978,33.201-57.136,65.091-58.424c12.626-0.5,24.596,2.129,34.906,7.78
+		c7.303,3.901,11.878,11.886,12.246,17.879c0.739,11.977-8.371,22.28-20.345,23.022c-8.985,0.553-17.837-4.075-20.795-12.015
+		c-5.314-14.258-19.087-19.227-26.068-8.909c-6.231,9.227-12.731,36.151-17.205,62.954c-1.302,7.826-2.984,17.894-4.814,28.614
+		h30.254l-5.428,21.046h-28.455C209.34,274.886,205.965,293.204,203.969,301.371z M357.424,360
+		c-22.44,3.007-42.266-8.819-51.163-33.258c-0.773-2.128-1.5-4.136-2.208-6.098c-5.496,9.159-10.815,17.742-13.875,21.803
+		c-9.512,12.697-25.61,21.485-41,16.614c-6.099-1.932-13.376-6.463-17.315-10.917c-2.803-3.113-3.606-7.704-2.754-10.621
+		c1.709-5.826,7.815-9.152,13.64-7.447c4.372,1.281,7.785,5.008,7.826,9.28c0.08,7.705,5.777,12.439,10.872,8.727
+		c4.553-3.326,12.272-15.015,19.004-27c3.682-6.537,9.425-16.53,14.58-25.394c-2.977-8.106-5.86-15.652-9.53-24.613
+		c-11.121-27.144-31.883-16.288-31.883-23.758c0-6.258,14.03-26.334,39.299-17.644c11.004,3.773,17.512,16.773,22.8,32.084
+		c3.701-5.993,7.25-11.493,9.912-14.992c9.606-12.606,25.766-21.303,41.114-16.326c6.084,1.97,13.342,6.538,17.251,11.023
+		c2.78,3.136,3.553,7.727,2.682,10.636c-1.75,5.81-7.878,9.106-13.69,7.364c-4.356-1.318-7.75-5.061-7.765-9.349
+		c-0.046-14.841-11.099-8.576-10.811-8.788c-4.576,3.288-12.371,14.924-19.189,26.864c-2.932,5.144-7.17,12.417-11.386,19.591
+		c0.352,1.113,0.704,2.22,1.06,3.318c6.97,21.462,13.242,42.773,34.015,44.47c13.455,1.098,30.629-6.235,28.174-19.689
+		c-0.734-4.076,2.97-6.788,6.675-6.788c3.712,0,4.454,4.75,4.454,4.75C397.47,326.068,387.833,355.932,357.424,360z"
+								/>
+							</g>
+						</svg>
+					</div>
+					<div class=" self-center">{$i18n.t('Functions')}</div>
+				</button>
+
+				<button
+					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 					'interface'
 						? 'bg-gray-200 dark:bg-gray-700'
 						: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
@@ -192,7 +241,7 @@
 					<div class=" self-center">{$i18n.t('Audio')}</div>
 				</button>
 
-				{#if $user.role === 'admin'}
+				{#if $user?.role === 'admin'}
 					<button
 						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 						'images'
@@ -309,6 +358,8 @@
 					/>
 				{:else if selectedTab === 'models'}
 					<Models {getModels} />
+				{:else if selectedTab === 'functions'}
+					<Functions />
 				{:else if selectedTab === 'connections'}
 					<Connections
 						{getModels}

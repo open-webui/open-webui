@@ -70,7 +70,7 @@ type OllamaModelDetails = {
 	quantization_level: string;
 };
 
-type Settings = {
+export type Settings = {
 	models?: string[];
 	conversationMode?: boolean;
 	speechAutoSend?: boolean;

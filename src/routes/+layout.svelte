@@ -14,6 +14,7 @@
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import i18n, { initI18n } from '$lib/i18n';
+	import { fnCaller, fnStore } from '$lib/apis/functions';
 
 	setContext('i18n', i18n);
 
@@ -65,6 +66,38 @@
 
 		document.getElementById('splash-screen')?.remove();
 		loaded = true;
+	});
+
+	onMount(() => {
+		let functions = JSON.parse(localStorage.getItem('functions') || '{}');
+		if (!functions.schema || !functions.fns) {
+			localStorage.setItem(
+				'functions',
+				JSON.stringify({
+					schema: {},
+					fns: {}
+				})
+			);
+			functions = JSON.parse(localStorage.getItem('functions') || '{}');
+		}
+		$fnStore = functions;
+		const cleanup = fnStore.subscribe((value) => {
+			// remove any functions named "undefined" or "null" from the list
+			Object.keys(value.fns).forEach((key) => {
+				if (key === 'undefined' || key === 'null') {
+					delete value.fns[key];
+				}
+			});
+			Object.keys(value.schema).forEach((key) => {
+				if (key === 'undefined' || key === 'null') {
+					delete value.schema[key];
+				}
+			});
+			localStorage.setItem('functions', JSON.stringify(value));
+			fnCaller.setFunctions(value.schema, value.fns);
+			console.log(value);
+		});
+		return cleanup;
 	});
 </script>
 
