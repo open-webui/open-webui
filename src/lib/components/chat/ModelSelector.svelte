@@ -1,9 +1,7 @@
 <script lang="ts">
-	import { Collapsible } from 'bits-ui';
-
 	import { setDefaultModels } from '$lib/apis/configs';
-	import { models, settings, showSettings, user } from '$lib/stores';
-	import { getContext, onMount, tick } from 'svelte';
+	import { models, settings, user } from '$lib/stores';
+	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';

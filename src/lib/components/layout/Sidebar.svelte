@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { chatId, chats, settings, showSettings, showSidebar, tags, user } from '$lib/stores';
+	import { chatId, chats, settings, showSidebar, tags, user } from '$lib/stores';
 	import { getContext, onMount } from 'svelte';
 
 	import type { Writable } from 'svelte/store';
@@ -18,7 +18,6 @@
 		updateChatById
 	} from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
-	import { fade, slide } from 'svelte/transition';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ChatMenu from './Sidebar/ChatMenu.svelte';

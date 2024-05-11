@@ -3,10 +3,9 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	import { WEBUI_NAME, prompts } from '$lib/stores';
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
-	import { error } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
 
 	import type { Writable } from 'svelte/store';

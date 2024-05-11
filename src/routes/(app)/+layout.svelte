@@ -27,7 +27,7 @@
 		tags,
 		user
 	} from '$lib/stores';
-	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
+	import { REQUIRED_OLLAMA_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
 
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';

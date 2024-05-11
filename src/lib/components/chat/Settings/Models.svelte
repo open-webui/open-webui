@@ -1,5 +1,4 @@
 <script lang="ts">
-	import queue from 'async/queue';
 	import { toast } from 'svelte-sonner';
 
 	import {
@@ -12,8 +11,7 @@
 		pullModel,
 		uploadModel
 	} from '$lib/apis/ollama';
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { MODEL_DOWNLOAD_POOL, WEBUI_NAME, models, user } from '$lib/stores';
+	import { MODEL_DOWNLOAD_POOL, models } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 	import { getContext, onMount } from 'svelte';
 	import { addLiteLLMModel, deleteLiteLLMModel, getLiteLLMModelInfo } from '$lib/apis/litellm';

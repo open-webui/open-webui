@@ -14,8 +14,7 @@
 		modelfiles,
 		models,
 		settings,
-		showSidebar,
-		user
+		showSidebar
 	} from '$lib/stores';
 	import { convertMessagesToHistory, copyToClipboard, splitStream } from '$lib/utils';
 

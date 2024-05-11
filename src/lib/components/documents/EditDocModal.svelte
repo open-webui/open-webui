@@ -1,14 +1,11 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import dayjs from 'dayjs';
 	import { getContext, onMount } from 'svelte';
 
 	import { getDocs, tagDocByName, updateDocByName } from '$lib/apis/documents';
 	import Modal from '../common/Modal.svelte';
 	import { documents } from '$lib/stores';
-	import TagInput from '../common/Tags/TagInput.svelte';
 	import Tags from '../common/Tags.svelte';
-	import { addTagById } from '$lib/apis/chats';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';

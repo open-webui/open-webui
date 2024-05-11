@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher } from 'svelte';
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	import { addUser } from '$lib/apis/auths';
 
 	import Modal from '../common/Modal.svelte';

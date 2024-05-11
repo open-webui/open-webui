@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { getRAGConfig, updateRAGConfig } from '$lib/apis/rag';
 
-	import { documents, models } from '$lib/stores';
 	import { getContext, onMount } from 'svelte';
-	import { toast } from 'svelte-sonner';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';

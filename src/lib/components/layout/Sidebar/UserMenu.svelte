@@ -2,11 +2,10 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext } from 'svelte';
 
-	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import { showSettings } from '$lib/stores';
-	import { fade, slide } from 'svelte/transition';
+	import { fade } from 'svelte/transition';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';

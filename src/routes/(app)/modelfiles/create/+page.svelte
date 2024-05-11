@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { config, modelfiles, models, settings, user } from '$lib/stores';
+	import { modelfiles, models } from '$lib/stores';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import { splitStream } from '$lib/utils';

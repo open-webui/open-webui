@@ -6,7 +6,7 @@
 	const dispatch = createEventDispatcher();
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { deleteChatById, getArchivedChatList, getChatListByUserId } from '$lib/apis/chats';
+	import { deleteChatById, getChatListByUserId } from '$lib/apis/chats';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import type { Writable } from 'svelte/store';

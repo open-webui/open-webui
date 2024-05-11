@@ -1,18 +1,15 @@
 <script lang="ts">
-	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 
 	import { getContext, onMount } from 'svelte';
 	import { page } from '$app/stores';
 
-	import { config, modelfiles, settings, user } from '$lib/stores';
+	import { modelfiles } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
 	import { createModel } from '$lib/apis/ollama';
 	import { getModelfiles, updateModelfileByTagName } from '$lib/apis/modelfiles';
-
-	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';

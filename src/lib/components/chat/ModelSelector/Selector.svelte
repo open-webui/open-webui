@@ -2,7 +2,7 @@
 	import { DropdownMenu } from 'bits-ui';
 
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -12,7 +12,7 @@
 
 	import { MODEL_DOWNLOAD_POOL, models, user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
-	import { capitalizeFirstLetter, getModels, splitStream } from '$lib/utils';
+	import { getModels, splitStream } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import type { Writable } from 'svelte/store';

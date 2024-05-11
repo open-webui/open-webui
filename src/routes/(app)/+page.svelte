@@ -3,7 +3,6 @@
 	import { toast } from 'svelte-sonner';
 
 	import { getContext, onMount, tick } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import {
@@ -15,8 +14,7 @@
 		modelfiles,
 		models,
 		settings,
-		showSidebar,
-		user
+		showSidebar
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
@@ -30,14 +28,11 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { queryCollection, queryDoc } from '$lib/apis/rag';
 	import { generateOpenAIChatCompletion, generateTitle } from '$lib/apis/openai';
 
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
-	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
-	import { RAGTemplate } from '$lib/utils/rag';
 	import { LITELLM_API_BASE_URL, OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';

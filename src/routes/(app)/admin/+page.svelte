@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user } from '$lib/stores';
+	import { WEBUI_NAME, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { getContext, onMount } from 'svelte';
 
@@ -11,7 +10,6 @@
 	import { toast } from 'svelte-sonner';
 
 	import { deleteUserById, getUsers, updateUserRole } from '$lib/apis/users';
-	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
 	import SettingsModal from '$lib/components/admin/SettingsModal.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';

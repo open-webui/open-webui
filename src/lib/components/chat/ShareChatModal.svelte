@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';

@@ -2,11 +2,11 @@
 	import { goto } from '$app/navigation';
 	import { userSignIn, userSignUp } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { canvasPixelTest, generateInitialsImage } from '$lib/utils';
+	import { generateInitialsImage } from '$lib/utils';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';

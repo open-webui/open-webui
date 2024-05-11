@@ -1,15 +1,12 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
 
-	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings } from '$lib/stores';
+	import { WEBUI_NAME, chatId, showSettings } from '$lib/stores';
 
-	import { slide } from 'svelte/transition';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import ModelSelector from '../chat/ModelSelector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Menu from './Navbar/Menu.svelte';
-	import { page } from '$app/stores';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';

@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
 	import { modelfiles, settings, showSidebar } from '$lib/stores';
-	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
+	import { blobToFile, findWordIndices } from '$lib/utils';
 
 	import {
 		uploadDocToVectorDB,
@@ -14,7 +14,6 @@
 	import { transcribeAudio } from '$lib/apis/audio';
 
 	import Prompts from './MessageInput/PromptCommands.svelte';
-	import Suggestions from './MessageInput/Suggestions.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
 	import Documents from './MessageInput/Documents.svelte';
 	import Models from './MessageInput/Models.svelte';

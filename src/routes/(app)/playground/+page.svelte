@@ -3,17 +3,9 @@
 
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { toast } from 'svelte-sonner';
-
-	import {
-		LITELLM_API_BASE_URL,
-		OLLAMA_API_BASE_URL,
-		OPENAI_API_BASE_URL,
-		WEBUI_API_BASE_URL
-	} from '$lib/constants';
+	import { LITELLM_API_BASE_URL, OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, models, settings, user } from '$lib/stores';
 
-	import { cancelOllamaRequest, generateChatCompletion } from '$lib/apis/ollama';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';

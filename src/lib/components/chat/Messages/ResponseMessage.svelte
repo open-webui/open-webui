@@ -6,7 +6,6 @@
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
 
-	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
 	import { getContext, onMount, tick } from 'svelte';
 

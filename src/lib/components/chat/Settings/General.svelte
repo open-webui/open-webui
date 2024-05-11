@@ -4,7 +4,7 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, theme, user } from '$lib/stores';
+	import { theme } from '$lib/stores';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';

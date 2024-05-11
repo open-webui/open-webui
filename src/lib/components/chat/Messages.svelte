@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { chats, config, modelfiles, settings, user } from '$lib/stores';
+	import { chats, settings, user } from '$lib/stores';
 	import { getContext, tick } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -10,8 +10,6 @@
 	import UserMessage from './Messages/UserMessage.svelte';
 	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
-	import Spinner from '../common/Spinner.svelte';
-	import { imageGenerations } from '$lib/apis/images';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
 
 	import type { Writable } from 'svelte/store';

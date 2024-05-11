@@ -3,7 +3,7 @@
 	import { user } from '$lib/stores';
 	import { getContext, onMount } from 'svelte';
 
-	import { blur, fade } from 'svelte/transition';
+	import { fade } from 'svelte/transition';
 
 	import Suggestions from '../MessageInput/Suggestions.svelte';
 

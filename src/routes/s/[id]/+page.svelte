@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -11,7 +11,6 @@
 	import { getChatByShareId } from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
-	import Navbar from '$lib/components/layout/Navbar.svelte';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
