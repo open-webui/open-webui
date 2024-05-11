@@ -4,7 +4,7 @@ import logging
 import requests
 
 from apps.rag.search.main import SearchResult
-from config import SRC_LOG_LEVELS, WEB_SEARCH_RESULT_COUNT
+from config import SRC_LOG_LEVELS, RAG_WEB_SEARCH_RESULT_COUNT
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -35,5 +35,5 @@ def search_serper(api_key: str, query: str) -> list[SearchResult]:
             title=result.get("title"),
             snippet=result.get("description"),
         )
-        for result in results[:WEB_SEARCH_RESULT_COUNT]
+        for result in results[:RAG_WEB_SEARCH_RESULT_COUNT]
     ]

@@ -30,7 +30,7 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { generateOpenAIChatCompletion, generateTitle } from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion, generateSearchQuery, generateTitle } from '$lib/apis/openai';
 
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
@@ -43,6 +43,7 @@
 		WEBUI_BASE_URL
 	} from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
+	import { runWebSearch } from '$lib/apis/rag';
 
 	const i18n = getContext('i18n');
 
@@ -58,6 +59,8 @@
 	let showModelSelector = true;
 	let selectedModels = [''];
 	let atSelectedModel = '';
+
+	let useWebSearch = false;
 
 	let selectedModelfile = null;
 
@@ -285,6 +288,39 @@
 							...history.messages[parentId].childrenIds,
 							responseMessageId
 						];
+					}
+
+					if (useWebSearch) {
+						// TODO: Toasts are temporary indicators for web search
+						toast.info($i18n.t('Generating search query'));
+						const searchQuery = await generateChatSearchQuery(prompt);
+						if (searchQuery) {
+							toast.info($i18n.t('Searching the web for \'{{searchQuery}}\'', { searchQuery }));
+							const searchDocUuid = uuidv4();
+							const searchDocument = await runWebSearch(localStorage.token, searchQuery, searchDocUuid);
+							if (searchDocument) {
+								const parentMessage = history.messages[parentId];
+								if (!parentMessage.files) {
+									parentMessage.files = [];
+								}
+								parentMessage.files.push({
+									collection_name: searchDocument.collection_name,
+									name: searchQuery,
+									type: 'doc',
+									upload_status: true,
+									error: ""
+								});
+								// Find message in messages and update it
+								const messageIndex = messages.findIndex((message) => message.id === parentId);
+								if (messageIndex !== -1) {
+									messages[messageIndex] = parentMessage;
+								}
+							} else {
+								toast.warning($i18n.t('No search results found'));
+							}
+						} else {
+							toast.warning($i18n.t('No search query generated'));
+						}
 					}
 
 					if (model?.external) {
@@ -819,6 +855,30 @@
 		}
 	};
 
+	// TODO: Add support for adding all the user's messages as context, and not just the last message
+	const generateChatSearchQuery = async (userPrompt: string) => {
+		const model = $models.find((model) => model.id === selectedModels[0]);
+
+		// TODO: rename titleModel to taskModel - this is the model used for non-chat tasks (e.g. title generation, search query generation)
+		const titleModelId =
+			model?.external ?? false
+				? $settings?.title?.modelExternal ?? selectedModels[0]
+				: $settings?.title?.model ?? selectedModels[0];
+		const titleModel = $models.find((model) => model.id === titleModelId);
+
+		console.log(titleModel);
+		return await generateSearchQuery(
+			localStorage.token,
+			titleModelId,
+			userPrompt,
+			titleModel?.external ?? false
+				? titleModel?.source?.toLowerCase() === 'litellm'
+					? `${LITELLM_API_BASE_URL}/v1`
+					: `${OPENAI_API_BASE_URL}`
+				: `${OLLAMA_API_BASE_URL}/v1`
+		);
+	};
+
 	const setChatTitle = async (_chatId, _title) => {
 		if (_chatId === $chatId) {
 			title = _title;
@@ -929,6 +989,7 @@
 		bind:prompt
 		bind:autoScroll
 		bind:selectedModel={atSelectedModel}
+		bind:useWebSearch
 		suggestionPrompts={selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
 		{messages}
 		{submitPrompt}

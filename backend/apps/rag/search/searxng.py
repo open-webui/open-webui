@@ -3,7 +3,7 @@ import logging
 import requests
 
 from apps.rag.search.main import SearchResult
-from config import SRC_LOG_LEVELS, WEB_SEARCH_RESULT_COUNT
+from config import SRC_LOG_LEVELS, RAG_WEB_SEARCH_RESULT_COUNT
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -40,5 +40,5 @@ def search_searxng(query_url: str, query: str) -> list[SearchResult]:
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("content")
         )
-        for result in sorted_results[:WEB_SEARCH_RESULT_COUNT]
+        for result in sorted_results[:RAG_WEB_SEARCH_RESULT_COUNT]
     ]

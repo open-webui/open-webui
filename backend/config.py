@@ -549,7 +549,10 @@ BRAVE_SEARCH_API_KEY = os.getenv("BRAVE_SEARCH_API_KEY", "")
 SERPSTACK_API_KEY = os.getenv("SERPSTACK_API_KEY", "")
 SERPSTACK_HTTPS = os.getenv("SERPSTACK_HTTPS", "True").lower() == "true"
 SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
-WEB_SEARCH_RESULT_COUNT = int(os.getenv("WEB_SEARCH_RESULT_COUNT", "10"))
+RAG_WEB_SEARCH_RESULT_COUNT = int(os.getenv("RAG_WEB_SEARCH_RESULT_COUNT", "10"))
+RAG_WEB_SEARCH_CONCURRENT_REQUESTS = int(
+    os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")
+)
 
 ####################################
 # Transcribe

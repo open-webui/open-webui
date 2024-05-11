@@ -93,6 +93,7 @@ from config import (
     CHUNK_OVERLAP,
     RAG_TEMPLATE,
     ENABLE_RAG_LOCAL_WEB_FETCH,
+    RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
 )
 
 from constants import ERROR_MESSAGES
@@ -538,18 +539,23 @@ def store_web(form_data: UrlForm, user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
 
+
 def get_web_loader(url: Union[str, Sequence[str]], verify_ssl: bool = True):
     # Check if the URL is valid
     if not validate_url(url):
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
-    return WebBaseLoader(url, verify_ssl=verify_ssl)
+    return WebBaseLoader(
+        url,
+        verify_ssl=verify_ssl,
+        requests_per_second=RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+    )
 
 
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
         if isinstance(validators.url(url), validators.ValidationError):
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
-        if not ENABLE_LOCAL_WEB_FETCH:
+        if not ENABLE_RAG_LOCAL_WEB_FETCH:
             # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
             parsed_url = urllib.parse.urlparse(url)
             # Get IPv4 and IPv6 addresses
@@ -593,7 +599,7 @@ def store_websearch(form_data: SearchForm, user=Depends(get_current_user)):
             )
         urls = [result.link for result in web_results]
         loader = get_web_loader(urls)
-        data = loader.load()
+        data = loader.aload()
 
         collection_name = form_data.collection_name
         if collection_name == "":
