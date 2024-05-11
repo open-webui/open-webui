@@ -15,7 +15,8 @@
 		chatId,
 		config,
 		WEBUI_NAME,
-		tags as _tags
+		tags as _tags,
+		showSidebar
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
@@ -50,7 +51,9 @@
 	let currentRequestId = null;
 
 	let showModelSelector = true;
+
 	let selectedModels = [''];
+	let atSelectedModel = '';
 
 	let selectedModelfile = null;
 	$: selectedModelfile =
@@ -131,6 +134,14 @@
 			selectedModels = [''];
 		}
 
+		if ($page.url.searchParams.get('q')) {
+			prompt = $page.url.searchParams.get('q') ?? '';
+			if (prompt) {
+				await tick();
+				submitPrompt(prompt);
+			}
+		}
+
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
@@ -144,7 +155,8 @@
 		setTimeout(() => chatInput?.focus(), 0);
 	};
 
-	const scrollToBottom = () => {
+	const scrollToBottom = async () => {
+		await tick();
 		if (messagesContainerElement) {
 			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 		}
@@ -242,7 +254,8 @@
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
-			selectedModels.map(async (modelId) => {
+			(atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(async (modelId) => {
+				console.log('modelId', modelId);
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
@@ -361,7 +374,8 @@
 			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
-			docs: docs.length > 0 ? docs : undefined
+			docs: docs.length > 0 ? docs : undefined,
+			citations: docs.length > 0
 		});
 
 		if (res && res.ok) {
@@ -395,6 +409,11 @@
 						if (line !== '') {
 							console.log(line);
 							let data = JSON.parse(line);
+
+							if ('citations' in data) {
+								responseMessage.citations = data.citations;
+								continue;
+							}
 
 							if ('detail' in data) {
 								throw data;
@@ -536,7 +555,7 @@
 
 		console.log(docs);
 
-		console.log(model);
+		scrollToBottom();
 
 		const [res, controller] = await generateOpenAIChatCompletion(
 			localStorage.token,
@@ -593,7 +612,8 @@
 				num_ctx: $settings?.options?.num_ctx ?? undefined,
 				frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
 				max_tokens: $settings?.options?.num_predict ?? undefined,
-				docs: docs.length > 0 ? docs : undefined
+				docs: docs.length > 0 ? docs : undefined,
+				citations: docs.length > 0
 			},
 			model?.source?.toLowerCase() === 'litellm'
 				? `${LITELLM_API_BASE_URL}/v1`
@@ -605,17 +625,11 @@
 
 		scrollToBottom();
 
-		if (res && res.ok) {
-			const reader = res.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
-
-			const textStream = await createOpenAITextStream(reader, $settings.splitLargeChunks);
-			console.log(textStream);
+		if (res && res.ok && res.body) {
+			const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 
 			for await (const update of textStream) {
-				const { value, done } = update;
+				const { value, done, citations } = update;
 				if (done || stopResponseFlag || _chatId !== $chatId) {
 					responseMessage.done = true;
 					messages = messages;
@@ -625,6 +639,11 @@
 					}
 
 					break;
+				}
+
+				if (citations) {
+					responseMessage.citations = citations;
+					continue;
 				}
 
 				if (responseMessage.content == '' && value == '\n') {
@@ -844,7 +863,11 @@
 	</title>
 </svelte:head>
 
-<div class="h-screen max-h-[100dvh] w-full flex flex-col">
+<div
+	class="min-h-screen max-h-screen {$showSidebar
+		? 'lg:max-w-[calc(100%-260px)]'
+		: ''} w-full max-w-full flex flex-col"
+>
 	<Navbar
 		{title}
 		bind:selectedModels
@@ -855,7 +878,7 @@
 	/>
 	<div class="flex flex-col flex-auto">
 		<div
-			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full"
 			id="messages-container"
 			bind:this={messagesContainerElement}
 			on:scroll={(e) => {
@@ -873,22 +896,25 @@
 					bind:history
 					bind:messages
 					bind:autoScroll
+					bind:prompt
 					bottomPadding={files.length > 0}
+					suggestionPrompts={selectedModelfile?.suggestionPrompts ??
+						$config.default_prompt_suggestions}
 					{sendPrompt}
 					{continueGeneration}
 					{regenerateResponse}
 				/>
 			</div>
 		</div>
-
-		<MessageInput
-			bind:files
-			bind:prompt
-			bind:autoScroll
-			suggestionPrompts={selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
-			{messages}
-			{submitPrompt}
-			{stopResponse}
-		/>
 	</div>
 </div>
+
+<MessageInput
+	bind:files
+	bind:prompt
+	bind:autoScroll
+	bind:selectedModel={atSelectedModel}
+	{messages}
+	{submitPrompt}
+	{stopResponse}
+/>

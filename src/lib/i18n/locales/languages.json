@@ -4,12 +4,20 @@
 		"title": "English (US)"
 	},
 	{
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+	{
+		"code": "ar-BH",
+		"title": "العربية (AR)"
+	},
+	{
 		"code": "bg-BG",
 		"title": "Bulgarian (BG)"
 	},
 	{
 		"code": "bn-BD",
-		"title": "Banlga (বাংলা)"
+		"title": "Bangla (বাংলা)"
 	},
 	{
 		"code": "ca-ES",
@@ -20,10 +28,6 @@
 		"title": "Deutsch"
 	},
 	{
-		"code": "en-GB",
-		"title": "English (GB)"
-	},
-	{
 		"code": "es-ES",
 		"title": "Spanish"
 	},
@@ -32,12 +36,20 @@
 		"title": "فارسی (Farsi)"
 	},
 	{
+		"code": "fi-FI",
+		"title": "Finnish"
+	},
+	{
 		"code": "fr-CA",
 		"title": "French (Canada)"
 	},
 	{
 		"code": "fr-FR",
 		"title": "French (France)"
+	},
+	{
+		"code": "hi-IN",
+		"title": "Hindi (हिंदी)"
 	},
 	{
 		"code": "it-IT",
@@ -76,6 +88,10 @@
 		"title": "Russian (Russia)"
 	},
 	{
+		"code": "sv-SE",
+		"title": "Swedish"
+	},
+	{
 		"code": "tr-TR",
 		"title": "Turkish"
 	},
@@ -94,5 +110,9 @@
 	{
 		"code": "zh-TW",
 		"title": "Chinese (Traditional)"
+	},
+	{
+		"code": "dg-DG",
+		"title": "Doge 🐶"
 	}
 ]

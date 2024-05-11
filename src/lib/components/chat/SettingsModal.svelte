@@ -35,8 +35,8 @@
 </script>
 
 <Modal bind:show>
-	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
+	<div class="text-gray-700 dark:text-gray-100">
+		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
 			<button
 				class="self-center"
@@ -56,7 +56,6 @@
 				</svg>
 			</button>
 		</div>
-		<hr class=" dark:border-gray-800" />
 
 		<div class="flex flex-col md:flex-row w-full p-4 md:space-x-4">
 			<div

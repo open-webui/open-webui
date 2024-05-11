@@ -159,7 +159,11 @@ export const generateTitle = async (
 		body: JSON.stringify({
 			model: model,
 			prompt: template,
-			stream: false
+			stream: false,
+			options: {
+				// Restrict the number of tokens generated to 50
+				num_predict: 50
+			}
 		})
 	})
 		.then(async (res) => {
@@ -178,7 +182,7 @@ export const generateTitle = async (
 		throw error;
 	}
 
-	return res?.response ?? 'New Chat';
+	return res?.response.replace(/["']/g, '') ?? 'New Chat';
 };
 
 export const generatePrompt = async (token: string = '', model: string, conversation: string) => {

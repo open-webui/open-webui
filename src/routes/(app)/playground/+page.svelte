@@ -316,7 +316,7 @@
 						</div>
 					</div>
 
-					<div class="flex flex-col gap-1 px-1 w-full">
+					<div class="flex flex-col gap-1 w-full">
 						<div class="flex w-full">
 							<div class="overflow-hidden w-full">
 								<div class="max-w-full">
@@ -330,6 +330,7 @@
 												info: model
 											}))}
 										bind:value={selectedModelId}
+										className="w-[42rem]"
 									/>
 								</div>
 							</div>

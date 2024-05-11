@@ -35,6 +35,7 @@ def query_doc(
     try:
         collection = CHROMA_CLIENT.get_collection(name=collection_name)
         query_embeddings = embedding_function(query)
+
         result = collection.query(
             query_embeddings=[query_embeddings],
             n_results=k,
@@ -52,7 +53,7 @@ def query_doc_with_hybrid_search(
     embedding_function,
     k: int,
     reranking_function,
-    r: int,
+    r: float,
 ):
     try:
         collection = CHROMA_CLIENT.get_collection(name=collection_name)
@@ -76,9 +77,9 @@ def query_doc_with_hybrid_search(
 
         compressor = RerankCompressor(
             embedding_function=embedding_function,
+            top_n=k,
             reranking_function=reranking_function,
             r_score=r,
-            top_n=k,
         )
 
         compression_retriever = ContextualCompressionRetriever(
@@ -91,6 +92,7 @@ def query_doc_with_hybrid_search(
             "documents": [[d.page_content for d in result]],
             "metadatas": [[d.metadata for d in result]],
         }
+
         log.info(f"query_doc_with_hybrid_search:result {result}")
         return result
     except Exception as e:
@@ -167,7 +169,6 @@ def query_collection_with_hybrid_search(
     reranking_function,
     r: float,
 ):
-
     results = []
     for collection_name in collection_names:
         try:
@@ -182,7 +183,6 @@ def query_collection_with_hybrid_search(
             results.append(result)
         except:
             pass
-
     return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
@@ -271,14 +271,14 @@ def rag_messages(
     for doc in docs:
         context = None
 
-        collection = doc.get("collection_name")
-        if collection:
-            collection = [collection]
-        else:
-            collection = doc.get("collection_names", [])
+        collection_names = (
+            doc["collection_names"]
+            if doc["type"] == "collection"
+            else [doc["collection_name"]]
+        )
 
-        collection = set(collection).difference(extracted_collections)
-        if not collection:
+        collection_names = set(collection_names).difference(extracted_collections)
+        if not collection_names:
             log.debug(f"skipping {doc} as it has already been extracted")
             continue
 
@@ -288,11 +288,7 @@ def rag_messages(
             else:
                 if hybrid_search:
                     context = query_collection_with_hybrid_search(
-                        collection_names=(
-                            doc["collection_names"]
-                            if doc["type"] == "collection"
-                            else [doc["collection_name"]]
-                        ),
+                        collection_names=collection_names,
                         query=query,
                         embedding_function=embedding_function,
                         k=k,
@@ -301,11 +297,7 @@ def rag_messages(
                     )
                 else:
                     context = query_collection(
-                        collection_names=(
-                            doc["collection_names"]
-                            if doc["type"] == "collection"
-                            else [doc["collection_name"]]
-                        ),
+                        collection_names=collection_names,
                         query=query,
                         embedding_function=embedding_function,
                         k=k,
@@ -315,14 +307,31 @@ def rag_messages(
             context = None
 
         if context:
-            relevant_contexts.append(context)
+            relevant_contexts.append({**context, "source": doc})
 
-        extracted_collections.extend(collection)
+        extracted_collections.extend(collection_names)
 
     context_string = ""
+
+    citations = []
     for context in relevant_contexts:
-        items = context["documents"][0]
-        context_string += "\n\n".join(items)
+        try:
+            if "documents" in context:
+                context_string += "\n\n".join(
+                    [text for text in context["documents"][0] if text is not None]
+                )
+
+                if "metadatas" in context:
+                    citations.append(
+                        {
+                            "source": context["source"],
+                            "document": context["documents"][0],
+                            "metadata": context["metadatas"][0],
+                        }
+                    )
+        except Exception as e:
+            log.exception(e)
+
     context_string = context_string.strip()
 
     ra_content = rag_template(
@@ -351,7 +360,7 @@ def rag_messages(
 
     messages[last_user_message_idx] = new_user_message
 
-    return messages
+    return messages, citations
 
 
 def get_model_path(model: str, update_model: bool = False):
@@ -443,13 +452,15 @@ class ChromaRetriever(BaseRetriever):
         metadatas = results["metadatas"][0]
         documents = results["documents"][0]
 
-        return [
-            Document(
-                metadata=metadatas[idx],
-                page_content=documents[idx],
+        results = []
+        for idx in range(len(ids)):
+            results.append(
+                Document(
+                    metadata=metadatas[idx],
+                    page_content=documents[idx],
+                )
             )
-            for idx in range(len(ids))
-        ]
+        return results
 
 
 import operator
@@ -465,9 +476,9 @@ from sentence_transformers import util
 
 class RerankCompressor(BaseDocumentCompressor):
     embedding_function: Any
+    top_n: int
     reranking_function: Any
     r_score: float
-    top_n: int
 
     class Config:
         extra = Extra.forbid
@@ -479,7 +490,9 @@ class RerankCompressor(BaseDocumentCompressor):
         query: str,
         callbacks: Optional[Callbacks] = None,
     ) -> Sequence[Document]:
-        if self.reranking_function:
+        reranking = self.reranking_function is not None
+
+        if reranking:
             scores = self.reranking_function.predict(
                 [(query, doc.page_content) for doc in documents]
             )
@@ -496,9 +509,7 @@ class RerankCompressor(BaseDocumentCompressor):
                 (d, s) for d, s in docs_with_scores if s >= self.r_score
             ]
 
-        reverse = self.reranking_function is not None
-        result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=reverse)
-
+        result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
         final_results = []
         for doc, doc_score in result[: self.top_n]:
             metadata = doc.metadata

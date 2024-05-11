@@ -193,7 +193,7 @@
 					<div class=" mt-2 mb-1 flex justify-center space-x-2 text-sm font-medium">
 						<button
 							id="save-edit-message-button"
-							class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg-lg"
+							class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 							on:click={() => {
 								editMessageConfirmHandler();
 							}}
@@ -266,7 +266,7 @@
 						{/if}
 
 						{#if !readOnly}
-							<Tooltip content="Edit" placement="bottom">
+							<Tooltip content={$i18n.t('Edit')} placement="bottom">
 								<button
 									class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition edit-user-message-button"
 									on:click={() => {
@@ -291,7 +291,7 @@
 							</Tooltip>
 						{/if}
 
-						<Tooltip content="Copy" placement="bottom">
+						<Tooltip content={$i18n.t('Copy')} placement="bottom">
 							<button
 								class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
 								on:click={() => {
@@ -316,7 +316,7 @@
 						</Tooltip>
 
 						{#if !isFirstMessage && !readOnly}
-							<Tooltip content="Delete" placement="bottom">
+							<Tooltip content={$i18n.t('Delete')} placement="bottom">
 								<button
 									class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
 									on:click={() => {
