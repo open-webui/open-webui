@@ -93,6 +93,7 @@ from config import (
     CHUNK_OVERLAP,
     RAG_TEMPLATE,
     ENABLE_RAG_LOCAL_WEB_FETCH,
+    YOUTUBE_LOADER_LANGUAGE,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
 )
 
@@ -124,6 +125,10 @@ app.state.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
 app.state.OPENAI_API_KEY = RAG_OPENAI_API_KEY
 
 app.state.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
+
+
+app.state.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
+app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 
 def update_embedding_model(
@@ -320,6 +325,10 @@ async def get_rag_config(user=Depends(get_admin_user)):
             "chunk_overlap": app.state.CHUNK_OVERLAP,
         },
         "web_loader_ssl_verification": app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+        "youtube": {
+            "language": app.state.YOUTUBE_LOADER_LANGUAGE,
+            "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
+        },
     }
 
 
@@ -328,10 +337,16 @@ class ChunkParamUpdateForm(BaseModel):
     chunk_overlap: int
 
 
+class YoutubeLoaderConfig(BaseModel):
+    language: List[str]
+    translation: Optional[str] = None
+
+
 class ConfigUpdateForm(BaseModel):
     pdf_extract_images: Optional[bool] = None
     chunk: Optional[ChunkParamUpdateForm] = None
     web_loader_ssl_verification: Optional[bool] = None
+    youtube: Optional[YoutubeLoaderConfig] = None
 
 
 @app.post("/config/update")
@@ -358,6 +373,18 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         else app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
     )
 
+    app.state.YOUTUBE_LOADER_LANGUAGE = (
+        form_data.youtube.language
+        if form_data.youtube != None
+        else app.state.YOUTUBE_LOADER_LANGUAGE
+    )
+
+    app.state.YOUTUBE_LOADER_TRANSLATION = (
+        form_data.youtube.translation
+        if form_data.youtube != None
+        else app.state.YOUTUBE_LOADER_TRANSLATION
+    )
+
     return {
         "status": True,
         "pdf_extract_images": app.state.PDF_EXTRACT_IMAGES,
@@ -366,6 +393,10 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             "chunk_overlap": app.state.CHUNK_OVERLAP,
         },
         "web_loader_ssl_verification": app.state.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+        "youtube": {
+            "language": app.state.YOUTUBE_LOADER_LANGUAGE,
+            "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
+        },
     }
 
 
@@ -492,7 +523,12 @@ def query_collection_handler(
 @app.post("/youtube")
 def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
     try:
-        loader = YoutubeLoader.from_youtube_url(form_data.url, add_video_info=False)
+        loader = YoutubeLoader.from_youtube_url(
+            form_data.url,
+            add_video_info=True,
+            language=app.state.YOUTUBE_LOADER_LANGUAGE,
+            translation=app.state.YOUTUBE_LOADER_TRANSLATION,
+        )
         data = loader.load()
 
         collection_name = form_data.collection_name
@@ -676,7 +712,7 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
 
         for batch in create_batches(
             api=CHROMA_CLIENT,
-            ids=[str(uuid.uuid1()) for _ in texts],
+            ids=[str(uuid.uuid4()) for _ in texts],
             metadatas=metadatas,
             embeddings=embeddings,
             documents=texts,

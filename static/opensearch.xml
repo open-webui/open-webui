@@ -1,0 +1,8 @@
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">
+<ShortName>Open WebUI</ShortName>
+<Description>Search Open WebUI</Description>
+<InputEncoding>UTF-8</InputEncoding>
+<Image width="16" height="16" type="image/x-icon">http://localhost:5137/favicon.png</Image>
+<Url type="text/html" method="get" template="http://localhost:5137/?q={searchTerms}"/>
+<moz:SearchForm>http://localhost:5137</moz:SearchForm>
+</OpenSearchDescription>

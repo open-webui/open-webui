@@ -4,6 +4,10 @@
 		"title": "English (US)"
 	},
 	{
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+	{
 		"code": "ar-BH",
 		"title": "العربية (AR)"
 	},
@@ -13,7 +17,7 @@
 	},
 	{
 		"code": "bn-BD",
-		"title": "Banlga (বাংলা)"
+		"title": "Bangla (বাংলা)"
 	},
 	{
 		"code": "ca-ES",
@@ -24,10 +28,6 @@
 		"title": "Deutsch"
 	},
 	{
-		"code": "en-GB",
-		"title": "English (GB)"
-	},
-	{
 		"code": "es-ES",
 		"title": "Spanish"
 	},
@@ -36,12 +36,20 @@
 		"title": "فارسی (Farsi)"
 	},
 	{
+		"code": "fi-FI",
+		"title": "Finnish"
+	},
+	{
 		"code": "fr-CA",
 		"title": "French (Canada)"
 	},
 	{
 		"code": "fr-FR",
 		"title": "French (France)"
+	},
+	{
+		"code": "hi-IN",
+		"title": "Hindi (हिंदी)"
 	},
 	{
 		"code": "it-IT",

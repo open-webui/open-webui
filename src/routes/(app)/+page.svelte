@@ -136,6 +136,14 @@
 			selectedModels = [''];
 		}
 
+		if ($page.url.searchParams.get('q')) {
+			prompt = $page.url.searchParams.get('q') ?? '';
+			if (prompt) {
+				await tick();
+				submitPrompt(prompt);
+			}
+		}
+
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);

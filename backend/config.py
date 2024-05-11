@@ -76,7 +76,10 @@ WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 if WEBUI_NAME != "Open WebUI":
     WEBUI_NAME += " (Open WebUI)"
 
+WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
+
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+
 
 ####################################
 # ENV (dev,test,prod)
@@ -150,6 +153,23 @@ for version in soup.find_all("h2"):
 
 
 CHANGELOG = changelog_json
+
+
+####################################
+# WEBUI_VERSION
+####################################
+
+WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
+
+####################################
+# WEBUI_AUTH (Required for security)
+####################################
+
+WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
+WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
+    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
+)
+
 
 ####################################
 # DATA/FRONTEND BUILD DIR
@@ -343,7 +363,11 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 # WEBUI
 ####################################
 
-ENABLE_SIGNUP = os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
+ENABLE_SIGNUP = (
+    False
+    if WEBUI_AUTH == False
+    else os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
+)
 DEFAULT_MODELS = os.environ.get("DEFAULT_MODELS", None)
 
 
@@ -399,21 +423,6 @@ MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
-
-####################################
-# WEBUI_VERSION
-####################################
-
-WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
-
-####################################
-# WEBUI_AUTH (Required for security)
-####################################
-
-WEBUI_AUTH = True
-WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
-    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
-)
 
 ####################################
 # WEBUI_SECRET_KEY
@@ -490,13 +499,6 @@ RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
 
-# device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
-USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
-
-if USE_CUDA.lower() == "true":
-    DEVICE_TYPE = "cuda"
-else:
-    DEVICE_TYPE = "cpu"
 
 if CHROMA_HTTP_HOST != "":
     CHROMA_CLIENT = chromadb.HttpClient(
@@ -515,6 +517,16 @@ else:
         tenant=CHROMA_TENANT,
         database=CHROMA_DATABASE,
     )
+
+
+# device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
+USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
+
+if USE_CUDA.lower() == "true":
+    DEVICE_TYPE = "cuda"
+else:
+    DEVICE_TYPE = "cpu"
+
 
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "1500"))
 CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "100"))
@@ -541,6 +553,8 @@ RAG_OPENAI_API_KEY = os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY)
 ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
 )
+
+YOUTUBE_LOADER_LANGUAGE = os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(",")
 
 SEARXNG_QUERY_URL = os.getenv("SEARXNG_QUERY_URL", "")
 GOOGLE_PSE_API_KEY = os.getenv("GOOGLE_PSE_API_KEY", "")
@@ -595,6 +609,8 @@ IMAGE_GENERATION_MODEL = os.getenv("IMAGE_GENERATION_MODEL", "")
 
 AUDIO_OPENAI_API_BASE_URL = os.getenv("AUDIO_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
 AUDIO_OPENAI_API_KEY = os.getenv("AUDIO_OPENAI_API_KEY", OPENAI_API_KEY)
+AUDIO_OPENAI_API_MODEL = os.getenv("AUDIO_OPENAI_API_MODEL", "tts-1")
+AUDIO_OPENAI_API_VOICE = os.getenv("AUDIO_OPENAI_API_VOICE", "alloy")
 
 ####################################
 # LiteLLM

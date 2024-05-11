@@ -15,7 +15,7 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import StreamingResponse
+from starlette.responses import StreamingResponse, Response
 
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
@@ -43,6 +43,8 @@ from apps.rag.utils import rag_messages
 from config import (
     CONFIG_DATA,
     WEBUI_NAME,
+    WEBUI_URL,
+    WEBUI_AUTH,
     ENV,
     VERSION,
     CHANGELOG,
@@ -239,6 +241,7 @@ async def get_app_config():
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
+        "auth": WEBUI_AUTH,
         "default_locale": default_locale,
         "images": images_app.state.ENABLED,
         "default_models": webui_app.state.DEFAULT_MODELS,
@@ -348,6 +351,21 @@ async def get_manifest_json():
         "orientation": "portrait-primary",
         "icons": [{"src": "/static/logo.png", "type": "image/png", "sizes": "500x500"}],
     }
+
+
+@app.get("/opensearch.xml")
+async def get_opensearch_xml():
+    xml_content = rf"""
+    <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">
+    <ShortName>{WEBUI_NAME}</ShortName>
+    <Description>Search {WEBUI_NAME}</Description>
+    <InputEncoding>UTF-8</InputEncoding>
+    <Image width="16" height="16" type="image/x-icon">{WEBUI_URL}/favicon.png</Image>
+    <Url type="text/html" method="get" template="{WEBUI_URL}/?q={"{searchTerms}"}"/>
+    <moz:SearchForm>{WEBUI_URL}</moz:SearchForm>
+    </OpenSearchDescription>
+    """
+    return Response(content=xml_content, media_type="application/xml")
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

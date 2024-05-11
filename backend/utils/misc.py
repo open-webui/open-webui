@@ -38,9 +38,10 @@ def calculate_sha256_string(string):
 
 
 def validate_email_format(email: str) -> bool:
-    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-        return False
-    return True
+    if email.endswith("@localhost"):
+        return True
+
+    return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email))
 
 
 def sanitize_filename(file_name):
