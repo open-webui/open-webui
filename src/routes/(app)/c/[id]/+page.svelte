@@ -347,22 +347,31 @@
 		const construct = (context: string) =>
 			`Use the following between <context> XML tags to help answer the user's question. Do not reference the context, do not mention "context" to the user, do not output the full context XML, only use the facts inside of it.\n<context>\n  ${context}\n</context>`;
 
+		const writeToSysPrompt = (msg: string) => {
+			if (messagesBody[0]?.role === 'system') {
+				messagesBody[0].content += `\n${msg}`;
+			} else {
+				// push at beginning
+				messagesBody.unshift({
+					role: 'system',
+					content: msg
+				});
+			}
+		};
+
 		try {
 			const fnRes = await fnCaller.callFunction(fn);
-			if (Object.keys($fnStore.schema).length > 0) {
-				if (messagesBody[0]?.role === 'system') {
-					messagesBody[0].content += `\n${construct(fnRes)}`;
-				} else {
-					// push at beginning
-					messagesBody.unshift({
-						role: 'system',
-						content: construct(fnRes)
-					});
-				}
-			}
+			writeToSysPrompt(construct(fnRes));
 		} catch (e) {
 			console.error(`Function ${fn.function} has failed with error: ${e}`);
+			writeToSysPrompt(
+				construct(
+					`You attempted to call a function, ${fn.function}, but it failed. This is probably user error. Error: ${e}\n\nPlease report this to the user.`
+				)
+			);
 		}
+
+		console.log(messagesBody);
 
 		let lastImageIndex = -1;
 
