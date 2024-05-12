@@ -102,9 +102,14 @@ select {
 	height: 2rem;
 }
 
+.size-7 {
+	width: 1.75rem;
+	height: 1.75rem;
+}
+
 .size-6 {
-	width: 30px;
-	height: 30px;
+	width: 1.5rem;
+	height: 1.5rem;
 }
 
 .size-5 {
@@ -113,18 +118,18 @@ select {
 }
 
 .size-4 {
-	width: 20px;
-	height: 20px;
+	width: 1rem;
+	height: 1rem;
 }
 
 .size-3 {
-	width: 15px;
-	height: 15px;
+	width: 0.75rem;
+	height: 0.75rem;
 }
 
 .size-3\.5 {
-	width: 1rem;
-	height: 1rem;
+	width: 0.825rem;
+	height: 0.825rem;
 }
 
 .size-\[2\.7rem\] {
