@@ -125,6 +125,12 @@
 				OpenAIKey = res.OPENAI_API_KEY;
 				model = res.OPENAI_API_MODEL;
 				speaker = res.OPENAI_API_VOICE;
+				saveSettings({
+					audio: {
+						speaker: speaker !== '' ? speaker : undefined,
+						model: model !== '' ? model : undefined
+					}
+				});
 			}
 		}
 	});
