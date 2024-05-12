@@ -373,7 +373,7 @@
 						<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
 							<div>
 								<button
-									class="h-16  flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none text-left"
+									class="h-16 flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none text-left"
 									type="button"
 								>
 									<div class="p-2.5 bg-red-400 text-white rounded-lg">
