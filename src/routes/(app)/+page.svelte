@@ -334,7 +334,7 @@
 		parentMessage.files.push({
 			collection_name: searchDocument!.collection_name,
 			name: searchQuery,
-			type: 'doc',
+			type: 'websearch',
 			upload_status: true,
 			error: ''
 		});
@@ -401,7 +401,7 @@
 		const docs = messages
 			.filter((message) => message?.files ?? null)
 			.map((message) =>
-				message.files.filter((item) => item.type === 'doc' || item.type === 'collection')
+				message.files.filter((item) => ['doc', 'collection', 'websearch'].includes(item.type))
 			)
 			.flat(1);
 
@@ -594,7 +594,7 @@
 		const docs = messages
 			.filter((message) => message?.files ?? null)
 			.map((message) =>
-				message.files.filter((item) => item.type === 'doc' || item.type === 'collection')
+				message.files.filter((item) => ['doc', 'collection', 'websearch'].includes(item.type))
 			)
 			.flat(1);
 

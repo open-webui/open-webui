@@ -30,7 +30,11 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { generateOpenAIChatCompletion, generateSearchQuery, generateTitle } from '$lib/apis/openai';
+	import {
+		generateOpenAIChatCompletion,
+		generateSearchQuery,
+		generateTitle
+	} from '$lib/apis/openai';
 
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
@@ -321,10 +325,7 @@
 		}
 		responseMessage.progress = $i18n.t("Searching the web for '{{searchQuery}}'", { searchQuery });
 		messages = messages;
-		const searchDocument = await runWebSearch(
-			localStorage.token,
-			searchQuery,
-		);
+		const searchDocument = await runWebSearch(localStorage.token, searchQuery);
 		if (!searchDocument) {
 			toast.warning($i18n.t('No search results found'));
 			responseMessage.progress = undefined;
@@ -338,7 +339,7 @@
 		parentMessage.files.push({
 			collection_name: searchDocument!.collection_name,
 			name: searchQuery,
-			type: 'doc',
+			type: 'websearch',
 			upload_status: true,
 			error: ''
 		});
@@ -405,7 +406,7 @@
 		const docs = messages
 			.filter((message) => message?.files ?? null)
 			.map((message) =>
-				message.files.filter((item) => item.type === 'doc' || item.type === 'collection')
+				message.files.filter((item) => ['doc', 'collection', 'websearch'].includes(item.type))
 			)
 			.flat(1);
 
@@ -598,7 +599,7 @@
 		const docs = messages
 			.filter((message) => message?.files ?? null)
 			.map((message) =>
-				message.files.filter((item) => item.type === 'doc' || item.type === 'collection')
+				message.files.filter((item) => ['doc', 'collection', 'websearch'].includes(item.type))
 			)
 			.flat(1);
 
