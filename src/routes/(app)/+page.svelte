@@ -860,30 +860,27 @@
 		}
 	};
 
-	// TODO: Add support for adding all the user's messages as context, and not just the last message
 	const generateChatSearchQuery = async (messageId: string) => {
 		const model = $models.find((model) => model.id === selectedModels[0]);
 
-		// TODO: rename titleModel to taskModel - this is the model used for non-chat tasks (e.g. title generation, search query generation)
-		const titleModelId =
+		const taskModelId =
 			model?.external ?? false
 				? $settings?.title?.modelExternal ?? selectedModels[0]
 				: $settings?.title?.model ?? selectedModels[0];
-		const titleModel = $models.find((model) => model.id === titleModelId);
+		const taskModel = $models.find((model) => model.id === taskModelId);
 
 		const userMessage = history.messages[messageId];
 		const userPrompt = userMessage.content;
 
 		const previousMessages = messages.filter((message) => message.role === 'user').map((message) => message.content);
 
-		console.log(titleModel);
 		return await generateSearchQuery(
 			localStorage.token,
-			titleModelId,
+			taskModelId,
 			previousMessages,
 			userPrompt,
-			titleModel?.external ?? false
-				? titleModel?.source?.toLowerCase() === 'litellm'
+			taskModel?.external ?? false
+				? taskModel?.source?.toLowerCase() === 'litellm'
 					? `${LITELLM_API_BASE_URL}/v1`
 					: `${OPENAI_API_BASE_URL}`
 				: `${OLLAMA_API_BASE_URL}/v1`
