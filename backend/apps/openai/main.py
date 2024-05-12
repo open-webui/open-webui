@@ -116,6 +116,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers = {}
         headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEYS[idx]}"
         headers["Content-Type"] = "application/json"
+        headers['HTTP-Referer'] = "https://openwebui.com/"
+        headers['X-Title'] = "Open WebUI"
 
         r = None
         try:
