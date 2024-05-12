@@ -385,7 +385,7 @@
 	"Server connection verified": "Sunucu bağlantısı doğrulandı",
 	"Set as default": "Varsayılan olarak ayarla",
 	"Set Default Model": "Varsayılan Modeli Ayarla",
-	"Set embedding model (e.g. {{model}})": "Gömme modelini ayarlayın (örn. {{model}})"",
+	"Set embedding model (e.g. {{model}})": "Gömme modelini ayarlayın (örn. {{model}})",
 	"Set Image Size": "Görüntü Boyutunu Ayarla",
 	"Set Model": "Model Ayarla",
 	"Set reranking model (e.g. {{model}})": "Yeniden sıralama modelini ayarlayın (örn. {{model}})",
