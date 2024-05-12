@@ -254,6 +254,22 @@ async def update_chat_by_id(
         )
 
 
+@router.post("/{id}/linear", response_model=Optional[ChatResponse])
+async def update_chat_by_id_linear(
+    id: str, form_data: ChatForm, user=Depends(get_current_user)
+):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+        updated_chat = {**json.loads(chat.chat), **form_data.chat}
+
+        chat = Chats.update_chat_by_id(id, updated_chat)
+        return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
 ############################
 # DeleteChatById
 ############################
