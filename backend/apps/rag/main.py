@@ -584,6 +584,7 @@ def get_web_loader(url: Union[str, Sequence[str]], verify_ssl: bool = True):
         url,
         verify_ssl=verify_ssl,
         requests_per_second=RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+        continue_on_failure=True,
     )
 
 
