@@ -327,11 +327,10 @@
 			messages = messages;
 			return;
 		}
-		const parentMessage = history.messages[parentId];
-		if (!parentMessage.files) {
-			parentMessage.files = [];
+		if (!responseMessage.files) {
+			responseMessage.files = [];
 		}
-		parentMessage.files.push({
+		responseMessage.files.push({
 			collection_name: searchDocument!.collection_name,
 			name: searchQuery,
 			type: 'websearch',
