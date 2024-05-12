@@ -106,8 +106,8 @@
 
 	const save = () => {
 		const code = editor.getValue();
-		$fnStore.fns[$page.params.task] = {
-			...$fnStore.fns[$page.params.task],
+		$fnStore.fns[$page.params.function] = {
+			...$fnStore.fns[$page.params.function],
 			fn: code
 		};
 		$fnStore = { ...$fnStore };
@@ -127,7 +127,7 @@
 		});
 		const fn = eval(code);
 		const schema = $fnStore.schema;
-		const schemaName: keyof typeof schema = $page.params.task;
+		const schemaName: keyof typeof schema = $page.params.function;
 
 		// for each parameter, prompt the user for a value
 		let params = {};
