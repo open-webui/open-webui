@@ -291,36 +291,7 @@
 					}
 
 					if (useWebSearch) {
-						// TODO: Toasts are temporary indicators for web search
-						toast.info($i18n.t('Generating search query'));
-						const searchQuery = await generateChatSearchQuery(prompt);
-						if (searchQuery) {
-							toast.info($i18n.t('Searching the web for \'{{searchQuery}}\'', { searchQuery }));
-							const searchDocUuid = uuidv4();
-							const searchDocument = await runWebSearch(localStorage.token, searchQuery, searchDocUuid);
-							if (searchDocument) {
-								const parentMessage = history.messages[parentId];
-								if (!parentMessage.files) {
-									parentMessage.files = [];
-								}
-								parentMessage.files.push({
-									collection_name: searchDocument.collection_name,
-									name: searchQuery,
-									type: 'doc',
-									upload_status: true,
-									error: ""
-								});
-								// Find message in messages and update it
-								const messageIndex = messages.findIndex((message) => message.id === parentId);
-								if (messageIndex !== -1) {
-									messages[messageIndex] = parentMessage;
-								}
-							} else {
-								toast.warning($i18n.t('No search results found'));
-							}
-						} else {
-							toast.warning($i18n.t('No search query generated'));
-						}
+						await runWebSearchForPrompt(parentId, responseMessageId, prompt);
 					}
 
 					if (model?.external) {
@@ -335,6 +306,44 @@
 		);
 
 		await chats.set(await getChatList(localStorage.token));
+	};
+
+	const runWebSearchForPrompt = async (parentId: string, responseId: string, prompt: string) => {
+		const responseMessage = history.messages[responseId];
+		responseMessage.progress = $i18n.t('Generating search query');
+		messages = messages;
+		const searchQuery = await generateChatSearchQuery(prompt);
+		if (!searchQuery) {
+			toast.warning($i18n.t('No search query generated'));
+			responseMessage.progress = undefined;
+			messages = messages;
+			return;
+		}
+		responseMessage.progress = $i18n.t("Searching the web for '{{searchQuery}}'", { searchQuery });
+		messages = messages;
+		const searchDocument = await runWebSearch(
+			localStorage.token,
+			searchQuery,
+		);
+		if (!searchDocument) {
+			toast.warning($i18n.t('No search results found'));
+			responseMessage.progress = undefined;
+			messages = messages;
+			return;
+		}
+		const parentMessage = history.messages[parentId];
+		if (!parentMessage.files) {
+			parentMessage.files = [];
+		}
+		parentMessage.files.push({
+			collection_name: searchDocument!.collection_name,
+			name: searchQuery,
+			type: 'doc',
+			upload_status: true,
+			error: ''
+		});
+		responseMessage.progress = undefined;
+		messages = messages;
 	};
 
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {

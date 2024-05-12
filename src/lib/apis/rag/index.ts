@@ -519,9 +519,7 @@ export const runWebSearch = async (
 	query: string,
 	collection_name?: string
 ): Promise<SearchDocument | undefined> => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/websearch`, {
+	return await fetch(`${RAG_API_BASE_URL}/websearch`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -529,7 +527,7 @@ export const runWebSearch = async (
 		},
 		body: JSON.stringify({
 			query,
-			collection_name
+			collection_name: collection_name ?? ''
 		})
 	})
 		.then(async (res) => {
@@ -538,15 +536,8 @@ export const runWebSearch = async (
 		})
 		.catch((err) => {
 			console.log(err);
-			error = err.detail;
 			return undefined;
 		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
 };
 
 export interface SearchDocument {

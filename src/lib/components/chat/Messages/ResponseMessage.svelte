@@ -369,6 +369,62 @@
 				class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
 			>
 				<div>
+					{#if message.progress}
+						<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
+							<div>
+								<button
+									class="h-16  flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none text-left"
+									type="button"
+								>
+									<div class="p-2.5 bg-red-400 text-white rounded-lg">
+										<svg
+											class=" w-6 h-6 translate-y-[0.5px]"
+											fill="currentColor"
+											viewBox="0 0 24 24"
+											xmlns="http://www.w3.org/2000/svg"
+											><style>
+												.spinner_qM83 {
+													animation: spinner_8HQG 1.05s infinite;
+												}
+												.spinner_oXPr {
+													animation-delay: 0.1s;
+												}
+												.spinner_ZTLf {
+													animation-delay: 0.2s;
+												}
+												@keyframes spinner_8HQG {
+													0%,
+													57.14% {
+														animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
+														transform: translate(0);
+													}
+													28.57% {
+														animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
+														transform: translateY(-6px);
+													}
+													100% {
+														transform: translate(0);
+													}
+												}
+											</style><circle class="spinner_qM83" cx="4" cy="12" r="2.5" /><circle
+												class="spinner_qM83 spinner_oXPr"
+												cx="12"
+												cy="12"
+												r="2.5"
+											/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="2.5" /></svg
+										>
+									</div>
+
+									<div class="flex flex-col justify-center -space-y-0.5">
+										<div class=" dark:text-gray-100 text-sm font-medium line-clamp-2 text-wrap">
+											{message.progress}
+										</div>
+									</div>
+								</button>
+							</div>
+						</div>
+					{/if}
+
 					{#if edit === true}
 						<div class=" w-full">
 							<textarea
