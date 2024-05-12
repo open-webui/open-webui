@@ -977,4 +977,5 @@
 	{messages}
 	{submitPrompt}
 	{stopResponse}
+	webSearchAvailable={$config.websearch ?? false}
 />

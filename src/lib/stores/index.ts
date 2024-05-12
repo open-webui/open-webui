@@ -129,6 +129,7 @@ type Config = {
 	default_models?: string[];
 	default_prompt_suggestions?: PromptSuggestion[];
 	trusted_header_auth?: boolean;
+	websearch?: boolean;
 };
 
 type PromptSuggestion = {

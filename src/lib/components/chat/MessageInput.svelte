@@ -47,7 +47,7 @@
 	export let fileUploadEnabled = true;
 	export let speechRecognitionEnabled = true;
 
-	export let webSearchAvailable = true; // TODO: Default to false
+	export let webSearchAvailable = false;
 	export let useWebSearch = false;
 
 	export let prompt = '';

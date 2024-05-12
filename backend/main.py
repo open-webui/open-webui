@@ -58,6 +58,7 @@ from config import (
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
+    RAG_WEB_SEARCH_ENABLED,
 )
 from constants import ERROR_MESSAGES
 
@@ -248,6 +249,7 @@ async def get_app_config():
         "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
         "trusted_header_auth": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
         "admin_export_enabled": ENABLE_ADMIN_EXPORT,
+        "websearch": RAG_WEB_SEARCH_ENABLED,
     }
 
 
