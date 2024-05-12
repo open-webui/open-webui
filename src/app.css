@@ -91,3 +91,43 @@ select {
 .scrollbar-none::-webkit-scrollbar-thumb {
 	visibility: hidden;
 }
+
+.size-16 {
+	width: 4rem;
+	height: 4rem;
+}
+
+.size-8 {
+	width: 2rem;
+	height: 2rem;
+}
+
+.size-6 {
+	width: 30px;
+	height: 30px;
+}
+
+.size-5 {
+	width: 1.25rem;
+	height: 1.25rem;
+}
+
+.size-4 {
+	width: 20px;
+	height: 20px;
+}
+
+.size-3 {
+	width: 15px;
+	height: 15px;
+}
+
+.size-3\.5 {
+	width: 1rem;
+	height: 1rem;
+}
+
+.size-\[2\.7rem\] {
+	width: 2.7rem;
+	height: 2.7rem;
+}
