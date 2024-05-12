@@ -1,5 +1,6 @@
 import { OPENAI_API_BASE_URL } from '$lib/constants';
 import { promptTemplate } from '$lib/utils';
+import { type Model, models, settings } from '$lib/stores';
 
 export const getOpenAIUrls = async (token: string = '') => {
 	let error = null;
@@ -322,15 +323,14 @@ export const generateTitle = async (
 
 export const generateSearchQuery = async (
 	token: string = '',
-	// template: string,
 	model: string,
+	previousMessages: string[],
 	prompt: string,
 	url: string = OPENAI_API_BASE_URL
 ): Promise<string | undefined> => {
 	let error = null;
 
 	// TODO: Allow users to specify the prompt
-	// template = promptTemplate(template, prompt);
 
 	// Get the current date in the format "January 20, 2024"
 	const currentDate = new Intl.DateTimeFormat('en-US', {
@@ -343,8 +343,6 @@ export const generateSearchQuery = async (
 		month: 'long',
 		day: '2-digit'
 	}).format(new Date());
-
-	// console.log(template);
 
 	const res = await fetch(`${url}/chat/completions`, {
 		method: 'POST',
@@ -409,7 +407,10 @@ Current Question: Where is it being hosted?`
 				},
 				{
 					role: 'user',
-					content: `Current Question: ${prompt}`
+					content:
+						(previousMessages.length > 0
+							? `Previous Questions:\n${previousMessages.join('\n')}\n\n`
+							: '') + `Current Question: ${prompt}`
 				}
 			],
 			stream: false,

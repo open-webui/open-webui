@@ -290,7 +290,7 @@
 					}
 
 					if (useWebSearch) {
-						await runWebSearchForPrompt(parentId, responseMessageId, prompt);
+						await runWebSearchForPrompt(parentId, responseMessageId);
 					}
 
 					if (model?.external) {
@@ -307,11 +307,11 @@
 		await chats.set(await getChatList(localStorage.token));
 	};
 
-	const runWebSearchForPrompt = async (parentId: string, responseId: string, prompt: string) => {
+	const runWebSearchForPrompt = async (parentId: string, responseId: string) => {
 		const responseMessage = history.messages[responseId];
 		responseMessage.progress = $i18n.t('Generating search query');
 		messages = messages;
-		const searchQuery = await generateChatSearchQuery(prompt);
+		const searchQuery = await generateChatSearchQuery(parentId);
 		if (!searchQuery) {
 			toast.warning($i18n.t('No search query generated'));
 			responseMessage.progress = undefined;
@@ -861,7 +861,7 @@
 	};
 
 	// TODO: Add support for adding all the user's messages as context, and not just the last message
-	const generateChatSearchQuery = async (userPrompt: string) => {
+	const generateChatSearchQuery = async (messageId: string) => {
 		const model = $models.find((model) => model.id === selectedModels[0]);
 
 		// TODO: rename titleModel to taskModel - this is the model used for non-chat tasks (e.g. title generation, search query generation)
@@ -871,10 +871,16 @@
 				: $settings?.title?.model ?? selectedModels[0];
 		const titleModel = $models.find((model) => model.id === titleModelId);
 
+		const userMessage = history.messages[messageId];
+		const userPrompt = userMessage.content;
+
+		const previousMessages = messages.filter((message) => message.role === 'user').map((message) => message.content);
+
 		console.log(titleModel);
 		return await generateSearchQuery(
 			localStorage.token,
 			titleModelId,
+			previousMessages,
 			userPrompt,
 			titleModel?.external ?? false
 				? titleModel?.source?.toLowerCase() === 'litellm'
