@@ -17,18 +17,21 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 - [ML for Community Forecasting Timelines](../data-pipeline/timelines/)
 - [RealityStream](/RealityStream/) - Machine Learning Classification Models
-- [OpenFootprint Builder and Meal Planner](/OpenFootprint) - Label Development for [Sustainable Products](/io/template) and [Meal Nutrition](/data-commons/docs/food/)
 - [USEEIO Open Footprint Data - Javascript](/useeio.js/footprint) and [React Widgets](/io/charts)
+- [Open Footprint Panels - YAML Display](/OpenFootprint)
 - [Process Industry NAICS by Zip Code](/data-pipeline/industries/naics) - Aashish
 - [Top Commodities by State (hide sort columns)](/data-pipeline/research/economy) - Dinesh
 - [State Regions using Sets of Counties](/community-data/us/edd/) - Dinesh
-- [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - Honglin, Rupesh
+- [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - <!--Honglin-->Rupesh
+- [CrewAI+Ollama integration](https://lightning.ai/lightning-ai/studios/ai-agents-powered-by-crewai) within our [Open WebUI fork](src)
+
+**Food Health and Impacts**
 - [3D Force Graph](https://github.com/vasturiano/3d-force-graph) for [Balanced Diets](/balance/) - Rakesh, Anshit
-- [CrewAI+Ollama integrated within Open WebUI](https://lightning.ai/lightning-ai/studios/ai-agents-powered-by-crewai)
+- [Meal Nutrition Network Display](/data-commons/docs/food/)
 
 **Observable Framework + GDC Visualization Projects**
 
-- [Python CoLabs for GDC API calls](/data-commons/docs/) - [Air and Climate](/data-commons/dist/air) - Paul and Anna
+- [Python CoLabs for GDC timeline automation - Air and Climate](/data-commons/dist/air) - Paul and Anna
 - [Observable with Data Commons](/data-commons/) - [Data Loaders How-To](/data-commons/dist/air/)
 - [Sankey Industry Chart](/io/charts/sankey/) - Chenbohan
 - [Balanced Food](/balance/) - [World Nutrition](/data-commons/dist/food) - Kargil, Meiru
