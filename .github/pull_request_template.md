@@ -1,4 +1,4 @@
-## Pull Request Checklist
+# Pull Request Checklist
 
 - [ ] **Target branch:** Pull requests should target the `dev` branch.
 - [ ] **Description:** Briefly describe the changes in this pull request.
@@ -7,32 +7,46 @@
 - [ ] **Dependencies:** Are there any new dependencies? Have you updated the dependency versions in the documentation?
 - [ ] **Testing:** Have you written and run sufficient tests for the changes?
 - [ ] **Code Review:** Have you self-reviewed your code and addressed any coding standard issues?
+- [ ] **Label title:** Ensure the pull request title is labeled properly using one of the following:
+  - **BREAKING CHANGE**: Significant changes that may affect compatibility
+  - **build**: Changes that affect the build system or external dependencies
+  - **ci**: Changes to our continuous integration processes or workflows
+  - **chore**: Refactor, cleanup, or other non-functional code changes
+  - **docs**: Documentation update or addition
+  - **feat**: Introduces a new feature or enhancement to the codebase
+  - **fix**: Bug fix or error correction
+  - **i18n**: Internationalization or localization changes
+  - **perf**: Performance improvement
+  - **refactor**: Code restructuring for better maintainability, readability, or scalability
+  - **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc.)
+  - **test**: Adding missing tests or correcting existing tests
+  - **WIP**: Work in progress, a temporary label for incomplete or ongoing work
 
----
+# Changelog Entry
 
-## Description
+### Description
 
-[Insert a brief description of the changes made in this pull request, including any relevant motivation and impact.]
-
----
-
-### Changelog Entry
+- [Briefly describe the changes made in this pull request, including any relevant motivation and impact.]
 
 ### Added
 
 - [List any new features, functionalities, or additions]
 
-### Fixed
-
-- [List any fixes, corrections, or bug fixes]
-
 ### Changed
 
 - [List any changes, updates, refactorings, or optimizations]
 
+### Deprecated
+
+- [List any deprecated functionality or features that have been removed]
+
 ### Removed
 
-- [List any removed features, files, or deprecated functionalities]
+- [List any removed features, files, or functionalities]
+
+### Fixed
+
+- [List any fixes, corrections, or bug fixes]
 
 ### Security
 
@@ -40,12 +54,11 @@
 
 ### Breaking Changes
 
-- [List any breaking changes affecting compatibility or functionality]
+- **BREAKING CHANGE**: [List any breaking changes affecting compatibility or functionality]
 
 ---
 
 ### Additional Information
 
 - [Insert any additional context, notes, or explanations for the changes]
-
-- [Reference any related issues, commits, or other relevant information]
+  - [Reference any related issues, commits, or other relevant information]
