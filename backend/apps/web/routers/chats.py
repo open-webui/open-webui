@@ -254,14 +254,30 @@ async def update_chat_by_id(
         )
 
 
-@router.post("/{id}/linear", response_model=Optional[ChatResponse])
-async def update_chat_by_id_linear(
+@router.post("/{id}/append", response_model=Optional[ChatResponse])
+async def append_chat_by_id(
     id: str, form_data: ChatForm, user=Depends(get_current_user)
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
-        updated_chat = {**json.loads(chat.chat), **form_data.chat}
-
+        update_messages = form_data.chat.get("messages", [])
+        updated_chat = json.loads(chat.chat)
+        if "messages" not in updated_chat:
+            updated_chat["messages"] = []
+        if "history" not in updated_chat:
+            updated_chat["history"] = {"messages":{}}
+        for message in update_messages:
+            if not updated_chat["messages"]:
+                updated_chat["messages"].append(message)
+                updated_chat["history"]["messages"][message["id"]] = message
+            else:
+                last_message_id = updated_chat["messages"][-1]["id"]
+                updated_chat["messages"][-1]["childrenIds"].append(message["id"])
+                updated_chat["history"]["messages"][last_message_id] = updated_chat["messages"][-1]
+                new_message = {**message, "parentId": updated_chat["messages"][-1]["id"]}
+                updated_chat["messages"].append(new_message)
+                updated_chat["history"]["messages"].update({new_message["id"]: new_message})
+        updated_chat["history"]["currentId"] = updated_chat["messages"][-1]["id"] if updated_chat["messages"] else None
         chat = Chats.update_chat_by_id(id, updated_chat)
         return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
     else:
