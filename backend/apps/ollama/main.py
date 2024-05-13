@@ -47,6 +47,7 @@ from utils.models import get_model_id_from_custom_model_id
 from config import (
     SRC_LOG_LEVELS,
     OLLAMA_BASE_URLS,
+    OLLAMA_AUTH_KEYS,
     ENABLE_OLLAMA_API,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
@@ -74,7 +75,7 @@ app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
-app.state.config.OLLAMA_AUTH_KEYS = []
+app.state.config.OLLAMA_AUTH_KEYS = OLLAMA_AUTH_KEYS
 app.state.MODELS = {}
 
 
