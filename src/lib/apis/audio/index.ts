@@ -1,30 +1,8 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
+import { doFormRequest, doGetRequest, doJSONRequest } from '$lib/apis/helpers';
 
 export const getAudioConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${AUDIO_API_BASE_URL}/config`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	return doGetRequest(`${AUDIO_API_BASE_URL}/config`, token);
 };
 
 type OpenAIConfigForm = {
@@ -35,63 +13,13 @@ type OpenAIConfigForm = {
 };
 
 export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
-	let error = null;
-
-	const res = await fetch(`${AUDIO_API_BASE_URL}/config/update`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...payload
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	return doJSONRequest(`${AUDIO_API_BASE_URL}/config/update`, token, payload);
 };
 
 export const transcribeAudio = async (token: string, file: File) => {
 	const data = new FormData();
 	data.append('file', file);
-
-	let error = null;
-	const res = await fetch(`${AUDIO_API_BASE_URL}/transcriptions`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: data
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	return doFormRequest(`${AUDIO_API_BASE_URL}/transcriptions`, token, data);
 };
 
 export const synthesizeOpenAISpeech = async (
@@ -100,34 +28,9 @@ export const synthesizeOpenAISpeech = async (
 	text: string = '',
 	model: string = 'tts-1'
 ) => {
-	let error = null;
-
-	const res = await fetch(`${AUDIO_API_BASE_URL}/speech`, {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({
-			model: model,
-			input: text,
-			voice: speaker
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	return doJSONRequest(`${AUDIO_API_BASE_URL}/speech`, token, {
+		model: model,
+		input: text,
+		voice: speaker
+	});
 };
