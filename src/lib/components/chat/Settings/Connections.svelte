@@ -6,14 +6,15 @@
 	import {
 		getOllamaConfig,
 		getOllamaUrls,
+		getOllamaAuthKeys,
 		getOllamaVersion,
 		updateOllamaConfig,
-		updateOllamaUrls
+		updateOllamaUrls,
+		updateOllamaAuthKeys
 	} from '$lib/apis/ollama';
 	import {
 		getOpenAIConfig,
 		getOpenAIKeys,
-		getOpenAIModels,
 		getOpenAIUrls,
 		updateOpenAIConfig,
 		updateOpenAIKeys,
@@ -30,11 +31,13 @@
 
 	// External
 	let OLLAMA_BASE_URLS = [''];
+	let OLLAMA_AUTH_KEYS = [''];
 
 	let OPENAI_API_KEYS = [''];
 	let OPENAI_API_BASE_URLS = [''];
 
 	let pipelineUrls = {};
+	let toggleOllamaAuthKeys = [];
 
 	let ENABLE_OPENAI_API = null;
 	let ENABLE_OLLAMA_API = null;
@@ -106,6 +109,7 @@
 			toast.info($i18n.t('Ollama API disabled'));
 		} else {
 			OLLAMA_BASE_URLS = await updateOllamaUrls(localStorage.token, OLLAMA_BASE_URLS);
+			OLLAMA_AUTH_KEYS = await updateOllamaAuthKeys(localStorage.token, OLLAMA_AUTH_KEYS);
 
 			const ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
 				toast.error(error);
@@ -124,6 +128,9 @@
 			await Promise.all([
 				(async () => {
 					OLLAMA_BASE_URLS = await getOllamaUrls(localStorage.token);
+				})(),
+				(async () => {
+					OLLAMA_AUTH_KEYS = await getOllamaAuthKeys(localStorage.token);
 				})(),
 				(async () => {
 					OPENAI_API_BASE_URLS = await getOpenAIUrls(localStorage.token);
@@ -145,6 +152,15 @@
 
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
+
+			for (let i = 0 ; i < OLLAMA_BASE_URLS.length ; i++) {
+				if (OLLAMA_AUTH_KEYS[i] != undefined && OLLAMA_AUTH_KEYS[i] != '') {
+					toggleOllamaAuthKeys[i] = true;
+				} else {
+					OLLAMA_AUTH_KEYS[i] = '';
+					toggleOllamaAuthKeys[i] = undefined;
+				}
+			}
 		}
 	});
 </script>
@@ -324,18 +340,58 @@
 						<div class="flex-1 flex flex-col gap-2">
 							{#each OLLAMA_BASE_URLS as url, idx}
 								<div class="flex gap-1.5">
+									{#if toggleOllamaAuthKeys[idx] === undefined}
 									<input
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 										placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
 										bind:value={url}
 									/>
+									{:else}
+									<input
+										class="w-6/12 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
+										bind:value={url}
+									/>
+									<input
+										class="w-6/12 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										placeholder={$i18n.t('Enter auth token')}
+										bind:value={OLLAMA_AUTH_KEYS[idx]}
+									/>
+									{/if}
 
 									<div class="self-center flex items-center">
 										{#if idx === 0}
 											<button
 												class="px-1"
 												on:click={() => {
+													if (toggleOllamaAuthKeys[idx] === undefined) {
+														toggleOllamaAuthKeys[idx] = true;
+
+														if (OLLAMA_AUTH_KEYS[idx] === undefined) {
+															OLLAMA_AUTH_KEYS[idx] = '';
+														}
+													} else {
+														toggleOllamaAuthKeys[idx] = undefined;
+													}
+												}}
+												type="button"
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 16 16"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6m-4-2a.75.75 0 0 0 0 1.5a.5.5 0 0 1 .5.5a.75.75 0 0 0 1.5 0a2 2 0 0 0-2-2"
+													/>
+												</svg>
+											</button>
+											<button
+												class="px-1"
+												on:click={() => {
 													OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, ''];
+													OLLAMA_AUTH_KEYS = [...OLLAMA_AUTH_KEYS, ''];
 												}}
 												type="button"
 											>
@@ -354,7 +410,36 @@
 											<button
 												class="px-1"
 												on:click={() => {
+													if (toggleOllamaAuthKeys[idx] === undefined) {
+														toggleOllamaAuthKeys[idx] = true;
+
+														if (OLLAMA_AUTH_KEYS[idx] === undefined) {
+															OLLAMA_AUTH_KEYS[idx] = '';
+														}
+													} else {
+														toggleOllamaAuthKeys[idx] = undefined;
+													}
+												}}
+												type="button"
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 16 16"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6m-4-2a.75.75 0 0 0 0 1.5a.5.5 0 0 1 .5.5a.75.75 0 0 0 1.5 0a2 2 0 0 0-2-2"
+													/>
+												</svg>
+											</button>
+											<button
+												class="px-1"
+												on:click={() => {
 													OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter(
+														(url, urlIdx) => idx !== urlIdx
+													);
+													OLLAMA_AUTH_KEYS = OLLAMA_AUTH_KEYS.filter(
 														(url, urlIdx) => idx !== urlIdx
 													);
 												}}

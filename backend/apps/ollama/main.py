@@ -74,6 +74,7 @@ app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
+app.state.config.OLLAMA_AUTH_KEYS = []
 app.state.MODELS = {}
 
 
@@ -129,6 +130,23 @@ async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin
 
     log.info(f"app.state.config.OLLAMA_BASE_URLS: {app.state.config.OLLAMA_BASE_URLS}")
     return {"OLLAMA_BASE_URLS": app.state.config.OLLAMA_BASE_URLS}
+
+
+@app.get("/auth_keys")
+async def get_ollama_api_auth_keys(user=Depends(get_admin_user)):
+    return {"OLLAMA_AUTH_KEYS": app.state.config.OLLAMA_AUTH_KEYS}
+
+
+class AuthKeyUpdateForm(BaseModel):
+    auth_keys: List[str]
+
+
+@app.post("/auth_keys/update")
+async def update_ollama_api_auth_keys(form_data: AuthKeyUpdateForm, user=Depends(get_admin_user)):
+    app.state.config.OLLAMA_AUTH_KEYS = form_data.auth_keys
+
+    log.info(f"app.state.config.OLLAMA_AUTH_KEYS: {app.state.config.OLLAMA_AUTH_KEYS}")
+    return {"OLLAMA_AUTH_KEYS": app.state.config.OLLAMA_AUTH_KEYS}
 
 
 async def fetch_url(url):
