@@ -201,7 +201,7 @@ def get_config_value(config_path: str):
 T = TypeVar("T")
 
 
-class PersistedConfig(Generic[T]):
+class PersistentConfig(Generic[T]):
     def __init__(self, env_name: str, config_path: str, env_value: T):
         self.env_name = env_name
         self.config_path = config_path
@@ -219,13 +219,13 @@ class PersistedConfig(Generic[T]):
     @property
     def __dict__(self):
         raise TypeError(
-            "PersistedConfig object cannot be converted to dict, use config_get or .value instead."
+            "PersistentConfig object cannot be converted to dict, use config_get or .value instead."
         )
 
     def __getattribute__(self, item):
         if item == "__dict__":
             raise TypeError(
-                "PersistedConfig object cannot be converted to dict, use config_get or .value instead."
+                "PersistentConfig object cannot be converted to dict, use config_get or .value instead."
             )
         return super().__getattribute__(item)
 
@@ -247,13 +247,13 @@ class PersistedConfig(Generic[T]):
 
 
 class AppConfig:
-    _state: dict[str, PersistedConfig]
+    _state: dict[str, PersistentConfig]
 
     def __init__(self):
         super().__setattr__("_state", {})
 
     def __setattr__(self, key, value):
-        if isinstance(value, PersistedConfig):
+        if isinstance(value, PersistentConfig):
             self._state[key] = value
         else:
             self._state[key].value = value
@@ -271,7 +271,7 @@ WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
 WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
 )
-JWT_EXPIRES_IN = PersistedConfig(
+JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
 )
 
@@ -409,7 +409,7 @@ OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != "" else OLLAMA_BASE_URL
 
 OLLAMA_BASE_URLS = [url.strip() for url in OLLAMA_BASE_URLS.split(";")]
-OLLAMA_BASE_URLS = PersistedConfig(
+OLLAMA_BASE_URLS = PersistentConfig(
     "OLLAMA_BASE_URLS", "ollama.base_urls", OLLAMA_BASE_URLS
 )
 
@@ -428,7 +428,9 @@ OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
 OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
 
 OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(";")]
-OPENAI_API_KEYS = PersistedConfig("OPENAI_API_KEYS", "openai.api_keys", OPENAI_API_KEYS)
+OPENAI_API_KEYS = PersistentConfig(
+    "OPENAI_API_KEYS", "openai.api_keys", OPENAI_API_KEYS
+)
 
 OPENAI_API_BASE_URLS = os.environ.get("OPENAI_API_BASE_URLS", "")
 OPENAI_API_BASE_URLS = (
@@ -439,7 +441,7 @@ OPENAI_API_BASE_URLS = [
     url.strip() if url != "" else "https://api.openai.com/v1"
     for url in OPENAI_API_BASE_URLS.split(";")
 ]
-OPENAI_API_BASE_URLS = PersistedConfig(
+OPENAI_API_BASE_URLS = PersistentConfig(
     "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
 )
 
@@ -458,7 +460,7 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 # WEBUI
 ####################################
 
-ENABLE_SIGNUP = PersistedConfig(
+ENABLE_SIGNUP = PersistentConfig(
     "ENABLE_SIGNUP",
     "ui.enable_signup",
     (
@@ -467,11 +469,11 @@ ENABLE_SIGNUP = PersistedConfig(
         else os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
     ),
 )
-DEFAULT_MODELS = PersistedConfig(
+DEFAULT_MODELS = PersistentConfig(
     "DEFAULT_MODELS", "ui.default_models", os.environ.get("DEFAULT_MODELS", None)
 )
 
-DEFAULT_PROMPT_SUGGESTIONS = PersistedConfig(
+DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     "DEFAULT_PROMPT_SUGGESTIONS",
     "ui.prompt_suggestions",
     [
@@ -505,7 +507,7 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistedConfig(
     ],
 )
 
-DEFAULT_USER_ROLE = PersistedConfig(
+DEFAULT_USER_ROLE = PersistentConfig(
     "DEFAULT_USER_ROLE",
     "ui.default_user_role",
     os.getenv("DEFAULT_USER_ROLE", "pending"),
@@ -515,25 +517,25 @@ USER_PERMISSIONS_CHAT_DELETION = (
     os.environ.get("USER_PERMISSIONS_CHAT_DELETION", "True").lower() == "true"
 )
 
-USER_PERMISSIONS = PersistedConfig(
+USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
     "ui.user_permissions",
     {"chat": {"deletion": USER_PERMISSIONS_CHAT_DELETION}},
 )
 
-ENABLE_MODEL_FILTER = PersistedConfig(
+ENABLE_MODEL_FILTER = PersistentConfig(
     "ENABLE_MODEL_FILTER",
     "model_filter.enable",
     os.environ.get("ENABLE_MODEL_FILTER", "False").lower() == "true",
 )
 MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
-MODEL_FILTER_LIST = PersistedConfig(
+MODEL_FILTER_LIST = PersistentConfig(
     "MODEL_FILTER_LIST",
     "model_filter.list",
     [model.strip() for model in MODEL_FILTER_LIST.split(";")],
 )
 
-WEBHOOK_URL = PersistedConfig(
+WEBHOOK_URL = PersistentConfig(
     "WEBHOOK_URL", "webhook_url", os.environ.get("WEBHOOK_URL", "")
 )
 
@@ -573,40 +575,40 @@ else:
 CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
-RAG_TOP_K = PersistedConfig(
+RAG_TOP_K = PersistentConfig(
     "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "5"))
 )
-RAG_RELEVANCE_THRESHOLD = PersistedConfig(
+RAG_RELEVANCE_THRESHOLD = PersistentConfig(
     "RAG_RELEVANCE_THRESHOLD",
     "rag.relevance_threshold",
     float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "0.0")),
 )
 
-ENABLE_RAG_HYBRID_SEARCH = PersistedConfig(
+ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
     "ENABLE_RAG_HYBRID_SEARCH",
     "rag.enable_hybrid_search",
     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
 )
 
-ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = PersistedConfig(
+ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
     "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION",
     "rag.enable_web_loader_ssl_verification",
     os.environ.get("ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION", "True").lower() == "true",
 )
 
-RAG_EMBEDDING_ENGINE = PersistedConfig(
+RAG_EMBEDDING_ENGINE = PersistentConfig(
     "RAG_EMBEDDING_ENGINE",
     "rag.embedding_engine",
     os.environ.get("RAG_EMBEDDING_ENGINE", ""),
 )
 
-PDF_EXTRACT_IMAGES = PersistedConfig(
+PDF_EXTRACT_IMAGES = PersistentConfig(
     "PDF_EXTRACT_IMAGES",
     "rag.pdf_extract_images",
     os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true",
 )
 
-RAG_EMBEDDING_MODEL = PersistedConfig(
+RAG_EMBEDDING_MODEL = PersistentConfig(
     "RAG_EMBEDDING_MODEL",
     "rag.embedding_model",
     os.environ.get("RAG_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
@@ -621,7 +623,7 @@ RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
 
-RAG_RERANKING_MODEL = PersistedConfig(
+RAG_RERANKING_MODEL = PersistentConfig(
     "RAG_RERANKING_MODEL",
     "rag.reranking_model",
     os.environ.get("RAG_RERANKING_MODEL", ""),
@@ -665,10 +667,10 @@ if USE_CUDA.lower() == "true":
 else:
     DEVICE_TYPE = "cpu"
 
-CHUNK_SIZE = PersistedConfig(
+CHUNK_SIZE = PersistentConfig(
     "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1500"))
 )
-CHUNK_OVERLAP = PersistedConfig(
+CHUNK_OVERLAP = PersistentConfig(
     "CHUNK_OVERLAP",
     "rag.chunk_overlap",
     int(os.environ.get("CHUNK_OVERLAP", "100")),
@@ -688,18 +690,18 @@ And answer according to the language of the user's question.
 Given the context information, answer the query.
 Query: [query]"""
 
-RAG_TEMPLATE = PersistedConfig(
+RAG_TEMPLATE = PersistentConfig(
     "RAG_TEMPLATE",
     "rag.template",
     os.environ.get("RAG_TEMPLATE", DEFAULT_RAG_TEMPLATE),
 )
 
-RAG_OPENAI_API_BASE_URL = PersistedConfig(
+RAG_OPENAI_API_BASE_URL = PersistentConfig(
     "RAG_OPENAI_API_BASE_URL",
     "rag.openai_api_base_url",
     os.getenv("RAG_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
 )
-RAG_OPENAI_API_KEY = PersistedConfig(
+RAG_OPENAI_API_KEY = PersistentConfig(
     "RAG_OPENAI_API_KEY",
     "rag.openai_api_key",
     os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY),
@@ -709,7 +711,7 @@ ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
 )
 
-YOUTUBE_LOADER_LANGUAGE = PersistedConfig(
+YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     "YOUTUBE_LOADER_LANGUAGE",
     "rag.youtube_loader_language",
     os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(","),
@@ -730,49 +732,49 @@ WHISPER_MODEL_AUTO_UPDATE = (
 # Images
 ####################################
 
-IMAGE_GENERATION_ENGINE = PersistedConfig(
+IMAGE_GENERATION_ENGINE = PersistentConfig(
     "IMAGE_GENERATION_ENGINE",
     "image_generation.engine",
     os.getenv("IMAGE_GENERATION_ENGINE", ""),
 )
 
-ENABLE_IMAGE_GENERATION = PersistedConfig(
+ENABLE_IMAGE_GENERATION = PersistentConfig(
     "ENABLE_IMAGE_GENERATION",
     "image_generation.enable",
     os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true",
 )
-AUTOMATIC1111_BASE_URL = PersistedConfig(
+AUTOMATIC1111_BASE_URL = PersistentConfig(
     "AUTOMATIC1111_BASE_URL",
     "image_generation.automatic1111.base_url",
     os.getenv("AUTOMATIC1111_BASE_URL", ""),
 )
 
-COMFYUI_BASE_URL = PersistedConfig(
+COMFYUI_BASE_URL = PersistentConfig(
     "COMFYUI_BASE_URL",
     "image_generation.comfyui.base_url",
     os.getenv("COMFYUI_BASE_URL", ""),
 )
 
-IMAGES_OPENAI_API_BASE_URL = PersistedConfig(
+IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
     "IMAGES_OPENAI_API_BASE_URL",
     "image_generation.openai.api_base_url",
     os.getenv("IMAGES_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
 )
-IMAGES_OPENAI_API_KEY = PersistedConfig(
+IMAGES_OPENAI_API_KEY = PersistentConfig(
     "IMAGES_OPENAI_API_KEY",
     "image_generation.openai.api_key",
     os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
-IMAGE_SIZE = PersistedConfig(
+IMAGE_SIZE = PersistentConfig(
     "IMAGE_SIZE", "image_generation.size", os.getenv("IMAGE_SIZE", "512x512")
 )
 
-IMAGE_STEPS = PersistedConfig(
+IMAGE_STEPS = PersistentConfig(
     "IMAGE_STEPS", "image_generation.steps", int(os.getenv("IMAGE_STEPS", 50))
 )
 
-IMAGE_GENERATION_MODEL = PersistedConfig(
+IMAGE_GENERATION_MODEL = PersistentConfig(
     "IMAGE_GENERATION_MODEL",
     "image_generation.model",
     os.getenv("IMAGE_GENERATION_MODEL", ""),
@@ -782,22 +784,22 @@ IMAGE_GENERATION_MODEL = PersistedConfig(
 # Audio
 ####################################
 
-AUDIO_OPENAI_API_BASE_URL = PersistedConfig(
+AUDIO_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_OPENAI_API_BASE_URL",
     "audio.openai.api_base_url",
     os.getenv("AUDIO_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
 )
-AUDIO_OPENAI_API_KEY = PersistedConfig(
+AUDIO_OPENAI_API_KEY = PersistentConfig(
     "AUDIO_OPENAI_API_KEY",
     "audio.openai.api_key",
     os.getenv("AUDIO_OPENAI_API_KEY", OPENAI_API_KEY),
 )
-AUDIO_OPENAI_API_MODEL = PersistedConfig(
+AUDIO_OPENAI_API_MODEL = PersistentConfig(
     "AUDIO_OPENAI_API_MODEL",
     "audio.openai.api_model",
     os.getenv("AUDIO_OPENAI_API_MODEL", "tts-1"),
 )
-AUDIO_OPENAI_API_VOICE = PersistedConfig(
+AUDIO_OPENAI_API_VOICE = PersistentConfig(
     "AUDIO_OPENAI_API_VOICE",
     "audio.openai.api_voice",
     os.getenv("AUDIO_OPENAI_API_VOICE", "alloy"),
