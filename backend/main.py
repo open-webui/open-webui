@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from bs4 import BeautifulSoup
 import json
 import markdown
@@ -92,7 +93,19 @@ https://github.com/open-webui/open-webui
 """
 )
 
-app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if ENABLE_LITELLM:
+        asyncio.create_task(start_litellm_background())
+    yield
+    if ENABLE_LITELLM:
+        await shutdown_litellm_background()
+
+
+app = FastAPI(
+    docs_url="/docs" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan
+)
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
@@ -209,12 +222,6 @@ async def check_url(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
 
     return response
-
-
-@app.on_event("startup")
-async def on_startup():
-    if ENABLE_LITELLM:
-        asyncio.create_task(start_litellm_background())
 
 
 app.mount("/api/v1", webui_app)
@@ -381,9 +388,3 @@ else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
     )
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    if ENABLE_LITELLM:
-        await shutdown_litellm_background()
