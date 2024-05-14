@@ -1,0 +1,7 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+    "docker-in-docker": "latest"
+  },
+  "postCreateCommand": "sudo service docker start"
+}
