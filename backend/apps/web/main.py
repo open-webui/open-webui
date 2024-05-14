@@ -21,20 +21,24 @@ from config import (
     USER_PERMISSIONS,
     WEBHOOK_URL,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
+    JWT_EXPIRES_IN,
+    AppConfig,
 )
 
 app = FastAPI()
 
 origins = ["*"]
 
-app.state.ENABLE_SIGNUP = ENABLE_SIGNUP
-app.state.JWT_EXPIRES_IN = "-1"
+app.state.config = AppConfig()
 
-app.state.DEFAULT_MODELS = DEFAULT_MODELS
-app.state.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
-app.state.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
-app.state.USER_PERMISSIONS = USER_PERMISSIONS
-app.state.WEBHOOK_URL = WEBHOOK_URL
+app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
+app.state.config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
+
+app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
+app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
+app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
+app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
+app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 
 app.add_middleware(
@@ -61,6 +65,6 @@ async def get_status():
     return {
         "status": True,
         "auth": WEBUI_AUTH,
-        "default_models": app.state.DEFAULT_MODELS,
-        "default_prompt_suggestions": app.state.DEFAULT_PROMPT_SUGGESTIONS,
+        "default_models": app.state.config.DEFAULT_MODELS,
+        "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
     }
