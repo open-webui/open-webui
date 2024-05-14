@@ -82,7 +82,7 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
         apt-get update && \
         # Install pandoc and netcat
-        apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
+        apt-get install -y --no-install-recommends pandoc netcat-openbsd curl && \
         # for RAG OCR
         apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
         # install helper tools
@@ -94,7 +94,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     else \
         apt-get update && \
         # Install pandoc and netcat
-        apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
+        apt-get install -y --no-install-recommends pandoc netcat-openbsd curl && \
         # for RAG OCR
         apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
         # cleanup
@@ -133,5 +133,7 @@ COPY --from=build /app/package.json /app/package.json
 COPY ./backend .
 
 EXPOSE 8080
+
+HEALTHCHECK CMD curl --fail http://localhost:8080 || exit 1 
 
 CMD [ "bash", "start.sh"]
