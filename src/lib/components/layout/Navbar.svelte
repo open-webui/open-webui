@@ -68,7 +68,7 @@
 				{#if !shareEnabled}
 					<Tooltip content={$i18n.t('Settings')}>
 						<button
-							class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							class="hidden md:flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 							id="open-settings-button"
 							on:click={async () => {
 								await showSettings.set(!$showSettings);
@@ -107,7 +107,7 @@
 						}}
 					>
 						<button
-							class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							class="hidden md:flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 						>
 							<div class=" m-auto self-center">
 								<svg
