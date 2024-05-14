@@ -144,12 +144,12 @@ class RAGMiddleware(BaseHTTPMiddleware):
                 data["messages"], citations = rag_messages(
                     docs=data["docs"],
                     messages=data["messages"],
-                    template=rag_app.state.RAG_TEMPLATE,
+                    template=rag_app.state.config.RAG_TEMPLATE,
                     embedding_function=rag_app.state.EMBEDDING_FUNCTION,
-                    k=rag_app.state.TOP_K,
+                    k=rag_app.state.config.TOP_K,
                     reranking_function=rag_app.state.sentence_transformer_rf,
-                    r=rag_app.state.RELEVANCE_THRESHOLD,
-                    hybrid_search=rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
+                    r=rag_app.state.config.RELEVANCE_THRESHOLD,
+                    hybrid_search=rag_app.state.config.ENABLE_RAG_HYBRID_SEARCH,
                 )
                 del data["docs"]
 
