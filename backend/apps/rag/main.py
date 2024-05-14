@@ -660,8 +660,6 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
                     log.info(f"deleting existing collection {collection_name}")
                     CHROMA_CLIENT.delete_collection(name=collection_name)
 
-        collection = CHROMA_CLIENT.create_collection(name=collection_name)
-
         embedding_func = get_embedding_function(
             app.state.config.RAG_EMBEDDING_ENGINE,
             app.state.config.RAG_EMBEDDING_MODEL,
@@ -673,14 +671,13 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
         embedding_texts = list(map(lambda x: x.replace("\n", " "), texts))
         embeddings = embedding_func(embedding_texts)
 
-        for batch in create_batches(
-            api=CHROMA_CLIENT,
-            ids=[str(uuid.uuid4()) for _ in texts],
-            metadatas=metadatas,
-            embeddings=embeddings,
-            documents=texts,
-        ):
-            collection.add(*batch)
+        if len(embeddings)>0:
+            collection = CHROMA_CLIENT.create_collection(name=collection_name, dims=len(embeddings[0]))
+            CHROMA_CLIENT.add_docs(collection_name=collection_name,
+                ids=[str(uuid.uuid4()) for _ in texts],
+                metadatas=metadatas,
+                embeddings=embeddings,
+                documents=texts)
 
         return True
     except Exception as e:

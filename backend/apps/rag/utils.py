@@ -20,7 +20,7 @@ from langchain.retrievers import (
 
 from typing import Optional
 from config import SRC_LOG_LEVELS, CHROMA_CLIENT
-
+from vectorstore import VectorStore
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -33,10 +33,10 @@ def query_doc(
     k: int,
 ):
     try:
-        collection = CHROMA_CLIENT.get_collection(name=collection_name)
         query_embeddings = embedding_function(query)
 
-        result = collection.query(
+        result = CHROMA_CLIENT.query(
+            collection_name=collection_name,
             query_embeddings=[query_embeddings],
             n_results=k,
         )
@@ -56,8 +56,7 @@ def query_doc_with_hybrid_search(
     r: float,
 ):
     try:
-        collection = CHROMA_CLIENT.get_collection(name=collection_name)
-        documents = collection.get()  # get all documents
+        documents = CHROMA_CLIENT.get_all(name=collection_name)  # get all documents
 
         bm25_retriever = BM25Retriever.from_texts(
             texts=documents.get("documents"),
@@ -66,7 +65,8 @@ def query_doc_with_hybrid_search(
         bm25_retriever.k = k
 
         chroma_retriever = ChromaRetriever(
-            collection=collection,
+            vector_store=CHROMA_CLIENT,
+            name=collection_name,
             embedding_function=embedding_function,
             top_n=k,
         )
@@ -431,7 +431,8 @@ from langchain_core.callbacks import CallbackManagerForRetrieverRun
 
 
 class ChromaRetriever(BaseRetriever):
-    collection: Any
+    vector_store: VectorStore
+    collection_name: str
     embedding_function: Any
     top_n: int
 
@@ -443,7 +444,7 @@ class ChromaRetriever(BaseRetriever):
     ) -> List[Document]:
         query_embeddings = self.embedding_function(query)
 
-        results = self.collection.query(
+        results = self.vector_store.query(collection_name=self.collection_name,
             query_embeddings=[query_embeddings],
             n_results=self.top_n,
         )

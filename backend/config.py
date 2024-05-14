@@ -17,7 +17,7 @@ import shutil
 
 from secrets import token_bytes
 from constants import ERROR_MESSAGES
-
+from vectorstore import create_vector_store, VectorStore
 ####################################
 # Load .env file
 ####################################
