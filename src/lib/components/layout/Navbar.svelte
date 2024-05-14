@@ -32,7 +32,7 @@
 		<div class="flex items-center w-full max-w-full">
 			<div class="{$showSidebar ? 'md:hidden' : ''} mr-3 self-start flex flex-none items-center">
 				<button
-					id="new-chat-button"
+					id="sidebar-toggle-button"
 					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 					on:click={() => {
 						showSidebar.set(!$showSidebar);

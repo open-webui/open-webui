@@ -210,7 +210,6 @@
 	>
 		<div class="px-2 flex justify-between space-x-2">
 			<button
-				id="new-chat-button"
 				class=" cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
