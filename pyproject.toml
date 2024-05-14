@@ -1,0 +1,110 @@
+[project]
+name = "open-webui"
+description = "Open WebUI (Formerly Ollama WebUI)"
+authors = [
+    { name = "Timothy Jaeryang Baek", email = "jaeryang_baek@sfu.ca" }
+]
+license = { file = "LICENSE" }
+dependencies = [
+    "fastapi==0.109.2",
+    "uvicorn[standard]==0.22.0",
+    "pydantic==2.7.1",
+    "python-multipart==0.0.9",
+
+    "Flask==3.0.3",
+    "Flask-Cors==4.0.0",
+
+    "python-socketio==5.11.2",
+    "python-jose==3.3.0",
+    "passlib[bcrypt]==1.7.4",
+
+    "requests==2.31.0",
+    "aiohttp==3.9.5",
+    "peewee==3.17.3",
+    "peewee-migrate==1.12.2",
+    "psycopg2-binary==2.9.9",
+    "PyMySQL==1.1.0",
+    "bcrypt==4.1.2",
+
+    "litellm[proxy]==1.35.28",
+
+    "boto3==1.34.95",
+
+    "argon2-cffi==23.1.0",
+    "APScheduler==3.10.4",
+    "google-generativeai==0.5.2",
+
+    "langchain==0.1.16",
+    "langchain-community==0.0.34",
+    "langchain-chroma==0.1.0",
+
+    "fake-useragent==1.5.1",
+    "chromadb==0.4.24",
+    "sentence-transformers==2.7.0",
+    "pypdf==4.2.0",
+    "docx2txt==0.8",
+    "unstructured==0.11.8",
+    "Markdown==3.6",
+    "pypandoc==1.13",
+    "pandas==2.2.2",
+    "openpyxl==3.1.2",
+    "pyxlsb==1.0.10",
+    "xlrd==2.0.1",
+    "validators==0.28.1",
+
+    "opencv-python-headless==4.9.0.80",
+    "rapidocr-onnxruntime==1.2.3",
+
+    "fpdf2==2.7.8",
+    "rank-bm25==0.2.2",
+
+    "faster-whisper==1.0.1",
+
+    "PyJWT[crypto]==2.8.0",
+
+    "black==24.4.2",
+    "langfuse==2.27.3",
+    "youtube-transcript-api==0.6.2",
+    "pytube",
+]
+readme = "README.md"
+requires-python = ">= 3.11, < 3.12.0a1"
+dynamic = ["version"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Communications :: Chat",
+    "Topic :: Multimedia",
+]
+
+[project.scripts]
+open-webui = "open_webui:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.version]
+path = "package.json"
+pattern = '"version":\s*"(?P<version>[^"]+)"'
+
+[tool.hatch.build.targets.wheel]
+ignore-vcs = true
+packages = ["backend"]
+sources = ["backend"]
+exclude = [
+    ".dockerignore",
+    ".gitignore",
+    ".webui_secret_key",
+    "dev.sh",
+    "requirements.txt",
+    "start.sh",
+    "start_windows.bat",
+]
