@@ -1,14 +1,19 @@
-from fastapi import Request
+import logging
+
+from fastapi import Request, UploadFile, File
 from fastapi import Depends, HTTPException, status
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 import re
 import uuid
+import csv
+
 
 from apps.web.models.auths import (
     SigninForm,
     SignupForm,
+    AddUserForm,
     UpdateProfileForm,
     UpdatePasswordForm,
     UserResponse,
@@ -28,7 +33,7 @@ from utils.utils import (
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from config import WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+from config import WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 
 router = APIRouter()
 
@@ -113,6 +118,22 @@ async def signin(request: Request, form_data: SigninForm):
                 ),
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
+    elif WEBUI_AUTH == False:
+        admin_email = "admin@localhost"
+        admin_password = "admin"
+
+        if Users.get_user_by_email(admin_email.lower()):
+            user = Auths.authenticate_user(admin_email.lower(), admin_password)
+        else:
+            if Users.get_num_users() != 0:
+                raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
+
+            await signup(
+                request,
+                SignupForm(email=admin_email, password=admin_password, name="User"),
+            )
+
+            user = Auths.authenticate_user(admin_email.lower(), admin_password)
     else:
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
@@ -142,7 +163,7 @@ async def signin(request: Request, form_data: SigninForm):
 
 @router.post("/signup", response_model=SigninResponse)
 async def signup(request: Request, form_data: SignupForm):
-    if not request.app.state.ENABLE_SIGNUP:
+    if not request.app.state.ENABLE_SIGNUP and WEBUI_AUTH:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
         )
@@ -188,6 +209,51 @@ async def signup(request: Request, form_data: SignupForm):
                     },
                 )
 
+            return {
+                "token": token,
+                "token_type": "Bearer",
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "role": user.role,
+                "profile_image_url": user.profile_image_url,
+            }
+        else:
+            raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+    except Exception as err:
+        raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
+
+
+############################
+# AddUser
+############################
+
+
+@router.post("/add", response_model=SigninResponse)
+async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+
+    if not validate_email_format(form_data.email.lower()):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+
+    if Users.get_user_by_email(form_data.email.lower()):
+        raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+
+    try:
+
+        print(form_data)
+        hashed = get_password_hash(form_data.password)
+        user = Auths.insert_new_auth(
+            form_data.email.lower(),
+            hashed,
+            form_data.name,
+            form_data.profile_image_url,
+            form_data.role,
+        )
+
+        if user:
+            token = create_token(data={"id": user.id})
             return {
                 "token": token,
                 "token_type": "Bearer",

@@ -67,7 +67,7 @@
 	const textCompletionHandler = async () => {
 		const model = $models.find((model) => model.id === selectedModelId);
 
-		const res = await generateOpenAIChatCompletion(
+		const [res, controller] = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
 				model: model.id,
@@ -96,7 +96,7 @@
 				const { value, done } = await reader.read();
 				if (done || stopResponseFlag) {
 					if (stopResponseFlag) {
-						await cancelOllamaRequest(localStorage.token, currentRequestId);
+						controller.abort('User: Stop Response');
 					}
 
 					currentRequestId = null;
@@ -135,7 +135,7 @@
 	const chatCompletionHandler = async () => {
 		const model = $models.find((model) => model.id === selectedModelId);
 
-		const res = await generateOpenAIChatCompletion(
+		const [res, controller] = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
 				model: model.id,
@@ -182,7 +182,7 @@
 				const { value, done } = await reader.read();
 				if (done || stopResponseFlag) {
 					if (stopResponseFlag) {
-						await cancelOllamaRequest(localStorage.token, currentRequestId);
+						controller.abort('User: Stop Response');
 					}
 
 					currentRequestId = null;
@@ -316,7 +316,7 @@
 						</div>
 					</div>
 
-					<div class="flex flex-col gap-1 px-1 w-full">
+					<div class="flex flex-col gap-1 w-full">
 						<div class="flex w-full">
 							<div class="overflow-hidden w-full">
 								<div class="max-w-full">
@@ -330,6 +330,7 @@
 												info: model
 											}))}
 										bind:value={selectedModelId}
+										className="w-[42rem]"
 									/>
 								</div>
 							</div>

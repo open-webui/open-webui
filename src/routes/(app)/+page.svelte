@@ -15,7 +15,8 @@
 		chatId,
 		config,
 		WEBUI_NAME,
-		tags as _tags
+		tags as _tags,
+		showSidebar
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
@@ -39,6 +40,7 @@
 	import { RAGTemplate } from '$lib/utils/rag';
 	import { LITELLM_API_BASE_URL, OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { createOpenAITextStream } from '$lib/apis/streaming';
 
 	const i18n = getContext('i18n');
 
@@ -49,7 +51,9 @@
 	let currentRequestId = null;
 
 	let showModelSelector = true;
+
 	let selectedModels = [''];
+	let atSelectedModel = '';
 
 	let selectedModelfile = null;
 	$: selectedModelfile =
@@ -130,6 +134,14 @@
 			selectedModels = [''];
 		}
 
+		if ($page.url.searchParams.get('q')) {
+			prompt = $page.url.searchParams.get('q') ?? '';
+			if (prompt) {
+				await tick();
+				submitPrompt(prompt);
+			}
+		}
+
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
@@ -143,7 +155,8 @@
 		setTimeout(() => chatInput?.focus(), 0);
 	};
 
-	const scrollToBottom = () => {
+	const scrollToBottom = async () => {
+		await tick();
 		if (messagesContainerElement) {
 			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 		}
@@ -241,7 +254,8 @@
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
-			selectedModels.map(async (modelId) => {
+			(atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(async (modelId) => {
+				console.log('modelId', modelId);
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
@@ -350,11 +364,18 @@
 			model: model,
 			messages: messagesBody,
 			options: {
-				...($settings.options ?? {})
+				...($settings.options ?? {}),
+				stop:
+					$settings?.options?.stop ?? undefined
+						? $settings.options.stop.map((str) =>
+								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+						  )
+						: undefined
 			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
-			docs: docs.length > 0 ? docs : undefined
+			docs: docs.length > 0 ? docs : undefined,
+			citations: docs.length > 0
 		});
 
 		if (res && res.ok) {
@@ -388,6 +409,11 @@
 						if (line !== '') {
 							console.log(line);
 							let data = JSON.parse(line);
+
+							if ('citations' in data) {
+								responseMessage.citations = data.citations;
+								continue;
+							}
 
 							if ('detail' in data) {
 								throw data;
@@ -529,9 +555,9 @@
 
 		console.log(docs);
 
-		console.log(model);
+		scrollToBottom();
 
-		const res = await generateOpenAIChatCompletion(
+		const [res, controller] = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
 				model: model.id,
@@ -575,13 +601,19 @@
 							  })
 					})),
 				seed: $settings?.options?.seed ?? undefined,
-				stop: $settings?.options?.stop ?? undefined,
+				stop:
+					$settings?.options?.stop ?? undefined
+						? $settings?.options?.stop.map((str) =>
+								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+						  )
+						: undefined,
 				temperature: $settings?.options?.temperature ?? undefined,
 				top_p: $settings?.options?.top_p ?? undefined,
 				num_ctx: $settings?.options?.num_ctx ?? undefined,
 				frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
 				max_tokens: $settings?.options?.num_predict ?? undefined,
-				docs: docs.length > 0 ? docs : undefined
+				docs: docs.length > 0 ? docs : undefined,
+				citations: docs.length > 0
 			},
 			model?.source?.toLowerCase() === 'litellm'
 				? `${LITELLM_API_BASE_URL}/v1`
@@ -593,44 +625,32 @@
 
 		scrollToBottom();
 
-		if (res && res.ok) {
-			const reader = res.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
+		if (res && res.ok && res.body) {
+			const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 
-			while (true) {
-				const { value, done } = await reader.read();
+			for await (const update of textStream) {
+				const { value, done, citations } = update;
 				if (done || stopResponseFlag || _chatId !== $chatId) {
 					responseMessage.done = true;
 					messages = messages;
+
+					if (stopResponseFlag) {
+						controller.abort('User: Stop Response');
+					}
+
 					break;
 				}
 
-				try {
-					let lines = value.split('\n');
+				if (citations) {
+					responseMessage.citations = citations;
+					continue;
+				}
 
-					for (const line of lines) {
-						if (line !== '') {
-							console.log(line);
-							if (line === 'data: [DONE]') {
-								responseMessage.done = true;
-								messages = messages;
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
-
-								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
-									continue;
-								} else {
-									responseMessage.content += data.choices[0].delta.content ?? '';
-									messages = messages;
-								}
-							}
-						}
-					}
-				} catch (error) {
-					console.log(error);
+				if (responseMessage.content == '' && value == '\n') {
+					continue;
+				} else {
+					responseMessage.content += value;
+					messages = messages;
 				}
 
 				if ($settings.notificationEnabled && !document.hasFocus()) {
@@ -843,7 +863,11 @@
 	</title>
 </svelte:head>
 
-<div class="h-screen max-h-[100dvh] w-full flex flex-col">
+<div
+	class="min-h-screen max-h-screen {$showSidebar
+		? 'lg:max-w-[calc(100%-260px)]'
+		: ''} w-full max-w-full flex flex-col"
+>
 	<Navbar
 		{title}
 		bind:selectedModels
@@ -854,7 +878,7 @@
 	/>
 	<div class="flex flex-col flex-auto">
 		<div
-			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+			class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full"
 			id="messages-container"
 			bind:this={messagesContainerElement}
 			on:scroll={(e) => {
@@ -872,22 +896,25 @@
 					bind:history
 					bind:messages
 					bind:autoScroll
+					bind:prompt
 					bottomPadding={files.length > 0}
+					suggestionPrompts={selectedModelfile?.suggestionPrompts ??
+						$config.default_prompt_suggestions}
 					{sendPrompt}
 					{continueGeneration}
 					{regenerateResponse}
 				/>
 			</div>
 		</div>
-
-		<MessageInput
-			bind:files
-			bind:prompt
-			bind:autoScroll
-			suggestionPrompts={selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
-			{messages}
-			{submitPrompt}
-			{stopResponse}
-		/>
 	</div>
 </div>
+
+<MessageInput
+	bind:files
+	bind:prompt
+	bind:autoScroll
+	bind:selectedModel={atSelectedModel}
+	{messages}
+	{submitPrompt}
+	{stopResponse}
+/>

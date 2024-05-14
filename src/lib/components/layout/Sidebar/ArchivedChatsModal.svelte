@@ -42,7 +42,7 @@
 
 <Modal size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
+		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Archived Chats')}</div>
 			<button
 				class="self-center"
@@ -62,16 +62,15 @@
 				</svg>
 			</button>
 		</div>
-		<hr class=" dark:border-gray-850" />
 
-		<div class="flex flex-col md:flex-row w-full px-5 py-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if chats.length > 0}
-					<div class="text-left text-sm w-full mb-4 h-[22rem] overflow-y-scroll">
+					<div class="text-left text-sm w-full mb-4 max-h-[22rem] overflow-y-scroll">
 						<div class="relative overflow-x-auto">
-							<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto">
+							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 								<thead
-									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 border-gray-800"
+									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-800"
 								>
 									<tr>
 										<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
@@ -82,7 +81,7 @@
 								<tbody>
 									{#each chats as chat, idx}
 										<tr
-											class="bg-white {idx !== chats.length - 1 &&
+											class="bg-transparent {idx !== chats.length - 1 &&
 												'border-b'} dark:bg-gray-900 dark:border-gray-850 text-xs"
 										>
 											<td class="px-3 py-1 w-2/3">
@@ -162,7 +161,9 @@
 						{/each} -->
 					</div>
 				{:else}
-					<div class="text-left text-sm w-full mb-8">You have no archived conversations.</div>
+					<div class="text-left text-sm w-full mb-8">
+						{$i18n.t('You have no archived conversations.')}
+					</div>
 				{/if}
 			</div>
 		</div>

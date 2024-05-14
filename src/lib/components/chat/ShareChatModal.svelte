@@ -71,7 +71,7 @@
 
 <Modal bind:show size="sm">
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 py-4">
+		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</div>
 			<button
 				class="self-center"
@@ -91,16 +91,16 @@
 				</svg>
 			</button>
 		</div>
-		<hr class=" dark:border-gray-800" />
 
 		{#if chat}
-			<div class="px-4 pt-4 pb-5 w-full flex flex-col justify-center">
+			<div class="px-5 pt-4 pb-5 w-full flex flex-col justify-center">
 				<div class=" text-sm dark:text-gray-300 mb-1">
 					{#if chat.share_id}
 						<a href="/s/{chat.share_id}" target="_blank"
-							>You have shared this chat <span class=" underline">before</span>.</a
+							>{$i18n.t('You have shared this chat')}
+							<span class=" underline">{$i18n.t('before')}</span>.</a
 						>
-						Click here to
+						{$i18n.t('Click here to')}
 						<button
 							class="underline"
 							on:click={async () => {
@@ -109,11 +109,14 @@
 								if (res) {
 									chat = await getChatById(localStorage.token, chatId);
 								}
-							}}>delete this link</button
-						> and create a new shared link.
+							}}
+							>{$i18n.t('delete this link')}
+						</button>
+						{$i18n.t('and create a new shared link.')}
 					{:else}
-						Messages you send after creating your link won't be shared. Users with the URL will be
-						able to view the shared chat.
+						{$i18n.t(
+							"Messages you send after creating your link won't be shared. Users with the URL will beable to view the shared chat."
+						)}
 					{/if}
 				</div>
 

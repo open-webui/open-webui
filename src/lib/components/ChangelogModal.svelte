@@ -22,7 +22,7 @@
 </script>
 
 <Modal bind:show>
-	<div class="px-5 py-4 dark:text-gray-300">
+	<div class="px-5 pt-4 dark:text-gray-300 text-gray-700">
 		<div class="flex justify-between items-start">
 			<div class="text-xl font-bold">
 				{$i18n.t('What’s New in')}
@@ -57,10 +57,8 @@
 		</div>
 	</div>
 
-	<hr class=" dark:border-gray-800" />
-
-	<div class=" w-full p-4 px-5">
-		<div class=" overflow-y-scroll max-h-80">
+	<div class=" w-full p-4 px-5 text-gray-700 dark:text-gray-100">
+		<div class=" overflow-y-scroll max-h-80 scrollbar-none">
 			<div class="mb-3">
 				{#if changelog}
 					{#each Object.keys(changelog) as version}
@@ -110,7 +108,7 @@
 					localStorage.version = $config.version;
 					show = false;
 				}}
-				class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
+				class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			>
 				<span class="relative">{$i18n.t("Okay, Let's Go!")}</span>
 			</button>

@@ -24,6 +24,7 @@ from utils.misc import calculate_sha256
 from typing import Optional
 from pydantic import BaseModel
 from pathlib import Path
+import mimetypes
 import uuid
 import base64
 import json
@@ -32,11 +33,15 @@ import logging
 from config import (
     SRC_LOG_LEVELS,
     CACHE_DIR,
+    IMAGE_GENERATION_ENGINE,
     ENABLE_IMAGE_GENERATION,
     AUTOMATIC1111_BASE_URL,
     COMFYUI_BASE_URL,
-    OPENAI_API_BASE_URL,
-    OPENAI_API_KEY,
+    IMAGES_OPENAI_API_BASE_URL,
+    IMAGES_OPENAI_API_KEY,
+    IMAGE_GENERATION_MODEL,
+    IMAGE_SIZE,
+    IMAGE_STEPS,
 )
 
 
@@ -55,21 +60,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.state.ENGINE = ""
+app.state.ENGINE = IMAGE_GENERATION_ENGINE
 app.state.ENABLED = ENABLE_IMAGE_GENERATION
 
-app.state.OPENAI_API_BASE_URL = OPENAI_API_BASE_URL
-app.state.OPENAI_API_KEY = OPENAI_API_KEY
+app.state.OPENAI_API_BASE_URL = IMAGES_OPENAI_API_BASE_URL
+app.state.OPENAI_API_KEY = IMAGES_OPENAI_API_KEY
 
-app.state.MODEL = ""
+app.state.MODEL = IMAGE_GENERATION_MODEL
 
 
 app.state.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
 app.state.COMFYUI_BASE_URL = COMFYUI_BASE_URL
 
 
-app.state.IMAGE_SIZE = "512x512"
-app.state.IMAGE_STEPS = 50
+app.state.IMAGE_SIZE = IMAGE_SIZE
+app.state.IMAGE_STEPS = IMAGE_STEPS
 
 
 @app.get("/config")
@@ -135,27 +140,33 @@ async def update_engine_url(
     }
 
 
-class OpenAIKeyUpdateForm(BaseModel):
+class OpenAIConfigUpdateForm(BaseModel):
+    url: str
     key: str
 
 
-@app.get("/key")
-async def get_openai_key(user=Depends(get_admin_user)):
-    return {"OPENAI_API_KEY": app.state.OPENAI_API_KEY}
+@app.get("/openai/config")
+async def get_openai_config(user=Depends(get_admin_user)):
+    return {
+        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
+        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
+    }
 
 
-@app.post("/key/update")
-async def update_openai_key(
-    form_data: OpenAIKeyUpdateForm, user=Depends(get_admin_user)
+@app.post("/openai/config/update")
+async def update_openai_config(
+    form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user)
 ):
-
     if form_data.key == "":
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
+    app.state.OPENAI_API_BASE_URL = form_data.url
     app.state.OPENAI_API_KEY = form_data.key
+
     return {
-        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
         "status": True,
+        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
+        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
     }
 
 
@@ -305,35 +316,61 @@ class GenerateImageForm(BaseModel):
 
 
 def save_b64_image(b64_str):
-    image_id = str(uuid.uuid4())
-    file_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.png")
-
     try:
-        # Split the base64 string to get the actual image data
-        img_data = base64.b64decode(b64_str)
+        image_id = str(uuid.uuid4())
 
-        # Write the image data to a file
-        with open(file_path, "wb") as f:
-            f.write(img_data)
+        if "," in b64_str:
+            header, encoded = b64_str.split(",", 1)
+            mime_type = header.split(";")[0]
 
-        return image_id
+            img_data = base64.b64decode(encoded)
+            image_format = mimetypes.guess_extension(mime_type)
+
+            image_filename = f"{image_id}{image_format}"
+            file_path = IMAGE_CACHE_DIR / f"{image_filename}"
+            with open(file_path, "wb") as f:
+                f.write(img_data)
+            return image_filename
+        else:
+            image_filename = f"{image_id}.png"
+            file_path = IMAGE_CACHE_DIR.joinpath(image_filename)
+
+            img_data = base64.b64decode(b64_str)
+
+            # Write the image data to a file
+            with open(file_path, "wb") as f:
+                f.write(img_data)
+            return image_filename
+
     except Exception as e:
-        log.error(f"Error saving image: {e}")
+        log.exception(f"Error saving image: {e}")
         return None
 
 
 def save_url_image(url):
     image_id = str(uuid.uuid4())
-    file_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.png")
-
     try:
         r = requests.get(url)
         r.raise_for_status()
+        if r.headers["content-type"].split("/")[0] == "image":
 
-        with open(file_path, "wb") as image_file:
-            image_file.write(r.content)
+            mime_type = r.headers["content-type"]
+            image_format = mimetypes.guess_extension(mime_type)
 
-        return image_id
+            if not image_format:
+                raise ValueError("Could not determine image type from MIME type")
+
+            image_filename = f"{image_id}{image_format}"
+
+            file_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}")
+            with open(file_path, "wb") as image_file:
+                for chunk in r.iter_content(chunk_size=8192):
+                    image_file.write(chunk)
+            return image_filename
+        else:
+            log.error(f"Url does not point to an image.")
+            return None
+
     except Exception as e:
         log.exception(f"Error saving image: {e}")
         return None
@@ -375,9 +412,9 @@ def generate_image(
             images = []
 
             for image in res["data"]:
-                image_id = save_b64_image(image["b64_json"])
-                images.append({"url": f"/cache/image/generations/{image_id}.png"})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
+                image_filename = save_b64_image(image["b64_json"])
+                images.append({"url": f"/cache/image/generations/{image_filename}"})
+                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
 
                 with open(file_body_path, "w") as f:
                     json.dump(data, f)
@@ -412,9 +449,9 @@ def generate_image(
             images = []
 
             for image in res["data"]:
-                image_id = save_url_image(image["url"])
-                images.append({"url": f"/cache/image/generations/{image_id}.png"})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
+                image_filename = save_url_image(image["url"])
+                images.append({"url": f"/cache/image/generations/{image_filename}"})
+                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
 
                 with open(file_body_path, "w") as f:
                     json.dump(data.model_dump(exclude_none=True), f)
@@ -450,9 +487,9 @@ def generate_image(
             images = []
 
             for image in res["images"]:
-                image_id = save_b64_image(image)
-                images.append({"url": f"/cache/image/generations/{image_id}.png"})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_id}.json")
+                image_filename = save_b64_image(image)
+                images.append({"url": f"/cache/image/generations/{image_filename}"})
+                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
 
                 with open(file_body_path, "w") as f:
                     json.dump({**data, "info": res["info"]}, f)

@@ -17,11 +17,11 @@ from apps.web.internal.db import DB
 class Chat(Model):
     id = CharField(unique=True)
     user_id = CharField()
-    title = CharField()
+    title = TextField()
     chat = TextField()  # Save Chat JSON as Text
 
-    created_at = DateTimeField()
-    updated_at = DateTimeField()
+    created_at = BigIntegerField()
+    updated_at = BigIntegerField()
 
     share_id = CharField(null=True, unique=True)
     archived = BooleanField(default=False)
@@ -191,7 +191,7 @@ class ChatTable:
         except:
             return None
 
-    def get_archived_chat_lists_by_user_id(
+    def get_archived_chat_list_by_user_id(
         self, user_id: str, skip: int = 0, limit: int = 50
     ) -> List[ChatModel]:
         return [
@@ -204,7 +204,7 @@ class ChatTable:
             # .offset(skip)
         ]
 
-    def get_chat_lists_by_user_id(
+    def get_chat_list_by_user_id(
         self, user_id: str, skip: int = 0, limit: int = 50
     ) -> List[ChatModel]:
         return [
@@ -217,7 +217,7 @@ class ChatTable:
             # .offset(skip)
         ]
 
-    def get_chat_lists_by_chat_ids(
+    def get_chat_list_by_chat_ids(
         self, chat_ids: List[str], skip: int = 0, limit: int = 50
     ) -> List[ChatModel]:
         return [
@@ -225,20 +225,6 @@ class ChatTable:
             for chat in Chat.select()
             .where(Chat.archived == False)
             .where(Chat.id.in_(chat_ids))
-            .order_by(Chat.updated_at.desc())
-        ]
-
-    def get_all_chats(self) -> List[ChatModel]:
-        return [
-            ChatModel(**model_to_dict(chat))
-            for chat in Chat.select().order_by(Chat.updated_at.desc())
-        ]
-
-    def get_all_chats_by_user_id(self, user_id: str) -> List[ChatModel]:
-        return [
-            ChatModel(**model_to_dict(chat))
-            for chat in Chat.select()
-            .where(Chat.user_id == user_id)
             .order_by(Chat.updated_at.desc())
         ]
 
@@ -271,8 +257,27 @@ class ChatTable:
     def get_chats(self, skip: int = 0, limit: int = 50) -> List[ChatModel]:
         return [
             ChatModel(**model_to_dict(chat))
-            for chat in Chat.select().limit(limit).offset(skip)
+            for chat in Chat.select().order_by(Chat.updated_at.desc())
+            # .limit(limit).offset(skip)
         ]
+
+    def get_chats_by_user_id(self, user_id: str) -> List[ChatModel]:
+        return [
+            ChatModel(**model_to_dict(chat))
+            for chat in Chat.select()
+            .where(Chat.user_id == user_id)
+            .order_by(Chat.updated_at.desc())
+            # .limit(limit).offset(skip)
+        ]
+
+    def delete_chat_by_id(self, id: str) -> bool:
+        try:
+            query = Chat.delete().where((Chat.id == id))
+            query.execute()  # Remove the rows, return number of rows removed.
+
+            return True and self.delete_shared_chat_by_chat_id(id)
+        except:
+            return False
 
     def delete_chat_by_id_and_user_id(self, id: str, user_id: str) -> bool:
         try:

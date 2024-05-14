@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { getTimeRange } from '$lib/utils';
 
 export const createNewChat = async (token: string, chat: object) => {
 	let error = null;
@@ -59,7 +60,44 @@ export const getChatList = async (token: string = '') => {
 		throw error;
 	}
 
-	return res;
+	return res.map((chat) => ({
+		...chat,
+		time_range: getTimeRange(chat.updated_at)
+	}));
+};
+
+export const getChatListByUserId = async (token: string = '', userId: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/list/user/${userId}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.map((chat) => ({
+		...chat,
+		time_range: getTimeRange(chat.updated_at)
+	}));
 };
 
 export const getArchivedChatList = async (token: string = '') => {
@@ -189,13 +227,16 @@ export const getAllChatTags = async (token: string) => {
 export const getChatListByTagName = async (token: string = '', tagName: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/tags/tag/${tagName}`, {
-		method: 'GET',
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/tags`, {
+		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		body: JSON.stringify({
+			name: tagName
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -214,7 +255,10 @@ export const getChatListByTagName = async (token: string = '', tagName: string) 
 		throw error;
 	}
 
-	return res;
+	return res.map((chat) => ({
+		...chat,
+		time_range: getTimeRange(chat.updated_at)
+	}));
 };
 
 export const getChatById = async (token: string, id: string) => {

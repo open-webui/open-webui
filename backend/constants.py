@@ -3,6 +3,10 @@ from enum import Enum
 
 class MESSAGES(str, Enum):
     DEFAULT = lambda msg="": f"{msg if msg else ''}"
+    MODEL_ADDED = lambda model="": f"The model '{model}' has been added successfully."
+    MODEL_DELETED = (
+        lambda model="": f"The model '{model}' has been deleted successfully."
+    )
 
 
 class WEBHOOK_MESSAGES(str, Enum):
@@ -38,6 +42,9 @@ class ERROR_MESSAGES(str, Enum):
         "The password provided is incorrect. Please check for typos and try again."
     )
     INVALID_TRUSTED_HEADER = "Your provider has not provided a trusted header. Please contact your administrator for assistance."
+
+    EXISTING_USERS = "You can't turn off authentication because there are existing users. If you want to disable WEBUI_AUTH, make sure your web interface doesn't have any existing users and is a fresh installation."
+
     UNAUTHORIZED = "401 Unauthorized"
     ACCESS_PROHIBITED = "You do not have permission to access this resource. Please contact your administrator for assistance."
     ACTION_PROHIBITED = (
@@ -65,3 +72,9 @@ class ERROR_MESSAGES(str, Enum):
     CREATE_API_KEY_ERROR = "Oops! Something went wrong while creating your API key. Please try again later. If the issue persists, contact support for assistance."
 
     EMPTY_CONTENT = "The content provided is empty. Please ensure that there is text or data present before proceeding."
+
+    DB_NOT_SQLITE = "This feature is only available when running with SQLite databases."
+
+    INVALID_URL = (
+        "Oops! The URL you provided is invalid. Please double-check and try again."
+    )
