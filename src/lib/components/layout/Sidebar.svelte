@@ -234,7 +234,7 @@
 			</button>
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-between rounded-xl px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="flex justify-between rounded-xl px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 				href="/"
 				on:click={async () => {
 					selectedChatId = null;

@@ -10,7 +10,7 @@
 
 	import { cancelOllamaRequest, deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 
-	import { user, MODEL_DOWNLOAD_POOL, models } from '$lib/stores';
+	import { user, MODEL_DOWNLOAD_POOL, models, mobile } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, getModels, splitStream } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -201,10 +201,11 @@
 			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
 		</div>
 	</DropdownMenu.Trigger>
+
 	<DropdownMenu.Content
 		class=" z-40 {className} max-w-[calc(100vw-1rem)] justify-start rounded-lg  bg-white dark:bg-gray-900 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/50  outline-none "
 		transition={flyAndScale}
-		side={'bottom'}
+		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={4}
 	>
 		<slot>
