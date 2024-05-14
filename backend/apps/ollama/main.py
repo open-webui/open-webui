@@ -202,7 +202,7 @@ async def post_streaming_url(url: str, payload: str):
         return StreamingResponse(
             r.content,
             status_code=r.status,
-            headers=dict(r.headers),
+            headers={k: v for k, v in dict(r.headers).items() if k in ['Content-Type', 'Date', 'Transfer-Encoding']},
             background=BackgroundTask(cleanup_response, response=r, session=session),
         )
     except Exception as e:
