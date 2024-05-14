@@ -38,7 +38,7 @@
 	}
 </script>
 
-<div class="flex flex-col mt-0.5 w-full">
+<div class="flex flex-col w-full items-center md:items-start">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">
@@ -109,7 +109,7 @@
 </div>
 
 {#if showSetDefault}
-	<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
+	<div class="hidden md:absolute text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
 		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
 {/if}

@@ -183,6 +183,17 @@
 	}}
 />
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+
+{#if $showSidebar}
+	<div
+		class=" fixed md:hidden z-10 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
+		on:mousedown={() => {
+			showSidebar.set(!$showSidebar);
+		}}
+	/>
+{/if}
+
 <div
 	bind:this={navElement}
 	id="sidebar"
@@ -193,14 +204,38 @@
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] {$showSidebar
+		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-2 flex justify-center space-x-2">
+		<div class="px-2 flex justify-between space-x-2">
+			<button
+				id="new-chat-button"
+				class=" cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+				on:click={() => {
+					showSidebar.set(!$showSidebar);
+				}}
+			>
+				<div class=" m-auto self-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="2"
+						stroke="currentColor"
+						class="size-5"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+						/>
+					</svg>
+				</div>
+			</button>
 			<a
 				id="sidebar-new-chat-button"
-				class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="flex justify-between rounded-xl px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				href="/"
 				on:click={async () => {
 					selectedChatId = null;
@@ -212,24 +247,12 @@
 					}, 0);
 				}}
 			>
-				<div class="flex self-center">
-					<div class="self-center mr-1.5">
-						<img
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-6 -translate-x-1.5 rounded-full"
-							alt="logo"
-						/>
-					</div>
-
-					<div class=" self-center font-medium text-sm">{$i18n.t('New Chat')}</div>
-				</div>
-
 				<div class="self-center">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 20 20"
 						fill="currentColor"
-						class="w-4 h-4"
+						class="size-5"
 					>
 						<path
 							d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"
@@ -717,7 +740,7 @@
 
 	<div
 		id="sidebar-handle"
-		class="fixed left-0 top-[50dvh] -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
+		class=" hidden md:fixed left-0 top-[50dvh] -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
 	>
 		<Tooltip
 			placement="right"
