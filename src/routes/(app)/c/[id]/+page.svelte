@@ -893,7 +893,9 @@
 		const userMessage = history.messages[messageId];
 		const userPrompt = userMessage.content;
 
-		const previousMessages = messages.filter((message) => message.role === 'user').map((message) => message.content);
+		const previousMessages = messages
+			.filter((message) => message.role === 'user')
+			.map((message) => message.content);
 
 		return await generateSearchQuery(
 			localStorage.token,

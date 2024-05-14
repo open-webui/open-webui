@@ -235,7 +235,10 @@
 			<div class=" mb-2.5 text-sm font-medium flex">
 				<div class=" mr-1">{$i18n.t('Set Task Model')}</div>
 				<Tooltip
-					content={$i18n.t('A task model is used when performing tasks such as generating titles for chats and web search queries')}>
+					content={$i18n.t(
+						'A task model is used when performing tasks such as generating titles for chats and web search queries'
+					)}
+				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"

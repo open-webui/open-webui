@@ -120,8 +120,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers["Authorization"] = f"Bearer {app.state.config.OPENAI_API_KEYS[idx]}"
         headers["Content-Type"] = "application/json"
         if "openrouter.ai" in app.state.OPENAI_API_BASE_URLS[idx]:
-            headers['HTTP-Referer'] = "https://openwebui.com/"
-            headers['X-Title'] = "Open WebUI"
+            headers["HTTP-Referer"] = "https://openwebui.com/"
+            headers["X-Title"] = "Open WebUI"
         r = None
         try:
             r = requests.post(
