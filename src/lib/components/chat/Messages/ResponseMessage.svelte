@@ -65,8 +65,8 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
-
 	let showCitationModal = false;
+
 	let selectedCitation = null;
 
 	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
@@ -476,7 +476,7 @@
 												<div class="bg-white dark:bg-gray-700 rounded-full size-4">
 													{idx + 1}
 												</div>
-												<div class=" mx-2">
+												<div class="flex-1 mx-2 line-clamp-1">
 													{citation.source.name}
 												</div>
 											</button>
@@ -902,7 +902,7 @@
 								</div>
 							{/if}
 
-							{#if showRateComment}
+							{#if message.done && showRateComment}
 								<RateComment
 									messageId={message.id}
 									bind:show={showRateComment}

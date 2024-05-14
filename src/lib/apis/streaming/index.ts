@@ -6,6 +6,8 @@ type TextStreamUpdate = {
 	value: string;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	citations?: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	error?: any;
 };
 
 // createOpenAITextStream takes a responseBody with a SSE response,
@@ -46,6 +48,11 @@ async function* openAIStreamToIterator(
 		try {
 			const parsedData = JSON.parse(data);
 			console.log(parsedData);
+
+			if (parsedData.error) {
+				yield { done: true, value: '', error: parsedData.error };
+				break;
+			}
 
 			if (parsedData.citations) {
 				yield { done: false, value: '', citations: parsedData.citations };
