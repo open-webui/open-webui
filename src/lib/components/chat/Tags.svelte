@@ -3,11 +3,15 @@
 		addTagById,
 		deleteTagById,
 		getAllChatTags,
+		getChatList,
+		getChatListByTagName,
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { tags as _tags } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { tags as _tags, chats } from '$lib/stores';
+	import { createEventDispatcher, onMount } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 
 	import Tags from '../common/Tags.svelte';
 
@@ -39,7 +43,21 @@
 			tags: tags
 		});
 
-		_tags.set(await getAllChatTags(localStorage.token));
+		console.log($_tags);
+
+		await _tags.set(await getAllChatTags(localStorage.token));
+
+		console.log($_tags);
+
+		if ($_tags.map((t) => t.name).includes(tagName)) {
+			await chats.set(await getChatListByTagName(localStorage.token, tagName));
+
+			if ($chats.find((chat) => chat.id === chatId)) {
+				dispatch('close');
+			}
+		} else {
+			await chats.set(await getChatList(localStorage.token));
+		}
 	};
 
 	onMount(async () => {

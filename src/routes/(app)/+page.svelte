@@ -129,6 +129,14 @@
 			selectedModels = [''];
 		}
 
+		if ($page.url.searchParams.get('q')) {
+			prompt = $page.url.searchParams.get('q') ?? '';
+			if (prompt) {
+				await tick();
+				submitPrompt(prompt);
+			}
+		}
+
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
@@ -361,7 +369,8 @@
 			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
-			docs: docs.length > 0 ? docs : undefined
+			docs: docs.length > 0 ? docs : undefined,
+			citations: docs.length > 0
 		});
 
 		if (res && res.ok) {
@@ -395,6 +404,11 @@
 						if (line !== '') {
 							console.log(line);
 							let data = JSON.parse(line);
+
+							if ('citations' in data) {
+								responseMessage.citations = data.citations;
+								continue;
+							}
 
 							if ('detail' in data) {
 								throw data;
@@ -593,7 +607,8 @@
 				num_ctx: $settings?.options?.num_ctx ?? undefined,
 				frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
 				max_tokens: $settings?.options?.num_predict ?? undefined,
-				docs: docs.length > 0 ? docs : undefined
+				docs: docs.length > 0 ? docs : undefined,
+				citations: docs.length > 0
 			},
 			model?.source?.toLowerCase() === 'litellm'
 				? `${LITELLM_API_BASE_URL}/v1`
@@ -611,7 +626,7 @@
 			const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 
 			for await (const update of textStream) {
-				const { value, done } = update;
+				const { value, done, citations } = update;
 				if (done || stopResponseFlag || _chatId !== $chatId) {
 					responseMessage.done = true;
 					messages = messages;
@@ -621,6 +636,11 @@
 					}
 
 					break;
+				}
+
+				if (citations) {
+					responseMessage.citations = citations;
+					continue;
 				}
 
 				if (responseMessage.content == '' && value == '\n') {
