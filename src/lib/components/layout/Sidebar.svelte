@@ -894,4 +894,11 @@
 	.scrollbar-none::-webkit-scrollbar-thumb {
 		visibility: hidden;
 	}
+
+	#sidebar, #sidebar * {
+		-moz-user-select: none; /* Firefox */
+		-webkit-user-select: none; /* Safari and Chrome */
+		-ms-user-select: none; /* Internet Explorer */
+		user-select: none; /* Other browsers */
+	}
 </style>
