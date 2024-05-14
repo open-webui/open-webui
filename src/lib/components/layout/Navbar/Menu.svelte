@@ -113,6 +113,7 @@
 			{#if shareEnabled}
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
+					id="chat-share-button"
 					on:click={() => {
 						shareHandler();
 					}}
