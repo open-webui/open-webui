@@ -168,7 +168,9 @@ async def signup(request: Request, form_data: SignupForm):
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
         )
 
-    if not validate_email_format(form_data.email.lower()):
+    if not WEBUI_AUTH_TRUSTED_EMAIL_HEADER and not validate_email_format(
+        form_data.email.lower()
+    ):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
         )
