@@ -86,7 +86,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     # install helper tools
-    apt-get install -y --no-install-recommends curl && \
+    apt-get install -y --no-install-recommends curl jq && \
     # install ollama
     curl -fsSL https://ollama.com/install.sh | sh && \
     # cleanup
@@ -134,6 +134,7 @@ COPY ./backend .
 
 EXPOSE 8080
 
-HEALTHCHECK CMD curl --fail http://localhost:8080/health || exit 1 
+HEALTHCHECK CMD curl --silent --fail http://localhost:8080/health | jq -e '.status == true' || exit 1
+
 
 CMD [ "bash", "start.sh"]
