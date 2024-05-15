@@ -41,7 +41,11 @@
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div class=" flex max-w-full w-full mx-auto px-5 pt-0.5 md:px-[1rem]">
 		<div class="flex items-center w-full max-w-full">
-			<div class="{$showSidebar ? 'md:hidden' : ''} mr-3 self-start flex flex-none items-center">
+			<div
+				class="{$showSidebar
+					? 'md:hidden'
+					: ''} mr-3 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
+			>
 				<button
 					id="sidebar-toggle-button"
 					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
@@ -60,7 +64,7 @@
 				{/if}
 			</div>
 
-			<div class="self-start flex flex-none items-center">
+			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 
 				{#if !shareEnabled}
