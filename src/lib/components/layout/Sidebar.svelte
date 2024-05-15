@@ -76,7 +76,26 @@
 		}
 	});
 
+	mobile;
+	const onResize = () => {
+		if ($showSidebar && window.innerWidth < BREAKPOINT) {
+			showSidebar.set(false);
+		}
+	};
+
 	onMount(async () => {
+		mobile.subscribe((e) => {
+			console.log(e);
+
+			if ($showSidebar && e) {
+				showSidebar.set(false);
+			}
+
+			if (!$showSidebar && !e) {
+				showSidebar.set(true);
+			}
+		});
+
 		showSidebar.set(window.innerWidth > BREAKPOINT);
 		await chats.set(await getChatList(localStorage.token));
 
@@ -106,20 +125,12 @@
 			checkDirection();
 		};
 
-		const onResize = () => {
-			if ($showSidebar && window.innerWidth < BREAKPOINT) {
-				showSidebar.set(false);
-			}
-		};
-
 		window.addEventListener('touchstart', onTouchStart);
 		window.addEventListener('touchend', onTouchEnd);
-		window.addEventListener('resize', onResize);
 
 		return () => {
 			window.removeEventListener('touchstart', onTouchStart);
 			window.removeEventListener('touchend', onTouchEnd);
-			window.removeEventListener('resize', onResize);
 		};
 	});
 
@@ -207,7 +218,7 @@
 	bind:this={navElement}
 	id="sidebar"
 	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-		? 'lg:relative w-[260px]'
+		? 'md:relative w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 rounded-r-2xl
         "
 	data-state={$showSidebar}
