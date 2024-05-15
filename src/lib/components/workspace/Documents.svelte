@@ -151,6 +151,12 @@
 	);
 </script>
 
+<svelte:head>
+	<title>
+		{$i18n.t('Documents')} | {$WEBUI_NAME}
+	</title>
+</svelte:head>
+
 {#if dragged}
 	<div
 		class="fixed w-full h-full flex z-50 touch-none pointer-events-none"

@@ -33,7 +33,7 @@
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 
-	const BREAKPOINT = 1024;
+	const BREAKPOINT = 768;
 
 	let show = false;
 	let navElement;
@@ -274,7 +274,7 @@
 		</div>
 
 		{#if $user?.role === 'admin'}
-			<div class="px-1.5 flex justify-center">
+			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
 					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/workspace"

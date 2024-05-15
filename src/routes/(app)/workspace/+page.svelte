@@ -90,12 +90,12 @@
 </svelte:head>
 
 <div class=" flex flex-col w-full min-h-screen">
-	<div class=" px-4 pt-3 mb-1.5">
-		<div class=" flex items-center">
+	<div class=" px-4 pt-3 mb-2">
+		<div class=" flex items-center gap-1">
 			<div class="{$showSidebar ? 'md:hidden' : ''} mr-1 self-start flex flex-none items-center">
 				<button
 					id="sidebar-toggle-button"
-					class="cursor-pointer p-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+					class="cursor-pointer p-1 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 					on:click={() => {
 						showSidebar.set(!$showSidebar);
 					}}
@@ -120,7 +120,7 @@
 				type="button"
 				on:click={() => {
 					tab = '';
-				}}>Modelfiles</button
+				}}>{$i18n.t('Modelfiles')}</button
 			>
 
 			<button
@@ -130,7 +130,7 @@
 				type="button"
 				on:click={() => {
 					tab = 'prompts';
-				}}>Prompts</button
+				}}>{$i18n.t('Prompts')}</button
 			>
 
 			<button
@@ -140,8 +140,10 @@
 				type="button"
 				on:click={() => {
 					tab = 'documents';
-				}}>Documents</button
+				}}
 			>
+				{$i18n.t('Documents')}
+			</button>
 
 			<button
 				class="min-w-fit rounded-lg p-1.5 px-3 {tab === 'playground'
@@ -150,7 +152,7 @@
 				type="button"
 				on:click={() => {
 					tab = 'playground';
-				}}>Playground</button
+				}}>{$i18n.t('Playground')}</button
 			>
 		</div>
 	</div>
