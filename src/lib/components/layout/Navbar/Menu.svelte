@@ -76,14 +76,14 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[200px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-900 dark:text-white shadow-lg"
+			class="w-full max-w-[200px] rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 			sideOffset={8}
 			side="bottom"
 			align="end"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-800 rounded-md"
 				on:click={async () => {
 					await showSettings.set(!$showSettings);
 				}}
@@ -112,7 +112,7 @@
 
 			{#if shareEnabled}
 				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
+					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-800 rounded-md"
 					id="chat-share-button"
 					on:click={() => {
 						shareHandler();
@@ -141,7 +141,7 @@
 				/> -->
 				<DropdownMenu.Sub>
 					<DropdownMenu.SubTrigger
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
+						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-800 rounded-md"
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -161,12 +161,12 @@
 						<div class="flex items-center">{$i18n.t('Download')}</div>
 					</DropdownMenu.SubTrigger>
 					<DropdownMenu.SubContent
-						class="w-full rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-900 dark:text-white shadow-lg"
+						class="w-full rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 						transition={flyAndScale}
 						sideOffset={8}
 					>
 						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
+							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-800 rounded-md"
 							on:click={() => {
 								downloadTxt();
 							}}
@@ -175,7 +175,7 @@
 						</DropdownMenu.Item>
 
 						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
+							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-800 rounded-md"
 							on:click={() => {
 								downloadPdf();
 							}}

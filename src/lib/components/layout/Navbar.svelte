@@ -2,7 +2,16 @@
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		chatId,
+		mobile,
+		modelfiles,
+		settings,
+		showSettings,
+		showSidebar,
+		user
+	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -10,6 +19,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Menu from './Navbar/Menu.svelte';
 	import { page } from '$app/stores';
+	import UserMenu from './Sidebar/UserMenu.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -28,8 +38,34 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
-	<div class=" flex max-w-full w-full mx-auto px-5 pt-0.5 md:px-[1.3rem]">
+	<div class=" flex max-w-full w-full mx-auto px-5 pt-0.5 md:px-[1rem]">
 		<div class="flex items-center w-full max-w-full">
+			<div class="{$showSidebar ? 'md:hidden' : ''} mr-3 self-start flex flex-none items-center">
+				<button
+					id="sidebar-toggle-button"
+					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+					on:click={() => {
+						showSidebar.set(!$showSidebar);
+					}}
+				>
+					<div class=" m-auto self-center">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
+							class="size-5"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+							/>
+						</svg>
+					</div>
+				</button>
+			</div>
 			<div class="flex-1 overflow-hidden max-w-full">
 				{#if showModelSelector}
 					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
@@ -37,12 +73,12 @@
 			</div>
 
 			<div class="self-start flex flex-none items-center">
-				<div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" />
+				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 
 				{#if !shareEnabled}
 					<Tooltip content={$i18n.t('Settings')}>
 						<button
-							class="cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
+							class="hidden md:flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 							id="open-settings-button"
 							on:click={async () => {
 								await showSettings.set(!$showSettings);
@@ -81,9 +117,9 @@
 						}}
 					>
 						<button
-							class="cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
+							class="hidden md:flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 							id="chat-context-menu-button"
-						>
+            >
 							<div class=" m-auto self-center">
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -106,7 +142,9 @@
 				<Tooltip content={$i18n.t('New Chat')}>
 					<button
 						id="new-chat-button"
-						class=" cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
+						class=" flex {$showSidebar
+							? 'md:hidden'
+							: ''} cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 						on:click={() => {
 							initNewChat();
 						}}
@@ -128,6 +166,29 @@
 						</div>
 					</button>
 				</Tooltip>
+
+				{#if !$mobile && $user !== undefined}
+					<UserMenu
+						role={$user.role}
+						on:show={(e) => {
+							if (e.detail === 'archived-chat') {
+								// showArchivedChatsModal = true;
+							}
+						}}
+					>
+						<button
+							class=" flex rounded-xl p-1.5 w-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+						>
+							<div class=" self-center">
+								<img
+									src={$user.profile_image_url}
+									class=" size-6 object-cover rounded-full"
+									alt="User profile"
+								/>
+							</div>
+						</button>
+					</UserMenu>
+				{/if}
 			</div>
 		</div>
 	</div>

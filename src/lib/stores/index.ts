@@ -9,6 +9,8 @@ export const user: Writable<SessionUser | undefined> = writable(undefined);
 // Frontend
 export const MODEL_DOWNLOAD_POOL = writable({});
 
+export const mobile = writable(false);
+
 export const theme = writable('system');
 export const chatId = writable('');
 
