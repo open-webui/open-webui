@@ -494,47 +494,53 @@
 									class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
 								>
 									{#if siblings.length > 1}
-										<div class="flex self-center min-w-fit">
+										<div class="flex self-center">
 											<button
-												class="self-center dark:hover:text-white hover:text-black transition"
+												class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 												on:click={() => {
 													showPreviousMessage(message);
 												}}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-4 h-4"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke="currentColor"
+													stroke-width="2.5"
+													class="size-3.5"
 												>
 													<path
-														fill-rule="evenodd"
-														d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-														clip-rule="evenodd"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M15.75 19.5 8.25 12l7.5-7.5"
 													/>
 												</svg>
 											</button>
 
-											<div class="text-xs font-bold self-center min-w-fit dark:text-gray-100">
-												{siblings.indexOf(message.id) + 1} / {siblings.length}
+											<div
+												class="text-sm tracking-widest font-semibold self-center dark:text-gray-100"
+											>
+												{siblings.indexOf(message.id) + 1}/{siblings.length}
 											</div>
 
 											<button
-												class="self-center dark:hover:text-white hover:text-black transition"
+												class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 												on:click={() => {
 													showNextMessage(message);
 												}}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-4 h-4"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke="currentColor"
+													stroke-width="2.5"
+													class="size-3.5"
 												>
 													<path
-														fill-rule="evenodd"
-														d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-														clip-rule="evenodd"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="m8.25 4.5 7.5 7.5-7.5 7.5"
 													/>
 												</svg>
 											</button>
