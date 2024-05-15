@@ -89,7 +89,7 @@
 		</a>
 	</div>
 </div>
-<hr class=" dark:border-gray-700 my-2.5" />
+<hr class=" dark:border-gray-850 my-2.5" />
 
 <div class="my-3 mb-5">
 	{#each $prompts.filter((p) => query === '' || p.command.includes(query)) as prompt}

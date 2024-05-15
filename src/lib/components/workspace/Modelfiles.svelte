@@ -103,7 +103,7 @@
 	</div>
 </a>
 
-<hr class=" dark:border-gray-700" />
+<hr class=" dark:border-gray-850" />
 
 <div class=" my-2 mb-5">
 	{#each $modelfiles as modelfile}

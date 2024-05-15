@@ -400,7 +400,7 @@
 				</div>
 			</div>
 
-			<div class="pb-2">
+			<div class="pb-3">
 				{#if !loading}
 					<button
 						class="px-3 py-1.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-gray-50 transition rounded-lg"

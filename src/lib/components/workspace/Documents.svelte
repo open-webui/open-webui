@@ -277,7 +277,7 @@
     </div>
 </div> -->
 
-<hr class=" dark:border-gray-700 my-2.5" />
+<hr class=" dark:border-gray-850 my-2.5" />
 
 {#if tags.length > 0}
 	<div class="px-2.5 pt-1 flex gap-1 flex-wrap">
