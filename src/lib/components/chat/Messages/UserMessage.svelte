@@ -137,7 +137,7 @@
 			{/if}
 
 			{#if edit === true}
-				<div class=" w-full bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
 					<textarea
 						id="message-edit-{message.id}"
 						bind:this={messageEditTextAreaElement}
@@ -187,7 +187,7 @@
 				<div class="w-full">
 					<div class="flex justify-end mb-2">
 						<div
-							class="rounded-3xl px-5 py-2 max-w-[90%] bg-gray-850 {message.files
+							class="rounded-3xl px-5 py-2 max-w-[90%] bg-gray-50 dark:bg-gray-850 {message.files
 								? 'rounded-tr-lg'
 								: ''}"
 						>
