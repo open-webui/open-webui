@@ -1,6 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { user, chats, settings, showSettings, chatId, tags, showSidebar } from '$lib/stores';
+	import {
+		user,
+		chats,
+		settings,
+		showSettings,
+		chatId,
+		tags,
+		showSidebar,
+		mobile
+	} from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -703,38 +712,40 @@
 			</div>
 		</div>
 
-		<div class="px-2.5">
-			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
+		{#if $mobile}
+			<div class="px-2.5">
+				<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 
-			<div class="flex flex-col">
-				{#if $user !== undefined}
-					<UserMenu
-						role={$user.role}
-						on:show={(e) => {
-							if (e.detail === 'archived-chat') {
-								showArchivedChatsModal = true;
-							}
-						}}
-					>
-						<button
-							class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
-								showDropdown = !showDropdown;
+				<div class="flex flex-col">
+					{#if $user !== undefined}
+						<UserMenu
+							role={$user.role}
+							on:show={(e) => {
+								if (e.detail === 'archived-chat') {
+									showArchivedChatsModal = true;
+								}
 							}}
 						>
-							<div class=" self-center mr-3">
-								<img
-									src={$user.profile_image_url}
-									class=" max-w-[30px] object-cover rounded-full"
-									alt="User profile"
-								/>
-							</div>
-							<div class=" self-center font-semibold">{$user.name}</div>
-						</button>
-					</UserMenu>
-				{/if}
+							<button
+								class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								on:click={() => {
+									showDropdown = !showDropdown;
+								}}
+							>
+								<div class=" self-center mr-3">
+									<img
+										src={$user.profile_image_url}
+										class=" max-w-[30px] object-cover rounded-full"
+										alt="User profile"
+									/>
+								</div>
+								<div class=" self-center font-semibold">{$user.name}</div>
+							</button>
+						</UserMenu>
+					{/if}
+				</div>
 			</div>
-		</div>
+		{/if}
 	</div>
 
 	<div

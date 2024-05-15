@@ -2,7 +2,16 @@
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings, showSidebar } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		chatId,
+		mobile,
+		modelfiles,
+		settings,
+		showSettings,
+		showSidebar,
+		user
+	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -10,6 +19,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Menu from './Navbar/Menu.svelte';
 	import { page } from '$app/stores';
+	import UserMenu from './Sidebar/UserMenu.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -155,6 +165,29 @@
 						</div>
 					</button>
 				</Tooltip>
+
+				{#if !$mobile && $user !== undefined}
+					<UserMenu
+						role={$user.role}
+						on:show={(e) => {
+							if (e.detail === 'archived-chat') {
+								// showArchivedChatsModal = true;
+							}
+						}}
+					>
+						<button
+							class=" flex rounded-xl p-1.5 w-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+						>
+							<div class=" self-center">
+								<img
+									src={$user.profile_image_url}
+									class=" size-6 object-cover rounded-full"
+									alt="User profile"
+								/>
+							</div>
+						</button>
+					</UserMenu>
+				{/if}
 			</div>
 		</div>
 	</div>
