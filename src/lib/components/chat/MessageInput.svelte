@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { modelfiles, settings, showSidebar } from '$lib/stores';
+	import { mobile, modelfiles, settings, showSidebar } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
@@ -765,7 +765,7 @@
 								bind:value={prompt}
 								on:keypress={(e) => {
 									if (
-										window.innerWidth > 1024 ||
+										!$mobile ||
 										!(
 											'ontouchstart' in window ||
 											navigator.maxTouchPoints > 0 ||

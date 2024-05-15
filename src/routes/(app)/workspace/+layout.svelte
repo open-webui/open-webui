@@ -14,7 +14,7 @@
 	</title>
 </svelte:head>
 
-<div class=" flex flex-col w-full min-h-screen">
+<div class=" flex flex-col w-full min-h-screen max-h-screen">
 	<div class=" px-4 pt-3 mt-0.5 mb-1">
 		<div class=" flex items-center gap-1">
 			<div class="{$showSidebar ? 'md:hidden' : ''} mr-1 self-start flex flex-none items-center">
@@ -39,21 +39,21 @@
 			class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-xl bg-transparent/10 p-1"
 		>
 			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname === '/workspace/modelfiles'
+				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/modelfiles')
 					? 'bg-gray-50 dark:bg-gray-850'
 					: ''} transition"
 				href="/workspace/modelfiles">{$i18n.t('Modelfiles')}</a
 			>
 
 			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname === '/workspace/prompts'
+				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/prompts')
 					? 'bg-gray-50 dark:bg-gray-850'
 					: ''} transition"
 				href="/workspace/prompts">{$i18n.t('Prompts')}</a
 			>
 
 			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname === '/workspace/documents'
+				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/documents')
 					? 'bg-gray-50 dark:bg-gray-850'
 					: ''} transition"
 				href="/workspace/documents"
@@ -62,7 +62,7 @@
 			</a>
 
 			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname === '/workspace/playground'
+				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/playground')
 					? 'bg-gray-50 dark:bg-gray-850'
 					: ''} transition"
 				href="/workspace/playground">{$i18n.t('Playground')}</a
@@ -72,7 +72,7 @@
 
 	<hr class=" my-2 dark:border-gray-850" />
 
-	<div class=" py-1 px-5 h-full">
+	<div class=" py-1 px-5 flex-1 max-h-full overflow-y-auto">
 		<slot />
 	</div>
 </div>

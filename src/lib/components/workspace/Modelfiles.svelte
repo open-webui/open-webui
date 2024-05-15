@@ -82,7 +82,7 @@
 
 <div class=" text-lg font-semibold mb-3">{$i18n.t('Modelfiles')}</div>
 
-<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2" href="/modelfiles/create">
+<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2" href="/workspace/modelfiles/create">
 	<div class=" self-center w-10">
 		<div
 			class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
@@ -135,7 +135,7 @@
 				<a
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
-					href={`/modelfiles/edit?tag=${encodeURIComponent(modelfile.tagName)}`}
+					href={`/workspace/modelfiles/edit?tag=${encodeURIComponent(modelfile.tagName)}`}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -159,7 +159,7 @@
 					on:click={() => {
 						// console.log(modelfile);
 						sessionStorage.modelfile = JSON.stringify(modelfile);
-						goto('/modelfiles/create');
+						goto('/workspace/modelfiles/create');
 					}}
 				>
 					<svg

@@ -252,6 +252,10 @@
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
 						newChatButton?.click();
+
+						if ($mobile) {
+							showSidebar.set(false);
+						}
 					}, 0);
 				}}
 			>
@@ -380,7 +384,7 @@
 			</div>
 
 			{#if $tags.length > 0}
-				<div class="px-2.5 mb-2 flex gap-0.5 flex-wrap">
+				<div class="px-2.5 mb-2 flex gap-1 flex-wrap">
 					<button
 						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 						on:click={async () => {
@@ -462,7 +466,7 @@
 								href="/c/{chat.id}"
 								on:click={() => {
 									selectedChatId = chat.id;
-									if (window.innerWidth < 1024) {
+									if ($mobile) {
 										showSidebar.set(false);
 									}
 								}}

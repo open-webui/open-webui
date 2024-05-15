@@ -74,7 +74,7 @@
 	<div>
 		<a
 			class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
-			href="/prompts/create"
+			href="/workspace/prompts/create"
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -97,7 +97,7 @@
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 		>
 			<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-				<a href={`/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
+				<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
 					<div class=" flex-1 self-center pl-5">
 						<div class=" font-bold">{prompt.command}</div>
 						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
@@ -110,7 +110,7 @@
 				<a
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
-					href={`/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+					href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -134,7 +134,7 @@
 					on:click={() => {
 						// console.log(modelfile);
 						sessionStorage.prompt = JSON.stringify(prompt);
-						goto('/prompts/create');
+						goto('/workspace/prompts/create');
 					}}
 				>
 					<svg
