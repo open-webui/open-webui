@@ -412,7 +412,7 @@
 {#if dragged}
 	<div
 		class="fixed {$showSidebar
-			? 'left-0 lg:left-[260px] lg:w-[calc(100%-260px)]'
+			? 'left-0 md:left-[260px] md:w-[calc(100%-260px)]'
 			: 'left-0'}  w-full h-full flex z-50 touch-none pointer-events-none"
 		id="dropzone"
 		role="region"
@@ -428,9 +428,9 @@
 	</div>
 {/if}
 
-<div class="fixed bottom-0 {$showSidebar ? 'left-0 lg:left-[260px]' : 'left-0'} right-0">
+<div class="fixed bottom-0 {$showSidebar ? 'left-0 md:left-[260px]' : 'left-0'} right-0">
 	<div class="w-full">
-		<div class="px-2.5 lg:px-16 -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
+		<div class="px-2.5 md:px-16 -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div class="flex flex-col max-w-5xl w-full">
 				<div class="relative">
 					{#if autoScroll === false && messages.length > 0}
