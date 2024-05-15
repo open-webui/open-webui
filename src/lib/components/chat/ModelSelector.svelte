@@ -2,7 +2,7 @@
 	import { Collapsible } from 'bits-ui';
 
 	import { setDefaultModels } from '$lib/apis/configs';
-	import { models, showSettings, settings, user } from '$lib/stores';
+	import { models, showSettings, settings, user, mobile } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
@@ -108,8 +108,8 @@
 	{/each}
 </div>
 
-{#if showSetDefault}
-	<div class="hidden md:absolute text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
+{#if showSetDefault && !$mobile}
+	<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
 		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
 {/if}
