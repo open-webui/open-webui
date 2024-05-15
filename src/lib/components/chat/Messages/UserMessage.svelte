@@ -54,7 +54,7 @@
 	};
 </script>
 
-<div class=" flex w-full">
+<div class=" flex w-full user-message">
 	<div class="w-full overflow-hidden">
 		<div
 			class="prose chat-{message.role} w-full max-w-full flex flex-col justify-end dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-p:-mb-4 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-6 prose-li:-mb-4 whitespace-pre-line"

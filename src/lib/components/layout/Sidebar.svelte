@@ -243,7 +243,9 @@
 						alt="logo"
 					/>
 				</div>
-				<div class=" self-center font-medium text-sm dark:text-white">{$i18n.t('New Chat')}</div>
+				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white">
+					{$i18n.t('New Chat')}
+				</div>
 				<div class="self-center ml-auto">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
