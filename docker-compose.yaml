@@ -14,7 +14,7 @@ services:
       args:
         OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    image: ghcr.io/open-webui/open-webui:dev
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
@@ -25,9 +25,22 @@ services:
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
+      - 'OPENAI_API_KEY=${OPENAI_API_KEY}'
+      - 'LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}'
+      - 'LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=1800
 
 volumes:
   ollama: {}
