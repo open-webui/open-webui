@@ -338,7 +338,7 @@
 				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
 		/>
 
-		<div class="w-full overflow-hidden">
+		<div class="w-full overflow-hidden pl-1">
 			<Name>
 				{#if message.model in modelfiles}
 					{modelfiles[message.model]?.title}
@@ -347,8 +347,10 @@
 				{/if}
 
 				{#if message.timestamp}
-					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
-						{dayjs(message.timestamp * 1000).format($i18n.t('DD/MM/YYYY HH:mm'))}
+					<span
+						class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase"
+					>
+						{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
 					</span>
 				{/if}
 			</Name>
@@ -370,7 +372,7 @@
 			>
 				<div>
 					{#if edit === true}
-						<div class=" w-full">
+						<div class="w-full bg-gray-800 rounded-3xl px-5 py-3 my-2">
 							<textarea
 								id="message-edit-{message.id}"
 								bind:this={editTextAreaElement}
@@ -382,23 +384,25 @@
 								}}
 							/>
 
-							<div class=" mt-2 mb-1 flex justify-center space-x-2 text-sm font-medium">
+							<div class=" mt-2 mb-1 flex justify-end space-x-1.5 text-sm font-medium">
 								<button
-									class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
-									on:click={() => {
-										editMessageConfirmHandler();
-									}}
-								>
-									{$i18n.t('Save')}
-								</button>
-
-								<button
-									class=" px-4 py-2 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-100 transition outline outline-1 outline-gray-200 dark:outline-gray-600 rounded-lg"
+									id="close-edit-message-button"
+									class=" px-4 py-2 bg-gray-900 hover:bg-gray-850 text-gray-100 transition rounded-3xl"
 									on:click={() => {
 										cancelEditMessage();
 									}}
 								>
 									{$i18n.t('Cancel')}
+								</button>
+
+								<button
+									id="save-edit-message-button"
+									class="px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 transition rounded-3xl"
+									on:click={() => {
+										editMessageConfirmHandler();
+									}}
+								>
+									{$i18n.t('Save')}
 								</button>
 							</div>
 						</div>

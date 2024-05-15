@@ -2,6 +2,6 @@
 	export let src = '/user.png';
 </script>
 
-<div class=" mr-4">
-	<img {src} class=" max-w-[28px] object-cover rounded-full" alt="profile" draggable="false" />
+<div class=" mr-3">
+	<img {src} class=" w-8 object-cover rounded-full" alt="profile" draggable="false" />
 </div>
