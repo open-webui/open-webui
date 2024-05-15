@@ -12,6 +12,7 @@
 
 	export let show = false;
 	export let role = '';
+	export let className = 'max-w-[240px]';
 
 	const dispatch = createEventDispatcher();
 </script>
@@ -28,81 +29,14 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[240px] rounded-lg p-1 py-1 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-gray-850 text-white text-sm"
+			class="w-full {className} text-sm rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
 			sideOffset={8}
 			side="bottom"
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
-			{#if role === 'admin'}
-				<button
-					class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-					on:click={() => {
-						goto('/admin');
-						show = false;
-					}}
-				>
-					<div class=" self-center mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-5 h-5"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
-							/>
-						</svg>
-					</div>
-					<div class=" self-center font-medium">{$i18n.t('Admin Panel')}</div>
-				</button>
-
-				<button
-					class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-					on:click={() => {
-						goto('/playground');
-						show = false;
-					}}
-				>
-					<div class=" self-center mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-5 h-5"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z"
-							/>
-						</svg>
-					</div>
-					<div class=" self-center font-medium">{$i18n.t('Playground')}</div>
-				</button>
-			{/if}
-
 			<button
-				class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-				on:click={() => {
-					dispatch('show', 'archived-chat');
-					show = false;
-				}}
-			>
-				<div class=" self-center mr-3">
-					<ArchiveBox className="size-5" strokeWidth="1.5" />
-				</div>
-				<div class=" self-center font-medium">{$i18n.t('Archived Chats')}</div>
-			</button>
-
-			<button
-				class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;
@@ -132,10 +66,51 @@
 				<div class=" self-center font-medium">{$i18n.t('Settings')}</div>
 			</button>
 
+			<button
+				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+				on:click={() => {
+					dispatch('show', 'archived-chat');
+					show = false;
+				}}
+			>
+				<div class=" self-center mr-3">
+					<ArchiveBox className="size-5" strokeWidth="1.5" />
+				</div>
+				<div class=" self-center font-medium">{$i18n.t('Archived Chats')}</div>
+			</button>
+
+			{#if role === 'admin'}
+				<button
+					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+					on:click={() => {
+						goto('/admin');
+						show = false;
+					}}
+				>
+					<div class=" self-center mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="w-5 h-5"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center font-medium">{$i18n.t('Admin Panel')}</div>
+				</button>
+			{/if}
+
 			<hr class=" dark:border-gray-800 my-2 p-0" />
 
 			<button
-				class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 				on:click={() => {
 					localStorage.removeItem('token');
 					location.href = '/auth';

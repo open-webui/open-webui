@@ -25,7 +25,7 @@
 
 	export let items = [{ value: 'mango', label: 'Mango' }];
 
-	export let className = ' w-[32rem]';
+	export let className = ' w-[30rem]';
 
 	let show = false;
 
@@ -225,7 +225,7 @@
 				<hr class="border-gray-100 dark:border-gray-800" />
 			{/if}
 
-			<div class="px-3 my-2 max-h-72 overflow-y-auto scrollbar-none">
+			<div class="px-3 my-2 max-h-64 overflow-y-auto scrollbar-hidden">
 				{#each filteredItems as item}
 					<button
 						aria-label="model-item"
@@ -407,12 +407,12 @@
 </DropdownMenu.Root>
 
 <style>
-	.scrollbar-none:active::-webkit-scrollbar-thumb,
-	.scrollbar-none:focus::-webkit-scrollbar-thumb,
-	.scrollbar-none:hover::-webkit-scrollbar-thumb {
+	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
 		visibility: visible;
 	}
-	.scrollbar-none::-webkit-scrollbar-thumb {
+	.scrollbar-hidden::-webkit-scrollbar-thumb {
 		visibility: hidden;
 	}
 </style>

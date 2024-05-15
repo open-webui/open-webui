@@ -338,7 +338,7 @@
 				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
 		/>
 
-		<div class="w-full overflow-hidden">
+		<div class="w-full overflow-hidden pl-1">
 			<Name>
 				{#if message.model in modelfiles}
 					{modelfiles[message.model]?.title}
@@ -347,8 +347,10 @@
 				{/if}
 
 				{#if message.timestamp}
-					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
-						{dayjs(message.timestamp * 1000).format($i18n.t('DD/MM/YYYY HH:mm'))}
+					<span
+						class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase"
+					>
+						{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
 					</span>
 				{/if}
 			</Name>
@@ -370,7 +372,7 @@
 			>
 				<div>
 					{#if edit === true}
-						<div class=" w-full">
+						<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
 							<textarea
 								id="message-edit-{message.id}"
 								bind:this={editTextAreaElement}
@@ -382,23 +384,25 @@
 								}}
 							/>
 
-							<div class=" mt-2 mb-1 flex justify-center space-x-2 text-sm font-medium">
+							<div class=" mt-2 mb-1 flex justify-end space-x-1.5 text-sm font-medium">
 								<button
-									class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
-									on:click={() => {
-										editMessageConfirmHandler();
-									}}
-								>
-									{$i18n.t('Save')}
-								</button>
-
-								<button
-									class=" px-4 py-2 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-100 transition outline outline-1 outline-gray-200 dark:outline-gray-600 rounded-lg"
+									id="close-edit-message-button"
+									class=" px-4 py-2 bg-gray-900 hover:bg-gray-850 text-gray-100 transition rounded-3xl"
 									on:click={() => {
 										cancelEditMessage();
 									}}
 								>
 									{$i18n.t('Cancel')}
+								</button>
+
+								<button
+									id="save-edit-message-button"
+									class="px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 transition rounded-3xl"
+									on:click={() => {
+										editMessageConfirmHandler();
+									}}
+								>
+									{$i18n.t('Save')}
 								</button>
 							</div>
 						</div>
@@ -490,47 +494,53 @@
 									class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
 								>
 									{#if siblings.length > 1}
-										<div class="flex self-center min-w-fit">
+										<div class="flex self-center">
 											<button
-												class="self-center dark:hover:text-white hover:text-black transition"
+												class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 												on:click={() => {
 													showPreviousMessage(message);
 												}}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-4 h-4"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke="currentColor"
+													stroke-width="2.5"
+													class="size-3.5"
 												>
 													<path
-														fill-rule="evenodd"
-														d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-														clip-rule="evenodd"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M15.75 19.5 8.25 12l7.5-7.5"
 													/>
 												</svg>
 											</button>
 
-											<div class="text-xs font-bold self-center min-w-fit dark:text-gray-100">
-												{siblings.indexOf(message.id) + 1} / {siblings.length}
+											<div
+												class="text-sm tracking-widest font-semibold self-center dark:text-gray-100"
+											>
+												{siblings.indexOf(message.id) + 1}/{siblings.length}
 											</div>
 
 											<button
-												class="self-center dark:hover:text-white hover:text-black transition"
+												class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 												on:click={() => {
 													showNextMessage(message);
 												}}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-4 h-4"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke="currentColor"
+													stroke-width="2.5"
+													class="size-3.5"
 												>
 													<path
-														fill-rule="evenodd"
-														d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-														clip-rule="evenodd"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="m8.25 4.5 7.5 7.5-7.5 7.5"
 													/>
 												</svg>
 											</button>

@@ -18,7 +18,7 @@
 	setContext('i18n', i18n);
 
 	let loaded = false;
-	const BREAKPOINT = 1024;
+	const BREAKPOINT = 768;
 
 	onMount(async () => {
 		theme.set(localStorage.theme);

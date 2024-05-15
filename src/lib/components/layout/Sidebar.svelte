@@ -8,7 +8,8 @@
 		chatId,
 		tags,
 		showSidebar,
-		mobile
+		mobile,
+		showArchivedChats
 	} from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
@@ -33,7 +34,7 @@
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 
-	const BREAKPOINT = 1024;
+	const BREAKPOINT = 768;
 
 	let show = false;
 	let navElement;
@@ -49,7 +50,6 @@
 	let chatTitleEditId = null;
 	let chatTitle = '';
 
-	let showArchivedChatsModal = false;
 	let showShareChatModal = false;
 	let showDropdown = false;
 	let isEditing = false;
@@ -76,7 +76,26 @@
 		}
 	});
 
+	mobile;
+	const onResize = () => {
+		if ($showSidebar && window.innerWidth < BREAKPOINT) {
+			showSidebar.set(false);
+		}
+	};
+
 	onMount(async () => {
+		mobile.subscribe((e) => {
+			console.log(e);
+
+			if ($showSidebar && e) {
+				showSidebar.set(false);
+			}
+
+			if (!$showSidebar && !e) {
+				showSidebar.set(true);
+			}
+		});
+
 		showSidebar.set(window.innerWidth > BREAKPOINT);
 		await chats.set(await getChatList(localStorage.token));
 
@@ -106,20 +125,12 @@
 			checkDirection();
 		};
 
-		const onResize = () => {
-			if ($showSidebar && window.innerWidth < BREAKPOINT) {
-				showSidebar.set(false);
-			}
-		};
-
 		window.addEventListener('touchstart', onTouchStart);
 		window.addEventListener('touchend', onTouchEnd);
-		window.addEventListener('resize', onResize);
 
 		return () => {
 			window.removeEventListener('touchstart', onTouchStart);
 			window.removeEventListener('touchend', onTouchEnd);
-			window.removeEventListener('resize', onResize);
 		};
 	});
 
@@ -186,7 +197,7 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={shareChatId} />
 <ArchivedChatsModal
-	bind:show={showArchivedChatsModal}
+	bind:show={$showArchivedChats}
 	on:change={async () => {
 		await chats.set(await getChatList(localStorage.token));
 	}}
@@ -206,8 +217,8 @@
 <div
 	bind:this={navElement}
 	id="sidebar"
-	class="h-screen max-h-[100dvh] min-h-screen {$showSidebar
-		? 'lg:relative w-[260px]'
+	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
+		? 'md:relative w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 rounded-r-2xl
         "
 	data-state={$showSidebar}
@@ -217,7 +228,53 @@
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-2 flex justify-between space-x-2">
+		<div class="px-2.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+			<a
+				id="sidebar-new-chat-button"
+				class="flex flex-1 justify-between rounded-xl px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+				href="/"
+				draggable="false"
+				on:click={async () => {
+					selectedChatId = null;
+
+					await goto('/');
+					const newChatButton = document.getElementById('new-chat-button');
+					setTimeout(() => {
+						newChatButton?.click();
+
+						if ($mobile) {
+							showSidebar.set(false);
+						}
+					}, 0);
+				}}
+			>
+				<div class="self-center mx-1.5">
+					<img
+						src="{WEBUI_BASE_URL}/static/favicon.png"
+						class=" size-6 -translate-x-1.5 rounded-full"
+						alt="logo"
+					/>
+				</div>
+				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white">
+					{$i18n.t('New Chat')}
+				</div>
+				<div class="self-center ml-auto">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="size-5"
+					>
+						<path
+							d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"
+						/>
+						<path
+							d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"
+						/>
+					</svg>
+				</div>
+			</a>
+
 			<button
 				class=" cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 				on:click={() => {
@@ -241,47 +298,18 @@
 					</svg>
 				</div>
 			</button>
-			<a
-				id="sidebar-new-chat-button"
-				class="flex justify-between rounded-xl px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-				href="/"
-				on:click={async () => {
-					selectedChatId = null;
-
-					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
-					setTimeout(() => {
-						newChatButton?.click();
-					}, 0);
-				}}
-			>
-				<div class="self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="size-5"
-					>
-						<path
-							d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"
-						/>
-						<path
-							d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"
-						/>
-					</svg>
-				</div>
-			</a>
 		</div>
 
 		{#if $user?.role === 'admin'}
-			<div class="px-2 flex justify-center mt-0.5">
+			<div class="px-2.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/modelfiles"
+					class="flex-grow flex space-x-3 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
 					}}
+					draggable="false"
 				>
 					<div class="self-center">
 						<svg
@@ -290,7 +318,7 @@
 							viewBox="0 0 24 24"
 							stroke-width="2"
 							stroke="currentColor"
-							class="w-4 h-4"
+							class="size-[1.1rem]"
 						>
 							<path
 								stroke-linecap="round"
@@ -301,71 +329,7 @@
 					</div>
 
 					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">{$i18n.t('Modelfiles')}</div>
-					</div>
-				</a>
-			</div>
-
-			<div class="px-2 flex justify-center">
-				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/prompts"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-					}}
-				>
-					<div class="self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-							/>
-						</svg>
-					</div>
-
-					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">{$i18n.t('Prompts')}</div>
-					</div>
-				</a>
-			</div>
-
-			<div class="px-2 flex justify-center mb-1">
-				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/documents"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-					}}
-				>
-					<div class="self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
-							/>
-						</svg>
-					</div>
-
-					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">{$i18n.t('Documents')}</div>
+						<div class=" self-center font-medium text-sm">{$i18n.t('Workspace')}</div>
 					</div>
 				</a>
 			</div>
@@ -415,9 +379,9 @@
 				</div>
 			{/if}
 
-			<div class="px-2 mt-1 mb-2 flex justify-center space-x-2">
-				<div class="flex w-full" id="chat-search">
-					<div class="self-center pl-3 py-2 rounded-l-xl bg-white dark:bg-gray-950">
+			<div class="px-2 mt-0.5 mb-2 flex justify-center space-x-2">
+				<div class="flex w-full rounded-xl" id="chat-search">
+					<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
@@ -433,7 +397,7 @@
 					</div>
 
 					<input
-						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm dark:text-gray-300 dark:bg-gray-950 outline-none"
+						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-none"
 						placeholder={$i18n.t('Search')}
 						bind:value={search}
 						on:focus={() => {
@@ -444,9 +408,9 @@
 			</div>
 
 			{#if $tags.length > 0}
-				<div class="px-2.5 mt-0.5 mb-2 flex gap-1 flex-wrap">
+				<div class="px-2.5 mb-2 flex gap-1 flex-wrap">
 					<button
-						class="px-2.5 text-xs font-medium bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 						on:click={async () => {
 							await chats.set(await getChatList(localStorage.token));
 						}}
@@ -455,7 +419,7 @@
 					</button>
 					{#each $tags as tag}
 						<button
-							class="px-2.5 text-xs font-medium bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+							class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 							on:click={async () => {
 								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
 								if (chatIds.length === 0) {
@@ -471,7 +435,7 @@
 				</div>
 			{/if}
 
-			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-none">
+			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
 				{#each filteredChatList as chat, idx}
 					{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
 						<div
@@ -526,7 +490,7 @@
 								href="/c/{chat.id}"
 								on:click={() => {
 									selectedChatId = chat.id;
-									if (window.innerWidth < 1024) {
+									if ($mobile) {
 										showSidebar.set(false);
 									}
 								}}
@@ -641,6 +605,9 @@
 											shareChatId = selectedChatId;
 											showShareChatModal = true;
 										}}
+										archiveChatHandler={() => {
+											archiveChatHandler(chat.id);
+										}}
 										renameHandler={() => {
 											chatTitle = chat.title;
 											chatTitleEditId = chat.id;
@@ -672,18 +639,6 @@
 										</button>
 									</ChatMenu>
 
-									<Tooltip content={$i18n.t('Archive')}>
-										<button
-											aria-label="Archive"
-											class=" self-center dark:hover:text-white transition"
-											on:click={() => {
-												archiveChatHandler(chat.id);
-											}}
-										>
-											<ArchiveBox />
-										</button>
-									</Tooltip>
-
 									{#if chat.id === $chatId}
 										<button
 											id="delete-chat-button"
@@ -712,43 +667,41 @@
 			</div>
 		</div>
 
-		{#if $mobile}
-			<div class="px-2.5">
-				<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
+		<div class="px-2.5">
+			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 
-				<div class="flex flex-col">
-					{#if $user !== undefined}
-						<UserMenu
-							role={$user.role}
-							on:show={(e) => {
-								if (e.detail === 'archived-chat') {
-									showArchivedChatsModal = true;
-								}
+			<div class="flex flex-col">
+				{#if $user !== undefined}
+					<UserMenu
+						role={$user.role}
+						on:show={(e) => {
+							if (e.detail === 'archived-chat') {
+								showArchivedChats.set(true);
+							}
+						}}
+					>
+						<button
+							class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+								showDropdown = !showDropdown;
 							}}
 						>
-							<button
-								class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								on:click={() => {
-									showDropdown = !showDropdown;
-								}}
-							>
-								<div class=" self-center mr-3">
-									<img
-										src={$user.profile_image_url}
-										class=" max-w-[30px] object-cover rounded-full"
-										alt="User profile"
-									/>
-								</div>
-								<div class=" self-center font-semibold">{$user.name}</div>
-							</button>
-						</UserMenu>
-					{/if}
-				</div>
+							<div class=" self-center mr-3">
+								<img
+									src={$user.profile_image_url}
+									class=" max-w-[30px] object-cover rounded-full"
+									alt="User profile"
+								/>
+							</div>
+							<div class=" self-center font-semibold">{$user.name}</div>
+						</button>
+					</UserMenu>
+				{/if}
 			</div>
-		{/if}
+		</div>
 	</div>
 
-	<div
+	<!-- <div
 		id="sidebar-handle"
 		class=" hidden md:fixed left-0 top-[50dvh] -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
 	>
@@ -783,16 +736,16 @@
 				</span>
 			</button>
 		</Tooltip>
-	</div>
+	</div> -->
 </div>
 
 <style>
-	.scrollbar-none:active::-webkit-scrollbar-thumb,
-	.scrollbar-none:focus::-webkit-scrollbar-thumb,
-	.scrollbar-none:hover::-webkit-scrollbar-thumb {
+	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
 		visibility: visible;
 	}
-	.scrollbar-none::-webkit-scrollbar-thumb {
+	.scrollbar-hidden::-webkit-scrollbar-thumb {
 		visibility: hidden;
 	}
 </style>
