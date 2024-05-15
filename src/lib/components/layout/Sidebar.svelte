@@ -213,7 +213,7 @@
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] z-50 {$showSidebar
+		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
@@ -274,9 +274,9 @@
 		</div>
 
 		{#if $user?.role === 'admin'}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+			<div class="px-2.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
@@ -290,7 +290,7 @@
 							viewBox="0 0 24 24"
 							stroke-width="2"
 							stroke="currentColor"
-							class="w-4 h-4"
+							class="size-[1.1rem]"
 						>
 							<path
 								stroke-linecap="round"
@@ -351,9 +351,9 @@
 				</div>
 			{/if}
 
-			<div class="px-2 mt-1 mb-2 flex justify-center space-x-2">
-				<div class="flex w-full" id="chat-search">
-					<div class="self-center pl-3 py-2 rounded-l-xl bg-white dark:bg-gray-950">
+			<div class="px-2 mt-0.5 mb-2 flex justify-center space-x-2">
+				<div class="flex w-full rounded-xl" id="chat-search">
+					<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
@@ -369,7 +369,7 @@
 					</div>
 
 					<input
-						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm dark:text-gray-300 dark:bg-gray-950 outline-none"
+						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-none"
 						placeholder={$i18n.t('Search')}
 						bind:value={search}
 						on:focus={() => {
@@ -380,9 +380,9 @@
 			</div>
 
 			{#if $tags.length > 0}
-				<div class="px-2.5 mt-0.5 mb-2 flex gap-1 flex-wrap">
+				<div class="px-2.5 mb-2 flex gap-0.5 flex-wrap">
 					<button
-						class="px-2.5 text-xs font-medium bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 						on:click={async () => {
 							await chats.set(await getChatList(localStorage.token));
 						}}
@@ -391,7 +391,7 @@
 					</button>
 					{#each $tags as tag}
 						<button
-							class="px-2.5 text-xs font-medium bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
+							class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 							on:click={async () => {
 								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
 								if (chatIds.length === 0) {

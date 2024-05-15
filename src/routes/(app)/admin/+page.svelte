@@ -108,7 +108,7 @@
 
 <div class=" flex flex-col w-full min-h-screen">
 	{#if loaded}
-		<div class="px-4 pt-3 mb-2">
+		<div class="px-4 pt-3 mt-0.5 mb-1">
 			<div class=" flex items-center gap-1">
 				<div class="{$showSidebar ? 'md:hidden' : ''} mr-1 self-start flex flex-none items-center">
 					<button
@@ -127,7 +127,7 @@
 			</div>
 		</div>
 
-		<div class="px-4 mb-1">
+		<!-- <div class="px-4 my-1">
 			<div
 				class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-xl bg-transparent/10 p-1"
 			>
@@ -141,7 +141,7 @@
 					}}>{$i18n.t('Overview')}</button
 				>
 			</div>
-		</div>
+		</div> -->
 
 		<hr class=" my-2 dark:border-gray-850" />
 
