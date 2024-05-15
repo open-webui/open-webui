@@ -1,7 +1,7 @@
 nameOverride: ""
 
 ollama:
-  externalHost: ""
+  externalHost: "true"
   annotations: {}
   podAnnotations: {}
   replicaCount: 1
