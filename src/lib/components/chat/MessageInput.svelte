@@ -535,7 +535,7 @@
 		</div>
 
 		<div class="bg-white dark:bg-gray-900">
-			<div class="max-w-6xl px-2.5 lg:px-16 mx-auto inset-x-0">
+			<div class="max-w-6xl px-2.5 md:px-16 mx-auto inset-x-0">
 				<div class=" pb-2">
 					<input
 						bind:this={filesInputElement}
