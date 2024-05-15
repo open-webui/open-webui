@@ -92,7 +92,6 @@ class Qdrant(VectorStore):
 
     def query(self, collection_name: str, query_embeddings, n_results: int):
         results = self._client.search(collection_name=collection_name, query_vector=query_embeddings, limit=n_results)
-        # TODO map ScoredPoints to chroma like model
         ids = []
         docs = []
         metas = []

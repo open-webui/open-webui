@@ -42,7 +42,7 @@ class VectorStoreTestCase(unittest.TestCase):
 
         from apps.rag.utils import query_doc
         import sentence_transformers
-        sentence_transformer_ef = sentence_transformers.SentenceTransformer(config.RAG_EMBEDDING_MODEL)
+        sentence_transformer_ef = sentence_transformers.SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
         embedding_function = lambda query: sentence_transformer_ef.encode(query).tolist()
         found = query_doc(collection_name, "lorem ipsum dolor sit amet", embedding_function, 5)
         self.assertEqual(len(docs), len(found["distances"][0]))
@@ -65,7 +65,7 @@ class VectorStoreTestCase(unittest.TestCase):
         from vectorstore import create_vector_store
         import config
         config.CHROMA_CLIENT = create_vector_store()
-        self.test_chroma_default()
+        self.index_then_search(str(uuid.uuid4()))
 
 if __name__ == '__main__':
     unittest.main()
