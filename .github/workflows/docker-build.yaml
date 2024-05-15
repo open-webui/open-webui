@@ -4,10 +4,12 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
-      - dev
+      - local_dev
     tags:
       - v*
+  pull_request:
+    branches:
+      - local_dev
 
 env:
   REGISTRY: ghcr.io
