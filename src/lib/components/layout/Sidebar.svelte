@@ -8,7 +8,8 @@
 		chatId,
 		tags,
 		showSidebar,
-		mobile
+		mobile,
+		showArchivedChats
 	} from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
@@ -49,7 +50,6 @@
 	let chatTitleEditId = null;
 	let chatTitle = '';
 
-	let showArchivedChatsModal = false;
 	let showShareChatModal = false;
 	let showDropdown = false;
 	let isEditing = false;
@@ -186,7 +186,7 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={shareChatId} />
 <ArchivedChatsModal
-	bind:show={showArchivedChatsModal}
+	bind:show={$showArchivedChats}
 	on:change={async () => {
 		await chats.set(await getChatList(localStorage.token));
 	}}
@@ -581,6 +581,9 @@
 											shareChatId = selectedChatId;
 											showShareChatModal = true;
 										}}
+										archiveChatHandler={() => {
+											archiveChatHandler(chat.id);
+										}}
 										renameHandler={() => {
 											chatTitle = chat.title;
 											chatTitleEditId = chat.id;
@@ -611,18 +614,6 @@
 											</svg>
 										</button>
 									</ChatMenu>
-
-									<Tooltip content={$i18n.t('Archive')}>
-										<button
-											aria-label="Archive"
-											class=" self-center dark:hover:text-white transition"
-											on:click={() => {
-												archiveChatHandler(chat.id);
-											}}
-										>
-											<ArchiveBox />
-										</button>
-									</Tooltip>
 
 									{#if chat.id === $chatId}
 										<button
@@ -662,7 +653,7 @@
 							role={$user.role}
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {
-									showArchivedChatsModal = true;
+									showArchivedChats.set(true);
 								}
 							}}
 						>

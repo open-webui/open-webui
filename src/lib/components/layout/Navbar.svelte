@@ -8,6 +8,7 @@
 		mobile,
 		modelfiles,
 		settings,
+		showArchivedChats,
 		showSettings,
 		showSidebar,
 		user
@@ -163,7 +164,7 @@
 						role={$user.role}
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {
-								// showArchivedChatsModal = true;
+								showArchivedChats.set(true);
 							}
 						}}
 					>
