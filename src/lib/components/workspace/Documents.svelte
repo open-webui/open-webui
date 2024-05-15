@@ -90,7 +90,6 @@
 
 		const onDrop = async (e) => {
 			e.preventDefault();
-			console.log(e);
 
 			if (e.dataTransfer?.files) {
 				let reader = new FileReader();

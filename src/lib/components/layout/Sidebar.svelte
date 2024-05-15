@@ -85,8 +85,6 @@
 
 	onMount(async () => {
 		mobile.subscribe((e) => {
-			console.log(e);
-
 			if ($showSidebar && e) {
 				showSidebar.set(false);
 			}
