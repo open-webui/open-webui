@@ -141,6 +141,7 @@
 					>
 						<button
 							class=" flex rounded-xl p-1.5 w-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							aria-label="User Menu"
 						>
 							<div class=" self-center">
 								<img
