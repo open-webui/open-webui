@@ -21,7 +21,7 @@
 </script>
 
 {#if code}
-	<div class="mb-4">
+	<div class="mb-4" dir="ltr">
 		<div
 			class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg overflow-x-auto"
 		>
