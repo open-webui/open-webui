@@ -326,7 +326,7 @@
 		responseMessage.progress = $i18n.t("Searching the web for '{{searchQuery}}'", { searchQuery });
 		messages = messages;
 		const searchDocument = await runWebSearch(localStorage.token, searchQuery);
-		if (!searchDocument) {
+		if (searchDocument === undefined) {
 			toast.warning($i18n.t('No search results found'));
 			responseMessage.progress = undefined;
 			messages = messages;
@@ -336,11 +336,12 @@
 			responseMessage.files = [];
 		}
 		responseMessage.files.push({
-			collection_name: searchDocument!.collection_name,
+			collection_name: searchDocument.collection_name,
 			name: searchQuery,
 			type: 'websearch',
 			upload_status: true,
-			error: ''
+			error: '',
+			urls: searchDocument.filenames,
 		});
 		responseMessage.progress = undefined;
 		messages = messages;
