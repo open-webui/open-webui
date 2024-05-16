@@ -27,6 +27,7 @@ RESET_PASSWORD_MAIL_TEMPLATE = Template(r"""
     <p>Hello,</p>
     <p>You recently requested to reset your password for your $webui_name account. To complete the process, please click the button below:</p>
     <a href="$reset_url" class="bg-gray-900 hover:bg-gray-800" style="color: rgb(236, 236, 236); background-color: #171717; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
+    <p>If you can't click the button, copy and paste this link into your browser's address bar: $reset_url</p>
     <p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
     <div style="font-size: 12px; color: #666;">
       <p>&copy; $current_year $webui_name.</p>
@@ -56,7 +57,7 @@ async def send_password_reset_mail(
         data=ResetToken(
             purpose="password_reset", sub=user.id, key=password_hash
         ).model_dump(),
-        expires_delta=timedelta(hours=1),
+        expires_delta=timedelta(days=7),
     )
 
     reset_url = f"{frontend_url}/auth/reset-password?token={reset_token}"
