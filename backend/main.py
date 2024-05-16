@@ -379,6 +379,11 @@ async def get_opensearch_xml():
     return Response(content=xml_content, media_type="application/xml")
 
 
+@app.get("/health")
+async def healthcheck():
+    return {"status": True}
+
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
 

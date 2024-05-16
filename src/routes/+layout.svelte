@@ -1,6 +1,6 @@
 <script>
 	import { onMount, tick, setContext } from 'svelte';
-	import { config, user, theme, WEBUI_NAME } from '$lib/stores';
+	import { config, user, theme, WEBUI_NAME, mobile } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { Toaster, toast } from 'svelte-sonner';
 
@@ -18,9 +18,22 @@
 	setContext('i18n', i18n);
 
 	let loaded = false;
+	const BREAKPOINT = 768;
 
 	onMount(async () => {
 		theme.set(localStorage.theme);
+
+		mobile.set(window.innerWidth < BREAKPOINT);
+		const onResize = () => {
+			if (window.innerWidth < BREAKPOINT) {
+				mobile.set(true);
+			} else {
+				mobile.set(false);
+			}
+		};
+
+		window.addEventListener('resize', onResize);
+
 		let backendConfig = null;
 		try {
 			backendConfig = await getBackendConfig();
@@ -67,6 +80,10 @@
 
 		document.getElementById('splash-screen')?.remove();
 		loaded = true;
+
+		return () => {
+			window.removeEventListener('resize', onResize);
+		};
 	});
 </script>
 

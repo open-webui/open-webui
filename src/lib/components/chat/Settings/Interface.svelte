@@ -23,6 +23,7 @@
 	// Interface
 	let promptSuggestions = [];
 	let showUsername = false;
+	let chatBubble = true;
 
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
@@ -32,6 +33,11 @@
 	const toggleFullScreenMode = async () => {
 		fullScreenMode = !fullScreenMode;
 		saveSettings({ fullScreenMode: fullScreenMode });
+	};
+
+	const toggleChatBubble = async () => {
+		chatBubble = !chatBubble;
+		saveSettings({ chatBubble: chatBubble });
 	};
 
 	const toggleShowUsername = async () => {
@@ -106,6 +112,7 @@
 
 		responseAutoCopy = settings.responseAutoCopy ?? false;
 		showUsername = settings.showUsername ?? false;
+		chatBubble = settings.chatBubble ?? true;
 		fullScreenMode = settings.fullScreenMode ?? false;
 		splitLargeChunks = settings.splitLargeChunks ?? false;
 	});
@@ -118,9 +125,29 @@
 		dispatch('save');
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[22rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[25rem]">
 		<div>
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Add-ons')}</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Chat Bubble UI')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleChatBubble();
+						}}
+						type="button"
+					>
+						{#if chatBubble === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -306,7 +333,7 @@
 		{#if $user.role === 'admin'}
 			<hr class=" dark:border-gray-700" />
 
-			<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
+			<div class=" space-y-3 pr-1.5">
 				<div class="flex w-full justify-between mb-2">
 					<div class=" self-center text-sm font-semibold">
 						{$i18n.t('Default Prompt Suggestions')}
