@@ -24,6 +24,8 @@
 
 	let showAdvanced = false;
 
+	let useModelName = false;
+
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
 
@@ -40,6 +42,7 @@
 	// Advanced
 	let requestFormat = '';
 	let keepAlive = null;
+	let botName = 'AI Bot';
 
 	let options = {
 		// Advanced
@@ -88,6 +91,8 @@
 		options.num_ctx = settings.num_ctx ?? '';
 		options = { ...options, ...settings.options };
 		options.stop = (settings?.options?.stop ?? []).join(',');
+
+		useModelName = localStorage.useModelName == 'true' ?? false;
 	});
 
 	const applyTheme = (_theme: string) => {
@@ -182,7 +187,37 @@
 					</a>
 				</div>
 			{/if}
-
+			<div class="flex w-full justify-between">
+				<div class="flex items-center relative">
+					<div class=" self-center text-xs font-medium mr-2">Bot Name</div>
+					{#if !useModelName}
+					<input
+						class=" rounded-lg py-1 px-2 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+						type="text"
+						bind:value={botName}
+						placeholder={$i18n.t('Enter name for bot')}
+						autocomplete="off"
+						disabled={useModelName}
+					/>
+					{/if}
+				</div>
+				<div class="flex items-center relative">
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							useModelName = !useModelName
+						}}
+						type="button"
+					>
+						Use Model Name
+						{#if useModelName}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Notifications')}</div>
@@ -298,6 +333,8 @@
 		<button
 			class="  px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			on:click={() => {
+				localStorage.setItem('useModelName', useModelName)
+				localStorage.setItem('botName', botName)
 				saveSettings({
 					system: system !== '' ? system : undefined,
 					options: {

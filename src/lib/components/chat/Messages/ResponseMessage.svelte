@@ -65,6 +65,10 @@
 
 	let showRateComment = false;
 
+	let useModelName = false;
+
+	$: useModelName = localStorage.useModelName == 'true'
+
 	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
 
 	const renderer = new marked.Renderer();
@@ -333,16 +337,20 @@
 
 		<div class="w-full overflow-hidden">
 			<Name>
-				{#if message.model in modelfiles}
-					{modelfiles[message.model]?.title}
-				{:else}
-					{message.model ? ` ${message.model}` : ''}
-				{/if}
+				{#if useModelName}
+					{#if message.model in modelfiles}
+						{modelfiles[message.model]?.title}
+					{:else}
+						{message.model ? ` ${message.model}` : ''}
+					{/if}
 
-				{#if message.timestamp}
-					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
-						{dayjs(message.timestamp * 1000).format($i18n.t('DD/MM/YYYY HH:mm'))}
-					</span>
+					{#if message.timestamp}
+						<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
+							{dayjs(message.timestamp * 1000).format($i18n.t('DD/MM/YYYY HH:mm'))}
+						</span>
+					{/if}
+				{:else}
+					{localStorage.botName ?? 'AI Bot'}
 				{/if}
 			</Name>
 

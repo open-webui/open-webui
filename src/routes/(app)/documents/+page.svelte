@@ -189,6 +189,17 @@
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<div class="mb-6">
 				<div class="flex justify-between items-center">
+					<a class="flex self-center" href="/">
+						<img
+							src="/logo-mbzuai.svg"
+							alt="logo-mbzuai"
+						/>
+						<img
+							src="/logo-ciai.svg"
+							class="ml-4 size-14"
+							alt="logo-ciai"
+						/>
+					</a>
 					<div class=" text-2xl font-semibold self-center">{$i18n.t('My Documents')}</div>
 
 					<div>
