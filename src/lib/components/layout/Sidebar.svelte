@@ -110,7 +110,10 @@
 	$: filteredDocs = showMoreDoc ? $documents : $documents.slice(0,5)
 
 	onMount(async () => {
-		showSidebar.set(window.innerWidth > BREAKPOINT);
+		// showSidebar.set(window.innerWidth > BREAKPOINT);
+
+		// customization: hide sidebar by default
+		showSidebar.set(false)
 		await chats.set(await getChatList(localStorage.token));
 
 		let touchstart;
@@ -286,7 +289,7 @@
 						</div>
 
 						<div class=" self-center font-medium text-sm">{$i18n.t('New Chat')}</div> -->
-						<img
+						<!-- <img
 							src="/logo-mbzuai.svg"
 							alt="logo-mbzuai"
 						/>
@@ -294,7 +297,7 @@
 							src="/logo-ciai.svg"
 							class="ml-4 size-14"
 							alt="logo-ciai"
-						/>
+						/> -->
 					</div>
 
 					<!-- <div class="self-center">
@@ -414,12 +417,14 @@
 			</div>
 		{/if} -->
 
-		<button 
-		class="ml-5 my-2 py-2 w-2/3 px-1.5 py-0.75 bg-gray-200 rounded-3xl hover:bg-gray-300"
-		on:click={() => {
-			filesInputElement.click();
-		}}
-		>+ New document</button>
+		<!-- <button 
+			class="ml-5 my-2 py-2 w-2/3 px-1.5 py-0.75 bg-gray-200 rounded-3xl hover:bg-gray-300"
+			on:click={() => {
+				filesInputElement.click();
+			}}
+		>
+			+ New document
+		</button> -->
 		<input
 						bind:this={filesInputElement}
 						bind:files={inputFiles}
@@ -452,15 +457,15 @@
 							}
 						}}
 					/>
-		<div class="px-5 py-2 text-[#555]">Recent</div>
+		<div class="px-5 py-2 text-[#555] dark:text-[#aaa]">Recent Documents</div>
 			<!-- FILE LIST -->
-		<div class="relative flex flex-col overflow-y-auto px-3 max-h-[38%]">
+		<div class="relative flex flex-col overflow-y-auto px-4 max-h-[38%]">
 			{#each filteredDocs as doc}
 				<div 
 				class=" flex space-x-3 rounded-xl px-3.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 text-ellipsis overflow-x-hidden whitespace-nowrap transition"
 				>
-					<div class="self-center">
-						<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<div class="self-center dark:text-[#999]">
+						<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
 							<g clip-path="url(#clip0_1_16)">
 							<path d="M10.7775 11.1525H1.2225C0.924135 11.1525 0.637987 11.034 0.427009 10.823C0.21603 10.612 0.0975037 10.3259 0.0975037 10.0275V1.9875C0.0975037 1.68913 0.21603 1.40298 0.427009 1.19201C0.637987 0.981027 0.924135 0.862501 1.2225 0.862501H4.5C4.66304 0.861414 4.82429 0.896503 4.97214 0.965238C5.11999 1.03397 5.25075 1.13465 5.355 1.26L6.0225 2.01C6.05773 2.05087 6.10153 2.08349 6.15079 2.10552C6.20005 2.12756 6.25355 2.13848 6.3075 2.1375L10.755 2.0925C11.0548 2.09447 11.3417 2.21441 11.5536 2.42637C11.7656 2.63833 11.8855 2.92525 11.8875 3.225V9.975C11.8935 10.1256 11.8694 10.2759 11.8166 10.417C11.7638 10.5582 11.6834 10.6874 11.58 10.797C11.4766 10.9067 11.3524 10.9946 11.2146 11.0557C11.0768 11.1167 10.9282 11.1496 10.7775 11.1525ZM1.2225 1.6125C1.12305 1.6125 1.02766 1.65201 0.957339 1.72234C0.887012 1.79266 0.847504 1.88804 0.847504 1.9875V10.0275C0.847504 10.127 0.887012 10.2223 0.957339 10.2927C1.02766 10.363 1.12305 10.4025 1.2225 10.4025H10.7775C10.8777 10.4025 10.9738 10.3633 11.0454 10.2931C11.1169 10.223 11.158 10.1276 11.16 10.0275V3.2775C11.16 3.17606 11.1197 3.07877 11.048 3.00703C10.9762 2.9353 10.8789 2.895 10.7775 2.895L6.3375 2.94C6.17052 2.9448 6.00485 2.9091 5.85465 2.83596C5.70446 2.76283 5.5742 2.65442 5.475 2.52L4.815 1.77C4.77813 1.72131 4.73053 1.68178 4.6759 1.65446C4.62127 1.62715 4.56108 1.61279 4.5 1.6125H1.2225Z" fill="#323333"/>
 							</g>
@@ -546,7 +551,7 @@
 		{/if}
 
 		<!-- Search Input  -->
-		<div class="px-2 mt-1 mb-2 flex justify-center space-x-2">
+		<div class="px-2 mt-4 mb-2 flex justify-center space-x-2">
 			<div class="flex w-full" id="chat-search">
 				<div class="self-center pl-3 py-2 rounded-l-xl bg-white dark:bg-gray-950">
 					<svg

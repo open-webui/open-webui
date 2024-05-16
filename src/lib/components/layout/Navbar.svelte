@@ -31,11 +31,22 @@
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div class=" flex max-w-full w-full mx-auto px-5 pt-3 md:px-[1.3rem]">
-		<div class="flex items-center w-full max-w-full">
-			<div class="w-[30%] overflow-hidden max-w-full text-xl font-bold text-black">
+		<div class="flex justify-between items-center w-full max-w-full">
+			<a class="flex self-center" href="/">
+				<img
+					src="/logo-mbzuai.svg"
+					alt="logo-mbzuai"
+				/>
+				<img
+					src="/logo-ciai.svg"
+					class="ml-4 size-14"
+					alt="logo-ciai"
+				/>
+			</a>
+
+			<div class="w-[30%] overflow-hidden ml-12 flex-1 text-xl font-bold text-black dark:text-white">
 				IT/HR RAG Service
 			</div>
-			<ModelSelector bind:selectedModels showSetDefault={false} />
 
 			<div class="self-start flex flex-none items-center">
 				<div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" />
@@ -63,6 +74,30 @@
 							class="absolute z-40 top-[80px] right-[20px] rounded-lg shadow w-[160px] bg-white dark:bg-gray-900"
 							transition:fade|slide={{ duration: 100 }}
 						>
+							<div class="px-4 py-2 w-full">
+								<ModelSelector bind:selectedModels showSetDefault={false} />
+							</div>
+							<hr class=" dark:border-gray-800 m-0 p-0" />
+
+							<div class="p-1 py-2 w-full">
+								<a
+									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+									href="/documents"
+									on:click={() => {
+										// selectedChatId = null;
+										chatId.set('');
+									}}
+								>
+								<div class="self-center ml-1 mr-3 dark:text-white">
+									<svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke-width="1" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+										<path d="M10.7775 11.1525H1.22247C0.924105 11.1525 0.637956 11.034 0.426978 10.823C0.216 10.612 0.0974731 10.3259 0.0974731 10.0275V1.9875C0.0974731 1.68913 0.216 1.40298 0.426978 1.192C0.637956 0.981023 0.924105 0.862497 1.22247 0.862497H4.49997C4.66301 0.861411 4.82426 0.896499 4.97211 0.965235C5.11996 1.03397 5.25072 1.13464 5.35497 1.26L6.02247 2.01C6.0577 2.05087 6.1015 2.08348 6.15076 2.10552C6.20002 2.12755 6.25352 2.13847 6.30747 2.1375L10.755 2.0925C11.0547 2.09446 11.3416 2.21441 11.5536 2.42637C11.7656 2.63833 11.8855 2.92525 11.8875 3.225V9.975C11.8935 10.1256 11.8694 10.2759 11.8166 10.417C11.7638 10.5582 11.6833 10.6874 11.5799 10.797C11.4766 10.9067 11.3523 10.9946 11.2145 11.0557C11.0767 11.1167 10.9282 11.1496 10.7775 11.1525ZM1.22247 1.6125C1.12302 1.6125 1.02763 1.65201 0.957308 1.72233C0.886982 1.79266 0.847473 1.88804 0.847473 1.9875V10.0275C0.847473 10.127 0.886982 10.2223 0.957308 10.2927C1.02763 10.363 1.12302 10.4025 1.22247 10.4025H10.7775C10.8776 10.4025 10.9738 10.3632 11.0453 10.2931C11.1168 10.223 11.158 10.1276 11.16 10.0275V3.2775C11.16 3.17605 11.1197 3.07876 11.0479 3.00703C10.9762 2.9353 10.8789 2.895 10.7775 2.895L6.33747 2.94C6.17049 2.94479 6.00482 2.9091 5.85462 2.83596C5.70443 2.76282 5.57417 2.65441 5.47497 2.52L4.81497 1.77C4.7781 1.72131 4.7305 1.68177 4.67587 1.65446C4.62124 1.62714 4.56105 1.61278 4.49997 1.6125H1.22247Z" fill="#323333"/>
+									</svg>
+										
+								</div>
+									<div class=" self-center font-medium">{$i18n.t('Documents')}</div>
+								</a>
+							</div>
+							<hr class=" dark:border-gray-800 m-0 p-0" />
 							<div class="p-1 py-2 w-full">
 
 								<button
@@ -96,6 +131,7 @@
 									<div class=" self-center font-medium">{$i18n.t('Settings')}</div>
 								</button>
 							</div>
+
 
 							<hr class=" dark:border-gray-800 m-0 p-0" />
 
