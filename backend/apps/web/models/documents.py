@@ -25,11 +25,11 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class Document(Model):
     collection_name = CharField(unique=True)
     name = CharField(unique=True)
-    title = CharField()
-    filename = CharField()
+    title = TextField()
+    filename = TextField()
     content = TextField(null=True)
     user_id = CharField()
-    timestamp = DateField()
+    timestamp = BigIntegerField()
 
     class Meta:
         database = DB

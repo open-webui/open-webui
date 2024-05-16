@@ -17,7 +17,7 @@
 			tagName = '';
 			showTagInput = false;
 		} else {
-			toast.error('Invalid Tag');
+			toast.error($i18n.t(`Invalid Tag`));
 		}
 	};
 </script>

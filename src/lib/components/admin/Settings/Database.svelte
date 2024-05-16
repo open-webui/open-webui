@@ -2,6 +2,7 @@
 	import { downloadDatabase } from '$lib/apis/utils';
 	import { onMount, getContext } from 'svelte';
 	import { config } from '$lib/stores';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -32,7 +33,9 @@
 						on:click={() => {
 							// exportAllUserChats();
 
-							downloadDatabase(localStorage.token);
+							downloadDatabase(localStorage.token).catch((error) => {
+								toast.error(error);
+							});
 						}}
 					>
 						<div class=" self-center mr-3">
@@ -59,10 +62,11 @@
 
 	<!-- <div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class=" px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-gray-100 transition rounded"
+			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			type="submit"
 		>
 			Save
 		</button>
+
 	</div> -->
 </form>

@@ -19,9 +19,9 @@ import json
 class Prompt(Model):
     command = CharField(unique=True)
     user_id = CharField()
-    title = CharField()
+    title = TextField()
     content = TextField()
-    timestamp = DateField()
+    timestamp = BigIntegerField()
 
     class Meta:
         database = DB

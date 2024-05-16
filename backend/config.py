@@ -19,6 +19,18 @@ from constants import ERROR_MESSAGES
 
 
 ####################################
+# Load .env file
+####################################
+
+try:
+    from dotenv import load_dotenv, find_dotenv
+
+    load_dotenv(find_dotenv("../.env"))
+except ImportError:
+    print("dotenv not installed, skipping...")
+
+
+####################################
 # LOGGING
 ####################################
 
@@ -59,19 +71,15 @@ for source in log_sources:
 
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
-####################################
-# Load .env file
-####################################
-
-try:
-    from dotenv import load_dotenv, find_dotenv
-
-    load_dotenv(find_dotenv("../.env"))
-except ImportError:
-    log.warning("dotenv not installed, skipping...")
 
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
+if WEBUI_NAME != "Open WebUI":
+    WEBUI_NAME += " (Open WebUI)"
+
+WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
+
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+
 
 ####################################
 # ENV (dev,test,prod)
@@ -146,6 +154,23 @@ for version in soup.find_all("h2"):
 
 CHANGELOG = changelog_json
 
+
+####################################
+# WEBUI_VERSION
+####################################
+
+WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
+
+####################################
+# WEBUI_AUTH (Required for security)
+####################################
+
+WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
+WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
+    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
+)
+
+
 ####################################
 # DATA/FRONTEND BUILD DIR
 ####################################
@@ -165,7 +190,11 @@ except:
 
 STATIC_DIR = str(Path(os.getenv("STATIC_DIR", "./static")).resolve())
 
-shutil.copyfile(f"{FRONTEND_BUILD_DIR}/favicon.png", f"{STATIC_DIR}/favicon.png")
+frontend_favicon = f"{FRONTEND_BUILD_DIR}/favicon.png"
+if os.path.exists(frontend_favicon):
+    shutil.copyfile(frontend_favicon, f"{STATIC_DIR}/favicon.png")
+else:
+    logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
 ####################################
 # CUSTOM_NAME
@@ -195,9 +224,6 @@ if CUSTOM_NAME:
     except Exception as e:
         log.exception(e)
         pass
-else:
-    if WEBUI_NAME != "Open WebUI":
-        WEBUI_NAME += " (Open WebUI)"
 
 
 ####################################
@@ -220,7 +246,7 @@ Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 # Docs DIR
 ####################################
 
-DOCS_DIR = f"{DATA_DIR}/docs"
+DOCS_DIR = os.getenv("DOCS_DIR", f"{DATA_DIR}/docs")
 Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
 
 
@@ -337,7 +363,11 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 # WEBUI
 ####################################
 
-ENABLE_SIGNUP = os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
+ENABLE_SIGNUP = (
+    False
+    if WEBUI_AUTH == False
+    else os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
+)
 DEFAULT_MODELS = os.environ.get("DEFAULT_MODELS", None)
 
 
@@ -363,6 +393,17 @@ DEFAULT_PROMPT_SUGGESTIONS = (
             "title": ["Show me a code snippet", "of a website's sticky header"],
             "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
         },
+        {
+            "title": [
+                "Explain options trading",
+                "if I'm familiar with buying and selling stocks",
+            ],
+            "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+        },
+        {
+            "title": ["Overcome procrastination", "give me tips"],
+            "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
+        },
     ]
 )
 
@@ -375,29 +416,13 @@ USER_PERMISSIONS_CHAT_DELETION = (
 
 USER_PERMISSIONS = {"chat": {"deletion": USER_PERMISSIONS_CHAT_DELETION}}
 
-
-MODEL_FILTER_ENABLED = os.environ.get("MODEL_FILTER_ENABLED", "False").lower() == "true"
+ENABLE_MODEL_FILTER = os.environ.get("ENABLE_MODEL_FILTER", "False").lower() == "true"
 MODEL_FILTER_LIST = os.environ.get("MODEL_FILTER_LIST", "")
 MODEL_FILTER_LIST = [model.strip() for model in MODEL_FILTER_LIST.split(";")]
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
-
-####################################
-# WEBUI_VERSION
-####################################
-
-WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
-
-####################################
-# WEBUI_AUTH (Required for security)
-####################################
-
-WEBUI_AUTH = True
-WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
-    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
-)
 
 ####################################
 # WEBUI_SECRET_KEY
@@ -418,18 +443,81 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
 ####################################
 
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
+CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
+CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
+CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
+CHROMA_HTTP_PORT = int(os.environ.get("CHROMA_HTTP_PORT", "8000"))
+# Comma-separated list of header=value pairs
+CHROMA_HTTP_HEADERS = os.environ.get("CHROMA_HTTP_HEADERS", "")
+if CHROMA_HTTP_HEADERS:
+    CHROMA_HTTP_HEADERS = dict(
+        [pair.split("=") for pair in CHROMA_HTTP_HEADERS.split(",")]
+    )
+else:
+    CHROMA_HTTP_HEADERS = None
+CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
+RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "5"))
+RAG_RELEVANCE_THRESHOLD = float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "0.0"))
+
+ENABLE_RAG_HYBRID_SEARCH = (
+    os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true"
+)
+
+
+ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+    os.environ.get("ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION", "True").lower() == "true"
+)
+
 RAG_EMBEDDING_ENGINE = os.environ.get("RAG_EMBEDDING_ENGINE", "")
+
+PDF_EXTRACT_IMAGES = os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true"
 
 RAG_EMBEDDING_MODEL = os.environ.get(
     "RAG_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
 )
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL}"),
 
+RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
+    os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "").lower() == "true"
+)
+
 RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
+
+RAG_RERANKING_MODEL = os.environ.get("RAG_RERANKING_MODEL", "")
+if not RAG_RERANKING_MODEL == "":
+    log.info(f"Reranking model set: {RAG_RERANKING_MODEL}"),
+
+RAG_RERANKING_MODEL_AUTO_UPDATE = (
+    os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "").lower() == "true"
+)
+
+RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
+    os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
+)
+
+
+if CHROMA_HTTP_HOST != "":
+    CHROMA_CLIENT = chromadb.HttpClient(
+        host=CHROMA_HTTP_HOST,
+        port=CHROMA_HTTP_PORT,
+        headers=CHROMA_HTTP_HEADERS,
+        ssl=CHROMA_HTTP_SSL,
+        tenant=CHROMA_TENANT,
+        database=CHROMA_DATABASE,
+        settings=Settings(allow_reset=True, anonymized_telemetry=False),
+    )
+else:
+    CHROMA_CLIENT = chromadb.PersistentClient(
+        path=CHROMA_DATA_PATH,
+        settings=Settings(allow_reset=True, anonymized_telemetry=False),
+        tenant=CHROMA_TENANT,
+        database=CHROMA_DATABASE,
+    )
+
 
 # device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
 USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
@@ -440,15 +528,10 @@ else:
     DEVICE_TYPE = "cpu"
 
 
-CHROMA_CLIENT = chromadb.PersistentClient(
-    path=CHROMA_DATA_PATH,
-    settings=Settings(allow_reset=True, anonymized_telemetry=False),
-)
-CHUNK_SIZE = 1500
-CHUNK_OVERLAP = 100
+CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "1500"))
+CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "100"))
 
-
-RAG_TEMPLATE = """Use the following context as your learned knowledge, inside <context></context> XML tags.
+DEFAULT_RAG_TEMPLATE = """Use the following context as your learned knowledge, inside <context></context> XML tags.
 <context>
     [context]
 </context>
@@ -458,12 +541,20 @@ When answer to user:
 - If you don't know when you are not sure, ask for clarification.
 Avoid mentioning that you obtained the information from the context.
 And answer according to the language of the user's question.
-        
+
 Given the context information, answer the query.
 Query: [query]"""
 
+RAG_TEMPLATE = os.environ.get("RAG_TEMPLATE", DEFAULT_RAG_TEMPLATE)
+
 RAG_OPENAI_API_BASE_URL = os.getenv("RAG_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
 RAG_OPENAI_API_KEY = os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY)
+
+ENABLE_RAG_LOCAL_WEB_FETCH = (
+    os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
+)
+
+YOUTUBE_LOADER_LANGUAGE = os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(",")
 
 ####################################
 # Transcribe
@@ -480,18 +571,25 @@ WHISPER_MODEL_AUTO_UPDATE = (
 # Images
 ####################################
 
+IMAGE_GENERATION_ENGINE = os.getenv("IMAGE_GENERATION_ENGINE", "")
+
 ENABLE_IMAGE_GENERATION = (
     os.environ.get("ENABLE_IMAGE_GENERATION", "").lower() == "true"
 )
 AUTOMATIC1111_BASE_URL = os.getenv("AUTOMATIC1111_BASE_URL", "")
-COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
 
+COMFYUI_BASE_URL = os.getenv("COMFYUI_BASE_URL", "")
 
 IMAGES_OPENAI_API_BASE_URL = os.getenv(
     "IMAGES_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL
 )
 IMAGES_OPENAI_API_KEY = os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY)
 
+IMAGE_SIZE = os.getenv("IMAGE_SIZE", "512x512")
+
+IMAGE_STEPS = int(os.getenv("IMAGE_STEPS", 50))
+
+IMAGE_GENERATION_MODEL = os.getenv("IMAGE_GENERATION_MODEL", "")
 
 ####################################
 # Audio
@@ -499,12 +597,24 @@ IMAGES_OPENAI_API_KEY = os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY)
 
 AUDIO_OPENAI_API_BASE_URL = os.getenv("AUDIO_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL)
 AUDIO_OPENAI_API_KEY = os.getenv("AUDIO_OPENAI_API_KEY", OPENAI_API_KEY)
+AUDIO_OPENAI_API_MODEL = os.getenv("AUDIO_OPENAI_API_MODEL", "tts-1")
+AUDIO_OPENAI_API_VOICE = os.getenv("AUDIO_OPENAI_API_VOICE", "alloy")
 
 ####################################
 # LiteLLM
 ####################################
 
+
+ENABLE_LITELLM = os.environ.get("ENABLE_LITELLM", "True").lower() == "true"
+
 LITELLM_PROXY_PORT = int(os.getenv("LITELLM_PROXY_PORT", "14365"))
 if LITELLM_PROXY_PORT < 0 or LITELLM_PROXY_PORT > 65535:
     raise ValueError("Invalid port number for LITELLM_PROXY_PORT")
 LITELLM_PROXY_HOST = os.getenv("LITELLM_PROXY_HOST", "127.0.0.1")
+
+
+####################################
+# Database
+####################################
+
+DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")

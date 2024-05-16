@@ -23,7 +23,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class Auth(Model):
     id = CharField(unique=True)
     email = CharField()
-    password = CharField()
+    password = TextField()
     active = BooleanField()
 
     class Meta:
@@ -87,6 +87,10 @@ class SignupForm(BaseModel):
     email: str
     password: str
     profile_image_url: Optional[str] = "/user.png"
+
+
+class AddUserForm(SignupForm):
+    role: Optional[str] = "pending"
 
 
 class AuthsTable:

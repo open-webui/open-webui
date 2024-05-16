@@ -1,12 +1,6 @@
 <script lang="ts">
-	import { v4 as uuidv4 } from 'uuid';
-
-	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
-
-	import { goto, invalidateAll } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { user, chats, settings, showSettings, chatId, tags } from '$lib/stores';
+	import { goto } from '$app/navigation';
+	import { user, chats, settings, showSettings, chatId, tags, showSidebar } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -29,6 +23,8 @@
 	import ArchiveBox from '../icons/ArchiveBox.svelte';
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 
+	const BREAKPOINT = 1024;
+
 	let show = false;
 	let navElement;
 
@@ -48,43 +44,72 @@
 	let showDropdown = false;
 	let isEditing = false;
 
-	onMount(async () => {
-		if (window.innerWidth > 1024) {
-			show = true;
+	let filteredChatList = [];
+
+	$: filteredChatList = $chats.filter((chat) => {
+		if (search === '') {
+			return true;
+		} else {
+			let title = chat.title.toLowerCase();
+			const query = search.toLowerCase();
+
+			let contentMatches = false;
+			// Access the messages within chat.chat.messages
+			if (chat.chat && chat.chat.messages && Array.isArray(chat.chat.messages)) {
+				contentMatches = chat.chat.messages.some((message) => {
+					// Check if message.content exists and includes the search query
+					return message.content && message.content.toLowerCase().includes(query);
+				});
+			}
+
+			return title.includes(query) || contentMatches;
 		}
+	});
+
+	onMount(async () => {
+		showSidebar.set(window.innerWidth > BREAKPOINT);
 		await chats.set(await getChatList(localStorage.token));
 
-		let touchstartX = 0;
-		let touchendX = 0;
+		let touchstart;
+		let touchend;
 
 		function checkDirection() {
 			const screenWidth = window.innerWidth;
-			const swipeDistance = Math.abs(touchendX - touchstartX);
-			if (swipeDistance >= screenWidth / 4) {
-				if (touchendX < touchstartX) {
-					show = false;
+			const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
+			if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 8) {
+				if (touchend.screenX < touchstart.screenX) {
+					showSidebar.set(false);
 				}
-				if (touchendX > touchstartX) {
-					show = true;
+				if (touchend.screenX > touchstart.screenX) {
+					showSidebar.set(true);
 				}
 			}
 		}
 
 		const onTouchStart = (e) => {
-			touchstartX = e.changedTouches[0].screenX;
+			touchstart = e.changedTouches[0];
+			console.log(touchstart.clientX);
 		};
 
 		const onTouchEnd = (e) => {
-			touchendX = e.changedTouches[0].screenX;
+			touchend = e.changedTouches[0];
 			checkDirection();
 		};
 
-		document.addEventListener('touchstart', onTouchStart);
-		document.addEventListener('touchend', onTouchEnd);
+		const onResize = () => {
+			if ($showSidebar && window.innerWidth < BREAKPOINT) {
+				showSidebar.set(false);
+			}
+		};
+
+		window.addEventListener('touchstart', onTouchStart);
+		window.addEventListener('touchend', onTouchEnd);
+		window.addEventListener('resize', onResize);
 
 		return () => {
-			document.removeEventListener('touchstart', onTouchStart);
-			document.removeEventListener('touchend', onTouchEnd);
+			window.removeEventListener('touchstart', onTouchStart);
+			window.removeEventListener('touchend', onTouchEnd);
+			window.removeEventListener('resize', onResize);
 		};
 	});
 
@@ -109,7 +134,7 @@
 
 	const editChatTitle = async (id, _title) => {
 		if (_title === '') {
-			toast.error('Title cannot be an empty string.');
+			toast.error($i18n.t('Title cannot be an empty string.'));
 		} else {
 			title = _title;
 
@@ -159,20 +184,22 @@
 
 <div
 	bind:this={navElement}
-	class="h-screen max-h-[100dvh] min-h-screen {show
+	id="sidebar"
+	class="h-screen max-h-[100dvh] min-h-screen {$showSidebar
 		? 'lg:relative w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0
+		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 rounded-r-2xl
         "
+	data-state={$showSidebar}
 >
 	<div
-		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] {show
+		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
 		<div class="px-2 flex justify-center space-x-2">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
+				class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				href="/"
 				on:click={async () => {
 					selectedChatId = null;
@@ -217,7 +244,7 @@
 		{#if $user?.role === 'admin'}
 			<div class="px-2 flex justify-center mt-0.5">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/modelfiles"
 					on:click={() => {
 						selectedChatId = null;
@@ -249,7 +276,7 @@
 
 			<div class="px-2 flex justify-center">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/prompts"
 					on:click={() => {
 						selectedChatId = null;
@@ -281,7 +308,7 @@
 
 			<div class="px-2 flex justify-center mb-1">
 				<a
-					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-200 dark:hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-xl px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/documents"
 					on:click={() => {
 						selectedChatId = null;
@@ -328,7 +355,7 @@
 
 						<div class="mt-3">
 							<button
-								class="flex justify-center items-center space-x-1.5 px-3 py-2.5 rounded-lg text-xs bg-gray-200 hover:bg-gray-300 transition text-gray-800 font-medium w-full"
+								class="flex justify-center items-center space-x-1.5 px-3 py-2.5 rounded-lg text-xs bg-gray-100 hover:bg-gray-200 transition text-gray-800 font-medium w-full"
 								type="button"
 								on:click={() => {
 									saveSettings({
@@ -392,7 +419,7 @@
 							await chats.set(await getChatList(localStorage.token));
 						}}
 					>
-						all
+						{$i18n.t('all')}
 					</button>
 					{#each $tags as tag}
 						<button
@@ -412,33 +439,43 @@
 				</div>
 			{/if}
 
-			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto">
-				{#each $chats.filter((chat) => {
-					if (search === '') {
-						return true;
-					} else {
-						let title = chat.title.toLowerCase();
-						const query = search.toLowerCase();
+			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-none">
+				{#each filteredChatList as chat, idx}
+					{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
+						<div
+							class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
+								? ''
+								: 'pt-5'} pb-0.5"
+						>
+							{$i18n.t(chat.time_range)}
+							<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
+							{$i18n.t('Today')}
+							{$i18n.t('Yesterday')}
+							{$i18n.t('Previous 7 days')}
+							{$i18n.t('Previous 30 days')}
+							{$i18n.t('January')}
+							{$i18n.t('February')}
+							{$i18n.t('March')}
+							{$i18n.t('April')}
+							{$i18n.t('May')}
+							{$i18n.t('June')}
+							{$i18n.t('July')}
+							{$i18n.t('August')}
+							{$i18n.t('September')}
+							{$i18n.t('October')}
+							{$i18n.t('November')}
+							{$i18n.t('December')}
+							-->
+						</div>
+					{/if}
 
-						let contentMatches = false;
-						// Access the messages within chat.chat.messages
-						if (chat.chat && chat.chat.messages && Array.isArray(chat.chat.messages)) {
-							contentMatches = chat.chat.messages.some((message) => {
-								// Check if message.content exists and includes the search query
-								return message.content && message.content.toLowerCase().includes(query);
-							});
-						}
-
-						return title.includes(query) || contentMatches;
-					}
-				}) as chat, i}
 					<div class=" w-full pr-2 relative group">
 						{#if chatTitleEditId === chat.id}
 							<div
 								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
 								chat.id === chatTitleEditId ||
 								chat.id === chatDeleteId
-									? 'bg-gray-300 dark:bg-gray-900'
+									? 'bg-gray-200 dark:bg-gray-900'
 									: chat.id === selectedChatId
 									? 'bg-gray-100 dark:bg-gray-950'
 									: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
@@ -450,7 +487,7 @@
 								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
 								chat.id === chatTitleEditId ||
 								chat.id === chatDeleteId
-									? 'bg-gray-300 dark:bg-gray-900'
+									? 'bg-gray-200 dark:bg-gray-900'
 									: chat.id === selectedChatId
 									? 'bg-gray-100 dark:bg-gray-950'
 									: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
@@ -458,7 +495,7 @@
 								on:click={() => {
 									selectedChatId = chat.id;
 									if (window.innerWidth < 1024) {
-										show = false;
+										showSidebar.set(false);
 									}
 								}}
 								draggable="false"
@@ -473,14 +510,14 @@
 
 						<div
 							class="
-							
+
 							{chat.id === $chatId || chat.id === chatTitleEditId || chat.id === chatDeleteId
-								? 'from-gray-300 dark:from-gray-900'
+								? 'from-gray-200 dark:from-gray-900'
 								: chat.id === selectedChatId
 								? 'from-gray-100 dark:from-gray-950'
 								: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
 								absolute right-[10px] top-[10px] pr-2 pl-5 bg-gradient-to-l from-80%
-								
+
 								  to-transparent"
 						>
 							{#if chatTitleEditId === chat.id}
@@ -603,7 +640,7 @@
 										</button>
 									</ChatMenu>
 
-									<Tooltip content="Archive">
+									<Tooltip content={$i18n.t('Archive')}>
 										<button
 											aria-label="Archive"
 											class=" self-center dark:hover:text-white transition"
@@ -614,6 +651,27 @@
 											<ArchiveBox />
 										</button>
 									</Tooltip>
+
+									{#if chat.id === $chatId}
+										<button
+											id="delete-chat-button"
+											class="hidden"
+											on:click={() => {
+												chatDeleteId = chat.id;
+											}}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+												/>
+											</svg>
+										</button>
+									{/if}
 								</div>
 							{/if}
 						</div>
@@ -628,7 +686,7 @@
 			<div class="flex flex-col">
 				{#if $user !== undefined}
 					<button
-						class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-900 transition"
+						class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						on:click={() => {
 							showDropdown = !showDropdown;
 						}}
@@ -795,14 +853,14 @@
 	>
 		<Tooltip
 			placement="right"
-			content={`${show ? $i18n.t('Close') : $i18n.t('Open')} ${$i18n.t('sidebar')}`}
+			content={`${$showSidebar ? $i18n.t('Close') : $i18n.t('Open')} ${$i18n.t('sidebar')}`}
 			touch={false}
 		>
 			<button
 				id="sidebar-toggle-button"
 				class=" group"
 				on:click={() => {
-					show = !show;
+					showSidebar.set(!$showSidebar);
 				}}
 				><span class="" data-state="closed"
 					><div
@@ -810,12 +868,12 @@
 					>
 						<div class="flex h-6 w-6 flex-col items-center">
 							<div
-								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {show
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[0.15rem] {$showSidebar
 									? 'group-hover:rotate-[15deg]'
 									: 'group-hover:rotate-[-15deg]'}"
 							/>
 							<div
-								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {show
+								class="h-3 w-1 rounded-full bg-[#0f0f0f] dark:bg-white rotate-0 translate-y-[-0.15rem] {$showSidebar
 									? 'group-hover:rotate-[-15deg]'
 									: 'group-hover:rotate-[15deg]'}"
 							/>
@@ -826,3 +884,14 @@
 		</Tooltip>
 	</div>
 </div>
+
+<style>
+	.scrollbar-none:active::-webkit-scrollbar-thumb,
+	.scrollbar-none:focus::-webkit-scrollbar-thumb,
+	.scrollbar-none:hover::-webkit-scrollbar-thumb {
+		visibility: visible;
+	}
+	.scrollbar-none::-webkit-scrollbar-thumb {
+		visibility: hidden;
+	}
+</style>

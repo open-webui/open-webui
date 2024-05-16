@@ -345,7 +345,7 @@
 										// await chats.set(await getChatListByTagName(localStorage.token, tag.name));
 									}}
 								>
-									<div class=" text-xs font-medium self-center line-clamp-1">{$i18n.t('add tags')}</div>
+									<div class=" text-xs font-medium self-center line-clamp-1">add tags</div>
 								</button> -->
 
 								<button
