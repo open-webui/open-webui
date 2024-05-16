@@ -27,8 +27,8 @@ RUN npm run build
 FROM python:3.11-slim-bookworm as base
 
 # Use args
-ARG USE_CUDA
 ARG USE_OLLAMA
+ARG USE_CUDA
 ARG USE_CUDA_VER
 ARG USE_EMBEDDING_MODEL
 ARG USE_RERANKING_MODEL
@@ -51,7 +51,7 @@ ENV OLLAMA_BASE_URL="/ollama" \
 ENV OPENAI_API_KEY="" \
     WEBUI_SECRET_KEY="" \
     SCARF_NO_ANALYTICS=true \
-    DO_NOT_TRACK=true \
+    DO_NOT_TRACK=true \ 
     ANONYMIZED_TELEMETRY=false
 
 # Use locally bundled version of the LiteLLM cost map json
@@ -75,9 +75,8 @@ ENV HF_HOME="/app/backend/data/cache/embedding/models"
 
 WORKDIR /app/backend
 
-ENV HOME /root
-RUN mkdir -p $HOME/.cache/chroma
-RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry_user_id
+# create non-root user
+RUN useradd -d /app openwebui
 
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
         apt-get update && \
@@ -103,27 +102,6 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
 
 # install python dependencies
 COPY ./backend/requirements.txt ./requirements.txt
-
-RUN pip3 install uv && \
-    if [ "$USE_CUDA" = "true" ]; then \
-        # If you use CUDA the whisper and embedding model will be downloaded on first use
-        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-        uv pip install --system -r requirements.txt --no-cache-dir && \
-        python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
-    else \
-        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-        uv pip install --system -r requirements.txt --no-cache-dir && \
-        python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
-    fi
-
-
-
-# copy embedding weight from build
-# RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2
-# COPY --from=build /app/onnx /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx
-
 # copy built frontend files
 COPY --from=build /app/build /app/build
 COPY --from=build /app/CHANGELOG.md /app/CHANGELOG.md
@@ -131,6 +109,31 @@ COPY --from=build /app/package.json /app/package.json
 
 # copy backend files
 COPY ./backend .
+
+# chown application files to non-root user 
+RUN chown -R openwebui:openwebui /app
+USER openwebui
+
+# addjust path to locate uv 
+ENV PATH=$PATH:/app/.local/bin
+# install and use uv as non-root user
+RUN pip3 install uv && \
+    uv venv && \
+    . .venv/bin/activate 
+    
+RUN if [ "$USE_CUDA" = "true" ]; then \
+        # If you use CUDA the whisper and embedding model will be downloaded on first use
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
+        pip install -r requirements.txt --no-cache-dir && \
+        python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
+        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
+    else \
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
+        pip install -r requirements.txt --no-cache-dir && \
+        python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
+        python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
+    fi
+
 
 EXPOSE 8080
 
