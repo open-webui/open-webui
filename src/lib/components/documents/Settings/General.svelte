@@ -196,7 +196,7 @@
 
 			<div class="  flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Scan for documents from {{path}}', { path: '/data/docs' })}
+					{$i18n.t('Scan for documents from {{path}}', { path: 'DOCS_DIR (/data/docs)' })}
 				</div>
 
 				<button
