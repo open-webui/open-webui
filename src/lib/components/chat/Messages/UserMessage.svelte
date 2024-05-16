@@ -235,7 +235,7 @@
 					<div
 						class=" flex {$settings?.chatBubble ?? true
 							? 'justify-end'
-							: ''} space-x-1 text-gray-700 dark:text-gray-500"
+							: ''}  text-gray-600 dark:text-gray-500"
 					>
 						{#if !($settings?.chatBubble ?? true)}
 							{#if siblings.length > 1}
@@ -293,7 +293,7 @@
 						{#if !readOnly}
 							<Tooltip content={$i18n.t('Edit')} placement="bottom">
 								<button
-									class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition edit-user-message-button"
+									class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
 									on:click={() => {
 										editMessageHandler();
 									}}
@@ -302,7 +302,7 @@
 										xmlns="http://www.w3.org/2000/svg"
 										fill="none"
 										viewBox="0 0 24 24"
-										stroke-width="2"
+										stroke-width="2.3"
 										stroke="currentColor"
 										class="w-4 h-4"
 									>
@@ -318,7 +318,7 @@
 
 						<Tooltip content={$i18n.t('Copy')} placement="bottom">
 							<button
-								class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
+								class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 								on:click={() => {
 									copyToClipboard(message.content);
 								}}
@@ -327,7 +327,7 @@
 									xmlns="http://www.w3.org/2000/svg"
 									fill="none"
 									viewBox="0 0 24 24"
-									stroke-width="2"
+									stroke-width="2.3"
 									stroke="currentColor"
 									class="w-4 h-4"
 								>
