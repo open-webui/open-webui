@@ -22,6 +22,7 @@
 	// Interface
 	let promptSuggestions = [];
 	let showUsername = false;
+	let chatDirection: 'LTR' | 'RTL' = 'LTR';
 
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
@@ -70,6 +71,11 @@
 		}
 	};
 
+	const toggleChangeChatDirection = async () => {
+		chatDirection = chatDirection === 'LTR' ? 'RTL' : 'LTR';
+		saveSettings({chatDirection});
+	};
+
 	const updateInterfaceHandler = async () => {
 		if ($user.role === 'admin') {
 			promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
@@ -107,6 +113,7 @@
 		showUsername = settings.showUsername ?? false;
 		fullScreenMode = settings.fullScreenMode ?? false;
 		splitLargeChunks = settings.splitLargeChunks ?? false;
+		chatDirection = settings.chatDirection ?? 'LTR';
 	});
 </script>
 
@@ -225,6 +232,24 @@
 						{/if}
 					</button>
 				</div>
+			</div>
+		</div>
+
+		<div>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Chat direction')}</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={toggleChangeChatDirection}
+					type="button"
+				>
+					{#if chatDirection === 'LTR'} 
+						<span class="ml-2 self-center">{$i18n.t('LTR')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
+					{/if}
+				</button>
 			</div>
 		</div>
 
