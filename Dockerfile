@@ -94,7 +94,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     else \
     apt-get update && \
     # Install pandoc and netcat
-    apt-get install -y --no-install-recommends pandoc netcat-openbsd curl && \
+    apt-get install -y --no-install-recommends pandoc netcat-openbsd curl jq && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     # cleanup
