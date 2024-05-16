@@ -557,166 +557,146 @@
 
 		scrollToBottom();
 
-		const [res, controller] = await generateOpenAIChatCompletion(
-			localStorage.token,
-			{
-				model: model.id,
-				stream: true,
-				messages: [
-					$settings.system
-						? {
-								role: 'system',
-								content: $settings.system
-						  }
-						: undefined,
-					...messages
-				]
-					.filter((message) => message)
-					.map((message, idx, arr) => ({
-						role: message.role,
-						...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-						message.role === 'user'
+		try {
+			const [res, controller] = await generateOpenAIChatCompletion(
+				localStorage.token,
+				{
+					model: model.id,
+					stream: true,
+					messages: [
+						$settings.system
 							? {
-									content: [
-										{
-											type: 'text',
-											text:
-												arr.length - 1 !== idx
-													? message.content
-													: message?.raContent ?? message.content
-										},
-										...message.files
-											.filter((file) => file.type === 'image')
-											.map((file) => ({
-												type: 'image_url',
-												image_url: {
-													url: file.url
-												}
-											}))
-									]
+									role: 'system',
+									content: $settings.system
 							  }
-							: {
-									content:
-										arr.length - 1 !== idx ? message.content : message?.raContent ?? message.content
-							  })
-					})),
-				seed: $settings?.options?.seed ?? undefined,
-				stop:
-					$settings?.options?.stop ?? undefined
-						? $settings?.options?.stop.map((str) =>
-								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-						  )
-						: undefined,
-				temperature: $settings?.options?.temperature ?? undefined,
-				top_p: $settings?.options?.top_p ?? undefined,
-				num_ctx: $settings?.options?.num_ctx ?? undefined,
-				frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
-				max_tokens: $settings?.options?.num_predict ?? undefined,
-				docs: docs.length > 0 ? docs : undefined,
-				citations: docs.length > 0
-			},
-			model?.source?.toLowerCase() === 'litellm'
-				? `${LITELLM_API_BASE_URL}/v1`
-				: `${OPENAI_API_BASE_URL}`
-		);
+							: undefined,
+						...messages
+					]
+						.filter((message) => message)
+						.map((message, idx, arr) => ({
+							role: message.role,
+							...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
+							message.role === 'user'
+								? {
+										content: [
+											{
+												type: 'text',
+												text:
+													arr.length - 1 !== idx
+														? message.content
+														: message?.raContent ?? message.content
+											},
+											...message.files
+												.filter((file) => file.type === 'image')
+												.map((file) => ({
+													type: 'image_url',
+													image_url: {
+														url: file.url
+													}
+												}))
+										]
+								  }
+								: {
+										content:
+											arr.length - 1 !== idx
+												? message.content
+												: message?.raContent ?? message.content
+								  })
+						})),
+					seed: $settings?.options?.seed ?? undefined,
+					stop:
+						$settings?.options?.stop ?? undefined
+							? $settings.options.stop.map((str) =>
+									decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+							  )
+							: undefined,
+					temperature: $settings?.options?.temperature ?? undefined,
+					top_p: $settings?.options?.top_p ?? undefined,
+					num_ctx: $settings?.options?.num_ctx ?? undefined,
+					frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
+					max_tokens: $settings?.options?.num_predict ?? undefined,
+					docs: docs.length > 0 ? docs : undefined,
+					citations: docs.length > 0
+				},
+				model?.source?.toLowerCase() === 'litellm'
+					? `${LITELLM_API_BASE_URL}/v1`
+					: `${OPENAI_API_BASE_URL}`
+			);
 
-		// Wait until history/message have been updated
-		await tick();
+			// Wait until history/message have been updated
+			await tick();
 
-		scrollToBottom();
+			scrollToBottom();
 
-		if (res && res.ok && res.body) {
-			const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
+			if (res && res.ok && res.body) {
+				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 
-			for await (const update of textStream) {
-				const { value, done, citations } = update;
-				if (done || stopResponseFlag || _chatId !== $chatId) {
-					responseMessage.done = true;
-					messages = messages;
+				for await (const update of textStream) {
+					const { value, done, citations, error } = update;
+					if (error) {
+						await handleOpenAIError(error, null, model, responseMessage);
+						break;
+					}
+					if (done || stopResponseFlag || _chatId !== $chatId) {
+						responseMessage.done = true;
+						messages = messages;
 
-					if (stopResponseFlag) {
-						controller.abort('User: Stop Response');
+						if (stopResponseFlag) {
+							controller.abort('User: Stop Response');
+						}
+
+						break;
 					}
 
-					break;
-				}
+					if (citations) {
+						responseMessage.citations = citations;
+						continue;
+					}
 
-				if (citations) {
-					responseMessage.citations = citations;
-					continue;
-				}
-
-				if (responseMessage.content == '' && value == '\n') {
-					continue;
-				} else {
-					responseMessage.content += value;
-					messages = messages;
-				}
-
-				if ($settings.notificationEnabled && !document.hasFocus()) {
-					const notification = new Notification(`OpenAI ${model}`, {
-						body: responseMessage.content,
-						icon: `${WEBUI_BASE_URL}/static/favicon.png`
-					});
-				}
-
-				if ($settings.responseAutoCopy) {
-					copyToClipboard(responseMessage.content);
-				}
-
-				if ($settings.responseAutoPlayback) {
-					await tick();
-					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
-				}
-
-				if (autoScroll) {
-					scrollToBottom();
-				}
-			}
-
-			if ($chatId == _chatId) {
-				if ($settings.saveChatHistory ?? true) {
-					chat = await updateChatById(localStorage.token, _chatId, {
-						messages: messages,
-						history: history
-					});
-					await chats.set(await getChatList(localStorage.token));
-				}
-			}
-		} else {
-			if (res !== null) {
-				const error = await res.json();
-				console.log(error);
-				if ('detail' in error) {
-					toast.error(error.detail);
-					responseMessage.content = error.detail;
-				} else {
-					if ('message' in error.error) {
-						toast.error(error.error.message);
-						responseMessage.content = error.error.message;
+					if (responseMessage.content == '' && value == '\n') {
+						continue;
 					} else {
-						toast.error(error.error);
-						responseMessage.content = error.error;
+						responseMessage.content += value;
+						messages = messages;
+					}
+
+					if ($settings.notificationEnabled && !document.hasFocus()) {
+						const notification = new Notification(`OpenAI ${model}`, {
+							body: responseMessage.content,
+							icon: `${WEBUI_BASE_URL}/static/favicon.png`
+						});
+					}
+
+					if ($settings.responseAutoCopy) {
+						copyToClipboard(responseMessage.content);
+					}
+
+					if ($settings.responseAutoPlayback) {
+						await tick();
+						document.getElementById(`speak-button-${responseMessage.id}`)?.click();
+					}
+
+					if (autoScroll) {
+						scrollToBottom();
+					}
+				}
+
+				if ($chatId == _chatId) {
+					if ($settings.saveChatHistory ?? true) {
+						chat = await updateChatById(localStorage.token, _chatId, {
+							messages: messages,
+							history: history
+						});
+						await chats.set(await getChatList(localStorage.token));
 					}
 				}
 			} else {
-				toast.error(
-					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-						provider: model.name ?? model.id
-					})
-				);
-				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-					provider: model.name ?? model.id
-				});
+				await handleOpenAIError(null, res, model, responseMessage);
 			}
-
-			responseMessage.error = true;
-			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-				provider: model.name ?? model.id
-			});
-			responseMessage.done = true;
-			messages = messages;
+		} catch (error) {
+			await handleOpenAIError(error, null, model, responseMessage);
 		}
+		messages = messages;
 
 		stopResponseFlag = false;
 		await tick();
@@ -731,6 +711,44 @@
 			const _title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, _title);
 		}
+	};
+
+	const handleOpenAIError = async (error, res: Response | null, model, responseMessage) => {
+		let errorMessage = '';
+		let innerError;
+
+		if (error) {
+			innerError = error;
+		} else if (res !== null) {
+			innerError = await res.json();
+		}
+		console.error(innerError);
+		if ('detail' in innerError) {
+			toast.error(innerError.detail);
+			errorMessage = innerError.detail;
+		} else if ('error' in innerError) {
+			if ('message' in innerError.error) {
+				toast.error(innerError.error.message);
+				errorMessage = innerError.error.message;
+			} else {
+				toast.error(innerError.error);
+				errorMessage = innerError.error;
+			}
+		} else if ('message' in innerError) {
+			toast.error(innerError.message);
+			errorMessage = innerError.message;
+		}
+
+		responseMessage.error = true;
+		responseMessage.content =
+			$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+				provider: model.name ?? model.id
+			}) +
+			'\n' +
+			errorMessage;
+		responseMessage.done = true;
+
+		messages = messages;
 	};
 
 	const stopResponse = () => {
@@ -865,7 +883,7 @@
 
 <div
 	class="min-h-screen max-h-screen {$showSidebar
-		? 'lg:max-w-[calc(100%-260px)]'
+		? 'md:max-w-[calc(100%-260px)]'
 		: ''} w-full max-w-full flex flex-col"
 >
 	<Navbar
