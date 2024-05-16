@@ -54,7 +54,7 @@
 	};
 </script>
 
-<div class=" flex w-full">
+<div class=" flex w-full" dir="{$settings.chatDirection}">
 	<ProfileImage
 		src={message.user
 			? $modelfiles.find((modelfile) => modelfile.tagName === message.user)?.imageUrl ?? '/user.png'

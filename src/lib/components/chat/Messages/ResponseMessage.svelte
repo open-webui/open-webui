@@ -332,7 +332,7 @@
 <CitationsModal bind:show={showCitationModal} citation={selectedCitation} />
 
 {#key message.id}
-	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
+	<div class=" flex w-full message-{message.id}" id="message-{message.id}" dir="{$settings.chatDirection}">
 		<ProfileImage
 			src={modelfiles[message.model]?.imageUrl ??
 				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
