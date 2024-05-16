@@ -123,7 +123,7 @@
 
 				<div class="flex mt-2 space-x-2">
 					<input
-						class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						type="text"
 						placeholder={`https://example.com/webhook`}
 						bind:value={webhookUrl}
@@ -140,7 +140,7 @@
 
 				<div class="flex mt-2 space-x-2">
 					<input
-						class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						type="text"
 						placeholder={`e.g.) "30m","1h", "10d". `}
 						bind:value={JWTExpiresIn}
