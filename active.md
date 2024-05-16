@@ -9,6 +9,8 @@ Our focused coding meetings are on Mondays and Wednesdays at [10 PM EDT](/io/cod
 
 [Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
+[restack.io](https://www.restack.io/docs/supabase-knowledge-supabase-rust-sdk-guide) - cool for Supabase with Rust and Streamlit
+
 <!--
 CSV Files to use for Timelines, Observable, and AI Training at: [industries/naics/US/counties](https://github.com/ModelEarth/community-data/tree/master/industries/naics/US/counties)  
 Pre-processed data for county industry levels, based on employment, establishments and payroll.-->
@@ -24,10 +26,6 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [State Regions using Sets of Counties](/community-data/us/edd/) - Dinesh
 - [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - <!--Honglin-->Rupesh
 - [CrewAI+Ollama integration](https://lightning.ai/lightning-ai/studios/ai-agents-powered-by-crewai) within our [Open WebUI fork](src)
-
-**Food Health and Impacts**
-- [3D Force Graph](https://github.com/vasturiano/3d-force-graph) for [Balanced Diets](/balance/) - Rakesh, Anshit
-- [Meal Nutrition Network Display](/data-commons/docs/food/)
 
 **Observable Framework + GDC Visualization Projects**
 
