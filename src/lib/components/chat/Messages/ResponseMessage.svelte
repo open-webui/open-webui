@@ -494,7 +494,7 @@
 									class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500"
 								>
 									{#if siblings.length > 1}
-										<div class="flex self-center">
+										<div class="flex self-center" dir="ltr">
 											<button
 												class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 												on:click={() => {
