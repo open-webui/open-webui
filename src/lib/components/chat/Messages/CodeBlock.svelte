@@ -21,6 +21,116 @@
 		}, 1000);
 	};
 
+	const checkPythonCode = (str) => {
+		// Check if the string contains typical Python keywords, syntax, or functions
+		const pythonKeywords = [
+			'def',
+			'class',
+			'import',
+			'from',
+			'if',
+			'else',
+			'elif',
+			'for',
+			'while',
+			'try',
+			'except',
+			'finally',
+			'return',
+			'yield',
+			'lambda',
+			'assert',
+			'pass',
+			'break',
+			'continue',
+			'global',
+			'nonlocal',
+			'del',
+			'True',
+			'False',
+			'None',
+			'and',
+			'or',
+			'not',
+			'in',
+			'is',
+			'as',
+			'with'
+		];
+
+		for (let keyword of pythonKeywords) {
+			if (str.includes(keyword)) {
+				return true;
+			}
+		}
+
+		// Check if the string contains typical Python syntax characters
+		const pythonSyntax = [
+			'def ',
+			'class ',
+			'import ',
+			'from ',
+			'if ',
+			'else:',
+			'elif ',
+			'for ',
+			'while ',
+			'try:',
+			'except:',
+			'finally:',
+			'return ',
+			'yield ',
+			'lambda ',
+			'assert ',
+			'pass',
+			'break',
+			'continue',
+			'global ',
+			'nonlocal ',
+			'del ',
+			'True',
+			'False',
+			'None',
+			' and ',
+			' or ',
+			' not ',
+			' in ',
+			' is ',
+			' as ',
+			' with ',
+			':',
+			'=',
+			'==',
+			'!=',
+			'>',
+			'<',
+			'>=',
+			'<=',
+			'+',
+			'-',
+			'*',
+			'/',
+			'%',
+			'**',
+			'//',
+			'(',
+			')',
+			'[',
+			']',
+			'{',
+			'}'
+		];
+
+		for (let syntax of pythonSyntax) {
+			if (str.includes(syntax)) {
+				return true;
+			}
+		}
+
+		// If none of the above conditions met, it's probably not Python code
+		return false;
+	};
+
 	const executePython = async (text) => {
 		executed = true;
 
@@ -31,9 +141,15 @@
 			outputDiv.innerText = 'Running...';
 		}
 
+		text = text
+			.split('\n')
+			.map((line, index) => (index === 0 ? line : '    ' + line))
+			.join('\n');
+
 		// pyscript
 		let div = document.createElement('div');
-		let html = `<py-script type="py" worker>
+		let html = `
+<py-script type="py" worker>
 import js
 import sys
 import io
@@ -48,7 +164,7 @@ original_stdout = sys.stdout
 sys.stdout = output_capture
 
 try:
-	${text}
+    ${text}
 except Exception as e:
     # Capture any errors and write them to the output capture
     print(f"Error: {e}", file=output_capture)
@@ -68,7 +184,7 @@ def display_message():
     output_div.innerText = captured_output
 
 display_message()
-			</py-script>`;
+</py-script>`;
 
 		div.innerHTML = html;
 		const pyScript = div.firstElementChild;
@@ -94,7 +210,7 @@ display_message()
 			<div class="p-1">{@html lang}</div>
 
 			<div class="flex items-center">
-				{#if lang === 'python'}
+				{#if lang === 'python' || checkPythonCode(code)}
 					<button
 						class="copy-code-button bg-none border-none p-1"
 						on:click={() => {
