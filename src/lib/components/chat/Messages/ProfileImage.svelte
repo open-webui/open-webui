@@ -1,11 +1,16 @@
 <script lang="ts">
+	import { WEBUI_BASE_URL } from '$lib/constants';
 	export let src = '/user.png';
 </script>
 
 <div class=" mr-3">
 	<img
 		crossorigin="anonymous"
-		{src}
+		src={src.startsWith(WEBUI_BASE_URL) ||
+		src.startsWith('https://www.gravatar.com/avatar/') ||
+		src.startsWith('data:')
+			? src
+			: `/user.png`}
 		class=" w-8 object-cover rounded-full"
 		alt="profile"
 		draggable="false"
