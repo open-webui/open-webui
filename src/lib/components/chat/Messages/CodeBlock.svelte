@@ -165,11 +165,16 @@
 			}
 		});
 
-		result = pyodide.runPython(code);
+		try {
+			result = pyodide.runPython(code);
 
-		console.log(result);
-		console.log(stdout);
-		console.log(stderr);
+			console.log(result);
+			console.log(stdout);
+			console.log(stderr);
+		} catch (error) {
+			console.error('Error:', error);
+			stderr = error;
+		}
 	};
 
 	$: highlightedCode = code ? hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value : '';
