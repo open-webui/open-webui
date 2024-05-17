@@ -122,6 +122,11 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 
 ### Installation with Default Configuration
 
+- **If Ollama is on your computer and you intend this for causal personal use**, use this command:
+  ```
+  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -e WEBUI_AUTH=False -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+  ```
+
 - **If Ollama is on your computer**, use this command:
 
   ```bash
