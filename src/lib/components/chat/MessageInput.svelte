@@ -506,6 +506,7 @@
 						>
 							<div class="flex items-center gap-2 text-sm dark:text-gray-500">
 								<img
+									crossorigin="anonymous"
 									alt="model profile"
 									class="size-5 max-w-[28px] object-cover rounded-full"
 									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedModel.id)

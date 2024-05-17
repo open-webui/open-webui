@@ -437,6 +437,7 @@
 								{#each tokens as token}
 									{#if token.type === 'code'}
 										<CodeBlock
+											id={message.id}
 											lang={token.lang}
 											code={revertSanitizedResponseContent(token.text)}
 										/>

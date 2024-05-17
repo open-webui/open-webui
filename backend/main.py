@@ -117,6 +117,18 @@ app.state.config.WEBHOOK_URL = WEBHOOK_URL
 origins = ["*"]
 
 
+# Custom middleware to add security headers
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+
 class RAGMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         return_citations = False

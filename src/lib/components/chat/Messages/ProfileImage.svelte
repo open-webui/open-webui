@@ -3,5 +3,11 @@
 </script>
 
 <div class=" mr-3">
-	<img {src} class=" w-8 object-cover rounded-full" alt="profile" draggable="false" />
+	<img
+		crossorigin="anonymous"
+		{src}
+		class=" w-8 object-cover rounded-full"
+		alt="profile"
+		draggable="false"
+	/>
 </div>
