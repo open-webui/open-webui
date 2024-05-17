@@ -82,7 +82,7 @@
 						<button
 							class="hidden md:flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 							id="chat-context-menu-button"
-            >
+						>
 							<div class=" m-auto self-center">
 								<svg
 									xmlns="http://www.w3.org/2000/svg"

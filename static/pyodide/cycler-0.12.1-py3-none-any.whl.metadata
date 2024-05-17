@@ -1,0 +1,78 @@
+Metadata-Version: 2.1
+Name: cycler
+Version: 0.12.1
+Summary: Composable style cycles
+Author-email: Thomas A Caswell <matplotlib-users@python.org>
+License: Copyright (c) 2015, matplotlib project
+        All rights reserved.
+        
+        Redistribution and use in source and binary forms, with or without
+        modification, are permitted provided that the following conditions are met:
+        
+        * Redistributions of source code must retain the above copyright notice, this
+          list of conditions and the following disclaimer.
+        
+        * Redistributions in binary form must reproduce the above copyright notice,
+          this list of conditions and the following disclaimer in the documentation
+          and/or other materials provided with the distribution.
+        
+        * Neither the name of the matplotlib project nor the names of its
+          contributors may be used to endorse or promote products derived from
+          this software without specific prior written permission.
+        
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+        AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+        IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+        DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+        FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+        DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+        SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+        CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+        OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+        OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Project-URL: homepage, https://matplotlib.org/cycler/
+Project-URL: repository, https://github.com/matplotlib/cycler
+Keywords: cycle kwargs
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Development Status :: 4 - Beta
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3 :: Only
+Requires-Python: >=3.8
+Description-Content-Type: text/x-rst
+License-File: LICENSE
+Provides-Extra: docs
+Requires-Dist: ipython ; extra == 'docs'
+Requires-Dist: matplotlib ; extra == 'docs'
+Requires-Dist: numpydoc ; extra == 'docs'
+Requires-Dist: sphinx ; extra == 'docs'
+Provides-Extra: tests
+Requires-Dist: pytest ; extra == 'tests'
+Requires-Dist: pytest-cov ; extra == 'tests'
+Requires-Dist: pytest-xdist ; extra == 'tests'
+
+|PyPi|_ |Conda|_ |Supported Python versions|_ |GitHub Actions|_ |Codecov|_
+
+.. |PyPi| image:: https://img.shields.io/pypi/v/cycler.svg?style=flat
+.. _PyPi: https://pypi.python.org/pypi/cycler
+
+.. |Conda| image:: https://img.shields.io/conda/v/conda-forge/cycler
+.. _Conda:  https://anaconda.org/conda-forge/cycler
+
+.. |Supported Python versions| image:: https://img.shields.io/pypi/pyversions/cycler.svg
+.. _Supported Python versions: https://pypi.python.org/pypi/cycler
+
+.. |GitHub Actions| image:: https://github.com/matplotlib/cycler/actions/workflows/tests.yml/badge.svg
+.. _GitHub Actions: https://github.com/matplotlib/cycler/actions
+
+.. |Codecov| image:: https://codecov.io/github/matplotlib/cycler/badge.svg?branch=main&service=github
+.. _Codecov: https://codecov.io/github/matplotlib/cycler?branch=main
+
+cycler: composable cycles
+=========================
+
+Docs: https://matplotlib.org/cycler/
