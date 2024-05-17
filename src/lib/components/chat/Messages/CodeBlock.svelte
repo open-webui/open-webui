@@ -169,6 +169,8 @@
 			const res = await pyodide.loadPackage('micropip');
 			console.log(res);
 
+			pyodide.setStdin({ stdin: () => prompt() });
+
 			const micropip = pyodide.pyimport('micropip');
 
 			await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
