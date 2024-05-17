@@ -139,73 +139,124 @@
 	};
 
 	const executePython = async (code) => {
+		if (!code.includes('input')) {
+			executePythonAsWorker(code);
+		} else {
+			result = null;
+			stdout = null;
+			stderr = null;
+
+			executing = true;
+
+			let pyodide = await loadPyodide({
+				indexURL: '/pyodide/',
+				stdout: (text) => {
+					console.log('Python output:', text);
+
+					if (stdout) {
+						stdout += `${text}\n`;
+					} else {
+						stdout = `${text}\n`;
+					}
+				},
+				stderr: (text) => {
+					console.log('An error occured:', text);
+					if (stderr) {
+						stderr += `${text}\n`;
+					} else {
+						stderr = `${text}\n`;
+					}
+				}
+			});
+
+			try {
+				const res = await pyodide.loadPackage('micropip');
+				console.log(res);
+
+				const micropip = pyodide.pyimport('micropip');
+
+				await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
+
+				let packages = [
+					code.includes('requests') ? 'requests' : null,
+					code.includes('bs4') ? 'beautifulsoup4' : null,
+					code.includes('numpy') ? 'numpy' : null,
+					code.includes('pandas') ? 'pandas' : null
+				].filter(Boolean);
+
+				console.log(packages);
+				await micropip.install(packages);
+
+				result = await pyodide.runPythonAsync(`from js import prompt
+def input(p):
+    return prompt(p)
+__builtins__.input = input`);
+
+				result = await pyodide.runPython(code);
+
+				if (!result) {
+					result = '[NO OUTPUT]';
+				}
+
+				console.log(result);
+				console.log(stdout);
+				console.log(stderr);
+			} catch (error) {
+				console.error('Error:', error);
+				stderr = error;
+			}
+
+			executing = false;
+		}
+	};
+
+	const executePythonAsWorker = async (code) => {
 		result = null;
 		stdout = null;
 		stderr = null;
 
 		executing = true;
 
-		let pyodide = await loadPyodide({
-			indexURL: '/pyodide/',
-			stdout: (text) => {
-				console.log('Python output:', text);
+		let packages = [
+			code.includes('requests') ? 'requests' : null,
+			code.includes('bs4') ? 'beautifulsoup4' : null,
+			code.includes('numpy') ? 'numpy' : null,
+			code.includes('pandas') ? 'pandas' : null
+		].filter(Boolean);
 
-				if (stdout) {
-					stdout += `${text}\n`;
-				} else {
-					stdout = `${text}\n`;
-				}
-			},
-			stderr: (text) => {
-				console.log('An error occured:', text);
-				if (stderr) {
-					stderr += `${text}\n`;
-				} else {
-					stderr = `${text}\n`;
-				}
-			}
+		const pyodideWorker = new Worker('/pyodide-worker.js');
+
+		pyodideWorker.postMessage({
+			id: id,
+			code: code,
+			packages: packages
 		});
 
-		try {
-			const res = await pyodide.loadPackage('micropip');
-			console.log(res);
-
-			// pyodide.setStdin({ stdin: () => prompt() });
-
-			const micropip = pyodide.pyimport('micropip');
-
-			await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
-
-			let packages = [
-				code.includes('requests') ? 'requests' : null,
-				code.includes('bs4') ? 'beautifulsoup4' : null,
-				code.includes('numpy') ? 'numpy' : null,
-				code.includes('pandas') ? 'pandas' : null
-			].filter(Boolean);
-
-			console.log(packages);
-			await micropip.install(packages);
-
-			result = pyodide.runPython(`from js import prompt
-def input(p):
-    return prompt(p)
-__builtins__.input = input`);
-
-			result = pyodide.runPython(code);
-
-			if (!result) {
-				result = '[NO OUTPUT]';
+		setTimeout(() => {
+			if (executing) {
+				executing = false;
+				stderr = 'Execution Time Limit Exceeded';
+				pyodideWorker.terminate();
 			}
+		}, 10000);
 
-			console.log(result);
-			console.log(stdout);
-			console.log(stderr);
-		} catch (error) {
-			console.error('Error:', error);
-			stderr = error;
-		}
+		pyodideWorker.onmessage = (event) => {
+			console.log('pyodideWorker.onmessage', event);
+			const { id, ...data } = event.data;
 
-		executing = false;
+			console.log(id, data);
+
+			data['stdout'] && (stdout = data['stdout']);
+			data['stderr'] && (stderr = data['stderr']);
+			data['result'] && (result = data['result']);
+
+			executing = false;
+		};
+
+		pyodideWorker.onerror = (event) => {
+			console.log('pyodideWorker.onerror', event);
+			executing = false;
+		};
 	};
 
 	$: highlightedCode = code ? hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value : '';
