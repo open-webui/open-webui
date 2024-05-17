@@ -166,6 +166,23 @@
 		});
 
 		try {
+			const res = await pyodide.loadPackage('micropip');
+			console.log(res);
+
+			const micropip = pyodide.pyimport('micropip');
+
+			await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
+
+			let packages = [
+				code.includes('requests') ? 'requests' : null,
+				code.includes('bs4') ? 'beautifulsoup4' : null,
+				code.includes('numpy') ? 'numpy' : null,
+				code.includes('pandas') ? 'pandas' : null
+			].filter(Boolean);
+
+			console.log(packages);
+			await micropip.install(packages);
+
 			result = pyodide.runPython(code);
 
 			console.log(result);

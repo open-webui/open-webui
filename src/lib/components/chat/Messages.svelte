@@ -23,7 +23,7 @@
 	export let regenerateResponse: Function;
 
 	export let prompt;
-	export let suggestionPrompts;
+	export let suggestionPrompts = [];
 	export let processing = '';
 	export let bottomPadding = false;
 	export let autoScroll;

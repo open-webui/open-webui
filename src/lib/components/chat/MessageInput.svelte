@@ -327,7 +327,6 @@
 	};
 
 	onMount(() => {
-		console.log(document.getElementById('sidebar'));
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
