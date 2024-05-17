@@ -47,7 +47,11 @@ original_stdout = sys.stdout
 # Replace the standard output with the StringIO object
 sys.stdout = output_capture
 
-${text}
+try:
+	${text}
+except Exception as e:
+    # Capture any errors and write them to the output capture
+    print(f"Error: {e}", file=output_capture)
 
 # Restore the original standard output
 sys.stdout = original_stdout
