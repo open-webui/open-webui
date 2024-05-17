@@ -47,6 +47,8 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@micropython/micropython-webassembly-pyscript": "^1.22.0-369",
+		"@pyscript/core": "^0.4.32",
 		"@sveltejs/adapter-node": "^1.3.1",
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
@@ -61,6 +63,7 @@
 		"js-sha256": "^0.10.1",
 		"katex": "^0.16.9",
 		"marked": "^9.1.0",
+		"pyodide": "^0.25.1",
 		"svelte-sonner": "^0.3.19",
 		"tippy.js": "^6.3.7",
 		"uuid": "^9.0.1"
