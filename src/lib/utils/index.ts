@@ -10,10 +10,10 @@ export const getModels = async (token: string) => {
 			console.log(error);
 			return null;
 		}),
-		// getOpenAIModels(token).catch((error) => {
-		// 	console.log(error);
-		// 	return null;
-		// }),
+		getOpenAIModels(token).catch((error) => {
+			console.log(error);
+			return null;
+		}),
 		getLiteLLMModels(token).catch((error) => {
 			console.log(error);
 			return null;
