@@ -208,7 +208,7 @@ __builtins__.input = input`);
 				const pltCanvasElement = document.getElementById(`plt-canvas-${id}`);
 
 				if (pltCanvasElement?.innerHTML !== '') {
-					pltCanvasElement.classList.add('px-4', 'pt-4');
+					pltCanvasElement.classList.add('pt-4');
 				}
 			} catch (error) {
 				console.error('Error:', error);
