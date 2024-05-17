@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { copyToClipboard } from '$lib/utils';
 	import hljs from 'highlight.js';
 	import 'highlight.js/styles/github-dark.min.css';
@@ -10,7 +11,7 @@
 	export let lang = '';
 	export let code = '';
 
-	let executed = false;
+	let executing = false;
 
 	let stdout = null;
 	let stderr = null;
@@ -142,7 +143,7 @@
 		stdout = null;
 		stderr = null;
 
-		executed = true;
+		executing = true;
 
 		let pyodide = await loadPyodide({
 			indexURL: '/pyodide/',
@@ -194,6 +195,8 @@
 			console.error('Error:', error);
 			stderr = error;
 		}
+
+		executing = false;
 	};
 
 	$: highlightedCode = code ? hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value : '';
@@ -208,12 +211,16 @@
 
 			<div class="flex items-center">
 				{#if lang === 'python' || checkPythonCode(code)}
-					<button
-						class="copy-code-button bg-none border-none p-1"
-						on:click={() => {
-							executePython(code);
-						}}>Run</button
-					>
+					{#if executing}
+						<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
+					{:else}
+						<button
+							class="copy-code-button bg-none border-none p-1"
+							on:click={() => {
+								executePython(code);
+							}}>Run</button
+						>
+					{/if}
 				{/if}
 				<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
 					>{copied ? 'Copied' : 'Copy Code'}</button
@@ -223,25 +230,28 @@
 
 		<pre
 			class=" hljs p-4 px-5 overflow-x-auto"
-			style="border-top-left-radius: 0px; border-top-right-radius: 0px; {executed &&
+			style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
+				stdout ||
+				stderr ||
+				result) &&
 				'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 				class="language-{lang} rounded-t-none whitespace-pre">{@html highlightedCode || code}</code
 			></pre>
 
-		{#if executed}
+		{#if executing}
 			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-				<div class="text-sm">
-					{#if stdout}
-						{stdout}
-					{:else if result}
-						{result}
-					{:else if stderr}
-						{stderr}
-					{:else}
-						Running...
-					{/if}
-				</div>
+				<div class="text-sm">Running...</div>
+			</div>
+		{:else if stdout || stderr}
+			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+				<div class="text-sm">{stdout || stderr}</div>
+
+				{#if result}
+					<div class=" text-gray-300 text-xs mt-2 mb-1">Result</div>
+					<div class="text-sm">{result}</div>
+				{/if}
 			</div>
 		{/if}
 	</div>
