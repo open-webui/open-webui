@@ -434,10 +434,10 @@
 							{:else if message.content === ''}
 								<Skeleton />
 							{:else}
-								{#each tokens as token}
+								{#each tokens as token, tokenIdx}
 									{#if token.type === 'code'}
 										<CodeBlock
-											id={message.id}
+											id={`${message.id}-${tokenIdx}`}
 											lang={token.lang}
 											code={revertSanitizedResponseContent(token.text)}
 										/>

@@ -148,7 +148,7 @@
 
 			executing = true;
 
-			document.pyodideMplTarget = document.getElementById('plt-canvas');
+			document.pyodideMplTarget = document.getElementById(`plt-canvas-${id}`);
 
 			let pyodide = await loadPyodide({
 				indexURL: '/pyodide/',
@@ -314,6 +314,6 @@ __builtins__.input = input`);
 			</div>
 		{/if}
 
-		<div id="plt-canvas" />
+		<div id="plt-canvas-{id}" />
 	</div>
 {/if}
