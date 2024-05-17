@@ -653,10 +653,36 @@ declare class PyCallableMethods {
 	 */
 	call(thisArg: any, ...jsargs: any): any;
 	/**
-	 * Call the function with key word arguments. The last argument must be an
+	 * Call the function with keyword arguments. The last argument must be an
 	 * object with the keyword arguments.
 	 */
 	callKwargs(...jsargs: any): any;
+	/**
+	 * Call the function in a "relaxed" manner. Any extra arguments will be
+	 * ignored. This matches the behavior of JavaScript functions more accurately.
+	 *
+	 * Any extra arguments will be ignored. This matches the behavior of
+	 * JavaScript functions more accurately. Missing arguments are **NOT** filled
+	 * with `None`. If too few arguments are passed, this will still raise a
+	 * TypeError.
+	 *
+	 * This uses :py:func:`pyodide.code.relaxed_call`.
+	 */
+	callRelaxed(...jsargs: any): any;
+	/**
+	 * Call the function with keyword arguments in a "relaxed" manner. The last
+	 * argument must be an object with the keyword arguments. Any extra arguments
+	 * will be ignored. This matches the behavior of JavaScript functions more
+	 * accurately.
+	 *
+	 * Missing arguments are **NOT** filled with `None`. If too few arguments are
+	 * passed, this will still raise a TypeError. Also, if the same argument is
+	 * passed as both a keyword argument and a positional argument, it will raise
+	 * an error.
+	 *
+	 * This uses :py:func:`pyodide.code.relaxed_call`.
+	 */
+	callKwargsRelaxed(...jsargs: any): any;
 	/**
 	 * Call the function with stack switching enabled. Functions called this way
 	 * can use
@@ -911,7 +937,7 @@ interface CanvasInterface {
 declare class PythonError extends Error {
 	/**
 	 * The address of the error we are wrapping. We may later compare this
-	 * against sys.last_value.
+	 * against sys.last_exc.
 	 * WARNING: we don't own a reference to this pointer, dereferencing it
 	 * may be a use-after-free error!
 	 * @private
@@ -1129,36 +1155,6 @@ declare class PyodideAPI {
 		filename?: string;
 	}): Promise<any>;
 	/**
-	 * Runs a Python code string like :js:func:`pyodide.runPython` but with stack
-	 * switching enabled. Code executed in this way can use
-	 * :py:meth:`PyodideFuture.syncify() <pyodide.webloop.PyodideFuture.syncify>`
-	 * to block until a :py:class:`~asyncio.Future` or :js:class:`Promise` is
-	 * resolved. Only works in runtimes with JS Promise Integration enabled.
-	 *
-	 * .. admonition:: Experimental
-	 *    :class: warning
-	 *
-	 *    This feature is not yet stable.
-	 *
-	 * @experimental
-	 * @param code The Python code to run
-	 * @param options
-	 * @param options.globals An optional Python dictionary to use as the globals.
-	 * Defaults to :js:attr:`pyodide.globals`.
-	 * @param options.locals An optional Python dictionary to use as the locals.
-	 *        Defaults to the same as ``globals``.
-	 * @param options.filename An optional string to use as the file name.
-	 *        Defaults to ``"<exec>"``. If a custom file name is given, the
-	 *        traceback for any exception that is thrown will show source lines
-	 *        (unless the given file name starts with ``<`` and ends with ``>``).
-	 * @returns The result of the Python code translated to JavaScript.
-	 */
-	static runPythonSyncifying(code: string, options?: {
-		globals?: PyProxy;
-		locals?: PyProxy;
-		filename?: string;
-	}): Promise<any>;
-	/**
 	 * Registers the JavaScript object ``module`` as a JavaScript module named
 	 * ``name``. This module can then be imported from Python using the standard
 	 * Python import system. If another module by the same name has already been
@@ -1232,30 +1228,25 @@ declare class PyodideAPI {
 	/**
 	 * Imports a module and returns it.
 	 *
-	 * .. admonition:: Warning
-	 *    :class: warning
-	 *
-	 *    This function has a completely different behavior than the old removed pyimport function!
-	 *
-	 *    ``pyimport`` is roughly equivalent to:
-	 *
-	 *    .. code-block:: js
-	 *
-	 *      pyodide.runPython(`import ${pkgname}; ${pkgname}`);
-	 *
-	 *    except that the global namespace will not change.
-	 *
-	 *    Example:
-	 *
-	 *    .. code-block:: js
-	 *
-	 *      let sysmodule = pyodide.pyimport("sys");
-	 *      let recursionLimit = sysmodule.getrecursionlimit();
+	 * If `name` has no dot in it, then `pyimport(name)` is approximately
+	 * equivalent to:
+	 * ```js
+	 * pyodide.runPython(`import ${name}; ${name}`)
+	 * ```
+	 * except that `name` is not introduced into the Python global namespace. If
+	 * the name has one or more dots in it, say it is of the form `path.name`
+	 * where `name` has no dots but path may have zero or more dots. Then it is
+	 * approximately the same as:
+	 * ```js
+	 * pyodide.runPython(`from ${path} import ${name}; ${name}`);
+	 * ```
 	 *
 	 * @param mod_name The name of the module to import
-	 * @returns A PyProxy for the imported module
+	 *
+	 * @example
+	 * pyodide.pyimport("math.comb")(4, 2) // returns 4 choose 2 = 6
 	 */
-	static pyimport(mod_name: string): PyProxy;
+	static pyimport(mod_name: string): any;
 	/**
 	 * Unpack an archive into a target directory.
 	 *
@@ -1277,14 +1268,26 @@ declare class PyodideAPI {
 	}): void;
 	/**
 	 * Mounts a :js:class:`FileSystemDirectoryHandle` into the target directory.
+	 * Currently it's only possible to acquire a
+	 * :js:class:`FileSystemDirectoryHandle` in Chrome.
 	 *
 	 * @param path The absolute path in the Emscripten file system to mount the
-	 * native directory. If the directory does not exist, it will be created. If it
-	 * does exist, it must be empty.
-	 * @param fileSystemHandle A handle returned by :js:func:`navigator.storage.getDirectory() <getDirectory>`
-	 * or :js:func:`window.showDirectoryPicker() <showDirectoryPicker>`.
+	 * native directory. If the directory does not exist, it will be created. If
+	 * it does exist, it must be empty.
+	 * @param fileSystemHandle A handle returned by
+	 * :js:func:`navigator.storage.getDirectory() <getDirectory>` or
+	 * :js:func:`window.showDirectoryPicker() <showDirectoryPicker>`.
 	 */
 	static mountNativeFS(path: string, fileSystemHandle: FileSystemDirectoryHandle): Promise<NativeFS>;
+	/**
+	 * Mounts a host directory into Pyodide file system. Only works in node.
+	 *
+	 * @param emscriptenPath The absolute path in the Emscripten file system to
+	 * mount the native directory. If the directory does not exist, it will be
+	 * created. If it does exist, it must be empty.
+	 * @param hostPath The host path to mount. It must be a directory that exists.
+	 */
+	static mountNodeFS(emscriptenPath: string, hostPath: string): void;
 	/**
 	 * Tell Pyodide about Comlink.
 	 * Necessary to enable importing Comlink proxies into Python.

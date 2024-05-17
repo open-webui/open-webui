@@ -63,7 +63,7 @@
 		"js-sha256": "^0.10.1",
 		"katex": "^0.16.9",
 		"marked": "^9.1.0",
-		"pyodide": "^0.25.1",
+		"pyodide": "^0.26.0-alpha.4",
 		"svelte-sonner": "^0.3.19",
 		"tippy.js": "^6.3.7",
 		"uuid": "^9.0.1"

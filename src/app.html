@@ -13,9 +13,6 @@
 			href="/opensearch.xml"
 		/>
 
-		<script type="module" src="/pyscript/core.js"></script>
-		<link rel="stylesheet" href="/pyscript/core.css" />
-
 		<script>
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
@@ -58,11 +55,6 @@
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
-		<py-config> interpreter = "/pyodide/pyodide.mjs" </py-config>
-
-		<script type="py">
-			print('pyscript:loaded')
-		</script>
 		<div style="display: contents">%sveltekit.body%</div>
 
 		<div

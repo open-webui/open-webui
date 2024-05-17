@@ -2,6 +2,7 @@
 	import { copyToClipboard } from '$lib/utils';
 	import hljs from 'highlight.js';
 	import 'highlight.js/styles/github-dark.min.css';
+	import { loadPyodide } from 'pyodide';
 	import { tick } from 'svelte';
 
 	export let id = '';
@@ -10,6 +11,11 @@
 	export let code = '';
 
 	let executed = false;
+
+	let stdout = null;
+	let stderr = null;
+	let result = null;
+
 	let copied = false;
 
 	const copyCode = async () => {
@@ -131,72 +137,35 @@
 		return false;
 	};
 
-	const executePython = async (text) => {
+	const executePython = async (code) => {
 		executed = true;
 
-		await tick();
-		const outputDiv = document.getElementById(`code-output-${id}`);
+		let pyodide = await loadPyodide({
+			indexURL: '/pyodide/',
+			stderr: (text) => {
+				console.log('An error occured:', text);
+				if (stderr) {
+					stderr += `${text}\n`;
+				} else {
+					stderr = `${text}\n`;
+				}
+			},
+			stdout: (text) => {
+				console.log('Python output:', text);
 
-		if (outputDiv) {
-			outputDiv.innerText = 'Running...';
-		}
+				if (stdout) {
+					stdout += `${text}\n`;
+				} else {
+					stdout = `${text}\n`;
+				}
+			}
+		});
 
-		text = text
-			.split('\n')
-			.map((line, index) => (index === 0 ? line : '    ' + line))
-			.join('\n');
+		result = pyodide.runPython(code);
 
-		// pyscript
-		let div = document.createElement('div');
-		let html = `
-<py-script type="py" worker>
-import js
-import sys
-import io
-
-# Create a StringIO object to capture the output
-output_capture = io.StringIO()
-
-# Save the current standard output
-original_stdout = sys.stdout
-
-# Replace the standard output with the StringIO object
-sys.stdout = output_capture
-
-try:
-    ${text}
-except Exception as e:
-    # Capture any errors and write them to the output capture
-    print(f"Error: {e}", file=output_capture)
-
-# Restore the original standard output
-sys.stdout = original_stdout
-
-# Retrieve the captured output
-captured_output = "[NO OUTPUT]"
-captured_output = output_capture.getvalue()
-
-# Print the captured output
-print(captured_output)
-
-def display_message():
-    output_div = js.document.getElementById("code-output-${id}")
-    output_div.innerText = captured_output
-
-display_message()
-</py-script>`;
-
-		div.innerHTML = html;
-		const pyScript = div.firstElementChild;
-		try {
-			document.body.appendChild(pyScript);
-			setTimeout(() => {
-				document.body.removeChild(pyScript);
-			}, 0);
-		} catch (error) {
-			console.error('Python error:');
-			console.error(error);
-		}
+		console.log(result);
+		console.log(stderr);
+		console.log(stdout);
 	};
 
 	$: highlightedCode = code ? hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value : '';
@@ -234,7 +203,17 @@ display_message()
 		{#if executed}
 			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-				<div id="code-output-{id}" class="text-sm" />
+				<div class="text-sm">
+					{#if stdout}
+						{stdout}
+					{:else if result}
+						{result}
+					{:else if stderr}
+						{stderr}
+					{:else}
+						Running...
+					{/if}
+				</div>
 			</div>
 		{/if}
 	</div>
