@@ -188,6 +188,10 @@
 
 			result = pyodide.runPython(code);
 
+			if (!result) {
+				result = '[NO OUTPUT]';
+			}
+
 			console.log(result);
 			console.log(stdout);
 			console.log(stderr);
@@ -243,15 +247,10 @@
 				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
 				<div class="text-sm">Running...</div>
 			</div>
-		{:else if stdout || stderr}
+		{:else if stdout || stderr || result}
 			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-				<div class="text-sm">{stdout || stderr}</div>
-
-				{#if result}
-					<div class=" text-gray-300 text-xs mt-2 mb-1">Result</div>
-					<div class="text-sm">{result}</div>
-				{/if}
+				<div class="text-sm">{stdout || stderr || result}</div>
 			</div>
 		{/if}
 	</div>
