@@ -397,7 +397,7 @@ def generate_image(
     user=Depends(get_current_user),
 ):
 
-    width, height = tuple(map(int, app.state.config.IMAGE_SIZE).split("x"))
+    width, height = tuple(map(int, app.state.config.IMAGE_SIZE.split("x")))
 
     r = None
     try:
