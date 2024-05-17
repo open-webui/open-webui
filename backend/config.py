@@ -450,6 +450,9 @@ OLLAMA_AUTH_KEYS = os.environ.get("OLLAMA_AUTH_KEYS", "")
 OLLAMA_AUTH_KEYS = OLLAMA_AUTH_KEYS if OLLAMA_AUTH_KEYS != "" else OLLAMA_AUTH_KEY
 
 OLLAMA_AUTH_KEYS = [url.strip() for url in OLLAMA_AUTH_KEYS.split(";")]
+OLLAMA_AUTH_KEYS = PersistentConfig(
+    "OLLAMA_AUTH_KEYS", "ollama.auth_keys", OLLAMA_AUTH_KEYS
+)
 
 
 ####################################
