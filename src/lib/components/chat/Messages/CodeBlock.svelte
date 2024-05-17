@@ -138,18 +138,14 @@
 	};
 
 	const executePython = async (code) => {
+		result = null;
+		stdout = null;
+		stderr = null;
+
 		executed = true;
 
 		let pyodide = await loadPyodide({
 			indexURL: '/pyodide/',
-			stderr: (text) => {
-				console.log('An error occured:', text);
-				if (stderr) {
-					stderr += `${text}\n`;
-				} else {
-					stderr = `${text}\n`;
-				}
-			},
 			stdout: (text) => {
 				console.log('Python output:', text);
 
@@ -158,14 +154,22 @@
 				} else {
 					stdout = `${text}\n`;
 				}
+			},
+			stderr: (text) => {
+				console.log('An error occured:', text);
+				if (stderr) {
+					stderr += `${text}\n`;
+				} else {
+					stderr = `${text}\n`;
+				}
 			}
 		});
 
 		result = pyodide.runPython(code);
 
 		console.log(result);
-		console.log(stderr);
 		console.log(stdout);
+		console.log(stderr);
 	};
 
 	$: highlightedCode = code ? hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value : '';
