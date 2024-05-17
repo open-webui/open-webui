@@ -124,8 +124,9 @@ async def cancel_ollama_request(request_id: str, user=Depends(get_current_user))
 
 
 async def fetch_url(url):
+    timeout = aiohttp.ClientTimeout(total=5)
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url) as response:
                 return await response.json()
     except Exception as e:

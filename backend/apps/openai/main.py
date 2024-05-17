@@ -182,10 +182,11 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
 
 async def fetch_url(url, key):
+    timeout = aiohttp.ClientTimeout(total=5)
     try:
         if key != "":
             headers = {"Authorization": f"Bearer {key}"}
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(url, headers=headers) as response:
                     return await response.json()
         else:
