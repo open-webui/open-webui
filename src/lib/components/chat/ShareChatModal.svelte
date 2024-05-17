@@ -65,7 +65,7 @@
 			return false;
 		}
 		return chat.id !== _chat.id || chat.share_id !== _chat.share_id;
-	}
+	};
 
 	$: if (show) {
 		(async () => {
