@@ -414,6 +414,8 @@ OLLAMA_API_BASE_URL = os.environ.get(
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
 OLLAMA_AUTH_KEY = os.environ.get("OLLAMA_AUTH_KEY", "")
+OLLAMA_AUTH_KEY = OLLAMA_AUTH_KEY if OLLAMA_AUTH_KEY else ""
+
 K8S_FLAG = os.environ.get("K8S_FLAG", "")
 USE_OLLAMA_DOCKER = os.environ.get("USE_OLLAMA_DOCKER", "false")
 
