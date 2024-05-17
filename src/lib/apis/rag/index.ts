@@ -1,31 +1,14 @@
 import { RAG_API_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/apis/utils';
 
-export const getRAGConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/config`, {
+export const getRAGConfig = async (token: string) =>
+	await fetchApi(`${RAG_API_BASE_URL}/config`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
 
 type ChunkConfigForm = {
 	chunk_size: number;
@@ -44,10 +27,8 @@ type RAGConfigForm = {
 	youtube?: YoutubeConfigForm;
 };
 
-export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/config/update`, {
+export const updateRAGConfig = async (token: string, payload: RAGConfigForm) =>
+	await fetchApi(`${RAG_API_BASE_URL}/config/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -56,77 +37,28 @@ export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => 
 		body: JSON.stringify({
 			...payload
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
 
 export const getRAGTemplate = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/template`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/template`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
+	});
 
 	return res?.template ?? '';
 };
 
-export const getQuerySettings = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/query/settings`, {
+export const getQuerySettings = async (token: string) =>
+	await fetchApi(`${RAG_API_BASE_URL}/query/settings`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
 
 type QuerySettings = {
 	k: number | null;
@@ -134,10 +66,8 @@ type QuerySettings = {
 	template: string | null;
 };
 
-export const updateQuerySettings = async (token: string, settings: QuerySettings) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/query/settings/update`, {
+export const updateQuerySettings = async (token: string, settings: QuerySettings) =>
+	await fetchApi(`${RAG_API_BASE_URL}/query/settings/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -146,60 +76,25 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 		body: JSON.stringify({
 			...settings
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
 
 export const uploadDocToVectorDB = async (token: string, collection_name: string, file: File) => {
 	const data = new FormData();
 	data.append('file', file);
 	data.append('collection_name', collection_name);
 
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/doc`, {
+	return await fetchApi(`${RAG_API_BASE_URL}/doc`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			authorization: `Bearer ${token}`
 		},
 		body: data
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
-export const uploadWebToVectorDB = async (token: string, collection_name: string, url: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/web`, {
+export const uploadWebToVectorDB = async (token: string, collection_name: string, url: string) =>
+	await fetchApi(`${RAG_API_BASE_URL}/web`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -210,28 +105,10 @@ export const uploadWebToVectorDB = async (token: string, collection_name: string
 			url: url,
 			collection_name: collection_name
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const uploadYoutubeTranscriptionToVectorDB = async (token: string, url: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/youtube`, {
+export const uploadYoutubeTranscriptionToVectorDB = async (token: string, url: string) =>
+	await fetchApi(`${RAG_API_BASE_URL}/youtube`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -241,33 +118,15 @@ export const uploadYoutubeTranscriptionToVectorDB = async (token: string, url: s
 		body: JSON.stringify({
 			url: url
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
 
 export const queryDoc = async (
 	token: string,
 	collection_name: string,
 	query: string,
 	k: number | null = null
-) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/query/doc`, {
+) =>
+	await fetchApi(`${RAG_API_BASE_URL}/query/doc`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -279,32 +138,15 @@ export const queryDoc = async (
 			query: query,
 			k: k
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
 
 export const queryCollection = async (
 	token: string,
 	collection_names: string,
 	query: string,
 	k: number | null = null
-) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/query/collection`, {
+) =>
+	await fetchApi(`${RAG_API_BASE_URL}/query/collection`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -316,101 +158,34 @@ export const queryCollection = async (
 			query: query,
 			k: k
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const scanDocs = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/scan`, {
+export const scanDocs = async (token: string) =>
+	await fetchApi(`${RAG_API_BASE_URL}/scan`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const resetVectorDB = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/reset`, {
+export const resetVectorDB = async (token: string) =>
+	await fetchApi(`${RAG_API_BASE_URL}/reset`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getEmbeddingConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/embedding`, {
+export const getEmbeddingConfig = async (token: string) =>
+	await fetchApi(`${RAG_API_BASE_URL}/embedding`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
 
 type OpenAIConfigForm = {
 	key: string;
@@ -423,10 +198,8 @@ type EmbeddingModelUpdateForm = {
 	embedding_model: string;
 };
 
-export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/embedding/update`, {
+export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) =>
+	await fetchApi(`${RAG_API_BASE_URL}/embedding/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -435,59 +208,23 @@ export const updateEmbeddingConfig = async (token: string, payload: EmbeddingMod
 		body: JSON.stringify({
 			...payload
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getRerankingConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/reranking`, {
+export const getRerankingConfig = async (token: string) =>
+	await fetchApi(`${RAG_API_BASE_URL}/reranking`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
 
 type RerankingModelUpdateForm = {
 	reranking_model: string;
 };
 
-export const updateRerankingConfig = async (token: string, payload: RerankingModelUpdateForm) => {
-	let error = null;
-
-	const res = await fetch(`${RAG_API_BASE_URL}/reranking/update`, {
+export const updateRerankingConfig = async (token: string, payload: RerankingModelUpdateForm) =>
+	await fetchApi(`${RAG_API_BASE_URL}/reranking/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -496,20 +233,4 @@ export const updateRerankingConfig = async (token: string, payload: RerankingMod
 		body: JSON.stringify({
 			...payload
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});

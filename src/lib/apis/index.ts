@@ -1,118 +1,41 @@
 import { WEBUI_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/apis/utils';
 
-export const getBackendConfig = async () => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_BASE_URL}/api/config`, {
+export const getBackendConfig = async () =>
+	await fetchApi(`${WEBUI_BASE_URL}/api/config`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json'
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err;
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getChangelog = async () => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_BASE_URL}/api/changelog`, {
+export const getChangelog = async () =>
+	await fetchApi(`${WEBUI_BASE_URL}/api/changelog`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json'
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err;
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getVersionUpdates = async () => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_BASE_URL}/api/version/updates`, {
+export const getVersionUpdates = async () =>
+	await fetchApi(`${WEBUI_BASE_URL}/api/version/updates`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json'
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err;
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getModelFilterConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_BASE_URL}/api/config/model/filter`, {
+export const getModelFilterConfig = async (token: string) =>
+	await fetchApi(`${WEBUI_BASE_URL}/api/config/model/filter`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err;
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateModelFilterConfig = async (
-	token: string,
-	enabled: boolean,
-	models: string[]
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_BASE_URL}/api/config/model/filter`, {
+export const updateModelFilterConfig = async (token: string, enabled: boolean, models: string[]) =>
+	await fetchApi(`${WEBUI_BASE_URL}/api/config/model/filter`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -122,55 +45,22 @@ export const updateModelFilterConfig = async (
 			enabled: enabled,
 			models: models
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
 
 export const getWebhookUrl = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_BASE_URL}/api/webhook`, {
+	const res = await fetchApi(`${WEBUI_BASE_URL}/api/webhook`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
+	});
 
 	return res.url;
 };
 
 export const updateWebhookUrl = async (token: string, url: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_BASE_URL}/api/webhook`, {
+	const res = await fetchApi(`${WEBUI_BASE_URL}/api/webhook`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -179,20 +69,7 @@ export const updateWebhookUrl = async (token: string, url: string) => {
 		body: JSON.stringify({
 			url: url
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
+	});
 
 	return res.url;
 };

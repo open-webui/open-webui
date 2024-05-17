@@ -1,42 +1,22 @@
 import { OPENAI_API_BASE_URL } from '$lib/constants';
 import { promptTemplate } from '$lib/utils';
+import { fetchApi } from '$lib/apis/utils';
 
 export const getOpenAIUrls = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${OPENAI_API_BASE_URL}/urls`, {
+	const res = await fetchApi(`${OPENAI_API_BASE_URL}/urls`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
+	});
 
 	return res.OPENAI_API_BASE_URLS;
 };
 
 export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
-	let error = null;
-
-	const res = await fetch(`${OPENAI_API_BASE_URL}/urls/update`, {
+	const res = await fetchApi(`${OPENAI_API_BASE_URL}/urls/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -46,64 +26,26 @@ export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 		body: JSON.stringify({
 			urls: urls
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
+	});
 
 	return res.OPENAI_API_BASE_URLS;
 };
 
 export const getOpenAIKeys = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${OPENAI_API_BASE_URL}/keys`, {
+	const res = await fetchApi(`${OPENAI_API_BASE_URL}/keys`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
+	});
 
 	return res.OPENAI_API_KEYS;
 };
 
 export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
-	let error = null;
-
-	const res = await fetch(`${OPENAI_API_BASE_URL}/keys/update`, {
+	const res = await fetchApi(`${OPENAI_API_BASE_URL}/keys/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -113,51 +55,20 @@ export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 		body: JSON.stringify({
 			keys: keys
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
+	});
 
 	return res.OPENAI_API_KEYS;
 };
 
 export const getOpenAIModels = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${OPENAI_API_BASE_URL}/models`, {
+	const res = await fetchApi(`${OPENAI_API_BASE_URL}/models`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
-			return [];
-		});
-
-	if (error) {
-		throw error;
-	}
+	});
 
 	const models = Array.isArray(res) ? res : res?.data ?? null;
 
@@ -174,28 +85,13 @@ export const getOpenAIModelsDirect = async (
 	base_url: string = 'https://api.openai.com/v1',
 	api_key: string = ''
 ) => {
-	let error = null;
-
-	const res = await fetch(`${base_url}/models`, {
+	const res = await fetchApi(`${base_url}/models`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${api_key}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
+	});
 
 	const models = Array.isArray(res) ? res : res?.data ?? null;
 
@@ -275,13 +171,11 @@ export const generateTitle = async (
 	prompt: string,
 	url: string = OPENAI_API_BASE_URL
 ) => {
-	let error = null;
-
 	template = promptTemplate(template, prompt);
 
 	console.log(template);
 
-	const res = await fetch(`${url}/chat/completions`, {
+	const res = await fetchApi(`${url}/chat/completions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -300,22 +194,7 @@ export const generateTitle = async (
 			// Restricting the max tokens to 50 to avoid long titles
 			max_tokens: 50
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
+	});
 
 	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? 'New Chat';
 };

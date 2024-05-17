@@ -1,9 +1,8 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/apis/utils';
 
-export const setDefaultModels = async (token: string, models: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/default/models`, {
+export const setDefaultModels = async (token: string, models: string) =>
+	await fetchApi(`${WEBUI_API_BASE_URL}/configs/default/models`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -12,28 +11,10 @@ export const setDefaultModels = async (token: string, models: string) => {
 		body: JSON.stringify({
 			models: models
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/default/suggestions`, {
+export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) =>
+	await fetchApi(`${WEBUI_API_BASE_URL}/configs/default/suggestions`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -42,20 +23,4 @@ export const setDefaultPromptSuggestions = async (token: string, promptSuggestio
 		body: JSON.stringify({
 			suggestions: promptSuggestions
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});

@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/apis/utils';
 
 export const createNewDoc = async (
 	token: string,
@@ -7,10 +8,8 @@ export const createNewDoc = async (
 	name: string,
 	title: string,
 	content: object | null = null
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/create`, {
+) =>
+	await fetchApi(`${WEBUI_API_BASE_URL}/documents/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -24,96 +23,35 @@ export const createNewDoc = async (
 			title: title,
 			...(content ? { content: JSON.stringify(content) } : {})
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getDocs = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/`, {
+export const getDocs = async (token: string = '') =>
+	await fetchApi(`${WEBUI_API_BASE_URL}/documents/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getDocByName = async (token: string, name: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/name/${name}`, {
+export const getDocByName = async (token: string, name: string) =>
+	await fetchApi(`${WEBUI_API_BASE_URL}/documents/name/${name}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
 
 type DocUpdateForm = {
 	name: string;
 	title: string;
 };
 
-export const updateDocByName = async (token: string, name: string, form: DocUpdateForm) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/name/${name}/update`, {
+export const updateDocByName = async (token: string, name: string, form: DocUpdateForm) =>
+	await fetchApi(`${WEBUI_API_BASE_URL}/documents/name/${name}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -124,37 +62,15 @@ export const updateDocByName = async (token: string, name: string, form: DocUpda
 			name: form.name,
 			title: form.title
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
 
 type TagDocForm = {
 	name: string;
 	tags: string[];
 };
 
-export const tagDocByName = async (token: string, name: string, form: TagDocForm) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/name/${name}/tags`, {
+export const tagDocByName = async (token: string, name: string, form: TagDocForm) =>
+	await fetchApi(`${WEBUI_API_BASE_URL}/documents/name/${name}/tags`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -165,56 +81,14 @@ export const tagDocByName = async (token: string, name: string, form: TagDocForm
 			name: form.name,
 			tags: form.tags
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
+	});
 
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteDocByName = async (token: string, name: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/name/${name}/delete`, {
+export const deleteDocByName = async (token: string, name: string) =>
+	await fetchApi(`${WEBUI_API_BASE_URL}/documents/name/${name}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+	});
