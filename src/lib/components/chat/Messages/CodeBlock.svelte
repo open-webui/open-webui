@@ -238,7 +238,7 @@ __builtins__.input = input`);
 				stderr = 'Execution Time Limit Exceeded';
 				pyodideWorker.terminate();
 			}
-		}, 10000);
+		}, 60000);
 
 		pyodideWorker.onmessage = (event) => {
 			console.log('pyodideWorker.onmessage', event);
