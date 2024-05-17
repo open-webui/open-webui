@@ -77,7 +77,7 @@ with open(LITELLM_CONFIG_DIR, "r") as file:
 
 app.state.ENABLE = ENABLE_LITELLM
 app.state.CONFIG = litellm_config
-app.state.MODEL_CONFIG = MODEL_CONFIG.get("litellm", [])
+app.state.MODEL_CONFIG = MODEL_CONFIG.value.get("litellm", [])
 
 # Global variable to store the subprocess reference
 background_process = None

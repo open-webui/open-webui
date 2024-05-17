@@ -113,7 +113,7 @@ app.state.config = AppConfig()
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
-app.state.MODEL_CONFIG = MODEL_CONFIG
+app.state.config.MODEL_CONFIG = MODEL_CONFIG
 
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 
@@ -323,18 +323,18 @@ async def update_model_config(
 
     litellm_app.state.MODEL_CONFIG = data.get("litellm", [])
 
-    app.state.MODEL_CONFIG = {
+    app.state.config.MODEL_CONFIG = {
         "ollama": ollama_app.state.MODEL_CONFIG,
         "openai": openai_app.state.MODEL_CONFIG,
         "litellm": litellm_app.state.MODEL_CONFIG,
     }
 
-    return {"models": app.state.MODEL_CONFIG}
+    return {"models": app.state.config.MODEL_CONFIG}
 
 
 @app.get("/api/config/models")
 async def get_model_config(user=Depends(get_admin_user)):
-    return {"models": app.state.MODEL_CONFIG}
+    return {"models": app.state.config.MODEL_CONFIG}
 
 
 @app.get("/api/webhook")

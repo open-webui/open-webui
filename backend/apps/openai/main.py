@@ -51,7 +51,7 @@ app.state.config = AppConfig()
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-app.state.MODEL_CONFIG = MODEL_CONFIG.get("openai", [])
+app.state.MODEL_CONFIG = MODEL_CONFIG.value.get("openai", [])
 
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS

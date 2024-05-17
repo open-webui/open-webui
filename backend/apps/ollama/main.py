@@ -67,7 +67,7 @@ app.state.config = AppConfig()
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-app.state.MODEL_CONFIG = MODEL_CONFIG.get("ollama", [])
+app.state.MODEL_CONFIG = MODEL_CONFIG.value.get("ollama", [])
 
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.MODELS = {}
