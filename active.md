@@ -19,9 +19,9 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 - [ML for Community Forecasting Timelines](../data-pipeline/timelines/)
 - [RealityStream](/RealityStream/) - Machine Learning Classification Models
-- [USEEIO Open Footprint Data - Javascript](/useeio.js/footprint) and [React Widgets](/io/charts)
+- [USEEIO.js Open Footprint Data and SQL](/useeio.js/footprint) and [React Widgets](/io/charts)
 - [Open Footprint Panels - YAML Display](/OpenFootprint)
-- [Process Industry NAICS by Zip Code](/data-pipeline/industries/naics) - Aashish
+- [Process Industry NAICS by Zip Code](/data-pipeline/industries/naics)
 - [Top Commodities by State (hide sort columns)](/data-pipeline/research/economy) - Dinesh
 - [State Regions using Sets of Counties](/community-data/us/edd/) - Dinesh
 - [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - <!--Honglin-->Rupesh
