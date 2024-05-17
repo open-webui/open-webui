@@ -139,7 +139,7 @@
 	};
 
 	const executePython = async (code) => {
-		if (!code.includes('input')) {
+		if (!code.includes('input') && !code.includes('matplotlib')) {
 			executePythonAsWorker(code);
 		} else {
 			result = null;
@@ -147,6 +147,8 @@
 			stderr = null;
 
 			executing = true;
+
+			document.pyodideMplTarget = document.getElementById('plt-canvas');
 
 			let pyodide = await loadPyodide({
 				indexURL: '/pyodide/',
@@ -181,7 +183,8 @@
 					code.includes('requests') ? 'requests' : null,
 					code.includes('bs4') ? 'beautifulsoup4' : null,
 					code.includes('numpy') ? 'numpy' : null,
-					code.includes('pandas') ? 'pandas' : null
+					code.includes('pandas') ? 'pandas' : null,
+					code.includes('matplotlib') ? 'matplotlib' : null
 				].filter(Boolean);
 
 				console.log(packages);
@@ -221,7 +224,8 @@ __builtins__.input = input`);
 			code.includes('requests') ? 'requests' : null,
 			code.includes('bs4') ? 'beautifulsoup4' : null,
 			code.includes('numpy') ? 'numpy' : null,
-			code.includes('pandas') ? 'pandas' : null
+			code.includes('pandas') ? 'pandas' : null,
+			code.includes('matplotlib') ? 'matplotlib' : null
 		].filter(Boolean);
 
 		const pyodideWorker = new Worker('/pyodide-worker.js');
@@ -309,5 +313,7 @@ __builtins__.input = input`);
 				<div class="text-sm">{stdout || stderr || result}</div>
 			</div>
 		{/if}
+
+		<div id="plt-canvas" />
 	</div>
 {/if}
