@@ -61,8 +61,10 @@ export const updatePromptByCommand = async (
 		})
 	});
 
-export const deletePromptByCommand = async (token: string, command: string) =>
-	await fetchApi(`${WEBUI_API_BASE_URL}/prompts/command/${command}/delete`, {
+export const deletePromptByCommand = async (token: string, command: string) => {
+	command = command.charAt(0) === '/' ? command.slice(1) : command;
+
+	return await fetchApi(`${WEBUI_API_BASE_URL}/prompts/command/${command}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -70,3 +72,4 @@ export const deletePromptByCommand = async (token: string, command: string) =>
 			authorization: `Bearer ${token}`
 		}
 	});
+};
