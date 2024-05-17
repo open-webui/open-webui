@@ -204,6 +204,12 @@ __builtins__.input = input`);
 				console.log(result);
 				console.log(stdout);
 				console.log(stderr);
+
+				const pltCanvasElement = document.getElementById(`plt-canvas-${id}`);
+
+				if (pltCanvasElement?.innerHTML !== '') {
+					pltCanvasElement.classList.add('px-4', 'pt-4');
+				}
 			} catch (error) {
 				console.error('Error:', error);
 				stderr = error;
@@ -302,6 +308,8 @@ __builtins__.input = input`);
 				class="language-{lang} rounded-t-none whitespace-pre">{@html highlightedCode || code}</code
 			></pre>
 
+		<div id="plt-canvas-{id}" class="bg-[#202123] text-white" />
+
 		{#if executing}
 			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
@@ -313,7 +321,5 @@ __builtins__.input = input`);
 				<div class="text-sm">{stdout || stderr || result}</div>
 			</div>
 		{/if}
-
-		<div id="plt-canvas-{id}" />
 	</div>
 {/if}
