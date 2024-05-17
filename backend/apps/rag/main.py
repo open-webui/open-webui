@@ -29,7 +29,9 @@ from langchain_community.document_loaders import (
     UnstructuredRSTLoader,
     UnstructuredExcelLoader,
     YoutubeLoader,
+    UnstructuredPowerPointLoader
 )
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 import validators
@@ -767,6 +769,11 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ] or file_ext in ["xls", "xlsx"]:
         loader = UnstructuredExcelLoader(file_path)
+    elif (
+        file_content_type == "application/vnd.ms-powerpoint"
+        or file_ext in ["ppt", "pptx"]
+    ):
+        loader = UnstructuredPowerPointLoader(file_path)
     elif file_ext in known_source_ext or (
         file_content_type and file_content_type.find("text/") >= 0
     ):
