@@ -378,31 +378,28 @@ DEFAULT_PROMPT_SUGGESTIONS = (
     and type(CONFIG_DATA["ui"]["prompt_suggestions"]) is list
     else [
         {
-            "title": ["Help me study", "vocabulary for a college entrance exam"],
-            "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            "title": ["Query re-entry time", "for a specific fungicide"],
+            "content": "What is the re-entry to field time for the fungicide Pristine?",
         },
         {
-            "title": ["Give me ideas", "for what to do with my kids' art"],
-            "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            "title": ["Get product details", "and tank mix instructions for almond bloom"],
+            "content": """I need to prepare a fungicide spray for almond bloom. Include product details and tank mix instructions, we run 300 gal tanks on our air-blast sprayers.""",
         },
         {
-            "title": ["Tell me a fun fact", "about the Roman Empire"],
-            "content": "Tell me a random fun fact about the Roman Empire",
+            "title": ["Dispatch request", "to mow and apply fungicide"],
+            "content": "Please tell Nala to go mow block 18 and later do fungicide on blocks 5 through 8.",
         },
         {
-            "title": ["Show me a code snippet", "of a website's sticky header"],
-            "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            "title": ["Dispatch multiple requests", "for mowing, pruning, and checking trees"],
+            "content": "Please tell Lawrence to go mow block 18 and later do fungicide on blocks 5 through 8. Also tell Daniel to do pruning on block 2 and check the fallen trees.",
         },
         {
-            "title": [
-                "Explain options trading",
-                "if I'm familiar with buying and selling stocks",
-            ],
-            "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+            "title": ["Query task status", "for a specific worker"],
+            "content": "What has Kalin done?",
         },
         {
-            "title": ["Overcome procrastination", "give me tips"],
-            "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
+            "title": ["Query fumigation", "responsibility for a specific block"],
+            "content": "Who is on fumigation for block 17?",
         },
     ]
 )
