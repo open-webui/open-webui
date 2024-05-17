@@ -117,7 +117,7 @@ display_message()
 
 		{#if executed}
 			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-				<div class=" text-gray-500 text-sm mb-1">STDOUT/STDERR</div>
+				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
 				<div id="code-output-{id}" class="text-sm" />
 			</div>
 		{/if}
