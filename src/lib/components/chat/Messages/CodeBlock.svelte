@@ -170,7 +170,7 @@
 			const res = await pyodide.loadPackage('micropip');
 			console.log(res);
 
-			pyodide.setStdin({ stdin: () => prompt() });
+			// pyodide.setStdin({ stdin: () => prompt() });
 
 			const micropip = pyodide.pyimport('micropip');
 
@@ -185,6 +185,11 @@
 
 			console.log(packages);
 			await micropip.install(packages);
+
+			result = pyodide.runPython(`from js import prompt
+def input(p):
+    return prompt(p)
+__builtins__.input = input`);
 
 			result = pyodide.runPython(code);
 
