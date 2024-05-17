@@ -39,15 +39,15 @@ async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)
 
 @router.get("/permissions/user")
 async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
-    return request.app.state.USER_PERMISSIONS
+    return request.app.state.config.USER_PERMISSIONS
 
 
 @router.post("/permissions/user")
 async def update_user_permissions(
     request: Request, form_data: dict, user=Depends(get_admin_user)
 ):
-    request.app.state.USER_PERMISSIONS = form_data
-    return request.app.state.USER_PERMISSIONS
+    request.app.state.config.USER_PERMISSIONS = form_data
+    return request.app.state.config.USER_PERMISSIONS
 
 
 ############################

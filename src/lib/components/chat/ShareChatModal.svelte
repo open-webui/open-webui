@@ -57,10 +57,23 @@
 
 	export let show = false;
 
+	const isDifferentChat = (_chat) => {
+		if (!chat) {
+			return true;
+		}
+		if (!_chat) {
+			return false;
+		}
+		return chat.id !== _chat.id || chat.share_id !== _chat.share_id;
+	};
+
 	$: if (show) {
 		(async () => {
 			if (chatId) {
-				chat = await getChatById(localStorage.token, chatId);
+				const _chat = await getChatById(localStorage.token, chatId);
+				if (isDifferentChat(_chat)) {
+					chat = _chat;
+				}
 			} else {
 				chat = null;
 				console.log(chat);
@@ -137,6 +150,7 @@
 							<button
 								class=" self-center flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white"
 								type="button"
+								id="copy-and-share-chat-button"
 								on:click={async () => {
 									const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
