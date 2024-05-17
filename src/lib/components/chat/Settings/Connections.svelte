@@ -157,7 +157,7 @@
 				if (OLLAMA_AUTH_KEYS[i] != undefined && OLLAMA_AUTH_KEYS[i] != '') {
 					toggleOllamaAuthKeys[i] = true;
 				} else {
-					OLLAMA_AUTH_KEYS[i] = '';
+					OLLAMA_AUTH_KEYS = [...OLLAMA_AUTH_KEYS, ''];
 					toggleOllamaAuthKeys[i] = undefined;
 				}
 			}
@@ -367,95 +367,98 @@
 													if (toggleOllamaAuthKeys[idx] === undefined) {
 														toggleOllamaAuthKeys[idx] = true;
 
-														if (OLLAMA_AUTH_KEYS[idx] === undefined) {
-															OLLAMA_AUTH_KEYS[idx] = '';
-														}
-													} else {
-														toggleOllamaAuthKeys[idx] = undefined;
-													}
-												}}
-												type="button"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 16 16"
-													fill="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6m-4-2a.75.75 0 0 0 0 1.5a.5.5 0 0 1 .5.5a.75.75 0 0 0 1.5 0a2 2 0 0 0-2-2"
-													/>
-												</svg>
-											</button>
-											<button
-												class="px-1"
-												on:click={() => {
-													OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, ''];
+												if (OLLAMA_AUTH_KEYS[idx] === undefined) {
 													OLLAMA_AUTH_KEYS = [...OLLAMA_AUTH_KEYS, ''];
-												}}
-												type="button"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 16 16"
-													fill="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-													/>
-												</svg>
-											</button>
-										{:else}
-											<button
-												class="px-1"
-												on:click={() => {
-													if (toggleOllamaAuthKeys[idx] === undefined) {
-														toggleOllamaAuthKeys[idx] = true;
+												}
+											} else {
+												toggleOllamaAuthKeys[idx] = undefined;
+											}
+										}}
+										type="button"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6m-4-2a.75.75 0 0 0 0 1.5a.5.5 0 0 1 .5.5a.75.75 0 0 0 1.5 0a2 2 0 0 0-2-2"
+											/>
+										</svg>
+									</button>
+									<button
+										class="px-1"
+										on:click={() => {
+											OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, ''];
+											OLLAMA_AUTH_KEYS = [...OLLAMA_AUTH_KEYS, ''];
+										}}
+										type="button"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+											/>
+										</svg>
+									</button>
+								{:else}
+									<button
+										class="px-1"
+										on:click={() => {
+											if (toggleOllamaAuthKeys[idx] === undefined) {
+												toggleOllamaAuthKeys[idx] = true;
 
-														if (OLLAMA_AUTH_KEYS[idx] === undefined) {
-															OLLAMA_AUTH_KEYS[idx] = '';
-														}
-													} else {
-														toggleOllamaAuthKeys[idx] = undefined;
-													}
-												}}
-												type="button"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 16 16"
-													fill="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6m-4-2a.75.75 0 0 0 0 1.5a.5.5 0 0 1 .5.5a.75.75 0 0 0 1.5 0a2 2 0 0 0-2-2"
-													/>
-												</svg>
-											</button>
-											<button
-												class="px-1"
-												on:click={() => {
-													OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter(
-														(url, urlIdx) => idx !== urlIdx
-													);
-													OLLAMA_AUTH_KEYS = OLLAMA_AUTH_KEYS.filter(
-														(url, urlIdx) => idx !== urlIdx
-													);
-												}}
-												type="button"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 16 16"
-													fill="currentColor"
-													class="w-4 h-4"
-												>
-													<path d="M3.75 7.25a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Z" />
-												</svg>
-											</button>
-										{/if}
-									</div>
+												if (OLLAMA_AUTH_KEYS[idx] === undefined) {
+													OLLAMA_AUTH_KEYS = [...OLLAMA_AUTH_KEYS, ''];
+												}
+											} else {
+												toggleOllamaAuthKeys[idx] = undefined;
+											}
+										}}
+										type="button"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												d="M14 6a4 4 0 0 1-4.899 3.899l-1.955 1.955a.5.5 0 0 1-.353.146H5v1.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-2.293a.5.5 0 0 1 .146-.353l3.955-3.955A4 4 0 1 1 14 6m-4-2a.75.75 0 0 0 0 1.5a.5.5 0 0 1 .5.5a.75.75 0 0 0 1.5 0a2 2 0 0 0-2-2"
+											/>
+										</svg>
+									</button>
+									<button
+										class="px-1"
+										on:click={() => {
+											OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter(
+													(url, urlIdx) => idx !== urlIdx
+												);
+												OLLAMA_AUTH_KEYS = OLLAMA_AUTH_KEYS.filter(
+													(url, urlIdx) => idx !== urlIdx
+												);
+										}}
+										type="button"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path d="M3.75 7.25a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Z" />
+										</svg>
+									</button>
+								{/if}
+							</div>
+						</div>
+					{/each}
+				</div>
 
 									<div class="flex">
 										<Tooltip content="Verify connection" className="self-start mt-0.5">
