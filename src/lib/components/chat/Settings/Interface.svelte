@@ -38,11 +38,21 @@
 	const toggleChatBubble = async () => {
 		chatBubble = !chatBubble;
 		saveSettings({ chatBubble: chatBubble });
+
+		if (chatBubble && showUsername) {
+			showUsername = false;
+			saveSettings({ showUsername: false });
+			toast.info($i18n.t('You can not use Chat Bubble UI and show the username at the same time. Option to show the username has been disabled.'));
+		}
 	};
 
 	const toggleShowUsername = async () => {
-		showUsername = !showUsername;
-		saveSettings({ showUsername: showUsername });
+		if (chatBubble && !showUsername) {
+			toast.error($i18n.t('You can not use Chat Bubble UI and show the username at the same time. Please disable Chat Bubble UI to use this feature.'));
+		} else {
+			showUsername = !showUsername;
+			saveSettings({ showUsername: showUsername });
+		}
 	};
 
 	const toggleTitleAutoGenerate = async () => {
@@ -71,9 +81,9 @@
 			responseAutoCopy = !responseAutoCopy;
 			saveSettings({ responseAutoCopy: responseAutoCopy });
 		} else {
-			toast.error(
+			toast.error($i18n.t(
 				'Clipboard write permission denied. Please check your browser settings to grant the necessary access.'
-			);
+			));
 		}
 	};
 
@@ -245,19 +255,19 @@
 						{$i18n.t('Fluidly stream large external response chunks')}
 					</div>
 
-					<button
-						class="p-1 px-3 text-xs flex rounded transition"
-						on:click={() => {
-							toggleSplitLargeChunks();
-						}}
-						type="button"
-					>
-						{#if splitLargeChunks === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								toggleSplitLargeChunks();
+							}}
+							type="button"
+						>
+							{#if splitLargeChunks === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
 				</div>
 			</div>
 		</div>

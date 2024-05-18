@@ -65,7 +65,7 @@
 				: user?.profile_image_url ?? '/user.png'}
 		/>
 	{/if}
-	<div class="w-full overflow-hidden">
+	<div class="w-full overflow-hidden pl-1">
 		{#if !($settings?.chatBubble ?? true)}
 			<div>
 				<Name>
