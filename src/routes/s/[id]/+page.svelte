@@ -13,6 +13,7 @@
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import { getUserById } from '$lib/apis/users';
+	import { error } from '@sveltejs/kit';
 
 	const i18n = getContext('i18n');
 
@@ -90,7 +91,10 @@
 		});
 
 		if (chat) {
-			user = await getUserById(localStorage.token, chat.user_id);
+			user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
+				console.error(error);
+				return null;
+			});
 
 			const chatContent = chat.chat;
 

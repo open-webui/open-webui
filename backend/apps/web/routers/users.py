@@ -11,6 +11,7 @@ import logging
 
 from apps.web.models.users import UserModel, UserUpdateForm, UserRoleUpdateForm, Users
 from apps.web.models.auths import Auths
+from apps.web.models.chats import Chats
 
 from utils.utils import get_verified_user, get_password_hash, get_admin_user
 from constants import ERROR_MESSAGES
@@ -79,6 +80,17 @@ class UserResponse(BaseModel):
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
+
+    if user_id.startswith("shared-"):
+        chat_id = user_id.replace("shared-", "")
+        chat = Chats.get_chat_by_id(chat_id)
+        if chat:
+            user_id = chat.user_id
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.USER_NOT_FOUND,
+            )
 
     user = Users.get_user_by_id(user_id)
 
