@@ -54,7 +54,7 @@
 	};
 </script>
 
-<div class=" flex w-full user-message" dir="{$settings.chatDirection}">
+<div class=" flex w-full user-message" dir={$settings.chatDirection}>
 	{#if !($settings?.chatBubble ?? true)}
 		<ProfileImage
 			src={message.user
@@ -239,7 +239,7 @@
 					>
 						{#if !($settings?.chatBubble ?? true)}
 							{#if siblings.length > 1}
-								<div class="flex self-center">
+								<div class="flex self-center" dir="ltr">
 									<button
 										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 										on:click={() => {
@@ -368,7 +368,7 @@
 
 						{#if $settings?.chatBubble ?? true}
 							{#if siblings.length > 1}
-								<div class="flex self-center">
+								<div class="flex self-center" dir="ltr">
 									<button
 										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 										on:click={() => {
