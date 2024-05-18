@@ -308,7 +308,10 @@ __builtins__.input = input`);
 				class="language-{lang} rounded-t-none whitespace-pre">{@html highlightedCode || code}</code
 			></pre>
 
-		<div id="plt-canvas-{id}" class="bg-[#202123] text-white" />
+		<div
+			id="plt-canvas-{id}"
+			class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
+		/>
 
 		{#if executing}
 			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">

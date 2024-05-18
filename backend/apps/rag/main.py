@@ -433,12 +433,12 @@ async def update_query_settings(
     form_data: QuerySettingsForm, user=Depends(get_admin_user)
 ):
     app.state.config.RAG_TEMPLATE = (
-        form_data.template if form_data.template else RAG_TEMPLATE,
+        form_data.template if form_data.template else RAG_TEMPLATE
     )
     app.state.config.TOP_K = form_data.k if form_data.k else 4
     app.state.config.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 0.0
     app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
-        form_data.hybrid if form_data.hybrid else False,
+        form_data.hybrid if form_data.hybrid else False
     )
     return {
         "status": True,

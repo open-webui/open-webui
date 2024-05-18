@@ -256,7 +256,7 @@
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "最多可以同时下载 3 个模型，请稍后重试。",
 	"May": "五月",
 	"Memory": "",
-	"Messages you send after creating your link won't be shared. Users with the URL will beable to view the shared chat.": "创建链接后发送的信息不会被共享。拥有 URL 的用户可以查看共享的聊天内容。",
+	"Messages you send after creating your link won't be shared. Users with the URL will be able to view the shared chat.": "",
 	"Minimum Score": "最低分",
 	"Mirostat": "Mirostat",
 	"Mirostat Eta": "Mirostat Eta",
