@@ -1,5 +1,7 @@
 # Pull Request Checklist
 
+### Note to first-time contributors: Please open a discussion post in [Discussions](https://github.com/open-webui/open-webui/discussions) and describe your changes before submitting a pull request.
+
 **Before submitting, make sure you've checked the following:**
 
 - [ ] **Target branch:** Please verify that the pull request targets the `dev` branch.
