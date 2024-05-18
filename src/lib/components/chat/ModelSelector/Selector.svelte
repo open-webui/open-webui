@@ -36,7 +36,7 @@
 	let ollamaVersion = null;
 
 	$: filteredItems = searchValue
-		? items.filter((item) => item.value.includes(searchValue.toLowerCase()))
+		? items.filter((item) => item.value.toLowerCase().includes(searchValue.toLowerCase()))
 		: items;
 
 	const pullModelHandler = async () => {
