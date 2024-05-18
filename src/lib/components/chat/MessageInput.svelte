@@ -584,6 +584,7 @@
 						}}
 					/>
 					<form
+						dir={$settings?.chatDirection}
 						class=" flex flex-col relative w-full rounded-3xl px-1.5 bg-gray-50 dark:bg-gray-850 dark:text-gray-100"
 						on:submit|preventDefault={() => {
 							submitPrompt(prompt, user);

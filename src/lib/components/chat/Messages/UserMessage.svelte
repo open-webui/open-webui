@@ -54,7 +54,7 @@
 	};
 </script>
 
-<div class=" flex w-full user-message">
+<div class=" flex w-full user-message" dir="{$settings.chatDirection}">
 	{#if !($settings?.chatBubble ?? true)}
 		<ProfileImage
 			src={message.user
