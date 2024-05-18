@@ -5,6 +5,7 @@
 	import 'highlight.js/styles/github-dark.min.css';
 	import { loadPyodide } from 'pyodide';
 	import { tick } from 'svelte';
+	import PyodideWorker from '../../../workers/pyodide.worker?worker';
 
 	export let id = '';
 
@@ -168,13 +169,11 @@
 					} else {
 						stderr = `${text}\n`;
 					}
-				}
+				},
+				packages: ['micropip']
 			});
 
 			try {
-				const res = await pyodide.loadPackage('micropip');
-				console.log(res);
-
 				const micropip = pyodide.pyimport('micropip');
 
 				await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
@@ -234,7 +233,7 @@ __builtins__.input = input`);
 			code.includes('matplotlib') ? 'matplotlib' : null
 		].filter(Boolean);
 
-		const pyodideWorker = new Worker('/pyodide-worker.js');
+		const pyodideWorker = new PyodideWorker();
 
 		pyodideWorker.postMessage({
 			id: id,
