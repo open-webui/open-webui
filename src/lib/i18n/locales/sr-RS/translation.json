@@ -1,6 +1,6 @@
 {
 	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "„s“, „m“, „h“, „d“, „w“ или „-1“ за без истека.",
-	"(Beta)": " (Бета)",
+	"(Beta)": "(бета)",
 	"(e.g. `sh webui.sh --api`)": "(нпр. `sh webui.sh --api`)",
 	"(latest)": "(најновије)",
 	"{{modelName}} is thinking...": "{{modelName}} размишља...",
@@ -481,7 +481,7 @@
 	"WebUI will make requests to": "Веб интерфејс ће слати захтеве на",
 	"What’s New in": "Шта је ново у",
 	"When history is turned off, new chats on this browser won't appear in your history on any of your devices.": "Када је историја искључена, нова ћаскања у овом прегледачу неће се појавити у вашој историји на било ком вашем уређају.",
-	"Whisper (Local)": "Whisper (Локално)",
+	"Whisper (Local)": "Whisper (локално)",
 	"Write a prompt suggestion (e.g. Who are you?)": "Напишите предлог упита (нпр. „ко си ти?“)",
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Напишите сажетак у 50 речи који резимира [тему или кључну реч].",
 	"Yesterday": "Јуче",
