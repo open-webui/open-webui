@@ -79,7 +79,7 @@
 
 	const toggleChangeChatDirection = async () => {
 		chatDirection = chatDirection === 'LTR' ? 'RTL' : 'LTR';
-		saveSettings({chatDirection});
+		saveSettings({ chatDirection });
 	};
 
 	const updateInterfaceHandler = async () => {
@@ -271,7 +271,7 @@
 					on:click={toggleChangeChatDirection}
 					type="button"
 				>
-					{#if chatDirection === 'LTR'} 
+					{#if chatDirection === 'LTR'}
 						<span class="ml-2 self-center">{$i18n.t('LTR')}</span>
 					{:else}
 						<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
