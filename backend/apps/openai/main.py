@@ -47,10 +47,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 app.state.config = AppConfig()
 
-app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
+app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
@@ -259,11 +260,11 @@ async def get_all_models():
 async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_user)):
     if url_idx == None:
         models = await get_all_models()
-        if app.state.ENABLE_MODEL_FILTER:
+        if app.state.config.ENABLE_MODEL_FILTER:
             if user.role == "user":
                 models["data"] = list(
                     filter(
-                        lambda model: model["id"] in app.state.MODEL_FILTER_LIST,
+                        lambda model: model["id"] in app.state.config.MODEL_FILTER_LIST,
                         models["data"],
                     )
                 )

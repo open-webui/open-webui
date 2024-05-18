@@ -64,8 +64,8 @@ app.add_middleware(
 
 app.state.config = AppConfig()
 
-app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
+app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.MODELS = {}
@@ -178,11 +178,12 @@ async def get_ollama_tags(
     if url_idx == None:
         models = await get_all_models()
 
-        if app.state.ENABLE_MODEL_FILTER:
+        if app.state.config.ENABLE_MODEL_FILTER:
             if user.role == "user":
                 models["models"] = list(
                     filter(
-                        lambda model: model["name"] in app.state.MODEL_FILTER_LIST,
+                        lambda model: model["name"]
+                        in app.state.config.MODEL_FILTER_LIST,
                         models["models"],
                     )
                 )
@@ -1046,11 +1047,12 @@ async def get_openai_models(
     if url_idx == None:
         models = await get_all_models()
 
-        if app.state.ENABLE_MODEL_FILTER:
+        if app.state.config.ENABLE_MODEL_FILTER:
             if user.role == "user":
                 models["models"] = list(
                     filter(
-                        lambda model: model["name"] in app.state.MODEL_FILTER_LIST,
+                        lambda model: model["name"]
+                        in app.state.config.MODEL_FILTER_LIST,
                         models["models"],
                     )
                 )
