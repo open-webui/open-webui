@@ -75,8 +75,8 @@ with open(LITELLM_CONFIG_DIR, "r") as file:
     litellm_config = yaml.safe_load(file)
 
 
-app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER.value
+app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST.value
 
 
 app.state.ENABLE = ENABLE_LITELLM
