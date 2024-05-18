@@ -12,6 +12,7 @@
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
+	import { getUserById } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
@@ -37,6 +38,7 @@
 	}, {});
 
 	let chat = null;
+	let user = null;
 
 	let title = '';
 	let files = [];
@@ -88,6 +90,8 @@
 		});
 
 		if (chat) {
+			user = await getUserById(localStorage.token, chat.user_id);
+
 			const chatContent = chat.chat;
 
 			if (chatContent) {
@@ -156,6 +160,7 @@
 				<div class=" h-full w-full flex flex-col py-4">
 					<div class="py-2">
 						<Messages
+							{user}
 							chatId={$chatId}
 							readOnly={true}
 							{selectedModels}

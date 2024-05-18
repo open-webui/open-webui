@@ -7,6 +7,8 @@
 	import { modelfiles, settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
+	import { user as _user } from '$lib/stores';
+
 	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
@@ -74,7 +76,7 @@
 							{$i18n.t('You')}
 							<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
 						{/if}
-					{:else if $settings.showUsername}
+					{:else if $settings.showUsername || $_user.name !== user.name}
 						{user.name}
 					{:else}
 						{$i18n.t('You')}
