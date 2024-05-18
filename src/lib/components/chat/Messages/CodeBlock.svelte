@@ -184,7 +184,7 @@
 					code.includes('numpy') ? 'numpy' : null,
 					code.includes('pandas') ? 'pandas' : null,
 					code.includes('matplotlib') ? 'matplotlib' : null,
-					code.includes('scikit-learn') ? 'sklearn' : null,
+					code.includes('sklearn') ? 'scikit-learn' : null,
 					code.includes('scipy') ? 'scipy' : null,
 					code.includes('re') ? 'regex' : null
 				].filter(Boolean);
@@ -233,10 +233,12 @@ __builtins__.input = input`);
 			code.includes('bs4') ? 'beautifulsoup4' : null,
 			code.includes('numpy') ? 'numpy' : null,
 			code.includes('pandas') ? 'pandas' : null,
-			code.includes('scikit-learn') ? 'sklearn' : null,
+			code.includes('sklearn') ? 'scikit-learn' : null,
 			code.includes('scipy') ? 'scipy' : null,
 			code.includes('re') ? 'regex' : null
 		].filter(Boolean);
+
+		console.log(packages);
 
 		const pyodideWorker = new PyodideWorker();
 
