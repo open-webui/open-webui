@@ -6,6 +6,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} düşünüyor...",
 	"{{user}}'s Chats": "{{user}} Sohbetleri",
 	"{{webUIName}} Backend Required": "{{webUIName}} Arkayüz Gerekli",
+  "A selected model does not support image input": "",
 	"a user": "bir kullanıcı",
 	"About": "Hakkında",
 	"Account": "Hesap",

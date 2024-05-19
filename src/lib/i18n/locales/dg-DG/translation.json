@@ -6,6 +6,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} is thinkin'...",
 	"{{user}}'s Chats": "",
 	"{{webUIName}} Backend Required": "{{webUIName}} Backend Much Required",
+  "A selected model does not support image input": "",
 	"a user": "such user",
 	"About": "Much About",
 	"Account": "Account",

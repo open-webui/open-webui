@@ -6,6 +6,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} 이(가) 생각중입니다....",
 	"{{user}}'s Chats": "",
 	"{{webUIName}} Backend Required": "{{webUIName}} 백엔드가 필요합니다.",
+  "A selected model does not support image input": "",
 	"a user": "사용자",
 	"About": "소개",
 	"Account": "계정",

@@ -6,6 +6,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} 正在思考...",
 	"{{user}}'s Chats": "{{user}} 的聊天记录",
 	"{{webUIName}} Backend Required": "需要 {{webUIName}} 后端",
+  "A selected model does not support image input": "",
 	"a user": "用户",
 	"About": "关于",
 	"Account": "账户",

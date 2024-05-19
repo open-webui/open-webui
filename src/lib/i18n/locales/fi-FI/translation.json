@@ -6,6 +6,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} miettii...",
 	"{{user}}'s Chats": "{{user}}:n keskustelut",
 	"{{webUIName}} Backend Required": "{{webUIName}} backend vaaditaan",
+  "A selected model does not support image input": "",
 	"a user": "käyttäjä",
 	"About": "Tietoja",
 	"Account": "Tili",

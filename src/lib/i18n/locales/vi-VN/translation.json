@@ -6,6 +6,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} đang suy nghĩ...",
 	"{{user}}'s Chats": "",
 	"{{webUIName}} Backend Required": "{{webUIName}} Yêu cầu Backend",
+  "A selected model does not support image input": "",
 	"a user": "người sử dụng",
 	"About": "Giới thiệu",
 	"Account": "Tài khoản",
