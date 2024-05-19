@@ -510,9 +510,7 @@
 									class="size-5 max-w-[28px] object-cover rounded-full"
 									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedModel.id)
 										?.imageUrl ??
-										($i18n.language === 'dg-DG'
-											? `/doge.png`
-											: `${WEBUI_BASE_URL}/static/favicon.png`)}
+										(`${WEBUI_BASE_URL}/static/favicon.png`)}
 								/>
 								<div>
 									Talking to <span class=" font-medium">{selectedModel.name} </span>
