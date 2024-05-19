@@ -114,4 +114,12 @@ async def reset_memory_from_vector_db(
 
 @router.delete("/{memory_id}", response_model=bool)
 async def delete_memory_by_id(memory_id: str, user=Depends(get_verified_user)):
-    return Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
+    result = Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
+
+    if result:
+        collection = CHROMA_CLIENT.get_or_create_collection(
+            name=f"user-memory-{user.id}"
+        )
+        collection.delete_document(memory_id)
+        return True
+    return False
