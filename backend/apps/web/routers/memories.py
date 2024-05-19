@@ -108,7 +108,26 @@ async def reset_memory_from_vector_db(
 
 
 ############################
-# DeleteUserById
+# DeleteMemoriesByUserId
+############################
+
+
+@router.delete("/user", response_model=bool)
+async def delete_memory_by_user_id(user=Depends(get_verified_user)):
+    result = Memories.delete_memories_by_user_id(user.id)
+
+    if result:
+        try:
+            CHROMA_CLIENT.delete_collection(f"user-memory-{user.id}")
+        except Exception as e:
+            log.error(e)
+        return True
+
+    return False
+
+
+############################
+# DeleteMemoryById
 ############################
 
 

@@ -96,6 +96,15 @@ class MemoriesTable:
         except:
             return False
 
+    def delete_memories_by_user_id(self, user_id: str) -> bool:
+        try:
+            query = Memory.delete().where(Memory.user_id == user_id)
+            query.execute()
+
+            return True
+        except:
+            return False
+
     def delete_memory_by_id_and_user_id(self, id: str, user_id: str) -> bool:
         try:
             query = Memory.delete().where(Memory.id == id, Memory.user_id == user_id)

@@ -7,7 +7,7 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AddMemoryModal from './AddMemoryModal.svelte';
-	import { deleteMemoryById, getMemories } from '$lib/apis/memories';
+	import { deleteMemoriesByUserId, deleteMemoryById, getMemories } from '$lib/apis/memories';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { error } from '@sveltejs/kit';
 
@@ -134,10 +134,20 @@
 						showAddMemoryModal = true;
 					}}>Add memory</button
 				>
-				<!-- <button
+				<button
 					class=" px-3.5 py-1.5 font-medium text-red-500 hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-red-300 dark:outline-red-800 rounded-3xl"
-					>Clear memory</button
-				> -->
+					on:click={async () => {
+						const res = await deleteMemoriesByUserId(localStorage.token).catch((error) => {
+							toast.error(error);
+							return null;
+						});
+
+						if (res) {
+							toast.success('Memory cleared successfully');
+							memories = [];
+						}
+					}}>Clear memory</button
+				>
 			</div>
 		</div>
 	</div>
