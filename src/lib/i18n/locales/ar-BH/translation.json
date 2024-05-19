@@ -232,7 +232,7 @@
 	"Import Modelfiles": "استيراد ملفات النماذج",
 	"Import Prompts": "مطالبات الاستيراد",
 	"Include `--api` flag when running stable-diffusion-webui": "قم بتضمين علامة `-api` عند تشغيل Stable-diffusion-webui",
-	"Input commands": "",
+	"Input commands": "إدخال الأوامر",
 	"Interface": "واجهه المستخدم",
 	"Invalid Tag": "تاق غير صالحة",
 	"January": "يناير",
