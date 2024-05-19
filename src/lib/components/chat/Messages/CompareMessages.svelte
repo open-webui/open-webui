@@ -59,7 +59,7 @@
 
 <div>
 	<div
-		class="flex snap-x snap-mandatory overflow-x-auto scrollbar-none"
+		class="flex snap-x snap-mandatory overflow-x-auto scrollbar-hidden"
 		id="responses-container-{parentMessage.id}"
 	>
 		{#each Object.keys(groupedMessages) as model}
