@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🧠 Experimental Memory Feature**: Manually input personal information you want LLMs to remember via settings > personalization > memory.
 - **💾 Persistent Settings**: Settings now saved as config.json for convenience.
 - **🩺 Health Check Endpoint**: Added for Docker deployment.
-- **↕️ LTR Support**: Toggle chat direction via settings > interface > chat direction.
+- **↕️ RTL Support**: Toggle chat direction via settings > interface > chat direction.
 - **🌐 Language Updates**: Ukrainian, Turkish, Arabic, Chinese, Serbian, Vietnamese updated; Punjabi added.
 
 ### Changed
