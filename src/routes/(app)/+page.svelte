@@ -255,8 +255,6 @@
 	const sendPrompt = async (prompt, parentId, modelId = null) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
-		let userContext = null;
-
 		await Promise.all(
 			(modelId ? [modelId] : atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(
 				async (modelId) => {
@@ -273,7 +271,7 @@
 							role: 'assistant',
 							content: '',
 							model: model.id,
-							userContext: userContext,
+							userContext: null,
 							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 						};
 
@@ -291,6 +289,7 @@
 
 						await tick();
 
+						let userContext = null;
 						if ($settings?.memory ?? false) {
 							if (userContext === null) {
 								const res = await queryMemory(localStorage.token, prompt).catch((error) => {
@@ -314,7 +313,6 @@
 								}
 							}
 						}
-
 						responseMessage.userContext = userContext;
 
 						if (model?.external) {
