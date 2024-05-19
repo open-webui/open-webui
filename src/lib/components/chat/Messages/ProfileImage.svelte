@@ -10,7 +10,8 @@
 		crossorigin="anonymous"
 		src={src.startsWith(WEBUI_BASE_URL) ||
 		src.startsWith('https://www.gravatar.com/avatar/') ||
-		src.startsWith('data:')
+		src.startsWith('data:') ||
+		src.startsWith('/')
 			? src
 			: `/user.png`}
 		class=" w-8 object-cover rounded-full"
