@@ -58,14 +58,17 @@
 </script>
 
 <div>
-	<div class="flex snap-x snap-mandatory overflow-x-auto scrollbar-none">
+	<div
+		class="flex snap-x snap-mandatory overflow-x-auto scrollbar-none"
+		id="responses-container-{parentMessage.id}"
+	>
 		{#each Object.keys(groupedMessages) as model}
 			{#if groupedMessagesIdx[model] !== undefined && groupedMessages[model].messages.length > 0}
 				<!-- svelte-ignore a11y-no-static-element-interactions -->
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
 
 				<div
-					class=" snap-center min-w-96 w-full max-w-full m-1 outline outline-1 {history.messages[
+					class=" snap-center min-w-80 w-full max-w-full m-1 outline outline-1 {history.messages[
 						currentMessageId
 					].model === model
 						? 'outline-gray-200 dark:outline-gray-700 outline-2'
@@ -133,8 +136,8 @@
 						{rateMessage}
 						{copyToClipboard}
 						{continueGeneration}
-						regenerateResponse={async (model) => {
-							regenerateResponse(model);
+						regenerateResponse={async (message) => {
+							regenerateResponse(message);
 							await tick();
 							groupedMessagesIdx[model] = groupedMessages[model].messages.length - 1;
 						}}

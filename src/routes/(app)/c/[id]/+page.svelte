@@ -764,16 +764,14 @@
 		console.log('stopResponse');
 	};
 
-	const regenerateResponse = async (modelId = null) => {
+	const regenerateResponse = async (message) => {
 		console.log('regenerateResponse');
-		if (messages.length != 0 && messages.at(-1).done == true) {
-			messages.splice(messages.length - 1, 1);
-			messages = messages;
 
-			let userMessage = messages.at(-1);
+		if (messages.length != 0) {
+			let userMessage = history.messages[message.parentId];
 			let userPrompt = userMessage.content;
 
-			await sendPrompt(userPrompt, userMessage.id, modelId);
+			await sendPrompt(userPrompt, userMessage.id, message.model);
 		}
 	};
 
