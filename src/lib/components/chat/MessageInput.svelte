@@ -357,7 +357,7 @@
 				if (inputFiles && inputFiles.length > 0) {
 					inputFiles.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
-						if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+						if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
 							let reader = new FileReader();
 							reader.onload = (event) => {
 								files = [
@@ -547,7 +547,7 @@
 							if (inputFiles && inputFiles.length > 0) {
 								const _inputFiles = Array.from(inputFiles);
 								_inputFiles.forEach((file) => {
-									if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+									if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
 										let reader = new FileReader();
 										reader.onload = (event) => {
 											files = [
