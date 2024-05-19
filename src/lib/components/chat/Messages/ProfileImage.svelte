@@ -5,7 +5,7 @@
 	export let src = '/user.png';
 </script>
 
-<div class={$settings?.chatDirection === 'LTR' ? 'mr-3' : 'ml-3'}>
+<div class={($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}>
 	<img
 		crossorigin="anonymous"
 		src={src.startsWith(WEBUI_BASE_URL) ||

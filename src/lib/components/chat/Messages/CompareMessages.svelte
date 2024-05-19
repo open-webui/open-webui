@@ -72,7 +72,7 @@
 						currentMessageId
 					].model === model
 						? 'outline-gray-200 dark:outline-gray-700 outline-2'
-						: 'outline-gray-100 dark:outline-gray-850 '} transition p-6 rounded-3xl"
+						: 'outline-gray-100 dark:outline-gray-850 '} transition p-5 rounded-3xl"
 					on:click={() => {
 						currentMessageId = groupedMessages[model].messages[groupedMessagesIdx[model]].id;
 
