@@ -513,7 +513,7 @@
 										(`${WEBUI_BASE_URL}/static/favicon.png`)}
 								/>
 								<div>
-									Talking to <span class=" font-medium">{selectedModel.name} </span>
+									{$i18n.t('Talking to')} <span class=" font-medium">{selectedModel.name} </span>
 								</div>
 							</div>
 							<div>
