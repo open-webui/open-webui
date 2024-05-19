@@ -263,26 +263,6 @@
 
 		let userContext = null;
 
-		if ($settings?.memory ?? false) {
-			const res = await queryMemory(localStorage.token, prompt).catch((error) => {
-				toast.error(error);
-				return null;
-			});
-
-			if (res) {
-				if (res.documents[0].length > 0) {
-					userContext = res.documents.reduce((acc, doc, index) => {
-						const createdAtTimestamp = res.metadatas[index][0].created_at;
-						const createdAtDate = new Date(createdAtTimestamp * 1000).toISOString().split('T')[0];
-						acc.push(`${index + 1}. [${createdAtDate}]. ${doc[0]}`);
-						return acc;
-					}, []);
-				}
-
-				console.log(userContext);
-			}
-		}
-
 		await Promise.all(
 			(modelId ? [modelId] : atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(
 				async (modelId) => {
@@ -314,6 +294,34 @@
 								responseMessageId
 							];
 						}
+
+						await tick();
+
+						if ($settings?.memory ?? false) {
+							if (userContext === null) {
+								const res = await queryMemory(localStorage.token, prompt).catch((error) => {
+									toast.error(error);
+									return null;
+								});
+
+								if (res) {
+									if (res.documents[0].length > 0) {
+										userContext = res.documents.reduce((acc, doc, index) => {
+											const createdAtTimestamp = res.metadatas[index][0].created_at;
+											const createdAtDate = new Date(createdAtTimestamp * 1000)
+												.toISOString()
+												.split('T')[0];
+											acc.push(`${index + 1}. [${createdAtDate}]. ${doc[0]}`);
+											return acc;
+										}, []);
+									}
+
+									console.log(userContext);
+								}
+							}
+						}
+
+						responseMessage.userContext = userContext;
 
 						if (model?.external) {
 							await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
