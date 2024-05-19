@@ -202,6 +202,7 @@
 				user: _user ?? undefined,
 				content: userPrompt,
 				files: files.length > 0 ? files : undefined,
+				models: selectedModels.filter((m, mIdx) => selectedModels.indexOf(m) === mIdx),
 				timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 			};
 
@@ -250,48 +251,50 @@
 		}
 	};
 
-	const sendPrompt = async (prompt, parentId) => {
+	const sendPrompt = async (prompt, parentId, modelId = null) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
-			(atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(async (modelId) => {
-				console.log('modelId', modelId);
-				const model = $models.filter((m) => m.id === modelId).at(0);
+			(modelId ? [modelId] : atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(
+				async (modelId) => {
+					console.log('modelId', modelId);
+					const model = $models.filter((m) => m.id === modelId).at(0);
 
-				if (model) {
-					// Create response message
-					let responseMessageId = uuidv4();
-					let responseMessage = {
-						parentId: parentId,
-						id: responseMessageId,
-						childrenIds: [],
-						role: 'assistant',
-						content: '',
-						model: model.id,
-						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-					};
+					if (model) {
+						// Create response message
+						let responseMessageId = uuidv4();
+						let responseMessage = {
+							parentId: parentId,
+							id: responseMessageId,
+							childrenIds: [],
+							role: 'assistant',
+							content: '',
+							model: model.id,
+							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+						};
 
-					// Add message to history and Set currentId to messageId
-					history.messages[responseMessageId] = responseMessage;
-					history.currentId = responseMessageId;
+						// Add message to history and Set currentId to messageId
+						history.messages[responseMessageId] = responseMessage;
+						history.currentId = responseMessageId;
 
-					// Append messageId to childrenIds of parent message
-					if (parentId !== null) {
-						history.messages[parentId].childrenIds = [
-							...history.messages[parentId].childrenIds,
-							responseMessageId
-						];
+						// Append messageId to childrenIds of parent message
+						if (parentId !== null) {
+							history.messages[parentId].childrenIds = [
+								...history.messages[parentId].childrenIds,
+								responseMessageId
+							];
+						}
+
+						if (model?.external) {
+							await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+						} else if (model) {
+							await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+						}
+					} else {
+						toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 					}
-
-					if (model?.external) {
-						await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-					} else if (model) {
-						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
-					}
-				} else {
-					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
-			})
+			)
 		);
 
 		await chats.set(await getChatList(localStorage.token));
@@ -756,16 +759,14 @@
 		console.log('stopResponse');
 	};
 
-	const regenerateResponse = async () => {
+	const regenerateResponse = async (message) => {
 		console.log('regenerateResponse');
-		if (messages.length != 0 && messages.at(-1).done == true) {
-			messages.splice(messages.length - 1, 1);
-			messages = messages;
 
-			let userMessage = messages.at(-1);
+		if (messages.length != 0) {
+			let userMessage = history.messages[message.parentId];
 			let userPrompt = userMessage.content;
 
-			await sendPrompt(userPrompt, userMessage.id);
+			await sendPrompt(userPrompt, userMessage.id, message.model);
 		}
 	};
 
