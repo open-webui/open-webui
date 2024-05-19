@@ -329,7 +329,6 @@
 											info: model
 										}))}
 									bind:value={selectedModelId}
-									className="w-[42rem]"
 								/>
 							</div>
 						</div>

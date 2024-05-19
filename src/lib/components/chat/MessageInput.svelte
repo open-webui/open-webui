@@ -327,7 +327,6 @@
 	};
 
 	onMount(() => {
-		console.log(document.getElementById('sidebar'));
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
@@ -358,7 +357,7 @@
 				if (inputFiles && inputFiles.length > 0) {
 					inputFiles.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
-						if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+						if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
 							let reader = new FileReader();
 							reader.onload = (event) => {
 								files = [
@@ -506,6 +505,7 @@
 						>
 							<div class="flex items-center gap-2 text-sm dark:text-gray-500">
 								<img
+									crossorigin="anonymous"
 									alt="model profile"
 									class="size-5 max-w-[28px] object-cover rounded-full"
 									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedModel.id)
@@ -547,7 +547,9 @@
 							if (inputFiles && inputFiles.length > 0) {
 								const _inputFiles = Array.from(inputFiles);
 								_inputFiles.forEach((file) => {
-									if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+									if (
+										['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])
+									) {
 										let reader = new FileReader();
 										reader.onload = (event) => {
 											files = [
@@ -584,7 +586,8 @@
 						}}
 					/>
 					<form
-						class=" flex flex-col relative w-full rounded-3xl px-1.5 border border-gray-100 dark:border-gray-850 bg-white dark:bg-gray-900 dark:text-gray-100"
+						dir={$settings?.chatDirection ?? 'LTR'}
+						class=" flex flex-col relative w-full rounded-3xl px-1.5 bg-gray-50 dark:bg-gray-850 dark:text-gray-100"
 						on:submit|preventDefault={() => {
 							submitPrompt(prompt, user);
 						}}
@@ -754,7 +757,7 @@
 							<textarea
 								id="chat-textarea"
 								bind:this={chatTextAreaElement}
-								class="scrollbar-hidden dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
+								class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
 									? ''
 									: ' pl-4'} rounded-xl resize-none h-[48px]"
 								placeholder={chatInputPlaceholder !== ''
@@ -995,7 +998,7 @@
 											id="send-message-button"
 											class="{prompt !== ''
 												? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-												: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-full p-1.5 self-center"
+												: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 											type="submit"
 											disabled={prompt === ''}
 										>

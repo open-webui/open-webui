@@ -117,6 +117,18 @@ app.state.config.WEBHOOK_URL = WEBHOOK_URL
 origins = ["*"]
 
 
+# Custom middleware to add security headers
+# class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+#     async def dispatch(self, request: Request, call_next):
+#         response: Response = await call_next(request)
+#         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+#         response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+#         return response
+
+
+# app.add_middleware(SecurityHeadersMiddleware)
+
+
 class RAGMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         return_citations = False
@@ -226,15 +238,25 @@ async def check_url(request: Request, call_next):
     return response
 
 
-app.mount("/api/v1", webui_app)
-app.mount("/litellm/api", litellm_app)
+@app.middleware("http")
+async def update_embedding_function(request: Request, call_next):
+    response = await call_next(request)
+    if "/embedding/update" in request.url.path:
+        webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
+    return response
 
+
+app.mount("/litellm/api", litellm_app)
 app.mount("/ollama", ollama_app)
 app.mount("/openai/api", openai_app)
 
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
 app.mount("/rag/api/v1", rag_app)
+
+app.mount("/api/v1", webui_app)
+
+webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
 
 
 @app.get("/api/config")
@@ -277,14 +299,14 @@ class ModelFilterConfigForm(BaseModel):
 async def update_model_filter_config(
     form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
 ):
-    app.state.config.ENABLE_MODEL_FILTER, form_data.enabled
-    app.state.config.MODEL_FILTER_LIST, form_data.models
+    app.state.config.ENABLE_MODEL_FILTER = form_data.enabled
+    app.state.config.MODEL_FILTER_LIST = form_data.models
 
-    ollama_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
-    ollama_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
+    ollama_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
+    ollama_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
 
-    openai_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
-    openai_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
+    openai_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
+    openai_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
 
     litellm_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
     litellm_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
