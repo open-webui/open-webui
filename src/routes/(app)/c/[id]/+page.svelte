@@ -299,6 +299,7 @@
 							role: 'assistant',
 							content: '',
 							model: model.id,
+							userContext: userContext,
 							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 						};
 
