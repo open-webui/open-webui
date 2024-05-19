@@ -122,9 +122,7 @@
 				{:else}
 					<div class="text-center flex h-full text-sm w-full">
 						<div class=" my-auto pb-10 px-4 w-full text-gray-500">
-							{$i18n.t(
-								'As you chat with LLMs, the details and preferences it remembers will be shown here.'
-							)}
+							{$i18n.t('Memories accessible by LLMs will be shown here.')}
 						</div>
 					</div>
 				{/if}

@@ -58,8 +58,8 @@
 
 		<div class="text-xs text-gray-600 dark:text-gray-400">
 			<div>
-				LLMs will become more helpful as you chat, picking up on details and preferences to tailor
-				its responses to you.
+				You can personalize your interactions with LLMs by adding memories through the 'Manage'
+				button below, making them more helpful and tailored to you.
 			</div>
 
 			<!-- <div class="mt-3">
