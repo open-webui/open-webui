@@ -5,7 +5,7 @@
 	import 'highlight.js/styles/github-dark.min.css';
 	import { loadPyodide } from 'pyodide';
 	import { tick } from 'svelte';
-	import PyodideWorker from '../../../workers/pyodide.worker?worker';
+	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 
 	export let id = '';
 
