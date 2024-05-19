@@ -31,7 +31,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 - [Python CoLabs for GDC timeline automation - Air and Climate](/data-commons/dist/air) - Paul and Anna
 - [Observable with Data Commons](/data-commons/) - [Data Loaders How-To](/data-commons/dist/air/)
-- [Sankey Industry Chart](/io/charts/sankey/) - Chenbohan
+- [Sankey Industry Chart](/useeio.js/charts/echarts/sankey-nodeAlign-left.html) - Chenbohan
 - [Balanced Food](/balance/) - [World Nutrition](/data-commons/dist/food) - Kargil, Meiru
 - [Chord Chart Data Prep](/io/charts/chord/) - [ask Kargil for location](https://github.com/modelearth/Observables-DataLoader/tree/master/docs)
 - [International Google Data Commons API](/data-commons/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
