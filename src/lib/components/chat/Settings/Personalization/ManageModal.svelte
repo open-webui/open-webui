@@ -69,9 +69,13 @@
 								<tbody>
 									{#each memories as memory}
 										<tr class="border-b dark:border-gray-800 items-center">
-											<td class="px-3 py-1"> {memory.content} </td>
+											<td class="px-3 py-1">
+												<div class="line-clamp-1">
+													{memory.content}
+												</div>
+											</td>
 											<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
-												<div class="my-auto">
+												<div class="my-auto whitespace-nowrap">
 													{dayjs(memory.created_at * 1000).format($i18n.t('MMMM DD, YYYY'))}
 												</div>
 											</td>
