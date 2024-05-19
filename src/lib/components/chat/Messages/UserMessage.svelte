@@ -55,14 +55,49 @@
 </script>
 
 <div class=" flex w-full user-message">
+	{#if !($settings?.chatBubble ?? true)}
+		<ProfileImage
+			src={message.user
+				? $modelfiles.find((modelfile) => modelfile.tagName === message.user)?.imageUrl ??
+				  '/user.png'
+				: user?.profile_image_url ?? '/user.png'}
+		/>
+	{/if}
 	<div class="w-full overflow-hidden">
+		{#if !($settings?.chatBubble ?? true)}
+			<div>
+				<Name>
+					{#if message.user}
+						{#if $modelfiles.map((modelfile) => modelfile.tagName).includes(message.user)}
+							{$modelfiles.find((modelfile) => modelfile.tagName === message.user)?.title}
+						{:else}
+							{$i18n.t('You')}
+							<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
+						{/if}
+					{:else if $settings.showUsername}
+						{user.name}
+					{:else}
+						{$i18n.t('You')}
+					{/if}
+
+					{#if message.timestamp}
+						<span
+							class=" invisible group-hover:visible text-gray-400 text-xs font-medium uppercase"
+						>
+							{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
+						</span>
+					{/if}
+				</Name>
+			</div>
+		{/if}
+
 		<div
 			class="prose chat-{message.role} w-full max-w-full flex flex-col justify-end dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-p:-mb-4 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-6 prose-li:-mb-4 whitespace-pre-line"
 		>
 			{#if message.files}
-				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1.5 flex-wrap">
+				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
 					{#each message.files as file}
-						<div class="self-end">
+						<div class={$settings?.chatBubble ?? true ? 'self-end' : ''}>
 							{#if file.type === 'image'}
 								<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
 							{:else if file.type === 'doc'}
@@ -185,21 +220,80 @@
 				</div>
 			{:else}
 				<div class="w-full">
-					<div class="flex justify-end mb-2">
+					<div class="flex {$settings?.chatBubble ?? true ? 'justify-end' : ''} mb-2">
 						<div
-							class="rounded-3xl px-5 py-2 max-w-[90%] bg-gray-50 dark:bg-gray-850 {message.files
-								? 'rounded-tr-lg'
-								: ''}"
+							class="rounded-3xl {$settings?.chatBubble ?? true
+								? `max-w-[90%] px-5 py-2  bg-gray-50 dark:bg-gray-850 ${
+										message.files ? 'rounded-tr-lg' : ''
+								  }`
+								: ''}  "
 						>
 							<pre id="user-message">{message.content}</pre>
 						</div>
 					</div>
 
-					<div class=" flex justify-end space-x-1 text-gray-700 dark:text-gray-500">
+					<div
+						class=" flex {$settings?.chatBubble ?? true
+							? 'justify-end'
+							: ''}  text-gray-600 dark:text-gray-500"
+					>
+						{#if !($settings?.chatBubble ?? true)}
+							{#if siblings.length > 1}
+								<div class="flex self-center">
+									<button
+										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+										on:click={() => {
+											showPreviousMessage(message);
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+											stroke-width="2.5"
+											class="size-3.5"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M15.75 19.5 8.25 12l7.5-7.5"
+											/>
+										</svg>
+									</button>
+
+									<div class="text-sm tracking-widest font-semibold self-center dark:text-gray-100">
+										{siblings.indexOf(message.id) + 1}/{siblings.length}
+									</div>
+
+									<button
+										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+										on:click={() => {
+											showNextMessage(message);
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+											stroke-width="2.5"
+											class="size-3.5"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="m8.25 4.5 7.5 7.5-7.5 7.5"
+											/>
+										</svg>
+									</button>
+								</div>
+							{/if}
+						{/if}
 						{#if !readOnly}
 							<Tooltip content={$i18n.t('Edit')} placement="bottom">
 								<button
-									class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition edit-user-message-button"
+									class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
 									on:click={() => {
 										editMessageHandler();
 									}}
@@ -208,7 +302,7 @@
 										xmlns="http://www.w3.org/2000/svg"
 										fill="none"
 										viewBox="0 0 24 24"
-										stroke-width="2"
+										stroke-width="2.3"
 										stroke="currentColor"
 										class="w-4 h-4"
 									>
@@ -224,7 +318,7 @@
 
 						<Tooltip content={$i18n.t('Copy')} placement="bottom">
 							<button
-								class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
+								class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 								on:click={() => {
 									copyToClipboard(message.content);
 								}}
@@ -233,7 +327,7 @@
 									xmlns="http://www.w3.org/2000/svg"
 									fill="none"
 									viewBox="0 0 24 24"
-									stroke-width="2"
+									stroke-width="2.3"
 									stroke="currentColor"
 									class="w-4 h-4"
 								>
@@ -271,56 +365,59 @@
 								</button>
 							</Tooltip>
 						{/if}
-						{#if siblings.length > 1}
-							<div class="flex self-center">
-								<button
-									class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
-									on:click={() => {
-										showPreviousMessage(message);
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke="currentColor"
-										stroke-width="2.5"
-										class="size-3.5"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M15.75 19.5 8.25 12l7.5-7.5"
-										/>
-									</svg>
-								</button>
 
-								<div class="text-sm tracking-widest font-semibold self-center dark:text-gray-100">
-									{siblings.indexOf(message.id) + 1}/{siblings.length}
+						{#if $settings?.chatBubble ?? true}
+							{#if siblings.length > 1}
+								<div class="flex self-center">
+									<button
+										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+										on:click={() => {
+											showPreviousMessage(message);
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+											stroke-width="2.5"
+											class="size-3.5"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M15.75 19.5 8.25 12l7.5-7.5"
+											/>
+										</svg>
+									</button>
+
+									<div class="text-sm tracking-widest font-semibold self-center dark:text-gray-100">
+										{siblings.indexOf(message.id) + 1}/{siblings.length}
+									</div>
+
+									<button
+										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+										on:click={() => {
+											showNextMessage(message);
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+											stroke-width="2.5"
+											class="size-3.5"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="m8.25 4.5 7.5 7.5-7.5 7.5"
+											/>
+										</svg>
+									</button>
 								</div>
-
-								<button
-									class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
-									on:click={() => {
-										showNextMessage(message);
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke="currentColor"
-										stroke-width="2.5"
-										class="size-3.5"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="m8.25 4.5 7.5 7.5-7.5 7.5"
-										/>
-									</svg>
-								</button>
-							</div>
+							{/if}
 						{/if}
 					</div>
 				</div>

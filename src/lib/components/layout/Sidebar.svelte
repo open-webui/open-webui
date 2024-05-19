@@ -76,7 +76,24 @@
 		}
 	});
 
+	mobile;
+	const onResize = () => {
+		if ($showSidebar && window.innerWidth < BREAKPOINT) {
+			showSidebar.set(false);
+		}
+	};
+
 	onMount(async () => {
+		mobile.subscribe((e) => {
+			if ($showSidebar && e) {
+				showSidebar.set(false);
+			}
+
+			if (!$showSidebar && !e) {
+				showSidebar.set(true);
+			}
+		});
+
 		showSidebar.set(window.innerWidth > BREAKPOINT);
 		await chats.set(await getChatList(localStorage.token));
 
@@ -106,20 +123,12 @@
 			checkDirection();
 		};
 
-		const onResize = () => {
-			if ($showSidebar && window.innerWidth < BREAKPOINT) {
-				showSidebar.set(false);
-			}
-		};
-
 		window.addEventListener('touchstart', onTouchStart);
 		window.addEventListener('touchend', onTouchEnd);
-		window.addEventListener('resize', onResize);
 
 		return () => {
 			window.removeEventListener('touchstart', onTouchStart);
 			window.removeEventListener('touchend', onTouchEnd);
-			window.removeEventListener('resize', onResize);
 		};
 	});
 
@@ -207,7 +216,7 @@
 	bind:this={navElement}
 	id="sidebar"
 	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-		? 'lg:relative w-[260px]'
+		? 'md:relative w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 rounded-r-2xl
         "
 	data-state={$showSidebar}
@@ -222,6 +231,7 @@
 				id="sidebar-new-chat-button"
 				class="flex flex-1 justify-between rounded-xl px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 				href="/"
+				draggable="false"
 				on:click={async () => {
 					selectedChatId = null;
 
@@ -297,6 +307,7 @@
 						selectedChatId = null;
 						chatId.set('');
 					}}
+					draggable="false"
 				>
 					<div class="self-center">
 						<svg
@@ -654,43 +665,41 @@
 			</div>
 		</div>
 
-		{#if $mobile}
-			<div class="px-2.5">
-				<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
+		<div class="px-2.5">
+			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 
-				<div class="flex flex-col">
-					{#if $user !== undefined}
-						<UserMenu
-							role={$user.role}
-							on:show={(e) => {
-								if (e.detail === 'archived-chat') {
-									showArchivedChats.set(true);
-								}
+			<div class="flex flex-col">
+				{#if $user !== undefined}
+					<UserMenu
+						role={$user.role}
+						on:show={(e) => {
+							if (e.detail === 'archived-chat') {
+								showArchivedChats.set(true);
+							}
+						}}
+					>
+						<button
+							class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+								showDropdown = !showDropdown;
 							}}
 						>
-							<button
-								class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								on:click={() => {
-									showDropdown = !showDropdown;
-								}}
-							>
-								<div class=" self-center mr-3">
-									<img
-										src={$user.profile_image_url}
-										class=" max-w-[30px] object-cover rounded-full"
-										alt="User profile"
-									/>
-								</div>
-								<div class=" self-center font-semibold">{$user.name}</div>
-							</button>
-						</UserMenu>
-					{/if}
-				</div>
+							<div class=" self-center mr-3">
+								<img
+									src={$user.profile_image_url}
+									class=" max-w-[30px] object-cover rounded-full"
+									alt="User profile"
+								/>
+							</div>
+							<div class=" self-center font-semibold">{$user.name}</div>
+						</button>
+					</UserMenu>
+				{/if}
 			</div>
-		{/if}
+		</div>
 	</div>
 
-	<div
+	<!-- <div
 		id="sidebar-handle"
 		class=" hidden md:fixed left-0 top-[50dvh] -translate-y-1/2 transition-transform translate-x-[255px] md:translate-x-[260px] rotate-0"
 	>
@@ -725,7 +734,7 @@
 				</span>
 			</button>
 		</Tooltip>
-	</div>
+	</div> -->
 </div>
 
 <style>

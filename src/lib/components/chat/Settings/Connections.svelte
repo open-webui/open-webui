@@ -65,7 +65,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="  pr-1.5 overflow-y-scroll max-h-[22rem] space-y-3">
+	<div class="  pr-1.5 overflow-y-scroll max-h-[25rem] space-y-3">
 		<div class=" space-y-3">
 			<div class="mt-2 space-y-2 pr-1.5">
 				<div class="flex justify-between items-center text-sm">

@@ -491,7 +491,7 @@
 
 							{#if message.done || siblings.length > 1}
 								<div
-									class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
+									class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500"
 								>
 									{#if siblings.length > 1}
 										<div class="flex self-center">
@@ -553,7 +553,7 @@
 												<button
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 													on:click={() => {
 														editMessageHandler();
 													}}
@@ -562,7 +562,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -580,7 +580,7 @@
 											<button
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition copy-response-button"
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 												on:click={() => {
 													copyToClipboard(message.content);
 												}}
@@ -589,7 +589,7 @@
 													xmlns="http://www.w3.org/2000/svg"
 													fill="none"
 													viewBox="0 0 24 24"
-													stroke-width="2"
+													stroke-width="2.3"
 													stroke="currentColor"
 													class="w-4 h-4"
 												>
@@ -602,83 +602,12 @@
 											</button>
 										</Tooltip>
 
-										{#if !readOnly}
-											<Tooltip content={$i18n.t('Good Response')} placement="bottom">
-												<button
-													class="{isLastMessage
-														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded {message?.annotation
-														?.rating === 1
-														? 'bg-gray-100 dark:bg-gray-800'
-														: ''} dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														rateMessage(message.id, 1);
-														showRateComment = true;
-
-														window.setTimeout(() => {
-															document
-																.getElementById(`message-feedback-${message.id}`)
-																?.scrollIntoView();
-														}, 0);
-													}}
-												>
-													<svg
-														stroke="currentColor"
-														fill="none"
-														stroke-width="2"
-														viewBox="0 0 24 24"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														class="w-4 h-4"
-														xmlns="http://www.w3.org/2000/svg"
-														><path
-															d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-														/></svg
-													>
-												</button>
-											</Tooltip>
-
-											<Tooltip content={$i18n.t('Bad Response')} placement="bottom">
-												<button
-													class="{isLastMessage
-														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded {message?.annotation
-														?.rating === -1
-														? 'bg-gray-100 dark:bg-gray-800'
-														: ''} dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														rateMessage(message.id, -1);
-														showRateComment = true;
-														window.setTimeout(() => {
-															document
-																.getElementById(`message-feedback-${message.id}`)
-																?.scrollIntoView();
-														}, 0);
-													}}
-												>
-													<svg
-														stroke="currentColor"
-														fill="none"
-														stroke-width="2"
-														viewBox="0 0 24 24"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														class="w-4 h-4"
-														xmlns="http://www.w3.org/2000/svg"
-														><path
-															d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
-														/></svg
-													>
-												</button>
-											</Tooltip>
-										{/if}
-
 										<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 											<button
 												id="speak-button-{message.id}"
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 												on:click={() => {
 													if (!loadingSpeech) {
 														toggleSpeakMessage(message);
@@ -725,7 +654,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -740,7 +669,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -759,7 +688,7 @@
 												<button
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
+														: 'invisible group-hover:visible'}  p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 													on:click={() => {
 														if (!generatingImage) {
 															generateImage(message);
@@ -806,7 +735,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															fill="none"
 															viewBox="0 0 24 24"
-															stroke-width="2"
+															stroke-width="2.3"
 															stroke="currentColor"
 															class="w-4 h-4"
 														>
@@ -826,7 +755,7 @@
 												<button
 													class=" {isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
 													on:click={() => {
 														console.log(message);
 													}}
@@ -836,7 +765,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -850,13 +779,84 @@
 											</Tooltip>
 										{/if}
 
+										{#if !readOnly}
+											<Tooltip content={$i18n.t('Good Response')} placement="bottom">
+												<button
+													class="{isLastMessage
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {message
+														?.annotation?.rating === 1
+														? 'bg-gray-100 dark:bg-gray-800'
+														: ''} dark:hover:text-white hover:text-black transition"
+													on:click={() => {
+														rateMessage(message.id, 1);
+														showRateComment = true;
+
+														window.setTimeout(() => {
+															document
+																.getElementById(`message-feedback-${message.id}`)
+																?.scrollIntoView();
+														}, 0);
+													}}
+												>
+													<svg
+														stroke="currentColor"
+														fill="none"
+														stroke-width="2.3"
+														viewBox="0 0 24 24"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														class="w-4 h-4"
+														xmlns="http://www.w3.org/2000/svg"
+														><path
+															d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
+														/></svg
+													>
+												</button>
+											</Tooltip>
+
+											<Tooltip content={$i18n.t('Bad Response')} placement="bottom">
+												<button
+													class="{isLastMessage
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {message
+														?.annotation?.rating === -1
+														? 'bg-gray-100 dark:bg-gray-800'
+														: ''} dark:hover:text-white hover:text-black transition"
+													on:click={() => {
+														rateMessage(message.id, -1);
+														showRateComment = true;
+														window.setTimeout(() => {
+															document
+																.getElementById(`message-feedback-${message.id}`)
+																?.scrollIntoView();
+														}, 0);
+													}}
+												>
+													<svg
+														stroke="currentColor"
+														fill="none"
+														stroke-width="2.3"
+														viewBox="0 0 24 24"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														class="w-4 h-4"
+														xmlns="http://www.w3.org/2000/svg"
+														><path
+															d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
+														/></svg
+													>
+												</button>
+											</Tooltip>
+										{/if}
+
 										{#if isLastMessage && !readOnly}
 											<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 												<button
 													type="button"
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition regenerate-response-button"
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 													on:click={() => {
 														continueGeneration();
 													}}
@@ -865,7 +865,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -888,14 +888,14 @@
 													type="button"
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition regenerate-response-button"
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 													on:click={regenerateResponse}
 												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
