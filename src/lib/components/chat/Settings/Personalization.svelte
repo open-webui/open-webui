@@ -5,11 +5,15 @@
 	import { config, models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import ManageModal from './Personalization/ManageModal.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
+
+	let showManageModal = false;
 
 	// Addons
 	let enableMemory = true;
@@ -20,6 +24,8 @@
 	});
 </script>
 
+<ManageModal bind:show={showManageModal} />
+
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
@@ -29,9 +35,15 @@
 	<div class="  pr-1.5 overflow-y-scroll max-h-[25rem]">
 		<div>
 			<div class="flex items-center justify-between mb-1">
-				<div class="text-sm font-medium">
-					{$i18n.t('Memory')} <span class=" text-xs text-gray-500">({$i18n.t('Beta')})</span>
-				</div>
+				<Tooltip
+					content="This is an experimental feature, it may not function as expected and is subject to change at any time."
+				>
+					<div class="text-sm font-medium">
+						{$i18n.t('Memory')}
+
+						<span class=" text-xs text-gray-500">({$i18n.t('Experimental')})</span>
+					</div>
+				</Tooltip>
 
 				<div class="mt-1">
 					<Switch
@@ -64,6 +76,9 @@
 			<button
 				type="button"
 				class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
+				on:click={() => {
+					showManageModal = true;
+				}}
 			>
 				Manage
 			</button>
