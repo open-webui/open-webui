@@ -29,7 +29,7 @@ import time
 from urllib.parse import urlparse
 from typing import Optional, List, Union
 
-
+from apps.web.models.models import Models
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
@@ -46,7 +46,6 @@ from config import (
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     UPLOAD_DIR,
-    MODEL_CONFIG,
     AppConfig,
 )
 from utils.misc import calculate_sha256
@@ -67,7 +66,9 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-app.state.MODEL_CONFIG = MODEL_CONFIG.value.get("ollama", [])
+app.state.MODEL_CONFIG = [
+    model.to_form() for model in Models.get_all_models_by_source("ollama")
+]
 
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.MODELS = {}
@@ -179,7 +180,7 @@ async def get_all_models():
 
 def add_custom_info_to_model(model: dict):
     model["custom_info"] = next(
-        (item for item in app.state.MODEL_CONFIG if item["id"] == model["model"]), {}
+        (item for item in app.state.MODEL_CONFIG if item.id == model["model"]), None
     )
 
 

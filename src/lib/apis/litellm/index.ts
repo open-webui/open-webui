@@ -34,7 +34,7 @@ export const getLiteLLMModels = async (token: string = '') => {
 					name: model.name ?? model.id,
 					external: true,
 					source: 'LiteLLM',
-					custom_info: model.custom_info ?? {}
+					custom_info: model.custom_info
 				}))
 				.sort((a, b) => {
 					return a.name.localeCompare(b.name);

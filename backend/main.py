@@ -35,9 +35,9 @@ from apps.web.main import app as webui_app
 
 import asyncio
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
-
+from apps.web.models.models import Models, ModelModel, ModelForm
 from utils.utils import get_admin_user
 from apps.rag.utils import rag_messages
 
@@ -59,7 +59,6 @@ from config import (
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
-    MODEL_CONFIG,
     AppConfig,
 )
 from constants import ERROR_MESSAGES
@@ -113,7 +112,7 @@ app.state.config = AppConfig()
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
-app.state.config.MODEL_CONFIG = MODEL_CONFIG
+app.state.MODEL_CONFIG = [model.to_form() for model in Models.get_all_models()]
 
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 
@@ -310,43 +309,40 @@ async def update_model_filter_config(
     }
 
 
-class ModelConfig(BaseModel):
-    id: str
-    name: str
-    description: str
-    vision_capable: bool
-
-
 class SetModelConfigForm(BaseModel):
-    ollama: List[ModelConfig]
-    litellm: List[ModelConfig]
-    openai: List[ModelConfig]
+    models: List[ModelForm]
 
 
 @app.post("/api/config/models")
 async def update_model_config(
     form_data: SetModelConfigForm, user=Depends(get_admin_user)
 ):
-    data = form_data.model_dump()
+    if not Models.update_all_models(form_data.models):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT("Failed to update model config"),
+        )
 
-    ollama_app.state.MODEL_CONFIG = data.get("ollama", [])
+    ollama_app.state.MODEL_CONFIG = [
+        model for model in form_data.models if model.source == "ollama"
+    ]
 
-    openai_app.state.MODEL_CONFIG = data.get("openai", [])
+    openai_app.state.MODEL_CONFIG = [
+        model for model in form_data.models if model.source == "openai"
+    ]
 
-    litellm_app.state.MODEL_CONFIG = data.get("litellm", [])
+    litellm_app.state.MODEL_CONFIG = [
+        model for model in form_data.models if model.source == "litellm"
+    ]
 
-    app.state.config.MODEL_CONFIG = {
-        "ollama": ollama_app.state.MODEL_CONFIG,
-        "openai": openai_app.state.MODEL_CONFIG,
-        "litellm": litellm_app.state.MODEL_CONFIG,
-    }
+    app.state.MODEL_CONFIG = [model for model in form_data.models]
 
-    return {"models": app.state.config.MODEL_CONFIG}
+    return {"models": app.state.MODEL_CONFIG}
 
 
 @app.get("/api/config/models")
 async def get_model_config(user=Depends(get_admin_user)):
-    return {"models": app.state.config.MODEL_CONFIG}
+    return {"models": app.state.MODEL_CONFIG}
 
 
 @app.get("/api/webhook")

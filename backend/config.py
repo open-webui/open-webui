@@ -549,10 +549,6 @@ WEBHOOK_URL = PersistentConfig(
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
 
-MODEL_CONFIG = PersistentConfig(
-    "CONFIG_DATA", "models", {"ollama": [], "litellm": [], "openai": []}
-)
-
 ####################################
 # WEBUI_SECRET_KEY
 ####################################

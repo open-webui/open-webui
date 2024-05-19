@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { type Model, mobile, modelfiles, settings, showSidebar } from '$lib/stores';
+	import { type Model, mobile, modelfiles, settings, showSidebar, models } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
@@ -27,7 +27,8 @@
 	export let stopResponse: Function;
 
 	export let autoScroll = true;
-	export let selectedModel: Model | undefined;
+	export let selectedAtModel: Model | undefined;
+	export let selectedModels: [''];
 
 	let chatTextAreaElement: HTMLTextAreaElement;
 	let filesInputElement;
@@ -52,10 +53,26 @@
 
 	let speechRecognition;
 
+	let visionCapableState = 'all';
+
 	$: if (prompt) {
 		if (chatTextAreaElement) {
 			chatTextAreaElement.style.height = '';
 			chatTextAreaElement.style.height = Math.min(chatTextAreaElement.scrollHeight, 200) + 'px';
+		}
+	}
+
+	$: {
+		if (selectedAtModel || selectedModels) {
+			visionCapableState = checkModelsAreVisionCapable();
+			if (visionCapableState === 'none') {
+				// Remove all image files
+				const fileCount = files.length;
+				files = files.filter((file) => file.type != 'image');
+				if (files.length < fileCount) {
+					toast.warning($i18n.t('All selected models do not support image input, removed images'));
+				}
+			}
 		}
 	}
 
@@ -326,6 +343,35 @@
 		}
 	};
 
+	const checkModelsAreVisionCapable = () => {
+		let modelsToCheck = [];
+		if (selectedAtModel !== undefined) {
+			modelsToCheck = [selectedAtModel.id];
+		} else {
+			modelsToCheck = selectedModels;
+		}
+		if (modelsToCheck.length == 0 || modelsToCheck[0] == '') {
+			return 'all';
+		}
+		let visionCapableCount = 0;
+		for (const modelName of modelsToCheck) {
+			const model = $models.find((m) => m.id === modelName);
+			if (!model) {
+				continue;
+			}
+			if (model.custom_info?.params.vision_capable ?? true) {
+				visionCapableCount++;
+			}
+		}
+		if (visionCapableCount == modelsToCheck.length) {
+			return 'all';
+		} else if (visionCapableCount == 0) {
+			return 'none';
+		} else {
+			return 'some';
+		}
+	};
+
 	onMount(() => {
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
@@ -358,11 +404,9 @@
 					inputFiles.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
 						if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
-							if (selectedModel !== undefined) {
-								if (!(selectedModel.custom_info?.vision_capable ?? true)) {
-									toast.error($i18n.t('Selected model does not support image inputs.'));
-									return;
-								}
+							if (visionCapableState == 'none') {
+								toast.error($i18n.t('Selected models do not support image inputs'));
+								return;
 							}
 							let reader = new FileReader();
 							reader.onload = (event) => {
@@ -500,12 +544,12 @@
 						bind:chatInputPlaceholder
 						{messages}
 						on:select={(e) => {
-							selectedModel = e.detail;
+							selectedAtModel = e.detail;
 							chatTextAreaElement?.focus();
 						}}
 					/>
 
-					{#if selectedModel !== undefined}
+					{#if selectedAtModel !== undefined}
 						<div
 							class="px-3 py-2.5 text-left w-full flex justify-between items-center absolute bottom-0 left-0 right-0 bg-gradient-to-t from-50% from-white dark:from-gray-900"
 						>
@@ -514,7 +558,7 @@
 									crossorigin="anonymous"
 									alt="model profile"
 									class="size-5 max-w-[28px] object-cover rounded-full"
-									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedModel.id)
+									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedAtModel.id)
 										?.imageUrl ??
 										($i18n.language === 'dg-DG'
 											? `/doge.png`
@@ -522,7 +566,7 @@
 								/>
 								<div>
 									Talking to <span class=" font-medium"
-										>{selectedModel.custom_info?.name ?? selectedModel.name}
+										>{selectedAtModel.custom_info?.name ?? selectedAtModel.name}
 									</span>
 								</div>
 							</div>
@@ -530,7 +574,7 @@
 								<button
 									class="flex items-center"
 									on:click={() => {
-										selectedModel = undefined;
+										selectedAtModel = undefined;
 									}}
 								>
 									<XMark />
@@ -556,13 +600,11 @@
 								const _inputFiles = Array.from(inputFiles);
 								_inputFiles.forEach((file) => {
 									if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
-										if (selectedModel !== undefined) {
-											if (!(selectedModel.custom_info?.vision_capable ?? true)) {
-												toast.error($i18n.t('Selected model does not support image inputs.'));
-												inputFiles = null;
-												filesInputElement.value = '';
-												return;
-											}
+										if (visionCapableState === 'none') {
+											toast.error($i18n.t('Selected models do not support image inputs'));
+											inputFiles = null;
+											filesInputElement.value = '';
+											return;
 										}
 										let reader = new FileReader();
 										reader.onload = (event) => {
@@ -897,7 +939,7 @@
 
 									if (e.key === 'Escape') {
 										console.log('Escape');
-										selectedModel = undefined;
+										selectedAtModel = undefined;
 									}
 								}}
 								rows="1"

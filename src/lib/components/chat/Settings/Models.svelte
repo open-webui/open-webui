@@ -80,8 +80,8 @@
 		const model = $models.find((m) => m.id === selectedModelId);
 		if (model) {
 			modelName = model.custom_info?.name ?? model.name;
-			modelDescription = model.custom_info?.description ?? '';
-			modelIsVisionCapable = model.custom_info?.vision_capable ?? false;
+			modelDescription = model.custom_info?.params.description ?? '';
+			modelIsVisionCapable = model.custom_info?.params.vision_capable ?? false;
 		}
 	};
 
@@ -521,13 +521,18 @@
 		const modelSource =
 			'details' in model ? 'ollama' : model.source === 'LiteLLM' ? 'litellm' : 'openai';
 		// Remove any existing config
-		modelConfig[modelSource] = modelConfig[modelSource].filter((m) => m.id !== selectedModelId);
+		modelConfig = modelConfig.filter(
+			(m) => !(m.id === selectedModelId && m.source === modelSource)
+		);
 		// Add new config
-		modelConfig[modelSource].push({
+		modelConfig.push({
 			id: selectedModelId,
 			name: modelName,
-			description: modelDescription,
-			vision_capable: modelIsVisionCapable
+			source: modelSource,
+			params: {
+				description: modelDescription,
+				vision_capable: modelIsVisionCapable
+			}
 		});
 		await updateModelConfig(localStorage.token, modelConfig);
 		toast.success(
@@ -546,7 +551,9 @@
 		}
 		const modelSource =
 			'details' in model ? 'ollama' : model.source === 'LiteLLM' ? 'litellm' : 'openai';
-		modelConfig[modelSource] = modelConfig[modelSource].filter((m) => m.id !== selectedModelId);
+		modelConfig = modelConfig.filter(
+			(m) => !(m.id === selectedModelId && m.source === modelSource)
+		);
 		await updateModelConfig(localStorage.token, modelConfig);
 		toast.success(
 			$i18n.t('Model info for {{modelName}} deleted successfully', { modelName: selectedModelId })
@@ -559,18 +566,28 @@
 	};
 
 	onMount(async () => {
-		OLLAMA_URLS = await getOllamaUrls(localStorage.token).catch((error) => {
-			toast.error(error);
-			return [];
-		});
+		console.log('mounting');
+		await Promise.all([
+			(async () => {
+				OLLAMA_URLS = await getOllamaUrls(localStorage.token).catch((error) => {
+					toast.error(error);
+					return [];
+				});
 
-		if (OLLAMA_URLS.length > 0) {
-			selectedOllamaUrlIdx = 0;
-		}
-
-		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
-		modelConfig = await getModelConfig(localStorage.token);
-		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+				if (OLLAMA_URLS.length > 0) {
+					selectedOllamaUrlIdx = 0;
+				}
+			})(),
+			(async () => {
+				liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
+			})(),
+			(async () => {
+				modelConfig = await getModelConfig(localStorage.token);
+			})(),
+			(async () => {
+				ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+			})()
+		]);
 	});
 </script>
 

@@ -10,7 +10,7 @@ import logging
 
 from pydantic import BaseModel
 
-
+from apps.web.models.models import Models
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
@@ -27,7 +27,6 @@ from config import (
     CACHE_DIR,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
-    MODEL_CONFIG,
     AppConfig,
 )
 from typing import List, Optional
@@ -53,7 +52,9 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-app.state.MODEL_CONFIG = MODEL_CONFIG.value.get("openai", [])
+app.state.MODEL_CONFIG = [
+    model.to_form() for model in Models.get_all_models_by_source("openai")
+]
 
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
@@ -262,7 +263,7 @@ async def get_all_models():
 
 def add_custom_info_to_model(model: dict):
     model["custom_info"] = next(
-        (item for item in app.state.MODEL_CONFIG if item["id"] == model["id"]), {}
+        (item for item in app.state.MODEL_CONFIG if item.id == model["id"]), None
     )
 
 

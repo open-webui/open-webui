@@ -265,7 +265,7 @@
 						const hasImages = messages.some((message) =>
 							message.files?.some((file) => file.type === 'image')
 						);
-						if (hasImages && !(model.custom_info?.vision_capable ?? true)) {
+						if (hasImages && !(model.custom_info?.params.vision_capable ?? true)) {
 							toast.error(
 								$i18n.t('Model {{modelName}} is not vision capable', {
 									modelName: model.custom_info?.name ?? model.name ?? model.id
@@ -949,6 +949,7 @@
 	bind:prompt
 	bind:autoScroll
 	bind:selectedModel={atSelectedModel}
+	{selectedModels}
 	{messages}
 	{submitPrompt}
 	{stopResponse}

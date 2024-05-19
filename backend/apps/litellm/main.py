@@ -18,8 +18,9 @@ import requests
 from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 
+from apps.web.models.models import Models
 from utils.utils import get_verified_user, get_current_user, get_admin_user
-from config import SRC_LOG_LEVELS, ENV, MODEL_CONFIG
+from config import SRC_LOG_LEVELS
 from constants import MESSAGES
 
 import os
@@ -77,11 +78,12 @@ with open(LITELLM_CONFIG_DIR, "r") as file:
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER.value
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST.value
-
+app.state.MODEL_CONFIG = [
+    model.to_form() for model in Models.get_all_models_by_source("litellm")
+]
 
 app.state.ENABLE = ENABLE_LITELLM
 app.state.CONFIG = litellm_config
-app.state.MODEL_CONFIG = MODEL_CONFIG.value.get("litellm", [])
 
 # Global variable to store the subprocess reference
 background_process = None
@@ -268,9 +270,9 @@ async def get_models(user=Depends(get_current_user)):
                             (
                                 item
                                 for item in app.state.MODEL_CONFIG
-                                if item["name"] == model["model_name"]
+                                if item.id == model["model_name"]
                             ),
-                            {},
+                            None,
                         ),
                     }
                     for model in app.state.CONFIG["model_list"]
@@ -286,7 +288,7 @@ async def get_models(user=Depends(get_current_user)):
 
 def add_custom_info_to_model(model: dict):
     model["custom_info"] = next(
-        (item for item in app.state.MODEL_CONFIG if item["id"] == model["id"]), {}
+        (item for item in app.state.MODEL_CONFIG if item.id == model["id"]), None
     )
 
 

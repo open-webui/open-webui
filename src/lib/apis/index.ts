@@ -226,16 +226,18 @@ export const getModelConfig = async (token: string): Promise<GlobalModelConfig> 
 
 export interface ModelConfig {
 	id: string;
-	name?: string;
+	name: string;
+	source: string;
+	base_model?: string;
+	params: ModelParams;
+}
+
+export interface ModelParams {
 	description?: string;
 	vision_capable?: boolean;
 }
 
-export interface GlobalModelConfig {
-	ollama: ModelConfig[];
-	litellm: ModelConfig[];
-	openai: ModelConfig[];
-}
+export type GlobalModelConfig = ModelConfig[];
 
 export const updateModelConfig = async (token: string, config: GlobalModelConfig) => {
 	let error = null;
@@ -246,7 +248,9 @@ export const updateModelConfig = async (token: string, config: GlobalModelConfig
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify(config)
+		body: JSON.stringify({
+			models: config
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

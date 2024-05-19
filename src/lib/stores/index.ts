@@ -1,5 +1,6 @@
 import { APP_NAME } from '$lib/constants';
 import { type Writable, writable } from 'svelte/store';
+import type { GlobalModelConfig, ModelConfig } from '$lib/apis';
 
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
@@ -44,17 +45,10 @@ export const showChangelog = writable(false);
 
 export type Model = OpenAIModel | OllamaModel;
 
-type ModelCustomInfo = {
-	id?: string;
-	name?: string;
-	description?: string;
-	vision_capable?: boolean;
-};
-
 type BaseModel = {
 	id: string;
 	name: string;
-	custom_info?: ModelCustomInfo;
+	custom_info?: ModelConfig;
 };
 
 export interface OpenAIModel extends BaseModel {
@@ -141,19 +135,6 @@ type Config = {
 	default_prompt_suggestions?: PromptSuggestion[];
 	trusted_header_auth?: boolean;
 	model_config?: GlobalModelConfig;
-};
-
-type GlobalModelConfig = {
-	ollama?: ModelConfig[];
-	litellm?: ModelConfig[];
-	openai?: ModelConfig[];
-};
-
-type ModelConfig = {
-	id?: string;
-	name?: string;
-	description?: string;
-	vision_capable?: boolean;
 };
 
 type PromptSuggestion = {
