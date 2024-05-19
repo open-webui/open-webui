@@ -355,7 +355,12 @@
 										copyToClipboard={copyToClipboardWithToast}
 										{continueGeneration}
 										{regenerateResponse}
-										on:change={() => {
+										on:change={async () => {
+											await updateChatById(localStorage.token, chatId, {
+												messages: messages,
+												history: history
+											});
+
 											const element = document.getElementById('messages-container');
 											autoScroll =
 												element.scrollHeight - element.scrollTop <= element.clientHeight + 50;

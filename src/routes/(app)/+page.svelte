@@ -766,7 +766,11 @@
 			let userMessage = history.messages[message.parentId];
 			let userPrompt = userMessage.content;
 
-			await sendPrompt(userPrompt, userMessage.id, message.model);
+			if ((userMessage?.models ?? [...selectedModels]).length == 1) {
+				await sendPrompt(userPrompt, userMessage.id);
+			} else {
+				await sendPrompt(userPrompt, userMessage.id, message.model);
+			}
 		}
 	};
 
