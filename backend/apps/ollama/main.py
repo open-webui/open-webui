@@ -65,8 +65,8 @@ app.add_middleware(
 
 app.state.config = AppConfig()
 
-app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
+app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 app.state.MODEL_CONFIG = MODEL_CONFIG.value.get("ollama", [])
 
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
@@ -126,8 +126,9 @@ async def cancel_ollama_request(request_id: str, user=Depends(get_current_user))
 
 
 async def fetch_url(url):
+    timeout = aiohttp.ClientTimeout(total=5)
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url) as response:
                 return await response.json()
     except Exception as e:
@@ -190,11 +191,12 @@ async def get_ollama_tags(
     if url_idx == None:
         models = await get_all_models()
 
-        if app.state.ENABLE_MODEL_FILTER:
+        if app.state.config.ENABLE_MODEL_FILTER:
             if user.role == "user":
                 models["models"] = list(
                     filter(
-                        lambda model: model["name"] in app.state.MODEL_FILTER_LIST,
+                        lambda model: model["name"]
+                        in app.state.config.MODEL_FILTER_LIST,
                         models["models"],
                     )
                 )
@@ -1058,11 +1060,12 @@ async def get_openai_models(
     if url_idx == None:
         models = await get_all_models()
 
-        if app.state.ENABLE_MODEL_FILTER:
+        if app.state.config.ENABLE_MODEL_FILTER:
             if user.role == "user":
                 models["models"] = list(
                     filter(
-                        lambda model: model["name"] in app.state.MODEL_FILTER_LIST,
+                        lambda model: model["name"]
+                        in app.state.config.MODEL_FILTER_LIST,
                         models["models"],
                     )
                 )

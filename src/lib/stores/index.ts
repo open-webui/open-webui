@@ -91,6 +91,7 @@ type Settings = {
 	notificationEnabled?: boolean;
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
+	chatDirection: 'LTR' | 'RTL';
 
 	system?: string;
 	requestFormat?: string;

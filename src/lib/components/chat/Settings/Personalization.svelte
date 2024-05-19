@@ -63,7 +63,7 @@
 		<div class="mt-3 mb-1 ml-1">
 			<button
 				type="button"
-				class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-gray-300 dark:outline-gray-800 rounded-3xl"
+				class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
 			>
 				Manage
 			</button>

@@ -332,7 +332,11 @@
 <CitationsModal bind:show={showCitationModal} citation={selectedCitation} />
 
 {#key message.id}
-	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
+	<div
+		class=" flex w-full message-{message.id}"
+		id="message-{message.id}"
+		dir={$settings.chatDirection}
+	>
 		<ProfileImage
 			src={modelfiles[message.model]?.imageUrl ??
 				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
@@ -434,9 +438,10 @@
 							{:else if message.content === ''}
 								<Skeleton />
 							{:else}
-								{#each tokens as token}
+								{#each tokens as token, tokenIdx}
 									{#if token.type === 'code'}
 										<CodeBlock
+											id={`${message.id}-${tokenIdx}`}
 											lang={token.lang}
 											code={revertSanitizedResponseContent(token.text)}
 										/>
@@ -494,7 +499,7 @@
 									class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500"
 								>
 									{#if siblings.length > 1}
-										<div class="flex self-center">
+										<div class="flex self-center" dir="ltr">
 											<button
 												class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 												on:click={() => {

@@ -6,15 +6,15 @@ import { getLiteLLMModels } from '$lib/apis/litellm';
 
 export const getModels = async (token: string) => {
 	let models = await Promise.all([
-		await getOllamaModels(token).catch((error) => {
+		getOllamaModels(token).catch((error) => {
 			console.log(error);
 			return null;
 		}),
-		await getOpenAIModels(token).catch((error) => {
+		getOpenAIModels(token).catch((error) => {
 			console.log(error);
 			return null;
 		}),
-		await getLiteLLMModels(token).catch((error) => {
+		getLiteLLMModels(token).catch((error) => {
 			console.log(error);
 			return null;
 		})

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { chats, config, modelfiles, settings, user } from '$lib/stores';
+	import { chats, config, modelfiles, settings, user as _user } from '$lib/stores';
 	import { tick, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -22,8 +22,9 @@
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
 
+	export let user = $_user;
 	export let prompt;
-	export let suggestionPrompts;
+	export let suggestionPrompts = [];
 	export let processing = '';
 	export let bottomPadding = false;
 	export let autoScroll;
@@ -294,7 +295,7 @@
 							{#if message.role === 'user'}
 								<UserMessage
 									on:delete={() => messageDeleteHandler(message.id)}
-									user={$user}
+									{user}
 									{readOnly}
 									{message}
 									isFirstMessage={messageIdx === 0}

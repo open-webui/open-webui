@@ -120,6 +120,18 @@ app.state.config.WEBHOOK_URL = WEBHOOK_URL
 origins = ["*"]
 
 
+# Custom middleware to add security headers
+# class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+#     async def dispatch(self, request: Request, call_next):
+#         response: Response = await call_next(request)
+#         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+#         response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+#         return response
+
+
+# app.add_middleware(SecurityHeadersMiddleware)
+
+
 class RAGMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         return_citations = False
@@ -280,14 +292,14 @@ class ModelFilterConfigForm(BaseModel):
 async def update_model_filter_config(
     form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
 ):
-    app.state.config.ENABLE_MODEL_FILTER, form_data.enabled
-    app.state.config.MODEL_FILTER_LIST, form_data.models
+    app.state.config.ENABLE_MODEL_FILTER = form_data.enabled
+    app.state.config.MODEL_FILTER_LIST = form_data.models
 
-    ollama_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
-    ollama_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
+    ollama_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
+    ollama_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
 
-    openai_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
-    openai_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
+    openai_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
+    openai_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
 
     litellm_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
     litellm_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST

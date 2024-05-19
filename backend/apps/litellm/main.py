@@ -75,6 +75,10 @@ with open(LITELLM_CONFIG_DIR, "r") as file:
     litellm_config = yaml.safe_load(file)
 
 
+app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER.value
+app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST.value
+
+
 app.state.ENABLE = ENABLE_LITELLM
 app.state.CONFIG = litellm_config
 app.state.MODEL_CONFIG = MODEL_CONFIG.value.get("litellm", [])
@@ -150,10 +154,6 @@ async def shutdown_litellm_background():
         await background_process.wait()  # Ensure the process has terminated
         log.info("Subprocess terminated")
         background_process = None
-
-
-app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 
 @app.get("/")

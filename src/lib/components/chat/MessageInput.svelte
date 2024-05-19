@@ -327,7 +327,6 @@
 	};
 
 	onMount(() => {
-		console.log(document.getElementById('sidebar'));
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
@@ -512,6 +511,7 @@
 						>
 							<div class="flex items-center gap-2 text-sm dark:text-gray-500">
 								<img
+									crossorigin="anonymous"
 									alt="model profile"
 									class="size-5 max-w-[28px] object-cover rounded-full"
 									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedModel.id)
@@ -600,7 +600,8 @@
 						}}
 					/>
 					<form
-						class=" flex flex-col relative w-full rounded-3xl px-1.5 border border-gray-100 dark:border-gray-850 bg-white dark:bg-gray-900 dark:text-gray-100"
+						dir={$settings?.chatDirection}
+						class=" flex flex-col relative w-full rounded-3xl px-1.5 bg-gray-50 dark:bg-gray-850 dark:text-gray-100"
 						on:submit|preventDefault={() => {
 							submitPrompt(prompt, user);
 						}}
@@ -770,7 +771,7 @@
 							<textarea
 								id="chat-textarea"
 								bind:this={chatTextAreaElement}
-								class="scrollbar-hidden dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
+								class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
 									? ''
 									: ' pl-4'} rounded-xl resize-none h-[48px]"
 								placeholder={chatInputPlaceholder !== ''
