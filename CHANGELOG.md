@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **💾 Persistent Settings**: Settings now saved as config.json for convenience.
 - **🩺 Health Check Endpoint**: Added for Docker deployment.
 - **↕️ RTL Support**: Toggle chat direction via settings > interface > chat direction.
+- **🖥️ PowerPoint Support**: RAG pipeline now supports PowerPoint documents.
 - **🌐 Language Updates**: Ukrainian, Turkish, Arabic, Chinese, Serbian, Vietnamese updated; Punjabi added.
 
 ### Changed
