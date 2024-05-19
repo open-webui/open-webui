@@ -339,7 +339,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 			if (
 				inputFiles &&
 				inputFiles.length > 0 &&
-				['image/gif', 'image/jpeg', 'image/png'].includes(inputFiles[0]['type'])
+				['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(inputFiles[0]['type'])
 			) {
 				reader.readAsDataURL(inputFiles[0]);
 			} else {
