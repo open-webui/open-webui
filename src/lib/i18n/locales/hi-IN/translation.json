@@ -478,7 +478,6 @@
 	"variable": "",
 	"variable to have them replaced with clipboard content.": "उन्हें क्लिपबोर्ड सामग्री से बदलने के लिए वेरिएबल।",
 	"Version": "संस्करण",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "चेतावनी: यदि आप अपने एम्बेडिंग मॉडल को अपडेट या बदलते हैं, तो आपको सभी दस्तावेज़ों को फिर से आयात करने की आवश्यकता होगी।",
 	"Web": "वेब",
 	"Web Loader Settings": "",

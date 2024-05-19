@@ -478,7 +478,6 @@
 	"variable": "variable",
 	"variable to have them replaced with clipboard content.": "variable pour les remplacer par le contenu du presse-papiers.",
 	"Version": "Version",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "Web",
 	"Web Loader Settings": "",

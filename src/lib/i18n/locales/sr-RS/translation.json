@@ -478,7 +478,6 @@
 	"variable": "променљива",
 	"variable to have them replaced with clipboard content.": "променљива за замену са садржајем оставе.",
 	"Version": "Издање",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "Упозорење: ако ажурирате или промените ваш модел уградње, мораћете поново да увезете све документе.",
 	"Web": "Веб",
 	"Web Loader Settings": "Подешавања веб учитавача",

@@ -478,7 +478,6 @@
 	"variable": "변수",
 	"variable to have them replaced with clipboard content.": "변수를 사용하여 클립보드 내용으로 바꾸세요.",
 	"Version": "버전",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "웹",
 	"Web Loader Settings": "",

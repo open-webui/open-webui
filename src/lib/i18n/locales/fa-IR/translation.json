@@ -478,7 +478,6 @@
 	"variable": "متغیر",
 	"variable to have them replaced with clipboard content.": "متغیر برای جایگزینی آنها با محتوای کلیپ بورد.",
 	"Version": "نسخه",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "وب",
 	"Web Loader Settings": "",

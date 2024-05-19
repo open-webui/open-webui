@@ -478,7 +478,6 @@
 	"variable": "değişken",
 	"variable to have them replaced with clipboard content.": "panodaki içerikle değiştirilmesi için değişken.",
 	"Version": "Sürüm",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "Uyarı: Gömme modelinizi günceller veya değiştirirseniz, tüm belgeleri yeniden içe aktarmanız gerekecektir.",
 	"Web": "Web",
 	"Web Loader Settings": "Web Yükleyici Ayarları",

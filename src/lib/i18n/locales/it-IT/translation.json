@@ -478,7 +478,6 @@
 	"variable": "variabile",
 	"variable to have them replaced with clipboard content.": "variabile per farli sostituire con il contenuto degli appunti.",
 	"Version": "Versione",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "Attenzione: se aggiorni o cambi il tuo modello di embedding, dovrai reimportare tutti i documenti.",
 	"Web": "Web",
 	"Web Loader Settings": "Impostazioni del caricatore Web",

@@ -478,7 +478,6 @@
 	"variable": "змінна",
 	"variable to have them replaced with clipboard content.": "змінна, щоб замінити їх вмістом буфера обміну.",
 	"Version": "Версія",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "Попередження: Якщо ви оновлюєте або змінюєте модель вбудовування, вам потрібно буде повторно імпортувати всі документи.",
 	"Web": "Веб",
 	"Web Loader Settings": "Налаштування веб-завантажувача",

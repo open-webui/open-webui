@@ -478,7 +478,6 @@
 	"variable": "ভেরিয়েবল",
 	"variable to have them replaced with clipboard content.": "ক্লিপবোর্ডের কন্টেন্ট দিয়ে যেই ভেরিয়েবল রিপ্লেস করা যাবে।",
 	"Version": "ভার্সন",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "ওয়েব",
 	"Web Loader Settings": "",

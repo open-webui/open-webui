@@ -478,7 +478,6 @@
 	"variable": "变量",
 	"variable to have them replaced with clipboard content.": "变量将被剪贴板内容替换。",
 	"Version": "版本",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "警告： 如果更新或更改 embedding 模型，则需要重新导入所有文档。",
 	"Web": "网页",
 	"Web Loader Settings": "Web 加载器设置",

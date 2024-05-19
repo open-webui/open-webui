@@ -478,7 +478,6 @@
 	"variable": "Variable",
 	"variable to have them replaced with clipboard content.": "Variable, um den Inhalt der Zwischenablage beim Nutzen des Prompts zu ersetzen.",
 	"Version": "Version",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "Warnung: Wenn du dein Einbettungsmodell aktualisierst oder änderst, musst du alle Dokumente erneut importieren.",
 	"Web": "Web",
 	"Web Loader Settings": "",

@@ -478,7 +478,6 @@
 	"variable": "変数",
 	"variable to have them replaced with clipboard content.": "クリップボードの内容に置き換える変数。",
 	"Version": "バージョン",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "ウェブ",
 	"Web Loader Settings": "",

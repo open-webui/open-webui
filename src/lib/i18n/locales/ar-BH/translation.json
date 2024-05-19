@@ -478,7 +478,6 @@
 	"variable": "المتغير",
 	"variable to have them replaced with clipboard content.": "متغير لاستبدالها بمحتوى الحافظة.",
 	"Version": "إصدار",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "تحذير: إذا قمت بتحديث أو تغيير نموذج التضمين الخاص بك، فستحتاج إلى إعادة استيراد كافة المستندات.",
 	"Web": "Web",
 	"Web Loader Settings": "",

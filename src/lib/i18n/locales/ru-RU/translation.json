@@ -478,7 +478,6 @@
 	"variable": "переменная",
 	"variable to have them replaced with clipboard content.": "переменная, чтобы их заменить содержимым буфера обмена.",
 	"Version": "Версия",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Web": "Веб",
 	"Web Loader Settings": "",

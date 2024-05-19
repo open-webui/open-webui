@@ -478,7 +478,6 @@
 	"variable": "muuttuja",
 	"variable to have them replaced with clipboard content.": "muuttuja korvataan leikepöydän sisällöllä.",
 	"Version": "Versio",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "Varoitus: Jos päivität tai vaihdat upotusmallia, sinun on tuotava kaikki asiakirjat uudelleen.",
 	"Web": "Web",
 	"Web Loader Settings": "",

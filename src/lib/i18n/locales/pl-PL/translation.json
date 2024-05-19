@@ -478,7 +478,6 @@
 	"variable": "zmienna",
 	"variable to have them replaced with clipboard content.": "zmienna która zostanie zastąpiona zawartością schowka.",
 	"Version": "Wersja",
-	"View": "",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "Uwaga: Jeśli uaktualnisz lub zmienisz model osadzania, będziesz musiał ponownie zaimportować wszystkie dokumenty.",
 	"Web": "Sieć",
 	"Web Loader Settings": "Ustawienia pobierania z sieci",
