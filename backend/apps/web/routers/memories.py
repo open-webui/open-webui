@@ -72,7 +72,7 @@ class QueryMemoryForm(BaseModel):
 
 
 @router.post("/query", response_model=Optional[MemoryModel])
-async def add_memory(
+async def query_memory(
     request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user)
 ):
     query_embedding = request.app.state.EMBEDDING_FUNCTION(form_data.content)
