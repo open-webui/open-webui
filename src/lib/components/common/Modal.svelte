@@ -18,7 +18,7 @@
 		} else if (size === 'md') {
 			return 'w-[48rem]';
 		} else {
-			return 'w-[52rem]';
+			return 'w-[56rem]';
 		}
 	};
 

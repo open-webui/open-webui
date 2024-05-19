@@ -59,7 +59,11 @@ self.onmessage = async (event) => {
 	// make sure loading is done
 	await loadPyodideAndPackages(self.packages);
 
-	self.result = await self.pyodide.runPythonAsync(code);
+	try {
+		self.result = await self.pyodide.runPythonAsync(code);
+	} catch (error) {
+		self.stderr = error.toString();
+	}
 	self.postMessage({ id, result: self.result, stdout: self.stdout, stderr: self.stderr });
 };
 

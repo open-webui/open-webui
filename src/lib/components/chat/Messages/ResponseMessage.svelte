@@ -69,7 +69,7 @@
 
 	let selectedCitation = null;
 
-	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
+	$: tokens = marked.lexer(sanitizeResponseContent(message?.content));
 
 	const renderer = new marked.Renderer();
 
@@ -499,7 +499,7 @@
 									class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500"
 								>
 									{#if siblings.length > 1}
-										<div class="flex self-center" dir="ltr">
+										<div class="flex self-center min-w-fit" dir="ltr">
 											<button
 												class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 												on:click={() => {
@@ -523,7 +523,7 @@
 											</button>
 
 											<div
-												class="text-sm tracking-widest font-semibold self-center dark:text-gray-100"
+												class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
 											>
 												{siblings.indexOf(message.id) + 1}/{siblings.length}
 											</div>
@@ -894,7 +894,9 @@
 													class="{isLastMessage
 														? 'visible'
 														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
-													on:click={regenerateResponse}
+													on:click={() => {
+														regenerateResponse(message);
+													}}
 												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"

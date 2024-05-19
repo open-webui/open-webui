@@ -211,7 +211,8 @@
 				user: _user ?? undefined,
 				content: userPrompt,
 				files: files.length > 0 ? files : undefined,
-				timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+				models: selectedModels
 			};
 
 			// Add message to history and Set currentId to messageId
@@ -256,62 +257,67 @@
 			await sendPrompt(userPrompt, userMessageId);
 		}
 	};
-	const sendPrompt = async (prompt, parentId) => {
+
+	const sendPrompt = async (prompt, parentId, modelId = null) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
-			(atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels).map(
-				async (modelId) => {
-					const model = $models.filter((m) => m.id === modelId).at(0);
+			(modelId
+				? [modelId]
+				: atSelectedModel !== undefined
+				? [atSelectedModel.id]
+				: selectedModels
+			).map(async (modelId) => {
+				console.log('modelId', modelId);
+				const model = $models.filter((m) => m.id === modelId).at(0);
 
-					if (model) {
-						// If there are image files, check if model is vision capable
-						const hasImages = messages.some((message) =>
-							message.files?.some((file) => file.type === 'image')
+				if (model) {
+					// If there are image files, check if model is vision capable
+					const hasImages = messages.some((message) =>
+						message.files?.some((file) => file.type === 'image')
+					);
+					if (hasImages && !(model.custom_info?.params.vision_capable ?? true)) {
+						toast.error(
+							$i18n.t('Model {{modelName}} is not vision capable', {
+								modelName: model.custom_info?.name ?? model.name ?? model.id
+							})
 						);
-						if (hasImages && !(model.custom_info?.params.vision_capable ?? true)) {
-							toast.error(
-								$i18n.t('Model {{modelName}} is not vision capable', {
-									modelName: model.custom_info?.name ?? model.name ?? model.id
-								})
-							);
-						}
-
-						// Create response message
-						let responseMessageId = uuidv4();
-						let responseMessage = {
-							parentId: parentId,
-							id: responseMessageId,
-							childrenIds: [],
-							role: 'assistant',
-							content: '',
-							model: model.id,
-							modelName: model.custom_info?.name ?? model.name ?? model.id,
-							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-						};
-
-						// Add message to history and Set currentId to messageId
-						history.messages[responseMessageId] = responseMessage;
-						history.currentId = responseMessageId;
-
-						// Append messageId to childrenIds of parent message
-						if (parentId !== null) {
-							history.messages[parentId].childrenIds = [
-								...history.messages[parentId].childrenIds,
-								responseMessageId
-							];
-						}
-
-						if (model?.external) {
-							await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-						} else if (model) {
-							await sendPromptOllama(model, prompt, responseMessageId, _chatId);
-						}
-					} else {
-						toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 					}
+
+					// Create response message
+					let responseMessageId = uuidv4();
+					let responseMessage = {
+						parentId: parentId,
+						id: responseMessageId,
+						childrenIds: [],
+						role: 'assistant',
+						content: '',
+						model: model.id,
+						modelName: model.custom_info?.name ?? model.name ?? model.id,
+						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+					};
+
+					// Add message to history and Set currentId to messageId
+					history.messages[responseMessageId] = responseMessage;
+					history.currentId = responseMessageId;
+
+					// Append messageId to childrenIds of parent message
+					if (parentId !== null) {
+						history.messages[parentId].childrenIds = [
+							...history.messages[parentId].childrenIds,
+							responseMessageId
+						];
+					}
+
+					if (model?.external) {
+						await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+					} else if (model) {
+						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+					}
+				} else {
+					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
-			)
+			})
 		);
 
 		await chats.set(await getChatList(localStorage.token));
@@ -775,16 +781,18 @@
 		console.log('stopResponse');
 	};
 
-	const regenerateResponse = async () => {
+	const regenerateResponse = async (message) => {
 		console.log('regenerateResponse');
-		if (messages.length != 0 && messages.at(-1).done == true) {
-			messages.splice(messages.length - 1, 1);
-			messages = messages;
 
-			let userMessage = messages.at(-1);
+		if (messages.length != 0) {
+			let userMessage = history.messages[message.parentId];
 			let userPrompt = userMessage.content;
 
-			await sendPrompt(userPrompt, userMessage.id);
+			if ((userMessage?.models ?? [...selectedModels]).length == 1) {
+				await sendPrompt(userPrompt, userMessage.id);
+			} else {
+				await sendPrompt(userPrompt, userMessage.id, message.model);
+			}
 		}
 	};
 
