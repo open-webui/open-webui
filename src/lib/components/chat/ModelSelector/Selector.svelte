@@ -25,7 +25,7 @@
 
 	export let items = [{ value: 'mango', label: 'Mango' }];
 
-	export let className = ' w-[30rem]';
+	export let className = 'w-[30rem]';
 
 	let show = false;
 
@@ -203,7 +203,9 @@
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
-		class=" z-40 {className} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/50  outline-none "
+		class=" z-40 {$mobile
+			? `w-full`
+			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/50  outline-none "
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={4}
