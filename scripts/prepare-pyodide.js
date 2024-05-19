@@ -6,7 +6,8 @@ const packages = [
 	'matplotlib',
 	'scikit-learn',
 	'scipy',
-	'regex'
+	'regex',
+	'seaborn'
 ];
 
 import { loadPyodide } from 'pyodide';

@@ -186,7 +186,8 @@
 					code.includes('matplotlib') ? 'matplotlib' : null,
 					code.includes('sklearn') ? 'scikit-learn' : null,
 					code.includes('scipy') ? 'scipy' : null,
-					code.includes('re') ? 'regex' : null
+					code.includes('re') ? 'regex' : null,
+					code.includes('seaborn') ? 'seaborn' : null
 				].filter(Boolean);
 
 				console.log(packages);
@@ -235,7 +236,8 @@ __builtins__.input = input`);
 			code.includes('pandas') ? 'pandas' : null,
 			code.includes('sklearn') ? 'scikit-learn' : null,
 			code.includes('scipy') ? 'scipy' : null,
-			code.includes('re') ? 'regex' : null
+			code.includes('re') ? 'regex' : null,
+			code.includes('seaborn') ? 'seaborn' : null
 		].filter(Boolean);
 
 		console.log(packages);
