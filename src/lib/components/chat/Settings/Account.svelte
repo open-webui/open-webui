@@ -71,7 +71,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[22rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[25rem]">
 		<input
 			id="profile-image-input"
 			bind:this={profileImageInputElement}
@@ -127,7 +127,7 @@
 
 				if (
 					files.length > 0 &&
-					['image/gif', 'image/jpeg', 'image/png'].includes(files[0]['type'])
+					['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(files[0]['type'])
 				) {
 					reader.readAsDataURL(files[0]);
 				}

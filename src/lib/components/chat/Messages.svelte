@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { chats, config, modelfiles, settings, user } from '$lib/stores';
+	import { chats, config, modelfiles, settings, user as _user, mobile } from '$lib/stores';
 	import { tick, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -13,6 +13,8 @@
 	import Spinner from '../common/Spinner.svelte';
 	import { imageGenerations } from '$lib/apis/images';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
+	import CompareMessages from './Messages/CompareMessages.svelte';
+	import { stringify } from 'postcss';
 
 	const i18n = getContext('i18n');
 
@@ -22,15 +24,16 @@
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
 
+	export let user = $_user;
 	export let prompt;
-	export let suggestionPrompts;
+	export let suggestionPrompts = [];
 	export let processing = '';
 	export let bottomPadding = false;
 	export let autoScroll;
-	export let selectedModels;
 	export let history = {};
 	export let messages = [];
 
+	export let selectedModels;
 	export let selectedModelfiles = [];
 
 	$: if (autoScroll && bottomPadding) {
@@ -62,7 +65,8 @@
 			childrenIds: [],
 			role: 'user',
 			content: userPrompt,
-			...(history.messages[messageId].files && { files: history.messages[messageId].files })
+			...(history.messages[messageId].files && { files: history.messages[messageId].files }),
+			models: selectedModels.filter((m, mIdx) => selectedModels.indexOf(m) === mIdx)
 		};
 
 		let messageParentId = history.messages[messageId].parentId;
@@ -78,7 +82,7 @@
 		history.currentId = userMessageId;
 
 		await tick();
-		await sendPrompt(userPrompt, userMessageId, chatId);
+		await sendPrompt(userPrompt, userMessageId);
 	};
 
 	const updateChatMessages = async () => {
@@ -294,7 +298,7 @@
 							{#if message.role === 'user'}
 								<UserMessage
 									on:delete={() => messageDeleteHandler(message.id)}
-									user={$user}
+									{user}
 									{readOnly}
 									{message}
 									isFirstMessage={messageIdx === 0}
@@ -308,32 +312,66 @@
 									{showNextMessage}
 									copyToClipboard={copyToClipboardWithToast}
 								/>
-							{:else}
-								<ResponseMessage
-									{message}
-									modelfiles={selectedModelfiles}
-									siblings={history.messages[message.parentId]?.childrenIds ?? []}
-									isLastMessage={messageIdx + 1 === messages.length}
-									{readOnly}
-									{updateChatMessages}
-									{confirmEditResponseMessage}
-									{showPreviousMessage}
-									{showNextMessage}
-									{rateMessage}
-									copyToClipboard={copyToClipboardWithToast}
-									{continueGeneration}
-									{regenerateResponse}
-									on:save={async (e) => {
-										console.log('save', e);
+							{:else if $mobile || (history.messages[message.parentId]?.models?.length ?? 1) === 1}
+								{#key message.id}
+									<ResponseMessage
+										{message}
+										modelfiles={selectedModelfiles}
+										siblings={history.messages[message.parentId]?.childrenIds ?? []}
+										isLastMessage={messageIdx + 1 === messages.length}
+										{readOnly}
+										{updateChatMessages}
+										{confirmEditResponseMessage}
+										{showPreviousMessage}
+										{showNextMessage}
+										{rateMessage}
+										copyToClipboard={copyToClipboardWithToast}
+										{continueGeneration}
+										{regenerateResponse}
+										on:save={async (e) => {
+											console.log('save', e);
 
-										const message = e.detail;
-										history.messages[message.id] = message;
-										await updateChatById(localStorage.token, chatId, {
-											messages: messages,
-											history: history
-										});
-									}}
-								/>
+											const message = e.detail;
+											history.messages[message.id] = message;
+											await updateChatById(localStorage.token, chatId, {
+												messages: messages,
+												history: history
+											});
+										}}
+									/>
+								{/key}
+							{:else}
+								{#key message.parentId}
+									<CompareMessages
+										bind:history
+										{messages}
+										{chatId}
+										parentMessage={history.messages[message.parentId]}
+										{messageIdx}
+										{selectedModelfiles}
+										{updateChatMessages}
+										{confirmEditResponseMessage}
+										{rateMessage}
+										copyToClipboard={copyToClipboardWithToast}
+										{continueGeneration}
+										{regenerateResponse}
+										on:change={async () => {
+											await updateChatById(localStorage.token, chatId, {
+												messages: messages,
+												history: history
+											});
+
+											if (autoScroll) {
+												const element = document.getElementById('messages-container');
+												autoScroll =
+													element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+												setTimeout(() => {
+													scrollToBottom();
+												}, 100);
+											}
+										}}
+									/>
+								{/key}
 							{/if}
 						</div>
 					</div>
