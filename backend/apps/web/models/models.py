@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Optional
 
 import peewee as pw
@@ -6,6 +7,11 @@ from playhouse.shortcuts import model_to_dict
 from pydantic import BaseModel
 
 from apps.web.internal.db import DB
+
+from config import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 ####################
@@ -16,16 +22,15 @@ from apps.web.internal.db import DB
 # ModelParams is a model for the data stored in the params field of the Model table
 # It isn't currently used in the backend, but it's here as a reference
 class ModelParams(BaseModel):
-    """
-    A Pydantic model that represents the parameters of a model.
-
-    Attributes:
-        description (str): A description of the model.
-        vision_capable (bool): A flag indicating if the model is capable of vision and thus image inputs.
-    """
-
     description: str
+    """
+        User-facing description of the model.
+    """
+
     vision_capable: bool
+    """
+        A flag indicating if the model is capable of vision and thus image inputs
+    """
 
 
 class Model(pw.Model):
@@ -151,6 +156,7 @@ class ModelsTable:
 
             return True
         except Exception as e:
+            log.exception(e)
             return False
 
 
