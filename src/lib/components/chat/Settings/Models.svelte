@@ -566,7 +566,6 @@
 	};
 
 	onMount(async () => {
-		console.log('mounting');
 		await Promise.all([
 			(async () => {
 				OLLAMA_URLS = await getOllamaUrls(localStorage.token).catch((error) => {
