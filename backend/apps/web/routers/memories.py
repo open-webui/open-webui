@@ -71,7 +71,7 @@ class QueryMemoryForm(BaseModel):
     content: str
 
 
-@router.post("/query", response_model=Optional[MemoryModel])
+@router.post("/query")
 async def query_memory(
     request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user)
 ):
