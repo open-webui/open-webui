@@ -341,7 +341,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 					if (
 						inputFiles &&
 						inputFiles.length > 0 &&
-						inputFiles[0]['type'].startsWith('image/')
+						['image/gif', 'image/jpeg', 'image/png'].includes(inputFiles[0]['type'])
 					) {
 						reader.readAsDataURL(inputFiles[0]);
 					} else {

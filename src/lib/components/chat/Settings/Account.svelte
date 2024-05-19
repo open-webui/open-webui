@@ -127,7 +127,7 @@
 
 				if (
 					files.length > 0 &&
-					files[0]['type'].startsWith('image/')
+					['image/gif', 'image/jpeg', 'image/png'].includes(files[0]['type'])
 				) {
 					reader.readAsDataURL(files[0]);
 				}
