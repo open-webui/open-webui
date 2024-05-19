@@ -120,6 +120,7 @@ async def delete_memory_by_id(memory_id: str, user=Depends(get_verified_user)):
         collection = CHROMA_CLIENT.get_or_create_collection(
             name=f"user-memory-{user.id}"
         )
-        collection.delete_document(memory_id)
+        collection.delete(ids=[memory_id])
         return True
+
     return False
