@@ -340,11 +340,11 @@
 		scrollToBottom();
 
 		const messagesBody = [
-			$settings.system || responseMessage?.userContext
+			$settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
 						content:
-							$settings.system + (responseMessage?.userContext ?? null)
+							$settings.system + !!(responseMessage?.userContext ?? null)
 								? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
 								: ''
 				  }
@@ -599,11 +599,11 @@
 					model: model.id,
 					stream: true,
 					messages: [
-						$settings.system || responseMessage?.userContext
+						$settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
 									content:
-										$settings.system + (responseMessage?.userContext ?? null)
+										$settings.system + !!(responseMessage?.userContext ?? null)
 											? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
 											: ''
 							  }
