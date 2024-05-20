@@ -48,14 +48,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-app.state.ADMIN_MODEL_FILTER_LIST = ADMIN_MODEL_FILTER_LIST
-
 app.state.config = AppConfig()
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.config.ADMIN_MODEL_FILTER_LIST = ADMIN_MODEL_FILTER_LIST
 
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
