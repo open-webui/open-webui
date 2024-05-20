@@ -276,7 +276,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
                 models["data"] = list(
                     filter(
                         lambda model: model["id"] 
-                        in app.state.ADMIN_MODEL_FILTER_LIST,
+                        in app.state.config.ADMIN_MODEL_FILTER_LIST,
                         models["data"],
                     )
                 )

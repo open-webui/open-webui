@@ -192,7 +192,7 @@ async def get_ollama_tags(
                 models["models"] = list(
                     filter(
                         lambda model: model["name"] 
-                        in app.state.ADMIN_MODEL_FILTER_LIST,
+                        in app.state.config.ADMIN_MODEL_FILTER_LIST,
                         models["models"],
                     )
                 )
