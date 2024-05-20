@@ -305,6 +305,7 @@ async def update_model_filter_config(
 ):
     app.state.config.ENABLE_MODEL_FILTER = form_data.enabled
     app.state.config.MODEL_FILTER_LIST = form_data.models
+    app.state.config.ADMIN_MODEL_FILTER_LIST = form_data.models
 
     ollama_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
     ollama_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
