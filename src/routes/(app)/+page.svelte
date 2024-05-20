@@ -261,28 +261,6 @@
 	const sendPrompt = async (prompt, parentId, modelId = null) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
-		let userContext = null;
-
-		if ($settings?.memory ?? false) {
-			const res = await queryMemory(localStorage.token, prompt).catch((error) => {
-				toast.error(error);
-				return null;
-			});
-
-			if (res) {
-				if (res.documents[0].length > 0) {
-					userContext = res.documents.reduce((acc, doc, index) => {
-						const createdAtTimestamp = res.metadatas[index][0].created_at;
-						const createdAtDate = new Date(createdAtTimestamp * 1000).toISOString().split('T')[0];
-						acc.push(`${index + 1}. [${createdAtDate}]. ${doc[0]}`);
-						return acc;
-					}, []);
-				}
-
-				console.log(userContext);
-			}
-		}
-
 		await Promise.all(
 			(modelId ? [modelId] : atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(
 				async (modelId) => {
@@ -299,7 +277,7 @@
 							role: 'assistant',
 							content: '',
 							model: model.id,
-							userContext: userContext,
+							userContext: null,
 							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 						};
 
@@ -314,6 +292,34 @@
 								responseMessageId
 							];
 						}
+
+						await tick();
+
+						let userContext = null;
+						if ($settings?.memory ?? false) {
+							if (userContext === null) {
+								const res = await queryMemory(localStorage.token, prompt).catch((error) => {
+									toast.error(error);
+									return null;
+								});
+
+								if (res) {
+									if (res.documents[0].length > 0) {
+										userContext = res.documents.reduce((acc, doc, index) => {
+											const createdAtTimestamp = res.metadatas[index][0].created_at;
+											const createdAtDate = new Date(createdAtTimestamp * 1000)
+												.toISOString()
+												.split('T')[0];
+											acc.push(`${index + 1}. [${createdAtDate}]. ${doc[0]}`);
+											return acc;
+										}, []);
+									}
+
+									console.log(userContext);
+								}
+							}
+						}
+						responseMessage.userContext = userContext;
 
 						if (useWebSearch) {
 							await runWebSearchForPrompt(model.id, parentId, responseMessageId);
@@ -383,10 +389,11 @@
 			$settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
-						content:
-							$settings.system + (responseMessage?.userContext ?? null)
-								? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
+						content: `${$settings?.system ?? ''}${
+							responseMessage?.userContext ?? null
+								? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 								: ''
+						}`
 				  }
 				: undefined,
 			...messages
@@ -642,10 +649,11 @@
 						$settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
-									content:
-										$settings.system + (responseMessage?.userContext ?? null)
-											? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
+									content: `${$settings?.system ?? ''}${
+										responseMessage?.userContext ?? null
+											? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 											: ''
+									}`
 							  }
 							: undefined,
 						...messages
