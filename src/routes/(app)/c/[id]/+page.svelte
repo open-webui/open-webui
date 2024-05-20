@@ -347,7 +347,7 @@
 		scrollToBottom();
 
 		const messagesBody = [
-			($settings.system || responseMessage?.userContext) ?? null
+			$settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
 						content:
