@@ -351,8 +351,8 @@
 				? {
 						role: 'system',
 						content:
-							$settings.system + (responseMessage?.userContext ?? null)
-								? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
+							$settings.system + responseMessage?.userContext ?? null
+								? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 								: ''
 				  }
 				: undefined,
@@ -611,7 +611,7 @@
 									role: 'system',
 									content:
 										$settings.system + (responseMessage?.userContext ?? null)
-											? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
+											? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 											: ''
 							  }
 							: undefined,
