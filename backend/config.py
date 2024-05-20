@@ -763,8 +763,6 @@ AUTOMATIC1111_BASE_URL = PersistentConfig(
     os.getenv("AUTOMATIC1111_BASE_URL", ""),
 )
 
-IMAGES_OPENAI_API_KEY = os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY)
-
 COMFYUI_BASE_URL = PersistentConfig(
     "COMFYUI_BASE_URL",
     "image_generation.comfyui.base_url",
@@ -775,6 +773,11 @@ IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
     "IMAGES_OPENAI_API_BASE_URL",
     "image_generation.openai.api_base_url",
     os.getenv("IMAGES_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+)
+IMAGES_OPENAI_API_KEY = PersistentConfig(
+    "IMAGES_OPENAI_API_KEY",
+    "image_generation.openai.api_key",
+    os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
 IMAGE_SIZE = PersistentConfig(
