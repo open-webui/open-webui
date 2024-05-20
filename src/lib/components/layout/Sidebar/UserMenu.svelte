@@ -7,6 +7,7 @@
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import { showSettings } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
+	import { getBackendConfig } from '$lib/apis';
 
 	const i18n = getContext('i18n');
 
@@ -15,6 +16,21 @@
 	export let className = 'max-w-[240px]';
 
 	const dispatch = createEventDispatcher();
+	let modelStatus = '';
+
+	const init = async () => {
+		try {
+			const backendConfig = await getBackendConfig(localStorage.token);
+			if (backendConfig) {
+				modelStatus = backendConfig.model_status;
+			} else {
+				console.log('backendConfig is null or undefined');
+			}
+		} catch (err) {
+			console.error('Error fetching backendConfig:', err);
+		}
+	};
+	init();
 </script>
 
 <DropdownMenu.Root
@@ -77,6 +93,32 @@
 					<ArchiveBox className="size-5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center font-medium">{$i18n.t('Archived Chats')}</div>
+			</button>
+
+			<button
+				class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+				on:click={() => {
+					window.open(modelStatus, '_blank');
+					showDropdown = false;
+				}}
+			>
+				<div class=" self-center mr-3">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="1.5"
+						stroke="currentColor"
+						class="w-5 h-5"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M10 1c3.866 0 7 1.79 7 4s-3.134 4-7 4-7-1.79-7-4 3.134-4 7-4zm5.694 8.13c.464-.264.91-.583 1.306-.952V10c0 2.21-3.134 4-7 4s-7-1.79-7-4V8.178c.396.37.842.688 1.306.953C5.838 10.006 7.854 10.5 10 10.5s4.162-.494 5.694-1.37zM3 13.179V15c0 2.21 3.134 4 7 4s7-1.79 7-4v-1.822c-.396.37-.842.688-1.306.953-1.532.875-3.548 1.369-5.694 1.369s-4.162-.494-5.694-1.37A7.009 7.009 0 013 13.179z"
+						/>
+					</svg>
+				</div>
+				<div class=" self-center font-medium">{$i18n.t('Model Status')}</div>
 			</button>
 
 			{#if role === 'admin'}
