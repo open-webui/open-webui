@@ -347,12 +347,12 @@
 		scrollToBottom();
 
 		const messagesBody = [
-			$settings.system || (responseMessage?.userContext ?? null)
+			$settings.system || Array.isArray(responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
 						content:
-							$settings.system + (responseMessage?.userContext ?? null)
-								? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
+							$settings.system + Array.isArray(responseMessage?.userContext ?? null)
+								? `\n\nUser Context:\n${userContext.join('\n')}`
 								: ''
 				  }
 				: undefined,
