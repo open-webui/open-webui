@@ -316,7 +316,7 @@
 						}
 
 						if (useWebSearch) {
-							await runWebSearchForPrompt(parentId, responseMessageId);
+							await runWebSearchForPrompt(model.id, parentId, responseMessageId);
 						}
 
 						if (model?.external) {
@@ -334,11 +334,11 @@
 		await chats.set(await getChatList(localStorage.token));
 	};
 
-	const runWebSearchForPrompt = async (parentId: string, responseId: string) => {
+	const runWebSearchForPrompt = async (model: string, parentId: string, responseId: string) => {
 		const responseMessage = history.messages[responseId];
 		responseMessage.progress = $i18n.t('Generating search query');
 		messages = messages;
-		const searchQuery = await generateChatSearchQuery(parentId);
+		const searchQuery = await generateChatSearchQuery(model, parentId);
 		if (!searchQuery) {
 			toast.warning($i18n.t('No search query generated'));
 			responseMessage.progress = undefined;
@@ -913,13 +913,13 @@
 		}
 	};
 
-	const generateChatSearchQuery = async (messageId: string) => {
-		const model = $models.find((model) => model.id === selectedModels[0]);
+	const generateChatSearchQuery = async (modelId: string, messageId: string) => {
+		const model = $models.find((model) => model.id === modelId);
 
 		const taskModelId =
 			model?.external ?? false
-				? $settings?.title?.modelExternal ?? selectedModels[0]
-				: $settings?.title?.model ?? selectedModels[0];
+				? $settings?.title?.modelExternal ?? modelId
+				: $settings?.title?.model ?? modelId;
 		const taskModel = $models.find((model) => model.id === taskModelId);
 
 		const userMessage = history.messages[messageId];
