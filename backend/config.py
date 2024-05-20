@@ -1,6 +1,8 @@
 import os
 import sys
 import logging
+import importlib.metadata
+import pkgutil
 import chromadb
 from chromadb import Settings
 from base64 import b64encode
@@ -92,7 +94,10 @@ ENV = os.environ.get("ENV", "dev")
 try:
     PACKAGE_DATA = json.loads((BASE_DIR / "package.json").read_text())
 except:
-    PACKAGE_DATA = {"version": "0.0.0"}
+    try:
+        PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
+    except importlib.metadata.PackageNotFoundError:
+        PACKAGE_DATA = {"version": "0.0.0"}
 
 VERSION = PACKAGE_DATA["version"]
 
@@ -119,7 +124,8 @@ def parse_section(section):
 try:
     changelog_content = (BASE_DIR / "CHANGELOG.md").read_text()
 except:
-    changelog_content = ""
+    changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
+
 
 # Convert markdown content to HTML
 html_content = markdown.markdown(changelog_content)

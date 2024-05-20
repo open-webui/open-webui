@@ -73,6 +73,8 @@ dynamic = ["version"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Communications :: Chat",
     "Topic :: Multimedia",
 ]
@@ -95,9 +97,9 @@ allow-direct-references = true
 path = "package.json"
 pattern = '"version":\s*"(?P<version>[^"]+)"'
 
+[tool.hatch.build.hooks.custom]  # keep this for reading hooks from `hatch_build.py`
+
 [tool.hatch.build.targets.wheel]
-ignore-vcs = true
-packages = ["backend"]
 sources = ["backend"]
 exclude = [
     ".dockerignore",
@@ -107,4 +109,7 @@ exclude = [
     "requirements.txt",
     "start.sh",
     "start_windows.bat",
+    "webui.db",
+    "chroma.sqlite3",
 ]
+force-include = { "CHANGELOG.md" = "open_webui/CHANGELOG.md", build = "open_webui/frontend" }
