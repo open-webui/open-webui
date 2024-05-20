@@ -350,10 +350,11 @@
 			$settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
-						content:
-							$settings.system + responseMessage?.userContext ?? null
+						content: `${$settings?.system ?? ''}${
+							responseMessage?.userContext ?? null
 								? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 								: ''
+						}`
 				  }
 				: undefined,
 			...messages
@@ -609,10 +610,11 @@
 						$settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
-									content:
-										$settings.system + (responseMessage?.userContext ?? null)
+									content: `${$settings?.system ?? ''}${
+										responseMessage?.userContext ?? null
 											? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 											: ''
+									}`
 							  }
 							: undefined,
 						...messages
