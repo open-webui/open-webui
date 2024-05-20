@@ -309,11 +309,11 @@ async def update_model_filter_config(
 
     ollama_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
     ollama_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
-    ollama_app.state.ADMIN_MODEL_FILTER_LIST = app.state.config.ADMIN_MODEL_FILTER_LIST
+    ollama_app.state.config.ADMIN_MODEL_FILTER_LIST = app.state.config.config.ADMIN_MODEL_FILTER_LIST
 
     openai_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
     openai_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
-    openai_app.state.ADMIN_MODEL_FILTER_LIST = app.state.config.ADMIN_MODEL_FILTER_LIST
+    openai_app.state.config.ADMIN_MODEL_FILTER_LIST = app.state.config.ADMIN_MODEL_FILTER_LIST
 
     litellm_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
     litellm_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
