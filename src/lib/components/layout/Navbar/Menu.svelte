@@ -132,7 +132,31 @@
 				<div class="flex items-center">{$i18n.t('Share')}</div>
 			</DropdownMenu.Item>
 
-			<!-- <DropdownMenu.Item
+			{#if shareEnabled}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-850 rounded-md"
+					on:click={() => {
+						shareHandler();
+					}}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="1.5"
+						stroke="currentColor"
+						class="size-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<div class="flex items-center">{$i18n.t('Share')}</div>
+				</DropdownMenu.Item>
+
+				<!-- <DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer"
 					on:click={() => {
 						downloadHandler();
