@@ -35,6 +35,7 @@ chromadb==0.4.24
 sentence-transformers==2.7.0
 pypdf==4.2.0
 docx2txt==0.8
+python-pptx==0.6.23
 unstructured==0.11.8
 Markdown==3.6
 pypandoc==1.13
