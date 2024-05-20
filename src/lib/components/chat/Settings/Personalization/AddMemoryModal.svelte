@@ -1,17 +1,37 @@
 <script>
-	import { getContext } from 'svelte';
+	import { createEventDispatcher, getContext } from 'svelte';
 
 	import Modal from '$lib/components/common/Modal.svelte';
+	import { addNewMemory } from '$lib/apis/memories';
+	import { toast } from 'svelte-sonner';
+
+	const dispatch = createEventDispatcher();
 
 	export let show;
 
 	const i18n = getContext('i18n');
 
 	let loading = false;
-	let memory = '';
+	let content = '';
 
-	const submitHandler = () => {
-		console.log('submitHandler');
+	const submitHandler = async () => {
+		loading = true;
+
+		const res = await addNewMemory(localStorage.token, content).catch((error) => {
+			toast.error(error);
+
+			return null;
+		});
+
+		if (res) {
+			console.log(res);
+			toast.success('Memory added successfully');
+			content = '';
+			show = false;
+			dispatch('save');
+		}
+
+		loading = false;
 	};
 </script>
 
@@ -48,7 +68,7 @@
 				>
 					<div class="">
 						<textarea
-							bind:value={memory}
+							bind:value={content}
 							class=" bg-transparent w-full text-sm resize-none rounded-xl p-3 outline outline-1 outline-gray-100 dark:outline-gray-800"
 							rows="3"
 							placeholder={$i18n.t('Enter a detail about yourself for your LLMs to recall')}

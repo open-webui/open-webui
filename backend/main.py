@@ -240,15 +240,25 @@ async def check_url(request: Request, call_next):
     return response
 
 
-app.mount("/api/v1", webui_app)
-app.mount("/litellm/api", litellm_app)
+@app.middleware("http")
+async def update_embedding_function(request: Request, call_next):
+    response = await call_next(request)
+    if "/embedding/update" in request.url.path:
+        webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
+    return response
 
+
+app.mount("/litellm/api", litellm_app)
 app.mount("/ollama", ollama_app)
 app.mount("/openai/api", openai_app)
 
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
 app.mount("/rag/api/v1", rag_app)
+
+app.mount("/api/v1", webui_app)
+
+webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
 
 
 @app.get("/api/config")

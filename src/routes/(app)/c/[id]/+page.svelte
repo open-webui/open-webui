@@ -44,6 +44,7 @@
 		WEBUI_BASE_URL
 	} from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
+	import { queryMemory } from '$lib/apis/memories';
 
 	const i18n = getContext('i18n');
 
@@ -261,6 +262,28 @@
 	const sendPrompt = async (prompt, parentId, modelId = null) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
+		let userContext = null;
+
+		if ($settings?.memory ?? false) {
+			const res = await queryMemory(localStorage.token, prompt).catch((error) => {
+				toast.error(error);
+				return null;
+			});
+
+			if (res) {
+				if (res.documents[0].length > 0) {
+					userContext = res.documents.reduce((acc, doc, index) => {
+						const createdAtTimestamp = res.metadatas[index][0].created_at;
+						const createdAtDate = new Date(createdAtTimestamp * 1000).toISOString().split('T')[0];
+						acc.push(`${index + 1}. [${createdAtDate}]. ${doc[0]}`);
+						return acc;
+					}, []);
+				}
+
+				console.log(userContext);
+			}
+		}
+
 		await Promise.all(
 			(modelId
 				? [modelId]
@@ -282,6 +305,38 @@
 								modelName: model.custom_info?.name ?? model.name ?? model.id
 							})
 						);
+						// Create response message
+						let responseMessageId = uuidv4();
+						let responseMessage = {
+							parentId: parentId,
+							id: responseMessageId,
+							childrenIds: [],
+							role: 'assistant',
+							content: '',
+							model: model.id,
+							userContext: userContext,
+							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+						};
+
+						// Add message to history and Set currentId to messageId
+						history.messages[responseMessageId] = responseMessage;
+						history.currentId = responseMessageId;
+
+						// Append messageId to childrenIds of parent message
+						if (parentId !== null) {
+							history.messages[parentId].childrenIds = [
+								...history.messages[parentId].childrenIds,
+								responseMessageId
+							];
+						}
+
+						if (model?.external) {
+							await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+						} else if (model) {
+							await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+						}
+					} else {
+						toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 					}
 
 					// Create response message
@@ -334,10 +389,13 @@
 		scrollToBottom();
 
 		const messagesBody = [
-			$settings.system
+			$settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
-						content: $settings.system
+						content:
+							$settings.system + (responseMessage?.userContext ?? null)
+								? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
+								: ''
 				  }
 				: undefined,
 			...messages
@@ -590,10 +648,13 @@
 					model: model.id,
 					stream: true,
 					messages: [
-						$settings.system
+						$settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
-									content: $settings.system
+									content:
+										$settings.system + (responseMessage?.userContext ?? null)
+											? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
+											: ''
 							  }
 							: undefined,
 						...messages
@@ -722,6 +783,7 @@
 		} catch (error) {
 			await handleOpenAIError(error, null, model, responseMessage);
 		}
+		messages = messages;
 
 		stopResponseFlag = false;
 		await tick();

@@ -361,13 +361,14 @@
 												history: history
 											});
 
-											const element = document.getElementById('messages-container');
-											autoScroll =
-												element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-
-											setTimeout(() => {
-												scrollToBottom();
-											}, 100);
+											if (autoScroll) {
+												const element = document.getElementById('messages-container');
+												autoScroll =
+													element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+												setTimeout(() => {
+													scrollToBottom();
+												}, 100);
+											}
 										}}
 									/>
 								{/key}

@@ -30,70 +30,17 @@
 	};
 
 	const checkPythonCode = (str) => {
-		// Check if the string contains typical Python keywords, syntax, or functions
-		const pythonKeywords = [
-			'def',
-			'class',
-			'import',
-			'from',
-			'if',
-			'else',
-			'elif',
-			'for',
-			'while',
-			'try',
-			'except',
-			'finally',
-			'return',
-			'yield',
-			'lambda',
-			'assert',
-			'pass',
-			'break',
-			'continue',
-			'global',
-			'nonlocal',
-			'del',
-			'True',
-			'False',
-			'None',
-			'and',
-			'or',
-			'not',
-			'in',
-			'is',
-			'as',
-			'with'
-		];
-
-		for (let keyword of pythonKeywords) {
-			if (str.includes(keyword)) {
-				return true;
-			}
-		}
-
 		// Check if the string contains typical Python syntax characters
 		const pythonSyntax = [
 			'def ',
-			'class ',
-			'import ',
-			'from ',
-			'if ',
 			'else:',
 			'elif ',
-			'for ',
-			'while ',
 			'try:',
 			'except:',
 			'finally:',
-			'return ',
 			'yield ',
 			'lambda ',
 			'assert ',
-			'pass',
-			'break',
-			'continue',
-			'global ',
 			'nonlocal ',
 			'del ',
 			'True',
@@ -104,29 +51,7 @@
 			' not ',
 			' in ',
 			' is ',
-			' as ',
-			' with ',
-			':',
-			'=',
-			'==',
-			'!=',
-			'>',
-			'<',
-			'>=',
-			'<=',
-			'+',
-			'-',
-			'*',
-			'/',
-			'%',
-			'**',
-			'//',
-			'(',
-			')',
-			'[',
-			']',
-			'{',
-			'}'
+			' with '
 		];
 
 		for (let syntax of pythonSyntax) {
@@ -186,7 +111,8 @@
 					code.includes('matplotlib') ? 'matplotlib' : null,
 					code.includes('sklearn') ? 'scikit-learn' : null,
 					code.includes('scipy') ? 'scipy' : null,
-					code.includes('re') ? 'regex' : null
+					code.includes('re') ? 'regex' : null,
+					code.includes('seaborn') ? 'seaborn' : null
 				].filter(Boolean);
 
 				console.log(packages);
@@ -235,7 +161,8 @@ __builtins__.input = input`);
 			code.includes('pandas') ? 'pandas' : null,
 			code.includes('sklearn') ? 'scikit-learn' : null,
 			code.includes('scipy') ? 'scipy' : null,
-			code.includes('re') ? 'regex' : null
+			code.includes('re') ? 'regex' : null,
+			code.includes('seaborn') ? 'seaborn' : null
 		].filter(Boolean);
 
 		console.log(packages);
