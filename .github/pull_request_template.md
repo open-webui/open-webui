@@ -1,13 +1,17 @@
 # Pull Request Checklist
 
-- [ ] **Target branch:** Pull requests should target the `dev` branch.
-- [ ] **Description:** Briefly describe the changes in this pull request.
+### Note to first-time contributors: Please open a discussion post in [Discussions](https://github.com/open-webui/open-webui/discussions) and describe your changes before submitting a pull request.
+
+**Before submitting, make sure you've checked the following:**
+
+- [ ] **Target branch:** Please verify that the pull request targets the `dev` branch.
+- [ ] **Description:** Provide a concise description of the changes made in this pull request.
 - [ ] **Changelog:** Ensure a changelog entry following the format of [Keep a Changelog](https://keepachangelog.com/) is added at the bottom of the PR description.
 - [ ] **Documentation:** Have you updated relevant documentation [Open WebUI Docs](https://github.com/open-webui/docs), or other documentation sources?
 - [ ] **Dependencies:** Are there any new dependencies? Have you updated the dependency versions in the documentation?
-- [ ] **Testing:** Have you written and run sufficient tests for the changes?
-- [ ] **Code Review:** Have you self-reviewed your code and addressed any coding standard issues?
-- [ ] **Label title:** Ensure the pull request title is labeled properly using one of the following:
+- [ ] **Testing:** Have you written and run sufficient tests for validating the changes?
+- [ ] **Code review:** Have you performed a self-review of your code, addressing any coding standard issues and ensuring adherence to the project's coding standards?
+- [ ] **Label:** To cleary categorize this pull request, assign a relevant label to the pull request title, using one of the following:
   - **BREAKING CHANGE**: Significant changes that may affect compatibility
   - **build**: Changes that affect the build system or external dependencies
   - **ci**: Changes to our continuous integration processes or workflows
@@ -26,7 +30,7 @@
 
 ### Description
 
-- [Briefly describe the changes made in this pull request, including any relevant motivation and impact.]
+- [Concisely describe the changes made in this pull request, including any relevant motivation and impact (e.g., fixing a bug, adding a feature, or improving performance)]
 
 ### Added
 
@@ -62,3 +66,7 @@
 
 - [Insert any additional context, notes, or explanations for the changes]
   - [Reference any related issues, commits, or other relevant information]
+
+### Screenshots or Videos
+
+- [Attach any relevant screenshots or videos demonstrating the changes]

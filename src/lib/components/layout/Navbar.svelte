@@ -82,7 +82,7 @@
 						<button
 							class="hidden md:flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 							id="chat-context-menu-button"
-            >
+						>
 							<div class=" m-auto self-center">
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -141,14 +141,15 @@
 						}}
 					>
 						<button
-							class=" flex rounded-xl p-1.5 w-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 							aria-label="User Menu"
 						>
 							<div class=" self-center">
 								<img
 									src={$user.profile_image_url}
-									class=" size-6 object-cover rounded-full"
+									class="size-6 object-cover rounded-full"
 									alt="User profile"
+									draggable="false"
 								/>
 							</div>
 						</button>

@@ -24,6 +24,7 @@
 	let promptSuggestions = [];
 	let showUsername = false;
 	let chatBubble = true;
+	let chatDirection: 'LTR' | 'RTL' = 'LTR';
 
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
@@ -77,6 +78,11 @@
 		}
 	};
 
+	const toggleChangeChatDirection = async () => {
+		chatDirection = chatDirection === 'LTR' ? 'RTL' : 'LTR';
+		saveSettings({ chatDirection });
+	};
+
 	const updateInterfaceHandler = async () => {
 		if ($user.role === 'admin') {
 			promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
@@ -115,6 +121,7 @@
 		chatBubble = settings.chatBubble ?? true;
 		fullScreenMode = settings.fullScreenMode ?? false;
 		splitLargeChunks = settings.splitLargeChunks ?? false;
+		chatDirection = settings.chatDirection ?? 'LTR';
 	});
 </script>
 
@@ -211,27 +218,29 @@
 				</div>
 			</div>
 
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Display the username instead of You in the Chat')}
-					</div>
+			{#if !$settings.chatBubble}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Display the username instead of You in the Chat')}
+						</div>
 
-					<button
-						class="p-1 px-3 text-xs flex rounded transition"
-						on:click={() => {
-							toggleShowUsername();
-						}}
-						type="button"
-					>
-						{#if showUsername === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								toggleShowUsername();
+							}}
+							type="button"
+						>
+							{#if showUsername === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
 				</div>
-			</div>
+			{/if}
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -253,6 +262,24 @@
 						{/if}
 					</button>
 				</div>
+			</div>
+		</div>
+
+		<div>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Chat direction')}</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={toggleChangeChatDirection}
+					type="button"
+				>
+					{#if chatDirection === 'LTR'}
+						<span class="ml-2 self-center">{$i18n.t('LTR')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
+					{/if}
+				</button>
 			</div>
 		</div>
 

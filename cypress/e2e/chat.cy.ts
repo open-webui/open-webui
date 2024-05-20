@@ -62,18 +62,17 @@ describe('Settings', () => {
 				.should('exist');
 			// spy on requests
 			const spy = cy.spy();
-			cy.intercept("GET", "/api/v1/chats/*", spy);
+			cy.intercept('GET', '/api/v1/chats/*', spy);
 			// Open context menu
 			cy.get('#chat-context-menu-button').click();
 			// Click share button
 			cy.get('#chat-share-button').click();
 			// Check if the share dialog is visible
 			cy.get('#copy-and-share-chat-button').should('exist');
-			cy.wrap({}, { timeout: 5000 })
-				.should(() => {
-					// Check if the request was made twice (once for to replace chat object and once more due to change event)
-					expect(spy).to.be.callCount(2);
-				});
+			cy.wrap({}, { timeout: 5000 }).should(() => {
+				// Check if the request was made twice (once for to replace chat object and once more due to change event)
+				expect(spy).to.be.callCount(2);
+			});
 		});
 	});
 });

@@ -7,6 +7,8 @@
 	import { modelfiles, settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
+	import { user as _user } from '$lib/stores';
+
 	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
@@ -54,7 +56,7 @@
 	};
 </script>
 
-<div class=" flex w-full user-message">
+<div class=" flex w-full user-message" dir={$settings.chatDirection}>
 	{#if !($settings?.chatBubble ?? true)}
 		<ProfileImage
 			src={message.user
@@ -63,7 +65,7 @@
 				: user?.profile_image_url ?? '/user.png'}
 		/>
 	{/if}
-	<div class="w-full overflow-hidden">
+	<div class="w-full overflow-hidden pl-1">
 		{#if !($settings?.chatBubble ?? true)}
 			<div>
 				<Name>
@@ -74,7 +76,7 @@
 							{$i18n.t('You')}
 							<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
 						{/if}
-					{:else if $settings.showUsername}
+					{:else if $settings.showUsername || $_user.name !== user.name}
 						{user.name}
 					{:else}
 						{$i18n.t('You')}
@@ -235,11 +237,11 @@
 					<div
 						class=" flex {$settings?.chatBubble ?? true
 							? 'justify-end'
-							: ''} space-x-1 text-gray-700 dark:text-gray-500"
+							: ''}  text-gray-600 dark:text-gray-500"
 					>
 						{#if !($settings?.chatBubble ?? true)}
 							{#if siblings.length > 1}
-								<div class="flex self-center">
+								<div class="flex self-center" dir="ltr">
 									<button
 										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 										on:click={() => {
@@ -293,7 +295,7 @@
 						{#if !readOnly}
 							<Tooltip content={$i18n.t('Edit')} placement="bottom">
 								<button
-									class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition edit-user-message-button"
+									class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
 									on:click={() => {
 										editMessageHandler();
 									}}
@@ -302,7 +304,7 @@
 										xmlns="http://www.w3.org/2000/svg"
 										fill="none"
 										viewBox="0 0 24 24"
-										stroke-width="2"
+										stroke-width="2.3"
 										stroke="currentColor"
 										class="w-4 h-4"
 									>
@@ -318,7 +320,7 @@
 
 						<Tooltip content={$i18n.t('Copy')} placement="bottom">
 							<button
-								class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
+								class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 								on:click={() => {
 									copyToClipboard(message.content);
 								}}
@@ -327,7 +329,7 @@
 									xmlns="http://www.w3.org/2000/svg"
 									fill="none"
 									viewBox="0 0 24 24"
-									stroke-width="2"
+									stroke-width="2.3"
 									stroke="currentColor"
 									class="w-4 h-4"
 								>
@@ -368,7 +370,7 @@
 
 						{#if $settings?.chatBubble ?? true}
 							{#if siblings.length > 1}
-								<div class="flex self-center">
+								<div class="flex self-center" dir="ltr">
 									<button
 										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 										on:click={() => {

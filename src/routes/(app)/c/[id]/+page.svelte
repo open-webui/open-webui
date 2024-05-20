@@ -48,6 +48,7 @@
 	} from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { runWebSearch } from '$lib/apis/rag';
+	import { queryMemory } from '$lib/apis/memories';
 
 	const i18n = getContext('i18n');
 
@@ -217,7 +218,8 @@
 				user: _user ?? undefined,
 				content: userPrompt,
 				files: files.length > 0 ? files : undefined,
-				timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+				models: selectedModels
 			};
 
 			// Add message to history and Set currentId to messageId
@@ -262,51 +264,77 @@
 			await sendPrompt(userPrompt, userMessageId);
 		}
 	};
-	const sendPrompt = async (prompt, parentId) => {
+
+	const sendPrompt = async (prompt, parentId, modelId = null) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
-		await Promise.all(
-			(atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(async (modelId) => {
-				const model = $models.filter((m) => m.id === modelId).at(0);
+		let userContext = null;
 
-				if (model) {
-					// Create response message
-					let responseMessageId = uuidv4();
-					let responseMessage = {
-						parentId: parentId,
-						id: responseMessageId,
-						childrenIds: [],
-						role: 'assistant',
-						content: '',
-						model: model.id,
-						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-					};
+		if ($settings?.memory ?? false) {
+			const res = await queryMemory(localStorage.token, prompt).catch((error) => {
+				toast.error(error);
+				return null;
+			});
 
-					// Add message to history and Set currentId to messageId
-					history.messages[responseMessageId] = responseMessage;
-					history.currentId = responseMessageId;
-
-					// Append messageId to childrenIds of parent message
-					if (parentId !== null) {
-						history.messages[parentId].childrenIds = [
-							...history.messages[parentId].childrenIds,
-							responseMessageId
-						];
-					}
-
-					if (useWebSearch) {
-						await runWebSearchForPrompt(parentId, responseMessageId);
-					}
-
-					if (model?.external) {
-						await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-					} else if (model) {
-						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
-					}
-				} else {
-					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
+			if (res) {
+				if (res.documents[0].length > 0) {
+					userContext = res.documents.reduce((acc, doc, index) => {
+						const createdAtTimestamp = res.metadatas[index][0].created_at;
+						const createdAtDate = new Date(createdAtTimestamp * 1000).toISOString().split('T')[0];
+						acc.push(`${index + 1}. [${createdAtDate}]. ${doc[0]}`);
+						return acc;
+					}, []);
 				}
-			})
+
+				console.log(userContext);
+			}
+		}
+
+		await Promise.all(
+			(modelId ? [modelId] : atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(
+				async (modelId) => {
+					console.log('modelId', modelId);
+					const model = $models.filter((m) => m.id === modelId).at(0);
+
+					if (model) {
+						// Create response message
+						let responseMessageId = uuidv4();
+						let responseMessage = {
+							parentId: parentId,
+							id: responseMessageId,
+							childrenIds: [],
+							role: 'assistant',
+							content: '',
+							model: model.id,
+							userContext: userContext,
+							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+						};
+
+						// Add message to history and Set currentId to messageId
+						history.messages[responseMessageId] = responseMessage;
+						history.currentId = responseMessageId;
+
+						// Append messageId to childrenIds of parent message
+						if (parentId !== null) {
+							history.messages[parentId].childrenIds = [
+								...history.messages[parentId].childrenIds,
+								responseMessageId
+							];
+						}
+
+						if (useWebSearch) {
+							await runWebSearchForPrompt(parentId, responseMessageId);
+						}
+
+						if (model?.external) {
+							await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+						} else if (model) {
+							await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+						}
+					} else {
+						toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
+					}
+				})
 		);
 
 		await chats.set(await getChatList(localStorage.token));
@@ -358,10 +386,13 @@
 		scrollToBottom();
 
 		const messagesBody = [
-			$settings.system
+			$settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
-						content: $settings.system
+						content:
+							$settings.system + (responseMessage?.userContext ?? null)
+								? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
+								: ''
 				  }
 				: undefined,
 			...messages
@@ -614,10 +645,13 @@
 					model: model.id,
 					stream: true,
 					messages: [
-						$settings.system
+						$settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
-									content: $settings.system
+									content:
+										$settings.system + (responseMessage?.userContext ?? null)
+											? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
+											: ''
 							  }
 							: undefined,
 						...messages
@@ -746,6 +780,7 @@
 		} catch (error) {
 			await handleOpenAIError(error, null, model, responseMessage);
 		}
+		messages = messages;
 
 		stopResponseFlag = false;
 		await tick();
@@ -805,16 +840,18 @@
 		console.log('stopResponse');
 	};
 
-	const regenerateResponse = async () => {
+	const regenerateResponse = async (message) => {
 		console.log('regenerateResponse');
-		if (messages.length != 0 && messages.at(-1).done == true) {
-			messages.splice(messages.length - 1, 1);
-			messages = messages;
 
-			let userMessage = messages.at(-1);
+		if (messages.length != 0) {
+			let userMessage = history.messages[message.parentId];
 			let userPrompt = userMessage.content;
 
-			await sendPrompt(userPrompt, userMessage.id);
+			if ((userMessage?.models ?? [...selectedModels]).length == 1) {
+				await sendPrompt(userPrompt, userMessage.id);
+			} else {
+				await sendPrompt(userPrompt, userMessage.id, message.model);
+			}
 		}
 	};
 
@@ -1006,6 +1043,7 @@
 						bind:history
 						bind:messages
 						bind:autoScroll
+						bind:prompt
 						bottomPadding={files.length > 0}
 						{sendPrompt}
 						{continueGeneration}
@@ -1022,7 +1060,6 @@
 		bind:autoScroll
 		bind:selectedModel={atSelectedModel}
 		bind:useWebSearch
-		suggestionPrompts={selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
 		{messages}
 		{submitPrompt}
 		{stopResponse}
