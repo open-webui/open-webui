@@ -9,6 +9,8 @@ export const user: Writable<SessionUser | undefined> = writable(undefined);
 // Frontend
 export const MODEL_DOWNLOAD_POOL = writable({});
 
+export const mobile = writable(false);
+
 export const theme = writable('system');
 export const chatId = writable('');
 
@@ -37,6 +39,7 @@ export const settings: Writable<Settings> = writable({});
 
 export const showSidebar = writable(false);
 export const showSettings = writable(false);
+export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 
 type Model = OpenAIModel | OllamaModel;
@@ -81,6 +84,7 @@ type Settings = {
 	notificationEnabled?: boolean;
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
+	chatDirection: 'LTR' | 'RTL';
 
 	system?: string;
 	requestFormat?: string;

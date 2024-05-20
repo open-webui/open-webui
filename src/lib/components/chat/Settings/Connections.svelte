@@ -5,28 +5,27 @@
 
 	import { getOllamaUrls, getOllamaVersion, updateOllamaUrls } from '$lib/apis/ollama';
 	import {
+		getOpenAIConfig,
 		getOpenAIKeys,
 		getOpenAIUrls,
+		updateOpenAIConfig,
 		updateOpenAIKeys,
 		updateOpenAIUrls
 	} from '$lib/apis/openai';
 	import { toast } from 'svelte-sonner';
+	import Switch from '$lib/components/common/Switch.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let getModels: Function;
 
 	// External
-	let OLLAMA_BASE_URL = '';
 	let OLLAMA_BASE_URLS = [''];
-
-	let OPENAI_API_KEY = '';
-	let OPENAI_API_BASE_URL = '';
 
 	let OPENAI_API_KEYS = [''];
 	let OPENAI_API_BASE_URLS = [''];
 
-	let showOpenAI = false;
+	let ENABLE_OPENAI_API = false;
 
 	const updateOpenAIHandler = async () => {
 		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
@@ -52,6 +51,10 @@
 	onMount(async () => {
 		if ($user.role === 'admin') {
 			OLLAMA_BASE_URLS = await getOllamaUrls(localStorage.token);
+
+			const config = await getOpenAIConfig(localStorage.token);
+			ENABLE_OPENAI_API = config.ENABLE_OPENAI_API;
+
 			OPENAI_API_BASE_URLS = await getOpenAIUrls(localStorage.token);
 			OPENAI_API_KEYS = await getOpenAIKeys(localStorage.token);
 		}
@@ -65,21 +68,23 @@
 		dispatch('save');
 	}}
 >
-	<div class="  pr-1.5 overflow-y-scroll max-h-[22rem] space-y-3">
+	<div class="  pr-1.5 overflow-y-scroll max-h-[25rem] space-y-3">
 		<div class=" space-y-3">
 			<div class="mt-2 space-y-2 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('OpenAI API')}</div>
-					<button
-						class=" text-xs font-medium text-gray-500"
-						type="button"
-						on:click={() => {
-							showOpenAI = !showOpenAI;
-						}}>{showOpenAI ? $i18n.t('Hide') : $i18n.t('Show')}</button
-					>
+
+					<div class="mt-1">
+						<Switch
+							bind:state={ENABLE_OPENAI_API}
+							on:change={async () => {
+								updateOpenAIConfig(localStorage.token, ENABLE_OPENAI_API);
+							}}
+						/>
+					</div>
 				</div>
 
-				{#if showOpenAI}
+				{#if ENABLE_OPENAI_API}
 					<div class="flex flex-col gap-1">
 						{#each OPENAI_API_BASE_URLS as url, idx}
 							<div class="flex w-full gap-2">

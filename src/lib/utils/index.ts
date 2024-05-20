@@ -6,15 +6,15 @@ import { getLiteLLMModels } from '$lib/apis/litellm';
 
 export const getModels = async (token: string) => {
 	let models = await Promise.all([
-		await getOllamaModels(token).catch((error) => {
+		getOllamaModels(token).catch((error) => {
 			console.log(error);
 			return null;
 		}),
-		await getOpenAIModels(token).catch((error) => {
+		getOpenAIModels(token).catch((error) => {
 			console.log(error);
 			return null;
 		}),
-		await getLiteLLMModels(token).catch((error) => {
+		getLiteLLMModels(token).catch((error) => {
 			console.log(error);
 			return null;
 		})
@@ -472,22 +472,39 @@ export const blobToFile = (blob, fileName) => {
 	return file;
 };
 
-export const promptTemplate = (template: string, prompt: string) => {
-	prompt = prompt.replace(/{{prompt}}|{{prompt:start:\d+}}|{{prompt:end:\d+}}/g, '');
-
-	template = template.replace(/{{prompt}}/g, prompt);
-
-	// Replace all instances of {{prompt:start:<length>}} with the first <length> characters of the prompt
-	template = template.replace(/{{prompt:start:(\d+)}}/g, (match, length) =>
-		prompt.substring(0, parseInt(length))
+/**
+ * This function is used to replace placeholders in a template string with the provided prompt.
+ * The placeholders can be in the following formats:
+ * - `{{prompt}}`: This will be replaced with the entire prompt.
+ * - `{{prompt:start:<length>}}`: This will be replaced with the first <length> characters of the prompt.
+ * - `{{prompt:end:<length>}}`: This will be replaced with the last <length> characters of the prompt.
+ * - `{{prompt:middletruncate:<length>}}`: This will be replaced with the prompt truncated to <length> characters, with '...' in the middle.
+ *
+ * @param {string} template - The template string containing placeholders.
+ * @param {string} prompt - The string to replace the placeholders with.
+ * @returns {string} The template string with the placeholders replaced by the prompt.
+ */
+export const promptTemplate = (template: string, prompt: string): string => {
+	return template.replace(
+		/{{prompt}}|{{prompt:start:(\d+)}}|{{prompt:end:(\d+)}}|{{prompt:middletruncate:(\d+)}}/g,
+		(match, startLength, endLength, middleLength) => {
+			if (match === '{{prompt}}') {
+				return prompt;
+			} else if (match.startsWith('{{prompt:start:')) {
+				return prompt.substring(0, startLength);
+			} else if (match.startsWith('{{prompt:end:')) {
+				return prompt.slice(-endLength);
+			} else if (match.startsWith('{{prompt:middletruncate:')) {
+				if (prompt.length <= middleLength) {
+					return prompt;
+				}
+				const start = prompt.slice(0, Math.ceil(middleLength / 2));
+				const end = prompt.slice(-Math.floor(middleLength / 2));
+				return `${start}...${end}`;
+			}
+			return '';
+		}
 	);
-
-	// Replace all instances of {{prompt:end:<length>}} with the last <length> characters of the prompt
-	template = template.replace(/{{prompt:end:(\d+)}}/g, (match, length) =>
-		prompt.slice(-parseInt(length))
-	);
-
-	return template;
 };
 
 export const approximateToHumanReadable = (nanoseconds: number) => {

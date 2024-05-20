@@ -1053,5 +1053,3 @@
 	}
 	.scrollbar-none::-webkit-scrollbar-thumb {
 		visibility: hidden;
-	}
-</style>

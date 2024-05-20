@@ -37,7 +37,7 @@ const createIsLoadingStore = (i18n: i18nType) => {
 	return isLoading;
 };
 
-export const initI18n = (defaultLocale: string) => {
+export const initI18n = (defaultLocale: string | undefined) => {
 	let detectionOrder = defaultLocale
 		? ['querystring', 'localStorage']
 		: ['querystring', 'localStorage', 'navigator'];

@@ -45,6 +45,7 @@ from config import (
     AUDIO_OPENAI_API_KEY,
     AUDIO_OPENAI_API_MODEL,
     AUDIO_OPENAI_API_VOICE,
+    AppConfig,
 )
 
 log = logging.getLogger(__name__)
@@ -59,11 +60,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-app.state.OPENAI_API_BASE_URL = AUDIO_OPENAI_API_BASE_URL
-app.state.OPENAI_API_KEY = AUDIO_OPENAI_API_KEY
-app.state.OPENAI_API_MODEL = AUDIO_OPENAI_API_MODEL
-app.state.OPENAI_API_VOICE = AUDIO_OPENAI_API_VOICE
+app.state.config = AppConfig()
+app.state.config.OPENAI_API_BASE_URL = AUDIO_OPENAI_API_BASE_URL
+app.state.config.OPENAI_API_KEY = AUDIO_OPENAI_API_KEY
+app.state.config.OPENAI_API_MODEL = AUDIO_OPENAI_API_MODEL
+app.state.config.OPENAI_API_VOICE = AUDIO_OPENAI_API_VOICE
 
 # setting device type for whisper model
 whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
@@ -83,10 +84,10 @@ class OpenAIConfigUpdateForm(BaseModel):
 @app.get("/config")
 async def get_openai_config(user=Depends(get_admin_user)):
     return {
-        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
-        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
-        "OPENAI_API_MODEL": app.state.OPENAI_API_MODEL,
-        "OPENAI_API_VOICE": app.state.OPENAI_API_VOICE,
+        "OPENAI_API_BASE_URL": app.state.config.OPENAI_API_BASE_URL,
+        "OPENAI_API_KEY": app.state.config.OPENAI_API_KEY,
+        "OPENAI_API_MODEL": app.state.config.OPENAI_API_MODEL,
+        "OPENAI_API_VOICE": app.state.config.OPENAI_API_VOICE,
     }
 
 
@@ -97,17 +98,17 @@ async def update_openai_config(
     if form_data.key == "":
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
-    app.state.OPENAI_API_BASE_URL = form_data.url
-    app.state.OPENAI_API_KEY = form_data.key
-    app.state.OPENAI_API_MODEL = form_data.model
-    app.state.OPENAI_API_VOICE = form_data.speaker
+    app.state.config.OPENAI_API_BASE_URL = form_data.url
+    app.state.config.OPENAI_API_KEY = form_data.key
+    app.state.config.OPENAI_API_MODEL = form_data.model
+    app.state.config.OPENAI_API_VOICE = form_data.speaker
 
     return {
         "status": True,
-        "OPENAI_API_BASE_URL": app.state.OPENAI_API_BASE_URL,
-        "OPENAI_API_KEY": app.state.OPENAI_API_KEY,
-        "OPENAI_API_MODEL": app.state.OPENAI_API_MODEL,
-        "OPENAI_API_VOICE": app.state.OPENAI_API_VOICE,
+        "OPENAI_API_BASE_URL": app.state.config.OPENAI_API_BASE_URL,
+        "OPENAI_API_KEY": app.state.config.OPENAI_API_KEY,
+        "OPENAI_API_MODEL": app.state.config.OPENAI_API_MODEL,
+        "OPENAI_API_VOICE": app.state.config.OPENAI_API_VOICE,
     }
 
 
@@ -124,13 +125,13 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         return FileResponse(file_path)
 
     headers = {}
-    headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEY}"
+    headers["Authorization"] = f"Bearer {app.state.config.OPENAI_API_KEY}"
     headers["Content-Type"] = "application/json"
 
     r = None
     try:
         r = requests.post(
-            url=f"{app.state.OPENAI_API_BASE_URL}/audio/speech",
+            url=f"{app.state.config.OPENAI_API_BASE_URL}/audio/speech",
             data=body,
             headers=headers,
             stream=True,
