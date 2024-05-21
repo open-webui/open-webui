@@ -37,7 +37,7 @@ import asyncio
 from pydantic import BaseModel
 from typing import List, Optional
 
-from apps.web.models.models import Models, ModelModel, ModelForm
+from apps.web.models.models import Models, ModelModel
 from utils.utils import get_admin_user
 from apps.rag.utils import rag_messages
 
@@ -112,7 +112,7 @@ app.state.config = AppConfig()
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
-app.state.MODEL_CONFIG = [model.to_form() for model in Models.get_all_models()]
+app.state.MODEL_CONFIG = Models.get_all_models()
 
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 
@@ -320,7 +320,7 @@ async def update_model_filter_config(
 
 
 class SetModelConfigForm(BaseModel):
-    models: List[ModelForm]
+    models: List[ModelModel]
 
 
 @app.post("/api/config/models")
@@ -333,19 +333,10 @@ async def update_model_config(
             detail=ERROR_MESSAGES.DEFAULT("Failed to update model config"),
         )
 
-    ollama_app.state.MODEL_CONFIG = [
-        model for model in form_data.models if model.source == "ollama"
-    ]
-
-    openai_app.state.MODEL_CONFIG = [
-        model for model in form_data.models if model.source == "openai"
-    ]
-
-    litellm_app.state.MODEL_CONFIG = [
-        model for model in form_data.models if model.source == "litellm"
-    ]
-
-    app.state.MODEL_CONFIG = [model for model in form_data.models]
+    ollama_app.state.MODEL_CONFIG = form_data.models
+    openai_app.state.MODEL_CONFIG = form_data.models
+    litellm_app.state.MODEL_CONFIG = form_data.models
+    app.state.MODEL_CONFIG = form_data.models
 
     return {"models": app.state.MODEL_CONFIG}
 

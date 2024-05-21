@@ -80,8 +80,8 @@
 		const model = $models.find((m) => m.id === selectedModelId);
 		if (model) {
 			modelName = model.custom_info?.name ?? model.name;
-			modelDescription = model.custom_info?.params.description ?? '';
-			modelIsVisionCapable = model.custom_info?.params.vision_capable ?? false;
+			modelDescription = model.custom_info?.meta.description ?? '';
+			modelIsVisionCapable = model.custom_info?.meta.vision_capable ?? false;
 		}
 	};
 
@@ -518,18 +518,16 @@
 		if (!model) {
 			return;
 		}
-		const modelSource =
-			'details' in model ? 'ollama' : model.source === 'LiteLLM' ? 'litellm' : 'openai';
 		// Remove any existing config
 		modelConfig = modelConfig.filter(
-			(m) => !(m.id === selectedModelId && m.source === modelSource)
+			(m) => !(m.id === selectedModelId)
 		);
 		// Add new config
 		modelConfig.push({
 			id: selectedModelId,
 			name: modelName,
-			source: modelSource,
-			params: {
+			params: {},
+			meta: {
 				description: modelDescription,
 				vision_capable: modelIsVisionCapable
 			}
@@ -549,10 +547,8 @@
 		if (!model) {
 			return;
 		}
-		const modelSource =
-			'details' in model ? 'ollama' : model.source === 'LiteLLM' ? 'litellm' : 'openai';
 		modelConfig = modelConfig.filter(
-			(m) => !(m.id === selectedModelId && m.source === modelSource)
+			(m) => !(m.id === selectedModelId)
 		);
 		await updateModelConfig(localStorage.token, modelConfig);
 		toast.success(

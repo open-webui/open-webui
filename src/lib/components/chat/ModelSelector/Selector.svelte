@@ -307,10 +307,10 @@
 									</div>
 								</Tooltip>
 							{/if}
-							{#if item.info?.custom_info?.params.description}
+							{#if item.info?.custom_info?.meta.description}
 								<Tooltip
 									content={`${sanitizeResponseContent(
-										item.info.custom_info?.params.description
+										item.info.custom_info?.meta.description
 									).replaceAll('\n', '<br>')}`}
 								>
 									<div class="">

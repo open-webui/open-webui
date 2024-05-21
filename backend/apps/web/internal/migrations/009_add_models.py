@@ -1,4 +1,4 @@
-"""Peewee migrations -- 008_add_models.py.
+"""Peewee migrations -- 009_add_models.py.
 
 Some examples (model - class or model name)::
 
@@ -39,19 +39,14 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 
     @migrator.create_model
     class Model(pw.Model):
-        id = pw.TextField()
-        source = pw.TextField()
-        base_model = pw.TextField(null=True)
+        id = pw.TextField(unique=True)
+        meta = pw.TextField()
+        base_model_id = pw.TextField(null=True)
         name = pw.TextField()
         params = pw.TextField()
 
         class Meta:
             table_name = "model"
-
-            indexes = (
-                # Create a unique index on the id, source columns
-                (("id", "source"), True),
-            )
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):

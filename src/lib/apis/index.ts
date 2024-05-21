@@ -227,15 +227,17 @@ export const getModelConfig = async (token: string): Promise<GlobalModelConfig> 
 export interface ModelConfig {
 	id: string;
 	name: string;
-	source: string;
-	base_model?: string;
+	meta: ModelMeta;
+	base_model_id?: string;
 	params: ModelParams;
 }
 
-export interface ModelParams {
+export interface ModelMeta {
 	description?: string;
 	vision_capable?: boolean;
 }
+
+export interface ModelParams {}
 
 export type GlobalModelConfig = ModelConfig[];
 

@@ -359,7 +359,7 @@
 			if (!model) {
 				continue;
 			}
-			if (model.custom_info?.params.vision_capable ?? true) {
+			if (model.custom_info?.meta.vision_capable ?? true) {
 				visionCapableCount++;
 			}
 		}

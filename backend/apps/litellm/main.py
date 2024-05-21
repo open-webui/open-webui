@@ -78,9 +78,7 @@ with open(LITELLM_CONFIG_DIR, "r") as file:
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER.value
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST.value
-app.state.MODEL_CONFIG = [
-    model.to_form() for model in Models.get_all_models_by_source("litellm")
-]
+app.state.MODEL_CONFIG = Models.get_all_models()
 
 app.state.ENABLE = ENABLE_LITELLM
 app.state.CONFIG = litellm_config
