@@ -42,7 +42,7 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 
 	const micropip = self.pyodide.pyimport('micropip');
 
-	await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
+	// await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
 	await micropip.install(packages);
 }
 
