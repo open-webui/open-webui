@@ -75,7 +75,7 @@
 							transition:fade|slide={{ duration: 100 }}
 						>
 							<div class="px-4 py-2 w-full">
-								<ModelSelector bind:selectedModels showSetDefault={false} />
+								<ModelSelector bind:selectedModels showSetDefault={true} />
 							</div>
 							<hr class=" dark:border-gray-800 m-0 p-0" />
 

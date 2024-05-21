@@ -42,7 +42,7 @@
 	// Advanced
 	let requestFormat = '';
 	let keepAlive = null;
-	let botName = 'AI Bot';
+	let botName = 'IT/HR Service';
 
 	let options = {
 		// Advanced
