@@ -32,6 +32,19 @@ jobs:
       - name: Remove git history
         run: rm -rf .git
 
+      - name: Prepend YAML front matter to README.md
+        run: |
+          echo "---" > temp_readme.md
+          echo "title: Open WebUI" >> temp_readme.md
+          echo "emoji: 🐳" >> temp_readme.md
+          echo "colorFrom: purple" >> temp_readme.md
+          echo "colorTo: gray" >> temp_readme.md
+          echo "sdk: docker" >> temp_readme.md
+          echo "app_port: 8080" >> temp_readme.md
+          echo "---" >> temp_readme.md
+          cat README.md >> temp_readme.md
+          mv temp_readme.md README.md
+
       - name: Configure git
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
