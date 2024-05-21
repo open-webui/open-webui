@@ -39,20 +39,24 @@ if [ -n "$SPACE_ID" ]; then
   echo "Copying litellm_config.yaml to the desired location with specified ownership..."
   cp -f ./space/litellm_config.yaml ./data/litellm/config.yaml
 
-  WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" uvicorn main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
-  webui_pid=$!
-  echo "Waiting for webui to start..."
-  while ! curl -s http://localhost:8080/health > /dev/null; do
-    sleep 1
-  done
-  echo "Creating admin user..."
-  curl \
-    -X POST "http://localhost:8080/api/v1/auths/signup" \
-    -H "accept: application/json" \
-    -H "Content-Type: application/json" \
-    -d "{ \"email\": \"${ADMIN_USER_EMAIL}\", \"password\": \"${ADMIN_USER_PASSWORD}\", \"name\": \"Admin\" }"
-  echo "Shutting down webui..."
-  kill $webui_pid
+  if [ -n "$ADMIN_USER_EMAIL" ] && [ -n "$ADMIN_USER_PASSWORD" ]; then
+    echo "Admin user configured, creating"
+    WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" uvicorn main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
+    webui_pid=$!
+    echo "Waiting for webui to start..."
+    while ! curl -s http://localhost:8080/health > /dev/null; do
+      sleep 1
+    done
+    echo "Creating admin user..."
+    curl \
+      -X POST "http://localhost:8080/api/v1/auths/signup" \
+      -H "accept: application/json" \
+      -H "Content-Type: application/json" \
+      -d "{ \"email\": \"${ADMIN_USER_EMAIL}\", \"password\": \"${ADMIN_USER_PASSWORD}\", \"name\": \"Admin\" }"
+    echo "Shutting down webui..."
+    kill $webui_pid
+  fi
+
   export WEBUI_URL=${SPACE_HOST}
 fi
 
