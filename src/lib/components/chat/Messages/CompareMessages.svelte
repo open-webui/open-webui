@@ -41,6 +41,44 @@
 		};
 	}, {});
 
+	const showPreviousMessage = (model) => {
+		groupedMessagesIdx[model] = Math.max(0, groupedMessagesIdx[model] - 1);
+		let messageId = groupedMessages[model].messages[groupedMessagesIdx[model]].id;
+
+		console.log(messageId);
+		let messageChildrenIds = history.messages[messageId].childrenIds;
+
+		while (messageChildrenIds.length !== 0) {
+			messageId = messageChildrenIds.at(-1);
+			messageChildrenIds = history.messages[messageId].childrenIds;
+		}
+
+		history.currentId = messageId;
+
+		dispatch('change');
+	};
+
+	const showNextMessage = (model) => {
+		groupedMessagesIdx[model] = Math.min(
+			groupedMessages[model].messages.length - 1,
+			groupedMessagesIdx[model] + 1
+		);
+
+		let messageId = groupedMessages[model].messages[groupedMessagesIdx[model]].id;
+		console.log(messageId);
+
+		let messageChildrenIds = history.messages[messageId].childrenIds;
+
+		while (messageChildrenIds.length !== 0) {
+			messageId = messageChildrenIds.at(-1);
+			messageChildrenIds = history.messages[messageId].childrenIds;
+		}
+
+		history.currentId = messageId;
+
+		dispatch('change');
+	};
+
 	onMount(async () => {
 		await tick();
 		currentMessageId = messages[messageIdx].id;
@@ -97,42 +135,8 @@
 						isLastMessage={true}
 						{updateChatMessages}
 						{confirmEditResponseMessage}
-						showPreviousMessage={() => {
-							groupedMessagesIdx[model] = Math.max(0, groupedMessagesIdx[model] - 1);
-							let messageId = groupedMessages[model].messages[groupedMessagesIdx[model]].id;
-
-							console.log(messageId);
-							let messageChildrenIds = history.messages[messageId].childrenIds;
-
-							while (messageChildrenIds.length !== 0) {
-								messageId = messageChildrenIds.at(-1);
-								messageChildrenIds = history.messages[messageId].childrenIds;
-							}
-
-							history.currentId = messageId;
-
-							dispatch('change');
-						}}
-						showNextMessage={() => {
-							groupedMessagesIdx[model] = Math.min(
-								groupedMessages[model].messages.length - 1,
-								groupedMessagesIdx[model] + 1
-							);
-
-							let messageId = groupedMessages[model].messages[groupedMessagesIdx[model]].id;
-							console.log(messageId);
-
-							let messageChildrenIds = history.messages[messageId].childrenIds;
-
-							while (messageChildrenIds.length !== 0) {
-								messageId = messageChildrenIds.at(-1);
-								messageChildrenIds = history.messages[messageId].childrenIds;
-							}
-
-							history.currentId = messageId;
-
-							dispatch('change');
-						}}
+						showPreviousMessage={() => showPreviousMessage(model)}
+						showNextMessage={() => showNextMessage(model)}
 						{rateMessage}
 						{copyToClipboard}
 						{continueGeneration}

@@ -101,7 +101,7 @@
 			try {
 				const micropip = pyodide.pyimport('micropip');
 
-				await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
+				// await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
 
 				let packages = [
 					code.includes('requests') ? 'requests' : null,
@@ -213,7 +213,7 @@ __builtins__.input = input`);
 			<div class="p-1">{@html lang}</div>
 
 			<div class="flex items-center">
-				{#if ['', 'python'].includes(lang) && (lang === 'python' || checkPythonCode(code))}
+				{#if lang === 'python' || (lang === '' && checkPythonCode(code))}
 					{#if executing}
 						<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
 					{:else}
