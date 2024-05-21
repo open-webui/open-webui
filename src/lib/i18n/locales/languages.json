@@ -20,10 +20,6 @@
 		"title": "German (Deutsch)"
 	},
 	{
-		"code": "dg-DG",
-		"title": "Doge (Doge🐶)"
-	},
-	{
 		"code": "es-ES",
 		"title": "Spanish (Español)"
 	},
@@ -77,7 +73,7 @@
 	},
 	{
 		"code": "ko-KR",
-		"title": "Korean (한국인)"
+		"title": "Korean (한국어)"
 	},
 	{
 		"code": "nl-NL",
@@ -130,5 +126,9 @@
 	{
 		"code": "zh-TW",
 		"title": "Chinese (繁體中文)"
+	},
+	{
+		"code": "dg-DG",
+		"title": "Doge (🐶)"
 	}
 ]
