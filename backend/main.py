@@ -60,7 +60,7 @@ from config import (
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
     AppConfig,
-    ENABLE_MAIL,
+    ENABLE_EMAIL,
 )
 from constants import ERROR_MESSAGES
 
@@ -280,7 +280,7 @@ async def get_app_config():
         "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
         "trusted_header_auth": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
         "admin_export_enabled": ENABLE_ADMIN_EXPORT,
-        "email_enabled": ENABLE_MAIL,
+        "email_enabled": ENABLE_EMAIL,
     }
 
 

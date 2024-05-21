@@ -33,7 +33,7 @@ from utils.utils import (
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from config import FRONTEND_URL, MAIL_CONFIG, WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+from config import FRONTEND_URL, EMAIL_CONFIG, WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 
 router = APIRouter()
 
@@ -377,7 +377,7 @@ async def get_api_key(user=Depends(get_current_user)):
 # Forgot Password
 ############################
 
-if MAIL_CONFIG and FRONTEND_URL:
+if EMAIL_CONFIG and FRONTEND_URL:
 
     class ForgetPassword(BaseModel):
         email: EmailStr
@@ -393,7 +393,7 @@ if MAIL_CONFIG and FRONTEND_URL:
             send_password_reset_mail,
             email=body.email,
             frontend_url=FRONTEND_URL,
-            email_conf=MAIL_CONFIG,
+            email_conf=EMAIL_CONFIG,
         )
         return {
             "message": "If the email is registered, you will receive a password reset link."

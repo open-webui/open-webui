@@ -11,6 +11,7 @@ from pathlib import Path
 import json
 from fastapi_mail import ConnectionConfig
 import yaml
+from pydantic import EmailStr, conint, Field
 
 import markdown
 import requests
@@ -839,21 +840,37 @@ DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL")
 
-ENABLE_MAIL = os.environ.get("ENABLE_MAIL", "False").lower() == "true"
+ENABLE_EMAIL = os.environ.get("ENABLE_EMAIL", "False").lower() == "true"
 
 ## Validate mail settings. ConnectionConfig takes the configuration from these environment variables:
-# MAIL_USERNAME: str
-# MAIL_PASSWORD: str
-# MAIL_PORT: int
-# MAIL_SERVER: str
-# MAIL_STARTTLS: bool
-# MAIL_SSL_TLS: bool
-# MAIL_DEBUG: conint(gt=-1, lt=2) = 0
-# MAIL_FROM: EmailStr
-# MAIL_FROM_NAME: Optional[str] = None
+# EMAIL_USERNAME: str
+# EMAIL_PASSWORD: str
+# EMAIL_PORT: int
+# EMAIL_SERVER: str
+# EMAIL_STARTTLS: bool
+# EMAIL_SSL_TLS: bool
+# EMAIL_DEBUG: conint(gt=-1, lt=2) = 0
+# EMAIL_FROM: EmailStr
+# EMAIL_FROM_NAME: Optional[str] = None
 # TEMPLATE_FOLDER: Optional[DirectoryPath] = None
 # SUPPRESS_SEND: conint(gt=-1, lt=2) = 0
 # USE_CREDENTIALS: bool = True
 # VALIDATE_CERTS: bool = True
 # TIMEOUT: int = DEFAULT_TIMEOUT
-MAIL_CONFIG = ConnectionConfig() if ENABLE_MAIL else None
+
+
+# Override variables to start with `EMAIL` instead of `MAIL`
+
+class _MyConnectionConfig(ConnectionConfig):
+    MAIL_USERNAME: str = Field(alias="EMAIL_USERNAME")
+    MAIL_PASSWORD: str = Field(alias="EMAIL_PASSWORD")
+    MAIL_PORT: int = Field(alias="EMAIL_PORT")
+    MAIL_SERVER: str = Field(alias="EMAIL_SERVER")
+    MAIL_STARTTLS: bool = Field(alias="EMAIL_STARTTLS")
+    MAIL_SSL_TLS: bool = Field(alias="EMAIL_SSL_TLS")
+    MAIL_DEBUG: conint(gt=-1, lt=2) = Field(0, alias="EMAIL_DEBUG")  # type: ignore
+    MAIL_FROM: EmailStr = Field(alias="EMAIL_FROM")
+    MAIL_FROM_NAME: str | None = Field(None, alias="EMAIL_FROM_NAME")
+
+
+EMAIL_CONFIG = _MyConnectionConfig() if ENABLE_EMAIL else None
