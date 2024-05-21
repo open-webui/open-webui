@@ -620,7 +620,7 @@
 						...messages
 					]
 						.filter((message) => message)
-						.filter((message) => message.content != "")
+						.filter((message) => message.content != '')
 						.map((message, idx, arr) => ({
 							role: message.role,
 							...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&

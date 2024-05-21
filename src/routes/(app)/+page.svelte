@@ -39,7 +39,12 @@
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import ModelSelector from '$lib/components/chat/ModelSelector.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
-	import { LITELLM_API_BASE_URL, OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import {
+		LITELLM_API_BASE_URL,
+		OLLAMA_API_BASE_URL,
+		OPENAI_API_BASE_URL,
+		WEBUI_BASE_URL
+	} from '$lib/constants';
 	import { RAGTemplate } from '$lib/utils/rag';
 
 	const i18n = getContext('i18n');
@@ -613,7 +618,7 @@
 						...messages
 					]
 						.filter((message) => message)
-						.filter((message) => message.content != "")
+						.filter((message) => message.content != '')
 						.map((message, idx, arr) => ({
 							role: message.role,
 							...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
