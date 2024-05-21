@@ -37,7 +37,7 @@ if [ -n "$SPACE_ID" ]; then
   
   # Copy litellm_config.yaml with specified ownership
   echo "Copying litellm_config.yaml to the desired location with specified ownership..."
-  cp ./backend/space/litellm_config.yaml ./data/litellm/config.yaml
+  cp -f ./space/litellm_config.yaml ./data/litellm/config.yaml
 
   WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" uvicorn main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
   webui_pid=$!
