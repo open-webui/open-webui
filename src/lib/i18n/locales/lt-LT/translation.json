@@ -264,7 +264,7 @@
 	"Model '{{modelTag}}' is already in queue for downloading.": "Modelis '{{modelTag}}' jau atsisiuntimų eilėje.",
 	"Model {{modelId}} not found": "Modelis {{modelId}} nerastas",
 	"Model {{modelName}} already exists.": "Modelis {{modelName}} jau egzistuoja.",
-	"Model filesystem path detected. Model shortname is required for update, cannot continue.": "",
+	"Model filesystem path detected. Model shortname is required for update, cannot continue.": "Modelio failų sistemos kelias aptiktas. Reikalingas trumpas modelio pavadinimas atnaujinimui.",
 	"Model Name": "Modelio pavadinimas",
 	"Model not selected": "Modelis nepasirinktas",
 	"Model Tag Name": "Modelio žymos pavadinimas",

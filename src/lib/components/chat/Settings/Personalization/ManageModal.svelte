@@ -54,7 +54,7 @@
 				class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6 h-[28rem] max-h-screen outline outline-1 rounded-xl outline-gray-100 dark:outline-gray-800 mb-4 mt-1"
 			>
 				{#if memories.length > 0}
-					<div class="text-left text-sm w-full mb-4 max-h-[22rem] overflow-y-scroll">
+					<div class="text-left text-sm w-full mb-4 overflow-y-scroll">
 						<div class="relative overflow-x-auto">
 							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 								<thead
