@@ -1,15 +1,15 @@
 [
 	{
 		"code": "ar-BH",
-		"title": "العربية (AR)"
-	},
-	{
-		"code": "bg-BG",
-		"title": "Bulgarian (BG)"
+		"title": "Arabic (عربي)"
 	},
 	{
 		"code": "bn-BD",
 		"title": "Bengali (বাংলা)"
+	},
+	{
+		"code": "bg-BG",
+		"title": "Bulgarian (български)"
 	},
 	{
 		"code": "ca-ES",
@@ -37,7 +37,7 @@
 	},
 	{
 		"code": "fa-IR",
-		"title": "فارسی (Farsi)"
+		"title": "Persian (فارسی)"
 	},
 	{
 		"code": "fi-FI",
