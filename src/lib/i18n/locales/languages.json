@@ -1,5 +1,13 @@
 [
 	{
+		"code": "en-US",
+		"title": "English (US)"
+	},
+	{
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+	{
 		"code": "ar-BH",
 		"title": "Arabic (عربي)"
 	},
@@ -22,14 +30,6 @@
 	{
 		"code": "es-ES",
 		"title": "Spanish (Español)"
-	},
-	{
-		"code": "en-GB",
-		"title": "English (GB)"
-	},
-	{
-		"code": "en-US",
-		"title": "English (US)"
 	},
 	{
 		"code": "fa-IR",
