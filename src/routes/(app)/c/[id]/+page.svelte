@@ -619,6 +619,7 @@
 							: undefined,
 						...messages
 					]
+						.filter((message) => message)
 						.filter((message) => message.content != "")
 						.map((message, idx, arr) => ({
 							role: message.role,
