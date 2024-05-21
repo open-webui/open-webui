@@ -38,6 +38,14 @@
 	}
 </script>
 
+<style>
+    .max-w-fit {
+        max-width: -moz-fit-content;
+        max-width: fit-content;
+        margin-right: auto;
+    }
+</style>
+
 <div class="flex flex-col w-full items-center md:items-start">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
