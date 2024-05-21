@@ -1,3 +1,12 @@
+---
+title: Open WebUI
+emoji: 🐳
+colorFrom: purple
+colorTo: gray
+sdk: docker
+app_port: 8080
+---
+
 # Open WebUI (Formerly Ollama WebUI) 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
