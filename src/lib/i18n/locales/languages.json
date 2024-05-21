@@ -1,134 +1,134 @@
 [
-    {
-        "code": "ar-BH",
-        "title": "Arabic (عربي)"
-    },
-    {
-        "code": "bg-BG",
-        "title": "Bulgarian (български)"
-    },
-    {
-        "code": "bn-BD",
-        "title": "Bengali (বাংলা)"
-    },
-    {
-        "code": "ca-ES",
-        "title": "Catalan (català)"
-    },
-    {
-        "code": "zh-CN",
-        "title": "Chinese (简体中文)"
-    },
-    {
-        "code": "zh-TW",
-        "title": "Chinese (繁體中文)"
-    },
-    {
-        "code": "hr-HR",
-        "title": "Croatian (Hrvatski)"
-    },
-    {
-        "code": "dg-DG",
-        "title": "Doge (Doge🐶)"
-    },
-    {
-        "code": "nl-NL",
-        "title": "Dutch (Netherlands)"
-    },
-    {
-        "code": "en-GB",
-        "title": "English (GB)"
-    },
-    {
-        "code": "en-US",
-        "title": "English (US)"
-    },
-    {
-        "code": "fa-IR",
-        "title": "Persian (فارسی)"
-    },
-    {
-        "code": "fi-FI",
-        "title": "Finnish (Suomalainen)"
-    },
-    {
-        "code": "fr-CA",
-        "title": "French (Canada)"
-    },
-    {
-        "code": "fr-FR",
-        "title": "French (France)"
-    },
-    {
-        "code": "ka-GE",
-        "title": "Georgian (ქართული)"
-    },
-    {
-        "code": "de-DE",
-        "title": "German (Deutsch)"
-    },
-    {
-        "code": "hi-IN",
-        "title": "Hindi (हिंदी)"
-    },
-    {
-        "code": "he-IL",
-        "title": "Hebrew (עברית)"
-    },
-    {
-        "code": "it-IT",
-        "title": "Italian (Italiano)"
-    },
-    {
-        "code": "ja-JP",
-        "title": "Japanese (日本語)"
-    },
-    {
-        "code": "ko-KR",
-        "title": "Korean (한국인)"
-    },
-    {
-        "code": "pa-IN",
-        "title": "Punjabi (India)"
-    },
-    {
-        "code": "pl-PL",
-        "title": "Polish (Polski)"
-    },
-    {
-        "code": "pt-BR",
-        "title": "Portuguese (Brazil)"
-    },
-    {
-        "code": "pt-PT",
-        "title": "Portuguese (Portugal)"
-    },
-    {
-        "code": "ru-RU",
-        "title": "Russian (Russia)"
-    },
-    {
-        "code": "sr-RS",
-        "title": "Serbian (Српски)"
-    },
-    {
-        "code": "es-ES",
-        "title": "Spanish (Español)"
-    },
-    {
-        "code": "sv-SE",
-        "title": "Swedish (Svenska)"
-    },
-    {
-        "code": "tr-TR",
-        "title": "Turkish (Türkçe)"
-    },
-    {
-        "code": "uk-UA",
-        "title": "Ukrainian (Українська)"
-    },
-    {
-        "code": "vi-VN",
-        "title": "Vietnamese (Tiếng Việt)"
-    }
+	{
+		"code": "ar-BH",
+		"title": "Arabic (عربي)"
+	},
+	{
+		"code": "bn-BD",
+		"title": "Bengali (বাংলা)"
+	},
+	{
+		"code": "bg-BG",
+		"title": "Bulgarian (български)"
+	},
+	{
+		"code": "ca-ES",
+		"title": "Catalan (català)"
+	},
+	{
+		"code": "de-DE",
+		"title": "German (Deutsch)"
+	},
+	{
+		"code": "dg-DG",
+		"title": "Doge (Doge🐶)"
+	},
+	{
+		"code": "es-ES",
+		"title": "Spanish (Español)"
+	},
+	{
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+	{
+		"code": "en-US",
+		"title": "English (US)"
+	},
+	{
+		"code": "fa-IR",
+		"title": "Persian (فارسی)"
+	},
+	{
+		"code": "fi-FI",
+		"title": "Finnish (Suomalainen)"
+	},
+	{
+		"code": "fr-CA",
+		"title": "French (Canada)"
+	},
+	{
+		"code": "fr-FR",
+		"title": "French (France)"
+	},
+	{
+		"code": "he-IL",
+		"title": "Hebrew (עברית)"
+	},
+	{
+		"code": "hi-IN",
+		"title": "Hindi (हिंदी)"
+	},
+	{
+		"code": "hr-HR",
+		"title": "Croatian (Hrvatski)"
+	},
+	{
+		"code": "it-IT",
+		"title": "Italian (Italiano)"
+	},
+	{
+		"code": "ja-JP",
+		"title": "Japanese (日本語)"
+	},
+	{
+		"code": "ka-GE",
+		"title": "Georgian (ქართული)"
+	},
+	{
+		"code": "ko-KR",
+		"title": "Korean (한국인)"
+	},
+	{
+		"code": "nl-NL",
+		"title": "Dutch (Netherlands)"
+	},
+	{
+		"code": "pa-IN",
+		"title": "Punjabi (India)"
+	},
+	{
+		"code": "pl-PL",
+		"title": "Polish (Polski)"
+	},
+	{
+		"code": "pt-BR",
+		"title": "Portuguese (Brazil)"
+	},
+	{
+		"code": "pt-PT",
+		"title": "Portuguese (Portugal)"
+	},
+	{
+		"code": "ru-RU",
+		"title": "Russian (Russia)"
+	},
+	{
+		"code": "sv-SE",
+		"title": "Swedish (Svenska)"
+	},
+	{
+		"code": "sr-RS",
+		"title": "Serbian (Српски)"
+	},
+	{
+		"code": "tr-TR",
+		"title": "Turkish (Türkçe)"
+	},
+	{
+		"code": "uk-UA",
+		"title": "Ukrainian (Українська)"
+	},
+	{
+		"code": "vi-VN",
+		"title": "Vietnamese (Tiếng Việt)"
+	},
+	{
+		"code": "zh-CN",
+		"title": "Chinese (简体中文)"
+	},
+	{
+		"code": "zh-TW",
+		"title": "Chinese (繁體中文)"
+	}
 ]
