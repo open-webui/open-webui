@@ -31,7 +31,6 @@ if [ "$USE_CUDA_DOCKER" = "true" ]; then
 fi
 
 
-# HFSPACE:START
 # Check if SPACE_ID is set, if so, configure for space
 if [ -n "$SPACE_ID" ]; then
   echo "Configuring for HuggingFace Space deployment"
@@ -56,6 +55,5 @@ if [ -n "$SPACE_ID" ]; then
   kill $webui_pid
   export WEBUI_URL=${SPACE_HOST}
 fi
-# HFSPACE:END
 
 WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec uvicorn main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*'
