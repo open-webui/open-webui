@@ -1,13 +1,5 @@
 [
 	{
-		"code": "en-US",
-		"title": "English (US)"
-	},
-	{
-		"code": "en-GB",
-		"title": "English (GB)"
-	},
-	{
 		"code": "ar-BH",
 		"title": "العربية (AR)"
 	},
@@ -17,19 +9,31 @@
 	},
 	{
 		"code": "bn-BD",
-		"title": "Bangla (বাংলা)"
+		"title": "Bengali (বাংলা)"
 	},
 	{
 		"code": "ca-ES",
-		"title": "Catalan"
+		"title": "Catalan (català)"
 	},
 	{
 		"code": "de-DE",
-		"title": "Deutsch"
+		"title": "German (Deutsch)"
+	},
+	{
+		"code": "dg-DG",
+		"title": "Doge (Doge🐶)"
 	},
 	{
 		"code": "es-ES",
-		"title": "Spanish"
+		"title": "Spanish (Español)"
+	},
+	{
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+	{
+		"code": "en-US",
+		"title": "English (US)"
 	},
 	{
 		"code": "fa-IR",
@@ -37,7 +41,7 @@
 	},
 	{
 		"code": "fi-FI",
-		"title": "Finnish"
+		"title": "Finnish (Suomalainen)"
 	},
 	{
 		"code": "fr-CA",
@@ -57,23 +61,23 @@
 	},
 	{
 		"code": "hr-HR",
-		"title": "Croatian"
+		"title": "Croatian (Hrvatski)"
 	},
 	{
 		"code": "it-IT",
-		"title": "Italian"
+		"title": "Italian (Italiano)"
 	},
 	{
 		"code": "ja-JP",
-		"title": "Japanese"
+		"title": "Japanese (日本語)"
 	},
 	{
 		"code": "ka-GE",
-		"title": "Georgian"
+		"title": "Georgian (ქართული)"
 	},
 	{
 		"code": "ko-KR",
-		"title": "Korean"
+		"title": "Korean (한국인)"
 	},
 	{
 		"code": "nl-NL",
@@ -85,7 +89,7 @@
 	},
 	{
 		"code": "pl-PL",
-		"title": "Polish"
+		"title": "Polish (Polski)"
 	},
 	{
 		"code": "pt-BR",
@@ -101,7 +105,7 @@
 	},
 	{
 		"code": "sv-SE",
-		"title": "Swedish"
+		"title": "Swedish (Svenska)"
 	},
 	{
 		"code": "sr-RS",
@@ -109,26 +113,22 @@
 	},
 	{
 		"code": "tr-TR",
-		"title": "Turkish"
+		"title": "Turkish (Türkçe)"
 	},
 	{
 		"code": "uk-UA",
-		"title": "Ukrainian"
+		"title": "Ukrainian (Українська)"
 	},
 	{
 		"code": "vi-VN",
-		"title": "Tiếng Việt"
+		"title": "Vietnamese (Tiếng Việt)"
 	},
 	{
 		"code": "zh-CN",
-		"title": "Chinese (Simplified)"
+		"title": "Chinese (简体中文)"
 	},
 	{
 		"code": "zh-TW",
-		"title": "Chinese (Traditional)"
-	},
-	{
-		"code": "dg-DG",
-		"title": "Doge 🐶"
+		"title": "Chinese (繁体中文)"
 	}
 ]
