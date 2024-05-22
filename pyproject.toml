@@ -2,7 +2,7 @@
 name = "open-webui"
 description = "Open WebUI (Formerly Ollama WebUI)"
 authors = [
-    { name = "Timothy Jaeryang Baek", email = "jaeryang_baek@sfu.ca" }
+    { name = "Timothy Jaeryang Baek", email = "tim@openwebui.com" }
 ]
 license = { file = "LICENSE" }
 dependencies = [
