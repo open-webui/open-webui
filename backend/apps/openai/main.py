@@ -306,7 +306,6 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     idx = 0
-    pipeline = False
 
     body = await request.body()
     # TODO: Remove below after gpt-4-vision fix from Open AI
@@ -319,11 +318,11 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
         idx = model["urlIdx"]
 
-        if "pipeline" in model:
-            pipeline = model.get("pipeline")
-
-        if pipeline:
+        if "pipeline" in model and model.get("pipeline"):
             body["user"] = {"name": user.name, "id": user.id}
+            body["title"] = (
+                True if body["stream"] == False and body["max_tokens"] == 50 else False
+            )
 
         # Check if the model is "gpt-4-vision-preview" and set "max_tokens" to 4000
         # This is a workaround until OpenAI fixes the issue with this model
