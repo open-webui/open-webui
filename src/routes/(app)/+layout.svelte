@@ -32,6 +32,7 @@
 
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
+	import FilesListSidebar from '$lib/components/layout/FilesListSidebar.svelte';
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -295,6 +296,7 @@
 
 			<Sidebar />
 			<slot />
+			<FilesListSidebar />
 		{/if}
 	</div>
 </div>
