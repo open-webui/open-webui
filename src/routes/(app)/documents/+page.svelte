@@ -189,7 +189,8 @@
 		<div class="max-w-2xl mx-auto w-full px-3 md:px-0 my-10">
 			<div class="mb-6">
 				<div class="flex justify-between items-center">
-					<a class="flex self-center" href="/">
+					<a href="/" class="px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition text-xs">{'< Back'}</a>
+					<!-- <a class="flex self-center" href="/">
 						<img
 							src="/logo-mbzuai.svg"
 							alt="logo-mbzuai"
@@ -199,7 +200,7 @@
 							class="ml-4 size-14"
 							alt="logo-ciai"
 						/>
-					</a>
+					</a> -->
 					<div class=" text-2xl font-semibold self-center">{$i18n.t('My Documents')}</div>
 
 					<div>

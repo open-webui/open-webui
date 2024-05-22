@@ -33,7 +33,7 @@
 				initI18n();
 			}
 
-			await WEBUI_NAME.set(backendConfig.name);
+			// await WEBUI_NAME.set(backendConfig.name);
 			console.log(backendConfig);
 
 			if ($config) {

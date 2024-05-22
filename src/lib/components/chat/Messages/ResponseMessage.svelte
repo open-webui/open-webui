@@ -350,7 +350,7 @@
 						</span>
 					{/if}
 				{:else}
-					{localStorage.botName ?? 'IT/HR Service'}
+					{localStorage.botName ?? 'Munir - HR Service'}
 				{/if}
 			</Name>
 

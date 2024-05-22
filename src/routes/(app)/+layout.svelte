@@ -193,7 +193,7 @@
 
 <ShortcutsModal bind:show={showShortcuts} />
 <SettingsModal bind:show={$showSettings} />
-<ChangelogModal bind:show={$showChangelog} />
+<ChangelogModal show={false} />
 
 <div class="app relative">
 	<div

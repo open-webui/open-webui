@@ -75,7 +75,7 @@
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user.name })}
 					{/if} -->
-					IT/HR RAG Service
+					Munir - MBZUAI HR LLM Service
 				</div>
 
 				<!-- <div in:fade={{ duration: 200, delay: 200 }}>

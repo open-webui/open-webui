@@ -70,9 +70,9 @@ try:
 except ImportError:
     log.warning("dotenv not installed, skipping...")
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "IT/HR RAG Service")
-if WEBUI_NAME != "IT/HR RAG Service":
-    WEBUI_NAME += " (IT/HR RAG Service)"
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "Munir - MBZUAI HR LLM Service")
+if WEBUI_NAME != "Munir - MBZUAI HR LLM Service":
+    WEBUI_NAME += " (Munir - MBZUAI HR LLM Service)"
 
 WEBUI_FAVICON_URL = "https://mbzuai.ac.ae/wp-content/uploads/2022/06/favicon.ico"
 
