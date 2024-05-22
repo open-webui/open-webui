@@ -41,6 +41,8 @@ export const showSidebar = writable(false);
 export const showSettings = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
+export const banners: Writable<Banner[]> = writable([]);
+export const dismissedBanners: Writable<string[]> = writable([]);
 
 type Model = OpenAIModel | OllamaModel;
 
@@ -133,6 +135,12 @@ type Config = {
 	default_models?: string[];
 	default_prompt_suggestions?: PromptSuggestion[];
 	trusted_header_auth?: boolean;
+};
+
+export type Banner = {
+	content: string;
+	type: string;
+	dismissible: boolean;
 };
 
 type PromptSuggestion = {

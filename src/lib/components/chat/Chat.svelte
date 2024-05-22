@@ -7,6 +7,7 @@
 	import { page } from '$app/stores';
 
 	import {
+		banners,
 		chatId,
 		chats,
 		config,
@@ -45,6 +46,7 @@
 	import { queryMemory } from '$lib/apis/memories';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import Banner from '$lib/components/common/Banner.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -1003,6 +1005,9 @@
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} w-full max-w-full flex flex-col"
 	>
+		{#each $banners as banner}
+			<Banner dismissable={banner.dismissible} content={banner.content} type={banner.type} />
+		{/each}
 		<Navbar
 			{title}
 			bind:selectedModels

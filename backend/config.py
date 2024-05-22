@@ -16,6 +16,9 @@ import requests
 import shutil
 
 from secrets import token_bytes
+
+from pydantic import BaseModel
+
 from constants import ERROR_MESSAGES
 
 ####################################
@@ -548,6 +551,22 @@ WEBHOOK_URL = PersistentConfig(
 )
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
+
+
+class BannerModel(BaseModel):
+    content: str
+    type: str
+    dismissible: bool
+
+
+WEBUI_BANNERS = PersistentConfig(
+    "WEBUI_BANNERS",
+    "ui.banners",
+    [
+        BannerModel(**banner)
+        for banner in json.loads(os.environ.get("WEBUI_BANNERS", "[]"))
+    ],
+)
 
 ####################################
 # WEBUI_SECRET_KEY

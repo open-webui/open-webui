@@ -9,6 +9,7 @@ import time
 import uuid
 
 from apps.web.models.users import Users
+from config import BannerModel
 
 from utils.utils import (
     get_password_hash,
@@ -57,3 +58,26 @@ async def set_global_default_suggestions(
     data = form_data.model_dump()
     request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS = data["suggestions"]
     return request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS
+
+
+class SetBannersForm(BaseModel):
+    banners: List[BannerModel]
+
+
+@router.post("/banners", response_model=List[BannerModel])
+async def set_banners(
+    request: Request,
+    form_data: SetBannersForm,
+    user=Depends(get_admin_user),
+):
+    data = form_data.model_dump()
+    request.app.state.config.BANNERS = data["banners"]
+    return request.app.state.config.BANNERS
+
+
+@router.get("/banners", response_model=List[BannerModel])
+async def get_banners(
+    request: Request,
+    user=Depends(get_current_user),
+):
+    return request.app.state.config.BANNERS

@@ -25,7 +25,9 @@
 		documents,
 		tags,
 		showChangelog,
-		config
+		config,
+		banners,
+		dismissedBanners
 	} from '$lib/stores';
 	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -35,6 +37,8 @@
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { getBanners } from '$lib/apis/configs';
+	import Banner from '$lib/components/common/Banner.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -99,6 +103,13 @@
 				// should fetch models
 				await models.set(await getModels());
 			});
+
+			const serverBanners = await getBanners(localStorage.token);
+			dismissedBanners.set(JSON.parse(localStorage.getItem('dismissedBanners') ?? '[]'));
+			const filteredBanners = serverBanners.filter(
+				(banner) => !$dismissedBanners.includes(banner.content)
+			);
+			banners.set(filteredBanners);
 
 			document.addEventListener('keydown', function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
