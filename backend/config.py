@@ -453,6 +453,20 @@ OPENAI_API_BASE_URLS = PersistentConfig(
     "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
 )
 
+OPENAI_API_PARAMS = [
+    {
+        'temperature': 0.3,
+        'top_p': 0.9,
+        'top_k': 40,
+        'repetition_penalty': 1.05,
+        'max_tokens': 2048,
+    }
+    for url in OPENAI_API_BASE_URLS.value
+]
+OPENAI_API_PARAMS = PersistentConfig(
+    "OPENAI_API_PARAMS", "openai.api_params", OPENAI_API_PARAMS
+)
+
 OPENAI_API_KEY = ""
 
 try:

@@ -118,6 +118,17 @@ async def update_openai_key(form_data: KeysUpdateForm, user=Depends(get_admin_us
     return {"OPENAI_API_KEYS": app.state.config.OPENAI_API_KEYS}
 
 
+@app.get("/params")
+async def get_openai_params(user=Depends(get_admin_user)):
+    return {"OPENAI_API_PARAMS": app.state.config.OPENAI_API_PARAMS}
+
+
+@app.post("/params/update")
+async def update_openai_param(form_data: KeysUpdateForm, user=Depends(get_admin_user)):
+    app.state.config.OPENAI_API_PARAMS = form_data.params
+    return {"OPENAI_API_PARAMS": app.state.config.OPENAI_API_PARAMS}
+
+
 @app.post("/audio/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
     idx = None
