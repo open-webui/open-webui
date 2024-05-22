@@ -41,7 +41,7 @@ backoff==2.2.1
     # via litellm
     # via posthog
     # via unstructured
-bcrypt==4.1.2
+bcrypt==4.1.3
     # via chromadb
     # via open-webui
     # via passlib
@@ -53,9 +53,9 @@ black==24.4.2
     # via open-webui
 blinker==1.8.2
     # via flask
-boto3==1.34.95
+boto3==1.34.110
     # via open-webui
-botocore==1.34.103
+botocore==1.34.110
     # via boto3
     # via s3transfer
 build==1.2.1
@@ -66,7 +66,6 @@ certifi==2024.2.2
     # via httpcore
     # via httpx
     # via kubernetes
-    # via pulsar-client
     # via requests
     # via unstructured-client
 cffi==1.16.0
@@ -79,7 +78,7 @@ charset-normalizer==3.3.2
     # via unstructured-client
 chroma-hnswlib==0.7.3
     # via chromadb
-chromadb==0.4.24
+chromadb==0.5.0
     # via langchain-chroma
     # via open-webui
 click==8.1.7
@@ -119,6 +118,7 @@ docx2txt==0.8
 ecdsa==0.19.0
     # via python-jose
 email-validator==2.1.1
+    # via fastapi
     # via pydantic
 emoji==2.11.1
     # via unstructured
@@ -126,15 +126,17 @@ et-xmlfile==1.1.0
     # via openpyxl
 fake-useragent==1.5.1
     # via open-webui
-fastapi==0.109.2
+fastapi==0.111.0
     # via chromadb
     # via fastapi-sso
     # via langchain-chroma
     # via litellm
     # via open-webui
+fastapi-cli==0.0.4
+    # via fastapi
 fastapi-sso==0.10.0
     # via litellm
-faster-whisper==1.0.1
+faster-whisper==1.0.2
     # via open-webui
 filelock==3.14.0
     # via huggingface-hub
@@ -145,13 +147,13 @@ filetype==1.2.0
 flask==3.0.3
     # via flask-cors
     # via open-webui
-flask-cors==4.0.0
+flask-cors==4.0.1
     # via open-webui
 flatbuffers==24.3.25
     # via onnxruntime
 fonttools==4.51.0
     # via fpdf2
-fpdf2==2.7.8
+fpdf2==2.7.9
     # via open-webui
 frozenlist==1.4.1
     # via aiohttp
@@ -159,7 +161,7 @@ frozenlist==1.4.1
 fsspec==2024.3.1
     # via huggingface-hub
     # via torch
-google-ai-generativelanguage==0.6.2
+google-ai-generativelanguage==0.6.4
     # via google-generativeai
 google-api-core==2.19.0
     # via google-ai-generativelanguage
@@ -176,7 +178,7 @@ google-auth==2.29.0
     # via kubernetes
 google-auth-httplib2==0.2.0
     # via google-api-python-client
-google-generativeai==0.5.2
+google-generativeai==0.5.4
     # via open-webui
 googleapis-common-protos==1.63.0
     # via google-api-core
@@ -189,7 +191,7 @@ grpcio==1.63.0
     # via opentelemetry-exporter-otlp-proto-grpc
 grpcio-status==1.62.2
     # via google-api-core
-gunicorn==21.2.0
+gunicorn==22.0.0
     # via litellm
 h11==0.14.0
     # via httpcore
@@ -203,6 +205,7 @@ httplib2==0.22.0
 httptools==0.6.1
     # via uvicorn
 httpx==0.27.0
+    # via fastapi
     # via fastapi-sso
     # via langfuse
     # via openai
@@ -229,6 +232,7 @@ importlib-resources==6.4.0
 itsdangerous==2.2.0
     # via flask
 jinja2==3.1.4
+    # via fastapi
     # via flask
     # via litellm
     # via torch
@@ -239,7 +243,6 @@ joblib==1.4.2
     # via nltk
     # via scikit-learn
 jsonpatch==1.33
-    # via langchain
     # via langchain-core
 jsonpath-python==1.0.6
     # via unstructured-client
@@ -247,29 +250,30 @@ jsonpointer==2.4
     # via jsonpatch
 kubernetes==29.0.0
     # via chromadb
-langchain==0.1.16
+langchain==0.2.0
+    # via langchain-community
     # via open-webui
-langchain-chroma==0.1.0
+langchain-chroma==0.1.1
     # via open-webui
-langchain-community==0.0.34
-    # via langchain
+langchain-community==0.2.0
     # via open-webui
-langchain-core==0.1.52
+langchain-core==0.2.1
     # via langchain
     # via langchain-chroma
     # via langchain-community
     # via langchain-text-splitters
-langchain-text-splitters==0.0.1
+langchain-text-splitters==0.2.0
     # via langchain
 langdetect==1.0.9
     # via unstructured
-langfuse==2.27.3
+langfuse==2.33.0
     # via open-webui
 langsmith==0.1.57
     # via langchain
     # via langchain-community
     # via langchain-core
-litellm==1.35.28
+litellm==1.37.20
+    # via litellm
     # via open-webui
 lxml==5.2.2
     # via unstructured
@@ -372,6 +376,7 @@ ordered-set==4.1.0
     # via deepdiff
 orjson==3.10.3
     # via chromadb
+    # via fastapi
     # via langsmith
     # via litellm
 overrides==7.7.0
@@ -391,9 +396,10 @@ pandas==2.2.2
     # via open-webui
 passlib==1.7.4
     # via open-webui
+    # via passlib
 pathspec==0.12.1
     # via black
-peewee==3.17.3
+peewee==3.17.5
     # via open-webui
     # via peewee-migrate
 peewee-migrate==1.12.2
@@ -420,8 +426,6 @@ protobuf==4.25.3
     # via proto-plus
 psycopg2-binary==2.9.9
     # via open-webui
-pulsar-client==3.5.0
-    # via chromadb
 pyasn1==0.6.0
     # via pyasn1-modules
     # via python-jose
@@ -450,6 +454,7 @@ pygments==2.18.0
 pyjwt==2.8.0
     # via litellm
     # via open-webui
+    # via pyjwt
 pymysql==1.1.0
     # via open-webui
 pypandoc==1.13
@@ -481,6 +486,7 @@ python-jose==3.3.0
 python-magic==0.4.27
     # via unstructured
 python-multipart==0.0.9
+    # via fastapi
     # via litellm
     # via open-webui
 python-socketio==5.11.2
@@ -508,7 +514,7 @@ rank-bm25==0.2.2
     # via open-webui
 rapidfuzz==3.9.0
     # via unstructured
-rapidocr-onnxruntime==1.2.3
+rapidocr-onnxruntime==1.3.22
     # via open-webui
 redis==5.0.4
     # via rq
@@ -516,7 +522,7 @@ regex==2024.5.10
     # via nltk
     # via tiktoken
     # via transformers
-requests==2.31.0
+requests==2.32.2
     # via chromadb
     # via google-api-core
     # via huggingface-hub
@@ -553,9 +559,6 @@ scipy==1.13.0
     # via sentence-transformers
 sentence-transformers==2.7.0
     # via open-webui
-setuptools==69.5.1
-    # via ctranslate2
-    # via opentelemetry-instrumentation
 shapely==2.0.4
     # via rapidocr-onnxruntime
 shellingham==1.5.4
@@ -580,7 +583,7 @@ soupsieve==2.5
 sqlalchemy==2.0.30
     # via langchain
     # via langchain-community
-starlette==0.36.3
+starlette==0.37.2
     # via fastapi
 sympy==1.12
     # via onnxruntime
@@ -615,6 +618,7 @@ transformers==4.39.3
     # via sentence-transformers
 typer==0.12.3
     # via chromadb
+    # via fastapi-cli
 typing-extensions==4.11.0
     # via chromadb
     # via fastapi
@@ -637,7 +641,9 @@ tzdata==2024.1
     # via pandas
 tzlocal==5.2
     # via apscheduler
-unstructured==0.11.8
+ujson==5.10.0
+    # via fastapi
+unstructured==0.14.0
     # via open-webui
 unstructured-client==0.22.0
     # via unstructured
@@ -650,8 +656,10 @@ urllib3==2.2.1
     # via unstructured-client
 uvicorn==0.22.0
     # via chromadb
+    # via fastapi
     # via litellm
     # via open-webui
+    # via uvicorn
 uvloop==0.19.0
     # via uvicorn
 validators==0.28.1
@@ -679,3 +687,6 @@ youtube-transcript-api==0.6.2
     # via open-webui
 zipp==3.18.1
     # via importlib-metadata
+setuptools==69.5.1
+    # via ctranslate2
+    # via opentelemetry-instrumentation
