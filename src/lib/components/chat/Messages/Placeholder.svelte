@@ -88,8 +88,8 @@
 						{/if}
 					{:else}
 						<div class=" font-medium text-gray-400 dark:text-gray-500">
-              <div class=" line-clamp-1">{$i18n.t('Hello, {{name}}', { name: $user.name })} ～</div>
-				      <div class=" line-clamp-1 mb-3">我是来自智采数链的数字化AI助手。</div>
+              <!-- <div class=" line-clamp-1">{$i18n.t('Hello, {{name}}', { name: $user.name })} ～</div> -->
+				      <div class=" line-clamp-1 mb-3">我是智采AIbot，是个数字化AI助手。</div>
 							<div class=" text-blue-900">{$i18n.t('How can I help you today?')}</div>
 						</div>
 					{/if}
