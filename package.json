@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.1.125",
+	"version": "0.2.0.dev1",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -13,7 +13,7 @@
 		"lint:types": "npm run check",
 		"lint:backend": "pylint backend/",
 		"format": "prettier --plugin-search-dir --write \"**/*.{js,ts,svelte,css,md,html,json}\"",
-		"format:backend": "black . --exclude \"/venv/\"",
+		"format:backend": "black . --exclude \".venv/|/venv/\"",
 		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write \"src/lib/i18n/**/*.{js,json}\"",
 		"cy:open": "cypress open",
 		"test:frontend": "vitest",

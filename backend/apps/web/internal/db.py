@@ -3,7 +3,7 @@ import json
 from peewee import *
 from peewee_migrate import Router
 from playhouse.db_url import connect
-from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL
+from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL, BACKEND_DIR
 import os
 import logging
 
@@ -30,6 +30,8 @@ else:
 
 DB = connect(DATABASE_URL)
 log.info(f"Connected to a {DB.__class__.__name__} database.")
-router = Router(DB, migrate_dir="apps/web/internal/migrations", logger=log)
+router = Router(
+    DB, migrate_dir=BACKEND_DIR / "apps" / "web" / "internal" / "migrations", logger=log
+)
 router.run()
 DB.connect(reuse_if_open=True)
