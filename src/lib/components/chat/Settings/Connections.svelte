@@ -3,7 +3,13 @@
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	const dispatch = createEventDispatcher();
 
-	import { getOllamaUrls, getOllamaVersion, updateOllamaUrls } from '$lib/apis/ollama';
+	import {
+		getOllamaConfig,
+		getOllamaUrls,
+		getOllamaVersion,
+		updateOllamaConfig,
+		updateOllamaUrls
+	} from '$lib/apis/ollama';
 	import {
 		getOpenAIConfig,
 		getOpenAIKeys,
@@ -26,6 +32,7 @@
 	let OPENAI_API_BASE_URLS = [''];
 
 	let ENABLE_OPENAI_API = false;
+	let ENABLE_OLLAMA_API = false;
 
 	const updateOpenAIHandler = async () => {
 		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
@@ -50,10 +57,13 @@
 
 	onMount(async () => {
 		if ($user.role === 'admin') {
-			OLLAMA_BASE_URLS = await getOllamaUrls(localStorage.token);
+			const ollamaConfig = await getOllamaConfig(localStorage.token);
+			const openaiConfig = await getOpenAIConfig(localStorage.token);
 
-			const config = await getOpenAIConfig(localStorage.token);
-			ENABLE_OPENAI_API = config.ENABLE_OPENAI_API;
+			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
+			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
+
+			OLLAMA_BASE_URLS = await getOllamaUrls(localStorage.token);
 
 			OPENAI_API_BASE_URLS = await getOpenAIUrls(localStorage.token);
 			OPENAI_API_KEYS = await getOpenAIKeys(localStorage.token);
@@ -161,95 +171,108 @@
 
 		<hr class=" dark:border-gray-700" />
 
-		<div>
-			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama Base URL')}</div>
-			<div class="flex w-full gap-1.5">
-				<div class="flex-1 flex flex-col gap-2">
-					{#each OLLAMA_BASE_URLS as url, idx}
-						<div class="flex gap-1.5">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
-								bind:value={url}
-							/>
+		<div class="pr-1.5 space-y-2">
+			<div class="flex justify-between items-center text-sm">
+				<div class="  font-medium">{$i18n.t('Ollama API')}</div>
 
-							<div class="self-center flex items-center">
-								{#if idx === 0}
-									<button
-										class="px-1"
-										on:click={() => {
-											OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, ''];
-										}}
-										type="button"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-											/>
-										</svg>
-									</button>
-								{:else}
-									<button
-										class="px-1"
-										on:click={() => {
-											OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
-										}}
-										type="button"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path d="M3.75 7.25a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Z" />
-										</svg>
-									</button>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				</div>
-
-				<div class="">
-					<button
-						class="p-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-850 dark:hover:bg-gray-800 rounded-lg transition"
-						on:click={() => {
-							updateOllamaUrlsHandler();
+				<div class="mt-1">
+					<Switch
+						bind:state={ENABLE_OLLAMA_API}
+						on:change={async () => {
+							updateOllamaConfig(localStorage.token, ENABLE_OLLAMA_API);
 						}}
-						type="button"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
+					/>
 				</div>
 			</div>
+			{#if ENABLE_OLLAMA_API}
+				<div class="flex w-full gap-1.5">
+					<div class="flex-1 flex flex-col gap-2">
+						{#each OLLAMA_BASE_URLS as url, idx}
+							<div class="flex gap-1.5">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
+									bind:value={url}
+								/>
 
-			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				{$i18n.t('Trouble accessing Ollama?')}
-				<a
-					class=" text-gray-300 font-medium underline"
-					href="https://github.com/open-webui/open-webui#troubleshooting"
-					target="_blank"
-				>
-					{$i18n.t('Click here for help.')}
-				</a>
-			</div>
+								<div class="self-center flex items-center">
+									{#if idx === 0}
+										<button
+											class="px-1"
+											on:click={() => {
+												OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, ''];
+											}}
+											type="button"
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+												/>
+											</svg>
+										</button>
+									{:else}
+										<button
+											class="px-1"
+											on:click={() => {
+												OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
+											}}
+											type="button"
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path d="M3.75 7.25a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Z" />
+											</svg>
+										</button>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					</div>
+
+					<div class="flex">
+						<button
+							class="self-center p-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+							on:click={() => {
+								updateOllamaUrlsHandler();
+							}}
+							type="button"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</button>
+					</div>
+				</div>
+
+				<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+					{$i18n.t('Trouble accessing Ollama?')}
+					<a
+						class=" text-gray-300 font-medium underline"
+						href="https://github.com/open-webui/open-webui#troubleshooting"
+						target="_blank"
+					>
+						{$i18n.t('Click here for help.')}
+					</a>
+				</div>
+			{/if}
 		</div>
 	</div>
 
