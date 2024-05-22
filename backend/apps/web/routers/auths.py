@@ -1,5 +1,6 @@
 import logging
 
+import requests
 from fastapi import Request, UploadFile, File
 from fastapi import Depends, HTTPException, status
 
@@ -33,7 +34,7 @@ from utils.utils import (
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from config import WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+from config import WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER, HATTO_LLM_BASE_URL, HATTO_LLM_API_KEY
 
 router = APIRouter()
 
@@ -138,8 +139,14 @@ async def signin(request: Request, form_data: SigninForm):
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
+        res = requests.post(f"{HATTO_LLM_BASE_URL}/management/get-user-from-uuid", json={
+            'uuid': user.id,
+        }, headers={
+            'ApiKey': HATTO_LLM_API_KEY
+        })
+
         token = create_token(
-            data={"id": user.id},
+            data={"id": user.id, "hatto_llm_user_id": res.json()['id']},
             expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
         )
 
@@ -192,8 +199,23 @@ async def signup(request: Request, form_data: SignupForm):
         )
 
         if user:
+            res = requests.post(f"{HATTO_LLM_BASE_URL}/management/create-user", json={
+                'email': form_data.email.lower(),
+                'username': form_data.email.lower(),
+                'password': form_data.password,
+                'uuid': user.id,
+            }, headers={
+                'ApiKey': HATTO_LLM_API_KEY
+            })
+
+            if res.status_code != 201:
+                print(res.json())
+                raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+
+            hatto_llm_user_id = res.json()['id']
+
             token = create_token(
-                data={"id": user.id},
+                data={"id": user.id, "hatto_llm_user_id": hatto_llm_user_id},
                 expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
             )
             # response.set_cookie(key='token', value=token, httponly=True)

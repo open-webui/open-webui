@@ -845,3 +845,10 @@ LITELLM_PROXY_HOST = os.getenv("LITELLM_PROXY_HOST", "127.0.0.1")
 ####################################
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+
+####################################
+# Hatto LLM
+####################################
+
+HATTO_LLM_BASE_URL = os.environ.get("HATTO_LLM_BASE_URL", "http://localhost:8081/api")
+HATTO_LLM_API_KEY = os.environ.get("HATTO_LLM_API_KEY", "5f4dcc3b5aa765d61d8327deb882cf99")
