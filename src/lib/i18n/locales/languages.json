@@ -23,6 +23,10 @@
 		"code": "ca-ES",
 		"title": "Catalan"
 	},
+        {
+                "code": "ceb-PH",
+                "title": "Cebuano (Filipino)"
+        },
 	{
 		"code": "de-DE",
 		"title": "Deutsch"
