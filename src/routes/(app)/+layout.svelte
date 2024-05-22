@@ -87,17 +87,29 @@
 				// IndexedDB Not Found
 			}
 
-			await models.set(await getModels());
-			await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 
-			await modelfiles.set(await getModelfiles(localStorage.token));
-			await prompts.set(await getPrompts(localStorage.token));
-			await documents.set(await getDocs(localStorage.token));
-			await tags.set(await getAllChatTags(localStorage.token));
+			await Promise.all([
+				(async () => {
+					models.set(await getModels());
+				})(),
+				(async () => {
+					modelfiles.set(await getModelfiles(localStorage.token));
+				})(),
+				(async () => {
+					prompts.set(await getPrompts(localStorage.token));
+				})(),
+				(async () => {
+					documents.set(await getDocs(localStorage.token));
+				})(),
+				(async () => {
+					tags.set(await getAllChatTags(localStorage.token));
+				})()
+			]);
 
 			modelfiles.subscribe(async () => {
 				// should fetch models
-				await models.set(await getModels());
+				models.set(await getModels());
 			});
 
 			document.addEventListener('keydown', function (event) {
