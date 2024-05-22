@@ -30,4 +30,34 @@ if [ "$USE_CUDA_DOCKER" = "true" ]; then
   export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib/python3.11/site-packages/torch/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib"
 fi
 
+
+# Check if SPACE_ID is set, if so, configure for space
+if [ -n "$SPACE_ID" ]; then
+  echo "Configuring for HuggingFace Space deployment"
+  
+  # Copy litellm_config.yaml with specified ownership
+  echo "Copying litellm_config.yaml to the desired location with specified ownership..."
+  cp -f ./space/litellm_config.yaml ./data/litellm/config.yaml
+
+  if [ -n "$ADMIN_USER_EMAIL" ] && [ -n "$ADMIN_USER_PASSWORD" ]; then
+    echo "Admin user configured, creating"
+    WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" uvicorn main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
+    webui_pid=$!
+    echo "Waiting for webui to start..."
+    while ! curl -s http://localhost:8080/health > /dev/null; do
+      sleep 1
+    done
+    echo "Creating admin user..."
+    curl \
+      -X POST "http://localhost:8080/api/v1/auths/signup" \
+      -H "accept: application/json" \
+      -H "Content-Type: application/json" \
+      -d "{ \"email\": \"${ADMIN_USER_EMAIL}\", \"password\": \"${ADMIN_USER_PASSWORD}\", \"name\": \"Admin\" }"
+    echo "Shutting down webui..."
+    kill $webui_pid
+  fi
+
+  export WEBUI_URL=${SPACE_HOST}
+fi
+
 WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec uvicorn main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*'

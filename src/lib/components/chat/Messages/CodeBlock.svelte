@@ -101,7 +101,7 @@
 			try {
 				const micropip = pyodide.pyimport('micropip');
 
-				await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
+				// await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
 
 				let packages = [
 					code.includes('requests') ? 'requests' : null,
