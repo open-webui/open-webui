@@ -425,8 +425,7 @@
 				: undefined,
 			...messages
 		]
-			.filter((message) => message)
-			.filter((message) => message.content != '')
+			.filter((message) => message?.content?.trim())
 			.map((message, idx, arr) => {
 				// Prepare the base message object
 				const baseMessage = {
@@ -686,8 +685,7 @@
 							: undefined,
 						...messages
 					]
-						.filter((message) => message)
-						.filter((message) => message.content != '')
+						.filter((message) => message?.content?.trim())
 						.map((message, idx, arr) => ({
 							role: message.role,
 							...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
