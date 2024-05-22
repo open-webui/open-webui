@@ -610,14 +610,14 @@
 							? {
 									role: 'system',
 									content:
-										$settings.system + (responseMessage?.userContext ?? null)
+										$settings.system + ((responseMessage?.userContext ?? null)
 											? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
-											: ''
+											: '')
 							  }
 							: undefined,
 						...messages
 					]
-						.filter((message) => message)
+						.filter((message) => message && (message.role !== 'assistant' || !!message.content))
 						.map((message, idx, arr) => ({
 							role: message.role,
 							...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
