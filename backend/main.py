@@ -338,11 +338,12 @@ async def get_app_latest_release_version():
             detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
         )
 
+# PWA mainfast.json
 
 @app.get("/manifest.json")
 async def get_manifest_json():
     return {
-        "name": WEBUI_NAME,
+        "name": "智采 AIbot - 上海外高桥造船海工设计 - Digitalink",
         "short_name": WEBUI_NAME,
         "start_url": "/",
         "display": "standalone",
