@@ -11,12 +11,14 @@ ARG USE_CUDA_VER=cu121
 # IMPORTANT: If you change the embedding model (sentence-transformers/all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
 ARG USE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ARG USE_RERANKING_MODEL=""
+ARG BUILD_HASH=dev-build
 # Override at your own risk - non-root configurations are untested
 ARG UID=0
 ARG GID=0
 
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:21-alpine3.19 as build
+ARG BUILD_HASH
 
 WORKDIR /app
 
@@ -24,6 +26,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+ENV WEBUI_VERSION=${BUILD_HASH}
 RUN npm run build
 
 ######## WebUI backend ########
@@ -35,6 +38,7 @@ ARG USE_OLLAMA
 ARG USE_CUDA_VER
 ARG USE_EMBEDDING_MODEL
 ARG USE_RERANKING_MODEL
+ARG BUILD_HASH
 ARG UID
 ARG GID
 
@@ -154,5 +158,7 @@ EXPOSE 8080
 HEALTHCHECK CMD curl --silent --fail http://localhost:8080/health | jq -e '.status == true' || exit 1
 
 USER $UID:$GID
+
+ENV WEBUI_VERSION=${BUILD_HASH}
 
 CMD [ "bash", "start.sh"]

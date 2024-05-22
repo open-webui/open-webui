@@ -18,7 +18,8 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [sveltekit()],
 	define: {
-		APP_VERSION: JSON.stringify(process.env.npm_package_version)
+		APP_VERSION: JSON.stringify(process.env.npm_package_version),
+		APP_HASH: JSON.stringify(process.env.WEBUI_VERSION || 'dev-build')
 	},
 	worker: {
 		format: 'es'
