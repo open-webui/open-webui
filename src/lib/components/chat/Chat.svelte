@@ -122,7 +122,7 @@
 	}
 
 	onMount(async () => {
-		if (!chatId) {
+		if (!$chatId) {
 			await initNewChat();
 		} else {
 			if (!($settings.saveChatHistory ?? true)) {
