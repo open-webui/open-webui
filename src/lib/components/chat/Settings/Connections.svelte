@@ -3,7 +3,6 @@
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	const dispatch = createEventDispatcher();
 
-	import { getOllamaUrls, getOllamaVersion, updateOllamaUrls } from '$lib/apis/ollama';
 	import {
 		getOpenAIConfig,
 		getOpenAIKeys,
@@ -12,20 +11,41 @@
 		updateOpenAIKeys,
 		updateOpenAIUrls
 	} from '$lib/apis/openai';
-	import { toast } from 'svelte-sonner';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let getModels: Function;
+	export let saveSettings: Function;
 
-	// External
-	let OLLAMA_BASE_URLS = [''];
 
 	let OPENAI_API_KEYS = [''];
 	let OPENAI_API_BASE_URLS = [''];
 
 	let ENABLE_OPENAI_API = false;
+
+	// Advanced
+	let showAdvanced: boolean = false;
+	let requestFormat = '';
+	let keepAlive: any = null;
+
+	let options = {
+		// Advanced
+		seed: 0,
+		temperature: '',
+		repeat_penalty: '',
+		repeat_last_n: '',
+		mirostat: '',
+		mirostat_eta: '',
+		mirostat_tau: '',
+		top_k: '',
+		top_p: '',
+		stop: '',
+		tfs_z: '',
+		num_ctx: '',
+		num_predict: ''
+	};
 
 	const updateOpenAIHandler = async () => {
 		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
@@ -34,30 +54,39 @@
 		await models.set(await getModels());
 	};
 
-	const updateOllamaUrlsHandler = async () => {
-		OLLAMA_BASE_URLS = await updateOllamaUrls(localStorage.token, OLLAMA_BASE_URLS);
-
-		const ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (ollamaVersion) {
-			toast.success($i18n.t('Server connection verified'));
-			await models.set(await getModels());
+	const toggleRequestFormat = async () => {
+		if (requestFormat === '') {
+			requestFormat = 'json';
+		} else {
+			requestFormat = '';
 		}
+
+		saveSettings({ requestFormat: requestFormat !== '' ? requestFormat : undefined });
 	};
 
 	onMount(async () => {
 		if ($user.role === 'admin') {
-			OLLAMA_BASE_URLS = await getOllamaUrls(localStorage.token);
-
 			const config = await getOpenAIConfig(localStorage.token);
 			ENABLE_OPENAI_API = config.ENABLE_OPENAI_API;
 
 			OPENAI_API_BASE_URLS = await getOpenAIUrls(localStorage.token);
 			OPENAI_API_KEYS = await getOpenAIKeys(localStorage.token);
 		}
+
+		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+
+		requestFormat = settings.requestFormat ?? '';
+		keepAlive = settings.keepAlive ?? null;
+
+		options.seed = settings.seed ?? 0;
+		options.temperature = settings.temperature ?? '';
+		options.repeat_penalty = settings.repeat_penalty ?? '';
+		options.top_k = settings.top_k ?? '';
+		options.top_p = settings.top_p ?? '';
+		options.num_ctx = settings.num_ctx ?? '';
+		options = { ...options, ...settings.options };
+		options.stop = (settings?.options?.stop ?? []).join(',');
+
 	});
 </script>
 
@@ -161,102 +190,109 @@
 
 		<hr class=" dark:border-gray-700" />
 
-		<div>
-			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama Base URL')}</div>
-			<div class="flex w-full gap-1.5">
-				<div class="flex-1 flex flex-col gap-2">
-					{#each OLLAMA_BASE_URLS as url, idx}
-						<div class="flex gap-1.5">
+		<div class="mt-2 space-y-3 pr-1.5">
+			<div class="flex justify-between items-center text-sm">
+				<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
+				<button
+					class=" text-xs font-medium text-gray-500"
+					type="button"
+					on:click={() => {
+						showAdvanced = !showAdvanced;
+					}}>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button
+				>
+			</div>
+
+			{#if showAdvanced}
+				<AdvancedParams bind:options />
+				<hr class=" dark:border-gray-700" />
+
+				<div class=" py-1 w-full justify-between">
+					<div class="flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Keep Alive')}</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							type="button"
+							on:click={() => {
+								keepAlive = keepAlive === null ? '5m' : null;
+							}}
+						>
+							{#if keepAlive === null}
+								<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+							{:else}
+								<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+							{/if}
+						</button>
+					</div>
+
+					{#if keepAlive !== null}
+						<div class="flex mt-1 space-x-2">
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
-								bind:value={url}
+								type="text"
+								placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
+								bind:value={keepAlive}
 							/>
-
-							<div class="self-center flex items-center">
-								{#if idx === 0}
-									<button
-										class="px-1"
-										on:click={() => {
-											OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, ''];
-										}}
-										type="button"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-											/>
-										</svg>
-									</button>
-								{:else}
-									<button
-										class="px-1"
-										on:click={() => {
-											OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
-										}}
-										type="button"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path d="M3.75 7.25a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Z" />
-										</svg>
-									</button>
-								{/if}
-							</div>
 						</div>
-					{/each}
+					{/if}
 				</div>
 
-				<div class="">
-					<button
-						class="p-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-850 dark:hover:bg-gray-800 rounded-lg transition"
-						on:click={() => {
-							updateOllamaUrlsHandler();
-						}}
-						type="button"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
+				<div>
+					<div class=" py-1 flex w-full justify-between">
+						<div class=" self-center text-sm font-medium">{$i18n.t('Request Mode')}</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								toggleRequestFormat();
+							}}
 						>
-							<path
-								fill-rule="evenodd"
-								d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
+							{#if requestFormat === ''}
+								<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+							{:else if requestFormat === 'json'}
+								<!-- <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            class="w-4 h-4 self-center"
+                        >
+                            <path
+                                d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 001.06-1.06l-1.06-1.061a.75.75 0 10-1.06 1.06l1.06 1.06zM5.404 6.464a.75.75 0 001.06-1.06l-1.06-1.06a.75.75 0 10-1.061 1.06l1.06 1.06z"
+                            />
+                        </svg> -->
+								<span class="ml-2 self-center"> {$i18n.t('JSON')} </span>
+							{/if}
+						</button>
+					</div>
 				</div>
-			</div>
-
-			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				{$i18n.t('Trouble accessing Ollama?')}
-				<a
-					class=" text-gray-300 font-medium underline"
-					href="https://github.com/open-webui/open-webui#troubleshooting"
-					target="_blank"
-				>
-					{$i18n.t('Click here for help.')}
-				</a>
-			</div>
+			{/if}
 		</div>
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
 			class="  px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
-			type="submit"
+			on:click={() => {
+				saveSettings({
+					options: {
+						seed: (options.seed !== 0 ? options.seed : undefined) ?? undefined,
+						stop: options.stop !== '' ? options.stop.split(',').filter((e) => e) : undefined,
+						temperature: options.temperature !== '' ? options.temperature : undefined,
+						repeat_penalty: options.repeat_penalty !== '' ? options.repeat_penalty : undefined,
+						repeat_last_n: options.repeat_last_n !== '' ? options.repeat_last_n : undefined,
+						mirostat: options.mirostat !== '' ? options.mirostat : undefined,
+						mirostat_eta: options.mirostat_eta !== '' ? options.mirostat_eta : undefined,
+						mirostat_tau: options.mirostat_tau !== '' ? options.mirostat_tau : undefined,
+						top_k: options.top_k !== '' ? options.top_k : undefined,
+						top_p: options.top_p !== '' ? options.top_p : undefined,
+						tfs_z: options.tfs_z !== '' ? options.tfs_z : undefined,
+						num_ctx: options.num_ctx !== '' ? options.num_ctx : undefined,
+						num_predict: options.num_predict !== '' ? options.num_predict : undefined
+					},
+					keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined
+				});
+				dispatch('save');
+			}}
 		>
 			{$i18n.t('Save')}
 		</button>
