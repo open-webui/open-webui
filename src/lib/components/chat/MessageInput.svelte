@@ -545,7 +545,7 @@
 			</div>
 		</div>
 
-		<div class="bg-white dark:bg-gray-900">
+		<div class="dark:bg-gray-900">
 			<div class="max-w-5xl px-2.5 lg:px-16 mx-auto inset-x-0">
 				<div class=" pb-2">
 					<input

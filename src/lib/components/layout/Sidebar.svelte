@@ -254,7 +254,7 @@
 	id="sidebar"
 	class="h-screen max-h-[100dvh] min-h-screen {$showSidebar
 		? 'lg:relative w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 rounded-r-2xl
+		: '-translate-x-[260px] w-[0px]'} bg-[#ffffff80] text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 rounded-r-2xl
         "
 	data-state={$showSidebar}
 >
@@ -462,7 +462,7 @@
 		<div class="relative flex flex-col justify-center overflow-y-auto overflow-x-hidden px-4 max-h-[38%]">
 			{#each filteredDocs as doc}
 				<div 
-				class=" flex items-center space-x-3 rounded-xl px-3.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900"
+				class=" flex items-center space-x-3 rounded-xl px-3.5 py-1.5 hover:bg-gray-100 dark:hover:bg-[#33333320]"
 				>
 					<div class="dark:text-[#999]">
 						<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -476,9 +476,9 @@
 							</defs>
 							</svg>
 					</div>
-					<Tooltip content={doc.name}>
-						<div class="overflow-hidden whitespace-nowrap">{doc.name}</div>
-					</Tooltip>
+					<!-- <Tooltip content={doc.name}> -->
+						<div class="overflow-hidden whitespace-nowrap text-ellipsis">{doc.name}</div>
+					<!-- </Tooltip> -->
 				</div>
 			{/each}
 			<!-- {#if !($settings.saveChatHistory ?? true)}
@@ -569,7 +569,7 @@
 				</div>
 
 				<input
-					class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 mt-2 text-sm dark:text-gray-300 dark:bg-gray-950 outline-none"
+					class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm dark:text-gray-300 dark:bg-gray-950 outline-none"
 					placeholder='Search Chat'
 					bind:value={search}
 					on:focus={() => {
@@ -647,7 +647,7 @@
 								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
 								chat.id === chatTitleEditId ||
 								chat.id === chatDeleteId
-									? 'bg-gray-200 dark:bg-gray-900'
+									? 'bg-gray-100 dark:bg-gray-900'
 									: chat.id === selectedChatId
 									? 'bg-gray-100 dark:bg-gray-950'
 									: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
