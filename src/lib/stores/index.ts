@@ -1,5 +1,6 @@
 import { APP_NAME } from '$lib/constants';
 import { type Writable, writable } from 'svelte/store';
+import type { GlobalModelConfig, ModelConfig } from '$lib/apis';
 
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
@@ -42,27 +43,27 @@ export const showSettings = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 
-type Model = OpenAIModel | OllamaModel;
+export type Model = OpenAIModel | OllamaModel;
 
-type OpenAIModel = {
+type BaseModel = {
 	id: string;
 	name: string;
-	external: boolean;
-	source?: string;
+	custom_info?: ModelConfig;
 };
 
-type OllamaModel = {
-	id: string;
-	name: string;
+export interface OpenAIModel extends BaseModel {
+	external: boolean;
+	source?: string;
+}
 
-	// Ollama specific fields
+export interface OllamaModel extends BaseModel {
 	details: OllamaModelDetails;
 	size: number;
 	description: string;
 	model: string;
 	modified_at: string;
 	digest: string;
-};
+}
 
 type OllamaModelDetails = {
 	parent_model: string;
@@ -133,6 +134,7 @@ type Config = {
 	default_models?: string[];
 	default_prompt_suggestions?: PromptSuggestion[];
 	trusted_header_auth?: boolean;
+	model_config?: GlobalModelConfig;
 };
 
 type PromptSuggestion = {

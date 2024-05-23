@@ -298,7 +298,10 @@
 						{#each $models as model}
 							{#if model.size != null}
 								<option value={model.name} class="bg-gray-100 dark:bg-gray-700">
-									{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}
+									{(model.custom_info?.name ?? model.name) +
+										' (' +
+										(model.size / 1024 ** 3).toFixed(1) +
+										' GB)'}
 								</option>
 							{/if}
 						{/each}
@@ -316,7 +319,7 @@
 						{#each $models as model}
 							{#if model.name !== 'hr'}
 								<option value={model.name} class="bg-gray-100 dark:bg-gray-700">
-									{model.name}
+									{model.custom_info?.name ?? model.name}
 								</option>
 							{/if}
 						{/each}

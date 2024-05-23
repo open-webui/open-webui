@@ -12,7 +12,12 @@
 
 	import { user, MODEL_DOWNLOAD_POOL, models, mobile } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
-	import { capitalizeFirstLetter, getModels, splitStream } from '$lib/utils';
+	import {
+		capitalizeFirstLetter,
+		getModels,
+		sanitizeResponseContent,
+		splitStream
+	} from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -23,7 +28,12 @@
 	export let searchEnabled = true;
 	export let searchPlaceholder = $i18n.t('Search a model');
 
-	export let items = [{ value: 'mango', label: 'Mango' }];
+	export let items: {
+		label: string;
+		value: string;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		[key: string]: any;
+	} = [];
 
 	export let className = 'w-[30rem]';
 
@@ -250,8 +260,8 @@
 							<!-- {JSON.stringify(item.info)} -->
 
 							{#if item.info.external}
-								<Tooltip content={item.info?.source ?? 'External'}>
-									<div class=" mr-2">
+								<Tooltip content={`${item.info?.source ?? 'External'}`}>
+									<div class="">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											viewBox="0 0 16 16"
@@ -279,7 +289,7 @@
 											: ''
 									}${item.info.size ? `(${(item.info.size / 1024 ** 3).toFixed(1)}GB)` : ''}`}
 								>
-									<div class=" mr-2">
+									<div class="">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
@@ -297,8 +307,31 @@
 									</div>
 								</Tooltip>
 							{/if}
+							{#if item.info?.custom_info?.meta.description}
+								<Tooltip
+									content={`${sanitizeResponseContent(
+										item.info.custom_info?.meta.description
+									).replaceAll('\n', '<br>')}`}
+								>
+									<div class="">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke-width="1.5"
+											stroke="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
+											/>
+										</svg>
+									</div>
+								</Tooltip>
+							{/if}
 						</div>
-
 						{#if value === item.value}
 							<div class="ml-auto">
 								<Check />

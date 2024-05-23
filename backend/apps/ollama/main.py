@@ -29,7 +29,7 @@ import time
 from urllib.parse import urlparse
 from typing import Optional, List, Union
 
-
+from apps.web.models.models import Models
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
@@ -67,6 +67,7 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.MODEL_CONFIG = Models.get_all_models()
 
 
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
@@ -191,10 +192,19 @@ async def get_all_models():
 
     else:
         models = {"models": []}
+        
+    for model in models["models"]:
+        add_custom_info_to_model(model)
 
     app.state.MODELS = {model["model"]: model for model in models["models"]}
 
     return models
+
+
+def add_custom_info_to_model(model: dict):
+    model["custom_info"] = next(
+        (item for item in app.state.MODEL_CONFIG if item.id == model["model"]), None
+    )
 
 
 @app.get("/api/tags")

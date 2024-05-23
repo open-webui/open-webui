@@ -10,7 +10,7 @@ import logging
 
 from pydantic import BaseModel
 
-
+from apps.web.models.models import Models
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
@@ -52,6 +52,7 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+app.state.MODEL_CONFIG = Models.get_all_models()
 
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
@@ -249,10 +250,19 @@ async def get_all_models():
             )
         }
 
+        for model in models["data"]:
+            add_custom_info_to_model(model)
+
         log.info(f"models: {models}")
         app.state.MODELS = {model["id"]: model for model in models["data"]}
 
-        return models
+    return models
+
+
+def add_custom_info_to_model(model: dict):
+    model["custom_info"] = next(
+        (item for item in app.state.MODEL_CONFIG if item.id == model["id"]), None
+    )
 
 
 @app.get("/models")

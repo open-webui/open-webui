@@ -36,9 +36,9 @@ from apps.web.main import app as webui_app
 
 import asyncio
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
-
+from apps.web.models.models import Models, ModelModel
 from utils.utils import get_admin_user
 from apps.rag.utils import rag_messages
 
@@ -112,6 +112,8 @@ app = FastAPI(
 app.state.config = AppConfig()
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+
+app.state.MODEL_CONFIG = Models.get_all_models()
 
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 
@@ -316,6 +318,33 @@ async def update_model_filter_config(
         "enabled": app.state.config.ENABLE_MODEL_FILTER,
         "models": app.state.config.MODEL_FILTER_LIST,
     }
+
+
+class SetModelConfigForm(BaseModel):
+    models: List[ModelModel]
+
+
+@app.post("/api/config/models")
+async def update_model_config(
+    form_data: SetModelConfigForm, user=Depends(get_admin_user)
+):
+    if not Models.update_all_models(form_data.models):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT("Failed to update model config"),
+        )
+
+    ollama_app.state.MODEL_CONFIG = form_data.models
+    openai_app.state.MODEL_CONFIG = form_data.models
+    litellm_app.state.MODEL_CONFIG = form_data.models
+    app.state.MODEL_CONFIG = form_data.models
+
+    return {"models": app.state.MODEL_CONFIG}
+
+
+@app.get("/api/config/models")
+async def get_model_config(user=Depends(get_admin_user)):
+    return {"models": app.state.MODEL_CONFIG}
 
 
 @app.get("/api/webhook")

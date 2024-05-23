@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { mobile, modelfiles, settings, showSidebar } from '$lib/stores';
+	import { type Model, mobile, modelfiles, settings, showSidebar, models } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
@@ -27,7 +27,8 @@
 	export let stopResponse: Function;
 
 	export let autoScroll = true;
-	export let selectedModel = '';
+	export let selectedAtModel: Model | undefined;
+	export let selectedModels: [''];
 
 	let chatTextAreaElement: HTMLTextAreaElement;
 	let filesInputElement;
@@ -52,10 +53,26 @@
 
 	let speechRecognition;
 
+	let visionCapableState = 'all';
+
 	$: if (prompt) {
 		if (chatTextAreaElement) {
 			chatTextAreaElement.style.height = '';
 			chatTextAreaElement.style.height = Math.min(chatTextAreaElement.scrollHeight, 200) + 'px';
+		}
+	}
+
+	$: {
+		if (selectedAtModel || selectedModels) {
+			visionCapableState = checkModelsAreVisionCapable();
+			if (visionCapableState === 'none') {
+				// Remove all image files
+				const fileCount = files.length;
+				files = files.filter((file) => file.type != 'image');
+				if (files.length < fileCount) {
+					toast.warning($i18n.t('All selected models do not support image input, removed images'));
+				}
+			}
 		}
 	}
 
@@ -326,6 +343,35 @@
 		}
 	};
 
+	const checkModelsAreVisionCapable = () => {
+		let modelsToCheck = [];
+		if (selectedAtModel !== undefined) {
+			modelsToCheck = [selectedAtModel.id];
+		} else {
+			modelsToCheck = selectedModels;
+		}
+		if (modelsToCheck.length == 0 || modelsToCheck[0] == '') {
+			return 'all';
+		}
+		let visionCapableCount = 0;
+		for (const modelName of modelsToCheck) {
+			const model = $models.find((m) => m.id === modelName);
+			if (!model) {
+				continue;
+			}
+			if (model.custom_info?.meta.vision_capable ?? true) {
+				visionCapableCount++;
+			}
+		}
+		if (visionCapableCount == modelsToCheck.length) {
+			return 'all';
+		} else if (visionCapableCount == 0) {
+			return 'none';
+		} else {
+			return 'some';
+		}
+	};
+
 	onMount(() => {
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
@@ -358,6 +404,10 @@
 					inputFiles.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
 						if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
+							if (visionCapableState == 'none') {
+								toast.error($i18n.t('Selected models do not support image inputs'));
+								return;
+							}
 							let reader = new FileReader();
 							reader.onload = (event) => {
 								files = [
@@ -494,12 +544,12 @@
 						bind:chatInputPlaceholder
 						{messages}
 						on:select={(e) => {
-							selectedModel = e.detail;
+							selectedAtModel = e.detail;
 							chatTextAreaElement?.focus();
 						}}
 					/>
 
-					{#if selectedModel !== ''}
+					{#if selectedAtModel !== undefined}
 						<div
 							class="px-3 py-2.5 text-left w-full flex justify-between items-center absolute bottom-0 left-0 right-0 bg-gradient-to-t from-50% from-white dark:from-gray-900"
 						>
@@ -508,21 +558,23 @@
 									crossorigin="anonymous"
 									alt="model profile"
 									class="size-5 max-w-[28px] object-cover rounded-full"
-									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedModel.id)
+									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedAtModel.id)
 										?.imageUrl ??
 										($i18n.language === 'dg-DG'
 											? `/doge.png`
 											: `${WEBUI_BASE_URL}/static/favicon.png`)}
 								/>
 								<div>
-									Talking to <span class=" font-medium">{selectedModel.name} </span>
+									Talking to <span class=" font-medium"
+										>{selectedAtModel.custom_info?.name ?? selectedAtModel.name}
+									</span>
 								</div>
 							</div>
 							<div>
 								<button
 									class="flex items-center"
 									on:click={() => {
-										selectedModel = '';
+										selectedAtModel = undefined;
 									}}
 								>
 									<XMark />
@@ -550,6 +602,12 @@
 									if (
 										['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])
 									) {
+										if (visionCapableState === 'none') {
+											toast.error($i18n.t('Selected models do not support image inputs'));
+											inputFiles = null;
+											filesInputElement.value = '';
+											return;
+										}
 										let reader = new FileReader();
 										reader.onload = (event) => {
 											files = [
@@ -597,7 +655,32 @@
 								{#each files as file, fileIdx}
 									<div class=" relative group">
 										{#if file.type === 'image'}
-											<img src={file.url} alt="input" class=" h-16 w-16 rounded-xl object-cover" />
+											<div class="relative">
+												<img
+													src={file.url}
+													alt="input"
+													class=" h-16 w-16 rounded-xl object-cover"
+												/>
+												{#if visionCapableState === 'some'}
+													<Tooltip
+														className=" absolute top-0 left-0"
+														content={$i18n.t('A selected model does not support image input')}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 24 24"
+															fill="currentColor"
+															class="w-6 h-6 fill-yellow-300"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+																clip-rule="evenodd"
+															/>
+														</svg>
+													</Tooltip>
+												{/if}
+											</div>
 										{:else if file.type === 'doc'}
 											<div
 												class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
@@ -883,7 +966,7 @@
 
 									if (e.key === 'Escape') {
 										console.log('Escape');
-										selectedModel = '';
+										selectedAtModel = undefined;
 									}
 								}}
 								rows="1"

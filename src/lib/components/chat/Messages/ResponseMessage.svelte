@@ -347,7 +347,7 @@
 				{#if message.model in modelfiles}
 					{modelfiles[message.model]?.title}
 				{:else}
-					{message.model ? ` ${message.model}` : ''}
+					{message.modelName ? ` ${message.modelName}` : message.model ? ` ${message.model}` : ''}
 				{/if}
 
 				{#if message.timestamp}

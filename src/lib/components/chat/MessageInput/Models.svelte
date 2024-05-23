@@ -21,8 +21,10 @@
 	let filteredModels = [];
 
 	$: filteredModels = $models
-		.filter((p) => p.name.includes(prompt.split(' ')?.at(0)?.substring(1) ?? ''))
-		.sort((a, b) => a.name.localeCompare(b.name));
+		.filter((p) =>
+			(p.custom_info?.name ?? p.name).includes(prompt.split(' ')?.at(0)?.substring(1) ?? '')
+		)
+		.sort((a, b) => (a.custom_info?.name ?? a.name).localeCompare(b.custom_info?.name ?? b.name));
 
 	$: if (prompt) {
 		selectedIdx = 0;
@@ -156,7 +158,7 @@
 								on:focus={() => {}}
 							>
 								<div class=" font-medium text-black line-clamp-1">
-									{model.name}
+									{model.custom_info?.name ?? model.name}
 								</div>
 
 								<!-- <div class=" text-xs text-gray-600 line-clamp-1">
