@@ -622,7 +622,8 @@
 				if ($settings.saveChatHistory ?? true) {
 					chat = await updateChatById(localStorage.token, _chatId, {
 						messages: messages,
-						history: history
+						history: history,
+						models: selectedModels
 					});
 					await chats.set(await getChatList(localStorage.token));
 				}
@@ -814,6 +815,7 @@
 				if ($chatId == _chatId) {
 					if ($settings.saveChatHistory ?? true) {
 						chat = await updateChatById(localStorage.token, _chatId, {
+							models: selectedModels,
 							messages: messages,
 							history: history
 						});
