@@ -12,7 +12,7 @@ export const getSystemPrompt = (chatType: string | null): string => {
   return 'Bạn là một trợ lý AI. Người dùng sẽ cung cấp cho bạn một nhiệm vụ, hoặc hội thoại với bạn. Hãy hoàn thành nhiệm vụ một cách trung thực nhất có thể.'
 }
 
-export const getUserPrompt = (chatType: string | null, content: string, options: {translate_lang: string | null}): string => {
+export const getUserPrompt = (chatType: string | null, content: string, options: { translate_lang?: string }): string => {
   switch (chatType) {
     case 'summary':
       return `Tóm tắt bài viết này.\n${content}`

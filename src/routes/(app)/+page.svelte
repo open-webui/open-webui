@@ -604,12 +604,10 @@
 					model: model.id,
 					stream: true,
 					messages: [
-						$settings.system || (responseMessage?.userContext ?? null)
-							? {
-									role: 'system',
-									content: getSystemPrompt($chatType)
-							  }
-							: undefined,
+						{
+							role: 'system',
+							content: getSystemPrompt($chatType)
+						},
 						...messages
 					]
 						.filter((message) => message && (message.role !== 'assistant' || !!message.content))

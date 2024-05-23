@@ -14,7 +14,7 @@ export const mobile = writable(false);
 export const theme = writable('system');
 export const chatId = writable('');
 export const chatType = writable('chat')
-export const promptOptions = writable({})
+export const promptOptions: Writable<{ translate_lang?: string }> = writable({})
 
 export const chats = writable([]);
 export const tags = writable([]);
