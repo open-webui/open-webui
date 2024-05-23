@@ -15,7 +15,7 @@
 		config,
 		WEBUI_NAME,
 		tags as _tags,
-		showSidebar
+		showSidebar, chatType, promptOptions
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream, convertMessagesToHistory } from '$lib/utils';
 
@@ -44,6 +44,8 @@
 	} from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
+	import {getSystemPrompt} from "$lib/utils/prompt_utils";
+	import {getUserPrompt} from "$lib/utils/prompt_utils.js";
 
 	const i18n = getContext('i18n');
 
@@ -135,6 +137,7 @@
 		if (chat) {
 			tags = await getTags();
 			const chatContent = chat.chat;
+			chatType.set(chatContent.chat_type)
 
 			if (chatContent) {
 				console.log(chatContent);
@@ -209,7 +212,7 @@
 				childrenIds: [],
 				role: 'user',
 				user: _user ?? undefined,
-				content: userPrompt,
+				content: getUserPrompt($chatType, userPrompt, $promptOptions),
 				files: files.length > 0 ? files : undefined,
 				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
 				models: selectedModels
@@ -234,7 +237,8 @@
 						id: $chatId,
 						title: $i18n.t('New Chat'),
 						models: selectedModels,
-						system: $settings.system ?? undefined,
+						chat_type: $chatType,
+						system: getSystemPrompt($chatType), // $settings.system ?? undefined,
 						options: {
 							...($settings.options ?? {})
 						},
@@ -606,15 +610,10 @@
 					model: model.id,
 					stream: true,
 					messages: [
-						$settings.system || (responseMessage?.userContext ?? null)
-							? {
-									role: 'system',
-									content:
-										$settings.system + (responseMessage?.userContext ?? null)
-											? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
-											: ''
-							  }
-							: undefined,
+						{
+							role: 'system',
+							content: getSystemPrompt($chatType)
+						},
 						...messages
 					]
 						.filter((message) => message)

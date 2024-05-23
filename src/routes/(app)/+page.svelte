@@ -16,7 +16,7 @@
 		config,
 		WEBUI_NAME,
 		tags as _tags,
-		showSidebar
+		showSidebar, chatType, promptOptions
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
@@ -42,6 +42,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
+	import {getSystemPrompt, getUserPrompt} from "$lib/utils/prompt_utils";
 
 	const i18n = getContext('i18n');
 
@@ -74,6 +75,8 @@
 		};
 	}, {});
 
+	let params = new URL(document.location.toString()).searchParams;
+	chatType.set(params.get('type') || 'chat')
 	let chat = null;
 	let tags = [];
 
@@ -113,7 +116,7 @@
 			await cancelOllamaRequest(localStorage.token, currentRequestId);
 			currentRequestId = null;
 		}
-		window.history.replaceState(history.state, '', `/`);
+		window.history.replaceState(history.state, '', `/?type=${$chatType}`);
 		await chatId.set('');
 
 		autoScroll = true;
@@ -201,7 +204,7 @@
 				childrenIds: [],
 				role: 'user',
 				user: _user ?? undefined,
-				content: userPrompt,
+				content: getUserPrompt($chatType, userPrompt, $promptOptions),
 				files: files.length > 0 ? files : undefined,
 				models: selectedModels.filter((m, mIdx) => selectedModels.indexOf(m) === mIdx),
 				timestamp: Math.floor(Date.now() / 1000) // Unix epoch
@@ -226,7 +229,8 @@
 						id: $chatId,
 						title: $i18n.t('New Chat'),
 						models: selectedModels,
-						system: $settings.system ?? undefined,
+						chat_type: $chatType,
+						system: getSystemPrompt($chatType), // $settings.system ?? undefined,
 						options: {
 							...($settings.options ?? {})
 						},
@@ -603,15 +607,12 @@
 						$settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
-									content:
-										$settings.system + (responseMessage?.userContext ?? null)
-											? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
-											: ''
+									content: getSystemPrompt($chatType)
 							  }
 							: undefined,
 						...messages
 					]
-						.filter((message) => message)
+						.filter((message) => message && (message.role !== 'assistant' || !!message.content))
 						.map((message, idx, arr) => ({
 							role: message.role,
 							...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&

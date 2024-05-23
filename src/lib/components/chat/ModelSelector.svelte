@@ -2,7 +2,7 @@
 	import { Collapsible } from 'bits-ui';
 
 	import { setDefaultModels } from '$lib/apis/configs';
-	import { models, showSettings, settings, user, mobile } from '$lib/stores';
+	import {models, showSettings, settings, user, mobile, chatType, promptOptions} from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
@@ -31,11 +31,34 @@
 		toast.success($i18n.t('Default model updated'));
 	};
 
+	const getDesLanguageOption = (type: string) => {
+		if (type === 'translate' || type === 'translate_coding') {
+			return [
+				{value: 'English', label: 'English'},
+				{value: 'Chinese', label: 'Chinese'},
+				{value: 'Việt', label: 'Tiếng Việt'},
+				{value: 'Russian', label: 'Russian'},
+				{value: 'Japan', label: 'Japan'},
+				{value: 'German', label: 'German'}
+			]
+		} else if (type === 'translate_ancient') {
+			return [
+				{value: 'Việt', label: 'Tiếng Việt'},
+				{value: 'Hán Việt', label: 'Hán Việt'},
+				{value: 'Trung Hoa cổ', label: 'Trung Hoa cổ'},
+				{value: 'Hoa', label: 'Hoa'}
+			]
+		}
+		return []
+	};
+
 	$: if (selectedModels.length > 0 && $models.length > 0) {
 		selectedModels = selectedModels.map((model) =>
 			$models.map((m) => m.id).includes(model) ? model : ''
 		);
 	}
+
+	$: supportedTranslateLangs = getDesLanguageOption($chatType)
 </script>
 
 <div class="flex flex-col w-full items-center md:items-start">
@@ -108,8 +131,23 @@
 	{/each}
 </div>
 
-{#if showSetDefault && !$mobile}
-	<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
-		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
-	</div>
-{/if}
+<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
+	<span> {$i18n.t($chatType)}</span>
+	{#if supportedTranslateLangs.length > 0}
+	<span class="mx-2">-></span>
+	<select class="capitalize rounded-lg py-2 pl-4 pr-10 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+			on:change={(e) => promptOptions.set({...$promptOptions, translate_lang: e.target.value})}
+	>
+		{#each supportedTranslateLangs as info}
+			<option value="{info.value}">{info.label}</option>
+		{/each}
+	</select>
+	{/if}
+</div>
+
+<!--{#if showSetDefault && !$mobile}-->
+<!--	<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">-->
+<!--&lt;!&ndash;		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>&ndash;&gt;-->
+<!--		<button> {$i18n.t($chatType)}</button>-->
+<!--	</div>-->
+<!--{/if}-->
