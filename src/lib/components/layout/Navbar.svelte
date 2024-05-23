@@ -38,8 +38,8 @@
 					alt="logo-mbzuai"
 				/>
 				<img
-					src="/logo-ciai.svg"
-					class="ml-4 size-14"
+					src="/logo-ciai.png"
+					class="ml-4 w-[70px]"
 					alt="logo-ciai"
 				/>
 			</a>
