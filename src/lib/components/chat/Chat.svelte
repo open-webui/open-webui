@@ -165,6 +165,7 @@
 
 		if ($page.url.searchParams.get('q')) {
 			prompt = $page.url.searchParams.get('q') ?? '';
+
 			if (prompt) {
 				await tick();
 				submitPrompt(prompt);
@@ -318,6 +319,7 @@
 
 			// Reset chat input textarea
 			prompt = '';
+			document.getElementById('chat-textarea').style.height = '';
 			files = [];
 
 			// Send prompt
