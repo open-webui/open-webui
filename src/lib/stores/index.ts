@@ -13,6 +13,8 @@ export const mobile = writable(false);
 
 export const theme = writable('system');
 export const chatId = writable('');
+export const chatType = writable('chat')
+export const promptOptions: Writable<{ translate_lang?: string }> = writable({})
 
 export const chats = writable([]);
 export const tags = writable([]);
@@ -38,6 +40,7 @@ export const documents = writable([
 export const settings: Writable<Settings> = writable({});
 
 export const showSidebar = writable(false);
+export const showFilesListSidebar = writable(false);
 export const showSettings = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);

@@ -33,6 +33,7 @@
 	import ArchiveBox from '../icons/ArchiveBox.svelte';
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
+	import NewChatSelector from '../chat/ModelSelector/NewChatSelector.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -44,7 +45,7 @@
 
 	let shareChatId = null;
 
-	let selectedChatId = null;
+	let selectedChatId: string | null = null;
 
 	let chatDeleteId = null;
 	let chatTitleEditId = null;
@@ -227,26 +228,10 @@
 			: 'invisible'}"
 	>
 		<div class="px-2.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
-			<a
-				id="sidebar-new-chat-button"
-				class="flex flex-1 justify-between rounded-xl px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-				href="/"
-				draggable="false"
-				on:click={async () => {
-					selectedChatId = null;
-
-					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
-					setTimeout(() => {
-						newChatButton?.click();
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}, 0);
-				}}
+			<div
+				class="flex flex-1 justify-between rounded-xl"
 			>
-				<div class="self-center mx-1.5">
+				<div class="p-2 self-center mx-1.5">
 					<img
 						crossorigin="anonymous"
 						src="{WEBUI_BASE_URL}/static/favicon.png"
@@ -257,8 +242,8 @@
 				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white">
 					{$i18n.t('New Chat')}
 				</div>
-				<div class="self-center ml-auto">
-					<svg
+				<div class="self-center ml-auto rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition">
+					<!-- <svg
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 20 20"
 						fill="currentColor"
@@ -270,9 +255,10 @@
 						<path
 							d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"
 						/>
-					</svg>
+					</svg> -->
+					<NewChatSelector selectedChatId={selectedChatId}/>
 				</div>
-			</a>
+			</div>
 
 			<button
 				class=" cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
