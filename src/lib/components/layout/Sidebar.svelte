@@ -647,7 +647,7 @@
 								class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
 								chat.id === chatTitleEditId ||
 								chat.id === chatDeleteId
-									? 'bg-gray-100 dark:bg-gray-900'
+									? 'bg-gray-200 dark:bg-gray-900'
 									: chat.id === selectedChatId
 									? 'bg-gray-100 dark:bg-gray-950'
 									: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
