@@ -42,7 +42,7 @@
 	// Advanced
 	let requestFormat = '';
 	let keepAlive = null;
-	let botName = 'IT/HR Service';
+	let botName = 'Munir - HR Service';
 
 	let options = {
 		// Advanced

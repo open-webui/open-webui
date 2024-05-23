@@ -75,7 +75,7 @@
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user.name })}
 					{/if} -->
-					IT/HR RAG Service
+					Munir - MBZUAI HR LLM Service
 				</div>
 
 				<!-- <div in:fade={{ duration: 200, delay: 200 }}>
@@ -96,7 +96,7 @@
 						</div>
 					{/if}
 				</div> -->
-				<div class="text-lg font-medium text-gray-400 dark:text-gray-500 text-center" in:fade={{ duration: 200, delay: 200 }}>
+				<div class="text-lg font-medium text-gray-600 dark:text-gray-500 text-center" in:fade={{ duration: 200, delay: 200 }}>
 					Your AI-powered copilot for the web
 				</div>
 			</div>

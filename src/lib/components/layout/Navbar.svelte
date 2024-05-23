@@ -31,7 +31,7 @@
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div class=" flex max-w-full w-full mx-auto px-5 pt-3 md:px-[1.3rem]">
-		<div class="flex justify-between items-center w-full max-w-full">
+		<div class="flex flex-wrap justify-between items-center w-full max-w-full">
 			<a class="flex self-center" href="/">
 				<img
 					src="/logo-mbzuai.svg"
@@ -44,8 +44,8 @@
 				/>
 			</a>
 
-			<div class="w-[30%] overflow-hidden ml-12 flex-1 text-xl font-bold text-black dark:text-white">
-				IT/HR RAG Service
+			<div class="overflow-hidden ml-6 flex-1 text-xl font-semibold text-black dark:text-white">
+				Munir - MBZUAI HR LLM Service
 			</div>
 
 			<div class="self-start flex flex-none items-center">
