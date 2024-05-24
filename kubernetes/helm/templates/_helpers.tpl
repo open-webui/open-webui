@@ -5,6 +5,9 @@
 {{- define "ollama.name" -}}
 ollama
 {{- end -}}
+{{- define "hrwebui.name" -}}
+hrwebui
+{{- end -}}
 
 {{- define "ollama.url" -}}
 {{- if .Values.ollama.externalHost }}
@@ -38,6 +41,16 @@ app.kubernetes.io/component: {{ .Chart.Name }}
 {{- define "open-webui.labels" -}}
 {{ include "base.labels" . }}
 {{ include "open-webui.selectorLabels" . }}
+{{- end }}
+
+{{- define "hrwebui.selectorLabels" -}}
+{{ include "base.selectorLabels" . }}
+app.kubernetes.io/component: {{ include "hrwebui.name" . }}
+{{- end }}
+
+{{- define "hrwebui.labels" -}}
+{{ include "base.labels" . }}
+{{ include "hrwebui.selectorLabels" . }}
 {{- end }}
 
 {{- define "ollama.selectorLabels" -}}

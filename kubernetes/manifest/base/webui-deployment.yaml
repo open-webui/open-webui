@@ -1,3 +1,4 @@
+{{- if .Values.webui.ingress.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -35,4 +36,5 @@ spec:
       volumes:
       - name: webui-volume
         persistentVolumeClaim:
-          claimName: open-webui-pvc          
+          claimName: open-webui-pvc   
+{{- end }}              
