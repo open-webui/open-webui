@@ -48,8 +48,8 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         meta = pw.TextField()
         params = pw.TextField()
 
-        created_at = (pw.BigIntegerField(null=False),)
-        updated_at = (pw.BigIntegerField(null=False),)
+        created_at = pw.BigIntegerField(null=False)
+        updated_at = pw.BigIntegerField(null=False)
 
         class Meta:
             table_name = "model"
