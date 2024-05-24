@@ -25,7 +25,12 @@ export const getModels = async (token: string = '') => {
 		throw error;
 	}
 
-	return res?.data ?? [];
+	let models = res?.data ?? [];
+
+	models = models.filter((models) => models).reduce((a, e, i, arr) => a.concat(e), []);
+
+	console.log(models);
+	return models;
 };
 
 export const getBackendConfig = async () => {

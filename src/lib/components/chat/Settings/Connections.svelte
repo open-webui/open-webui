@@ -23,7 +23,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let getAllModels: Function;
+	export let getModels: Function;
 
 	// External
 	let OLLAMA_BASE_URLS = [''];
@@ -38,7 +38,7 @@
 		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
 		OPENAI_API_KEYS = await updateOpenAIKeys(localStorage.token, OPENAI_API_KEYS);
 
-		await models.set(await getAllModels());
+		await models.set(await getModels());
 	};
 
 	const updateOllamaUrlsHandler = async () => {
@@ -51,7 +51,7 @@
 
 		if (ollamaVersion) {
 			toast.success($i18n.t('Server connection verified'));
-			await models.set(await getAllModels());
+			await models.set(await getModels());
 		}
 	};
 

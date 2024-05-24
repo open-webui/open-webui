@@ -7,7 +7,7 @@
 
 	import { goto } from '$app/navigation';
 
-	import { getAllModels as _getAllModels } from '$lib/utils';
+	import { getModels as _getModels } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
 	import { getPrompts } from '$lib/apis/prompts';
 
@@ -45,8 +45,8 @@
 
 	let showShortcuts = false;
 
-	const getAllModels = async () => {
-		return _getAllModels(localStorage.token);
+	const getModels = async () => {
+		return _getModels(localStorage.token);
 	};
 
 	onMount(async () => {
@@ -75,7 +75,7 @@
 
 			await Promise.all([
 				(async () => {
-					models.set(await getAllModels());
+					models.set(await getModels());
 				})(),
 				(async () => {
 					prompts.set(await getPrompts(localStorage.token));

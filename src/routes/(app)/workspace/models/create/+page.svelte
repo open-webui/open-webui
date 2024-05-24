@@ -8,7 +8,7 @@
 	import { splitStream } from '$lib/utils';
 	import { onMount, tick, getContext } from 'svelte';
 	import { createModel } from '$lib/apis/ollama';
-	import { addNewModel, getModelById, getModels } from '$lib/apis/models';
+	import { addNewModel, getModelById, getModelInfos } from '$lib/apis/models';
 
 	const i18n = getContext('i18n');
 
@@ -99,7 +99,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 
 	const saveModelfile = async (modelfile) => {
 		await addNewModel(localStorage.token, modelfile);
-		await modelfiles.set(await getModels(localStorage.token));
+		await modelfiles.set(await getModelInfos(localStorage.token));
 	};
 
 	const submitHandler = async () => {

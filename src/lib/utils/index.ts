@@ -1,20 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 
-import { getModels } from '$lib/apis';
-
-export const getAllModels = async (token: string) => {
-	let models = await getModels(token).catch((error) => {
-		console.log(error);
-		return null;
-	});
-
-	models = models.filter((models) => models).reduce((a, e, i, arr) => a.concat(e), []);
-
-	console.log(models);
-	return models;
-};
-
 //////////////////////////
 // Helper functions
 //////////////////////////

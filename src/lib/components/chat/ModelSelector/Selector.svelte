@@ -12,12 +12,9 @@
 
 	import { user, MODEL_DOWNLOAD_POOL, models, mobile } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
-	import {
-		capitalizeFirstLetter,
-		getAllModels,
-		sanitizeResponseContent,
-		splitStream
-	} from '$lib/utils';
+	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
+	import { getModels } from '$lib/apis';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -159,7 +156,7 @@
 					})
 				);
 
-				models.set(await getAllModels(localStorage.token));
+				models.set(await getModels(localStorage.token));
 			} else {
 				toast.error($i18n.t('Download canceled'));
 			}

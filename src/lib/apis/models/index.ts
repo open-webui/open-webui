@@ -29,7 +29,7 @@ export const addNewModel = async (token: string, model: object) => {
 	return res;
 };
 
-export const getModels = async (token: string = '') => {
+export const getModelInfos = async (token: string = '') => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/`, {

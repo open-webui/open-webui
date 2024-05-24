@@ -22,7 +22,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let getAllModels: Function;
+	export let getModels: Function;
 
 	let showLiteLLM = false;
 	let showLiteLLMParams = false;
@@ -261,7 +261,7 @@
 					})
 				);
 
-				models.set(await getAllModels(localStorage.token));
+				models.set(await getModels(localStorage.token));
 			} else {
 				toast.error($i18n.t('Download canceled'));
 			}
@@ -424,7 +424,7 @@
 		modelTransferring = false;
 		uploadProgress = null;
 
-		models.set(await getAllModels());
+		models.set(await getModels());
 	};
 
 	const deleteModelHandler = async () => {
@@ -439,7 +439,7 @@
 		}
 
 		deleteModelTag = '';
-		models.set(await getAllModels());
+		models.set(await getModels());
 	};
 
 	const cancelModelPullHandler = async (model: string) => {
@@ -488,7 +488,7 @@
 		liteLLMMaxTokens = '';
 
 		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
-		models.set(await getAllModels());
+		models.set(await getModels());
 	};
 
 	const deleteLiteLLMModelHandler = async () => {
@@ -507,7 +507,7 @@
 
 		deleteLiteLLMModelName = '';
 		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
-		models.set(await getAllModels());
+		models.set(await getModels());
 	};
 
 	const addModelInfoHandler = async () => {
@@ -534,7 +534,7 @@
 		toast.success(
 			$i18n.t('Model info for {{modelName}} added successfully', { modelName: selectedModelId })
 		);
-		models.set(await getAllModels());
+		models.set(await getModels());
 	};
 
 	const deleteModelInfoHandler = async () => {
@@ -550,7 +550,7 @@
 		toast.success(
 			$i18n.t('Model info for {{modelName}} deleted successfully', { modelName: selectedModelId })
 		);
-		models.set(await getAllModels());
+		models.set(await getModels());
 	};
 
 	const toggleIsVisionCapable = () => {

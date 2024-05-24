@@ -42,7 +42,7 @@
 	let imageSize = '';
 	let steps = 50;
 
-	const getAllModels = async () => {
+	const getModels = async () => {
 		models = await getImageGenerationModels(localStorage.token).catch((error) => {
 			toast.error(error);
 			return null;
@@ -66,7 +66,7 @@
 			if (res) {
 				COMFYUI_BASE_URL = res.COMFYUI_BASE_URL;
 
-				await getAllModels();
+				await getModels();
 
 				if (models) {
 					toast.success($i18n.t('Server connection verified'));
@@ -85,7 +85,7 @@
 			if (res) {
 				AUTOMATIC1111_BASE_URL = res.AUTOMATIC1111_BASE_URL;
 
-				await getAllModels();
+				await getModels();
 
 				if (models) {
 					toast.success($i18n.t('Server connection verified'));
@@ -112,7 +112,7 @@
 
 		if (enableImageGeneration) {
 			config.set(await getBackendConfig(localStorage.token));
-			getAllModels();
+			getModels();
 		}
 	};
 
@@ -141,7 +141,7 @@
 			steps = await getImageSteps(localStorage.token);
 
 			if (enableImageGeneration) {
-				getAllModels();
+				getModels();
 			}
 		}
 	});

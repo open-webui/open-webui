@@ -13,7 +13,7 @@ from constants import ERROR_MESSAGES
 router = APIRouter()
 
 ###########################
-# getAllModels
+# getModels
 ###########################
 
 

@@ -6,9 +6,10 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { WEBUI_NAME, modelfiles, models, settings, user } from '$lib/stores';
-	import { addNewModel, deleteModelById, getModels } from '$lib/apis/models';
+	import { addNewModel, deleteModelById, getModelInfos } from '$lib/apis/models';
 	import { goto } from '$app/navigation';
-	import { getAllModels } from '$lib/utils';
+
+	import { getModels } from '$lib/apis';
 
 	const i18n = getContext('i18n');
 
@@ -22,7 +23,7 @@
 		if (res) {
 			toast.success($i18n.t(`Deleted {{tagName}}`, { id }));
 		}
-		await models.set(await getAllModels(localStorage.token));
+		await models.set(await getModels(localStorage.token));
 	};
 
 	const shareModelHandler = async (model) => {
@@ -236,7 +237,7 @@
 						});
 					}
 
-					await modelfiles.set(await getModels(localStorage.token));
+					await modelfiles.set(await getModelInfos(localStorage.token));
 				};
 
 				reader.readAsText(importFiles[0]);
