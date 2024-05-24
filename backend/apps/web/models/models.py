@@ -4,7 +4,7 @@ from typing import Optional
 
 import peewee as pw
 from playhouse.shortcuts import model_to_dict
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from apps.web.internal.db import DB, JSONField
 
@@ -22,21 +22,27 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 # ModelParams is a model for the data stored in the params field of the Model table
 # It isn't currently used in the backend, but it's here as a reference
 class ModelParams(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     pass
 
 
 # ModelMeta is a model for the data stored in the meta field of the Model table
 # It isn't currently used in the backend, but it's here as a reference
 class ModelMeta(BaseModel):
-    description: str
+    description: Optional[str] = None
     """
         User-facing description of the model.
     """
 
-    vision_capable: bool
+    vision_capable: Optional[bool] = None
     """
         A flag indicating if the model is capable of vision and thus image inputs
     """
+
+    model_config = ConfigDict(extra="allow")
+
+    pass
 
 
 class Model(pw.Model):
@@ -44,7 +50,6 @@ class Model(pw.Model):
     """
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
-
     user_id = pw.TextField()
 
     base_model_id = pw.TextField(null=True)
@@ -89,7 +94,6 @@ class ModelModel(BaseModel):
 
 
 class ModelsTable:
-
     def __init__(
         self,
         db: pw.SqliteDatabase | pw.PostgresqlDatabase,
