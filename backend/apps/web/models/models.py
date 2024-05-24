@@ -45,10 +45,7 @@ class Model(pw.Model):
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
 
-    meta = JSONField()
-    """
-        Holds a JSON encoded blob of metadata, see `ModelMeta`.
-    """
+    user_id = pw.TextField()
 
     base_model_id = pw.TextField(null=True)
     """
@@ -66,16 +63,24 @@ class Model(pw.Model):
         Holds a JSON encoded blob of parameters, see `ModelParams`.
     """
 
+    meta = JSONField()
+    """
+        Holds a JSON encoded blob of metadata, see `ModelMeta`.
+    """
+
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
+
     class Meta:
         database = DB
 
 
 class ModelModel(BaseModel):
     id: str
-    meta: ModelMeta
     base_model_id: Optional[str] = None
     name: str
     params: ModelParams
+    meta: ModelMeta
 
 
 ####################
