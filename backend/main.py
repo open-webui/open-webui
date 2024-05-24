@@ -307,7 +307,10 @@ async def get_models(user=Depends(get_verified_user)):
     for custom_model in custom_models:
         if custom_model.base_model_id == None:
             for model in models:
-                if custom_model.id == model["id"]:
+                if (
+                    custom_model.id == model["id"]
+                    or custom_model.id == model["id"].split(":")[0]
+                ):
                     model["name"] = custom_model.name
                     model["info"] = custom_model.model_dump()
         else:
