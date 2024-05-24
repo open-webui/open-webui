@@ -43,6 +43,7 @@ from utils.utils import (
 from config import (
     SRC_LOG_LEVELS,
     OLLAMA_BASE_URLS,
+    ENABLE_OLLAMA_API,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     UPLOAD_DIR,
@@ -67,6 +68,8 @@ app.state.config = AppConfig()
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
+
+app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.MODELS = {}
 
@@ -94,6 +97,21 @@ async def check_url(request: Request, call_next):
 @app.get("/")
 async def get_status():
     return {"status": True}
+
+
+@app.get("/config")
+async def get_config(user=Depends(get_admin_user)):
+    return {"ENABLE_OLLAMA_API": app.state.config.ENABLE_OLLAMA_API}
+
+
+class OllamaConfigForm(BaseModel):
+    enable_ollama_api: Optional[bool] = None
+
+
+@app.post("/config/update")
+async def update_config(form_data: OllamaConfigForm, user=Depends(get_admin_user)):
+    app.state.config.ENABLE_OLLAMA_API = form_data.enable_ollama_api
+    return {"ENABLE_OLLAMA_API": app.state.config.ENABLE_OLLAMA_API}
 
 
 @app.get("/urls")
@@ -156,14 +174,23 @@ def merge_models_lists(model_lists):
 
 async def get_all_models():
     log.info("get_all_models()")
-    tasks = [fetch_url(f"{url}/api/tags") for url in app.state.config.OLLAMA_BASE_URLS]
-    responses = await asyncio.gather(*tasks)
 
-    models = {
-        "models": merge_models_lists(
-            map(lambda response: response["models"] if response else None, responses)
-        )
-    }
+    if app.state.config.ENABLE_OLLAMA_API:
+        tasks = [
+            fetch_url(f"{url}/api/tags") for url in app.state.config.OLLAMA_BASE_URLS
+        ]
+        responses = await asyncio.gather(*tasks)
+
+        models = {
+            "models": merge_models_lists(
+                map(
+                    lambda response: response["models"] if response else None, responses
+                )
+            )
+        }
+
+    else:
+        models = {"models": []}
 
     app.state.MODELS = {model["model"]: model for model in models["models"]}
 

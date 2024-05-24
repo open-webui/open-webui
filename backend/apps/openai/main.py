@@ -314,7 +314,15 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         body = body.decode("utf-8")
         body = json.loads(body)
 
-        idx = app.state.MODELS[body.get("model")]["urlIdx"]
+        model = app.state.MODELS[body.get("model")]
+
+        idx = model["urlIdx"]
+
+        if "pipeline" in model and model.get("pipeline"):
+            body["user"] = {"name": user.name, "id": user.id}
+            body["title"] = (
+                True if body["stream"] == False and body["max_tokens"] == 50 else False
+            )
 
         # Check if the model is "gpt-4-vision-preview" and set "max_tokens" to 4000
         # This is a workaround until OpenAI fixes the issue with this model

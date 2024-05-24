@@ -8,6 +8,7 @@ import sys
 import logging
 import aiohttp
 import requests
+import mimetypes
 
 from fastapi import FastAPI, Request, Depends, status
 from fastapi.staticfiles import StaticFiles
@@ -408,6 +409,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
 
 if os.path.exists(FRONTEND_BUILD_DIR):
+    mimetypes.add_type("text/javascript", ".js")
     app.mount(
         "/",
         SPAStaticFiles(directory=FRONTEND_BUILD_DIR, html=True),
