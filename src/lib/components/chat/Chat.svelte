@@ -11,7 +11,6 @@
 		chats,
 		config,
 		type Model,
-		modelfiles,
 		models,
 		settings,
 		showSidebar,
@@ -62,24 +61,6 @@
 
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
-
-	let selectedModelfile = null;
-	$: selectedModelfile =
-		selectedModels.length === 1 &&
-		$modelfiles.filter((modelfile) => modelfile.tagName === selectedModels[0]).length > 0
-			? $modelfiles.filter((modelfile) => modelfile.tagName === selectedModels[0])[0]
-			: null;
-
-	let selectedModelfiles = {};
-	$: selectedModelfiles = selectedModels.reduce((a, tagName, i, arr) => {
-		const modelfile =
-			$modelfiles.filter((modelfile) => modelfile.tagName === tagName)?.at(0) ?? undefined;
-
-		return {
-			...a,
-			...(modelfile && { [tagName]: modelfile })
-		};
-	}, {});
 
 	let chat = null;
 	let tags = [];
@@ -345,6 +326,7 @@
 					const hasImages = messages.some((message) =>
 						message.files?.some((file) => file.type === 'image')
 					);
+
 					if (hasImages && !(model.custom_info?.meta.vision_capable ?? true)) {
 						toast.error(
 							$i18n.t('Model {{modelName}} is not vision capable', {
@@ -362,7 +344,7 @@
 						role: 'assistant',
 						content: '',
 						model: model.id,
-						modelName: model.custom_info?.name ?? model.name ?? model.id,
+						modelName: model.name ?? model.id,
 						userContext: null,
 						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 					};
@@ -407,7 +389,7 @@
 					}
 					responseMessage.userContext = userContext;
 
-					if (model?.external) {
+					if (model?.owned_by === 'openai') {
 						await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
 					} else if (model) {
 						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
@@ -956,10 +938,8 @@
 					) + ' {{prompt}}',
 				titleModelId,
 				userPrompt,
-				titleModel?.external ?? false
-					? titleModel?.source?.toLowerCase() === 'litellm'
-						? `${LITELLM_API_BASE_URL}/v1`
-						: `${OPENAI_API_BASE_URL}`
+				titleModel?.owned_by === 'openai' ?? false
+					? `${OPENAI_API_BASE_URL}`
 					: `${OLLAMA_API_BASE_URL}/v1`
 			);
 
@@ -1046,16 +1026,12 @@
 					<Messages
 						chatId={$chatId}
 						{selectedModels}
-						{selectedModelfiles}
 						{processing}
 						bind:history
 						bind:messages
 						bind:autoScroll
 						bind:prompt
 						bottomPadding={files.length > 0}
-						suggestionPrompts={chatIdProp
-							? []
-							: selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
 						{sendPrompt}
 						{continueGeneration}
 						{regenerateResponse}

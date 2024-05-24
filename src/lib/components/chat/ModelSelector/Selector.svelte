@@ -249,15 +249,17 @@
 							<div class="line-clamp-1">
 								{item.label}
 
-								<span class=" text-xs font-medium text-gray-600 dark:text-gray-400"
-									>{item.info?.details?.parameter_size ?? ''}</span
-								>
+								{#if item.model.owned_by === 'ollama'}
+									<span class=" text-xs font-medium text-gray-600 dark:text-gray-400"
+										>{item.model.ollama?.details?.parameter_size ?? ''}</span
+									>
+								{/if}
 							</div>
 
 							<!-- {JSON.stringify(item.info)} -->
 
-							{#if item.info.external}
-								<Tooltip content={`${item.info?.source ?? 'External'}`}>
+							{#if item.model.owned_by === 'openai'}
+								<Tooltip content={`${'External'}`}>
 									<div class="">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
@@ -278,13 +280,17 @@
 										</svg>
 									</div>
 								</Tooltip>
-							{:else}
+							{:else if item.model.owned_by === 'ollama'}
 								<Tooltip
 									content={`${
-										item.info?.details?.quantization_level
-											? item.info?.details?.quantization_level + ' '
+										item.model.ollama?.details?.quantization_level
+											? item.model.ollama?.details?.quantization_level + ' '
 											: ''
-									}${item.info.size ? `(${(item.info.size / 1024 ** 3).toFixed(1)}GB)` : ''}`}
+									}${
+										item.model.ollama?.size
+											? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
+											: ''
+									}`}
 								>
 									<div class="">
 										<svg

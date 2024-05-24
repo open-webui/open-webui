@@ -207,7 +207,7 @@ def merge_models_lists(model_lists):
                 [
                     {
                         **model,
-                        "name": model["id"],
+                        "name": model.get("name", model["id"]),
                         "owned_by": "openai",
                         "openai": model,
                         "urlIdx": idx,
@@ -318,6 +318,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     try:
         body = body.decode("utf-8")
         body = json.loads(body)
+
+        print(app.state.MODELS)
 
         model = app.state.MODELS[body.get("model")]
 

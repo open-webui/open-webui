@@ -27,7 +27,7 @@ export const getModels = async (token: string = '') => {
 
 	let models = res?.data ?? [];
 
-	models = models.filter((models) => models).reduce((a, e, i, arr) => a.concat(e), []);
+	models = models.filter((models) => models).sort((a, b) => (a.name > b.name ? 1 : -1));
 
 	console.log(models);
 	return models;

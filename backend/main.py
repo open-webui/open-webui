@@ -276,13 +276,11 @@ async def get_models(user=Depends(get_verified_user)):
 
     if app.state.config.ENABLE_OPENAI_API:
         openai_models = await get_openai_models()
-        openai_app.state.MODELS = openai_models
 
         openai_models = openai_models["data"]
 
     if app.state.config.ENABLE_OLLAMA_API:
         ollama_models = await get_ollama_models()
-        ollama_app.state.MODELS = ollama_models
 
         print(ollama_models)
 
