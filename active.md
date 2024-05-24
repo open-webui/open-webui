@@ -5,7 +5,7 @@ Our focused coding meetings are on Mondays and Wednesdays at [10 PM EDT](/io/cod
 
 # Active Projects
 
-**New Project!** &nbsp;[Feed Player](../feed/) - for Video, Images, JSON, YAML, CSS, RSS news feeds and [more!](../feed/view/)
+**New Project!** &nbsp;[Feed Player](../feed/) - for Video, Images, JSON, YAML, CSS, RSS news feeds and our [Feed Viewer](../feed/view/#feed=nasa)
 
 [Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
@@ -17,6 +17,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 **Machine Learning with Python and Google Data Commons**
 
+- [RStudio - API to JSON](/localsite/info/data/flowsa/)
 - [ML for Community Forecasting Timelines](../data-pipeline/timelines/)
 - [RealityStream](/RealityStream/) - Machine Learning Classification Models
 - [USEEIO.js Open Footprint Data and SQL](/useeio.js/footprint) and [React Widgets](/io/charts)
