@@ -312,13 +312,20 @@ async def get_models(user=Depends(get_verified_user)):
                     model["name"] = custom_model.name
                     model["info"] = custom_model.model_dump()
         else:
+
+            owned_by = "openai"
+            for model in models:
+                if custom_model.base_model_id == model["id"]:
+                    owned_by = model["owned_by"]
+                    break
+
             models.append(
                 {
                     "id": custom_model.id,
                     "name": custom_model.name,
                     "object": "model",
                     "created": custom_model.created_at,
-                    "owned_by": "user",
+                    "owned_by": owned_by,
                     "info": custom_model.model_dump(),
                 }
             )
