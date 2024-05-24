@@ -3,8 +3,10 @@ import { browser, dev } from '$app/environment';
 
 export const APP_NAME = 'Open WebUI';
 export const WEBUI_BASE_URL = browser ? (dev ? `http://${location.hostname}:8080` : ``) : ``;
+export const HATTO_LLM_BASE_URL = browser ? (dev ? `http://${location.hostname}:8081` : ``) : ``;
 
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
+export const HATTO_LLM_API_BASE_URL = `${HATTO_LLM_BASE_URL}/api`;
 
 export const LITELLM_API_BASE_URL = `${WEBUI_BASE_URL}/litellm/api`;
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;

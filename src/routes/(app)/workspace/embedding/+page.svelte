@@ -1,5 +1,5 @@
 <script>
-	import Documents from '$lib/components/workspace/Documents.svelte';
+	import Embedding from '$lib/components/workspace/Embedding.svelte';
 </script>
 
-<Documents />
+<Embedding />
