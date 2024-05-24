@@ -1,24 +1,25 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
+	import { toast } from 'svelte-sonner';
 
+	import { onMount, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import {
+		models,
+		modelfiles,
+		user,
+		settings,
+		chats,
+		chatId,
+		config,
 		WEBUI_NAME,
 		tags as _tags,
-		chatId,
-		chats,
-		config,
-		modelfiles,
-		models,
-		settings,
-		showSidebar,
-		user
+		showSidebar
 	} from '$lib/stores';
-	import { convertMessagesToHistory, copyToClipboard, splitStream } from '$lib/utils';
-	import { getContext, onMount, tick } from 'svelte';
+	import { copyToClipboard, splitStream, convertMessagesToHistory } from '$lib/utils';
 
+	import { generateChatCompletion, cancelOllamaRequest } from '$lib/apis/ollama';
 	import {
 		addTagById,
 		createNewChat,
@@ -29,21 +30,20 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { cancelOllamaRequest, generateChatCompletion } from '$lib/apis/ollama';
 	import { generateOpenAIChatCompletion, generateTitle } from '$lib/apis/openai';
 
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 
-	import { queryMemory } from '$lib/apis/memories';
-	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import {
 		LITELLM_API_BASE_URL,
-		OLLAMA_API_BASE_URL,
 		OPENAI_API_BASE_URL,
+		OLLAMA_API_BASE_URL,
 		WEBUI_BASE_URL
 	} from '$lib/constants';
+	import { createOpenAITextStream } from '$lib/apis/streaming';
+	import { queryMemory } from '$lib/apis/memories';
 
 	const i18n = getContext('i18n');
 
@@ -350,11 +350,10 @@
 			$settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
-						content: `${$settings?.system ?? ''}${
-							responseMessage?.userContext ?? null
-								? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
+						content:
+							$settings.system + (responseMessage?.userContext ?? null)
+								? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
 								: ''
-						}`
 				  }
 				: undefined,
 			...messages
@@ -610,17 +609,15 @@
 						$settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
-									content: `${$settings?.system ?? ''}${
-										responseMessage?.userContext ?? null
-											? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
+									content:
+										$settings.system + (responseMessage?.userContext ?? null)
+											? `\n\nUser Context:\n${responseMessage.userContext.join('\n')}`
 											: ''
-									}`
 							  }
 							: undefined,
 						...messages
 					]
 						.filter((message) => message)
-						.filter((message) => message.content != '')
 						.map((message, idx, arr) => ({
 							role: message.role,
 							...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
