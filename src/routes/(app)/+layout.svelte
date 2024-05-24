@@ -7,9 +7,9 @@
 
 	import { goto } from '$app/navigation';
 
-	import { getModels as _getModels } from '$lib/utils';
+	import { getAllModels as _getAllModels } from '$lib/utils';
 	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { getModelfiles } from '$lib/apis/modelfiles';
+	import { getModels } from '$lib/apis/models';
 	import { getPrompts } from '$lib/apis/prompts';
 
 	import { getDocs } from '$lib/apis/documents';
@@ -46,8 +46,8 @@
 
 	let showShortcuts = false;
 
-	const getModels = async () => {
-		return _getModels(localStorage.token);
+	const getAllModels = async () => {
+		return _getAllModels(localStorage.token);
 	};
 
 	const setOllamaVersion = async (version: string = '') => {
@@ -91,10 +91,10 @@
 
 			await Promise.all([
 				(async () => {
-					models.set(await getModels());
+					models.set(await getAllModels());
 				})(),
 				(async () => {
-					modelfiles.set(await getModelfiles(localStorage.token));
+					modelfiles.set(await getModels(localStorage.token));
 				})(),
 				(async () => {
 					prompts.set(await getPrompts(localStorage.token));
@@ -109,7 +109,7 @@
 
 			modelfiles.subscribe(async () => {
 				// should fetch models
-				models.set(await getModels());
+				models.set(await getAllModels());
 			});
 
 			document.addEventListener('keydown', function (event) {

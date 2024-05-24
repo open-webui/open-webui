@@ -1,3 +1,11 @@
+################################################################################
+#                              DEPRECATION NOTICE                              #
+#                                                                              #
+# This file has been deprecated since version 0.2.0.                           #
+#                                                                              #
+################################################################################
+
+
 from pydantic import BaseModel
 from peewee import *
 from playhouse.shortcuts import model_to_dict

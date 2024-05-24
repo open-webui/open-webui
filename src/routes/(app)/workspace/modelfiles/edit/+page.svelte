@@ -10,7 +10,7 @@
 	import { splitStream } from '$lib/utils';
 
 	import { createModel } from '$lib/apis/ollama';
-	import { getModelfiles, updateModelfileByTagName } from '$lib/apis/modelfiles';
+	import { getModels, updateModelById } from '$lib/apis/models';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 
@@ -85,8 +85,8 @@
 	});
 
 	const updateModelfile = async (modelfile) => {
-		await updateModelfileByTagName(localStorage.token, modelfile.tagName, modelfile);
-		await modelfiles.set(await getModelfiles(localStorage.token));
+		await updateModelById(localStorage.token, modelfile.tagName, modelfile);
+		await modelfiles.set(await getModels(localStorage.token));
 	};
 
 	const updateHandler = async () => {

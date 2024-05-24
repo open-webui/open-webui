@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { models, settings, user } from '$lib/stores';
 
-	import { getModels as _getModels } from '$lib/utils';
+	import { getAllModels as _getAllModels } from '$lib/utils';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -25,12 +25,12 @@
 	const saveSettings = async (updated) => {
 		console.log(updated);
 		await settings.set({ ...$settings, ...updated });
-		await models.set(await getModels());
+		await models.set(await getAllModels());
 		localStorage.setItem('settings', JSON.stringify($settings));
 	};
 
-	const getModels = async () => {
-		return await _getModels(localStorage.token);
+	const getAllModels = async () => {
+		return await _getAllModels(localStorage.token);
 	};
 
 	let selectedTab = 'general';
@@ -318,17 +318,17 @@
 			<div class="flex-1 md:min-h-[28rem]">
 				{#if selectedTab === 'general'}
 					<General
-						{getModels}
+						{getAllModels}
 						{saveSettings}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'models'}
-					<Models {getModels} />
+					<Models {getAllModels} />
 				{:else if selectedTab === 'connections'}
 					<Connections
-						{getModels}
+						{getAllModels}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}

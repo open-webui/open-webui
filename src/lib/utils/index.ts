@@ -4,7 +4,7 @@ import { getOllamaModels } from '$lib/apis/ollama';
 import { getOpenAIModels } from '$lib/apis/openai';
 import { getLiteLLMModels } from '$lib/apis/litellm';
 
-export const getModels = async (token: string) => {
+export const getAllModels = async (token: string) => {
 	let models = await Promise.all([
 		getOllamaModels(token).catch((error) => {
 			console.log(error);

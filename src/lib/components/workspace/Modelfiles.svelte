@@ -7,11 +7,7 @@
 
 	import { WEBUI_NAME, modelfiles, settings, user } from '$lib/stores';
 	import { createModel, deleteModel } from '$lib/apis/ollama';
-	import {
-		createNewModelfile,
-		deleteModelfileByTagName,
-		getModelfiles
-	} from '$lib/apis/modelfiles';
+	import { addNewModel, deleteModelById, getModels } from '$lib/apis/models';
 	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
@@ -36,8 +32,8 @@
 
 	const deleteModelfile = async (tagName) => {
 		await deleteModelHandler(tagName);
-		await deleteModelfileByTagName(localStorage.token, tagName);
-		await modelfiles.set(await getModelfiles(localStorage.token));
+		await deleteModelById(localStorage.token, tagName);
+		await modelfiles.set(await getModels(localStorage.token));
 	};
 
 	const shareModelfile = async (modelfile) => {
@@ -246,12 +242,12 @@
 					console.log(savedModelfiles);
 
 					for (const modelfile of savedModelfiles) {
-						await createNewModelfile(localStorage.token, modelfile).catch((error) => {
+						await addNewModel(localStorage.token, modelfile).catch((error) => {
 							return null;
 						});
 					}
 
-					await modelfiles.set(await getModelfiles(localStorage.token));
+					await modelfiles.set(await getModels(localStorage.token));
 				};
 
 				reader.readAsText(importFiles[0]);
@@ -318,7 +314,7 @@
 					class="self-center w-fit text-sm px-3 py-1 border dark:border-gray-600 rounded-xl flex"
 					on:click={async () => {
 						for (const modelfile of localModelfiles) {
-							await createNewModelfile(localStorage.token, modelfile).catch((error) => {
+							await addNewModel(localStorage.token, modelfile).catch((error) => {
 								return null;
 							});
 						}
@@ -326,7 +322,7 @@
 						saveModelfiles(localModelfiles);
 						localStorage.removeItem('modelfiles');
 						localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
-						await modelfiles.set(await getModelfiles(localStorage.token));
+						await modelfiles.set(await getModels(localStorage.token));
 					}}
 				>
 					<div class=" self-center mr-2 font-medium">{$i18n.t('Sync All')}</div>
@@ -354,7 +350,7 @@
 
 						localStorage.removeItem('modelfiles');
 						localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
-						await modelfiles.set(await getModelfiles(localStorage.token));
+						await modelfiles.set(await getModels(localStorage.token));
 					}}
 				>
 					<div class=" self-center">

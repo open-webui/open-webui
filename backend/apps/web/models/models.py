@@ -3,12 +3,17 @@ import logging
 from typing import Optional
 
 import peewee as pw
+from peewee import *
+
 from playhouse.shortcuts import model_to_dict
 from pydantic import BaseModel, ConfigDict
 
 from apps.web.internal.db import DB, JSONField
 
+from typing import List, Union, Optional
 from config import SRC_LOG_LEVELS
+
+import time
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -20,10 +25,8 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 # ModelParams is a model for the data stored in the params field of the Model table
-# It isn't currently used in the backend, but it's here as a reference
 class ModelParams(BaseModel):
     model_config = ConfigDict(extra="allow")
-
     pass
 
 
@@ -55,7 +58,6 @@ class Model(pw.Model):
     base_model_id = pw.TextField(null=True)
     """
         An optional pointer to the actual model that should be used when proxying requests.
-        Currently unused - but will be used to support Modelfile like behaviour in the future
     """
 
     name = pw.TextField()
@@ -73,8 +75,8 @@ class Model(pw.Model):
         Holds a JSON encoded blob of metadata, see `ModelMeta`.
     """
 
-    updated_at: int  # timestamp in epoch
-    created_at: int  # timestamp in epoch
+    updated_at = BigIntegerField()
+    created_at = BigIntegerField()
 
     class Meta:
         database = DB
@@ -83,14 +85,34 @@ class Model(pw.Model):
 class ModelModel(BaseModel):
     id: str
     base_model_id: Optional[str] = None
+
     name: str
     params: ModelParams
     meta: ModelMeta
+
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
 
 
 ####################
 # Forms
 ####################
+
+
+class ModelResponse(BaseModel):
+    id: str
+    name: str
+    meta: ModelMeta
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
+
+
+class ModelForm(BaseModel):
+    id: str
+    base_model_id: Optional[str] = None
+    name: str
+    meta: ModelMeta
+    params: ModelParams
 
 
 class ModelsTable:
@@ -101,44 +123,47 @@ class ModelsTable:
         self.db = db
         self.db.create_tables([Model])
 
-    def get_all_models(self) -> list[ModelModel]:
+    def insert_new_model(self, model: ModelForm, user_id: str) -> Optional[ModelModel]:
+        try:
+            model = Model.create(
+                **{
+                    **model.model_dump(),
+                    "user_id": user_id,
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
+                }
+            )
+            return ModelModel(**model_to_dict(model))
+        except:
+            return None
+
+    def get_all_models(self) -> List[ModelModel]:
         return [ModelModel(**model_to_dict(model)) for model in Model.select()]
 
-    def update_all_models(self, models: list[ModelModel]) -> bool:
+    def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
-            with self.db.atomic():
-                # Fetch current models from the database
-                current_models = self.get_all_models()
-                current_model_dict = {model.id: model for model in current_models}
+            model = Model.get(Model.id == id)
+            return ModelModel(**model_to_dict(model))
+        except:
+            return None
 
-                # Create a set of model IDs from the current models and the new models
-                current_model_keys = set(current_model_dict.keys())
-                new_model_keys = set(model.id for model in models)
+    def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
+        try:
+            # update only the fields that are present in the model
+            query = Model.update(**model.model_dump()).where(Model.id == id)
+            query.execute()
 
-                # Determine which models need to be created, updated, or deleted
-                models_to_create = [
-                    model for model in models if model.id not in current_model_keys
-                ]
-                models_to_update = [
-                    model for model in models if model.id in current_model_keys
-                ]
-                models_to_delete = current_model_keys - new_model_keys
+            model = Model.get(Model.id == id)
+            return ModelModel(**model_to_dict(model))
+        except:
+            return None
 
-                # Perform the necessary database operations
-                for model in models_to_create:
-                    Model.create(**model.model_dump())
-
-                for model in models_to_update:
-                    Model.update(**model.model_dump()).where(
-                        Model.id == model.id
-                    ).execute()
-
-                for model_id, model_source in models_to_delete:
-                    Model.delete().where(Model.id == model_id).execute()
-
+    def delete_model_by_id(self, id: str) -> bool:
+        try:
+            query = Model.delete().where(Model.id == id)
+            query.execute()
             return True
-        except Exception as e:
-            log.exception(e)
+        except:
             return False
 
 

@@ -1,18 +1,16 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const createNewModelfile = async (token: string, modelfile: object) => {
+export const addNewModel = async (token: string, model: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/modelfiles/create`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/add`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			modelfile: modelfile
-		})
+		body: JSON.stringify(model)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -31,10 +29,10 @@ export const createNewModelfile = async (token: string, modelfile: object) => {
 	return res;
 };
 
-export const getModelfiles = async (token: string = '') => {
+export const getModels = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/modelfiles/`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -59,62 +57,19 @@ export const getModelfiles = async (token: string = '') => {
 		throw error;
 	}
 
-	return res.map((modelfile) => modelfile.modelfile);
+	return res;
 };
 
-export const getModelfileByTagName = async (token: string, tagName: string) => {
+export const getModelById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/modelfiles/`, {
-		method: 'POST',
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/${id}`, {
+		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			tag_name: tagName
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res.modelfile;
-};
-
-export const updateModelfileByTagName = async (
-	token: string,
-	tagName: string,
-	modelfile: object
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/modelfiles/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			tag_name: tagName,
-			modelfile: modelfile
-		})
+		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -137,19 +92,49 @@ export const updateModelfileByTagName = async (
 	return res;
 };
 
-export const deleteModelfileByTagName = async (token: string, tagName: string) => {
+export const updateModelById = async (token: string, id: string, model: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/modelfiles/delete`, {
-		method: 'DELETE',
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/${id}/update`, {
+		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			tag_name: tagName
+		body: JSON.stringify(model)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const deleteModelById = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/${id}/delete`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

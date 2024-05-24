@@ -14,7 +14,7 @@
 	import { toast } from 'svelte-sonner';
 	import {
 		capitalizeFirstLetter,
-		getModels,
+		getAllModels,
 		sanitizeResponseContent,
 		splitStream
 	} from '$lib/utils';
@@ -159,7 +159,7 @@
 					})
 				);
 
-				models.set(await getModels(localStorage.token));
+				models.set(await getAllModels(localStorage.token));
 			} else {
 				toast.error($i18n.t('Download canceled'));
 			}

@@ -8,7 +8,7 @@
 	import { splitStream } from '$lib/utils';
 	import { onMount, tick, getContext } from 'svelte';
 	import { createModel } from '$lib/apis/ollama';
-	import { createNewModelfile, getModelfileByTagName, getModelfiles } from '$lib/apis/modelfiles';
+	import { addNewModel, getModelById, getModels } from '$lib/apis/models';
 
 	const i18n = getContext('i18n');
 
@@ -98,8 +98,8 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 	};
 
 	const saveModelfile = async (modelfile) => {
-		await createNewModelfile(localStorage.token, modelfile);
-		await modelfiles.set(await getModelfiles(localStorage.token));
+		await addNewModel(localStorage.token, modelfile);
+		await modelfiles.set(await getModels(localStorage.token));
 	};
 
 	const submitHandler = async () => {
@@ -116,7 +116,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 
 		if (
 			$models.map((model) => model.name).includes(tagName) ||
-			(await getModelfileByTagName(localStorage.token, tagName).catch(() => false))
+			(await getModelById(localStorage.token, tagName).catch(() => false))
 		) {
 			toast.error(
 				`Uh-oh! It looks like you already have a model named '${tagName}'. Please choose a different name to complete your modelfile.`

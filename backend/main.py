@@ -320,33 +320,6 @@ async def update_model_filter_config(
     }
 
 
-class SetModelConfigForm(BaseModel):
-    models: List[ModelModel]
-
-
-@app.post("/api/config/models")
-async def update_model_config(
-    form_data: SetModelConfigForm, user=Depends(get_admin_user)
-):
-    if not Models.update_all_models(form_data.models):
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ERROR_MESSAGES.DEFAULT("Failed to update model config"),
-        )
-
-    ollama_app.state.MODEL_CONFIG = form_data.models
-    openai_app.state.MODEL_CONFIG = form_data.models
-    litellm_app.state.MODEL_CONFIG = form_data.models
-    app.state.MODEL_CONFIG = form_data.models
-
-    return {"models": app.state.MODEL_CONFIG}
-
-
-@app.get("/api/config/models")
-async def get_model_config(user=Depends(get_admin_user)):
-    return {"models": app.state.MODEL_CONFIG}
-
-
 @app.get("/api/webhook")
 async def get_webhook_url(user=Depends(get_admin_user)):
     return {
