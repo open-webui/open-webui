@@ -12,7 +12,7 @@
 		updateOpenAIUrls
 	} from '$lib/apis/openai';
 	import Switch from '$lib/components/common/Switch.svelte';
-	import AdvancedParams from './Advanced/AdvancedParams.svelte';
+	import DefaultParams from './DefaultParams/DefaultParams.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -25,13 +25,8 @@
 
 	let ENABLE_OPENAI_API = false;
 
-	// Advanced
-	let showAdvanced: boolean = false;
-	let requestFormat = '';
-	let keepAlive: any = null;
-
 	let options = {
-		// Advanced
+		api_url: '',
 		seed: 0,
 		temperature: '',
 		repeat_penalty: '',
@@ -44,8 +39,12 @@
 		stop: '',
 		tfs_z: '',
 		num_ctx: '',
-		num_predict: ''
+		num_predict: '',
+		keep_alive: null,
+		request_format: '',
 	};
+
+	let modelParamsList: any[] = [];
 
 	const updateOpenAIHandler = async () => {
 		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
@@ -54,15 +53,28 @@
 		await models.set(await getModels());
 	};
 
-	const toggleRequestFormat = async () => {
-		if (requestFormat === '') {
-			requestFormat = 'json';
-		} else {
-			requestFormat = '';
-		}
-
-		saveSettings({ requestFormat: requestFormat !== '' ? requestFormat : undefined });
-	};
+	const handleSaveModelParams = () => {
+		let submitData = modelParamsList.map(m => (
+			{
+				api_url: m.api_url,
+				seed: (m.seed !== 0 ? m.seed : undefined) ?? undefined,
+				stop: m.stop !== '' ? m.stop.split(',').filter((e) => e) : undefined,
+				temperature: m.temperature !== '' ? m.temperature : undefined,
+				mirostat: m.mirostat !== '' ? m.mirostat : undefined,
+				mirostat_eta: m.mirostat_eta !== '' ? m.mirostat_eta : undefined,
+				mirostat_tau: m.mirostat_tau !== '' ? m.mirostat_tau : undefined,
+				top_k: m.top_k !== '' ? m.top_k : undefined,
+				top_p: m.top_p !== '' ? m.top_p : undefined,
+				repeat_penalty: m.repeat_penalty !== '' ? m.repeat_penalty : undefined,
+				repeat_last_n: m.repeat_last_n !== '' ? m.repeat_last_n : undefined,
+				tfs_z: m.tfs_z !== '' ? m.tfs_z : undefined,
+				num_ctx: m.num_ctx !== '' ? m.num_ctx : undefined,
+				num_predict: m.num_predict !== '' ? m.num_predict : undefined,
+				keep_alive: m.keep_alive !== null ? m.keep_alive : undefined,
+				request_format: m.request_format !== '' ? m.request_format : undefined,
+			}))
+		localStorage.setItem('models_params', JSON.stringify(submitData));
+	}
 
 	onMount(async () => {
 		if ($user.role === 'admin') {
@@ -71,23 +83,40 @@
 
 			OPENAI_API_BASE_URLS = await getOpenAIUrls(localStorage.token);
 			OPENAI_API_KEYS = await getOpenAIKeys(localStorage.token);
+
+			let modelsParams = JSON.parse(localStorage.getItem('models_params') ?? '{}');
+
+			OPENAI_API_BASE_URLS.forEach(url => {
+				let foundOptions = modelsParams.find(m => m.api_url === url);
+			
+				if(foundOptions) {
+					modelParamsList= [...modelParamsList, 
+					{
+						api_url: url,
+						seed: foundOptions.seed ?? 0,
+						stop: (foundOptions?.stop ?? []).join(','),
+						temperature: foundOptions.temperature ?? '',
+						mirostat: foundOptions.mirostat ?? '',
+						mirostat_eta: foundOptions.mirostat_eta ?? '',
+						mirostat_tau: foundOptions.mirostat_tau ?? '',
+						top_k: foundOptions.top_k ?? '',
+						top_p: foundOptions.top_p ?? '',
+						repeat_penalty: foundOptions.repeat_penalty ?? '',
+						repeat_last_n: foundOptions.repeat_last_n ?? '',
+						tfs_z: foundOptions.tfs_z ?? '',
+						num_ctx: foundOptions.num_ctx ?? '',
+						num_predict: foundOptions.num_predict ?? '',
+						keep_alive: foundOptions.keep_alive ?? null,
+						request_format: foundOptions.request_format ?? '',
+					}]
+
+					return;
+				}
+					modelParamsList= [...modelParamsList, {...options, api_url: url}]
+				})
 		}
-
-		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-
-		requestFormat = settings.requestFormat ?? '';
-		keepAlive = settings.keepAlive ?? null;
-
-		options.seed = settings.seed ?? 0;
-		options.temperature = settings.temperature ?? '';
-		options.repeat_penalty = settings.repeat_penalty ?? '';
-		options.top_k = settings.top_k ?? '';
-		options.top_p = settings.top_p ?? '';
-		options.num_ctx = settings.num_ctx ?? '';
-		options = { ...options, ...settings.options };
-		options.stop = (settings?.options?.stop ?? []).join(',');
-
 	});
+	
 </script>
 
 <form
@@ -122,6 +151,7 @@
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 										placeholder={$i18n.t('API Base URL')}
 										bind:value={url}
+										on:input={(e)=> {modelParamsList[idx].api_url = e.target.value}}
 										autocomplete="off"
 									/>
 								</div>
@@ -141,6 +171,7 @@
 											on:click={() => {
 												OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, ''];
 												OPENAI_API_KEYS = [...OPENAI_API_KEYS, ''];
+												modelParamsList = [...modelParamsList, options];
 											}}
 											type="button"
 										>
@@ -163,6 +194,7 @@
 													(url, urlIdx) => idx !== urlIdx
 												);
 												OPENAI_API_KEYS = OPENAI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
+												modelParamsList = modelParamsList.filter((_, keyIdx) => idx !== keyIdx)
 											}}
 											type="button"
 										>
@@ -182,117 +214,21 @@
 								{$i18n.t('WebUI will make requests to')}
 								<span class=" text-gray-200">'{url}/models'</span>
 							</div>
+							<DefaultParams 
+								options={modelParamsList[idx]} 
+							/>
+							<hr class=" dark:border-gray-700 mx-2 my-4" />
 						{/each}
 					</div>
 				{/if}
 			</div>
-		</div>
-
-		<hr class=" dark:border-gray-700" />
-
-		<div class="mt-2 space-y-3 pr-1.5">
-			<div class="flex justify-between items-center text-sm">
-				<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
-				<button
-					class=" text-xs font-medium text-gray-500"
-					type="button"
-					on:click={() => {
-						showAdvanced = !showAdvanced;
-					}}>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button
-				>
-			</div>
-
-			{#if showAdvanced}
-				<AdvancedParams bind:options />
-				<hr class=" dark:border-gray-700" />
-
-				<div class=" py-1 w-full justify-between">
-					<div class="flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Keep Alive')}</div>
-
-						<button
-							class="p-1 px-3 text-xs flex rounded transition"
-							type="button"
-							on:click={() => {
-								keepAlive = keepAlive === null ? '5m' : null;
-							}}
-						>
-							{#if keepAlive === null}
-								<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
-							{:else}
-								<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
-							{/if}
-						</button>
-					</div>
-
-					{#if keepAlive !== null}
-						<div class="flex mt-1 space-x-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-								type="text"
-								placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
-								bind:value={keepAlive}
-							/>
-						</div>
-					{/if}
-				</div>
-
-				<div>
-					<div class=" py-1 flex w-full justify-between">
-						<div class=" self-center text-sm font-medium">{$i18n.t('Request Mode')}</div>
-
-						<button
-							class="p-1 px-3 text-xs flex rounded transition"
-							on:click={() => {
-								toggleRequestFormat();
-							}}
-						>
-							{#if requestFormat === ''}
-								<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
-							{:else if requestFormat === 'json'}
-								<!-- <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                            class="w-4 h-4 self-center"
-                        >
-                            <path
-                                d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 001.06-1.06l-1.06-1.061a.75.75 0 10-1.06 1.06l1.06 1.06zM5.404 6.464a.75.75 0 001.06-1.06l-1.06-1.06a.75.75 0 10-1.061 1.06l1.06 1.06z"
-                            />
-                        </svg> -->
-								<span class="ml-2 self-center"> {$i18n.t('JSON')} </span>
-							{/if}
-						</button>
-					</div>
-				</div>
-			{/if}
 		</div>
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
 			class="  px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
-			on:click={() => {
-				saveSettings({
-					options: {
-						seed: (options.seed !== 0 ? options.seed : undefined) ?? undefined,
-						stop: options.stop !== '' ? options.stop.split(',').filter((e) => e) : undefined,
-						temperature: options.temperature !== '' ? options.temperature : undefined,
-						repeat_penalty: options.repeat_penalty !== '' ? options.repeat_penalty : undefined,
-						repeat_last_n: options.repeat_last_n !== '' ? options.repeat_last_n : undefined,
-						mirostat: options.mirostat !== '' ? options.mirostat : undefined,
-						mirostat_eta: options.mirostat_eta !== '' ? options.mirostat_eta : undefined,
-						mirostat_tau: options.mirostat_tau !== '' ? options.mirostat_tau : undefined,
-						top_k: options.top_k !== '' ? options.top_k : undefined,
-						top_p: options.top_p !== '' ? options.top_p : undefined,
-						tfs_z: options.tfs_z !== '' ? options.tfs_z : undefined,
-						num_ctx: options.num_ctx !== '' ? options.num_ctx : undefined,
-						num_predict: options.num_predict !== '' ? options.num_predict : undefined
-					},
-					keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined
-				});
-				dispatch('save');
-			}}
+			on:click={() => handleSaveModelParams()}
 		>
 			{$i18n.t('Save')}
 		</button>
