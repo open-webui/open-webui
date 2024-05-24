@@ -2,7 +2,7 @@
 	import { Collapsible } from 'bits-ui';
 
 	import { setDefaultModels } from '$lib/apis/configs';
-	import { models, showSettings, settings, user } from '$lib/stores';
+	import { models, showSettings, settings, user, mobile } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
@@ -12,6 +12,8 @@
 
 	export let selectedModels = [''];
 	export let disabled = false;
+
+	export let showSetDefault = true;
 
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
@@ -36,11 +38,11 @@
 	}
 </script>
 
-<div class="flex flex-col mt-0.5 w-full">
+<div class="flex flex-col w-full items-center md:items-start">
 	{#each selectedModels as selectedModel, selectedModelIdx}
-		<div class="flex w-full">
+		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">
-				<div class="mr-0.5 max-w-full">
+				<div class="mr-1 max-w-full">
 					<Selector
 						placeholder={$i18n.t('Select a model')}
 						items={$models
@@ -57,7 +59,7 @@
 
 			{#if selectedModelIdx === 0}
 				<div class="  self-center mr-2 disabled:text-gray-600 disabled:hover:text-gray-600">
-					<Tooltip content="Add Model">
+					<Tooltip content={$i18n.t('Add Model')}>
 						<button
 							class=" "
 							{disabled}
@@ -69,9 +71,9 @@
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
 								viewBox="0 0 24 24"
-								stroke-width="1.5"
+								stroke-width="2"
 								stroke="currentColor"
-								class="w-4 h-4"
+								class="size-3.5"
 							>
 								<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
 							</svg>
@@ -80,7 +82,7 @@
 				</div>
 			{:else}
 				<div class="  self-center disabled:text-gray-600 disabled:hover:text-gray-600 mr-2">
-					<Tooltip content="Remove Model">
+					<Tooltip content={$i18n.t('Remove Model')}>
 						<button
 							{disabled}
 							on:click={() => {
@@ -92,9 +94,9 @@
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
 								viewBox="0 0 24 24"
-								stroke-width="1.5"
+								stroke-width="2"
 								stroke="currentColor"
-								class="w-4 h-4"
+								class="size-3.5"
 							>
 								<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
 							</svg>
@@ -106,6 +108,8 @@
 	{/each}
 </div>
 
-<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
-	<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
-</div>
+{#if showSetDefault && !$mobile}
+	<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
+		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
+	</div>
+{/if}

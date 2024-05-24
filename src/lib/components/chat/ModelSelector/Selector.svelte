@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Select } from 'bits-ui';
+	import { DropdownMenu } from 'bits-ui';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
@@ -10,7 +10,7 @@
 
 	import { cancelOllamaRequest, deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 
-	import { user, MODEL_DOWNLOAD_POOL, models } from '$lib/stores';
+	import { user, MODEL_DOWNLOAD_POOL, models, mobile } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, getModels, splitStream } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -21,15 +21,22 @@
 	export let value = '';
 	export let placeholder = 'Select a model';
 	export let searchEnabled = true;
-	export let searchPlaceholder = 'Search a model';
+	export let searchPlaceholder = $i18n.t('Search a model');
 
 	export let items = [{ value: 'mango', label: 'Mango' }];
+
+	export let className = 'w-[30rem]';
+
+	let show = false;
+
+	let selectedModel = '';
+	$: selectedModel = items.find((item) => item.value === value) ?? '';
 
 	let searchValue = '';
 	let ollamaVersion = null;
 
 	$: filteredItems = searchValue
-		? items.filter((item) => item.value.includes(searchValue.toLowerCase()))
+		? items.filter((item) => item.value.toLowerCase().includes(searchValue.toLowerCase()))
 		: items;
 
 	const pullModelHandler = async () => {
@@ -144,7 +151,7 @@
 
 				models.set(await getModels(localStorage.token));
 			} else {
-				toast.error('Download canceled');
+				toast.error($i18n.t('Download canceled'));
 			}
 
 			delete $MODEL_DOWNLOAD_POOL[sanitizedModelTag];
@@ -175,27 +182,32 @@
 	};
 </script>
 
-<Select.Root
-	{items}
+<DropdownMenu.Root
+	bind:open={show}
 	onOpenChange={async () => {
 		searchValue = '';
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 	}}
-	selected={items.find((item) => item.value === value) ?? ''}
-	onSelectedChange={(selectedItem) => {
-		value = selectedItem.value;
-	}}
 >
-	<Select.Trigger class="relative w-full" aria-label={placeholder}>
-		<Select.Value
-			class="flex text-left px-0.5 outline-none bg-transparent truncate text-lg font-semibold placeholder-gray-400  focus:outline-none"
-			{placeholder}
-		/>
-		<ChevronDown className="absolute end-2 top-1/2 -translate-y-[45%] size-3.5" strokeWidth="2.5" />
-	</Select.Trigger>
-	<Select.Content
-		class=" z-40 w-full rounded-lg  bg-white dark:bg-gray-900 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/50  outline-none"
+	<DropdownMenu.Trigger class="relative w-full" aria-label={placeholder}>
+		<div
+			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate text-lg font-semibold placeholder-gray-400 focus:outline-none"
+		>
+			{#if selectedModel}
+				{selectedModel.label}
+			{:else}
+				{placeholder}
+			{/if}
+			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
+		</div>
+	</DropdownMenu.Trigger>
+
+	<DropdownMenu.Content
+		class=" z-40 {$mobile
+			? `w-full`
+			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/50  outline-none "
 		transition={flyAndScale}
+		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={4}
 	>
 		<slot>
@@ -208,18 +220,23 @@
 						bind:value={searchValue}
 						class="w-full text-sm bg-transparent outline-none"
 						placeholder={searchPlaceholder}
+						autocomplete="off"
 					/>
 				</div>
 
 				<hr class="border-gray-100 dark:border-gray-800" />
 			{/if}
 
-			<div class="px-3 my-2 max-h-72 overflow-y-auto">
+			<div class="px-3 my-2 max-h-64 overflow-y-auto scrollbar-hidden">
 				{#each filteredItems as item}
-					<Select.Item
-						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm  text-gray-700 dark:text-gray-100  outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
-						value={item.value}
-						label={item.label}
+					<button
+						aria-label="model-item"
+						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+						on:click={() => {
+							value = item.value;
+
+							show = false;
+						}}
 					>
 						<div class="flex items-center gap-2">
 							<div class="line-clamp-1">
@@ -287,23 +304,23 @@
 								<Check />
 							</div>
 						{/if}
-					</Select.Item>
+					</button>
 				{:else}
 					<div>
 						<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
-							No results found
+							{$i18n.t('No results found')}
 						</div>
 					</div>
 				{/each}
 
 				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user.role === 'admin'}
 					<button
-						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
 						on:click={() => {
 							pullModelHandler();
 						}}
 					>
-						Pull "{searchValue}" from Ollama.com
+						{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}
 					</button>
 				{/if}
 
@@ -354,7 +371,7 @@
 						</div>
 
 						<div class="mr-2 translate-y-0.5">
-							<Tooltip content="Cancel">
+							<Tooltip content={$i18n.t('Cancel')}>
 								<button
 									class="text-gray-800 dark:text-gray-100"
 									on:click={() => {
@@ -384,6 +401,20 @@
 					</div>
 				{/each}
 			</div>
+
+			<div class="hidden w-[42rem]" />
+			<div class="hidden w-[32rem]" />
 		</slot>
-	</Select.Content>
-</Select.Root>
+	</DropdownMenu.Content>
+</DropdownMenu.Root>
+
+<style>
+	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
+		visibility: visible;
+	}
+	.scrollbar-hidden::-webkit-scrollbar-thumb {
+		visibility: hidden;
+	}
+</style>

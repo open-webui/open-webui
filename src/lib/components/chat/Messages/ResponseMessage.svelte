@@ -23,15 +23,16 @@
 		revertSanitizedResponseContent,
 		sanitizeResponseContent
 	} from '$lib/utils';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import Skeleton from './Skeleton.svelte';
 	import CodeBlock from './CodeBlock.svelte';
 	import Image from '$lib/components/common/Image.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
+	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
 
 	export let modelfiles = [];
 	export let message;
@@ -64,8 +65,11 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
+	let showCitationModal = false;
 
-	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
+	let selectedCitation = null;
+
+	$: tokens = marked.lexer(sanitizeResponseContent(message?.content));
 
 	const renderer = new marked.Renderer();
 
@@ -137,20 +141,22 @@
 			.getElementById(`message-${message.id}`)
 			?.getElementsByClassName('chat-assistant');
 
-		for (const element of chatMessageElements) {
-			auto_render(element, {
-				// customised options
-				// • auto-render specific keys, e.g.:
-				delimiters: [
-					{ left: '$$', right: '$$', display: false },
-					{ left: '$ ', right: ' $', display: false },
-					{ left: '\\(', right: '\\)', display: false },
-					{ left: '\\[', right: '\\]', display: false },
-					{ left: '[ ', right: ' ]', display: false }
-				],
-				// • rendering keys, e.g.:
-				throwOnError: false
-			});
+		if (chatMessageElements) {
+			for (const element of chatMessageElements) {
+				auto_render(element, {
+					// customised options
+					// • auto-render specific keys, e.g.:
+					delimiters: [
+						{ left: '$$', right: '$$', display: false },
+						{ left: '$ ', right: ' $', display: false },
+						{ left: '\\(', right: '\\)', display: false },
+						{ left: '\\[', right: '\\]', display: false },
+						{ left: '[ ', right: ' ]', display: false }
+					],
+					// • rendering keys, e.g.:
+					throwOnError: false
+				});
+			}
 		}
 	};
 
@@ -221,7 +227,8 @@
 					const res = await synthesizeOpenAISpeech(
 						localStorage.token,
 						$settings?.audio?.speaker,
-						sentence
+						sentence,
+						$settings?.audio?.model
 					).catch((error) => {
 						toast.error(error);
 
@@ -322,13 +329,20 @@
 	});
 </script>
 
+<CitationsModal bind:show={showCitationModal} citation={selectedCitation} />
+
 {#key message.id}
-	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
+	<div
+		class=" flex w-full message-{message.id}"
+		id="message-{message.id}"
+		dir={$settings.chatDirection}
+	>
 		<ProfileImage
-			src={modelfiles[message.model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+			src={modelfiles[message.model]?.imageUrl ??
+				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
 		/>
 
-		<div class="w-full overflow-hidden">
+		<div class="w-full overflow-hidden pl-1">
 			<Name>
 				{#if message.model in modelfiles}
 					{modelfiles[message.model]?.title}
@@ -337,166 +351,214 @@
 				{/if}
 
 				{#if message.timestamp}
-					<span class=" invisible group-hover:visible text-gray-400 text-xs font-medium">
-						{dayjs(message.timestamp * 1000).format($i18n.t('DD/MM/YYYY HH:mm'))}
+					<span
+						class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase"
+					>
+						{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
 					</span>
 				{/if}
 			</Name>
 
-			{#if message.content === ''}
-				<Skeleton />
-			{:else}
-				{#if message.files}
-					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
-						{#each message.files as file}
-							<div>
-								{#if file.type === 'image'}
-									<Image src={file.url} />
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{/if}
+			{#if message.files}
+				<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
+					{#each message.files as file}
+						<div>
+							{#if file.type === 'image'}
+								<Image src={file.url} />
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
 
-				<div
-					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
-				>
-					<div>
-						{#if edit === true}
-							<div class=" w-full">
-								<textarea
-									id="message-edit-{message.id}"
-									bind:this={editTextAreaElement}
-									class=" bg-transparent outline-none w-full resize-none"
-									bind:value={editedContent}
-									on:input={(e) => {
-										e.target.style.height = '';
-										e.target.style.height = `${e.target.scrollHeight}px`;
+			<div
+				class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
+			>
+				<div>
+					{#if edit === true}
+						<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
+							<textarea
+								id="message-edit-{message.id}"
+								bind:this={editTextAreaElement}
+								class=" bg-transparent outline-none w-full resize-none"
+								bind:value={editedContent}
+								on:input={(e) => {
+									e.target.style.height = '';
+									e.target.style.height = `${e.target.scrollHeight}px`;
+								}}
+							/>
+
+							<div class=" mt-2 mb-1 flex justify-end space-x-1.5 text-sm font-medium">
+								<button
+									id="close-edit-message-button"
+									class=" px-4 py-2 bg-gray-900 hover:bg-gray-850 text-gray-100 transition rounded-3xl"
+									on:click={() => {
+										cancelEditMessage();
 									}}
-								/>
+								>
+									{$i18n.t('Cancel')}
+								</button>
 
-								<div class=" mt-2 mb-1 flex justify-center space-x-2 text-sm font-medium">
-									<button
-										class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg-lg"
-										on:click={() => {
-											editMessageConfirmHandler();
-										}}
-									>
-										{$i18n.t('Save')}
-									</button>
-
-									<button
-										class=" px-4 py-2 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-100 transition outline outline-1 outline-gray-200 dark:outline-gray-600 rounded-lg"
-										on:click={() => {
-											cancelEditMessage();
-										}}
-									>
-										{$i18n.t('Cancel')}
-									</button>
-								</div>
+								<button
+									id="save-edit-message-button"
+									class="px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 transition rounded-3xl"
+									on:click={() => {
+										editMessageConfirmHandler();
+									}}
+								>
+									{$i18n.t('Save')}
+								</button>
 							</div>
-						{:else}
-							<div class="w-full">
-								{#if message?.error === true}
-									<div
-										class="flex mt-2 mb-4 space-x-2 border px-4 py-3 border-red-800 bg-red-800/30 font-medium rounded-lg"
+						</div>
+					{:else}
+						<div class="w-full">
+							{#if message?.error === true}
+								<div
+									class="flex mt-2 mb-4 space-x-2 border px-4 py-3 border-red-800 bg-red-800/30 font-medium rounded-lg"
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="w-5 h-5 self-center"
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="1.5"
-											stroke="currentColor"
-											class="w-5 h-5 self-center"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-											/>
-										</svg>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+										/>
+									</svg>
 
-										<div class=" self-center">
-											{message.content}
-										</div>
+									<div class=" self-center">
+										{message.content}
 									</div>
-								{:else}
-									{#each tokens as token}
-										{#if token.type === 'code'}
-											<CodeBlock
-												lang={token.lang}
-												code={revertSanitizedResponseContent(token.text)}
-											/>
-										{:else}
-											{@html marked.parse(token.raw, {
-												...defaults,
-												gfm: true,
-												breaks: true,
-												renderer
-											})}
-										{/if}
-									{/each}
-									<!-- {@html marked(message.content.replaceAll('\\', '\\\\'))} -->
-								{/if}
+								</div>
+							{:else if message.content === ''}
+								<Skeleton />
+							{:else}
+								{#each tokens as token, tokenIdx}
+									{#if token.type === 'code'}
+										<CodeBlock
+											id={`${message.id}-${tokenIdx}`}
+											lang={token.lang}
+											code={revertSanitizedResponseContent(token.text)}
+										/>
+									{:else}
+										{@html marked.parse(token.raw, {
+											...defaults,
+											gfm: true,
+											breaks: true,
+											renderer
+										})}
+									{/if}
+								{/each}
+							{/if}
 
-								{#if message.done}
-									<div
-										class=" flex justify-start space-x-1 overflow-x-auto buttons text-gray-700 dark:text-gray-500"
-									>
-										{#if siblings.length > 1}
-											<div class="flex self-center min-w-fit">
-												<button
-													class="self-center dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														showPreviousMessage(message);
-													}}
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</button>
+							{#if message.citations}
+								<div class="mt-1 mb-2 w-full flex gap-1 items-center">
+									{#each message.citations.reduce((acc, citation) => {
+										citation.document.forEach((document, index) => {
+											const metadata = citation.metadata?.[index];
+											const id = metadata?.source ?? 'N/A';
 
-												<div class="text-xs font-bold self-center min-w-fit dark:text-gray-100">
-													{siblings.indexOf(message.id) + 1} / {siblings.length}
+											const existingSource = acc.find((item) => item.id === id);
+
+											if (existingSource) {
+												existingSource.document.push(document);
+												existingSource.metadata.push(metadata);
+											} else {
+												acc.push( { id: id, source: citation?.source, document: [document], metadata: metadata ? [metadata] : [] } );
+											}
+										});
+										return acc;
+									}, []) as citation, idx}
+										<div class="flex gap-1 text-xs font-semibold">
+											<button
+												class="flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl"
+												on:click={() => {
+													showCitationModal = true;
+													selectedCitation = citation;
+												}}
+											>
+												<div class="bg-white dark:bg-gray-700 rounded-full size-4">
+													{idx + 1}
 												</div>
+												<div class="flex-1 mx-2 line-clamp-1">
+													{citation.source.name}
+												</div>
+											</button>
+										</div>
+									{/each}
+								</div>
+							{/if}
 
-												<button
-													class="self-center dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														showNextMessage(message);
-													}}
+							{#if message.done || siblings.length > 1}
+								<div
+									class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500"
+								>
+									{#if siblings.length > 1}
+										<div class="flex self-center min-w-fit" dir="ltr">
+											<button
+												class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+												on:click={() => {
+													showPreviousMessage(message);
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke="currentColor"
+													stroke-width="2.5"
+													class="size-3.5"
 												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</button>
-											</div>
-										{/if}
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M15.75 19.5 8.25 12l7.5-7.5"
+													/>
+												</svg>
+											</button>
 
+											<div
+												class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+											>
+												{siblings.indexOf(message.id) + 1}/{siblings.length}
+											</div>
+
+											<button
+												class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+												on:click={() => {
+													showNextMessage(message);
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke="currentColor"
+													stroke-width="2.5"
+													class="size-3.5"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="m8.25 4.5 7.5 7.5-7.5 7.5"
+													/>
+												</svg>
+											</button>
+										</div>
+									{/if}
+
+									{#if message.done}
 										{#if !readOnly}
-											<Tooltip content="Edit" placement="bottom">
+											<Tooltip content={$i18n.t('Edit')} placement="bottom">
 												<button
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 													on:click={() => {
 														editMessageHandler();
 													}}
@@ -505,7 +567,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -519,11 +581,11 @@
 											</Tooltip>
 										{/if}
 
-										<Tooltip content="Copy" placement="bottom">
+										<Tooltip content={$i18n.t('Copy')} placement="bottom">
 											<button
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition copy-response-button"
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 												on:click={() => {
 													copyToClipboard(message.content);
 												}}
@@ -532,7 +594,7 @@
 													xmlns="http://www.w3.org/2000/svg"
 													fill="none"
 													viewBox="0 0 24 24"
-													stroke-width="2"
+													stroke-width="2.3"
 													stroke="currentColor"
 													class="w-4 h-4"
 												>
@@ -545,83 +607,12 @@
 											</button>
 										</Tooltip>
 
-										{#if !readOnly}
-											<Tooltip content="Good Response" placement="bottom">
-												<button
-													class="{isLastMessage
-														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded {message?.annotation
-														?.rating === 1
-														? 'bg-gray-100 dark:bg-gray-800'
-														: ''} dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														rateMessage(message.id, 1);
-														showRateComment = true;
-
-														window.setTimeout(() => {
-															document
-																.getElementById(`message-feedback-${message.id}`)
-																?.scrollIntoView();
-														}, 0);
-													}}
-												>
-													<svg
-														stroke="currentColor"
-														fill="none"
-														stroke-width="2"
-														viewBox="0 0 24 24"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														class="w-4 h-4"
-														xmlns="http://www.w3.org/2000/svg"
-														><path
-															d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-														/></svg
-													>
-												</button>
-											</Tooltip>
-
-											<Tooltip content="Bad Response" placement="bottom">
-												<button
-													class="{isLastMessage
-														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded {message?.annotation
-														?.rating === -1
-														? 'bg-gray-100 dark:bg-gray-800'
-														: ''} dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														rateMessage(message.id, -1);
-														showRateComment = true;
-														window.setTimeout(() => {
-															document
-																.getElementById(`message-feedback-${message.id}`)
-																?.scrollIntoView();
-														}, 0);
-													}}
-												>
-													<svg
-														stroke="currentColor"
-														fill="none"
-														stroke-width="2"
-														viewBox="0 0 24 24"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														class="w-4 h-4"
-														xmlns="http://www.w3.org/2000/svg"
-														><path
-															d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
-														/></svg
-													>
-												</button>
-											</Tooltip>
-										{/if}
-
-										<Tooltip content="Read Aloud" placement="bottom">
+										<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 											<button
 												id="speak-button-{message.id}"
 												class="{isLastMessage
 													? 'visible'
-													: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 												on:click={() => {
 													if (!loadingSpeech) {
 														toggleSpeakMessage(message);
@@ -668,7 +659,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -683,7 +674,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -702,7 +693,7 @@
 												<button
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition"
+														: 'invisible group-hover:visible'}  p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 													on:click={() => {
 														if (!generatingImage) {
 															generateImage(message);
@@ -749,7 +740,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															fill="none"
 															viewBox="0 0 24 24"
-															stroke-width="2"
+															stroke-width="2.3"
 															stroke="currentColor"
 															class="w-4 h-4"
 														>
@@ -765,11 +756,11 @@
 										{/if}
 
 										{#if message.info}
-											<Tooltip content="Generation Info" placement="bottom">
+											<Tooltip content={$i18n.t('Generation Info')} placement="bottom">
 												<button
 													class=" {isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
 													on:click={() => {
 														console.log(message);
 													}}
@@ -779,7 +770,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -793,13 +784,84 @@
 											</Tooltip>
 										{/if}
 
+										{#if !readOnly}
+											<Tooltip content={$i18n.t('Good Response')} placement="bottom">
+												<button
+													class="{isLastMessage
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {message
+														?.annotation?.rating === 1
+														? 'bg-gray-100 dark:bg-gray-800'
+														: ''} dark:hover:text-white hover:text-black transition"
+													on:click={() => {
+														rateMessage(message.id, 1);
+														showRateComment = true;
+
+														window.setTimeout(() => {
+															document
+																.getElementById(`message-feedback-${message.id}`)
+																?.scrollIntoView();
+														}, 0);
+													}}
+												>
+													<svg
+														stroke="currentColor"
+														fill="none"
+														stroke-width="2.3"
+														viewBox="0 0 24 24"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														class="w-4 h-4"
+														xmlns="http://www.w3.org/2000/svg"
+														><path
+															d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
+														/></svg
+													>
+												</button>
+											</Tooltip>
+
+											<Tooltip content={$i18n.t('Bad Response')} placement="bottom">
+												<button
+													class="{isLastMessage
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {message
+														?.annotation?.rating === -1
+														? 'bg-gray-100 dark:bg-gray-800'
+														: ''} dark:hover:text-white hover:text-black transition"
+													on:click={() => {
+														rateMessage(message.id, -1);
+														showRateComment = true;
+														window.setTimeout(() => {
+															document
+																.getElementById(`message-feedback-${message.id}`)
+																?.scrollIntoView();
+														}, 0);
+													}}
+												>
+													<svg
+														stroke="currentColor"
+														fill="none"
+														stroke-width="2.3"
+														viewBox="0 0 24 24"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														class="w-4 h-4"
+														xmlns="http://www.w3.org/2000/svg"
+														><path
+															d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
+														/></svg
+													>
+												</button>
+											</Tooltip>
+										{/if}
+
 										{#if isLastMessage && !readOnly}
-											<Tooltip content="Continue Response" placement="bottom">
+											<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 												<button
 													type="button"
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition regenerate-response-button"
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 													on:click={() => {
 														continueGeneration();
 													}}
@@ -808,7 +870,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -826,19 +888,21 @@
 												</button>
 											</Tooltip>
 
-											<Tooltip content="Regenerate" placement="bottom">
+											<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 												<button
 													type="button"
 													class="{isLastMessage
 														? 'visible'
-														: 'invisible group-hover:visible'} p-1 rounded dark:hover:text-white hover:text-black transition regenerate-response-button"
-													on:click={regenerateResponse}
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+													on:click={() => {
+														regenerateResponse(message);
+													}}
 												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
 														fill="none"
 														viewBox="0 0 24 24"
-														stroke-width="2"
+														stroke-width="2.3"
 														stroke="currentColor"
 														class="w-4 h-4"
 													>
@@ -851,24 +915,24 @@
 												</button>
 											</Tooltip>
 										{/if}
-									</div>
-								{/if}
+									{/if}
+								</div>
+							{/if}
 
-								{#if showRateComment}
-									<RateComment
-										messageId={message.id}
-										bind:show={showRateComment}
-										bind:message
-										on:submit={() => {
-											updateChatMessages();
-										}}
-									/>
-								{/if}
-							</div>
-						{/if}
-					</div>
+							{#if message.done && showRateComment}
+								<RateComment
+									messageId={message.id}
+									bind:show={showRateComment}
+									bind:message
+									on:submit={() => {
+										updateChatMessages();
+									}}
+								/>
+							{/if}
+						</div>
+					{/if}
 				</div>
-			{/if}
+			</div>
 		</div>
 	</div>
 {/key}

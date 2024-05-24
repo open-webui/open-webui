@@ -27,7 +27,7 @@
 			<div class=" w-20 text-xs font-medium self-center">{$i18n.t('Seed')}</div>
 			<div class=" flex-1 self-center">
 				<input
-					class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+					class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 					type="number"
 					placeholder="Enter Seed"
 					bind:value={options.seed}
@@ -43,7 +43,7 @@
 			<div class=" w-20 text-xs font-medium self-center">{$i18n.t('Stop Sequence')}</div>
 			<div class=" flex-1 self-center">
 				<input
-					class="w-full rounded py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none border border-gray-100 dark:border-gray-600"
+					class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 					type="text"
 					placeholder={$i18n.t('Enter stop sequence')}
 					bind:value={options.stop}
@@ -492,8 +492,8 @@
 					<input
 						id="steps-range"
 						type="range"
-						min="1"
-						max="16000"
+						min="-1"
+						max="10240000"
 						step="1"
 						bind:value={options.num_ctx}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
@@ -504,9 +504,8 @@
 						bind:value={options.num_ctx}
 						type="number"
 						class=" bg-transparent text-center w-14"
-						min="1"
-						max="16000"
-						step="1"
+						min="-1"
+						step="10"
 					/>
 				</div>
 			</div>

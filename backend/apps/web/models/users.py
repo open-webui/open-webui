@@ -123,6 +123,13 @@ class UsersTable:
     def get_num_users(self) -> Optional[int]:
         return User.select().count()
 
+    def get_first_user(self) -> UserModel:
+        try:
+            user = User.select().order_by(User.created_at).first()
+            return UserModel(**model_to_dict(user))
+        except:
+            return None
+
     def update_user_role_by_id(self, id: str, role: str) -> Optional[UserModel]:
         try:
             query = User.update(role=role).where(User.id == id)

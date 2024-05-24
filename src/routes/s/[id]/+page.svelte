@@ -12,6 +12,8 @@
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
+	import { getUserById } from '$lib/apis/users';
+	import { error } from '@sveltejs/kit';
 
 	const i18n = getContext('i18n');
 
@@ -37,6 +39,7 @@
 	}, {});
 
 	let chat = null;
+	let user = null;
 
 	let title = '';
 	let files = [];
@@ -88,6 +91,11 @@
 		});
 
 		if (chat) {
+			user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
+				console.error(error);
+				return null;
+			});
+
 			const chatContent = chat.chat;
 
 			if (chatContent) {
@@ -138,27 +146,25 @@
 		class="min-h-screen max-h-screen w-full flex flex-col text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900"
 	>
 		<div class="flex flex-col flex-auto justify-center py-8">
-			<div class="px-3 w-full max-w-3xl mx-auto">
+			<div class="px-3 w-full max-w-5xl mx-auto">
 				<div>
 					<div class=" text-3xl font-semibold line-clamp-1">
 						{title}
 					</div>
 
 					<div class=" mt-1 text-gray-400">
-						{dayjs(chat.chat.timestamp).format('MMMM D, YYYY')}
+						{dayjs(chat.chat.timestamp).format($i18n.t('MMMM DD, YYYY'))}
 					</div>
 				</div>
 
 				<hr class=" dark:border-gray-800 mt-6 mb-2" />
 			</div>
 
-			<div
-				class=" flex flex-col justify-center w-full flex-auto overflow-auto h-0"
-				id="messages-container"
-			>
+			<div class=" flex flex-col w-full flex-auto overflow-auto h-0" id="messages-container">
 				<div class=" h-full w-full flex flex-col py-4">
 					<div class="py-2">
 						<Messages
+							{user}
 							chatId={$chatId}
 							readOnly={true}
 							{selectedModels}

@@ -1,16 +1,19 @@
 import logging
 
-from fastapi import Request
+from fastapi import Request, UploadFile, File
 from fastapi import Depends, HTTPException, status
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 import re
 import uuid
+import csv
+
 
 from apps.web.models.auths import (
     SigninForm,
     SignupForm,
+    AddUserForm,
     UpdateProfileForm,
     UpdatePasswordForm,
     UserResponse,
@@ -30,7 +33,7 @@ from utils.utils import (
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from config import WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+from config import WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 
 router = APIRouter()
 
@@ -115,13 +118,29 @@ async def signin(request: Request, form_data: SigninForm):
                 ),
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
+    elif WEBUI_AUTH == False:
+        admin_email = "admin@localhost"
+        admin_password = "admin"
+
+        if Users.get_user_by_email(admin_email.lower()):
+            user = Auths.authenticate_user(admin_email.lower(), admin_password)
+        else:
+            if Users.get_num_users() != 0:
+                raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
+
+            await signup(
+                request,
+                SignupForm(email=admin_email, password=admin_password, name="User"),
+            )
+
+            user = Auths.authenticate_user(admin_email.lower(), admin_password)
     else:
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
         token = create_token(
             data={"id": user.id},
-            expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
+            expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
         )
 
         return {
@@ -144,7 +163,7 @@ async def signin(request: Request, form_data: SigninForm):
 
 @router.post("/signup", response_model=SigninResponse)
 async def signup(request: Request, form_data: SignupForm):
-    if not request.app.state.ENABLE_SIGNUP:
+    if not request.app.state.config.ENABLE_SIGNUP and WEBUI_AUTH:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
         )
@@ -161,7 +180,7 @@ async def signup(request: Request, form_data: SignupForm):
         role = (
             "admin"
             if Users.get_num_users() == 0
-            else request.app.state.DEFAULT_USER_ROLE
+            else request.app.state.config.DEFAULT_USER_ROLE
         )
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(
@@ -175,13 +194,13 @@ async def signup(request: Request, form_data: SignupForm):
         if user:
             token = create_token(
                 data={"id": user.id},
-                expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
+                expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
             )
             # response.set_cookie(key='token', value=token, httponly=True)
 
-            if request.app.state.WEBHOOK_URL:
+            if request.app.state.config.WEBHOOK_URL:
                 post_webhook(
-                    request.app.state.WEBHOOK_URL,
+                    request.app.state.config.WEBHOOK_URL,
                     WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                     {
                         "action": "signup",
@@ -206,19 +225,64 @@ async def signup(request: Request, form_data: SignupForm):
 
 
 ############################
+# AddUser
+############################
+
+
+@router.post("/add", response_model=SigninResponse)
+async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+
+    if not validate_email_format(form_data.email.lower()):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+
+    if Users.get_user_by_email(form_data.email.lower()):
+        raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+
+    try:
+
+        print(form_data)
+        hashed = get_password_hash(form_data.password)
+        user = Auths.insert_new_auth(
+            form_data.email.lower(),
+            hashed,
+            form_data.name,
+            form_data.profile_image_url,
+            form_data.role,
+        )
+
+        if user:
+            token = create_token(data={"id": user.id})
+            return {
+                "token": token,
+                "token_type": "Bearer",
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "role": user.role,
+                "profile_image_url": user.profile_image_url,
+            }
+        else:
+            raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+    except Exception as err:
+        raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
+
+
+############################
 # ToggleSignUp
 ############################
 
 
 @router.get("/signup/enabled", response_model=bool)
 async def get_sign_up_status(request: Request, user=Depends(get_admin_user)):
-    return request.app.state.ENABLE_SIGNUP
+    return request.app.state.config.ENABLE_SIGNUP
 
 
 @router.get("/signup/enabled/toggle", response_model=bool)
 async def toggle_sign_up(request: Request, user=Depends(get_admin_user)):
-    request.app.state.ENABLE_SIGNUP = not request.app.state.ENABLE_SIGNUP
-    return request.app.state.ENABLE_SIGNUP
+    request.app.state.config.ENABLE_SIGNUP = not request.app.state.config.ENABLE_SIGNUP
+    return request.app.state.config.ENABLE_SIGNUP
 
 
 ############################
@@ -228,7 +292,7 @@ async def toggle_sign_up(request: Request, user=Depends(get_admin_user)):
 
 @router.get("/signup/user/role")
 async def get_default_user_role(request: Request, user=Depends(get_admin_user)):
-    return request.app.state.DEFAULT_USER_ROLE
+    return request.app.state.config.DEFAULT_USER_ROLE
 
 
 class UpdateRoleForm(BaseModel):
@@ -240,8 +304,8 @@ async def update_default_user_role(
     request: Request, form_data: UpdateRoleForm, user=Depends(get_admin_user)
 ):
     if form_data.role in ["pending", "user", "admin"]:
-        request.app.state.DEFAULT_USER_ROLE = form_data.role
-    return request.app.state.DEFAULT_USER_ROLE
+        request.app.state.config.DEFAULT_USER_ROLE = form_data.role
+    return request.app.state.config.DEFAULT_USER_ROLE
 
 
 ############################
@@ -251,7 +315,7 @@ async def update_default_user_role(
 
 @router.get("/token/expires")
 async def get_token_expires_duration(request: Request, user=Depends(get_admin_user)):
-    return request.app.state.JWT_EXPIRES_IN
+    return request.app.state.config.JWT_EXPIRES_IN
 
 
 class UpdateJWTExpiresDurationForm(BaseModel):
@@ -268,10 +332,10 @@ async def update_token_expires_duration(
 
     # Check if the input string matches the pattern
     if re.match(pattern, form_data.duration):
-        request.app.state.JWT_EXPIRES_IN = form_data.duration
-        return request.app.state.JWT_EXPIRES_IN
+        request.app.state.config.JWT_EXPIRES_IN = form_data.duration
+        return request.app.state.config.JWT_EXPIRES_IN
     else:
-        return request.app.state.JWT_EXPIRES_IN
+        return request.app.state.config.JWT_EXPIRES_IN
 
 
 ############################

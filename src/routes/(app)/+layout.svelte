@@ -154,7 +154,7 @@
 				if (isCtrlPressed && event.key === '.') {
 					event.preventDefault();
 					console.log('openSettings');
-					document.getElementById('open-settings-button')?.click();
+					showSettings.set(!$showSettings);
 				}
 
 				// Check if Ctrl + / is pressed
@@ -177,7 +177,7 @@
 </script>
 
 <div class=" hidden lg:flex fixed bottom-0 right-0 px-3 py-3 z-10">
-	<Tooltip content="Help" placement="left">
+	<Tooltip content={$i18n.t('Help')} placement="left">
 		<button
 			id="show-shortcuts-button"
 			bind:this={showShortcutsButtonElement}
@@ -192,6 +192,8 @@
 </div>
 
 <ShortcutsModal bind:show={showShortcuts} />
+<SettingsModal bind:show={$showSettings} />
+<ChangelogModal bind:show={$showChangelog} />
 
 <div class="app relative">
 	<div
@@ -199,11 +201,11 @@
 	>
 		{#if loaded}
 			{#if !['user', 'admin'].includes($user.role)}
-				<div class="fixed w-full h-full flex z-50">
+				<div class="fixed w-full h-full flex z-[999]">
 					<div
-						class="absolute w-full h-full backdrop-blur-md bg-white/20 dark:bg-gray-900/50 flex justify-center"
+						class="absolute w-full h-full backdrop-blur-lg bg-white/10 dark:bg-gray-900/50 flex justify-center"
 					>
-						<div class="m-auto pb-44 flex flex-col justify-center">
+						<div class="m-auto pb-10 flex flex-col justify-center">
 							<div class="max-w-md">
 								<div class="text-center dark:text-white text-2xl font-medium z-50">
 									Account Activation Pending<br /> Contact Admin for WebUI Access
@@ -292,8 +294,6 @@
 			{/if}
 
 			<Sidebar />
-			<SettingsModal bind:show={$showSettings} />
-			<ChangelogModal bind:show={$showChangelog} />
 			<slot />
 		{/if}
 	</div>

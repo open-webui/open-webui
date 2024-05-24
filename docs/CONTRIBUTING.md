@@ -17,7 +17,7 @@ If your issue or contribution pertains directly to the core Ollama technology, p
 
 ### 🚨 Reporting Issues
 
-Noticed something off? Have an idea? Check our [Issues tab](https://github.com/open-webui/oopen-webui/issues) to see if it's already been reported or suggested. If not, feel free to open a new issue. When reporting an issue, please follow our issue templates. These templates are designed to ensure that all necessary details are provided from the start, enabling us to address your concerns more efficiently.
+Noticed something off? Have an idea? Check our [Issues tab](https://github.com/open-webui/open-webui/issues) to see if it's already been reported or suggested. If not, feel free to open a new issue. When reporting an issue, please follow our issue templates. These templates are designed to ensure that all necessary details are provided from the start, enabling us to address your concerns more efficiently.
 
 > [!IMPORTANT]
 >
@@ -54,7 +54,7 @@ Help us make Open WebUI more accessible by improving documentation, writing tuto
 
 Help us make Open WebUI available to a wider audience. In this section, we'll guide you through the process of adding new translations to the project.
 
-We use JSON files to store translations. You can find the existing translation files in the `src/lib/i18n/locales` directory. Each directory corresponds to a specific language, for example, `en-US` for English (US), `fr-FR` for French (France) and so on. You can refer to [ISO 639 Language Codes][http://www.lingoes.net/en/translator/langcode.htm] to find the appropriate code for a specific language.
+We use JSON files to store translations. You can find the existing translation files in the `src/lib/i18n/locales` directory. Each directory corresponds to a specific language, for example, `en-US` for English (US), `fr-FR` for French (France) and so on. You can refer to [ISO 639 Language Codes](http://www.lingoes.net/en/translator/langcode.htm) to find the appropriate code for a specific language.
 
 To add a new language:
 

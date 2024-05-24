@@ -1,6 +1,6 @@
 <script>
 	import { onMount, tick, setContext } from 'svelte';
-	import { config, user, theme, WEBUI_NAME } from '$lib/stores';
+	import { config, user, theme, WEBUI_NAME, mobile } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { Toaster, toast } from 'svelte-sonner';
 
@@ -18,23 +18,38 @@
 	setContext('i18n', i18n);
 
 	let loaded = false;
+	const BREAKPOINT = 768;
 
 	onMount(async () => {
 		theme.set(localStorage.theme);
-		// Check Backend Status
-		const backendConfig = await getBackendConfig();
+
+		mobile.set(window.innerWidth < BREAKPOINT);
+		const onResize = () => {
+			if (window.innerWidth < BREAKPOINT) {
+				mobile.set(true);
+			} else {
+				mobile.set(false);
+			}
+		};
+
+		window.addEventListener('resize', onResize);
+
+		let backendConfig = null;
+		try {
+			backendConfig = await getBackendConfig();
+			console.log('Backend config:', backendConfig);
+		} catch (error) {
+			console.error('Error loading backend config:', error);
+		}
+		// Initialize i18n even if we didn't get a backend config,
+		// so `/error` can show something that's not `undefined`.
+		initI18n(backendConfig?.default_locale);
 
 		if (backendConfig) {
 			// Save Backend Status to Store
 			await config.set(backendConfig);
-			if ($config.default_locale) {
-				initI18n($config.default_locale);
-			} else {
-				initI18n();
-			}
 
 			await WEBUI_NAME.set(backendConfig.name);
-			console.log(backendConfig);
 
 			if ($config) {
 				if (localStorage.token) {
@@ -65,12 +80,16 @@
 
 		document.getElementById('splash-screen')?.remove();
 		loaded = true;
+
+		return () => {
+			window.removeEventListener('resize', onResize);
+		};
 	});
 </script>
 
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
-	<link rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
 
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
 	<!-- feel free to make a PR to fix if anyone wants to see it return -->

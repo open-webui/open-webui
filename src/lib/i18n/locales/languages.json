@@ -4,12 +4,20 @@
 		"title": "English (US)"
 	},
 	{
+		"code": "en-GB",
+		"title": "English (GB)"
+	},
+	{
+		"code": "ar-BH",
+		"title": "العربية (AR)"
+	},
+	{
 		"code": "bg-BG",
 		"title": "Bulgarian (BG)"
 	},
 	{
 		"code": "bn-BD",
-		"title": "Banlga (বাংলা)"
+		"title": "Bangla (বাংলা)"
 	},
 	{
 		"code": "ca-ES",
@@ -20,10 +28,6 @@
 		"title": "Deutsch"
 	},
 	{
-		"code": "en-GB",
-		"title": "English (GB)"
-	},
-	{
 		"code": "es-ES",
 		"title": "Spanish"
 	},
@@ -32,12 +36,28 @@
 		"title": "فارسی (Farsi)"
 	},
 	{
+		"code": "fi-FI",
+		"title": "Finnish"
+	},
+	{
 		"code": "fr-CA",
 		"title": "French (Canada)"
 	},
 	{
 		"code": "fr-FR",
 		"title": "French (France)"
+	},
+	{
+		"code": "he-IL",
+		"title": "עברית (Hebrew)"
+	},
+	{
+		"code": "hi-IN",
+		"title": "Hindi (हिंदी)"
+	},
+	{
+		"code": "hr-HR",
+		"title": "Croatian"
 	},
 	{
 		"code": "it-IT",
@@ -60,6 +80,10 @@
 		"title": "Dutch (Netherlands)"
 	},
 	{
+		"code": "pa-IN",
+		"title": "Punjabi (India)"
+	},
+	{
 		"code": "pl-PL",
 		"title": "Polish"
 	},
@@ -74,6 +98,14 @@
 	{
 		"code": "ru-RU",
 		"title": "Russian (Russia)"
+	},
+	{
+		"code": "sv-SE",
+		"title": "Swedish"
+	},
+	{
+		"code": "sr-RS",
+		"title": "Serbian (Српски)"
 	},
 	{
 		"code": "tr-TR",
@@ -94,5 +126,9 @@
 	{
 		"code": "zh-TW",
 		"title": "Chinese (Traditional)"
+	},
+	{
+		"code": "dg-DG",
+		"title": "Doge 🐶"
 	}
 ]

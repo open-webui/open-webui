@@ -26,7 +26,7 @@
 	let searchValue = '';
 
 	$: filteredItems = searchValue
-		? items.filter((item) => item.value.includes(searchValue.toLowerCase()))
+		? items.filter((item) => item.value.toLowerCase().includes(searchValue.toLowerCase()))
 		: items;
 </script>
 

@@ -28,8 +28,15 @@ from langchain_community.document_loaders import (
     UnstructuredXMLLoader,
     UnstructuredRSTLoader,
     UnstructuredExcelLoader,
+    UnstructuredPowerPointLoader,
+    YoutubeLoader,
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+import validators
+import urllib.parse
+import socket
+
 
 from pydantic import BaseModel
 from typing import Optional
@@ -63,6 +70,7 @@ from utils.misc import (
 from utils.utils import get_current_user, get_admin_user
 
 from config import (
+    ENV,
     SRC_LOG_LEVELS,
     UPLOAD_DIR,
     DOCS_DIR,
@@ -73,6 +81,7 @@ from config import (
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     ENABLE_RAG_HYBRID_SEARCH,
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     RAG_RERANKING_MODEL,
     PDF_EXTRACT_IMAGES,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
@@ -84,6 +93,9 @@ from config import (
     CHUNK_SIZE,
     CHUNK_OVERLAP,
     RAG_TEMPLATE,
+    ENABLE_RAG_LOCAL_WEB_FETCH,
+    YOUTUBE_LOADER_LANGUAGE,
+    AppConfig,
 )
 
 from constants import ERROR_MESSAGES
@@ -93,30 +105,40 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 app = FastAPI()
 
-app.state.TOP_K = RAG_TOP_K
-app.state.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
+app.state.config = AppConfig()
 
-app.state.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
+app.state.config.TOP_K = RAG_TOP_K
+app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 
-app.state.CHUNK_SIZE = CHUNK_SIZE
-app.state.CHUNK_OVERLAP = CHUNK_OVERLAP
+app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
+app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+)
 
-app.state.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
-app.state.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
-app.state.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
-app.state.RAG_TEMPLATE = RAG_TEMPLATE
+app.state.config.CHUNK_SIZE = CHUNK_SIZE
+app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
 
-app.state.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
-app.state.OPENAI_API_KEY = RAG_OPENAI_API_KEY
+app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
+app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
+app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
+app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
-app.state.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
+
+app.state.config.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
+app.state.config.OPENAI_API_KEY = RAG_OPENAI_API_KEY
+
+app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
+
+
+app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
+app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 
 def update_embedding_model(
     embedding_model: str,
     update_model: bool = False,
 ):
-    if embedding_model and app.state.RAG_EMBEDDING_ENGINE == "":
+    if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
         app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
             get_model_path(embedding_model, update_model),
             device=DEVICE_TYPE,
@@ -141,22 +163,22 @@ def update_reranking_model(
 
 
 update_embedding_model(
-    app.state.RAG_EMBEDDING_MODEL,
+    app.state.config.RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
 )
 
 update_reranking_model(
-    app.state.RAG_RERANKING_MODEL,
+    app.state.config.RAG_RERANKING_MODEL,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
 )
 
 
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
-    app.state.RAG_EMBEDDING_ENGINE,
-    app.state.RAG_EMBEDDING_MODEL,
+    app.state.config.RAG_EMBEDDING_ENGINE,
+    app.state.config.RAG_EMBEDDING_MODEL,
     app.state.sentence_transformer_ef,
-    app.state.OPENAI_API_KEY,
-    app.state.OPENAI_API_BASE_URL,
+    app.state.config.OPENAI_API_KEY,
+    app.state.config.OPENAI_API_BASE_URL,
 )
 
 origins = ["*"]
@@ -175,7 +197,7 @@ class CollectionNameForm(BaseModel):
     collection_name: Optional[str] = "test"
 
 
-class StoreWebForm(CollectionNameForm):
+class UrlForm(CollectionNameForm):
     url: str
 
 
@@ -183,12 +205,12 @@ class StoreWebForm(CollectionNameForm):
 async def get_status():
     return {
         "status": True,
-        "chunk_size": app.state.CHUNK_SIZE,
-        "chunk_overlap": app.state.CHUNK_OVERLAP,
-        "template": app.state.RAG_TEMPLATE,
-        "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
-        "embedding_model": app.state.RAG_EMBEDDING_MODEL,
-        "reranking_model": app.state.RAG_RERANKING_MODEL,
+        "chunk_size": app.state.config.CHUNK_SIZE,
+        "chunk_overlap": app.state.config.CHUNK_OVERLAP,
+        "template": app.state.config.RAG_TEMPLATE,
+        "embedding_engine": app.state.config.RAG_EMBEDDING_ENGINE,
+        "embedding_model": app.state.config.RAG_EMBEDDING_MODEL,
+        "reranking_model": app.state.config.RAG_RERANKING_MODEL,
     }
 
 
@@ -196,18 +218,21 @@ async def get_status():
 async def get_embedding_config(user=Depends(get_admin_user)):
     return {
         "status": True,
-        "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
-        "embedding_model": app.state.RAG_EMBEDDING_MODEL,
+        "embedding_engine": app.state.config.RAG_EMBEDDING_ENGINE,
+        "embedding_model": app.state.config.RAG_EMBEDDING_MODEL,
         "openai_config": {
-            "url": app.state.OPENAI_API_BASE_URL,
-            "key": app.state.OPENAI_API_KEY,
+            "url": app.state.config.OPENAI_API_BASE_URL,
+            "key": app.state.config.OPENAI_API_KEY,
         },
     }
 
 
 @app.get("/reranking")
 async def get_reraanking_config(user=Depends(get_admin_user)):
-    return {"status": True, "reranking_model": app.state.RAG_RERANKING_MODEL}
+    return {
+        "status": True,
+        "reranking_model": app.state.config.RAG_RERANKING_MODEL,
+    }
 
 
 class OpenAIConfigForm(BaseModel):
@@ -226,34 +251,34 @@ async def update_embedding_config(
     form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
 ):
     log.info(
-        f"Updating embedding model: {app.state.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
+        f"Updating embedding model: {app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
     )
     try:
-        app.state.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
-        app.state.RAG_EMBEDDING_MODEL = form_data.embedding_model
+        app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
+        app.state.config.RAG_EMBEDDING_MODEL = form_data.embedding_model
 
-        if app.state.RAG_EMBEDDING_ENGINE in ["ollama", "openai"]:
+        if app.state.config.RAG_EMBEDDING_ENGINE in ["ollama", "openai"]:
             if form_data.openai_config != None:
-                app.state.OPENAI_API_BASE_URL = form_data.openai_config.url
-                app.state.OPENAI_API_KEY = form_data.openai_config.key
+                app.state.config.OPENAI_API_BASE_URL = form_data.openai_config.url
+                app.state.config.OPENAI_API_KEY = form_data.openai_config.key
 
-        update_embedding_model(app.state.RAG_EMBEDDING_MODEL, True)
+        update_embedding_model(app.state.config.RAG_EMBEDDING_MODEL)
 
         app.state.EMBEDDING_FUNCTION = get_embedding_function(
-            app.state.RAG_EMBEDDING_ENGINE,
-            app.state.RAG_EMBEDDING_MODEL,
+            app.state.config.RAG_EMBEDDING_ENGINE,
+            app.state.config.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
-            app.state.OPENAI_API_KEY,
-            app.state.OPENAI_API_BASE_URL,
+            app.state.config.OPENAI_API_KEY,
+            app.state.config.OPENAI_API_BASE_URL,
         )
 
         return {
             "status": True,
-            "embedding_engine": app.state.RAG_EMBEDDING_ENGINE,
-            "embedding_model": app.state.RAG_EMBEDDING_MODEL,
+            "embedding_engine": app.state.config.RAG_EMBEDDING_ENGINE,
+            "embedding_model": app.state.config.RAG_EMBEDDING_MODEL,
             "openai_config": {
-                "url": app.state.OPENAI_API_BASE_URL,
-                "key": app.state.OPENAI_API_KEY,
+                "url": app.state.config.OPENAI_API_BASE_URL,
+                "key": app.state.config.OPENAI_API_KEY,
             },
         }
     except Exception as e:
@@ -273,16 +298,16 @@ async def update_reranking_config(
     form_data: RerankingModelUpdateForm, user=Depends(get_admin_user)
 ):
     log.info(
-        f"Updating reranking model: {app.state.RAG_RERANKING_MODEL} to {form_data.reranking_model}"
+        f"Updating reranking model: {app.state.config.RAG_RERANKING_MODEL} to {form_data.reranking_model}"
     )
     try:
-        app.state.RAG_RERANKING_MODEL = form_data.reranking_model
+        app.state.config.RAG_RERANKING_MODEL = form_data.reranking_model
 
-        update_reranking_model(app.state.RAG_RERANKING_MODEL, True)
+        update_reranking_model(app.state.config.RAG_RERANKING_MODEL), True
 
         return {
             "status": True,
-            "reranking_model": app.state.RAG_RERANKING_MODEL,
+            "reranking_model": app.state.config.RAG_RERANKING_MODEL,
         }
     except Exception as e:
         log.exception(f"Problem updating reranking model: {e}")
@@ -296,10 +321,15 @@ async def update_reranking_config(
 async def get_rag_config(user=Depends(get_admin_user)):
     return {
         "status": True,
-        "pdf_extract_images": app.state.PDF_EXTRACT_IMAGES,
+        "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
         "chunk": {
-            "chunk_size": app.state.CHUNK_SIZE,
-            "chunk_overlap": app.state.CHUNK_OVERLAP,
+            "chunk_size": app.state.config.CHUNK_SIZE,
+            "chunk_overlap": app.state.config.CHUNK_OVERLAP,
+        },
+        "web_loader_ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+        "youtube": {
+            "language": app.state.config.YOUTUBE_LOADER_LANGUAGE,
+            "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
         },
     }
 
@@ -309,23 +339,67 @@ class ChunkParamUpdateForm(BaseModel):
     chunk_overlap: int
 
 
+class YoutubeLoaderConfig(BaseModel):
+    language: List[str]
+    translation: Optional[str] = None
+
+
 class ConfigUpdateForm(BaseModel):
-    pdf_extract_images: bool
-    chunk: ChunkParamUpdateForm
+    pdf_extract_images: Optional[bool] = None
+    chunk: Optional[ChunkParamUpdateForm] = None
+    web_loader_ssl_verification: Optional[bool] = None
+    youtube: Optional[YoutubeLoaderConfig] = None
 
 
 @app.post("/config/update")
 async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_user)):
-    app.state.PDF_EXTRACT_IMAGES = form_data.pdf_extract_images
-    app.state.CHUNK_SIZE = form_data.chunk.chunk_size
-    app.state.CHUNK_OVERLAP = form_data.chunk.chunk_overlap
+    app.state.config.PDF_EXTRACT_IMAGES = (
+        form_data.pdf_extract_images
+        if form_data.pdf_extract_images is not None
+        else app.state.config.PDF_EXTRACT_IMAGES
+    )
+
+    app.state.config.CHUNK_SIZE = (
+        form_data.chunk.chunk_size
+        if form_data.chunk is not None
+        else app.state.config.CHUNK_SIZE
+    )
+
+    app.state.config.CHUNK_OVERLAP = (
+        form_data.chunk.chunk_overlap
+        if form_data.chunk is not None
+        else app.state.config.CHUNK_OVERLAP
+    )
+
+    app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+        form_data.web_loader_ssl_verification
+        if form_data.web_loader_ssl_verification != None
+        else app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+    )
+
+    app.state.config.YOUTUBE_LOADER_LANGUAGE = (
+        form_data.youtube.language
+        if form_data.youtube is not None
+        else app.state.config.YOUTUBE_LOADER_LANGUAGE
+    )
+
+    app.state.YOUTUBE_LOADER_TRANSLATION = (
+        form_data.youtube.translation
+        if form_data.youtube is not None
+        else app.state.YOUTUBE_LOADER_TRANSLATION
+    )
 
     return {
         "status": True,
-        "pdf_extract_images": app.state.PDF_EXTRACT_IMAGES,
+        "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
         "chunk": {
-            "chunk_size": app.state.CHUNK_SIZE,
-            "chunk_overlap": app.state.CHUNK_OVERLAP,
+            "chunk_size": app.state.config.CHUNK_SIZE,
+            "chunk_overlap": app.state.config.CHUNK_OVERLAP,
+        },
+        "web_loader_ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+        "youtube": {
+            "language": app.state.config.YOUTUBE_LOADER_LANGUAGE,
+            "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
         },
     }
 
@@ -334,7 +408,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
 async def get_rag_template(user=Depends(get_current_user)):
     return {
         "status": True,
-        "template": app.state.RAG_TEMPLATE,
+        "template": app.state.config.RAG_TEMPLATE,
     }
 
 
@@ -342,10 +416,10 @@ async def get_rag_template(user=Depends(get_current_user)):
 async def get_query_settings(user=Depends(get_admin_user)):
     return {
         "status": True,
-        "template": app.state.RAG_TEMPLATE,
-        "k": app.state.TOP_K,
-        "r": app.state.RELEVANCE_THRESHOLD,
-        "hybrid": app.state.ENABLE_RAG_HYBRID_SEARCH,
+        "template": app.state.config.RAG_TEMPLATE,
+        "k": app.state.config.TOP_K,
+        "r": app.state.config.RELEVANCE_THRESHOLD,
+        "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
     }
 
 
@@ -360,16 +434,20 @@ class QuerySettingsForm(BaseModel):
 async def update_query_settings(
     form_data: QuerySettingsForm, user=Depends(get_admin_user)
 ):
-    app.state.RAG_TEMPLATE = form_data.template if form_data.template else RAG_TEMPLATE
-    app.state.TOP_K = form_data.k if form_data.k else 4
-    app.state.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 0.0
-    app.state.ENABLE_RAG_HYBRID_SEARCH = form_data.hybrid if form_data.hybrid else False
+    app.state.config.RAG_TEMPLATE = (
+        form_data.template if form_data.template else RAG_TEMPLATE
+    )
+    app.state.config.TOP_K = form_data.k if form_data.k else 4
+    app.state.config.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 0.0
+    app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
+        form_data.hybrid if form_data.hybrid else False
+    )
     return {
         "status": True,
-        "template": app.state.RAG_TEMPLATE,
-        "k": app.state.TOP_K,
-        "r": app.state.RELEVANCE_THRESHOLD,
-        "hybrid": app.state.ENABLE_RAG_HYBRID_SEARCH,
+        "template": app.state.config.RAG_TEMPLATE,
+        "k": app.state.config.TOP_K,
+        "r": app.state.config.RELEVANCE_THRESHOLD,
+        "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
     }
 
 
@@ -387,21 +465,23 @@ def query_doc_handler(
     user=Depends(get_current_user),
 ):
     try:
-        if app.state.ENABLE_RAG_HYBRID_SEARCH:
+        if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
             return query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
                 query=form_data.query,
-                embeddings_function=app.state.EMBEDDING_FUNCTION,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
+                k=form_data.k if form_data.k else app.state.config.TOP_K,
                 reranking_function=app.state.sentence_transformer_rf,
-                k=form_data.k if form_data.k else app.state.TOP_K,
-                r=form_data.r if form_data.r else app.state.RELEVANCE_THRESHOLD,
+                r=(
+                    form_data.r if form_data.r else app.state.config.RELEVANCE_THRESHOLD
+                ),
             )
         else:
             return query_doc(
                 collection_name=form_data.collection_name,
                 query=form_data.query,
-                embeddings_function=app.state.EMBEDDING_FUNCTION,
-                k=form_data.k if form_data.k else app.state.TOP_K,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
+                k=form_data.k if form_data.k else app.state.config.TOP_K,
             )
     except Exception as e:
         log.exception(e)
@@ -425,21 +505,23 @@ def query_collection_handler(
     user=Depends(get_current_user),
 ):
     try:
-        if app.state.ENABLE_RAG_HYBRID_SEARCH:
+        if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 query=form_data.query,
-                embeddings_function=app.state.EMBEDDING_FUNCTION,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
+                k=form_data.k if form_data.k else app.state.config.TOP_K,
                 reranking_function=app.state.sentence_transformer_rf,
-                k=form_data.k if form_data.k else app.state.TOP_K,
-                r=form_data.r if form_data.r else app.state.RELEVANCE_THRESHOLD,
+                r=(
+                    form_data.r if form_data.r else app.state.config.RELEVANCE_THRESHOLD
+                ),
             )
         else:
             return query_collection(
                 collection_names=form_data.collection_names,
                 query=form_data.query,
-                embeddings_function=app.state.EMBEDDING_FUNCTION,
-                k=form_data.k if form_data.k else app.state.TOP_K,
+                embedding_function=app.state.EMBEDDING_FUNCTION,
+                k=form_data.k if form_data.k else app.state.config.TOP_K,
             )
 
     except Exception as e:
@@ -450,11 +532,15 @@ def query_collection_handler(
         )
 
 
-@app.post("/web")
-def store_web(form_data: StoreWebForm, user=Depends(get_current_user)):
-    # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
+@app.post("/youtube")
+def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
     try:
-        loader = WebBaseLoader(form_data.url)
+        loader = YoutubeLoader.from_youtube_url(
+            form_data.url,
+            add_video_info=True,
+            language=app.state.config.YOUTUBE_LOADER_LANGUAGE,
+            translation=app.state.YOUTUBE_LOADER_TRANSLATION,
+        )
         data = loader.load()
 
         collection_name = form_data.collection_name
@@ -475,11 +561,70 @@ def store_web(form_data: StoreWebForm, user=Depends(get_current_user)):
         )
 
 
+@app.post("/web")
+def store_web(form_data: UrlForm, user=Depends(get_current_user)):
+    # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
+    try:
+        loader = get_web_loader(
+            form_data.url,
+            verify_ssl=app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+        )
+        data = loader.load()
+
+        collection_name = form_data.collection_name
+        if collection_name == "":
+            collection_name = calculate_sha256_string(form_data.url)[:63]
+
+        store_data_in_vector_db(data, collection_name, overwrite=True)
+        return {
+            "status": True,
+            "collection_name": collection_name,
+            "filename": form_data.url,
+        }
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+def get_web_loader(url: str, verify_ssl: bool = True):
+    # Check if the URL is valid
+    if isinstance(validators.url(url), validators.ValidationError):
+        raise ValueError(ERROR_MESSAGES.INVALID_URL)
+    if not ENABLE_RAG_LOCAL_WEB_FETCH:
+        # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
+        parsed_url = urllib.parse.urlparse(url)
+        # Get IPv4 and IPv6 addresses
+        ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
+        # Check if any of the resolved addresses are private
+        # This is technically still vulnerable to DNS rebinding attacks, as we don't control WebBaseLoader
+        for ip in ipv4_addresses:
+            if validators.ipv4(ip, private=True):
+                raise ValueError(ERROR_MESSAGES.INVALID_URL)
+        for ip in ipv6_addresses:
+            if validators.ipv6(ip, private=True):
+                raise ValueError(ERROR_MESSAGES.INVALID_URL)
+    return WebBaseLoader(url, verify_ssl=verify_ssl)
+
+
+def resolve_hostname(hostname):
+    # Get address information
+    addr_info = socket.getaddrinfo(hostname, None)
+
+    # Extract IP addresses from address information
+    ipv4_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET]
+    ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
+
+    return ipv4_addresses, ipv6_addresses
+
+
 def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> bool:
 
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=app.state.CHUNK_SIZE,
-        chunk_overlap=app.state.CHUNK_OVERLAP,
+        chunk_size=app.state.config.CHUNK_SIZE,
+        chunk_overlap=app.state.config.CHUNK_OVERLAP,
         add_start_index=True,
     )
 
@@ -496,8 +641,8 @@ def store_text_in_vector_db(
     text, metadata, collection_name, overwrite: bool = False
 ) -> bool:
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=app.state.CHUNK_SIZE,
-        chunk_overlap=app.state.CHUNK_OVERLAP,
+        chunk_size=app.state.config.CHUNK_SIZE,
+        chunk_overlap=app.state.config.CHUNK_OVERLAP,
         add_start_index=True,
     )
     docs = text_splitter.create_documents([text], metadatas=[metadata])
@@ -520,11 +665,11 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
         collection = CHROMA_CLIENT.create_collection(name=collection_name)
 
         embedding_func = get_embedding_function(
-            app.state.RAG_EMBEDDING_ENGINE,
-            app.state.RAG_EMBEDDING_MODEL,
+            app.state.config.RAG_EMBEDDING_ENGINE,
+            app.state.config.RAG_EMBEDDING_MODEL,
             app.state.sentence_transformer_ef,
-            app.state.OPENAI_API_KEY,
-            app.state.OPENAI_API_BASE_URL,
+            app.state.config.OPENAI_API_KEY,
+            app.state.config.OPENAI_API_BASE_URL,
         )
 
         embedding_texts = list(map(lambda x: x.replace("\n", " "), texts))
@@ -532,7 +677,7 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
 
         for batch in create_batches(
             api=CHROMA_CLIENT,
-            ids=[str(uuid.uuid1()) for _ in texts],
+            ids=[str(uuid.uuid4()) for _ in texts],
             metadatas=metadatas,
             embeddings=embeddings,
             documents=texts,
@@ -598,7 +743,9 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
     ]
 
     if file_ext == "pdf":
-        loader = PyPDFLoader(file_path, extract_images=app.state.PDF_EXTRACT_IMAGES)
+        loader = PyPDFLoader(
+            file_path, extract_images=app.state.config.PDF_EXTRACT_IMAGES
+        )
     elif file_ext == "csv":
         loader = CSVLoader(file_path)
     elif file_ext == "rst":
@@ -622,6 +769,11 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ] or file_ext in ["xls", "xlsx"]:
         loader = UnstructuredExcelLoader(file_path)
+    elif file_content_type in [
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ] or file_ext in ["ppt", "pptx"]:
+        loader = UnstructuredPowerPointLoader(file_path)
     elif file_ext in known_source_ext or (
         file_content_type and file_content_type.find("text/") >= 0
     ):
@@ -806,3 +958,14 @@ def reset(user=Depends(get_admin_user)) -> bool:
         log.exception(e)
 
     return True
+
+
+if ENV == "dev":
+
+    @app.get("/ef")
+    async def get_embeddings():
+        return {"result": app.state.EMBEDDING_FUNCTION("hello world")}
+
+    @app.get("/ef/{text}")
+    async def get_embeddings_text(text: str):
+        return {"result": app.state.EMBEDDING_FUNCTION(text)}

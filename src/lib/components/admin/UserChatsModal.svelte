@@ -70,7 +70,7 @@
 								>
 									<tr>
 										<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
-										<th scope="col" class="px-3 py-2 hidden md:flex"> {$i18n.t('Created At')} </th>
+										<th scope="col" class="px-3 py-2 hidden md:flex"> {$i18n.t('Created at')} </th>
 										<th scope="col" class="px-3 py-2 text-right" />
 									</tr>
 								</thead>
@@ -96,7 +96,7 @@
 
 											<td class="px-3 py-1 text-right">
 												<div class="flex justify-end w-full">
-													<Tooltip content="Delete Chat">
+													<Tooltip content={$i18n.t('Delete Chat')}>
 														<button
 															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 															on:click={async () => {
@@ -133,7 +133,10 @@
 						{/each} -->
 					</div>
 				{:else}
-					<div class="text-left text-sm w-full mb-8">{user.name} has no conversations.</div>
+					<div class="text-left text-sm w-full mb-8">
+						{user.name}
+						{$i18n.t('has no conversations.')}
+					</div>
 				{/if}
 			</div>
 		</div>

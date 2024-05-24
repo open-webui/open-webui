@@ -71,7 +71,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[22rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[25rem]">
 		<input
 			id="profile-image-input"
 			bind:this={profileImageInputElement}
@@ -127,7 +127,7 @@
 
 				if (
 					files.length > 0 &&
-					['image/gif', 'image/jpeg', 'image/png'].includes(files[0]['type'])
+					['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(files[0]['type'])
 				) {
 					reader.readAsDataURL(files[0]);
 				}
@@ -447,7 +447,7 @@
 								{/if}
 							</button>
 
-							<Tooltip content="Create new key">
+							<Tooltip content={$i18n.t('Create new key')}>
 								<button
 									class=" px-1.5 py-1 dark:hover:bg-gray-850transition rounded-lg"
 									on:click={() => {
@@ -479,7 +479,7 @@
 							>
 								<Plus strokeWidth="2" className=" size-3.5" />
 
-								Create new secret key</button
+								{$i18n.t('Create new secret key')}</button
 							>
 						{/if}
 					</div>

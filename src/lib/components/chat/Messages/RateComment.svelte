@@ -39,9 +39,9 @@
 	let selectedReason = null;
 	let comment = '';
 
-	$: if (message.annotation.rating === 1) {
+	$: if (message?.annotation?.rating === 1) {
 		reasons = LIKE_REASONS;
-	} else if (message.annotation.rating === -1) {
+	} else if (message?.annotation?.rating === -1) {
 		reasons = DISLIKE_REASONS;
 	}
 
@@ -123,7 +123,7 @@
 				submitHandler();
 			}}
 		>
-			Submit
+			{$i18n.t('Submit')}
 		</button>
 	</div>
 </div>
