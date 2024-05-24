@@ -242,8 +242,6 @@ async def get_models(user=Depends(get_current_user)):
                         )
                     )
 
-            for model in data["data"]:
-                add_custom_info_to_model(model)
             return data
         except Exception as e:
 
@@ -282,12 +280,6 @@ async def get_models(user=Depends(get_current_user)):
             "data": [],
             "object": "list",
         }
-
-
-def add_custom_info_to_model(model: dict):
-    model["custom_info"] = next(
-        (item for item in app.state.MODEL_CONFIG if item.id == model["id"]), None
-    )
 
 
 @app.get("/model/info")

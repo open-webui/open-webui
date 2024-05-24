@@ -9,7 +9,6 @@
 
 	import { getAllModels as _getAllModels } from '$lib/utils';
 	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { getModels } from '$lib/apis/models';
 	import { getPrompts } from '$lib/apis/prompts';
 
 	import { getDocs } from '$lib/apis/documents';
@@ -50,21 +49,6 @@
 		return _getAllModels(localStorage.token);
 	};
 
-	const setOllamaVersion = async (version: string = '') => {
-		if (version === '') {
-			version = await getOllamaVersion(localStorage.token).catch((error) => {
-				return '';
-			});
-		}
-
-		ollamaVersion = version;
-
-		console.log(ollamaVersion);
-		if (compareVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion)) {
-			toast.error(`Ollama Version: ${ollamaVersion !== '' ? ollamaVersion : 'Not Detected'}`);
-		}
-	};
-
 	onMount(async () => {
 		if ($user === undefined) {
 			await goto('/auth');
@@ -94,9 +78,6 @@
 					models.set(await getAllModels());
 				})(),
 				(async () => {
-					modelfiles.set(await getModels(localStorage.token));
-				})(),
-				(async () => {
 					prompts.set(await getPrompts(localStorage.token));
 				})(),
 				(async () => {
@@ -106,11 +87,6 @@
 					tags.set(await getAllChatTags(localStorage.token));
 				})()
 			]);
-
-			modelfiles.subscribe(async () => {
-				// should fetch models
-				models.set(await getAllModels());
-			});
 
 			document.addEventListener('keydown', function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac

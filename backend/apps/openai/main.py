@@ -52,8 +52,6 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-app.state.MODEL_CONFIG = Models.get_all_models()
-
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
@@ -207,7 +205,13 @@ def merge_models_lists(model_lists):
         if models is not None and "error" not in models:
             merged_list.extend(
                 [
-                    {**model, "urlIdx": idx}
+                    {
+                        **model,
+                        "name": model["id"],
+                        "owned_by": "openai",
+                        "openai": model,
+                        "urlIdx": idx,
+                    }
                     for model in models
                     if "api.openai.com"
                     not in app.state.config.OPENAI_API_BASE_URLS[idx]
@@ -250,19 +254,10 @@ async def get_all_models():
             )
         }
 
-        for model in models["data"]:
-            add_custom_info_to_model(model)
-
         log.info(f"models: {models}")
         app.state.MODELS = {model["id"]: model for model in models["data"]}
 
     return models
-
-
-def add_custom_info_to_model(model: dict):
-    model["custom_info"] = next(
-        (item for item in app.state.MODEL_CONFIG if item.id == model["id"]), None
-    )
 
 
 @app.get("/models")
