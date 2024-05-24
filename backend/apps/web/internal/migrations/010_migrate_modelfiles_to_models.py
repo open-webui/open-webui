@@ -60,7 +60,7 @@ def migrate_modelfile_to_model(migrator: Migrator, database: pw.Database):
                 "ollama": {"modelfile": modelfile.modelfile.get("content")},
                 "suggestion_prompts": modelfile.modelfile.get("suggestionPrompts"),
                 "categories": modelfile.modelfile.get("categories"),
-                "user": {**modelfile.modelfile.get("user", {}), "community": "true"},
+                "user": {**modelfile.modelfile.get("user", {}), "community": True},
             }
         )
 
