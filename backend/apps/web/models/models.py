@@ -31,7 +31,6 @@ class ModelParams(BaseModel):
 
 
 # ModelMeta is a model for the data stored in the meta field of the Model table
-# It isn't currently used in the backend, but it's here as a reference
 class ModelMeta(BaseModel):
     profile_image_url: Optional[str] = "/favicon.png"
 
@@ -40,10 +39,7 @@ class ModelMeta(BaseModel):
         User-facing description of the model.
     """
 
-    vision_capable: Optional[bool] = None
-    """
-        A flag indicating if the model is capable of vision and thus image inputs
-    """
+    capabilities: Optional[dict] = None
 
     model_config = ConfigDict(extra="allow")
 

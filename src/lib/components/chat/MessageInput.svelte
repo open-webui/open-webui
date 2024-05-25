@@ -53,7 +53,11 @@
 	export let messages = [];
 
 	let speechRecognition;
-	let visionCapableState = 'all';
+
+	let visionCapableModels = [];
+	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
+		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
+	);
 
 	$: if (prompt) {
 		if (chatTextAreaElement) {
@@ -61,49 +65,6 @@
 			chatTextAreaElement.style.height = Math.min(chatTextAreaElement.scrollHeight, 200) + 'px';
 		}
 	}
-
-	// $: {
-	// 	if (atSelectedModel || selectedModels) {
-	// 		visionCapableState = checkModelsAreVisionCapable();
-	// 		if (visionCapableState === 'none') {
-	// 			// Remove all image files
-	// 			const fileCount = files.length;
-	// 			files = files.filter((file) => file.type != 'image');
-	// 			if (files.length < fileCount) {
-	// 				toast.warning($i18n.t('All selected models do not support image input, removed images'));
-	// 			}
-	// 		}
-	// 	}
-	// }
-
-	const checkModelsAreVisionCapable = () => {
-		let modelsToCheck = [];
-		if (atSelectedModel !== undefined) {
-			modelsToCheck = [atSelectedModel.id];
-		} else {
-			modelsToCheck = selectedModels;
-		}
-		if (modelsToCheck.length == 0 || modelsToCheck[0] == '') {
-			return 'all';
-		}
-		let visionCapableCount = 0;
-		for (const modelName of modelsToCheck) {
-			const model = $models.find((m) => m.id === modelName);
-			if (!model) {
-				continue;
-			}
-			if (model.custom_info?.meta.vision_capable ?? true) {
-				visionCapableCount++;
-			}
-		}
-		if (visionCapableCount == modelsToCheck.length) {
-			return 'all';
-		} else if (visionCapableCount == 0) {
-			return 'none';
-		} else {
-			return 'some';
-		}
-	};
 
 	let mediaRecorder;
 	let audioChunks = [];
@@ -404,8 +365,8 @@
 					inputFiles.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
 						if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
-							if (visionCapableState == 'none') {
-								toast.error($i18n.t('Selected models do not support image inputs'));
+							if (visionCapableModels.length === 0) {
+								toast.error($i18n.t('Selected model(s) do not support image inputs'));
 								return;
 							}
 							let reader = new FileReader();
@@ -600,8 +561,8 @@
 									if (
 										['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])
 									) {
-										if (visionCapableState === 'none') {
-											toast.error($i18n.t('Selected models do not support image inputs'));
+										if (visionCapableModels.length === 0) {
+											toast.error($i18n.t('Selected model(s) do not support image inputs'));
 											inputFiles = null;
 											filesInputElement.value = '';
 											return;
@@ -645,6 +606,7 @@
 						dir={$settings?.chatDirection ?? 'LTR'}
 						class=" flex flex-col relative w-full rounded-3xl px-1.5 bg-gray-50 dark:bg-gray-850 dark:text-gray-100"
 						on:submit|preventDefault={() => {
+							// check if selectedModels support image input
 							submitPrompt(prompt, user);
 						}}
 					>
@@ -659,16 +621,20 @@
 													alt="input"
 													class=" h-16 w-16 rounded-xl object-cover"
 												/>
-												{#if visionCapableState === 'some'}
+												{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
 													<Tooltip
-														className=" absolute top-0 left-0"
-														content={$i18n.t('A selected model does not support image input')}
+														className=" absolute top-1 left-1"
+														content={$i18n.t('{{ models }}', {
+															models: [...(atSelectedModel ? [atSelectedModel] : selectedModels)]
+																.filter((id) => !visionCapableModels.includes(id))
+																.join(', ')
+														})}
 													>
 														<svg
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 24 24"
 															fill="currentColor"
-															class="w-6 h-6 fill-yellow-300"
+															class="size-4 fill-yellow-300"
 														>
 															<path
 																fill-rule="evenodd"

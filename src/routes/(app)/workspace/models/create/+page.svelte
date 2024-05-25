@@ -9,6 +9,7 @@
 	import { getModels } from '$lib/apis';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
+	import Checkbox from '$lib/components/common/Checkbox.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -48,6 +49,10 @@
 
 	let params = {};
 
+	let capabilities = {
+		vision: false
+	};
+
 	$: if (name) {
 		id = name.replace(/\s+/g, '-').toLowerCase();
 	}
@@ -57,6 +62,7 @@
 
 		info.id = id;
 		info.name = name;
+		info.meta.capabilities = capabilities;
 
 		if ($models.find((m) => m.id === info.id)) {
 			toast.error(
@@ -298,14 +304,13 @@
 		</div>
 
 		<div class="my-2">
-			<div class=" text-sm font-semibold mb-2">{$i18n.t('Description')}*</div>
+			<div class=" text-sm font-semibold mb-2">{$i18n.t('Description')}</div>
 
 			<div>
 				<input
 					class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
 					placeholder={$i18n.t('Add a short description about what this model does')}
 					bind:value={info.meta.description}
-					required
 				/>
 			</div>
 		</div>
@@ -329,7 +334,7 @@
 				</div>
 
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-sm font-semibold">
+					<div class=" self-center text-xs font-semibold">
 						{$i18n.t('Advanced Params')}
 					</div>
 
@@ -417,6 +422,28 @@
 								/>
 							</svg>
 						</button>
+					</div>
+				{/each}
+			</div>
+		</div>
+
+		<div class="my-2">
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
+			</div>
+			<div class="flex flex-col">
+				{#each Object.keys(capabilities) as capability}
+					<div class=" flex items-center gap-2">
+						<Checkbox
+							state={capabilities[capability] ? 'checked' : 'unchecked'}
+							on:change={(e) => {
+								capabilities[capability] = e.detail === 'checked';
+							}}
+						/>
+
+						<div class=" py-1.5 text-sm w-full capitalize">
+							{$i18n.t(capability)}
+						</div>
 					</div>
 				{/each}
 			</div>
