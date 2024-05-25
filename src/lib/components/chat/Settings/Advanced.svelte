@@ -25,7 +25,7 @@
 		stop: '',
 		tfs_z: '',
 		num_ctx: '',
-		num_predict: ''
+		max_tokens: ''
 	};
 
 	const toggleRequestFormat = async () => {
@@ -141,7 +141,7 @@
 						top_p: params.top_p !== '' ? params.top_p : undefined,
 						tfs_z: params.tfs_z !== '' ? params.tfs_z : undefined,
 						num_ctx: params.num_ctx !== '' ? params.num_ctx : undefined,
-						num_predict: params.num_predict !== '' ? params.num_predict : undefined
+						max_tokens: params.max_tokens !== '' ? params.max_tokens : undefined
 					},
 					keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined
 				});

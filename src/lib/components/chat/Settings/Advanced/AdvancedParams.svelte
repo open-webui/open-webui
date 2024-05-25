@@ -19,7 +19,7 @@
 		top_p: '',
 		tfs_z: '',
 		num_ctx: '',
-		num_predict: '',
+		max_tokens: '',
 		template: null
 	};
 
@@ -561,16 +561,16 @@
 	</div>
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Max Tokens')}</div>
+			<div class=" self-center text-xs font-medium">{$i18n.t('Max Tokens (num_predict)')}</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
 				type="button"
 				on:click={() => {
-					params.num_predict = (params?.num_predict ?? '') === '' ? 128 : '';
+					params.max_tokens = (params?.max_tokens ?? '') === '' ? 128 : '';
 				}}
 			>
-				{#if (params?.num_predict ?? '') === ''}
+				{#if (params?.max_tokens ?? '') === ''}
 					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
 					<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
@@ -578,7 +578,7 @@
 			</button>
 		</div>
 
-		{#if (params?.num_predict ?? '') !== ''}
+		{#if (params?.max_tokens ?? '') !== ''}
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
@@ -587,13 +587,13 @@
 						min="-2"
 						max="16000"
 						step="1"
-						bind:value={params.num_predict}
+						bind:value={params.max_tokens}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
 					/>
 				</div>
 				<div class="">
 					<input
-						bind:value={params.num_predict}
+						bind:value={params.max_tokens}
 						type="number"
 						class=" bg-transparent text-center w-14"
 						min="-2"
