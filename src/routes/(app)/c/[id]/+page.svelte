@@ -15,7 +15,7 @@
 		config,
 		WEBUI_NAME,
 		tags as _tags,
-		showSidebar, chatType, promptOptions
+		showSidebar, chatType, promptOptions, selectedChatEmbeddingIndex
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream, convertMessagesToHistory } from '$lib/utils';
 
@@ -44,7 +44,7 @@
 	} from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
-	import {getSystemPrompt} from "$lib/utils/prompt_utils";
+	import {createChatCompletionApiMessages, getSystemPrompt} from "$lib/utils/prompt_utils";
 	import {getUserPrompt} from "$lib/utils/prompt_utils.js";
 
 	const i18n = getContext('i18n');
@@ -138,6 +138,7 @@
 			tags = await getTags();
 			const chatContent = chat.chat;
 			chatType.set(chatContent.chat_type)
+			selectedChatEmbeddingIndex.set(chatContent.embedding_index_id)
 
 			if (chatContent) {
 				console.log(chatContent);
@@ -609,44 +610,7 @@
 				{
 					model: model.id,
 					stream: true,
-					messages: [
-						{
-							role: 'system',
-							content: getSystemPrompt($chatType)
-						},
-						...messages
-					]
-						.filter((message) => message && (message.role !== 'assistant' || !!message.content))
-						.map((message, idx, arr) => ({
-							role: message.role,
-							...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-							message.role === 'user'
-								? {
-										content: [
-											{
-												type: 'text',
-												text:
-													arr.length - 1 !== idx
-														? message.content
-														: message?.raContent ?? message.content
-											},
-											...message.files
-												.filter((file) => file.type === 'image')
-												.map((file) => ({
-													type: 'image_url',
-													image_url: {
-														url: file.url
-													}
-												}))
-										]
-								  }
-								: {
-										content:
-											arr.length - 1 !== idx
-												? message.content
-												: message?.raContent ?? message.content
-								  })
-						})),
+					messages: await createChatCompletionApiMessages($chatType, userPrompt, $selectedChatEmbeddingIndex, messages, $promptOptions),
 					seed: $settings?.options?.seed ?? undefined,
 					stop:
 						$settings?.options?.stop ?? undefined

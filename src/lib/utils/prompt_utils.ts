@@ -1,3 +1,5 @@
+import {queryRankedChunk} from "$lib/apis/embedding";
+
 export const getSystemPrompt = (chatType: string | null): string => {
   switch (chatType) {
     case 'chat':
@@ -80,4 +82,75 @@ ${content}`
 ${content}`
   }
   return content
+}
+
+export const getAbstractPrompt = (content: string, question: string) => {
+  return `Hãy trả lời câu hỏi dưới đây theo bối cảnh được cung cấp.: Câu hỏi: ${question}\nBối cảnh: ${content}\n### Response: `
+}
+
+export const createChatCompletionApiMessages = async (chatType: string, userPrompt: string, embeddingIndexId: number, messages, promptOptions) => {
+  if (chatType === 'chat_embedding') {
+    const [chunk] = await queryRankedChunk(embeddingIndexId, userPrompt)
+    return [
+      {
+        role: 'system',
+        content: getSystemPrompt(chatType)
+      },
+      {
+        role: 'user',
+        content: getAbstractPrompt(chunk?.text || "Không xác định", userPrompt)
+      }
+    ]
+  }
+  if (!['chat', 'chat_law', 'chat_buddhism'].includes(chatType)) {
+    return [
+      {
+        role: 'system',
+        content: getSystemPrompt(chatType)
+      },
+      {
+        role: 'user',
+        content: getUserPrompt(chatType, userPrompt, promptOptions)
+      }
+    ]
+  }
+
+  return [
+    {
+      role: 'system',
+      content: getSystemPrompt(chatType)
+    },
+    ...messages
+  ]
+    .filter((message) => message && (message.role !== 'assistant' || !!message.content))
+    .map((message, idx, arr) => ({
+      role: message.role,
+      ...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
+      message.role === 'user'
+        ? {
+          content: [
+            {
+              type: 'text',
+              text:
+                arr.length - 1 !== idx
+                  ? message.content
+                  : message?.raContent ?? message.content
+            },
+            ...message.files
+              .filter((file) => file.type === 'image')
+              .map((file) => ({
+                type: 'image_url',
+                image_url: {
+                  url: file.url
+                }
+              }))
+          ]
+        }
+        : {
+          content:
+            arr.length - 1 !== idx
+              ? message.content
+              : message?.raContent ?? message.content
+        })
+    }))
 }

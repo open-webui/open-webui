@@ -47,6 +47,7 @@ export const showChangelog = writable(false);
 
 // Embedding
 export const selectedIndexId = writable(0)
+export const selectedChatEmbeddingIndex = writable(0)
 
 type Model = OpenAIModel | OllamaModel;
 

@@ -515,5 +515,7 @@
 	"faq_create_verdict_scenario": "Tạo kịch bản bản án",
 	"translate": "Dịch",
 	"translate_coding": "Dịch có coding",
-	"translate_ancient": "Dịch cổ văn"
+	"translate_ancient": "Dịch cổ văn",
+	"Embedding query": "Truy vấn embedding",
+	"chat_embedding": "Truy vấn với embedding"
 }

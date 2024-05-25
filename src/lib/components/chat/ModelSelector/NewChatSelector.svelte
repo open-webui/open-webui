@@ -222,6 +222,18 @@
 					</div>
 				</a>
 			</div>
+			<div class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+				<a
+						href="/?type=chat_embedding"
+						on:click={async () => {
+						await handleCreateNewChat('chat_embedding')
+					}}
+				>
+					<div class="flex self-center">
+						<div class=" self-center font-medium text-sm">{$i18n.t('Embedding query')}</div>
+					</div>
+				</a>
+			</div>
 		</div>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>

@@ -145,6 +145,16 @@ async def signin(request: Request, form_data: SigninForm):
             'ApiKey': HATTO_LLM_API_KEY
         })
 
+        if res.status_code == 404:
+            res = requests.post(f"{HATTO_LLM_BASE_URL}/management/create-user", json={
+                'email': user.email.lower(),
+                'username': user.email.lower(),
+                'password': form_data.password,
+                'uuid': user.id,
+            }, headers={
+                'ApiKey': HATTO_LLM_API_KEY
+            })
+
         token = create_token(
             data={"id": user.id, "hatto_llm_user_id": res.json()['id']},
             expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),

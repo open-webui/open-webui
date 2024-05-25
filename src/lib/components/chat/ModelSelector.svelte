@@ -2,11 +2,21 @@
 	import { Collapsible } from 'bits-ui';
 
 	import { setDefaultModels } from '$lib/apis/configs';
-	import {models, showSettings, settings, user, mobile, chatType, promptOptions} from '$lib/stores';
+	import {
+		models,
+		showSettings,
+		settings,
+		user,
+		mobile,
+		chatType,
+		promptOptions,
+		selectedChatEmbeddingIndex
+	} from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import {getEmbeddingIndex} from "$lib/apis/embedding";
 
 	const i18n = getContext('i18n');
 
@@ -52,6 +62,17 @@
 		return []
 	};
 
+	const loadEmbeddingIndex = async (type: string) => {
+		if (type !== 'chat_embedding') {
+			return []
+		}
+		const results = await getEmbeddingIndex()
+		selectedChatEmbeddingIndex.set($selectedChatEmbeddingIndex || results?.[0]?.id || 0)
+		return results
+	}
+
+	let embeddingIndexs = [];
+
 	$: if (selectedModels.length > 0 && $models.length > 0) {
 		selectedModels = selectedModels.map((model) =>
 			$models.map((m) => m.id).includes(model) ? model : ''
@@ -59,6 +80,7 @@
 	}
 
 	$: supportedTranslateLangs = getDesLanguageOption($chatType)
+	$: (async () => embeddingIndexs = await loadEmbeddingIndex($chatType))()
 </script>
 
 <div class="flex flex-col w-full items-center md:items-start">
@@ -134,14 +156,23 @@
 <div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
 	<span> {$i18n.t($chatType)}</span>
 	{#if supportedTranslateLangs.length > 0}
-	<span class="mx-2">-></span>
-	<select class="capitalize rounded-lg py-2 pl-4 pr-10 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
-			on:change={(e) => promptOptions.set({...$promptOptions, translate_lang: e.target.value})}
-	>
-		{#each supportedTranslateLangs as info}
-			<option value="{info.value}">{info.label}</option>
-		{/each}
-	</select>
+		<span class="mx-2">-></span>
+		<select class="capitalize rounded-lg py-2 pl-4 pr-10 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+				on:change={(e) => promptOptions.set({...$promptOptions, translate_lang: e.target.value})}
+		>
+			{#each supportedTranslateLangs as info}
+				<option value="{info.value}">{info.label}</option>
+			{/each}
+		</select>
+	{/if}
+	{#if embeddingIndexs.length > 0}
+		<select class="ml-2 capitalize rounded-lg py-2 pl-4 pr-10 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+				bind:value={$selectedChatEmbeddingIndex}
+		>
+			{#each embeddingIndexs as info}
+				<option value="{info.id}">{info.name}</option>
+			{/each}
+		</select>
 	{/if}
 </div>
 
