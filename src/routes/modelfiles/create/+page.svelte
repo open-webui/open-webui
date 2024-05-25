@@ -14,10 +14,10 @@
 				].includes(event.origin)
 			)
 				return;
-			const modelfile = JSON.parse(event.data);
-			sessionStorage.modelfile = JSON.stringify(modelfile);
+			const model = JSON.parse(event.data);
+			sessionStorage.model = JSON.stringify(model);
 
-			goto('/workspace/modelfiles/create');
+			goto('/workspace/models/create');
 		});
 
 		if (window.opener ?? false) {

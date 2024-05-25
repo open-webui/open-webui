@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { settings, user, config, modelfiles, models } from '$lib/stores';
+	import { settings, user, config, models } from '$lib/stores';
 
 	import { onMount, tick, getContext } from 'svelte';
 	import { addNewModel, getModelById, getModelInfos } from '$lib/apis/models';

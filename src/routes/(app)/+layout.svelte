@@ -19,7 +19,6 @@
 		showSettings,
 		settings,
 		models,
-		modelfiles,
 		prompts,
 		documents,
 		tags,

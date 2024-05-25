@@ -16,8 +16,9 @@
 	const i18n = getContext('i18n');
 
 	let localModelfiles = [];
+
 	let importFiles;
-	let modelfilesImportInputElement: HTMLInputElement;
+	let modelsImportInputElement: HTMLInputElement;
 
 	const deleteModelHandler = async (model) => {
 		console.log(model.info);
@@ -243,8 +244,8 @@
 <div class=" flex justify-end w-full mb-3">
 	<div class="flex space-x-1">
 		<input
-			id="modelfiles-import-input"
-			bind:this={modelfilesImportInputElement}
+			id="models-import-input"
+			bind:this={modelsImportInputElement}
 			bind:files={importFiles}
 			type="file"
 			accept=".json"
@@ -254,16 +255,16 @@
 
 				let reader = new FileReader();
 				reader.onload = async (event) => {
-					let savedModelfiles = JSON.parse(event.target.result);
-					console.log(savedModelfiles);
+					let savedModels = JSON.parse(event.target.result);
+					console.log(savedModels);
 
-					for (const modelfile of savedModelfiles) {
-						await addNewModel(localStorage.token, modelfile).catch((error) => {
+					for (const model of savedModels) {
+						await addNewModel(localStorage.token, model).catch((error) => {
 							return null;
 						});
 					}
 
-					await modelfiles.set(await getModelInfos(localStorage.token));
+					await models.set(await getModels(localStorage.token));
 				};
 
 				reader.readAsText(importFiles[0]);
@@ -273,7 +274,7 @@
 		<button
 			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 			on:click={() => {
-				modelfilesImportInputElement.click();
+				modelsImportInputElement.click();
 			}}
 		>
 			<div class=" self-center mr-2 font-medium">{$i18n.t('Import Models')}</div>
