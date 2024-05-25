@@ -440,8 +440,8 @@
 									{#if token.type === 'code'}
 										<CodeBlock
 											id={`${message.id}-${tokenIdx}`}
-											lang={token.lang}
-											code={revertSanitizedResponseContent(token.text)}
+											lang={token?.lang ?? ''}
+											code={revertSanitizedResponseContent(token?.text ?? '')}
 										/>
 									{:else}
 										{@html marked.parse(token.raw, {
