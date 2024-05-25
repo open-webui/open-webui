@@ -48,7 +48,7 @@ export type Model = OpenAIModel | OllamaModel;
 type BaseModel = {
 	id: string;
 	name: string;
-	custom_info?: ModelConfig;
+	info?: ModelConfig;
 };
 
 export interface OpenAIModel extends BaseModel {

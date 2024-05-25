@@ -33,6 +33,8 @@ class ModelParams(BaseModel):
 # ModelMeta is a model for the data stored in the meta field of the Model table
 # It isn't currently used in the backend, but it's here as a reference
 class ModelMeta(BaseModel):
+    profile_image_url: Optional[str] = "/favicon.png"
+
     description: Optional[str] = None
     """
         User-facing description of the model.
@@ -84,6 +86,7 @@ class Model(pw.Model):
 
 class ModelModel(BaseModel):
     id: str
+    user_id: str
     base_model_id: Optional[str] = None
 
     name: str
@@ -123,18 +126,26 @@ class ModelsTable:
         self.db = db
         self.db.create_tables([Model])
 
-    def insert_new_model(self, model: ModelForm, user_id: str) -> Optional[ModelModel]:
+    def insert_new_model(
+        self, form_data: ModelForm, user_id: str
+    ) -> Optional[ModelModel]:
+        model = ModelModel(
+            **{
+                **form_data.model_dump(),
+                "user_id": user_id,
+                "created_at": int(time.time()),
+                "updated_at": int(time.time()),
+            }
+        )
         try:
-            model = Model.create(
-                **{
-                    **model.model_dump(),
-                    "user_id": user_id,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                }
-            )
-            return ModelModel(**model_to_dict(model))
-        except:
+            result = Model.create(**model.model_dump())
+
+            if result:
+                return model
+            else:
+                return None
+        except Exception as e:
+            print(e)
             return None
 
     def get_all_models(self) -> List[ModelModel]:

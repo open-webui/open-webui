@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status, Request
 from datetime import datetime, timedelta
 from typing import List, Union, Optional
 
@@ -65,17 +65,28 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/update", response_model=Optional[ModelModel])
 async def update_model_by_id(
-    id: str, form_data: ModelForm, user=Depends(get_admin_user)
+    request: Request, id: str, form_data: ModelForm, user=Depends(get_admin_user)
 ):
     model = Models.get_model_by_id(id)
     if model:
         model = Models.update_model_by_id(id, form_data)
         return model
     else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+        if form_data.id in request.app.state.MODELS:
+            model = Models.insert_new_model(form_data, user.id)
+            print(model)
+            if model:
+                return model
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=ERROR_MESSAGES.DEFAULT(),
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
 
 
 ############################

@@ -122,6 +122,9 @@ app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 
+
+app.state.MODELS = {}
+
 origins = ["*"]
 
 
@@ -238,6 +241,11 @@ app.add_middleware(
 
 @app.middleware("http")
 async def check_url(request: Request, call_next):
+    if len(app.state.MODELS) == 0:
+        await get_all_models()
+    else:
+        pass
+
     start_time = int(time.time())
     response = await call_next(request)
     process_time = int(time.time()) - start_time
@@ -269,8 +277,7 @@ app.mount("/api/v1", webui_app)
 webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
 
 
-@app.get("/api/models")
-async def get_models(user=Depends(get_verified_user)):
+async def get_all_models():
     openai_models = []
     ollama_models = []
 
@@ -281,8 +288,6 @@ async def get_models(user=Depends(get_verified_user)):
 
     if app.state.config.ENABLE_OLLAMA_API:
         ollama_models = await get_ollama_models()
-
-        print(ollama_models)
 
         ollama_models = [
             {
@@ -295,9 +300,6 @@ async def get_models(user=Depends(get_verified_user)):
             }
             for model in ollama_models["models"]
         ]
-
-    print("openai", openai_models)
-    print("ollama", ollama_models)
 
     models = openai_models + ollama_models
     custom_models = Models.get_all_models()
@@ -330,6 +332,16 @@ async def get_models(user=Depends(get_verified_user)):
                 }
             )
 
+    app.state.MODELS = {model["id"]: model for model in models}
+
+    webui_app.state.MODELS = app.state.MODELS
+
+    return models
+
+
+@app.get("/api/models")
+async def get_models(user=Depends(get_verified_user)):
+    models = await get_all_models()
     if app.state.config.ENABLE_MODEL_FILTER:
         if user.role == "user":
             models = list(

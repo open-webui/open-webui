@@ -7,6 +7,8 @@
 
 	import { WEBUI_NAME, modelfiles, models, settings, user } from '$lib/stores';
 	import { addNewModel, deleteModelById, getModelInfos } from '$lib/apis/models';
+
+	import { deleteModel } from '$lib/apis/ollama';
 	import { goto } from '$app/navigation';
 
 	import { getModels } from '$lib/apis';
@@ -17,13 +19,42 @@
 	let importFiles;
 	let modelfilesImportInputElement: HTMLInputElement;
 
-	const deleteModelHandler = async (id) => {
-		const res = await deleteModelById(localStorage.token, id);
+	const deleteModelHandler = async (model) => {
+		if (model?.info?.base_model_id) {
+			const res = await deleteModelById(localStorage.token, model.id);
 
-		if (res) {
-			toast.success($i18n.t(`Deleted {{tagName}}`, { id }));
+			if (res) {
+				toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
+			}
+			await models.set(await getModels(localStorage.token));
+		} else if (model?.owned_by === 'ollama') {
+			const res = await deleteModel(localStorage.token, model.id);
+
+			if (res) {
+				toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
+			}
+			await models.set(await getModels(localStorage.token));
+		} else {
+			toast.error(
+				$i18n.t('{{ owner }}: You cannot delete this model', {
+					owner: model.owned_by.toUpperCase()
+				})
+			);
 		}
-		await models.set(await getModels(localStorage.token));
+	};
+
+	const cloneModelHandler = async (model) => {
+		if ((model?.info?.base_model_id ?? null) === null) {
+			toast.error($i18n.t('You cannot clone a base model'));
+			return;
+		} else {
+			sessionStorage.model = JSON.stringify({
+				...model,
+				id: `${model.id}-clone`,
+				name: `${model.name} (Clone)`
+			});
+			goto('/workspace/models/create');
+		}
 	};
 
 	const shareModelHandler = async (model) => {
@@ -104,7 +135,7 @@
 				<div class=" self-center w-10">
 					<div class=" rounded-full bg-stone-700">
 						<img
-							src={model?.meta?.profile_image_url ?? '/favicon.png'}
+							src={model?.info?.meta?.profile_image_url ?? '/favicon.png'}
 							alt="modelfile profile"
 							class=" rounded-full w-full h-auto object-cover"
 						/>
@@ -114,7 +145,7 @@
 				<div class=" flex-1 self-center">
 					<div class=" font-bold capitalize">{model.name}</div>
 					<div class=" text-sm overflow-hidden text-ellipsis line-clamp-1">
-						{model?.meta?.description ?? 'No description'}
+						{model?.info?.meta?.description ?? model.id}
 					</div>
 				</div>
 			</a>
@@ -122,7 +153,7 @@
 				<a
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
-					href={`/workspace/models/edit?tag=${encodeURIComponent(model.id)}`}
+					href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -144,8 +175,7 @@
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
 					on:click={() => {
-						sessionStorage.model = JSON.stringify(model);
-						goto('/workspace/models/create');
+						cloneModelHandler(model);
 					}}
 				>
 					<svg
@@ -191,7 +221,7 @@
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
 					on:click={() => {
-						deleteModelHandler(model.id);
+						deleteModelHandler(model);
 					}}
 				>
 					<svg

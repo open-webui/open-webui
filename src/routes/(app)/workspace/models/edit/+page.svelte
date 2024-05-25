@@ -5,181 +5,83 @@
 
 	import { onMount, getContext } from 'svelte';
 	import { page } from '$app/stores';
-
-	import { settings, user, config, modelfiles } from '$lib/stores';
+	import { settings, user, config, models } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
-	import { createModel } from '$lib/apis/ollama';
 	import { getModelInfos, updateModelById } from '$lib/apis/models';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
+	import { getModels } from '$lib/apis';
 
 	const i18n = getContext('i18n');
 
 	let loading = false;
+	let success = false;
 
 	let filesInputElement;
 	let inputFiles;
-	let imageUrl = null;
+
 	let digest = '';
 	let pullProgress = null;
-	let success = false;
 
-	let modelfile = null;
 	// ///////////
-	// Modelfile
+	// model
 	// ///////////
 
-	let title = '';
-	let tagName = '';
-	let desc = '';
-
-	// Raw Mode
-	let content = '';
-
-	let suggestions = [
-		{
-			content: ''
-		}
-	];
-
-	let categories = {
-		character: false,
-		assistant: false,
-		writing: false,
-		productivity: false,
-		programming: false,
-		'data analysis': false,
-		lifestyle: false,
-		education: false,
-		business: false
-	};
-
-	onMount(() => {
-		tagName = $page.url.searchParams.get('tag');
-
-		if (tagName) {
-			modelfile = $modelfiles.filter((modelfile) => modelfile.tagName === tagName)[0];
-
-			console.log(modelfile);
-
-			imageUrl = modelfile.imageUrl;
-			title = modelfile.title;
-			desc = modelfile.desc;
-			content = modelfile.content;
-			suggestions =
-				modelfile.suggestionPrompts.length != 0
-					? modelfile.suggestionPrompts
-					: [
-							{
-								content: ''
-							}
-					  ];
-
-			for (const category of modelfile.categories) {
-				categories[category.toLowerCase()] = true;
-			}
-		} else {
-			goto('/workspace/modelfiles');
-		}
-	});
-
-	const updateModelfile = async (modelfile) => {
-		await updateModelById(localStorage.token, modelfile.tagName, modelfile);
-		await modelfiles.set(await getModelInfos(localStorage.token));
+	let model = null;
+	let info = {
+		id: '',
+		base_model_id: null,
+		name: '',
+		meta: {
+			profile_image_url: '/favicon.png',
+			description: '',
+			content: '',
+			suggestion_prompts: []
+		},
+		params: {}
 	};
 
 	const updateHandler = async () => {
 		loading = true;
+		const res = await updateModelById(localStorage.token, info.id, info);
 
-		if (Object.keys(categories).filter((category) => categories[category]).length == 0) {
-			toast.error(
-				'Uh-oh! It looks like you missed selecting a category. Please choose one to complete your modelfile.'
-			);
+		if (res) {
+			await goto('/workspace/models');
+			await models.set(await getModels(localStorage.token));
 		}
 
-		if (
-			title !== '' &&
-			desc !== '' &&
-			content !== '' &&
-			Object.keys(categories).filter((category) => categories[category]).length > 0
-		) {
-			const res = await createModel(localStorage.token, tagName, content);
-
-			if (res) {
-				const reader = res.body
-					.pipeThrough(new TextDecoderStream())
-					.pipeThrough(splitStream('\n'))
-					.getReader();
-
-				while (true) {
-					const { value, done } = await reader.read();
-					if (done) break;
-
-					try {
-						let lines = value.split('\n');
-
-						for (const line of lines) {
-							if (line !== '') {
-								console.log(line);
-								let data = JSON.parse(line);
-								console.log(data);
-
-								if (data.error) {
-									throw data.error;
-								}
-								if (data.detail) {
-									throw data.detail;
-								}
-
-								if (data.status) {
-									if (
-										!data.digest &&
-										!data.status.includes('writing') &&
-										!data.status.includes('sha256')
-									) {
-										toast.success(data.status);
-
-										if (data.status === 'success') {
-											success = true;
-										}
-									} else {
-										if (data.digest) {
-											digest = data.digest;
-
-											if (data.completed) {
-												pullProgress = Math.round((data.completed / data.total) * 1000) / 10;
-											} else {
-												pullProgress = 100;
-											}
-										}
-									}
-								}
-							}
-						}
-					} catch (error) {
-						console.log(error);
-						toast.error(error);
-					}
-				}
-			}
-
-			if (success) {
-				await updateModelfile({
-					tagName: tagName,
-					imageUrl: imageUrl,
-					title: title,
-					desc: desc,
-					content: content,
-					suggestionPrompts: suggestions.filter((prompt) => prompt.content !== ''),
-					categories: Object.keys(categories).filter((category) => categories[category])
-				});
-				await goto('/workspace/modelfiles');
-			}
-		}
 		loading = false;
 		success = false;
 	};
+
+	onMount(() => {
+		const id = $page.url.searchParams.get('id');
+
+		if (id) {
+			model = $models.find((m) => m.id === id);
+			if (model) {
+				info = {
+					...info,
+					...JSON.parse(
+						JSON.stringify(
+							model?.info
+								? model?.info
+								: {
+										id: model.id,
+										name: model.name
+								  }
+						)
+					)
+				};
+				console.log(model);
+			} else {
+				goto('/workspace/models');
+			}
+		} else {
+			goto('/workspace/models');
+		}
+	});
 </script>
 
 <div class="w-full max-h-full">
@@ -229,7 +131,7 @@
 					const compressedSrc = canvas.toDataURL('image/jpeg');
 
 					// Display the compressed image
-					imageUrl = compressedSrc;
+					info.meta.profile_image_url = compressedSrc;
 
 					inputFiles = null;
 				};
@@ -270,238 +172,230 @@
 		</div>
 		<div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
 	</button>
-	<form
-		class="flex flex-col max-w-2xl mx-auto mt-4 mb-10"
-		on:submit|preventDefault={() => {
-			updateHandler();
-		}}
-	>
-		<div class="flex justify-center my-4">
-			<div class="self-center">
-				<button
-					class=" {imageUrl
-						? ''
-						: 'p-6'} rounded-full dark:bg-gray-700 border border-dashed border-gray-200"
-					type="button"
-					on:click={() => {
-						filesInputElement.click();
-					}}
-				>
-					{#if imageUrl}
-						<img
-							src={imageUrl}
-							alt="modelfile profile"
-							class=" rounded-full w-20 h-20 object-cover"
+
+	{#if model}
+		<form
+			class="flex flex-col max-w-2xl mx-auto mt-4 mb-10"
+			on:submit|preventDefault={() => {
+				updateHandler();
+			}}
+		>
+			<div class="flex justify-center my-4">
+				<div class="self-center">
+					<button
+						class=" {info?.meta?.profile_image_url
+							? ''
+							: 'p-6'} rounded-full dark:bg-gray-700 border border-dashed border-gray-200"
+						type="button"
+						on:click={() => {
+							filesInputElement.click();
+						}}
+					>
+						{#if info?.meta?.profile_image_url}
+							<img
+								src={info?.meta?.profile_image_url}
+								alt="modelfile profile"
+								class=" rounded-full w-20 h-20 object-cover"
+							/>
+						{:else}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								class="w-8"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div class="my-2 flex space-x-2">
+				<div class="flex-1">
+					<div class=" text-sm font-semibold mb-2">{$i18n.t('Name')}*</div>
+
+					<div>
+						<input
+							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
+							placeholder={$i18n.t('Name your model')}
+							bind:value={info.name}
+							required
 						/>
-					{:else}
+					</div>
+				</div>
+
+				<div class="flex-1">
+					<div class=" text-sm font-semibold mb-2">{$i18n.t('Model ID')}*</div>
+
+					<div>
+						<input
+							class="px-3 py-1.5 text-sm w-full bg-transparent disabled:text-gray-500 border dark:border-gray-600 outline-none rounded-lg"
+							placeholder={$i18n.t('Add a model id')}
+							value={info.id}
+							disabled
+							required
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div class="my-2">
+				<div class=" text-sm font-semibold mb-2">{$i18n.t('description')}*</div>
+
+				<div>
+					<input
+						class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
+						placeholder={$i18n.t('Add a short description about what this model does')}
+						bind:value={info.meta.description}
+						required
+					/>
+				</div>
+			</div>
+
+			<div class="my-2">
+				<div class="flex w-full justify-between">
+					<div class=" self-center text-sm font-semibold">{$i18n.t('Model')}</div>
+				</div>
+
+				<!-- <div class=" text-sm font-semibold mb-2"></div> -->
+
+				<div class="mt-2">
+					<div class=" text-xs font-semibold mb-2">{$i18n.t('Params')}*</div>
+
+					<div>
+						<!-- <textarea
+							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
+							placeholder={`FROM llama2\nPARAMETER temperature 1\nSYSTEM """\nYou are Mario from Super Mario Bros, acting as an assistant.\n"""`}
+							rows="6"
+							bind:value={content}
+							required
+						/> -->
+					</div>
+				</div>
+			</div>
+
+			<div class="my-2">
+				<div class="flex w-full justify-between mb-2">
+					<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt suggestions')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						type="button"
+						on:click={() => {
+							if (
+								info.meta.suggestion_prompts.length === 0 ||
+								info.meta.suggestion_prompts.at(-1).content !== ''
+							) {
+								info.meta.suggestion_prompts = [...info.meta.suggestion_prompts, { content: '' }];
+							}
+						}}
+					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
+							viewBox="0 0 20 20"
 							fill="currentColor"
-							class="w-8"
+							class="w-4 h-4"
 						>
 							<path
-								fill-rule="evenodd"
-								d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z"
-								clip-rule="evenodd"
+								d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
 							/>
 						</svg>
+					</button>
+				</div>
+				<div class="flex flex-col space-y-1">
+					{#each info.meta.suggestion_prompts as prompt, promptIdx}
+						<div class=" flex border dark:border-gray-600 rounded-lg">
+							<input
+								class="px-3 py-1.5 text-sm w-full bg-transparent outline-none border-r dark:border-gray-600"
+								placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
+								bind:value={prompt.content}
+							/>
+
+							<button
+								class="px-2"
+								type="button"
+								on:click={() => {
+									info.meta.suggestion_prompts.splice(promptIdx, 1);
+									info.meta.suggestion_prompts = info.meta.suggestion_prompts;
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+									/>
+								</svg>
+							</button>
+						</div>
+					{/each}
+				</div>
+			</div>
+
+			{#if pullProgress !== null}
+				<div class="my-2">
+					<div class=" text-sm font-semibold mb-2">{$i18n.t('Pull Progress')}</div>
+					<div class="w-full rounded-full dark:bg-gray-800">
+						<div
+							class="dark:bg-gray-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
+							style="width: {Math.max(15, pullProgress ?? 0)}%"
+						>
+							{pullProgress ?? 0}%
+						</div>
+					</div>
+					<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
+						{digest}
+					</div>
+				</div>
+			{/if}
+
+			<div class="my-2 flex justify-end">
+				<button
+					class=" text-sm px-3 py-2 transition rounded-xl {loading
+						? ' cursor-not-allowed bg-gray-100 dark:bg-gray-800'
+						: ' bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-800'} flex"
+					type="submit"
+					disabled={loading}
+				>
+					<div class=" self-center font-medium">{$i18n.t('Save & Update')}</div>
+
+					{#if loading}
+						<div class="ml-1.5 self-center">
+							<svg
+								class=" w-4 h-4"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								xmlns="http://www.w3.org/2000/svg"
+								><style>
+									.spinner_ajPY {
+										transform-origin: center;
+										animation: spinner_AtaB 0.75s infinite linear;
+									}
+									@keyframes spinner_AtaB {
+										100% {
+											transform: rotate(360deg);
+										}
+									}
+								</style><path
+									d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+									opacity=".25"
+								/><path
+									d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+									class="spinner_ajPY"
+								/></svg
+							>
+						</div>
 					{/if}
 				</button>
 			</div>
-		</div>
-
-		<div class="my-2 flex space-x-2">
-			<div class="flex-1">
-				<div class=" text-sm font-semibold mb-2">{$i18n.t('Name')}*</div>
-
-				<div>
-					<input
-						class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-						placeholder={$i18n.t('Name your modelfile')}
-						bind:value={title}
-						required
-					/>
-				</div>
-			</div>
-
-			<div class="flex-1">
-				<div class=" text-sm font-semibold mb-2">{$i18n.t('Model Tag Name')}*</div>
-
-				<div>
-					<input
-						class="px-3 py-1.5 text-sm w-full bg-transparent disabled:text-gray-500 border dark:border-gray-600 outline-none rounded-lg"
-						placeholder={$i18n.t('Add a model tag name')}
-						value={tagName}
-						disabled
-						required
-					/>
-				</div>
-			</div>
-		</div>
-
-		<div class="my-2">
-			<div class=" text-sm font-semibold mb-2">{$i18n.t('Description')}*</div>
-
-			<div>
-				<input
-					class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-					placeholder={$i18n.t('Add a short description about what this modelfile does')}
-					bind:value={desc}
-					required
-				/>
-			</div>
-		</div>
-
-		<div class="my-2">
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-sm font-semibold">{$i18n.t('Modelfile')}</div>
-			</div>
-
-			<!-- <div class=" text-sm font-semibold mb-2"></div> -->
-
-			<div class="mt-2">
-				<div class=" text-xs font-semibold mb-2">{$i18n.t('Content')}*</div>
-
-				<div>
-					<textarea
-						class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-						placeholder={`FROM llama2\nPARAMETER temperature 1\nSYSTEM """\nYou are Mario from Super Mario Bros, acting as an assistant.\n"""`}
-						rows="6"
-						bind:value={content}
-						required
-					/>
-				</div>
-			</div>
-		</div>
-
-		<div class="my-2">
-			<div class="flex w-full justify-between mb-2">
-				<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt suggestions')}</div>
-
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					type="button"
-					on:click={() => {
-						if (suggestions.length === 0 || suggestions.at(-1).content !== '') {
-							suggestions = [...suggestions, { content: '' }];
-						}
-					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-						/>
-					</svg>
-				</button>
-			</div>
-			<div class="flex flex-col space-y-1">
-				{#each suggestions as prompt, promptIdx}
-					<div class=" flex border dark:border-gray-600 rounded-lg">
-						<input
-							class="px-3 py-1.5 text-sm w-full bg-transparent outline-none border-r dark:border-gray-600"
-							placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
-							bind:value={prompt.content}
-						/>
-
-						<button
-							class="px-2"
-							type="button"
-							on:click={() => {
-								suggestions.splice(promptIdx, 1);
-								suggestions = suggestions;
-							}}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								class="w-4 h-4"
-							>
-								<path
-									d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-								/>
-							</svg>
-						</button>
-					</div>
-				{/each}
-			</div>
-		</div>
-
-		<div class="my-2">
-			<div class=" text-sm font-semibold mb-2">{$i18n.t('Categories')}</div>
-
-			<div class="grid grid-cols-4">
-				{#each Object.keys(categories) as category}
-					<div class="flex space-x-2 text-sm">
-						<input type="checkbox" bind:checked={categories[category]} />
-
-						<div class=" capitalize">{category}</div>
-					</div>
-				{/each}
-			</div>
-		</div>
-
-		{#if pullProgress !== null}
-			<div class="my-2">
-				<div class=" text-sm font-semibold mb-2">{$i18n.t('Pull Progress')}</div>
-				<div class="w-full rounded-full dark:bg-gray-800">
-					<div
-						class="dark:bg-gray-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
-						style="width: {Math.max(15, pullProgress ?? 0)}%"
-					>
-						{pullProgress ?? 0}%
-					</div>
-				</div>
-				<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
-					{digest}
-				</div>
-			</div>
-		{/if}
-
-		<div class="my-2 flex justify-end">
-			<button
-				class=" text-sm px-3 py-2 transition rounded-xl {loading
-					? ' cursor-not-allowed bg-gray-100 dark:bg-gray-800'
-					: ' bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-800'} flex"
-				type="submit"
-				disabled={loading}
-			>
-				<div class=" self-center font-medium">{$i18n.t('Save & Update')}</div>
-
-				{#if loading}
-					<div class="ml-1.5 self-center">
-						<svg
-							class=" w-4 h-4"
-							viewBox="0 0 24 24"
-							fill="currentColor"
-							xmlns="http://www.w3.org/2000/svg"
-							><style>
-								.spinner_ajPY {
-									transform-origin: center;
-									animation: spinner_AtaB 0.75s infinite linear;
-								}
-								@keyframes spinner_AtaB {
-									100% {
-										transform: rotate(360deg);
-									}
-								}
-							</style><path
-								d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-								opacity=".25"
-							/><path
-								d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-								class="spinner_ajPY"
-							/></svg
-						>
-					</div>
-				{/if}
-			</button>
-		</div>
-	</form>
+		</form>
+	{/if}
 </div>
