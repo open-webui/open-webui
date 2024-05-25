@@ -56,8 +56,11 @@
 	const updateModelsHandler = async () => {
 		for (const model of $models.filter(
 			(m) =>
-				m.size != null &&
-				(selectedOllamaUrlIdx === null ? true : (m?.urls ?? []).includes(selectedOllamaUrlIdx))
+				!(m?.preset ?? false) &&
+				m.owned_by === 'ollama' &&
+				(selectedOllamaUrlIdx === null
+					? true
+					: (m?.ollama?.urls ?? []).includes(selectedOllamaUrlIdx))
 		)) {
 			console.log(model);
 
@@ -644,9 +647,12 @@
 									{#if !deleteModelTag}
 										<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 									{/if}
-									{#each $models.filter((m) => m.size != null && (selectedOllamaUrlIdx === null ? true : (m?.urls ?? []).includes(selectedOllamaUrlIdx))) as model}
+									{#each $models.filter((m) => !(m?.preset ?? false) && m.owned_by === 'ollama' && (selectedOllamaUrlIdx === null ? true : (m?.ollama?.urls ?? []).includes(selectedOllamaUrlIdx))) as model}
 										<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
-											>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
+											>{model.name +
+												' (' +
+												(model.ollama.size / 1024 ** 3).toFixed(1) +
+												' GB)'}</option
 										>
 									{/each}
 								</select>
