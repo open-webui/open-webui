@@ -56,7 +56,6 @@ log_sources = [
     "CONFIG",
     "DB",
     "IMAGES",
-    "LITELLM",
     "MAIN",
     "MODELS",
     "OLLAMA",
@@ -374,10 +373,10 @@ def create_config_file(file_path):
 
 LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
 
-if not os.path.exists(LITELLM_CONFIG_PATH):
-    log.info("Config file doesn't exist. Creating...")
-    create_config_file(LITELLM_CONFIG_PATH)
-    log.info("Config file created successfully.")
+# if not os.path.exists(LITELLM_CONFIG_PATH):
+#     log.info("Config file doesn't exist. Creating...")
+#     create_config_file(LITELLM_CONFIG_PATH)
+#     log.info("Config file created successfully.")
 
 
 ####################################
@@ -825,18 +824,6 @@ AUDIO_OPENAI_API_VOICE = PersistentConfig(
     "audio.openai.api_voice",
     os.getenv("AUDIO_OPENAI_API_VOICE", "alloy"),
 )
-
-####################################
-# LiteLLM
-####################################
-
-
-ENABLE_LITELLM = os.environ.get("ENABLE_LITELLM", "True").lower() == "true"
-
-LITELLM_PROXY_PORT = int(os.getenv("LITELLM_PROXY_PORT", "14365"))
-if LITELLM_PROXY_PORT < 0 or LITELLM_PROXY_PORT > 65535:
-    raise ValueError("Invalid port number for LITELLM_PROXY_PORT")
-LITELLM_PROXY_HOST = os.getenv("LITELLM_PROXY_HOST", "127.0.0.1")
 
 
 ####################################

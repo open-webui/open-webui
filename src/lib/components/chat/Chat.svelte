@@ -35,12 +35,7 @@
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
-	import {
-		LITELLM_API_BASE_URL,
-		OLLAMA_API_BASE_URL,
-		OPENAI_API_BASE_URL,
-		WEBUI_BASE_URL
-	} from '$lib/constants';
+	import { OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import type { Writable } from 'svelte/store';
@@ -733,9 +728,7 @@
 					docs: docs.length > 0 ? docs : undefined,
 					citations: docs.length > 0
 				},
-				model?.source?.toLowerCase() === 'litellm'
-					? `${LITELLM_API_BASE_URL}/v1`
-					: `${OPENAI_API_BASE_URL}`
+				`${OPENAI_API_BASE_URL}`
 			);
 
 			// Wait until history/message have been updated
