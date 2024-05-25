@@ -103,10 +103,11 @@
 					info.base_model_id = `${info.base_model_id}:latest`;
 				}
 
+				params = { ...params, ...model?.info?.params };
+
 				if (model?.info?.meta?.capabilities) {
 					capabilities = { ...capabilities, ...model?.info?.meta?.capabilities };
 				}
-
 				console.log(model);
 			} else {
 				goto('/workspace/models');
