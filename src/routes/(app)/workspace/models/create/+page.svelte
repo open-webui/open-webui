@@ -79,7 +79,9 @@
 				meta: {
 					...info.meta,
 					profile_image_url: info.meta.profile_image_url ?? '/favicon.png',
-					suggestion_prompts: info.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
+					suggestion_prompts: info.meta.suggestion_prompts
+						? info.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
+						: null
 				},
 				params: { ...info.params, ...params }
 			});
