@@ -164,7 +164,7 @@ export const getOllamaVersion = async (token: string = '') => {
 		throw error;
 	}
 
-	return res?.version ?? '';
+	return res?.version ?? false;
 };
 
 export const getOllamaModels = async (token: string = '') => {

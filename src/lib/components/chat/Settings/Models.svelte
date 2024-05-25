@@ -18,6 +18,7 @@
 	import { onMount, getContext } from 'svelte';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -34,7 +35,8 @@
 	let updateProgress = null;
 
 	let showExperimentalOllama = false;
-	let ollamaVersion = '';
+
+	let ollamaVersion = null;
 	const MAX_PARALLEL_DOWNLOADS = 3;
 
 	let modelTransferring = false;
@@ -449,7 +451,7 @@
 
 <div class="flex flex-col h-full justify-between text-sm">
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-[24rem]">
-		{#if ollamaVersion}
+		{#if ollamaVersion !== null}
 			<div class="space-y-2 pr-1.5">
 				<div class="text-sm font-medium">{$i18n.t('Manage Ollama Models')}</div>
 
@@ -880,8 +882,14 @@
 					{/if}
 				</div>
 			</div>
-		{:else}
+		{:else if ollamaVersion === false}
 			<div>Ollama Not Detected</div>
+		{:else}
+			<div class="flex h-full justify-center">
+				<div class="my-auto">
+					<Spinner className="size-6" />
+				</div>
+			</div>
 		{/if}
 	</div>
 </div>
