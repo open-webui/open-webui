@@ -282,7 +282,7 @@
 							<option value={null} class=" placeholder:text-gray-500"
 								>{$i18n.t('Select a base model')}</option
 							>
-							{#each $models.filter((m) => m.id !== model.id) as model}
+							{#each $models.filter((m) => m.id !== model.id && !m?.preset) as model}
 								<option value={model.id}>{model.name}</option>
 							{/each}
 						</select>
