@@ -1,5 +1,4 @@
 <script lang="ts">
-	import queue from 'async/queue';
 	import { toast } from 'svelte-sonner';
 
 	import {
@@ -12,32 +11,19 @@
 		cancelOllamaRequest,
 		uploadModel
 	} from '$lib/apis/ollama';
+
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user } from '$lib/stores';
+	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user, config } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
-	import { addLiteLLMModel, deleteLiteLLMModel, getLiteLLMModelInfo } from '$lib/apis/litellm';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let getModels: Function;
 
-	let showLiteLLM = false;
-	let showLiteLLMParams = false;
 	let modelUploadInputElement: HTMLInputElement;
-	let liteLLMModelInfo = [];
-
-	let liteLLMModel = '';
-	let liteLLMModelName = '';
-	let liteLLMAPIBase = '';
-	let liteLLMAPIKey = '';
-	let liteLLMRPM = '';
-	let liteLLMMaxTokens = '';
-
-	let deleteLiteLLMModelName = '';
-
-	$: liteLLMModelName = liteLLMModel;
 
 	// Models
 
@@ -439,71 +425,22 @@
 		}
 	};
 
-	const addLiteLLMModelHandler = async () => {
-		if (!liteLLMModelInfo.find((info) => info.model_name === liteLLMModelName)) {
-			const res = await addLiteLLMModel(localStorage.token, {
-				name: liteLLMModelName,
-				model: liteLLMModel,
-				api_base: liteLLMAPIBase,
-				api_key: liteLLMAPIKey,
-				rpm: liteLLMRPM,
-				max_tokens: liteLLMMaxTokens
-			}).catch((error) => {
-				toast.error(error);
-				return null;
-			});
-
-			if (res) {
-				if (res.message) {
-					toast.success(res.message);
-				}
-			}
-		} else {
-			toast.error($i18n.t(`Model {{modelName}} already exists.`, { modelName: liteLLMModelName }));
-		}
-
-		liteLLMModelName = '';
-		liteLLMModel = '';
-		liteLLMAPIBase = '';
-		liteLLMAPIKey = '';
-		liteLLMRPM = '';
-		liteLLMMaxTokens = '';
-
-		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
-		models.set(await getModels());
-	};
-
-	const deleteLiteLLMModelHandler = async () => {
-		const res = await deleteLiteLLMModel(localStorage.token, deleteLiteLLMModelName).catch(
-			(error) => {
-				toast.error(error);
-				return null;
-			}
-		);
-
-		if (res) {
-			if (res.message) {
-				toast.success(res.message);
-			}
-		}
-
-		deleteLiteLLMModelName = '';
-		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
-		models.set(await getModels());
-	};
-
 	onMount(async () => {
-		OLLAMA_URLS = await getOllamaUrls(localStorage.token).catch((error) => {
-			toast.error(error);
-			return [];
-		});
+		await Promise.all([
+			(async () => {
+				OLLAMA_URLS = await getOllamaUrls(localStorage.token).catch((error) => {
+					toast.error(error);
+					return [];
+				});
 
-		if (OLLAMA_URLS.length > 0) {
-			selectedOllamaUrlIdx = 0;
-		}
-
-		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
-		liteLLMModelInfo = await getLiteLLMModelInfo(localStorage.token);
+				if (OLLAMA_URLS.length > 0) {
+					selectedOllamaUrlIdx = 0;
+				}
+			})(),
+			(async () => {
+				ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+			})()
+		]);
 	});
 </script>
 
@@ -587,24 +524,28 @@
 											viewBox="0 0 24 24"
 											fill="currentColor"
 											xmlns="http://www.w3.org/2000/svg"
-											><style>
+										>
+											<style>
 												.spinner_ajPY {
 													transform-origin: center;
 													animation: spinner_AtaB 0.75s infinite linear;
 												}
+
 												@keyframes spinner_AtaB {
 													100% {
 														transform: rotate(360deg);
 													}
 												}
-											</style><path
+											</style>
+											<path
 												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
 												opacity=".25"
-											/><path
+											/>
+											<path
 												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
 												class="spinner_ajPY"
-											/></svg
-										>
+											/>
+										</svg>
 									</div>
 								{:else}
 									<svg
@@ -833,24 +774,28 @@
 													viewBox="0 0 24 24"
 													fill="currentColor"
 													xmlns="http://www.w3.org/2000/svg"
-													><style>
+												>
+													<style>
 														.spinner_ajPY {
 															transform-origin: center;
 															animation: spinner_AtaB 0.75s infinite linear;
 														}
+
 														@keyframes spinner_AtaB {
 															100% {
 																transform: rotate(360deg);
 															}
 														}
-													</style><path
+													</style>
+													<path
 														d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
 														opacity=".25"
-													/><path
+													/>
+													<path
 														d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
 														class="spinner_ajPY"
-													/></svg
-												>
+													/>
+												</svg>
 											</div>
 										{:else}
 											<svg
@@ -929,203 +874,8 @@
 					{/if}
 				</div>
 			</div>
-			<hr class=" dark:border-gray-700 my-2" />
+		{:else}
+			<div>Ollama Not Detected</div>
 		{/if}
-
-		<div class=" space-y-3">
-			<div class="mt-2 space-y-3 pr-1.5">
-				<div>
-					<div class="mb-2">
-						<div class="flex justify-between items-center text-xs">
-							<div class=" text-sm font-medium">{$i18n.t('Manage LiteLLM Models')}</div>
-							<button
-								class=" text-xs font-medium text-gray-500"
-								type="button"
-								on:click={() => {
-									showLiteLLM = !showLiteLLM;
-								}}>{showLiteLLM ? $i18n.t('Hide') : $i18n.t('Show')}</button
-							>
-						</div>
-					</div>
-
-					{#if showLiteLLM}
-						<div>
-							<div class="flex justify-between items-center text-xs">
-								<div class=" text-sm font-medium">{$i18n.t('Add a model')}</div>
-								<button
-									class=" text-xs font-medium text-gray-500"
-									type="button"
-									on:click={() => {
-										showLiteLLMParams = !showLiteLLMParams;
-									}}
-									>{showLiteLLMParams
-										? $i18n.t('Hide Additional Params')
-										: $i18n.t('Show Additional Params')}</button
-								>
-							</div>
-						</div>
-
-						<div class="my-2 space-y-2">
-							<div class="flex w-full mb-1.5">
-								<div class="flex-1 mr-2">
-									<input
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-										placeholder={$i18n.t('Enter LiteLLM Model (litellm_params.model)')}
-										bind:value={liteLLMModel}
-										autocomplete="off"
-									/>
-								</div>
-
-								<button
-									class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-									on:click={() => {
-										addLiteLLMModelHandler();
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-										/>
-									</svg>
-								</button>
-							</div>
-
-							{#if showLiteLLMParams}
-								<div>
-									<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Model Name')}</div>
-									<div class="flex w-full">
-										<div class="flex-1">
-											<input
-												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder="Enter Model Name (model_name)"
-												bind:value={liteLLMModelName}
-												autocomplete="off"
-											/>
-										</div>
-									</div>
-								</div>
-
-								<div>
-									<div class=" mb-1.5 text-sm font-medium">{$i18n.t('API Base URL')}</div>
-									<div class="flex w-full">
-										<div class="flex-1">
-											<input
-												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder={$i18n.t(
-													'Enter LiteLLM API Base URL (litellm_params.api_base)'
-												)}
-												bind:value={liteLLMAPIBase}
-												autocomplete="off"
-											/>
-										</div>
-									</div>
-								</div>
-
-								<div>
-									<div class=" mb-1.5 text-sm font-medium">{$i18n.t('API Key')}</div>
-									<div class="flex w-full">
-										<div class="flex-1">
-											<input
-												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder={$i18n.t('Enter LiteLLM API Key (litellm_params.api_key)')}
-												bind:value={liteLLMAPIKey}
-												autocomplete="off"
-											/>
-										</div>
-									</div>
-								</div>
-
-								<div>
-									<div class="mb-1.5 text-sm font-medium">{$i18n.t('API RPM')}</div>
-									<div class="flex w-full">
-										<div class="flex-1">
-											<input
-												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder={$i18n.t('Enter LiteLLM API RPM (litellm_params.rpm)')}
-												bind:value={liteLLMRPM}
-												autocomplete="off"
-											/>
-										</div>
-									</div>
-								</div>
-
-								<div>
-									<div class="mb-1.5 text-sm font-medium">{$i18n.t('Max Tokens')}</div>
-									<div class="flex w-full">
-										<div class="flex-1">
-											<input
-												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-												placeholder={$i18n.t('Enter Max Tokens (litellm_params.max_tokens)')}
-												bind:value={liteLLMMaxTokens}
-												type="number"
-												min="1"
-												autocomplete="off"
-											/>
-										</div>
-									</div>
-								</div>
-							{/if}
-						</div>
-
-						<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
-							{$i18n.t('Not sure what to add?')}
-							<a
-								class=" text-gray-300 font-medium underline"
-								href="https://litellm.vercel.app/docs/proxy/configs#quick-start"
-								target="_blank"
-							>
-								{$i18n.t('Click here for help.')}
-							</a>
-						</div>
-
-						<div>
-							<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Delete a model')}</div>
-							<div class="flex w-full">
-								<div class="flex-1 mr-2">
-									<select
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-										bind:value={deleteLiteLLMModelName}
-										placeholder={$i18n.t('Select a model')}
-									>
-										{#if !deleteLiteLLMModelName}
-											<option value="" disabled selected>{$i18n.t('Select a model')}</option>
-										{/if}
-										{#each liteLLMModelInfo as model}
-											<option value={model.model_name} class="bg-gray-100 dark:bg-gray-700"
-												>{model.model_name}</option
-											>
-										{/each}
-									</select>
-								</div>
-								<button
-									class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-									on:click={() => {
-										deleteLiteLLMModelHandler();
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</button>
-							</div>
-						</div>
-					{/if}
-				</div>
-			</div>
-		</div>
 	</div>
 </div>

@@ -1,3 +1,5 @@
+import json
+
 from peewee import *
 from peewee_migrate import Router
 from playhouse.db_url import connect
@@ -7,6 +9,16 @@ import logging
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])
+
+
+class JSONField(TextField):
+    def db_value(self, value):
+        return json.dumps(value)
+
+    def python_value(self, value):
+        if value is not None:
+            return json.loads(value)
+
 
 # Check if the file exists
 if os.path.exists(f"{DATA_DIR}/ollama.db"):

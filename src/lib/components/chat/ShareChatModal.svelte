@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
+	import { models } from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
-	import { modelfiles } from '$lib/stores';
 	import { copyToClipboard } from '$lib/utils';
 
 	import Modal from '../common/Modal.svelte';
@@ -43,9 +43,7 @@
 					tab.postMessage(
 						JSON.stringify({
 							chat: _chat,
-							modelfiles: $modelfiles.filter((modelfile) =>
-								_chat.models.includes(modelfile.tagName)
-							)
+							models: $models.filter((m) => _chat.models.includes(m.id))
 						}),
 						'*'
 					);

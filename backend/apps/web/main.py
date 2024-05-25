@@ -6,7 +6,7 @@ from apps.web.routers import (
     users,
     chats,
     documents,
-    modelfiles,
+    models,
     prompts,
     configs,
     memories,
@@ -40,6 +40,9 @@ app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
+
+
+app.state.MODELS = {}
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 
 
@@ -56,10 +59,9 @@ app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(chats.router, prefix="/chats", tags=["chats"])
 
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
-app.include_router(modelfiles.router, prefix="/modelfiles", tags=["modelfiles"])
+app.include_router(models.router, prefix="/models", tags=["models"])
 app.include_router(prompts.router, prefix="/prompts", tags=["prompts"])
 app.include_router(memories.router, prefix="/memories", tags=["memories"])
-
 
 app.include_router(configs.router, prefix="/configs", tags=["configs"])
 app.include_router(utils.router, prefix="/utils", tags=["utils"])

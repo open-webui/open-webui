@@ -18,8 +18,9 @@ import requests
 from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 
+from apps.web.models.models import Models
 from utils.utils import get_verified_user, get_current_user, get_admin_user
-from config import SRC_LOG_LEVELS, ENV
+from config import SRC_LOG_LEVELS
 from constants import MESSAGES
 
 import os
@@ -77,7 +78,7 @@ with open(LITELLM_CONFIG_DIR, "r") as file:
 
 app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER.value
 app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST.value
-
+app.state.MODEL_CONFIG = Models.get_all_models()
 
 app.state.ENABLE = ENABLE_LITELLM
 app.state.CONFIG = litellm_config
@@ -261,6 +262,14 @@ async def get_models(user=Depends(get_current_user)):
                         "object": "model",
                         "created": int(time.time()),
                         "owned_by": "openai",
+                        "custom_info": next(
+                            (
+                                item
+                                for item in app.state.MODEL_CONFIG
+                                if item.id == model["model_name"]
+                            ),
+                            None,
+                        ),
                     }
                     for model in app.state.CONFIG["model_list"]
                 ],

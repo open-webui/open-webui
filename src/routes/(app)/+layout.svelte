@@ -7,9 +7,8 @@
 
 	import { goto } from '$app/navigation';
 
-	import { getModels as _getModels } from '$lib/utils';
+	import { getModels as _getModels } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { getModelfiles } from '$lib/apis/modelfiles';
 	import { getPrompts } from '$lib/apis/prompts';
 
 	import { getDocs } from '$lib/apis/documents';
@@ -20,7 +19,6 @@
 		showSettings,
 		settings,
 		models,
-		modelfiles,
 		prompts,
 		documents,
 		tags,
@@ -48,21 +46,6 @@
 
 	const getModels = async () => {
 		return _getModels(localStorage.token);
-	};
-
-	const setOllamaVersion = async (version: string = '') => {
-		if (version === '') {
-			version = await getOllamaVersion(localStorage.token).catch((error) => {
-				return '';
-			});
-		}
-
-		ollamaVersion = version;
-
-		console.log(ollamaVersion);
-		if (compareVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion)) {
-			toast.error(`Ollama Version: ${ollamaVersion !== '' ? ollamaVersion : 'Not Detected'}`);
-		}
 	};
 
 	onMount(async () => {
@@ -94,9 +77,6 @@
 					models.set(await getModels());
 				})(),
 				(async () => {
-					modelfiles.set(await getModelfiles(localStorage.token));
-				})(),
-				(async () => {
 					prompts.set(await getPrompts(localStorage.token));
 				})(),
 				(async () => {
@@ -106,11 +86,6 @@
 					tags.set(await getAllChatTags(localStorage.token));
 				})()
 			]);
-
-			modelfiles.subscribe(async () => {
-				// should fetch models
-				models.set(await getModels());
-			});
 
 			document.addEventListener('keydown', function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
@@ -188,12 +163,12 @@
 	});
 </script>
 
-<div class=" hidden lg:flex fixed bottom-0 right-0 px-3 py-3 z-10">
+<div class=" hidden lg:flex fixed bottom-0 right-0 px-2 py-2 z-10">
 	<Tooltip content={$i18n.t('Help')} placement="left">
 		<button
 			id="show-shortcuts-button"
 			bind:this={showShortcutsButtonElement}
-			class="text-gray-600 dark:text-gray-300 bg-gray-300/20 w-6 h-6 flex items-center justify-center text-xs rounded-full"
+			class="text-gray-600 dark:text-gray-300 bg-gray-300/20 size-5 flex items-center justify-center text-[0.7rem] rounded-full"
 			on:click={() => {
 				showShortcuts = !showShortcuts;
 			}}
