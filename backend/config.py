@@ -123,7 +123,8 @@ def parse_section(section):
 
 
 try:
-    with open(BASE_DIR / "CHANGELOG.md", "r") as file:
+    changelog_path = BASE_DIR / "CHANGELOG.md"
+    with open(str(changelog_path.absolute()), "r") as file:
         changelog_content = file.read()
 
 except:
