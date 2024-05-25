@@ -1,15 +1,15 @@
-Our weekly meetups are [Thursdays at NOON EDT](/io/coders/) and [Sundays at 10 PM EDT](/io/coders/).
-Our focused coding meetings are on Mondays and Wednesdays at [10 PM EDT](/io/coders).
+Our weekly meetups are [Thursdays at NOON EDT](/io/coders/) and [Sundays at 10 PM EDT](/io/coders/) and [Wednesdays at 10 PM EDT](/io/coders).
 
 <hr style="margin-bottom:20px">
 
 # Active Projects
 
-**New Project!** &nbsp;[Feed Player](../feed/) - for Video, Images, JSON, YAML, CSS, RSS news feeds and our [Feed Viewer](../feed/view/#feed=nasa)
 
 [Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
-[restack.io](https://www.restack.io/docs/supabase-knowledge-supabase-rust-sdk-guide) - cool for Supabase with Rust and Streamlit
+**Vite Project**
+[Feed Player](../feed/) - for Video, Images, JSON, YAML, CSS, RSS news feeds and our [Feed Viewer](../feed/view/#feed=nasa)  
+[Restack.io](https://www.restack.io/docs/supabase-knowledge-supabase-rust-sdk-guide) - for Supabase with Rust and Streamlit
 
 <!--
 CSV Files to use for Timelines, Observable, and AI Training at: [industries/naics/US/counties](https://github.com/ModelEarth/community-data/tree/master/industries/naics/US/counties)  
