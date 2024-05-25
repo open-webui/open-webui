@@ -30,6 +30,8 @@ import peewee as pw
 from peewee_migrate import Migrator
 import json
 
+from utils.misc import parse_ollama_modelfile
+
 with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
@@ -64,13 +66,16 @@ def migrate_modelfile_to_model(migrator: Migrator, database: pw.Database):
             }
         )
 
+        info = parse_ollama_modelfile(modelfile.modelfile.get("content"))
+
         # Insert the processed data into the 'model' table
         Model.create(
             id=modelfile.tag_name,
             user_id=modelfile.user_id,
+            base_model_id=info.get("base_model_id"),
             name=modelfile.modelfile.get("title"),
             meta=meta,
-            params="{}",
+            params=json.dumps(info.get("params", {})),
             created_at=modelfile.timestamp,
             updated_at=modelfile.timestamp,
         )
