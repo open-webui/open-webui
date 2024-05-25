@@ -119,6 +119,39 @@ export const embeddingFile = async (indexId: number, file: File) => {
   return res;
 }
 
+export const deleteEmbeddingFile = async (indexId: number, fileId: number, docRefId: string) => {
+  let error = null;
+
+  const res = await fetch(`${HATTO_LLM_API_BASE_URL}/embedding/delete-doc`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      authorization: `Bearer ${localStorage.token}`
+    },
+    body: JSON.stringify({
+      org_index_id: indexId,
+      file_id: fileId,
+      doc_ref_id: docRefId
+    })
+  })
+    .then(async (res) => {
+      if (!res.ok) throw await res.json();
+      return res.json();
+    })
+    .catch((err) => {
+      error = err.detail;
+      console.log(err);
+      return null;
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return res;
+}
+
 export const queryRankedChunk = async (indexId: number, question: string) => {
   let error = null;
 

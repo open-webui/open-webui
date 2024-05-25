@@ -129,7 +129,7 @@
 					<div class=" self-center flex-1">
 						<div class=" font-bold line-clamp-1">{embeddingIndex.name}</div>
 						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-							{embeddingIndex.category}
+							{embeddingIndex.num_docs} Documents
 						</div>
 					</div>
 				</div>

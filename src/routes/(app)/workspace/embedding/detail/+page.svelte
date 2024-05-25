@@ -4,7 +4,7 @@
   const { saveAs } = fileSaver;
 
   import { onMount, getContext } from 'svelte';
-  import {WEBUI_NAME, documents, selectedIndexId, chatType} from '$lib/stores';
+  import {WEBUI_NAME, documents, selectedIndexId, chatType, selectedChatEmbeddingIndex} from '$lib/stores';
   import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
   import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
@@ -15,7 +15,8 @@
 
   import EditDocModal from '$lib/components/documents/EditDocModal.svelte';
   import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
-  import {embeddingFile, getEmbeddedFiles} from "$lib/apis/embedding";
+  import {deleteEmbeddingFile, embeddingFile, getEmbeddedFiles} from "$lib/apis/embedding";
+  import Tooltip from "$lib/components/common/Tooltip.svelte";
 
   const i18n = getContext('i18n');
 
@@ -36,9 +37,9 @@
 
   let dragged = false;
 
-  const deleteDoc = async (name) => {
-    await deleteDocByName(localStorage.token, name);
-    await documents.set(await getDocs(localStorage.token));
+  const deleteDoc = async (doc) => {
+    await deleteEmbeddingFile($selectedIndexId, doc.id, doc.doc_ref_id);
+    embeddedFiles = embeddedFiles.filter(({id}) => id !== doc.id)
   };
 
   const deleteDocs = async (docs) => {
@@ -212,6 +213,7 @@
                 hidden
                 on:change={async () => {
                   await embeddingFile($selectedIndexId, inputFiles[0])
+                  embeddedFiles = await getEmbeddedFiles($selectedIndexId)
 				}}
         />
         <button
@@ -407,7 +409,30 @@
                         {/if}
                     </div>
                     <div class=" self-center flex-1">
-                        <div class=" font-bold line-clamp-1">{doc.file_name}</div>
+                        <div class="flex items-center font-bold line-clamp-1">
+                            <span class="mr-4">{doc.file_name}</span>
+                            {#if doc.status === 'indexed'}
+                                <Tooltip content={$i18n.t('Success')}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="16" height="16" class="inline-block">
+                                        <circle r="8" cx="8" cy="8" style="fill:Green;stroke:gray;stroke-width:0.1" />
+                                    </svg>
+                                </Tooltip>
+                            {/if}
+                            {#if doc.status === 'fail'}
+                                <Tooltip content={$i18n.t('Fail')}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="16" height="16" class="inline-block">
+                                        <circle r="8" cx="8" cy="8" style="fill:Red;stroke:gray;stroke-width:0.1" />
+                                    </svg>
+                                </Tooltip>
+                            {/if}
+                            {#if doc.status === 'pending'}
+                                <Tooltip content={$i18n.t('Pending')}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="16" height="16" class="inline-block">
+                                        <circle r="8" cx="8" cy="8" style="fill:Gray;stroke:gray;stroke-width:0.1" />
+                                    </svg>
+                                </Tooltip>
+                            {/if}
+                        </div>
                         <div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
                             {new Date(doc.created * 1000)}
                         </div>
@@ -415,31 +440,6 @@
                 </div>
             </div>
             <div class="flex flex-row space-x-1 self-center">
-                <button
-                        class="self-center w-fit text-sm z-20 px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-                        type="button"
-                        on:click={async (e) => {
-						e.stopPropagation();
-						showEditDocModal = !showEditDocModal;
-						selectedDoc = doc;
-					}}
-                >
-                    <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="1.5"
-                            stroke="currentColor"
-                            class="w-4 h-4"
-                    >
-                        <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-                        />
-                    </svg>
-                </button>
-
                 <!-- <button
             class="self-center w-fit text-sm px-2 py-2 border dark:border-gray-600 rounded-xl"
             type="button"
@@ -467,8 +467,7 @@
                         type="button"
                         on:click={(e) => {
 						e.stopPropagation();
-
-						deleteDoc(doc.name);
+						deleteDoc(doc);
 					}}
                 >
                     <svg
