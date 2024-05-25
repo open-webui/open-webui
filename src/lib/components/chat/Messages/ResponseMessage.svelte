@@ -346,7 +346,7 @@
 
 		<div class="w-full overflow-hidden pl-1">
 			<Name>
-				{model.name}
+				{model?.name ?? message.model}
 
 				{#if message.timestamp}
 					<span
