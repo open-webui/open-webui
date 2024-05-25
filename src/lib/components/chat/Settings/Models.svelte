@@ -646,10 +646,7 @@
 									{/if}
 									{#each $models.filter((m) => m.size != null && (selectedOllamaUrlIdx === null ? true : (m?.urls ?? []).includes(selectedOllamaUrlIdx))) as model}
 										<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
-											>{(model.custom_info?.name ?? model.name) +
-												' (' +
-												(model.size / 1024 ** 3).toFixed(1) +
-												' GB)'}</option
+											>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
 										>
 									{/each}
 								</select>

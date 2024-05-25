@@ -125,7 +125,7 @@
 												<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 												{#each $models.filter((model) => model.id) as model}
 													<option value={model.id} class="bg-gray-100 dark:bg-gray-700"
-														>{model.custom_info?.name ?? model.name}</option
+														>{model.name}</option
 													>
 												{/each}
 											</select>

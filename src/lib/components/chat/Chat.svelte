@@ -327,10 +327,10 @@
 						message.files?.some((file) => file.type === 'image')
 					);
 
-					if (hasImages && !(model.custom_info?.meta.vision_capable ?? true)) {
+					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
 						toast.error(
 							$i18n.t('Model {{modelName}} is not vision capable', {
-								modelName: model.custom_info?.name ?? model.name ?? model.id
+								modelName: model.name ?? model.id
 							})
 						);
 					}
@@ -857,7 +857,7 @@
 		responseMessage.error = true;
 		responseMessage.content =
 			$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-				provider: model.custom_info?.name ?? model.name ?? model.id
+				provider: model.name ?? model.id
 			}) +
 			'\n' +
 			errorMessage;

@@ -283,7 +283,7 @@ export interface ModelConfig {
 
 export interface ModelMeta {
 	description?: string;
-	vision_capable?: boolean;
+	capabilities?: object;
 }
 
 export interface ModelParams {}
