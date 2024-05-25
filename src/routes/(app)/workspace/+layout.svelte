@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 
-	import { WEBUI_NAME, showSidebar } from '$lib/stores';
+	import {WEBUI_NAME, showSidebar, user} from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { page } from '$app/stores';
 
@@ -38,35 +38,37 @@
 		<div
 			class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-xl bg-transparent/10 p-1"
 		>
-			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/modelfiles')
-					? 'bg-gray-50 dark:bg-gray-850'
-					: ''} transition"
-				href="/workspace/modelfiles">{$i18n.t('Modelfiles')}</a
-			>
+			{#if $user?.role === 'admin'}
+				<a
+					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/modelfiles')
+						? 'bg-gray-50 dark:bg-gray-850'
+						: ''} transition"
+					href="/workspace/modelfiles">{$i18n.t('Modelfiles')}</a
+				>
 
-			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/prompts')
-					? 'bg-gray-50 dark:bg-gray-850'
-					: ''} transition"
-				href="/workspace/prompts">{$i18n.t('Prompts')}</a
-			>
+				<a
+					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/prompts')
+						? 'bg-gray-50 dark:bg-gray-850'
+						: ''} transition"
+					href="/workspace/prompts">{$i18n.t('Prompts')}</a
+				>
 
-			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/documents')
-					? 'bg-gray-50 dark:bg-gray-850'
-					: ''} transition"
-				href="/workspace/documents"
-			>
-				{$i18n.t('Documents')}
-			</a>
+				<a
+					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/documents')
+						? 'bg-gray-50 dark:bg-gray-850'
+						: ''} transition"
+					href="/workspace/documents"
+				>
+					{$i18n.t('Documents')}
+				</a>
 
-			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/playground')
-					? 'bg-gray-50 dark:bg-gray-850'
-					: ''} transition"
-				href="/workspace/playground">{$i18n.t('Playground')}</a
-			>
+				<a
+					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/playground')
+						? 'bg-gray-50 dark:bg-gray-850'
+						: ''} transition"
+					href="/workspace/playground">{$i18n.t('Playground')}</a
+				>
+			{/if}
 
 			<a
 					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/embedding')

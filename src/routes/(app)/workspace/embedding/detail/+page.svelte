@@ -176,6 +176,31 @@
     <EditDocModal bind:show={showEditDocModal} {selectedDoc} />
 {/key}
 
+<div class="mb-4">
+    <button
+            class="flex space-x-1"
+            on:click={() => {
+			history.back();
+		}}
+    >
+        <div class=" self-center">
+            <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    class="w-4 h-4"
+            >
+                <path
+                        fill-rule="evenodd"
+                        d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+                        clip-rule="evenodd"
+                />
+            </svg>
+        </div>
+        <div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
+    </button>
+</div>
+
 <div class="mb-3">
     <div class="flex justify-between items-center">
         <div class=" text-lg font-semibold self-center">{$i18n.t('Embedded Documents')}</div>
