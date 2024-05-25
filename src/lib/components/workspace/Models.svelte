@@ -259,9 +259,11 @@
 					console.log(savedModels);
 
 					for (const model of savedModels) {
-						await addNewModel(localStorage.token, model).catch((error) => {
-							return null;
-						});
+						if (model?.info ?? false) {
+							await addNewModel(localStorage.token, model.info).catch((error) => {
+								return null;
+							});
+						}
 					}
 
 					await models.set(await getModels(localStorage.token));

@@ -73,7 +73,6 @@
 		}
 
 		if (info) {
-			// TODO: if profile image url === null, set it to default image '/favicon.png'
 			const res = await addNewModel(localStorage.token, {
 				...info,
 				meta: {
