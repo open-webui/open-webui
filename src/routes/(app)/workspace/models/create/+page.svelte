@@ -29,6 +29,11 @@
 	let id = '';
 	let name = '';
 
+	let params = {};
+	let capabilities = {
+		vision: true
+	};
+
 	let info = {
 		id: '',
 		base_model_id: null,
@@ -45,12 +50,6 @@
 		params: {
 			system: ''
 		}
-	};
-
-	let params = {};
-
-	let capabilities = {
-		vision: false
 	};
 
 	$: if (name) {
@@ -96,6 +95,19 @@
 		success = false;
 	};
 
+	const initModel = (model) => {
+		id = model.id;
+		name = model.name;
+
+		params = { ...params, ...model?.info?.params };
+		capabilities = { ...capabilities, ...(model?.info?.meta?.capabilities ?? {}) };
+
+		info = {
+			...info,
+			...model.info
+		};
+	};
+
 	onMount(async () => {
 		window.addEventListener('message', async (event) => {
 			if (
@@ -108,8 +120,11 @@
 				].includes(event.origin)
 			)
 				return;
+
 			const model = JSON.parse(event.data);
 			console.log(model);
+
+			initModel(model);
 		});
 
 		if (window.opener ?? false) {
@@ -118,8 +133,10 @@
 
 		if (sessionStorage.model) {
 			const model = JSON.parse(sessionStorage.model);
-			console.log(model);
 			sessionStorage.removeItem('model');
+
+			console.log(model);
+			initModel(model);
 		}
 	});
 </script>
