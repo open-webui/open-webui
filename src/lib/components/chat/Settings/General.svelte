@@ -302,7 +302,7 @@
 					system: system !== '' ? system : undefined,
 					params: {
 						seed: (params.seed !== 0 ? params.seed : undefined) ?? undefined,
-						stop: params.stop !== null ? params.stop.split(',').filter((e) => e) : undefined,
+						stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
 						temperature: params.temperature !== '' ? params.temperature : undefined,
 						frequency_penalty:
 							params.frequency_penalty !== '' ? params.frequency_penalty : undefined,

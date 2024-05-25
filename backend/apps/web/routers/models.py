@@ -53,7 +53,7 @@ async def add_new_model(
 ############################
 
 
-@router.get("/{id}", response_model=Optional[ModelModel])
+@router.get("/", response_model=Optional[ModelModel])
 async def get_model_by_id(id: str, user=Depends(get_verified_user)):
     model = Models.get_model_by_id(id)
 
@@ -71,7 +71,7 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
 ############################
 
 
-@router.post("/{id}/update", response_model=Optional[ModelModel])
+@router.post("/update", response_model=Optional[ModelModel])
 async def update_model_by_id(
     request: Request, id: str, form_data: ModelForm, user=Depends(get_admin_user)
 ):
@@ -102,7 +102,7 @@ async def update_model_by_id(
 ############################
 
 
-@router.delete("/{id}/delete", response_model=bool)
+@router.delete("/delete", response_model=bool)
 async def delete_model_by_id(id: str, user=Depends(get_admin_user)):
     result = Models.delete_model_by_id(id)
     return result

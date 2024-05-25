@@ -63,7 +63,10 @@ export const getModelInfos = async (token: string = '') => {
 export const getModelById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/${id}`, {
+	const url = new URL(`${WEBUI_API_BASE_URL}/models`);
+	url.searchParams.append('id', id);
+
+	const res = await fetch(url.toString(), {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -95,7 +98,10 @@ export const getModelById = async (token: string, id: string) => {
 export const updateModelById = async (token: string, id: string, model: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/${id}/update`, {
+	const url = new URL(`${WEBUI_API_BASE_URL}/models/update`);
+	url.searchParams.append('id', id);
+
+	const res = await fetch(url.toString(), {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -128,7 +134,10 @@ export const updateModelById = async (token: string, id: string, model: object) 
 export const deleteModelById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/${id}/delete`, {
+	const url = new URL(`${WEBUI_API_BASE_URL}/models/delete`);
+	url.searchParams.append('id', id);
+
+	const res = await fetch(url.toString(), {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
