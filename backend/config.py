@@ -27,6 +27,8 @@ from constants import ERROR_MESSAGES
 BACKEND_DIR = Path(__file__).parent  # the path containing this file
 BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
 
+print(BASE_DIR)
+
 try:
     from dotenv import load_dotenv, find_dotenv
 
@@ -121,7 +123,9 @@ def parse_section(section):
 
 
 try:
-    changelog_content = (BASE_DIR / "CHANGELOG.md").read_text()
+    with open(BASE_DIR / "CHANGELOG.md", "r") as file:
+        changelog_content = file.read()
+
 except:
     changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
 
