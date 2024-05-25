@@ -24,6 +24,9 @@
 	let digest = '';
 	let pullProgress = null;
 
+	let showAdvanced = false;
+	let showPreview = false;
+
 	// ///////////
 	// model
 	// ///////////
@@ -39,8 +42,12 @@
 			content: '',
 			suggestion_prompts: []
 		},
-		params: {}
+		params: {
+			system: ''
+		}
 	};
+
+	let params = {};
 
 	const updateHandler = async () => {
 		loading = true;
@@ -74,6 +81,11 @@
 						)
 					)
 				};
+
+				if (model.preset && model.owned_by === 'ollama' && !info.base_model_id.includes(':')) {
+					info.base_model_id = `${info.base_model_id}:latest`;
+				}
+
 				console.log(model);
 			} else {
 				goto('/workspace/models');
@@ -244,8 +256,30 @@
 				</div>
 			</div>
 
+			{#if model.preset}
+				<div class="my-2">
+					<div class=" text-sm font-semibold mb-2">{$i18n.t('Base Model (From)')}</div>
+
+					<div>
+						<select
+							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
+							placeholder="Select a base model (e.g. llama3, gpt-4o)"
+							bind:value={info.base_model_id}
+							required
+						>
+							<option value={null} class=" placeholder:text-gray-500"
+								>{$i18n.t('Select a base model')}</option
+							>
+							{#each $models.filter((m) => m.id !== model.id) as model}
+								<option value={model.id}>{model.name}</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+			{/if}
+
 			<div class="my-2">
-				<div class=" text-sm font-semibold mb-2">{$i18n.t('description')}*</div>
+				<div class=" text-sm font-semibold mb-2">{$i18n.t('Description')}*</div>
 
 				<div>
 					<input
@@ -259,23 +293,49 @@
 
 			<div class="my-2">
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-sm font-semibold">{$i18n.t('Model')}</div>
+					<div class=" self-center text-sm font-semibold">{$i18n.t('Model Params')}</div>
 				</div>
 
 				<!-- <div class=" text-sm font-semibold mb-2"></div> -->
 
 				<div class="mt-2">
-					<div class=" text-xs font-semibold mb-2">{$i18n.t('Params')}*</div>
-
-					<div>
-						<!-- <textarea
-							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-							placeholder={`FROM llama2\nPARAMETER temperature 1\nSYSTEM """\nYou are Mario from Super Mario Bros, acting as an assistant.\n"""`}
-							rows="6"
-							bind:value={content}
-							required
-						/> -->
+					<div class="my-1">
+						<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
+						<div>
+							<textarea
+								class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg -mb-1"
+								placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+								rows="4"
+								bind:value={info.params.system}
+							/>
+						</div>
 					</div>
+
+					<div class="flex w-full justify-between">
+						<div class=" self-center text-sm font-semibold">
+							{$i18n.t('Advanced Params')}
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							type="button"
+							on:click={() => {
+								showAdvanced = !showAdvanced;
+							}}
+						>
+							{#if showAdvanced}
+								<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+							{/if}
+						</button>
+					</div>
+
+					{#if showAdvanced}
+						<div class="my-2">
+							<AdvancedParams bind:params />
+						</div>
+					{/if}
 				</div>
 			</div>
 
@@ -338,6 +398,38 @@
 						</div>
 					{/each}
 				</div>
+			</div>
+
+			<div class="my-2 text-gray-500">
+				<div class="flex w-full justify-between mb-2">
+					<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						type="button"
+						on:click={() => {
+							showPreview = !showPreview;
+						}}
+					>
+						{#if showPreview}
+							<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+						{/if}
+					</button>
+				</div>
+
+				{#if showPreview}
+					<div>
+						<textarea
+							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
+							rows="10"
+							value={JSON.stringify(info, null, 2)}
+							disabled
+							readonly
+						/>
+					</div>
+				{/if}
 			</div>
 
 			{#if pullProgress !== null}

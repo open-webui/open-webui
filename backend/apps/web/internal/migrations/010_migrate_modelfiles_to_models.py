@@ -70,7 +70,7 @@ def migrate_modelfile_to_model(migrator: Migrator, database: pw.Database):
 
         # Insert the processed data into the 'model' table
         Model.create(
-            id=modelfile.tag_name,
+            id=f"ollama-{modelfile.tag_name}",
             user_id=modelfile.user_id,
             base_model_id=info.get("base_model_id"),
             name=modelfile.modelfile.get("title"),

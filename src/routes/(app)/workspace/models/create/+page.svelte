@@ -39,7 +39,7 @@
 	let model = '';
 	let system = '';
 	let template = '';
-	let options = {
+	let params = {
 		// Advanced
 		seed: 0,
 		stop: '',
@@ -63,19 +63,19 @@
 	$: if (!raw) {
 		content = `FROM ${model}
 ${template !== '' ? `TEMPLATE """${template}"""` : ''}
-${options.seed !== 0 ? `PARAMETER seed ${options.seed}` : ''}
-${options.stop !== '' ? `PARAMETER stop ${options.stop}` : ''}
-${options.temperature !== '' ? `PARAMETER temperature ${options.temperature}` : ''}
-${options.repeat_penalty !== '' ? `PARAMETER repeat_penalty ${options.repeat_penalty}` : ''}
-${options.repeat_last_n !== '' ? `PARAMETER repeat_last_n ${options.repeat_last_n}` : ''}
-${options.mirostat !== '' ? `PARAMETER mirostat ${options.mirostat}` : ''}
-${options.mirostat_eta !== '' ? `PARAMETER mirostat_eta ${options.mirostat_eta}` : ''}
-${options.mirostat_tau !== '' ? `PARAMETER mirostat_tau ${options.mirostat_tau}` : ''}
-${options.top_k !== '' ? `PARAMETER top_k ${options.top_k}` : ''}
-${options.top_p !== '' ? `PARAMETER top_p ${options.top_p}` : ''}
-${options.tfs_z !== '' ? `PARAMETER tfs_z ${options.tfs_z}` : ''}
-${options.num_ctx !== '' ? `PARAMETER num_ctx ${options.num_ctx}` : ''}
-${options.num_predict !== '' ? `PARAMETER num_predict ${options.num_predict}` : ''}
+${params.seed !== 0 ? `PARAMETER seed ${params.seed}` : ''}
+${params.stop !== '' ? `PARAMETER stop ${params.stop}` : ''}
+${params.temperature !== '' ? `PARAMETER temperature ${params.temperature}` : ''}
+${params.repeat_penalty !== '' ? `PARAMETER repeat_penalty ${params.repeat_penalty}` : ''}
+${params.repeat_last_n !== '' ? `PARAMETER repeat_last_n ${params.repeat_last_n}` : ''}
+${params.mirostat !== '' ? `PARAMETER mirostat ${params.mirostat}` : ''}
+${params.mirostat_eta !== '' ? `PARAMETER mirostat_eta ${params.mirostat_eta}` : ''}
+${params.mirostat_tau !== '' ? `PARAMETER mirostat_tau ${params.mirostat_tau}` : ''}
+${params.top_k !== '' ? `PARAMETER top_k ${params.top_k}` : ''}
+${params.top_p !== '' ? `PARAMETER top_p ${params.top_p}` : ''}
+${params.tfs_z !== '' ? `PARAMETER tfs_z ${params.tfs_z}` : ''}
+${params.num_ctx !== '' ? `PARAMETER num_ctx ${params.num_ctx}` : ''}
+${params.num_predict !== '' ? `PARAMETER num_predict ${params.num_predict}` : ''}
 SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 	}
 
@@ -583,7 +583,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 						<div class=" text-xs font-semibold mb-2">{$i18n.t('Parameters')}</div>
 
 						<div>
-							<AdvancedParams bind:options />
+							<AdvancedParams bind:params />
 						</div>
 					</div>
 				{/if}

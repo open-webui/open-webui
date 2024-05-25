@@ -11,7 +11,7 @@
 	let requestFormat = '';
 	let keepAlive = null;
 
-	let options = {
+	let params = {
 		// Advanced
 		seed: 0,
 		temperature: '',
@@ -44,14 +44,14 @@
 		requestFormat = settings.requestFormat ?? '';
 		keepAlive = settings.keepAlive ?? null;
 
-		options.seed = settings.seed ?? 0;
-		options.temperature = settings.temperature ?? '';
-		options.repeat_penalty = settings.repeat_penalty ?? '';
-		options.top_k = settings.top_k ?? '';
-		options.top_p = settings.top_p ?? '';
-		options.num_ctx = settings.num_ctx ?? '';
-		options = { ...options, ...settings.options };
-		options.stop = (settings?.options?.stop ?? []).join(',');
+		params.seed = settings.seed ?? 0;
+		params.temperature = settings.temperature ?? '';
+		params.repeat_penalty = settings.repeat_penalty ?? '';
+		params.top_k = settings.top_k ?? '';
+		params.top_p = settings.top_p ?? '';
+		params.num_ctx = settings.num_ctx ?? '';
+		params = { ...params, ...settings.params };
+		params.stop = (settings?.params?.stop ?? []).join(',');
 	});
 </script>
 
@@ -59,7 +59,7 @@
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
 		<div class=" text-sm font-medium">{$i18n.t('Parameters')}</div>
 
-		<AdvancedParams bind:options />
+		<AdvancedParams bind:params />
 		<hr class=" dark:border-gray-700" />
 
 		<div class=" py-1 w-full justify-between">
@@ -128,20 +128,20 @@
 			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			on:click={() => {
 				saveSettings({
-					options: {
-						seed: (options.seed !== 0 ? options.seed : undefined) ?? undefined,
-						stop: options.stop !== '' ? options.stop.split(',').filter((e) => e) : undefined,
-						temperature: options.temperature !== '' ? options.temperature : undefined,
-						repeat_penalty: options.repeat_penalty !== '' ? options.repeat_penalty : undefined,
-						repeat_last_n: options.repeat_last_n !== '' ? options.repeat_last_n : undefined,
-						mirostat: options.mirostat !== '' ? options.mirostat : undefined,
-						mirostat_eta: options.mirostat_eta !== '' ? options.mirostat_eta : undefined,
-						mirostat_tau: options.mirostat_tau !== '' ? options.mirostat_tau : undefined,
-						top_k: options.top_k !== '' ? options.top_k : undefined,
-						top_p: options.top_p !== '' ? options.top_p : undefined,
-						tfs_z: options.tfs_z !== '' ? options.tfs_z : undefined,
-						num_ctx: options.num_ctx !== '' ? options.num_ctx : undefined,
-						num_predict: options.num_predict !== '' ? options.num_predict : undefined
+					params: {
+						seed: (params.seed !== 0 ? params.seed : undefined) ?? undefined,
+						stop: params.stop !== '' ? params.stop.split(',').filter((e) => e) : undefined,
+						temperature: params.temperature !== '' ? params.temperature : undefined,
+						repeat_penalty: params.repeat_penalty !== '' ? params.repeat_penalty : undefined,
+						repeat_last_n: params.repeat_last_n !== '' ? params.repeat_last_n : undefined,
+						mirostat: params.mirostat !== '' ? params.mirostat : undefined,
+						mirostat_eta: params.mirostat_eta !== '' ? params.mirostat_eta : undefined,
+						mirostat_tau: params.mirostat_tau !== '' ? params.mirostat_tau : undefined,
+						top_k: params.top_k !== '' ? params.top_k : undefined,
+						top_p: params.top_p !== '' ? params.top_p : undefined,
+						tfs_z: params.tfs_z !== '' ? params.tfs_z : undefined,
+						num_ctx: params.num_ctx !== '' ? params.num_ctx : undefined,
+						num_predict: params.num_predict !== '' ? params.num_predict : undefined
 					},
 					keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined
 				});
