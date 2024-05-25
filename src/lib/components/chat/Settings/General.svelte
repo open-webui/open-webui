@@ -45,7 +45,7 @@
 		// Advanced
 		seed: 0,
 		temperature: '',
-		repeat_penalty: '',
+		frequency_penalty: '',
 		repeat_last_n: '',
 		mirostat: '',
 		mirostat_eta: '',
@@ -82,7 +82,7 @@
 
 		params.seed = settings.seed ?? 0;
 		params.temperature = settings.temperature ?? '';
-		params.repeat_penalty = settings.repeat_penalty ?? '';
+		params.frequency_penalty = settings.frequency_penalty ?? '';
 		params.top_k = settings.top_k ?? '';
 		params.top_p = settings.top_p ?? '';
 		params.num_ctx = settings.num_ctx ?? '';
@@ -304,7 +304,8 @@
 						seed: (params.seed !== 0 ? params.seed : undefined) ?? undefined,
 						stop: params.stop !== '' ? params.stop.split(',').filter((e) => e) : undefined,
 						temperature: params.temperature !== '' ? params.temperature : undefined,
-						repeat_penalty: params.repeat_penalty !== '' ? params.repeat_penalty : undefined,
+						frequency_penalty:
+							params.frequency_penalty !== '' ? params.frequency_penalty : undefined,
 						repeat_last_n: params.repeat_last_n !== '' ? params.repeat_last_n : undefined,
 						mirostat: params.mirostat !== '' ? params.mirostat : undefined,
 						mirostat_eta: params.mirostat_eta !== '' ? params.mirostat_eta : undefined,

@@ -10,7 +10,7 @@
 		seed: 0,
 		stop: '',
 		temperature: '',
-		repeat_penalty: '',
+		frequency_penalty: '',
 		repeat_last_n: '',
 		mirostat: '',
 		mirostat_eta: '',
@@ -379,16 +379,16 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Repeat Penalty')}</div>
+			<div class=" self-center text-xs font-medium">{$i18n.t('Frequencey Penalty')}</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
 				type="button"
 				on:click={() => {
-					params.repeat_penalty = (params?.repeat_penalty ?? '') === '' ? 1.1 : '';
+					params.frequency_penalty = (params?.frequency_penalty ?? '') === '' ? 1.1 : '';
 				}}
 			>
-				{#if (params?.repeat_penalty ?? '') === ''}
+				{#if (params?.frequency_penalty ?? '') === ''}
 					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 				{:else}
 					<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
@@ -396,7 +396,7 @@
 			</button>
 		</div>
 
-		{#if (params?.repeat_penalty ?? '') !== ''}
+		{#if (params?.frequency_penalty ?? '') !== ''}
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
@@ -405,13 +405,13 @@
 						min="0"
 						max="2"
 						step="0.05"
-						bind:value={params.repeat_penalty}
+						bind:value={params.frequency_penalty}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
 					/>
 				</div>
 				<div>
 					<input
-						bind:value={params.repeat_penalty}
+						bind:value={params.frequency_penalty}
 						type="number"
 						class=" bg-transparent text-center w-14"
 						min="0"

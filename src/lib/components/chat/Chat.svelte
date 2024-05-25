@@ -480,7 +480,8 @@
 								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
 						  )
 						: undefined,
-				num_predict: $settings?.params?.max_tokens ?? undefined
+				num_predict: $settings?.params?.max_tokens ?? undefined,
+				repeat_penalty: $settings?.params?.frequency_penalty ?? undefined
 			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
@@ -727,7 +728,7 @@
 							: undefined,
 					temperature: $settings?.params?.temperature ?? undefined,
 					top_p: $settings?.params?.top_p ?? undefined,
-					frequency_penalty: $settings?.params?.repeat_penalty ?? undefined,
+					frequency_penalty: $settings?.params?.frequency_penalty ?? undefined,
 					max_tokens: $settings?.params?.max_tokens ?? undefined,
 					docs: docs.length > 0 ? docs : undefined,
 					citations: docs.length > 0
