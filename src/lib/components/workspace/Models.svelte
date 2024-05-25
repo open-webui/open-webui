@@ -20,27 +20,23 @@
 	let modelfilesImportInputElement: HTMLInputElement;
 
 	const deleteModelHandler = async (model) => {
-		if (model?.info?.base_model_id) {
-			const res = await deleteModelById(localStorage.token, model.id);
-
-			if (res) {
-				toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
-			}
-			await models.set(await getModels(localStorage.token));
-		} else if (model?.owned_by === 'ollama') {
-			const res = await deleteModel(localStorage.token, model.id);
-
-			if (res) {
-				toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
-			}
-			await models.set(await getModels(localStorage.token));
-		} else {
+		console.log(model.info);
+		if (!model?.info) {
 			toast.error(
-				$i18n.t('{{ owner }}: You cannot delete this model', {
+				$i18n.t('{{ owner }}: You cannot delete a base model', {
 					owner: model.owned_by.toUpperCase()
 				})
 			);
+			return null;
 		}
+
+		const res = await deleteModelById(localStorage.token, model.id);
+
+		if (res) {
+			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
+		}
+
+		await models.set(await getModels(localStorage.token));
 	};
 
 	const cloneModelHandler = async (model) => {
