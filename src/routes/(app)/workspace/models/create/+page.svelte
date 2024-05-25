@@ -95,9 +95,11 @@
 		success = false;
 	};
 
-	const initModel = (model) => {
-		id = model.id;
+	const initModel = async (model) => {
 		name = model.name;
+		await tick();
+
+		id = model.id;
 
 		params = { ...params, ...model?.info?.params };
 		capabilities = { ...capabilities, ...(model?.info?.meta?.capabilities ?? {}) };
