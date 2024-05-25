@@ -44,8 +44,7 @@
 		meta: {
 			profile_image_url: '/favicon.png',
 			description: '',
-			content: '',
-			suggestion_prompts: []
+			suggestion_prompts: null
 		},
 		params: {
 			system: ''
@@ -366,64 +365,93 @@
 			</div>
 
 			<div class="my-2">
-				<div class="flex w-full justify-between mb-2">
-					<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt suggestions')}</div>
+				<div class="flex w-full justify-between items-center">
+					<div class="flex w-full justify-between items-center">
+						<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt suggestions')}</div>
 
-					<button
-						class="p-1 px-3 text-xs flex rounded transition"
-						type="button"
-						on:click={() => {
-							if (
-								info.meta.suggestion_prompts.length === 0 ||
-								info.meta.suggestion_prompts.at(-1).content !== ''
-							) {
-								info.meta.suggestion_prompts = [...info.meta.suggestion_prompts, { content: '' }];
-							}
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
+						<button
+							class="p-1 text-xs flex rounded transition"
+							type="button"
+							on:click={() => {
+								if (info.meta.suggestion_prompts === null) {
+									info.meta.suggestion_prompts = [{ content: '' }];
+								} else {
+									info.meta.suggestion_prompts = null;
+								}
+							}}
 						>
-							<path
-								d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-							/>
-						</svg>
-					</button>
-				</div>
-				<div class="flex flex-col space-y-1">
-					{#each info.meta.suggestion_prompts as prompt, promptIdx}
-						<div class=" flex border dark:border-gray-600 rounded-lg">
-							<input
-								class="px-3 py-1.5 text-sm w-full bg-transparent outline-none border-r dark:border-gray-600"
-								placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
-								bind:value={prompt.content}
-							/>
+							{#if info.meta.suggestion_prompts === null}
+								<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+							{/if}
+						</button>
+					</div>
 
-							<button
-								class="px-2"
-								type="button"
-								on:click={() => {
-									info.meta.suggestion_prompts.splice(promptIdx, 1);
-									info.meta.suggestion_prompts = info.meta.suggestion_prompts;
-								}}
+					{#if info.meta.suggestion_prompts !== null}
+						<button
+							class="p-1 px-2 text-xs flex rounded transition"
+							type="button"
+							on:click={() => {
+								if (
+									info.meta.suggestion_prompts.length === 0 ||
+									info.meta.suggestion_prompts.at(-1).content !== ''
+								) {
+									info.meta.suggestion_prompts = [...info.meta.suggestion_prompts, { content: '' }];
+								}
+							}}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="w-4 h-4"
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="w-4 h-4"
-								>
-									<path
-										d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-									/>
-								</svg>
-							</button>
-						</div>
-					{/each}
+								<path
+									d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+								/>
+							</svg>
+						</button>
+					{/if}
 				</div>
+
+				{#if info.meta.suggestion_prompts}
+					<div class="flex flex-col space-y-1 mt-2">
+						{#if info.meta.suggestion_prompts.length > 0}
+							{#each info.meta.suggestion_prompts as prompt, promptIdx}
+								<div class=" flex border dark:border-gray-600 rounded-lg">
+									<input
+										class="px-3 py-1.5 text-sm w-full bg-transparent outline-none border-r dark:border-gray-600"
+										placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
+										bind:value={prompt.content}
+									/>
+
+									<button
+										class="px-2"
+										type="button"
+										on:click={() => {
+											info.meta.suggestion_prompts.splice(promptIdx, 1);
+											info.meta.suggestion_prompts = info.meta.suggestion_prompts;
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+											/>
+										</svg>
+									</button>
+								</div>
+							{/each}
+						{:else}
+							<div class="text-xs text-center">No suggestion prompts</div>
+						{/if}
+					</div>
+				{/if}
 			</div>
 
 			<div class="my-2">
