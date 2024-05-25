@@ -11,8 +11,9 @@ import logging
 
 from apps.web.models.users import UserModel, UserUpdateForm, UserRoleUpdateForm, Users
 from apps.web.models.auths import Auths
+from apps.web.models.chats import Chats
 
-from utils.utils import get_current_user, get_password_hash, get_admin_user
+from utils.utils import get_verified_user, get_password_hash, get_admin_user
 from constants import ERROR_MESSAGES
 
 from config import SRC_LOG_LEVELS
@@ -39,15 +40,15 @@ async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)
 
 @router.get("/permissions/user")
 async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
-    return request.app.state.USER_PERMISSIONS
+    return request.app.state.config.USER_PERMISSIONS
 
 
 @router.post("/permissions/user")
 async def update_user_permissions(
     request: Request, form_data: dict, user=Depends(get_admin_user)
 ):
-    request.app.state.USER_PERMISSIONS = form_data
-    return request.app.state.USER_PERMISSIONS
+    request.app.state.config.USER_PERMISSIONS = form_data
+    return request.app.state.config.USER_PERMISSIONS
 
 
 ############################
@@ -65,6 +66,41 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
         status_code=status.HTTP_403_FORBIDDEN,
         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
     )
+
+
+############################
+# GetUserById
+############################
+
+
+class UserResponse(BaseModel):
+    name: str
+    profile_image_url: str
+
+
+@router.get("/{user_id}", response_model=UserResponse)
+async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
+
+    if user_id.startswith("shared-"):
+        chat_id = user_id.replace("shared-", "")
+        chat = Chats.get_chat_by_id(chat_id)
+        if chat:
+            user_id = chat.user_id
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.USER_NOT_FOUND,
+            )
+
+    user = Users.get_user_by_id(user_id)
+
+    if user:
+        return UserResponse(name=user.name, profile_image_url=user.profile_image_url)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
 
 
 ############################

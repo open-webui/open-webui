@@ -1,4 +1,4 @@
-import { dev } from '$app/environment';
+import { browser, dev } from '$app/environment';
 // import { version } from '../../package.json';
 
 export const APP_NAME = 'OWL';
@@ -86,7 +86,9 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 	'csv',
 	'txt',
 	'xls',
-	'xlsx'
+	'xlsx',
+	'pptx',
+	'ppt'
 ];
 
 // Source: https://kit.svelte.dev/docs/modules#$env-static-public

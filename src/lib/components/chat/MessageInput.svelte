@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { modelfiles, settings, showSidebar } from '$lib/stores';
+	import { mobile, modelfiles, settings, showSidebar } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
@@ -327,7 +327,6 @@
 	};
 
 	onMount(() => {
-		console.log(document.getElementById('sidebar'));
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
@@ -358,7 +357,7 @@
 				if (inputFiles && inputFiles.length > 0) {
 					inputFiles.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
-						if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+						if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
 							let reader = new FileReader();
 							reader.onload = (event) => {
 								files = [
@@ -412,7 +411,7 @@
 {#if dragged}
 	<div
 		class="fixed {$showSidebar
-			? 'left-0 lg:left-[260px] lg:w-[calc(100%-260px)]'
+			? 'left-0 md:left-[260px] md:w-[calc(100%-260px)]'
 			: 'left-0'}  w-full h-full flex z-50 touch-none pointer-events-none"
 		id="dropzone"
 		role="region"
@@ -428,9 +427,9 @@
 	</div>
 {/if}
 
-<div class="fixed bottom-0 {$showSidebar ? 'left-0 lg:left-[260px]' : 'left-0'} right-0">
+<div class="fixed bottom-0 {$showSidebar ? 'left-0 md:left-[260px]' : 'left-0'} right-0">
 	<div class="w-full">
-		<div class="px-2.5 lg:px-16 -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
+		<div class="px-2.5 md:px-16 -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div class="flex flex-col max-w-5xl w-full">
 				<div class="relative">
 					{#if autoScroll === false && messages.length > 0}
@@ -506,6 +505,7 @@
 						>
 							<div class="flex items-center gap-2 text-sm dark:text-gray-500">
 								<img
+									crossorigin="anonymous"
 									alt="model profile"
 									class="size-5 max-w-[28px] object-cover rounded-full"
 									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedModel.id)
@@ -535,7 +535,7 @@
 		</div>
 
 		<div class="bg-white dark:bg-gray-900">
-			<div class="max-w-6xl px-2.5 lg:px-16 mx-auto inset-x-0">
+			<div class="max-w-6xl px-2.5 md:px-16 mx-auto inset-x-0">
 				<div class=" pb-2">
 					<input
 						bind:this={filesInputElement}
@@ -547,7 +547,9 @@
 							if (inputFiles && inputFiles.length > 0) {
 								const _inputFiles = Array.from(inputFiles);
 								_inputFiles.forEach((file) => {
-									if (['image/gif', 'image/jpeg', 'image/png'].includes(file['type'])) {
+									if (
+										['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])
+									) {
 										let reader = new FileReader();
 										reader.onload = (event) => {
 											files = [
@@ -584,7 +586,8 @@
 						}}
 					/>
 					<form
-						class=" flex flex-col relative w-full rounded-3xl px-1.5 border border-gray-100 dark:border-gray-850 bg-white dark:bg-gray-900 dark:text-gray-100"
+						dir={$settings?.chatDirection ?? 'LTR'}
+						class=" flex flex-col relative w-full rounded-3xl px-1.5 bg-gray-50 dark:bg-gray-850 dark:text-gray-100"
 						on:submit|preventDefault={() => {
 							submitPrompt(prompt, user);
 						}}
@@ -754,7 +757,7 @@
 							<textarea
 								id="chat-textarea"
 								bind:this={chatTextAreaElement}
-								class="scrollbar-none dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
+								class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
 									? ''
 									: ' pl-4'} rounded-xl resize-none h-[48px]"
 								placeholder={chatInputPlaceholder !== ''
@@ -765,7 +768,7 @@
 								bind:value={prompt}
 								on:keypress={(e) => {
 									if (
-										window.innerWidth > 1024 ||
+										!$mobile ||
 										!(
 											'ontouchstart' in window ||
 											navigator.maxTouchPoints > 0 ||
@@ -995,7 +998,7 @@
 											id="send-message-button"
 											class="{prompt !== ''
 												? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-												: 'text-white bg-gray-100 dark:text-gray-900 dark:bg-gray-800 disabled'} transition rounded-full p-1.5 self-center"
+												: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 											type="submit"
 											disabled={prompt === ''}
 										>
@@ -1046,12 +1049,12 @@
 </div>
 
 <style>
-	.scrollbar-none:active::-webkit-scrollbar-thumb,
-	.scrollbar-none:focus::-webkit-scrollbar-thumb,
-	.scrollbar-none:hover::-webkit-scrollbar-thumb {
+	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
 		visibility: visible;
 	}
-	.scrollbar-none::-webkit-scrollbar-thumb {
+	.scrollbar-hidden::-webkit-scrollbar-thumb {
 		visibility: hidden;
 	}
 </style>

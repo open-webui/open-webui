@@ -21,11 +21,13 @@ from utils.utils import (
 )
 from config import (
     SRC_LOG_LEVELS,
+    ENABLE_OPENAI_API,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     CACHE_DIR,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
+    AppConfig,
 )
 from typing import List, Optional
 
@@ -45,11 +47,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
-app.state.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
-app.state.OPENAI_API_KEYS = OPENAI_API_KEYS
+app.state.config = AppConfig()
+
+app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
+app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+
+
+app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
+app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
+app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 
 app.state.MODELS = {}
 
@@ -65,6 +72,21 @@ async def check_url(request: Request, call_next):
     return response
 
 
+@app.get("/config")
+async def get_config(user=Depends(get_admin_user)):
+    return {"ENABLE_OPENAI_API": app.state.config.ENABLE_OPENAI_API}
+
+
+class OpenAIConfigForm(BaseModel):
+    enable_openai_api: Optional[bool] = None
+
+
+@app.post("/config/update")
+async def update_config(form_data: OpenAIConfigForm, user=Depends(get_admin_user)):
+    app.state.config.ENABLE_OPENAI_API = form_data.enable_openai_api
+    return {"ENABLE_OPENAI_API": app.state.config.ENABLE_OPENAI_API}
+
+
 class UrlsUpdateForm(BaseModel):
     urls: List[str]
 
@@ -75,32 +97,32 @@ class KeysUpdateForm(BaseModel):
 
 @app.get("/urls")
 async def get_openai_urls(user=Depends(get_admin_user)):
-    return {"OPENAI_API_BASE_URLS": app.state.OPENAI_API_BASE_URLS}
+    return {"OPENAI_API_BASE_URLS": app.state.config.OPENAI_API_BASE_URLS}
 
 
 @app.post("/urls/update")
 async def update_openai_urls(form_data: UrlsUpdateForm, user=Depends(get_admin_user)):
     await get_all_models()
-    app.state.OPENAI_API_BASE_URLS = form_data.urls
-    return {"OPENAI_API_BASE_URLS": app.state.OPENAI_API_BASE_URLS}
+    app.state.config.OPENAI_API_BASE_URLS = form_data.urls
+    return {"OPENAI_API_BASE_URLS": app.state.config.OPENAI_API_BASE_URLS}
 
 
 @app.get("/keys")
 async def get_openai_keys(user=Depends(get_admin_user)):
-    return {"OPENAI_API_KEYS": app.state.OPENAI_API_KEYS}
+    return {"OPENAI_API_KEYS": app.state.config.OPENAI_API_KEYS}
 
 
 @app.post("/keys/update")
 async def update_openai_key(form_data: KeysUpdateForm, user=Depends(get_admin_user)):
-    app.state.OPENAI_API_KEYS = form_data.keys
-    return {"OPENAI_API_KEYS": app.state.OPENAI_API_KEYS}
+    app.state.config.OPENAI_API_KEYS = form_data.keys
+    return {"OPENAI_API_KEYS": app.state.config.OPENAI_API_KEYS}
 
 
 @app.post("/audio/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
     idx = None
     try:
-        idx = app.state.OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
+        idx = app.state.config.OPENAI_API_BASE_URLS.index("https://api.openai.com/v1")
         body = await request.body()
         name = hashlib.sha256(body).hexdigest()
 
@@ -114,13 +136,15 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             return FileResponse(file_path)
 
         headers = {}
-        headers["Authorization"] = f"Bearer {app.state.OPENAI_API_KEYS[idx]}"
+        headers["Authorization"] = f"Bearer {app.state.config.OPENAI_API_KEYS[idx]}"
         headers["Content-Type"] = "application/json"
-
+        if "openrouter.ai" in app.state.config.OPENAI_API_BASE_URLS[idx]:
+            headers["HTTP-Referer"] = "https://openwebui.com/"
+            headers["X-Title"] = "Open WebUI"
         r = None
         try:
             r = requests.post(
-                url=f"{app.state.OPENAI_API_BASE_URLS[idx]}/audio/speech",
+                url=f"{app.state.config.OPENAI_API_BASE_URLS[idx]}/audio/speech",
                 data=body,
                 headers=headers,
                 stream=True,
@@ -159,11 +183,15 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
 
 async def fetch_url(url, key):
+    timeout = aiohttp.ClientTimeout(total=5)
     try:
-        headers = {"Authorization": f"Bearer {key}"}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                return await response.json()
+        if key != "":
+            headers = {"Authorization": f"Bearer {key}"}
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(url, headers=headers) as response:
+                    return await response.json()
+        else:
+            return None
     except Exception as e:
         # Handle connection error here
         log.error(f"Connection error: {e}")
@@ -180,7 +208,8 @@ def merge_models_lists(model_lists):
                 [
                     {**model, "urlIdx": idx}
                     for model in models
-                    if "api.openai.com" not in app.state.OPENAI_API_BASE_URLS[idx]
+                    if "api.openai.com"
+                    not in app.state.config.OPENAI_API_BASE_URLS[idx]
                     or "gpt" in model["id"]
                 ]
             )
@@ -191,12 +220,15 @@ def merge_models_lists(model_lists):
 async def get_all_models():
     log.info("get_all_models()")
 
-    if len(app.state.OPENAI_API_KEYS) == 1 and app.state.OPENAI_API_KEYS[0] == "":
+    if (
+        len(app.state.config.OPENAI_API_KEYS) == 1
+        and app.state.config.OPENAI_API_KEYS[0] == ""
+    ) or not app.state.config.ENABLE_OPENAI_API:
         models = {"data": []}
     else:
         tasks = [
-            fetch_url(f"{url}/models", app.state.OPENAI_API_KEYS[idx])
-            for idx, url in enumerate(app.state.OPENAI_API_BASE_URLS)
+            fetch_url(f"{url}/models", app.state.config.OPENAI_API_KEYS[idx])
+            for idx, url in enumerate(app.state.config.OPENAI_API_BASE_URLS)
         ]
 
         responses = await asyncio.gather(*tasks)
@@ -228,18 +260,18 @@ async def get_all_models():
 async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_user)):
     if url_idx == None:
         models = await get_all_models()
-        if app.state.ENABLE_MODEL_FILTER:
+        if app.state.config.ENABLE_MODEL_FILTER:
             if user.role == "user":
                 models["data"] = list(
                     filter(
-                        lambda model: model["id"] in app.state.MODEL_FILTER_LIST,
+                        lambda model: model["id"] in app.state.config.MODEL_FILTER_LIST,
                         models["data"],
                     )
                 )
                 return models
         return models
     else:
-        url = app.state.OPENAI_API_BASE_URLS[url_idx]
+        url = app.state.config.OPENAI_API_BASE_URLS[url_idx]
 
         r = None
 
@@ -303,8 +335,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     except json.JSONDecodeError as e:
         log.error("Error loading request body into a dictionary:", e)
 
-    url = app.state.OPENAI_API_BASE_URLS[idx]
-    key = app.state.OPENAI_API_KEYS[idx]
+    url = app.state.config.OPENAI_API_BASE_URLS[idx]
+    key = app.state.config.OPENAI_API_KEYS[idx]
 
     target_url = f"{url}/{path}"
 

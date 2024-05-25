@@ -10,7 +10,7 @@
 
 	import { cancelOllamaRequest, deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 
-	import { user, MODEL_DOWNLOAD_POOL, models } from '$lib/stores';
+	import { user, MODEL_DOWNLOAD_POOL, models, mobile } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, getModels, splitStream } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -25,7 +25,7 @@
 
 	export let items = [{ value: 'mango', label: 'Mango' }];
 
-	export let className = ' w-[32rem]';
+	export let className = 'w-[30rem]';
 
 	let show = false;
 
@@ -36,7 +36,7 @@
 	let ollamaVersion = null;
 
 	$: filteredItems = searchValue
-		? items.filter((item) => item.value.includes(searchValue.toLowerCase()))
+		? items.filter((item) => item.value.toLowerCase().includes(searchValue.toLowerCase()))
 		: items;
 
 	const pullModelHandler = async () => {
@@ -201,10 +201,13 @@
 			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
 		</div>
 	</DropdownMenu.Trigger>
+
 	<DropdownMenu.Content
-		class=" z-40 {className} max-w-[calc(100vw-1rem)] justify-start rounded-lg  bg-white dark:bg-gray-900 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/50  outline-none "
+		class=" z-40 {$mobile
+			? `w-full`
+			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/50  outline-none "
 		transition={flyAndScale}
-		side={'bottom-start'}
+		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={4}
 	>
 		<slot>
@@ -224,11 +227,11 @@
 				<hr class="border-gray-100 dark:border-gray-800" />
 			{/if}
 
-			<div class="px-3 my-2 max-h-72 overflow-y-auto scrollbar-none">
+			<div class="px-3 my-2 max-h-64 overflow-y-auto scrollbar-hidden">
 				{#each filteredItems as item}
 					<button
 						aria-label="model-item"
-						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
 						on:click={() => {
 							value = item.value;
 
@@ -312,7 +315,7 @@
 
 				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user.role === 'admin'}
 					<button
-						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
 						on:click={() => {
 							pullModelHandler();
 						}}
@@ -406,12 +409,12 @@
 </DropdownMenu.Root>
 
 <style>
-	.scrollbar-none:active::-webkit-scrollbar-thumb,
-	.scrollbar-none:focus::-webkit-scrollbar-thumb,
-	.scrollbar-none:hover::-webkit-scrollbar-thumb {
+	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
+	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
 		visibility: visible;
 	}
-	.scrollbar-none::-webkit-scrollbar-thumb {
+	.scrollbar-hidden::-webkit-scrollbar-thumb {
 		visibility: hidden;
 	}
 </style>

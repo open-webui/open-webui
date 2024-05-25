@@ -83,11 +83,31 @@ select {
 	display: none;
 }
 
-.scrollbar-none:active::-webkit-scrollbar-thumb,
-.scrollbar-none:focus::-webkit-scrollbar-thumb,
-.scrollbar-none:hover::-webkit-scrollbar-thumb {
+.scrollbar-hidden:active::-webkit-scrollbar-thumb,
+.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
+.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
 	visibility: visible;
 }
-.scrollbar-none::-webkit-scrollbar-thumb {
+.scrollbar-hidden::-webkit-scrollbar-thumb {
 	visibility: hidden;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+	display: none; /* for Chrome, Safari and Opera */
+}
+
+.scrollbar-none {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+	/* display: none; <- Crashes Chrome on hover */
+	-webkit-appearance: none;
+	margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+}
+
+input[type='number'] {
+	-moz-appearance: textfield; /* Firefox */
 }

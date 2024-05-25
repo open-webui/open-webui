@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from bs4 import BeautifulSoup
 import json
 import markdown
@@ -58,6 +59,7 @@ from config import (
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
+    AppConfig,
 )
 from constants import ERROR_MESSAGES
 
@@ -92,14 +94,39 @@ https://github.com/open-webui/open-webui
 """
 )
 
-app = FastAPI(docs_url="/docs" if ENV == "dev" else None, redoc_url=None)
 
-app.state.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
-app.state.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if ENABLE_LITELLM:
+        asyncio.create_task(start_litellm_background())
+    yield
+    if ENABLE_LITELLM:
+        await shutdown_litellm_background()
 
-app.state.WEBHOOK_URL = WEBHOOK_URL
+
+app = FastAPI(
+    docs_url="/docs" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan
+)
+
+app.state.config = AppConfig()
+app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
+app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
+
+app.state.config.WEBHOOK_URL = WEBHOOK_URL
 
 origins = ["*"]
+
+
+# Custom middleware to add security headers
+# class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+#     async def dispatch(self, request: Request, call_next):
+#         response: Response = await call_next(request)
+#         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+#         response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+#         return response
+
+
+# app.add_middleware(SecurityHeadersMiddleware)
 
 
 class RAGMiddleware(BaseHTTPMiddleware):
@@ -129,12 +156,12 @@ class RAGMiddleware(BaseHTTPMiddleware):
                 data["messages"], citations = rag_messages(
                     docs=data["docs"],
                     messages=data["messages"],
-                    template=rag_app.state.RAG_TEMPLATE,
+                    template=rag_app.state.config.RAG_TEMPLATE,
                     embedding_function=rag_app.state.EMBEDDING_FUNCTION,
-                    k=rag_app.state.TOP_K,
+                    k=rag_app.state.config.TOP_K,
                     reranking_function=rag_app.state.sentence_transformer_rf,
-                    r=rag_app.state.RELEVANCE_THRESHOLD,
-                    hybrid_search=rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
+                    r=rag_app.state.config.RELEVANCE_THRESHOLD,
+                    hybrid_search=rag_app.state.config.ENABLE_RAG_HYBRID_SEARCH,
                 )
                 del data["docs"]
 
@@ -211,21 +238,25 @@ async def check_url(request: Request, call_next):
     return response
 
 
-@app.on_event("startup")
-async def on_startup():
-    if ENABLE_LITELLM:
-        asyncio.create_task(start_litellm_background())
+@app.middleware("http")
+async def update_embedding_function(request: Request, call_next):
+    response = await call_next(request)
+    if "/embedding/update" in request.url.path:
+        webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
+    return response
 
 
-app.mount("/api/v1", webui_app)
 app.mount("/litellm/api", litellm_app)
-
 app.mount("/ollama", ollama_app)
 app.mount("/openai/api", openai_app)
 
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
 app.mount("/rag/api/v1", rag_app)
+
+app.mount("/api/v1", webui_app)
+
+webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
 
 
 @app.get("/api/config")
@@ -243,9 +274,9 @@ async def get_app_config():
         "version": VERSION,
         "auth": WEBUI_AUTH,
         "default_locale": default_locale,
-        "images": images_app.state.ENABLED,
-        "default_models": webui_app.state.DEFAULT_MODELS,
-        "default_prompt_suggestions": webui_app.state.DEFAULT_PROMPT_SUGGESTIONS,
+        "images": images_app.state.config.ENABLED,
+        "default_models": webui_app.state.config.DEFAULT_MODELS,
+        "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
         "trusted_header_auth": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
         "admin_export_enabled": ENABLE_ADMIN_EXPORT,
     }
@@ -254,8 +285,8 @@ async def get_app_config():
 @app.get("/api/config/model/filter")
 async def get_model_filter_config(user=Depends(get_admin_user)):
     return {
-        "enabled": app.state.ENABLE_MODEL_FILTER,
-        "models": app.state.MODEL_FILTER_LIST,
+        "enabled": app.state.config.ENABLE_MODEL_FILTER,
+        "models": app.state.config.MODEL_FILTER_LIST,
     }
 
 
@@ -268,28 +299,28 @@ class ModelFilterConfigForm(BaseModel):
 async def update_model_filter_config(
     form_data: ModelFilterConfigForm, user=Depends(get_admin_user)
 ):
-    app.state.ENABLE_MODEL_FILTER = form_data.enabled
-    app.state.MODEL_FILTER_LIST = form_data.models
+    app.state.config.ENABLE_MODEL_FILTER = form_data.enabled
+    app.state.config.MODEL_FILTER_LIST = form_data.models
 
-    ollama_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
-    ollama_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
+    ollama_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
+    ollama_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
 
-    openai_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
-    openai_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
+    openai_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
+    openai_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
 
-    litellm_app.state.ENABLE_MODEL_FILTER = app.state.ENABLE_MODEL_FILTER
-    litellm_app.state.MODEL_FILTER_LIST = app.state.MODEL_FILTER_LIST
+    litellm_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
+    litellm_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
 
     return {
-        "enabled": app.state.ENABLE_MODEL_FILTER,
-        "models": app.state.MODEL_FILTER_LIST,
+        "enabled": app.state.config.ENABLE_MODEL_FILTER,
+        "models": app.state.config.MODEL_FILTER_LIST,
     }
 
 
 @app.get("/api/webhook")
 async def get_webhook_url(user=Depends(get_admin_user)):
     return {
-        "url": app.state.WEBHOOK_URL,
+        "url": app.state.config.WEBHOOK_URL,
     }
 
 
@@ -299,12 +330,12 @@ class UrlForm(BaseModel):
 
 @app.post("/api/webhook")
 async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
-    app.state.WEBHOOK_URL = form_data.url
+    app.state.config.WEBHOOK_URL = form_data.url
 
-    webui_app.state.WEBHOOK_URL = app.state.WEBHOOK_URL
+    webui_app.state.WEBHOOK_URL = app.state.config.WEBHOOK_URL
 
     return {
-        "url": app.state.WEBHOOK_URL,
+        "url": app.state.config.WEBHOOK_URL,
     }
 
 
@@ -368,6 +399,11 @@ async def get_opensearch_xml():
     return Response(content=xml_content, media_type="application/xml")
 
 
+@app.get("/health")
+async def healthcheck():
+    return {"status": True}
+
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
 
@@ -381,9 +417,3 @@ else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
     )
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    if ENABLE_LITELLM:
-        await shutdown_litellm_background()

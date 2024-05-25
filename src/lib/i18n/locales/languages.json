@@ -48,8 +48,16 @@
 		"title": "French (France)"
 	},
 	{
+		"code": "he-IL",
+		"title": "עברית (Hebrew)"
+	},
+	{
 		"code": "hi-IN",
 		"title": "Hindi (हिंदी)"
+	},
+	{
+		"code": "hr-HR",
+		"title": "Croatian"
 	},
 	{
 		"code": "it-IT",
@@ -72,6 +80,10 @@
 		"title": "Dutch (Netherlands)"
 	},
 	{
+		"code": "pa-IN",
+		"title": "Punjabi (India)"
+	},
+	{
 		"code": "pl-PL",
 		"title": "Polish"
 	},
@@ -90,6 +102,10 @@
 	{
 		"code": "sv-SE",
 		"title": "Swedish"
+	},
+	{
+		"code": "sr-RS",
+		"title": "Serbian (Српски)"
 	},
 	{
 		"code": "tr-TR",
