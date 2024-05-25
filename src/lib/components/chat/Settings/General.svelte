@@ -52,7 +52,7 @@
 		mirostat_tau: '',
 		top_k: '',
 		top_p: '',
-		stop: '',
+		stop: null,
 		tfs_z: '',
 		num_ctx: '',
 		max_tokens: ''
@@ -87,7 +87,7 @@
 		params.top_p = settings.top_p ?? '';
 		params.num_ctx = settings.num_ctx ?? '';
 		params = { ...params, ...settings.params };
-		params.stop = (settings?.params?.stop ?? []).join(',');
+		params.stop = settings?.params?.stop ? (settings?.params?.stop ?? []).join(',') : null;
 	});
 
 	const applyTheme = (_theme: string) => {
@@ -302,7 +302,7 @@
 					system: system !== '' ? system : undefined,
 					params: {
 						seed: (params.seed !== 0 ? params.seed : undefined) ?? undefined,
-						stop: params.stop !== '' ? params.stop.split(',').filter((e) => e) : undefined,
+						stop: params.stop !== null ? params.stop.split(',').filter((e) => e) : undefined,
 						temperature: params.temperature !== '' ? params.temperature : undefined,
 						frequency_penalty:
 							params.frequency_penalty !== '' ? params.frequency_penalty : undefined,

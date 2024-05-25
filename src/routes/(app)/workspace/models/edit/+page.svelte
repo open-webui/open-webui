@@ -63,6 +63,7 @@
 		info.id = id;
 		info.name = name;
 		info.meta.capabilities = capabilities;
+		info.params.stop = params.stop !== null ? params.stop.split(',').filter((s) => s.trim()) : null;
 
 		const res = await updateModelById(localStorage.token, info.id, info);
 
@@ -104,6 +105,7 @@
 				}
 
 				params = { ...params, ...model?.info?.params };
+				params.stop = params?.stop ? (params?.stop ?? []).join(',') : null;
 
 				if (model?.info?.meta?.capabilities) {
 					capabilities = { ...capabilities, ...model?.info?.meta?.capabilities };

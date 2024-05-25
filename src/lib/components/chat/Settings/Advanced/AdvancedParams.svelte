@@ -8,7 +8,7 @@
 	export let params = {
 		// Advanced
 		seed: 0,
-		stop: '',
+		stop: null,
 		temperature: '',
 		frequency_penalty: '',
 		repeat_last_n: '',

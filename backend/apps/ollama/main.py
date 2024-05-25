@@ -920,8 +920,14 @@ async def generate_chat_completion(
             )
             payload["options"]["seed"] = model_info.params.get("seed", None)
 
-            # TODO: add "stop" back in
-            # payload["stop"] = model_info.params.get("stop", None)
+            payload["options"]["stop"] = (
+                [
+                    bytes(stop, "utf-8").decode("unicode_escape")
+                    for stop in model_info.params["stop"]
+                ]
+                if model_info.params.get("stop", None)
+                else None
+            )
 
             payload["options"]["tfs_z"] = model_info.params.get("tfs_z", None)
 
@@ -1076,8 +1082,14 @@ async def generate_openai_chat_completion(
                 "frequency_penalty", None
             )
             payload["seed"] = model_info.params.get("seed", None)
-            # TODO: add "stop" back in
-            # payload["stop"] = model_info.params.get("stop", None)
+            payload["stop"] = (
+                [
+                    bytes(stop, "utf-8").decode("unicode_escape")
+                    for stop in model_info.params["stop"]
+                ]
+                if model_info.params.get("stop", None)
+                else None
+            )
 
         if model_info.params.get("system", None):
             # Check if the payload already has a system message
