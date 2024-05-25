@@ -13,7 +13,6 @@
 	export let models = [];
 
 	export let submitPrompt;
-	export let suggestionPrompts;
 
 	let mounted = false;
 	let selectedModelIdx = 0;

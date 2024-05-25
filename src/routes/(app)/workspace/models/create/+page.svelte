@@ -4,209 +4,88 @@
 	import { goto } from '$app/navigation';
 	import { settings, user, config, modelfiles, models } from '$lib/stores';
 
-	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
-	import { splitStream } from '$lib/utils';
 	import { onMount, tick, getContext } from 'svelte';
-	import { createModel } from '$lib/apis/ollama';
 	import { addNewModel, getModelById, getModelInfos } from '$lib/apis/models';
+	import { getModels } from '$lib/apis';
+
+	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 
 	const i18n = getContext('i18n');
 
-	let loading = false;
-
 	let filesInputElement;
 	let inputFiles;
-	let imageUrl = null;
-	let digest = '';
-	let pullProgress = null;
+
+	let showAdvanced = false;
+	let showPreview = false;
+
+	let loading = false;
 	let success = false;
 
 	// ///////////
-	// Modelfile
+	// Model
 	// ///////////
 
-	let title = '';
-	let tagName = '';
-	let desc = '';
+	let id = '';
+	let name = '';
 
-	let raw = true;
-	let advanced = false;
-
-	// Raw Mode
-	let content = '';
-
-	// Builder Mode
-	let model = '';
-	let system = '';
-	let template = '';
-	let params = {
-		// Advanced
-		seed: 0,
-		stop: '',
-		temperature: '',
-		repeat_penalty: '',
-		repeat_last_n: '',
-		mirostat: '',
-		mirostat_eta: '',
-		mirostat_tau: '',
-		top_k: '',
-		top_p: '',
-		tfs_z: '',
-		num_ctx: '',
-		num_predict: ''
-	};
-
-	let modelfileCreator = null;
-
-	$: tagName = title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}:latest` : '';
-
-	$: if (!raw) {
-		content = `FROM ${model}
-${template !== '' ? `TEMPLATE """${template}"""` : ''}
-${params.seed !== 0 ? `PARAMETER seed ${params.seed}` : ''}
-${params.stop !== '' ? `PARAMETER stop ${params.stop}` : ''}
-${params.temperature !== '' ? `PARAMETER temperature ${params.temperature}` : ''}
-${params.repeat_penalty !== '' ? `PARAMETER repeat_penalty ${params.repeat_penalty}` : ''}
-${params.repeat_last_n !== '' ? `PARAMETER repeat_last_n ${params.repeat_last_n}` : ''}
-${params.mirostat !== '' ? `PARAMETER mirostat ${params.mirostat}` : ''}
-${params.mirostat_eta !== '' ? `PARAMETER mirostat_eta ${params.mirostat_eta}` : ''}
-${params.mirostat_tau !== '' ? `PARAMETER mirostat_tau ${params.mirostat_tau}` : ''}
-${params.top_k !== '' ? `PARAMETER top_k ${params.top_k}` : ''}
-${params.top_p !== '' ? `PARAMETER top_p ${params.top_p}` : ''}
-${params.tfs_z !== '' ? `PARAMETER tfs_z ${params.tfs_z}` : ''}
-${params.num_ctx !== '' ? `PARAMETER num_ctx ${params.num_ctx}` : ''}
-${params.num_predict !== '' ? `PARAMETER num_predict ${params.num_predict}` : ''}
-SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
-	}
-
-	let suggestions = [
-		{
-			content: ''
+	let info = {
+		id: '',
+		base_model_id: null,
+		name: '',
+		meta: {
+			profile_image_url: null,
+			description: '',
+			suggestion_prompts: [
+				{
+					content: ''
+				}
+			]
+		},
+		params: {
+			system: ''
 		}
-	];
-
-	let categories = {
-		character: false,
-		assistant: false,
-		writing: false,
-		productivity: false,
-		programming: false,
-		'data analysis': false,
-		lifestyle: false,
-		education: false,
-		business: false
 	};
 
-	const saveModelfile = async (modelfile) => {
-		await addNewModel(localStorage.token, modelfile);
-		await modelfiles.set(await getModelInfos(localStorage.token));
-	};
+	let params = {};
+
+	$: if (name) {
+		id = name.replace(/\s+/g, '-').toLowerCase();
+	}
 
 	const submitHandler = async () => {
 		loading = true;
 
-		if (Object.keys(categories).filter((category) => categories[category]).length == 0) {
+		info.id = id;
+		info.name = name;
+
+		if ($models.find((m) => m.id === info.id)) {
 			toast.error(
-				'Uh-oh! It looks like you missed selecting a category. Please choose one to complete your modelfile.'
+				`Error: A model with the ID '${info.id}' already exists. Please select a different ID to proceed.`
 			);
 			loading = false;
 			success = false;
 			return success;
 		}
 
-		if (
-			$models.map((model) => model.name).includes(tagName) ||
-			(await getModelById(localStorage.token, tagName).catch(() => false))
-		) {
-			toast.error(
-				`Uh-oh! It looks like you already have a model named '${tagName}'. Please choose a different name to complete your modelfile.`
-			);
-			loading = false;
-			success = false;
-			return success;
-		}
-
-		if (
-			title !== '' &&
-			desc !== '' &&
-			content !== '' &&
-			Object.keys(categories).filter((category) => categories[category]).length > 0 &&
-			!$models.includes(tagName)
-		) {
-			const res = await createModel(localStorage.token, tagName, content);
+		if (info) {
+			// TODO: if profile image url === null, set it to default image '/favicon.png'
+			const res = await addNewModel(localStorage.token, {
+				...info,
+				meta: {
+					...info.meta,
+					profile_image_url: info.meta.profile_image_url ?? '/favicon.png',
+					suggestion_prompts: info.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
+				},
+				params: { ...info.params, ...params }
+			});
 
 			if (res) {
-				const reader = res.body
-					.pipeThrough(new TextDecoderStream())
-					.pipeThrough(splitStream('\n'))
-					.getReader();
-
-				while (true) {
-					const { value, done } = await reader.read();
-					if (done) break;
-
-					try {
-						let lines = value.split('\n');
-
-						for (const line of lines) {
-							if (line !== '') {
-								console.log(line);
-								let data = JSON.parse(line);
-								console.log(data);
-
-								if (data.error) {
-									throw data.error;
-								}
-								if (data.detail) {
-									throw data.detail;
-								}
-
-								if (data.status) {
-									if (
-										!data.digest &&
-										!data.status.includes('writing') &&
-										!data.status.includes('sha256')
-									) {
-										toast.success(data.status);
-
-										if (data.status === 'success') {
-											success = true;
-										}
-									} else {
-										if (data.digest) {
-											digest = data.digest;
-
-											if (data.completed) {
-												pullProgress = Math.round((data.completed / data.total) * 1000) / 10;
-											} else {
-												pullProgress = 100;
-											}
-										}
-									}
-								}
-							}
-						}
-					} catch (error) {
-						console.log(error);
-						toast.error(error);
-					}
-				}
-			}
-
-			if (success) {
-				await saveModelfile({
-					tagName: tagName,
-					imageUrl: imageUrl,
-					title: title,
-					desc: desc,
-					content: content,
-					suggestionPrompts: suggestions.filter((prompt) => prompt.content !== ''),
-					categories: Object.keys(categories).filter((category) => categories[category]),
-					user: modelfileCreator !== null ? modelfileCreator : undefined
-				});
-				await goto('/workspace/modelfiles');
+				toast.success('Model created successfully!');
+				await goto('/workspace/models');
+				await models.set(await getModels(localStorage.token));
 			}
 		}
+
 		loading = false;
 		success = false;
 	};
@@ -223,62 +102,18 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 				].includes(event.origin)
 			)
 				return;
-			const modelfile = JSON.parse(event.data);
-			console.log(modelfile);
-
-			imageUrl = modelfile.imageUrl;
-			title = modelfile.title;
-			await tick();
-			tagName = `${modelfile.user.username === 'hub' ? '' : `hub/`}${modelfile.user.username}/${
-				modelfile.tagName
-			}`;
-			desc = modelfile.desc;
-			content = modelfile.content;
-			suggestions =
-				modelfile.suggestionPrompts.length != 0
-					? modelfile.suggestionPrompts
-					: [
-							{
-								content: ''
-							}
-					  ];
-
-			modelfileCreator = {
-				username: modelfile.user.username,
-				name: modelfile.user.name
-			};
-			for (const category of modelfile.categories) {
-				categories[category.toLowerCase()] = true;
-			}
+			const model = JSON.parse(event.data);
+			console.log(model);
 		});
 
 		if (window.opener ?? false) {
 			window.opener.postMessage('loaded', '*');
 		}
 
-		if (sessionStorage.modelfile) {
-			const modelfile = JSON.parse(sessionStorage.modelfile);
-			console.log(modelfile);
-			imageUrl = modelfile.imageUrl;
-			title = modelfile.title;
-			await tick();
-			tagName = modelfile.tagName;
-			desc = modelfile.desc;
-			content = modelfile.content;
-			suggestions =
-				modelfile.suggestionPrompts.length != 0
-					? modelfile.suggestionPrompts
-					: [
-							{
-								content: ''
-							}
-					  ];
-
-			for (const category of modelfile.categories) {
-				categories[category.toLowerCase()] = true;
-			}
-
-			sessionStorage.removeItem('modelfile');
+		if (sessionStorage.model) {
+			const model = JSON.parse(sessionStorage.model);
+			console.log(model);
+			sessionStorage.removeItem('model');
 		}
 	});
 </script>
@@ -330,7 +165,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 					const compressedSrc = canvas.toDataURL('image/jpeg');
 
 					// Display the compressed image
-					imageUrl = compressedSrc;
+					info.meta.profile_image_url = compressedSrc;
 
 					inputFiles = null;
 				};
@@ -382,7 +217,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 		<div class="flex justify-center my-4">
 			<div class="self-center">
 				<button
-					class=" {imageUrl
+					class=" {info.meta.profile_image_url
 						? ''
 						: 'p-6'} rounded-full dark:bg-gray-700 border border-dashed border-gray-200"
 					type="button"
@@ -390,9 +225,9 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 						filesInputElement.click();
 					}}
 				>
-					{#if imageUrl}
+					{#if info.meta.profile_image_url}
 						<img
-							src={imageUrl}
+							src={info.meta.profile_image_url}
 							alt="modelfile profile"
 							class=" rounded-full w-20 h-20 object-cover"
 						/>
@@ -401,7 +236,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 24 24"
 							fill="currentColor"
-							class="w-8"
+							class="size-8"
 						>
 							<path
 								fill-rule="evenodd"
@@ -421,24 +256,44 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 				<div>
 					<input
 						class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-						placeholder={$i18n.t('Name your modelfile')}
-						bind:value={title}
+						placeholder={$i18n.t('Name your model')}
+						bind:value={name}
 						required
 					/>
 				</div>
 			</div>
 
 			<div class="flex-1">
-				<div class=" text-sm font-semibold mb-2">{$i18n.t('Model Tag Name')}*</div>
+				<div class=" text-sm font-semibold mb-2">{$i18n.t('Model ID')}*</div>
 
 				<div>
 					<input
 						class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-						placeholder={$i18n.t('Add a model tag name')}
-						bind:value={tagName}
+						placeholder={$i18n.t('Add a model id')}
+						bind:value={id}
 						required
 					/>
 				</div>
+			</div>
+		</div>
+
+		<div class="my-2">
+			<div class=" text-sm font-semibold mb-2">{$i18n.t('Base Model (From)')}</div>
+
+			<div>
+				<select
+					class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
+					placeholder="Select a base model (e.g. llama3, gpt-4o)"
+					bind:value={info.base_model_id}
+					required
+				>
+					<option value={null} class=" placeholder:text-gray-500"
+						>{$i18n.t('Select a base model')}</option
+					>
+					{#each $models as model}
+						<option value={model.id}>{model.name}</option>
+					{/each}
+				</select>
 			</div>
 		</div>
 
@@ -448,8 +303,8 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 			<div>
 				<input
 					class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-					placeholder={$i18n.t('Add a short description about what this modelfile does')}
-					bind:value={desc}
+					placeholder={$i18n.t('Add a short description about what this model does')}
+					bind:value={info.meta.description}
 					required
 				/>
 			</div>
@@ -457,137 +312,53 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 
 		<div class="my-2">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-sm font-semibold">{$i18n.t('Modelfile')}</div>
-
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					type="button"
-					on:click={() => {
-						raw = !raw;
-					}}
-				>
-					{#if raw}
-						<span class="ml-2 self-center"> {$i18n.t('Raw Format')} </span>
-					{:else}
-						<span class="ml-2 self-center"> {$i18n.t('Builder Mode')} </span>
-					{/if}
-				</button>
+				<div class=" self-center text-sm font-semibold">{$i18n.t('Model Params')}</div>
 			</div>
 
-			<!-- <div class=" text-sm font-semibold mb-2"></div> -->
-
-			{#if raw}
-				<div class="mt-2">
-					<div class=" text-xs font-semibold mb-2">{$i18n.t('Content')}*</div>
-
-					<div>
-						<textarea
-							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-							placeholder={`FROM llama2\nPARAMETER temperature 1\nSYSTEM """\nYou are Mario from Super Mario Bros, acting as an assistant.\n"""`}
-							rows="6"
-							bind:value={content}
-							required
-						/>
-					</div>
-
-					<div class="text-xs text-gray-400 dark:text-gray-500">
-						{$i18n.t('Not sure what to write? Switch to')}
-						<button
-							class="text-gray-500 dark:text-gray-300 font-medium cursor-pointer"
-							type="button"
-							on:click={() => {
-								raw = !raw;
-							}}>{$i18n.t('Builder Mode')}</button
-						>
-						or
-						<a
-							class=" text-gray-500 dark:text-gray-300 font-medium"
-							href="https://openwebui.com"
-							target="_blank"
-						>
-							{$i18n.t('Click here to check other modelfiles.')}
-						</a>
-					</div>
-				</div>
-			{:else}
-				<div class="my-2">
-					<div class=" text-xs font-semibold mb-2">{$i18n.t('From (Base Model)')}*</div>
-
-					<div>
-						<input
-							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
-							placeholder="Write a modelfile base model name (e.g. llama2, mistral)"
-							bind:value={model}
-							required
-						/>
-					</div>
-
-					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-						{$i18n.t('To access the available model names for downloading,')}
-						<a
-							class=" text-gray-500 dark:text-gray-300 font-medium"
-							href="https://ollama.com/library"
-							target="_blank">{$i18n.t('click here.')}</a
-						>
-					</div>
-				</div>
-
+			<div class="mt-2">
 				<div class="my-1">
 					<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
-
 					<div>
 						<textarea
 							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg -mb-1"
-							placeholder={`Write your modelfile system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+							placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
 							rows="4"
-							bind:value={system}
+							bind:value={info.params.system}
 						/>
 					</div>
 				</div>
 
 				<div class="flex w-full justify-between">
 					<div class=" self-center text-sm font-semibold">
-						{$i18n.t('Modelfile Advanced Settings')}
+						{$i18n.t('Advanced Params')}
 					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
 						type="button"
 						on:click={() => {
-							advanced = !advanced;
+							showAdvanced = !showAdvanced;
 						}}
 					>
-						{#if advanced}
-							<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+						{#if showAdvanced}
+							<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
 						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+							<span class="ml-2 self-center">{$i18n.t('Show')}</span>
 						{/if}
 					</button>
 				</div>
 
-				{#if advanced}
+				{#if showAdvanced}
 					<div class="my-2">
-						<div class=" text-xs font-semibold mb-2">{$i18n.t('Template')}</div>
-
-						<div>
-							<textarea
-								class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg -mb-1"
-								placeholder="Write your modelfile template content here"
-								rows="4"
-								bind:value={template}
-							/>
-						</div>
-					</div>
-
-					<div class="my-2">
-						<div class=" text-xs font-semibold mb-2">{$i18n.t('Parameters')}</div>
-
-						<div>
-							<AdvancedParams bind:params />
-						</div>
+						<AdvancedParams
+							bind:params
+							on:change={(e) => {
+								info.params = { ...info.params, ...params };
+							}}
+						/>
 					</div>
 				{/if}
-			{/if}
+			</div>
 		</div>
 
 		<div class="my-2">
@@ -598,8 +369,11 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 					class="p-1 px-3 text-xs flex rounded transition"
 					type="button"
 					on:click={() => {
-						if (suggestions.length === 0 || suggestions.at(-1).content !== '') {
-							suggestions = [...suggestions, { content: '' }];
+						if (
+							info.meta.suggestion_prompts.length === 0 ||
+							info.meta.suggestion_prompts.at(-1).content !== ''
+						) {
+							info.meta.suggestion_prompts = [...info.meta.suggestion_prompts, { content: '' }];
 						}
 					}}
 				>
@@ -616,7 +390,7 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 				</button>
 			</div>
 			<div class="flex flex-col space-y-1">
-				{#each suggestions as prompt, promptIdx}
+				{#each info.meta.suggestion_prompts as prompt, promptIdx}
 					<div class=" flex border dark:border-gray-600 rounded-lg">
 						<input
 							class="px-3 py-1.5 text-sm w-full bg-transparent outline-none border-r dark:border-gray-600"
@@ -628,8 +402,8 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 							class="px-2"
 							type="button"
 							on:click={() => {
-								suggestions.splice(promptIdx, 1);
-								suggestions = suggestions;
+								info.meta.suggestion_prompts.splice(promptIdx, 1);
+								info.meta.suggestion_prompts = info.meta.suggestion_prompts;
 							}}
 						>
 							<svg
@@ -648,37 +422,39 @@ SYSTEM """${system}"""`.replace(/^\s*\n/gm, '');
 			</div>
 		</div>
 
-		<div class="my-2">
-			<div class=" text-sm font-semibold mb-2">{$i18n.t('Categories')}</div>
+		<div class="my-2 text-gray-500">
+			<div class="flex w-full justify-between mb-2">
+				<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
 
-			<div class="grid grid-cols-4">
-				{#each Object.keys(categories) as category}
-					<div class="flex space-x-2 text-sm">
-						<input type="checkbox" bind:checked={categories[category]} />
-						<div class="capitalize">{category}</div>
-					</div>
-				{/each}
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					type="button"
+					on:click={() => {
+						showPreview = !showPreview;
+					}}
+				>
+					{#if showPreview}
+						<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+					{/if}
+				</button>
 			</div>
+
+			{#if showPreview}
+				<div>
+					<textarea
+						class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
+						rows="10"
+						value={JSON.stringify(info, null, 2)}
+						disabled
+						readonly
+					/>
+				</div>
+			{/if}
 		</div>
 
-		{#if pullProgress !== null}
-			<div class="my-2">
-				<div class=" text-sm font-semibold mb-2">{$i18n.t('Pull Progress')}</div>
-				<div class="w-full rounded-full dark:bg-gray-800">
-					<div
-						class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
-						style="width: {Math.max(15, pullProgress ?? 0)}%"
-					>
-						{pullProgress ?? 0}%
-					</div>
-				</div>
-				<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
-					{digest}
-				</div>
-			</div>
-		{/if}
-
-		<div class="my-2 flex justify-end">
+		<div class="my-2 flex justify-end mb-20">
 			<button
 				class=" text-sm px-3 py-2 transition rounded-xl {loading
 					? ' cursor-not-allowed bg-gray-100 dark:bg-gray-800'

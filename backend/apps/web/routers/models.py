@@ -28,16 +28,24 @@ async def get_models(user=Depends(get_verified_user)):
 
 
 @router.post("/add", response_model=Optional[ModelModel])
-async def add_new_model(form_data: ModelForm, user=Depends(get_admin_user)):
-    model = Models.insert_new_model(form_data, user.id)
-
-    if model:
-        return model
-    else:
+async def add_new_model(
+    request: Request, form_data: ModelForm, user=Depends(get_admin_user)
+):
+    if form_data.id in request.app.state.MODELS:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.DEFAULT(),
+            detail=ERROR_MESSAGES.MODEL_ID_TAKEN,
         )
+    else:
+        model = Models.insert_new_model(form_data, user.id)
+
+        if model:
+            return model
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
 
 
 ############################

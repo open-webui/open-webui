@@ -27,7 +27,8 @@
 	export let stopResponse: Function;
 
 	export let autoScroll = true;
-	export let selectedAtModel: Model | undefined;
+
+	export let atSelectedModel: Model | undefined;
 	export let selectedModels: [''];
 
 	let chatTextAreaElement: HTMLTextAreaElement;
@@ -52,7 +53,6 @@
 	export let messages = [];
 
 	let speechRecognition;
-
 	let visionCapableState = 'all';
 
 	$: if (prompt) {
@@ -62,19 +62,48 @@
 		}
 	}
 
-	$: {
-		if (selectedAtModel || selectedModels) {
-			visionCapableState = checkModelsAreVisionCapable();
-			if (visionCapableState === 'none') {
-				// Remove all image files
-				const fileCount = files.length;
-				files = files.filter((file) => file.type != 'image');
-				if (files.length < fileCount) {
-					toast.warning($i18n.t('All selected models do not support image input, removed images'));
-				}
+	// $: {
+	// 	if (atSelectedModel || selectedModels) {
+	// 		visionCapableState = checkModelsAreVisionCapable();
+	// 		if (visionCapableState === 'none') {
+	// 			// Remove all image files
+	// 			const fileCount = files.length;
+	// 			files = files.filter((file) => file.type != 'image');
+	// 			if (files.length < fileCount) {
+	// 				toast.warning($i18n.t('All selected models do not support image input, removed images'));
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	const checkModelsAreVisionCapable = () => {
+		let modelsToCheck = [];
+		if (atSelectedModel !== undefined) {
+			modelsToCheck = [atSelectedModel.id];
+		} else {
+			modelsToCheck = selectedModels;
+		}
+		if (modelsToCheck.length == 0 || modelsToCheck[0] == '') {
+			return 'all';
+		}
+		let visionCapableCount = 0;
+		for (const modelName of modelsToCheck) {
+			const model = $models.find((m) => m.id === modelName);
+			if (!model) {
+				continue;
+			}
+			if (model.custom_info?.meta.vision_capable ?? true) {
+				visionCapableCount++;
 			}
 		}
-	}
+		if (visionCapableCount == modelsToCheck.length) {
+			return 'all';
+		} else if (visionCapableCount == 0) {
+			return 'none';
+		} else {
+			return 'some';
+		}
+	};
 
 	let mediaRecorder;
 	let audioChunks = [];
@@ -343,35 +372,6 @@
 		}
 	};
 
-	const checkModelsAreVisionCapable = () => {
-		let modelsToCheck = [];
-		if (selectedAtModel !== undefined) {
-			modelsToCheck = [selectedAtModel.id];
-		} else {
-			modelsToCheck = selectedModels;
-		}
-		if (modelsToCheck.length == 0 || modelsToCheck[0] == '') {
-			return 'all';
-		}
-		let visionCapableCount = 0;
-		for (const modelName of modelsToCheck) {
-			const model = $models.find((m) => m.id === modelName);
-			if (!model) {
-				continue;
-			}
-			if (model.custom_info?.meta.vision_capable ?? true) {
-				visionCapableCount++;
-			}
-		}
-		if (visionCapableCount == modelsToCheck.length) {
-			return 'all';
-		} else if (visionCapableCount == 0) {
-			return 'none';
-		} else {
-			return 'some';
-		}
-	};
-
 	onMount(() => {
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
@@ -479,8 +479,8 @@
 
 <div class="fixed bottom-0 {$showSidebar ? 'left-0 md:left-[260px]' : 'left-0'} right-0">
 	<div class="w-full">
-		<div class="px-2.5 md:px-16 -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
-			<div class="flex flex-col max-w-5xl w-full">
+		<div class=" -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
+			<div class="flex flex-col max-w-6xl px-2.5 md:px-6 w-full">
 				<div class="relative">
 					{#if autoScroll === false && messages.length > 0}
 						<div class=" absolute -top-12 left-0 right-0 flex justify-center z-30">
@@ -544,12 +544,12 @@
 						bind:chatInputPlaceholder
 						{messages}
 						on:select={(e) => {
-							selectedAtModel = e.detail;
+							atSelectedModel = e.detail;
 							chatTextAreaElement?.focus();
 						}}
 					/>
 
-					{#if selectedAtModel !== undefined}
+					{#if atSelectedModel !== undefined}
 						<div
 							class="px-3 py-2.5 text-left w-full flex justify-between items-center absolute bottom-0 left-0 right-0 bg-gradient-to-t from-50% from-white dark:from-gray-900"
 						>
@@ -558,23 +558,21 @@
 									crossorigin="anonymous"
 									alt="model profile"
 									class="size-5 max-w-[28px] object-cover rounded-full"
-									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedAtModel.id)
-										?.imageUrl ??
+									src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
+										?.profile_image_url ??
 										($i18n.language === 'dg-DG'
 											? `/doge.png`
 											: `${WEBUI_BASE_URL}/static/favicon.png`)}
 								/>
 								<div>
-									Talking to <span class=" font-medium"
-										>{selectedAtModel.custom_info?.name ?? selectedAtModel.name}
-									</span>
+									Talking to <span class=" font-medium">{atSelectedModel.name}</span>
 								</div>
 							</div>
 							<div>
 								<button
 									class="flex items-center"
 									on:click={() => {
-										selectedAtModel = undefined;
+										atSelectedModel = undefined;
 									}}
 								>
 									<XMark />
@@ -966,7 +964,7 @@
 
 									if (e.key === 'Escape') {
 										console.log('Escape');
-										selectedAtModel = undefined;
+										atSelectedModel = undefined;
 									}
 								}}
 								rows="1"

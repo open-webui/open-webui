@@ -194,7 +194,7 @@
 				await settings.set({
 					..._settings,
 					system: chatContent.system ?? _settings.system,
-					options: chatContent.options ?? _settings.options
+					params: chatContent.options ?? _settings.params
 				});
 				autoScroll = true;
 				await tick();
@@ -283,7 +283,7 @@
 						models: selectedModels,
 						system: $settings.system ?? undefined,
 						options: {
-							...($settings.options ?? {})
+							...($settings.params ?? {})
 						},
 						messages: messages,
 						history: history,
@@ -431,7 +431,7 @@
 				// Prepare the base message object
 				const baseMessage = {
 					role: message.role,
-					content: arr.length - 2 !== idx ? message.content : message?.raContent ?? message.content
+					content: message.content
 				};
 
 				// Extract and format image URLs if any exist
@@ -443,7 +443,6 @@
 				if (imageUrls && imageUrls.length > 0 && message.role === 'user') {
 					baseMessage.images = imageUrls;
 				}
-
 				return baseMessage;
 			});
 
@@ -474,10 +473,10 @@
 			model: model,
 			messages: messagesBody,
 			options: {
-				...($settings.options ?? {}),
+				...($settings.params ?? {}),
 				stop:
-					$settings?.options?.stop ?? undefined
-						? $settings.options.stop.map((str) =>
+					$settings?.params?.stop ?? undefined
+						? $settings.params.stop.map((str) =>
 								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
 						  )
 						: undefined
@@ -718,18 +717,18 @@
 												: message?.raContent ?? message.content
 								  })
 						})),
-					seed: $settings?.options?.seed ?? undefined,
+					seed: $settings?.params?.seed ?? undefined,
 					stop:
-						$settings?.options?.stop ?? undefined
-							? $settings.options.stop.map((str) =>
+						$settings?.params?.stop ?? undefined
+							? $settings.params.stop.map((str) =>
 									decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
 							  )
 							: undefined,
-					temperature: $settings?.options?.temperature ?? undefined,
-					top_p: $settings?.options?.top_p ?? undefined,
-					num_ctx: $settings?.options?.num_ctx ?? undefined,
-					frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
-					max_tokens: $settings?.options?.num_predict ?? undefined,
+					temperature: $settings?.params?.temperature ?? undefined,
+					top_p: $settings?.params?.top_p ?? undefined,
+					num_ctx: $settings?.params?.num_ctx ?? undefined,
+					frequency_penalty: $settings?.params?.repeat_penalty ?? undefined,
+					max_tokens: $settings?.params?.num_predict ?? undefined,
 					docs: docs.length > 0 ? docs : undefined,
 					citations: docs.length > 0
 				},
@@ -1045,7 +1044,7 @@
 		bind:files
 		bind:prompt
 		bind:autoScroll
-		bind:selectedModel={atSelectedModel}
+		bind:atSelectedModel
 		{selectedModels}
 		{messages}
 		{submitPrompt}

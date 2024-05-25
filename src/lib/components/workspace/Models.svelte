@@ -139,7 +139,7 @@
 				</div>
 
 				<div class=" flex-1 self-center">
-					<div class=" font-bold capitalize line-clamp-1">{model.name}</div>
+					<div class=" font-bold line-clamp-1">{model.name}</div>
 					<div class=" text-sm overflow-hidden text-ellipsis line-clamp-1">
 						{model?.info?.meta?.description ?? model.id}
 					</div>

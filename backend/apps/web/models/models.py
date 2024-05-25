@@ -166,7 +166,9 @@ class ModelsTable:
 
             model = Model.get(Model.id == id)
             return ModelModel(**model_to_dict(model))
-        except:
+        except Exception as e:
+            print(e)
+
             return None
 
     def delete_model_by_id(self, id: str) -> bool:

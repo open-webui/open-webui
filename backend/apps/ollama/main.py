@@ -39,6 +39,8 @@ from utils.utils import (
     get_admin_user,
 )
 
+from utils.models import get_model_id_from_custom_model_id
+
 
 from config import (
     SRC_LOG_LEVELS,
@@ -873,10 +875,10 @@ async def generate_chat_completion(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
+    model_id = get_model_id_from_custom_model_id(form_data.model)
+    model = model_id
 
     if url_idx == None:
-        model = form_data.model
-
         if ":" not in model:
             model = f"{model}:latest"
 
@@ -892,6 +894,13 @@ async def generate_chat_completion(
     log.info(f"url: {url}")
 
     r = None
+
+    # payload = {
+    #     **form_data.model_dump_json(exclude_none=True).encode(),
+    #     "model": model,
+    #     "messages": form_data.messages,
+
+    # }
 
     log.debug(
         "form_data.model_dump_json(exclude_none=True).encode(): {0} ".format(

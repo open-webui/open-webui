@@ -32,6 +32,10 @@
 	// ///////////
 
 	let model = null;
+
+	let id = '';
+	let name = '';
+
 	let info = {
 		id: '',
 		base_model_id: null,
@@ -51,9 +55,14 @@
 
 	const updateHandler = async () => {
 		loading = true;
+
+		info.id = id;
+		info.name = name;
+
 		const res = await updateModelById(localStorage.token, info.id, info);
 
 		if (res) {
+			toast.success('Model updated successfully');
 			await goto('/workspace/models');
 			await models.set(await getModels(localStorage.token));
 		}
@@ -63,11 +72,14 @@
 	};
 
 	onMount(() => {
-		const id = $page.url.searchParams.get('id');
+		const _id = $page.url.searchParams.get('id');
 
-		if (id) {
-			model = $models.find((m) => m.id === id);
+		if (_id) {
+			model = $models.find((m) => m.id === _id);
 			if (model) {
+				id = model.id;
+				name = model.name;
+
 				info = {
 					...info,
 					...JSON.parse(
@@ -235,7 +247,7 @@
 						<input
 							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
 							placeholder={$i18n.t('Name your model')}
-							bind:value={info.name}
+							bind:value={name}
 							required
 						/>
 					</div>
@@ -248,7 +260,7 @@
 						<input
 							class="px-3 py-1.5 text-sm w-full bg-transparent disabled:text-gray-500 border dark:border-gray-600 outline-none rounded-lg"
 							placeholder={$i18n.t('Add a model id')}
-							value={info.id}
+							value={id}
 							disabled
 							required
 						/>
@@ -333,7 +345,12 @@
 
 					{#if showAdvanced}
 						<div class="my-2">
-							<AdvancedParams bind:params />
+							<AdvancedParams
+								bind:params
+								on:change={(e) => {
+									info.params = { ...info.params, ...params };
+								}}
+							/>
 						</div>
 					{/if}
 				</div>
@@ -432,24 +449,7 @@
 				{/if}
 			</div>
 
-			{#if pullProgress !== null}
-				<div class="my-2">
-					<div class=" text-sm font-semibold mb-2">{$i18n.t('Pull Progress')}</div>
-					<div class="w-full rounded-full dark:bg-gray-800">
-						<div
-							class="dark:bg-gray-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
-							style="width: {Math.max(15, pullProgress ?? 0)}%"
-						>
-							{pullProgress ?? 0}%
-						</div>
-					</div>
-					<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
-						{digest}
-					</div>
-				</div>
-			{/if}
-
-			<div class="my-2 flex justify-end">
+			<div class="my-2 flex justify-end mb-20">
 				<button
 					class=" text-sm px-3 py-2 transition rounded-xl {loading
 						? ' cursor-not-allowed bg-gray-100 dark:bg-gray-800'

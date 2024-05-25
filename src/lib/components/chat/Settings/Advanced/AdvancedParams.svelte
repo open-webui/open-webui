@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
 
@@ -23,6 +25,10 @@
 
 	let customFieldName = '';
 	let customFieldValue = '';
+
+	$: if (params) {
+		dispatch('change', params);
+	}
 </script>
 
 <div class=" space-y-3 text-xs">
