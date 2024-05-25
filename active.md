@@ -7,9 +7,23 @@ Our weekly meetups are [Thursdays at NOON EDT](/io/coders/) and [Sundays at 10 P
 
 [Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
-**Vite Project**
-[Feed Player](../feed/) - for Video, Images, JSON, YAML, CSS, RSS news feeds and our [Feed Viewer](../feed/view/#feed=nasa)  
-[Restack.io](https://www.restack.io/docs/supabase-knowledge-supabase-rust-sdk-guide) - for Supabase with Rust and Streamlit
+**SQL, Vite, Supabase, AI Chat**
+- [Open Footprint Data in SQL](/useeio.js/footprint) 
+- [Feed Player](../feed/) - for Video, Images, JSON, YAML, CSS, RSS news feeds and our [Feed Viewer](../feed/view/#feed=nasa)  
+- [Restack.io](https://www.restack.io/docs/supabase-knowledge-supabase-rust-sdk-guide) - for Supabase with Rust and Streamlit
+- [Open WebUI](src) with [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/) like Pinecone
+- [Earthscape for Chatbot AI - Supabase and NextJS Hosting](/earthscape/app/)
+<!--
+- [ChatAll - Share simultaneous AI Chats with Chatbot UI](https://github.com/sunner/ChatALL)
+-->
+
+<!-- 
+openai
+Docker path: https://chat.openai.com/share/61b0997f-ea9b-49f7-9bcb-12fa0519a2d1 
+
+Matthew Berman list of true Agents: 
+https://youtu.be/_AOA6M9Ta2I?si=Bh8SMhyD3GmuCLks&t=378
+-->
 
 <!--
 CSV Files to use for Timelines, Observable, and AI Training at: [industries/naics/US/counties](https://github.com/ModelEarth/community-data/tree/master/industries/naics/US/counties)  
@@ -20,7 +34,6 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [RStudio - API to JSON](/localsite/info/data/flowsa/)
 - [ML for Community Forecasting Timelines](../data-pipeline/timelines/)
 - [RealityStream](/RealityStream/) - Machine Learning Classification Models
-- [USEEIO.js Open Footprint Data and SQL](/useeio.js/footprint) and [React Widgets](/io/charts)
 - [Open Footprint Panels - YAML Display](/OpenFootprint)
 - [Process Industry NAICS by Zip Code](/data-pipeline/industries/naics)
 - [Top Commodities by State (hide sort columns)](/data-pipeline/research/economy) - Dinesh
@@ -49,15 +62,6 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [AI Process for Farm Fresh Data and Food Deserts ML](/community-data/process/python/farmfresh/)
 - [Push EPA date to Google Data Commons API](https://docs.datacommons.org/api/)
 
-
-**AI Chatbots LLM/SLM**
-
-<!-- Docker path: https://chat.openai.com/share/61b0997f-ea9b-49f7-9bcb-12fa0519a2d1 -->
-- [Open WebUI](src) with [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/) like Pinecone<!-- Mentioned, and Matthew Berman rattles of a list of true Agents: https://youtu.be/_AOA6M9Ta2I?si=Bh8SMhyD3GmuCLks&t=378-->
-- [Earthscape for Chatbot AI - Supabase and NextJS Hosting](/earthscape/app/)
-<!--
-- [ChatAll - Share simultaneous AI Chats with Chatbot UI](https://github.com/sunner/ChatALL)
--->
 
 **Storyboard Generator - Images and Video for Request Visualization**
 - [Image Gallery (JQuery) and Video (Leonardo)](/data-pipeline/research/stream)
