@@ -90,67 +90,81 @@ export const getAbstractPrompt = (content: string, question: string) => {
 
 export const createChatCompletionApiMessages = async (chatType: string, userPrompt: string, embeddingIndexId: number, messages, promptOptions) => {
   if (chatType === 'chat_embedding') {
-    const [chunk] = await queryRankedChunk(embeddingIndexId, userPrompt)
-    return [
-      {
-        role: 'system',
-        content: getSystemPrompt(chatType)
+    const chunks = await queryRankedChunk(embeddingIndexId, userPrompt)
+    const citations = chunks.map((chunk) => ({
+      source: {
+        type: 'doc',
+        name: chunk.metadata.file_name,
       },
-      {
-        role: 'user',
-        content: getAbstractPrompt(chunk?.text || "Không xác định", userPrompt)
-      }
-    ]
+      document: [chunk.text]
+    }))
+    return {
+      apiMessages: [
+        {
+          role: 'system',
+          content: getSystemPrompt(chatType)
+        },
+        {
+          role: 'user',
+          content: getAbstractPrompt(chunks.length > 0 ? chunks.map((chunk) => chunk.text).join('\n\n') : "Không xác định", userPrompt)
+        }
+      ],
+      citations
+    }
   }
   if (!['chat', 'chat_law', 'chat_buddhism'].includes(chatType)) {
-    return [
+    return {
+      apiMessages: [
+        {
+          role: 'system',
+          content: getSystemPrompt(chatType)
+        },
+        {
+          role: 'user',
+          content: getUserPrompt(chatType, userPrompt, promptOptions)
+        }
+      ]
+    }
+  }
+
+  return {
+    apiMessages: [
       {
         role: 'system',
         content: getSystemPrompt(chatType)
       },
-      {
-        role: 'user',
-        content: getUserPrompt(chatType, userPrompt, promptOptions)
-      }
+      ...messages
     ]
+      .filter((message) => message && (message.role !== 'assistant' || !!message.content))
+      .map((message, idx, arr) => ({
+        role: message.role,
+        ...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
+        message.role === 'user'
+          ? {
+            content: [
+              {
+                type: 'text',
+                text:
+                  arr.length - 1 !== idx
+                    ? message.content
+                    : message?.raContent ?? message.content
+              },
+              ...message.files
+                .filter((file) => file.type === 'image')
+                .map((file) => ({
+                  type: 'image_url',
+                  image_url: {
+                    url: file.url
+                  }
+                }))
+            ]
+          }
+          : {
+            content:
+              arr.length - 1 !== idx
+                ? message.content
+                : message?.raContent ?? message.content
+          })
+      }))
   }
-
-  return [
-    {
-      role: 'system',
-      content: getSystemPrompt(chatType)
-    },
-    ...messages
-  ]
-    .filter((message) => message && (message.role !== 'assistant' || !!message.content))
-    .map((message, idx, arr) => ({
-      role: message.role,
-      ...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-      message.role === 'user'
-        ? {
-          content: [
-            {
-              type: 'text',
-              text:
-                arr.length - 1 !== idx
-                  ? message.content
-                  : message?.raContent ?? message.content
-            },
-            ...message.files
-              .filter((file) => file.type === 'image')
-              .map((file) => ({
-                type: 'image_url',
-                image_url: {
-                  url: file.url
-                }
-              }))
-          ]
-        }
-        : {
-          content:
-            arr.length - 1 !== idx
-              ? message.content
-              : message?.raContent ?? message.content
-        })
-    }))
 }

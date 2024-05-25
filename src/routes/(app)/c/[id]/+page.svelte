@@ -605,12 +605,17 @@
 		scrollToBottom();
 
 		try {
+			const {apiMessages, citations} = await createChatCompletionApiMessages($chatType, userPrompt, $selectedChatEmbeddingIndex, messages, $promptOptions)
+			if (citations) {
+				responseMessage.citations = citations
+			}
+
 			const [res, controller] = await generateOpenAIChatCompletion(
 				localStorage.token,
 				{
 					model: model.id,
 					stream: true,
-					messages: await createChatCompletionApiMessages($chatType, userPrompt, $selectedChatEmbeddingIndex, messages, $promptOptions),
+					messages: apiMessages,
 					seed: $settings?.options?.seed ?? undefined,
 					stop:
 						$settings?.options?.stop ?? undefined
