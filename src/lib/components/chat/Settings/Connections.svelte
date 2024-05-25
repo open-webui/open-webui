@@ -3,7 +3,6 @@
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	const dispatch = createEventDispatcher();
 
-	import { getOllamaUrls, getOllamaVersion, updateOllamaUrls } from '$lib/apis/ollama';
 	import {
 		getOpenAIConfig,
 		getOpenAIKeys,
@@ -12,20 +11,40 @@
 		updateOpenAIKeys,
 		updateOpenAIUrls
 	} from '$lib/apis/openai';
-	import { toast } from 'svelte-sonner';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import DefaultParams from './DefaultParams/DefaultParams.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let getModels: Function;
+	export let saveSettings: Function;
 
-	// External
-	let OLLAMA_BASE_URLS = [''];
 
 	let OPENAI_API_KEYS = [''];
 	let OPENAI_API_BASE_URLS = [''];
 
 	let ENABLE_OPENAI_API = false;
+
+	let options = {
+		api_url: '',
+		seed: 0,
+		temperature: '',
+		repeat_penalty: '',
+		repeat_last_n: '',
+		mirostat: '',
+		mirostat_eta: '',
+		mirostat_tau: '',
+		top_k: '',
+		top_p: '',
+		stop: '',
+		tfs_z: '',
+		num_ctx: '',
+		num_predict: '',
+		keep_alive: null,
+		request_format: '',
+	};
+
+	let modelParamsList: any[] = [];
 
 	const updateOpenAIHandler = async () => {
 		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
@@ -34,31 +53,70 @@
 		await models.set(await getModels());
 	};
 
-	const updateOllamaUrlsHandler = async () => {
-		OLLAMA_BASE_URLS = await updateOllamaUrls(localStorage.token, OLLAMA_BASE_URLS);
-
-		const ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (ollamaVersion) {
-			toast.success($i18n.t('Server connection verified'));
-			await models.set(await getModels());
-		}
-	};
+	const handleSaveModelParams = () => {
+		let submitData = modelParamsList.map(m => (
+			{
+				api_url: m.api_url,
+				seed: (m.seed !== 0 ? m.seed : undefined) ?? undefined,
+				stop: m.stop !== '' ? m.stop.split(',').filter((e) => e) : undefined,
+				temperature: m.temperature !== '' ? m.temperature : undefined,
+				mirostat: m.mirostat !== '' ? m.mirostat : undefined,
+				mirostat_eta: m.mirostat_eta !== '' ? m.mirostat_eta : undefined,
+				mirostat_tau: m.mirostat_tau !== '' ? m.mirostat_tau : undefined,
+				top_k: m.top_k !== '' ? m.top_k : undefined,
+				top_p: m.top_p !== '' ? m.top_p : undefined,
+				repeat_penalty: m.repeat_penalty !== '' ? m.repeat_penalty : undefined,
+				repeat_last_n: m.repeat_last_n !== '' ? m.repeat_last_n : undefined,
+				tfs_z: m.tfs_z !== '' ? m.tfs_z : undefined,
+				num_ctx: m.num_ctx !== '' ? m.num_ctx : undefined,
+				num_predict: m.num_predict !== '' ? m.num_predict : undefined,
+				keep_alive: m.keep_alive !== null ? m.keep_alive : undefined,
+				request_format: m.request_format !== '' ? m.request_format : undefined,
+			}))
+		localStorage.setItem('models_params', JSON.stringify(submitData));
+	}
 
 	onMount(async () => {
 		if ($user.role === 'admin') {
-			OLLAMA_BASE_URLS = await getOllamaUrls(localStorage.token);
-
 			const config = await getOpenAIConfig(localStorage.token);
 			ENABLE_OPENAI_API = config.ENABLE_OPENAI_API;
 
 			OPENAI_API_BASE_URLS = await getOpenAIUrls(localStorage.token);
 			OPENAI_API_KEYS = await getOpenAIKeys(localStorage.token);
+
+			let modelsParams = JSON.parse(localStorage.getItem('models_params') ?? '{}');
+
+			OPENAI_API_BASE_URLS.forEach(url => {
+				let foundOptions = modelsParams.find(m => m.api_url === url);
+			
+				if(foundOptions) {
+					modelParamsList= [...modelParamsList, 
+					{
+						api_url: url,
+						seed: foundOptions.seed ?? 0,
+						stop: (foundOptions?.stop ?? []).join(','),
+						temperature: foundOptions.temperature ?? '',
+						mirostat: foundOptions.mirostat ?? '',
+						mirostat_eta: foundOptions.mirostat_eta ?? '',
+						mirostat_tau: foundOptions.mirostat_tau ?? '',
+						top_k: foundOptions.top_k ?? '',
+						top_p: foundOptions.top_p ?? '',
+						repeat_penalty: foundOptions.repeat_penalty ?? '',
+						repeat_last_n: foundOptions.repeat_last_n ?? '',
+						tfs_z: foundOptions.tfs_z ?? '',
+						num_ctx: foundOptions.num_ctx ?? '',
+						num_predict: foundOptions.num_predict ?? '',
+						keep_alive: foundOptions.keep_alive ?? null,
+						request_format: foundOptions.request_format ?? '',
+					}]
+
+					return;
+				}
+					modelParamsList= [...modelParamsList, {...options, api_url: url}]
+				})
 		}
 	});
+	
 </script>
 
 <form
@@ -93,6 +151,7 @@
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 										placeholder={$i18n.t('API Base URL')}
 										bind:value={url}
+										on:input={(e)=> {modelParamsList[idx].api_url = e.target.value}}
 										autocomplete="off"
 									/>
 								</div>
@@ -112,6 +171,7 @@
 											on:click={() => {
 												OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, ''];
 												OPENAI_API_KEYS = [...OPENAI_API_KEYS, ''];
+												modelParamsList = [...modelParamsList, options];
 											}}
 											type="button"
 										>
@@ -134,6 +194,7 @@
 													(url, urlIdx) => idx !== urlIdx
 												);
 												OPENAI_API_KEYS = OPENAI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
+												modelParamsList = modelParamsList.filter((_, keyIdx) => idx !== keyIdx)
 											}}
 											type="button"
 										>
@@ -153,102 +214,13 @@
 								{$i18n.t('WebUI will make requests to')}
 								<span class=" text-gray-200">'{url}/models'</span>
 							</div>
+							<DefaultParams 
+								options={modelParamsList[idx]} 
+							/>
+							<hr class=" dark:border-gray-700 mx-2 my-4" />
 						{/each}
 					</div>
 				{/if}
-			</div>
-		</div>
-
-		<hr class=" dark:border-gray-700" />
-
-		<div>
-			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama Base URL')}</div>
-			<div class="flex w-full gap-1.5">
-				<div class="flex-1 flex flex-col gap-2">
-					{#each OLLAMA_BASE_URLS as url, idx}
-						<div class="flex gap-1.5">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
-								bind:value={url}
-							/>
-
-							<div class="self-center flex items-center">
-								{#if idx === 0}
-									<button
-										class="px-1"
-										on:click={() => {
-											OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, ''];
-										}}
-										type="button"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-											/>
-										</svg>
-									</button>
-								{:else}
-									<button
-										class="px-1"
-										on:click={() => {
-											OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
-										}}
-										type="button"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path d="M3.75 7.25a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Z" />
-										</svg>
-									</button>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				</div>
-
-				<div class="">
-					<button
-						class="p-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-850 dark:hover:bg-gray-800 rounded-lg transition"
-						on:click={() => {
-							updateOllamaUrlsHandler();
-						}}
-						type="button"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
-				</div>
-			</div>
-
-			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				{$i18n.t('Trouble accessing Ollama?')}
-				<a
-					class=" text-gray-300 font-medium underline"
-					href="https://github.com/open-webui/open-webui#troubleshooting"
-					target="_blank"
-				>
-					{$i18n.t('Click here for help.')}
-				</a>
 			</div>
 		</div>
 	</div>
@@ -256,7 +228,7 @@
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
 			class="  px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
-			type="submit"
+			on:click={() => handleSaveModelParams()}
 		>
 			{$i18n.t('Save')}
 		</button>

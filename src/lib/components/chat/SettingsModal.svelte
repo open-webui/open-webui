@@ -329,6 +329,7 @@
 				{:else if selectedTab === 'connections'}
 					<Connections
 						{getModels}
+						{saveSettings}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
