@@ -3,6 +3,6 @@
 	import { onMount } from 'svelte';
 
 	onMount(() => {
-		goto('/workspace/modelfiles');
+		goto('/workspace/models');
 	});
 </script>

@@ -6,7 +6,6 @@
 		WEBUI_NAME,
 		chatId,
 		mobile,
-		modelfiles,
 		settings,
 		showArchivedChats,
 		showSettings,

@@ -13,8 +13,6 @@
 
 	export let parentMessage;
 
-	export let selectedModelfiles;
-
 	export let updateChatMessages: Function;
 	export let confirmEditResponseMessage: Function;
 	export let rateMessage: Function;
@@ -130,7 +128,6 @@
 				>
 					<ResponseMessage
 						message={groupedMessages[model].messages[groupedMessagesIdx[model]]}
-						modelfiles={selectedModelfiles}
 						siblings={groupedMessages[model].messages.map((m) => m.id)}
 						isLastMessage={true}
 						{updateChatMessages}

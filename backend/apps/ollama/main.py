@@ -29,7 +29,7 @@ import time
 from urllib.parse import urlparse
 from typing import Optional, List, Union
 
-
+from apps.web.models.models import Models
 from apps.web.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
@@ -38,6 +38,8 @@ from utils.utils import (
     get_verified_user,
     get_admin_user,
 )
+
+from utils.models import get_model_id_from_custom_model_id
 
 
 from config import (
@@ -67,7 +69,6 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-
 
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
@@ -875,14 +876,93 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
 ):
 
+    log.debug(
+        "form_data.model_dump_json(exclude_none=True).encode(): {0} ".format(
+            form_data.model_dump_json(exclude_none=True).encode()
+        )
+    )
+
+    payload = {
+        **form_data.model_dump(exclude_none=True),
+    }
+
+    model_id = form_data.model
+    model_info = Models.get_model_by_id(model_id)
+
+    if model_info:
+        print(model_info)
+        if model_info.base_model_id:
+            payload["model"] = model_info.base_model_id
+
+        model_info.params = model_info.params.model_dump()
+
+        if model_info.params:
+            payload["options"] = {}
+
+            payload["options"]["mirostat"] = model_info.params.get("mirostat", None)
+            payload["options"]["mirostat_eta"] = model_info.params.get(
+                "mirostat_eta", None
+            )
+            payload["options"]["mirostat_tau"] = model_info.params.get(
+                "mirostat_tau", None
+            )
+            payload["options"]["num_ctx"] = model_info.params.get("num_ctx", None)
+
+            payload["options"]["repeat_last_n"] = model_info.params.get(
+                "repeat_last_n", None
+            )
+            payload["options"]["repeat_penalty"] = model_info.params.get(
+                "frequency_penalty", None
+            )
+
+            payload["options"]["temperature"] = model_info.params.get(
+                "temperature", None
+            )
+            payload["options"]["seed"] = model_info.params.get("seed", None)
+
+            payload["options"]["stop"] = (
+                [
+                    bytes(stop, "utf-8").decode("unicode_escape")
+                    for stop in model_info.params["stop"]
+                ]
+                if model_info.params.get("stop", None)
+                else None
+            )
+
+            payload["options"]["tfs_z"] = model_info.params.get("tfs_z", None)
+
+            payload["options"]["num_predict"] = model_info.params.get(
+                "max_tokens", None
+            )
+            payload["options"]["top_k"] = model_info.params.get("top_k", None)
+
+            payload["options"]["top_p"] = model_info.params.get("top_p", None)
+
+        if model_info.params.get("system", None):
+            # Check if the payload already has a system message
+            # If not, add a system message to the payload
+            if payload.get("messages"):
+                for message in payload["messages"]:
+                    if message.get("role") == "system":
+                        message["content"] = (
+                            model_info.params.get("system", None) + message["content"]
+                        )
+                        break
+                else:
+                    payload["messages"].insert(
+                        0,
+                        {
+                            "role": "system",
+                            "content": model_info.params.get("system", None),
+                        },
+                    )
+
     if url_idx == None:
-        model = form_data.model
+        if ":" not in payload["model"]:
+            payload["model"] = f"{payload['model']}:latest"
 
-        if ":" not in model:
-            model = f"{model}:latest"
-
-        if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[model]["urls"])
+        if payload["model"] in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[payload["model"]]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -892,16 +972,12 @@ async def generate_chat_completion(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
+    print(payload)
+
     r = None
 
-    log.debug(
-        "form_data.model_dump_json(exclude_none=True).encode(): {0} ".format(
-            form_data.model_dump_json(exclude_none=True).encode()
-        )
-    )
-
     def get_request():
-        nonlocal form_data
+        nonlocal payload
         nonlocal r
 
         request_id = str(uuid.uuid4())
@@ -910,7 +986,7 @@ async def generate_chat_completion(
 
             def stream_content():
                 try:
-                    if form_data.stream:
+                    if payload.get("stream", None):
                         yield json.dumps({"id": request_id, "done": False}) + "\n"
 
                     for chunk in r.iter_content(chunk_size=8192):
@@ -928,7 +1004,7 @@ async def generate_chat_completion(
             r = requests.request(
                 method="POST",
                 url=f"{url}/api/chat",
-                data=form_data.model_dump_json(exclude_none=True).encode(),
+                data=json.dumps(payload),
                 stream=True,
             )
 
@@ -984,14 +1060,62 @@ async def generate_openai_chat_completion(
     user=Depends(get_verified_user),
 ):
 
+    payload = {
+        **form_data.model_dump(exclude_none=True),
+    }
+
+    model_id = form_data.model
+    model_info = Models.get_model_by_id(model_id)
+
+    if model_info:
+        print(model_info)
+        if model_info.base_model_id:
+            payload["model"] = model_info.base_model_id
+
+        model_info.params = model_info.params.model_dump()
+
+        if model_info.params:
+            payload["temperature"] = model_info.params.get("temperature", None)
+            payload["top_p"] = model_info.params.get("top_p", None)
+            payload["max_tokens"] = model_info.params.get("max_tokens", None)
+            payload["frequency_penalty"] = model_info.params.get(
+                "frequency_penalty", None
+            )
+            payload["seed"] = model_info.params.get("seed", None)
+            payload["stop"] = (
+                [
+                    bytes(stop, "utf-8").decode("unicode_escape")
+                    for stop in model_info.params["stop"]
+                ]
+                if model_info.params.get("stop", None)
+                else None
+            )
+
+        if model_info.params.get("system", None):
+            # Check if the payload already has a system message
+            # If not, add a system message to the payload
+            if payload.get("messages"):
+                for message in payload["messages"]:
+                    if message.get("role") == "system":
+                        message["content"] = (
+                            model_info.params.get("system", None) + message["content"]
+                        )
+                        break
+                else:
+                    payload["messages"].insert(
+                        0,
+                        {
+                            "role": "system",
+                            "content": model_info.params.get("system", None),
+                        },
+                    )
+
     if url_idx == None:
-        model = form_data.model
+        if ":" not in payload["model"]:
+            payload["model"] = f"{payload['model']}:latest"
 
-        if ":" not in model:
-            model = f"{model}:latest"
-
-        if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[model]["urls"])
+        if payload["model"] in app.state.MODELS:
+            url_idx = random.choice(app.state.MODELS[payload["model"]]["urls"])
         else:
             raise HTTPException(
                 status_code=400,
@@ -1004,7 +1128,7 @@ async def generate_openai_chat_completion(
     r = None
 
     def get_request():
-        nonlocal form_data
+        nonlocal payload
         nonlocal r
 
         request_id = str(uuid.uuid4())
@@ -1013,7 +1137,7 @@ async def generate_openai_chat_completion(
 
             def stream_content():
                 try:
-                    if form_data.stream:
+                    if payload.get("stream"):
                         yield json.dumps(
                             {"request_id": request_id, "done": False}
                         ) + "\n"
@@ -1033,7 +1157,7 @@ async def generate_openai_chat_completion(
             r = requests.request(
                 method="POST",
                 url=f"{url}/v1/chat/completions",
-                data=form_data.model_dump_json(exclude_none=True).encode(),
+                data=json.dumps(payload),
                 stream=True,
             )
 

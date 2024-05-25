@@ -19,8 +19,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import StreamingResponse, Response
 
-from apps.ollama.main import app as ollama_app
-from apps.openai.main import app as openai_app
+from apps.ollama.main import app as ollama_app, get_all_models as get_ollama_models
+from apps.openai.main import app as openai_app, get_all_models as get_openai_models
 
 from apps.litellm.main import (
     app as litellm_app,
@@ -36,10 +36,10 @@ from apps.web.main import app as webui_app
 
 import asyncio
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
-
-from utils.utils import get_admin_user
+from apps.web.models.models import Models, ModelModel
+from utils.utils import get_admin_user, get_verified_user
 from apps.rag.utils import rag_messages
 
 from config import (
@@ -53,6 +53,8 @@ from config import (
     FRONTEND_BUILD_DIR,
     CACHE_DIR,
     STATIC_DIR,
+    ENABLE_OPENAI_API,
+    ENABLE_OLLAMA_API,
     ENABLE_LITELLM,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
@@ -110,10 +112,18 @@ app = FastAPI(
 )
 
 app.state.config = AppConfig()
+
+app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
+app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
+
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
+
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
+
+
+app.state.MODELS = {}
 
 origins = ["*"]
 
@@ -231,6 +241,11 @@ app.add_middleware(
 
 @app.middleware("http")
 async def check_url(request: Request, call_next):
+    if len(app.state.MODELS) == 0:
+        await get_all_models()
+    else:
+        pass
+
     start_time = int(time.time())
     response = await call_next(request)
     process_time = int(time.time()) - start_time
@@ -247,9 +262,11 @@ async def update_embedding_function(request: Request, call_next):
     return response
 
 
+# TODO: Deprecate LiteLLM
 app.mount("/litellm/api", litellm_app)
+
 app.mount("/ollama", ollama_app)
-app.mount("/openai/api", openai_app)
+app.mount("/openai", openai_app)
 
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
@@ -258,6 +275,87 @@ app.mount("/rag/api/v1", rag_app)
 app.mount("/api/v1", webui_app)
 
 webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
+
+
+async def get_all_models():
+    openai_models = []
+    ollama_models = []
+
+    if app.state.config.ENABLE_OPENAI_API:
+        openai_models = await get_openai_models()
+
+        openai_models = openai_models["data"]
+
+    if app.state.config.ENABLE_OLLAMA_API:
+        ollama_models = await get_ollama_models()
+
+        ollama_models = [
+            {
+                "id": model["model"],
+                "name": model["name"],
+                "object": "model",
+                "created": int(time.time()),
+                "owned_by": "ollama",
+                "ollama": model,
+            }
+            for model in ollama_models["models"]
+        ]
+
+    models = openai_models + ollama_models
+    custom_models = Models.get_all_models()
+
+    for custom_model in custom_models:
+        if custom_model.base_model_id == None:
+            for model in models:
+                if (
+                    custom_model.id == model["id"]
+                    or custom_model.id == model["id"].split(":")[0]
+                ):
+                    model["name"] = custom_model.name
+                    model["info"] = custom_model.model_dump()
+        else:
+            owned_by = "openai"
+            for model in models:
+                if (
+                    custom_model.base_model_id == model["id"]
+                    or custom_model.base_model_id == model["id"].split(":")[0]
+                ):
+                    owned_by = model["owned_by"]
+                    break
+
+            models.append(
+                {
+                    "id": custom_model.id,
+                    "name": custom_model.name,
+                    "object": "model",
+                    "created": custom_model.created_at,
+                    "owned_by": owned_by,
+                    "info": custom_model.model_dump(),
+                    "preset": True,
+                }
+            )
+
+    app.state.MODELS = {model["id"]: model for model in models}
+
+    webui_app.state.MODELS = app.state.MODELS
+
+    return models
+
+
+@app.get("/api/models")
+async def get_models(user=Depends(get_verified_user)):
+    models = await get_all_models()
+    if app.state.config.ENABLE_MODEL_FILTER:
+        if user.role == "user":
+            models = list(
+                filter(
+                    lambda model: model["id"] in app.state.config.MODEL_FILTER_LIST,
+                    models,
+                )
+            )
+            return {"data": models}
+
+    return {"data": models}
 
 
 @app.get("/api/config")

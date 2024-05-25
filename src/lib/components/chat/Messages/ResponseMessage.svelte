@@ -14,7 +14,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, settings } from '$lib/stores';
+	import { config, models, settings } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -34,7 +34,6 @@
 	import RateComment from './RateComment.svelte';
 	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
 
-	export let modelfiles = [];
 	export let message;
 	export let siblings;
 
@@ -51,6 +50,9 @@
 	export let copyToClipboard: Function;
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
+
+	let model = null;
+	$: model = $models.find((m) => m.id === message.model);
 
 	let edit = false;
 	let editedContent = '';
@@ -338,17 +340,13 @@
 		dir={$settings.chatDirection}
 	>
 		<ProfileImage
-			src={modelfiles[message.model]?.imageUrl ??
+			src={model?.info?.meta?.profile_image_url ??
 				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
 		/>
 
 		<div class="w-full overflow-hidden pl-1">
 			<Name>
-				{#if message.model in modelfiles}
-					{modelfiles[message.model]?.title}
-				{:else}
-					{message.model ? ` ${message.model}` : ''}
-				{/if}
+				{model?.name ?? message.model}
 
 				{#if message.timestamp}
 					<span
@@ -442,8 +440,8 @@
 									{#if token.type === 'code'}
 										<CodeBlock
 											id={`${message.id}-${tokenIdx}`}
-											lang={token.lang}
-											code={revertSanitizedResponseContent(token.text)}
+											lang={token?.lang ?? ''}
+											code={revertSanitizedResponseContent(token?.text ?? '')}
 										/>
 									{:else}
 										{@html marked.parse(token.raw, {

@@ -5,67 +5,82 @@
 
 	import { onMount, getContext } from 'svelte';
 
-	import { WEBUI_NAME, modelfiles, settings, user } from '$lib/stores';
-	import { createModel, deleteModel } from '$lib/apis/ollama';
-	import {
-		createNewModelfile,
-		deleteModelfileByTagName,
-		getModelfiles
-	} from '$lib/apis/modelfiles';
+	import { WEBUI_NAME, modelfiles, models, settings, user } from '$lib/stores';
+	import { addNewModel, deleteModelById, getModelInfos } from '$lib/apis/models';
+
+	import { deleteModel } from '$lib/apis/ollama';
 	import { goto } from '$app/navigation';
+
+	import { getModels } from '$lib/apis';
 
 	const i18n = getContext('i18n');
 
 	let localModelfiles = [];
+
 	let importFiles;
-	let modelfilesImportInputElement: HTMLInputElement;
-	const deleteModelHandler = async (tagName) => {
-		let success = null;
+	let modelsImportInputElement: HTMLInputElement;
 
-		success = await deleteModel(localStorage.token, tagName).catch((err) => {
-			toast.error(err);
+	const deleteModelHandler = async (model) => {
+		console.log(model.info);
+		if (!model?.info) {
+			toast.error(
+				$i18n.t('{{ owner }}: You cannot delete a base model', {
+					owner: model.owned_by.toUpperCase()
+				})
+			);
 			return null;
-		});
-
-		if (success) {
-			toast.success($i18n.t(`Deleted {{tagName}}`, { tagName }));
 		}
 
-		return success;
+		const res = await deleteModelById(localStorage.token, model.id);
+
+		if (res) {
+			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
+		}
+
+		await models.set(await getModels(localStorage.token));
 	};
 
-	const deleteModelfile = async (tagName) => {
-		await deleteModelHandler(tagName);
-		await deleteModelfileByTagName(localStorage.token, tagName);
-		await modelfiles.set(await getModelfiles(localStorage.token));
+	const cloneModelHandler = async (model) => {
+		if ((model?.info?.base_model_id ?? null) === null) {
+			toast.error($i18n.t('You cannot clone a base model'));
+			return;
+		} else {
+			sessionStorage.model = JSON.stringify({
+				...model,
+				id: `${model.id}-clone`,
+				name: `${model.name} (Clone)`
+			});
+			goto('/workspace/models/create');
+		}
 	};
 
-	const shareModelfile = async (modelfile) => {
+	const shareModelHandler = async (model) => {
 		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
 		const url = 'https://openwebui.com';
 
-		const tab = await window.open(`${url}/modelfiles/create`, '_blank');
+		const tab = await window.open(`${url}/models/create`, '_blank');
 		window.addEventListener(
 			'message',
 			(event) => {
 				if (event.origin !== url) return;
 				if (event.data === 'loaded') {
-					tab.postMessage(JSON.stringify(modelfile), '*');
+					tab.postMessage(JSON.stringify(model), '*');
 				}
 			},
 			false
 		);
 	};
 
-	const saveModelfiles = async (modelfiles) => {
-		let blob = new Blob([JSON.stringify(modelfiles)], {
+	const downloadModels = async (models) => {
+		let blob = new Blob([JSON.stringify(models)], {
 			type: 'application/json'
 		});
-		saveAs(blob, `modelfiles-export-${Date.now()}.json`);
+		saveAs(blob, `models-export-${Date.now()}.json`);
 	};
 
 	onMount(() => {
+		// Legacy code to sync localModelfiles with models
 		localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
 
 		if (localModelfiles) {
@@ -76,13 +91,13 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Modelfiles')} | {$WEBUI_NAME}
+		{$i18n.t('Models')} | {$WEBUI_NAME}
 	</title>
 </svelte:head>
 
-<div class=" text-lg font-semibold mb-3">{$i18n.t('Modelfiles')}</div>
+<div class=" text-lg font-semibold mb-3">{$i18n.t('Models')}</div>
 
-<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2" href="/workspace/modelfiles/create">
+<a class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2" href="/workspace/models/create">
 	<div class=" self-center w-10">
 		<div
 			class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
@@ -98,26 +113,26 @@
 	</div>
 
 	<div class=" self-center">
-		<div class=" font-bold">{$i18n.t('Create a modelfile')}</div>
-		<div class=" text-sm">{$i18n.t('Customize Ollama models for a specific purpose')}</div>
+		<div class=" font-bold">{$i18n.t('Create a model')}</div>
+		<div class=" text-sm">{$i18n.t('Customize models for a specific purpose')}</div>
 	</div>
 </a>
 
 <hr class=" dark:border-gray-850" />
 
 <div class=" my-2 mb-5">
-	{#each $modelfiles as modelfile}
+	{#each $models as model}
 		<div
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 		>
 			<a
 				class=" flex flex-1 space-x-4 cursor-pointer w-full"
-				href={`/?models=${encodeURIComponent(modelfile.tagName)}`}
+				href={`/?models=${encodeURIComponent(model.id)}`}
 			>
 				<div class=" self-center w-10">
 					<div class=" rounded-full bg-stone-700">
 						<img
-							src={modelfile.imageUrl ?? '/user.png'}
+							src={model?.info?.meta?.profile_image_url ?? '/favicon.png'}
 							alt="modelfile profile"
 							class=" rounded-full w-full h-auto object-cover"
 						/>
@@ -125,9 +140,9 @@
 				</div>
 
 				<div class=" flex-1 self-center">
-					<div class=" font-bold capitalize">{modelfile.title}</div>
+					<div class=" font-bold line-clamp-1">{model.name}</div>
 					<div class=" text-sm overflow-hidden text-ellipsis line-clamp-1">
-						{modelfile.desc}
+						{!!model?.info?.meta?.description ? model?.info?.meta?.description : model.id}
 					</div>
 				</div>
 			</a>
@@ -135,7 +150,7 @@
 				<a
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
-					href={`/workspace/modelfiles/edit?tag=${encodeURIComponent(modelfile.tagName)}`}
+					href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -157,9 +172,7 @@
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
 					on:click={() => {
-						// console.log(modelfile);
-						sessionStorage.modelfile = JSON.stringify(modelfile);
-						goto('/workspace/modelfiles/create');
+						cloneModelHandler(model);
 					}}
 				>
 					<svg
@@ -182,7 +195,7 @@
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
 					on:click={() => {
-						shareModelfile(modelfile);
+						shareModelHandler(model);
 					}}
 				>
 					<svg
@@ -205,7 +218,7 @@
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
 					on:click={() => {
-						deleteModelfile(modelfile.tagName);
+						deleteModelHandler(model);
 					}}
 				>
 					<svg
@@ -231,8 +244,8 @@
 <div class=" flex justify-end w-full mb-3">
 	<div class="flex space-x-1">
 		<input
-			id="modelfiles-import-input"
-			bind:this={modelfilesImportInputElement}
+			id="models-import-input"
+			bind:this={modelsImportInputElement}
 			bind:files={importFiles}
 			type="file"
 			accept=".json"
@@ -242,16 +255,18 @@
 
 				let reader = new FileReader();
 				reader.onload = async (event) => {
-					let savedModelfiles = JSON.parse(event.target.result);
-					console.log(savedModelfiles);
+					let savedModels = JSON.parse(event.target.result);
+					console.log(savedModels);
 
-					for (const modelfile of savedModelfiles) {
-						await createNewModelfile(localStorage.token, modelfile).catch((error) => {
-							return null;
-						});
+					for (const model of savedModels) {
+						if (model?.info ?? false) {
+							await addNewModel(localStorage.token, model.info).catch((error) => {
+								return null;
+							});
+						}
 					}
 
-					await modelfiles.set(await getModelfiles(localStorage.token));
+					await models.set(await getModels(localStorage.token));
 				};
 
 				reader.readAsText(importFiles[0]);
@@ -261,10 +276,10 @@
 		<button
 			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 			on:click={() => {
-				modelfilesImportInputElement.click();
+				modelsImportInputElement.click();
 			}}
 		>
-			<div class=" self-center mr-2 font-medium">{$i18n.t('Import Modelfiles')}</div>
+			<div class=" self-center mr-2 font-medium">{$i18n.t('Import Models')}</div>
 
 			<div class=" self-center">
 				<svg
@@ -285,10 +300,10 @@
 		<button
 			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 			on:click={async () => {
-				saveModelfiles($modelfiles);
+				downloadModels($models);
 			}}
 		>
-			<div class=" self-center mr-2 font-medium">{$i18n.t('Export Modelfiles')}</div>
+			<div class=" self-center mr-2 font-medium">{$i18n.t('Export Models')}</div>
 
 			<div class=" self-center">
 				<svg
@@ -315,46 +330,12 @@
 
 			<div class="flex space-x-1">
 				<button
-					class="self-center w-fit text-sm px-3 py-1 border dark:border-gray-600 rounded-xl flex"
-					on:click={async () => {
-						for (const modelfile of localModelfiles) {
-							await createNewModelfile(localStorage.token, modelfile).catch((error) => {
-								return null;
-							});
-						}
-
-						saveModelfiles(localModelfiles);
-						localStorage.removeItem('modelfiles');
-						localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
-						await modelfiles.set(await getModelfiles(localStorage.token));
-					}}
-				>
-					<div class=" self-center mr-2 font-medium">{$i18n.t('Sync All')}</div>
-
-					<div class=" self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-3.5 h-3.5"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75Zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
-				</button>
-
-				<button
 					class="self-center w-fit text-sm p-1.5 border dark:border-gray-600 rounded-xl flex"
 					on:click={async () => {
-						saveModelfiles(localModelfiles);
+						downloadModels(localModelfiles);
 
 						localStorage.removeItem('modelfiles');
 						localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
-						await modelfiles.set(await getModelfiles(localStorage.token));
 					}}
 				>
 					<div class=" self-center">
@@ -402,7 +383,7 @@
 		</div>
 
 		<div class=" self-center">
-			<div class=" font-bold">{$i18n.t('Discover a modelfile')}</div>
+			<div class=" font-bold">{$i18n.t('Discover a model')}</div>
 			<div class=" text-sm">{$i18n.t('Discover, download, and explore model presets')}</div>
 		</div>
 	</a>
