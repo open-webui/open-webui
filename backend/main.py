@@ -365,6 +365,7 @@ async def get_app_config():
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
             "enable_image_generation": images_app.state.config.ENABLED,
             "enable_admin_export": ENABLE_ADMIN_EXPORT,
+            "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
         },
     }
 

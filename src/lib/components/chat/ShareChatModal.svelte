@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import { models } from '$lib/stores';
+	import { models, config } from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
@@ -134,16 +134,18 @@
 				<div class="flex justify-end">
 					<div class="flex flex-col items-end space-x-1 mt-1.5">
 						<div class="flex gap-1">
-							<button
-								class=" self-center px-3.5 py-2 rounded-xl text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white"
-								type="button"
-								on:click={() => {
-									shareChat();
-									show = false;
-								}}
-							>
-								{$i18n.t('Share to OpenWebUI Community')}
-							</button>
+							{#if $config?.feature_flags.enable_community_sharing}
+								<button
+									class=" self-center px-3.5 py-2 rounded-xl text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white"
+									type="button"
+									on:click={() => {
+										shareChat();
+										show = false;
+									}}
+								>
+									{$i18n.t('Share to OpenWebUI Community')}
+								</button>
+							{/if}
 
 							<button
 								class=" self-center flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white"

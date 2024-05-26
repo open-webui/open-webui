@@ -133,11 +133,12 @@ type Config = {
 	default_models: string[];
 	default_prompt_suggestions: PromptSuggestion[];
 	feature_flags: {
-		auth?: boolean;
-		enable_signup?: boolean;
-		auth_trusted_header?: boolean;
-		enable_image_generation?: boolean;
-		enable_admin_export?: boolean;
+		auth: boolean;
+		enable_signup: boolean;
+		auth_trusted_header: boolean;
+		enable_image_generation: boolean;
+		enable_admin_export: boolean;
+		enable_community_sharing: boolean;
 	};
 };
 
