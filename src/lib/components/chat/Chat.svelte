@@ -15,7 +15,8 @@
 		settings,
 		showSidebar,
 		tags as _tags,
-		WEBUI_NAME
+		WEBUI_NAME,
+		banners
 	} from '$lib/stores';
 	import { convertMessagesToHistory, copyToClipboard, splitStream } from '$lib/utils';
 
@@ -40,6 +41,7 @@
 	import { queryMemory } from '$lib/apis/memories';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import Banner from '../common/Banner.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -1004,6 +1006,30 @@
 			{chat}
 			{initNewChat}
 		/>
+
+		{#if $banners.length > 0}
+			<div class="flex flex-col gap-1">
+				{#each $banners as banner}
+					<Banner
+						{banner}
+						on:dismiss={(e) => {
+							const bannerId = e.detail;
+
+							localStorage.setItem(
+								'dismissedBannerIds',
+								JSON.stringify(
+									[
+										bannerId,
+										...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]')
+									].filter((id) => $banners.find((b) => b.id === id))
+								)
+							);
+						}}
+					/>
+				{/each}
+			</div>
+		{/if}
+
 		<div class="flex flex-col flex-auto">
 			<div
 				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full"

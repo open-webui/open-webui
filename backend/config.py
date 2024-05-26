@@ -8,6 +8,8 @@ from chromadb import Settings
 from base64 import b64encode
 from bs4 import BeautifulSoup
 from typing import TypeVar, Generic, Union
+from pydantic import BaseModel
+from typing import Optional
 
 from pathlib import Path
 import json
@@ -565,6 +567,22 @@ WEBHOOK_URL = PersistentConfig(
 )
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
+
+
+class BannerModel(BaseModel):
+    id: str
+    type: str
+    title: Optional[str] = None
+    content: str
+    dismissible: bool
+    timestamp: int
+
+
+WEBUI_BANNERS = PersistentConfig(
+    "WEBUI_BANNERS",
+    "ui.banners",
+    [BannerModel(**banner) for banner in json.loads("[]")],
+)
 
 ####################################
 # WEBUI_SECRET_KEY
