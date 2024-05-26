@@ -89,7 +89,7 @@
 							</select>
 
 							<input
-								class="px-3 py-1.5 text-xs w-full bg-transparent outline-none"
+								class="pr-5 py-1.5 text-xs w-full bg-transparent outline-none"
 								placeholder={$i18n.t('Content')}
 								bind:value={banner.content}
 							/>
