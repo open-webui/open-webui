@@ -33,7 +33,7 @@
 		saveHandler();
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80 h-full">
 		<div class=" space-y-3 pr-1.5">
 			<div class="flex w-full justify-between mb-2">
 				<div class=" self-center text-sm font-semibold">
