@@ -31,6 +31,11 @@
 		"code": "de-DE",
 		"title": "German (Deutsch)"
 	},
+	
+	{
+		"code": "da-DK",
+		"title": "Denmark (Danish)"
+	},
 	{
 		"code": "es-ES",
 		"title": "Spanish (Español)"
