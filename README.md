@@ -11,7 +11,7 @@
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
 
-Imagine having a powerhouse of AI-driven conversations at your fingertips. Open WebUI is a revolutionary, self-hosted WebUI that brings the future of language models to your desktop. With its modular architecture, extensibility, and user-friendly interface, Open WebUI is the perfect platform for anyone looking to unlock the full potential of language models. Capable of operating entirely offline and leveraging various LLM runners, including Ollama and OpenAI-compatible APIs. For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
+Imagine having a powerhouse of AI-driven conversations at your fingertips. Open WebUI is a revolutionary, self-hosted Web UI that brings the future of language models to your desktop. With its modular architecture, extensibility, and user-friendly interface, Open WebUI is the perfect platform for anyone looking to unlock the full potential of language models. Capable of operating entirely offline and leveraging various LLM runners, including Ollama and OpenAI-compatible APIs. For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
 
 ![Open WebUI Demo](./demo.gif)
 
@@ -29,35 +29,37 @@ Imagine having a powerhouse of AI-driven conversations at your fingertips. Open 
 
 - 👥 **'@' Model Integration**: Harness the collective intelligence of multiple models in a single chat by seamlessly switching to any acessible local or external model during conversations by using the `@` command to specify the model by name. **Unlock the power of multiple models**.
 
-- 🎨 **Image Generation Integration**: Seamlessly incorporate image generation capabilities using options such as AUTOMATIC1111 API (local), ComfyUI (local), and DALL-E, enriching your chat experience with dynamic visual content. **Bring your chats to life with images**.
+- 🎨 **Image Generation Integration**: Seamlessly incorporate image generation capabilities using options such as AUTOMATIC1111 API or ComfyUI (local), and OpenAI's DALL-E (external), enriching your chat experience with dynamic visual content. **Bring your chats to life with images**.
 
-- 🤝 **OpenAI API Integration**: Effortlessly integrate OpenAI-compatible API for versatile conversations alongside Ollama models. Customize the API Base URL to link with **LMStudio, Mistral, OpenRouter, and more**. **Tap into the power of OpenAI**.
+- 🤝 **OpenAI API Integration**: Effortlessly integrate OpenAI-compatible APIs for versatile conversations alongside Ollama models. Customize the Ollama API URL to link with **LMStudio, GroqCloud, Mistral, OpenRouter, and more**. **Tap into the power of OpenAI**.
 
 - 🔄 **Multi-Modal Support**: Seamlessly engage with models that support multimodal interactions, including images (e.g., LLava). **Experience the future of chat interactions**.
 
-- ⚙️ **Fine-Tuned Control with Advanced Parameters**: Gain a deeper level of control by adjusting parameters such as temperature and defining your system prompts to tailor the conversation to your specific preferences and needs. **Tailor your conversations to your needs**.
+- ⚙️ **Fine-Tuned Control with Advanced Parameters**: Gain a deeper level of control by adjusting parameters such as temperature, context length, and seed, and define your system prompts to tailor the conversation to your specific preferences and needs. **Tailor your conversations to your needs**.
 
 - 🌐🌍 **Multilingual Support**: Experience Open WebUI in your preferred language with our internationalization (i18n) support. Join us in expanding our supported languages! We're actively seeking contributors! **Chat in your native tongue**.
 
 - ↕️ **Bi-Directional Chat Support**: Easily switch between left-to-right and right-to-left chat directions to accommodate various language preferences. **Accommodate diverse language preferences**.
 
-- 🌟 **Continuous Updates**: We are committed to improving Open WebUI with regular updates and new features. **Enjoy the latest innovations in chat technology**.
+- 🌟 **Continuous Updates**: We are committed to improving Open WebUI with regular updates, fixes, and new features. **Enjoy the latest innovations in chat technology**.
 
 <details>
-  <summary>...and many more features! ⚡️</summary>
+  <summary>...and many more remarkable features! ⚡️</summary>
 
 <details>
   <summary>🌈 User Experience</summary>
 
-- 🖥️ **Intuitive Interface**: Our chat interface takes inspiration from ChatGPT, ensuring a user-friendly experience.
+- 🖥️ **Intuitive Interface**: Our chat interface takes inspiration from ChatGPT user interface, ensuring a user-friendly experience.
 
-- 📱 **Responsive Design**: Enjoy a seamless experience on both desktop and mobile devices.
+- 📱 **Responsive Design**: Enjoy a seamless experience across Desktop PC, Laptop, and Mobile devices.
 
-- ⚡ **Swift Responsiveness**: Enjoy fast and responsive performance.
+- ⚡ **Swift Responsiveness**: Enjoy reliably fast and responsive performance.
 
 - 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience.
 
-- 🌈 **Theme Customization**: Choose from a variety of themes to personalize your Open WebUI experience.
+- 📦 **Pip Install Method (Soon/WIP)**: Install Open WebUI using pip, simplifying the installation process and making it even easier for newcomers to get started.
+
+- 🌈 **Theme Customization**: Choose from a variety of solid, yet sleek themes to personalize your Open WebUI experience. Choose between either Light, Dark, or OLED Dark mode; or simply let your device choose for you!
 
 - 💻 **Code Syntax Highlighting**: Enjoy enhanced code readability with our syntax highlighting feature.
 
@@ -74,7 +76,7 @@ Imagine having a powerhouse of AI-driven conversations at your fingertips. Open 
 
 - 🏷️ **Conversation Tagging**: Effortlessly categorize and locate specific chats for quick reference and streamlined data collection.
 
-- ⬆️ **GGUF File Model Creation**: Effortlessly create Ollama models by uploading GGUF files directly from the web UI. Streamlined process with options to upload from your machine or download GGUF files from Hugging Face.
+- ⬆️ **GGUF File Model Creation**: Effortlessly create Ollama models by uploading GGUF files directly from the Web UI. Streamlined process with options to upload from your machine or download GGUF files from Hugging Face.
 
 - ⚙️ **Many Models Conversations**: Effortlessly engage with various models simultaneously, harnessing their unique strengths for optimal responses. Enhance your experience by leveraging a diverse set of models in parallel.
 
@@ -89,7 +91,7 @@ Imagine having a powerhouse of AI-driven conversations at your fingertips. Open 
 <details>
   <summary>💻 Model Management</summary>
 
-- 📥🗑️ **Download/Delete Models**: Easily download or remove models directly from the web UI.
+- 📥🗑️ **Download/Delete Models**: Easily download or delete models directly from Open WebUI.
 
 - 🔄 **Update All Ollama Models**: Easily update locally installed models all at once with a convenient button, streamlining model management.
 
@@ -161,11 +163,11 @@ Imagine having a powerhouse of AI-driven conversations at your fingertips. Open 
 
 - 🛡️ **Model Whitelisting**: Enhance security and access control by allowing admins to whitelist models for users with the `user` role, ensuring that only authorized models can be accessed.
 
-- 📧 **Trusted Email Authentication**: Authenticate using a trusted email header, adding an extra layer of security and authentication to protect your WebUI.
+- 📧 **Trusted Email Authentication**: Authenticate using a trusted email header, adding an extra layer of security and authentication to protect your Web UI.
 
 - 🔐 **Role-Based Access Control (RBAC)**: Ensure secure access with restricted permissions; only authorized individuals can access your Ollama, and exclusive model creation/pulling rights are reserved for administrators.
 
-- 🔒 **Backend Reverse Proxy Support**: Bolster security through direct communication between Open WebUI backend and Ollama. This key feature eliminates the need to expose Ollama over LAN. Requests made to the '/ollama/api' route from the web UI are seamlessly redirected to Ollama from the backend, enhancing overall system security.
+- 🔒 **Backend Reverse Proxy Support**: Bolster security through direct communication between Open WebUI backend and Ollama. This key feature eliminates the need to expose Ollama over LAN. Requests made to the '/ollama/api' route from the Web UI are seamlessly redirected to Ollama from the backend, enhancing overall system security.
 
 - 🔓 **Optional Authentication**: Enjoy the flexibility to disable authentication by setting WEBUI_AUTH to False, ideal for fresh installations without existing users.
 
