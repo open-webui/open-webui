@@ -82,7 +82,7 @@
 
 	// Open all links in a new tab/window (from https://github.com/markedjs/marked/issues/655#issuecomment-383226346)
 	const origLinkRenderer = renderer.link;
-	renderer.link =	(href, title, text) => {
+	renderer.link = (href, title, text) => {
 		const html = origLinkRenderer.call(renderer, href, title, text);
 		return html.replace(/^<a /, '<a target="_blank" rel="nofollow" ');
 	};

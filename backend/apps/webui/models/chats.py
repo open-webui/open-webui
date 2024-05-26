@@ -191,6 +191,20 @@ class ChatTable:
         except:
             return None
 
+    def archive_all_chats_by_user_id(self, user_id: str) -> bool:
+        try:
+            chats = self.get_chats_by_user_id(user_id)
+            for chat in chats:
+                query = Chat.update(
+                    archived=True,
+                ).where(Chat.id == chat.id)
+
+                query.execute()
+
+            return True
+        except:
+            return False
+
     def get_archived_chat_list_by_user_id(
         self, user_id: str, skip: int = 0, limit: int = 50
     ) -> List[ChatModel]:
@@ -205,17 +219,31 @@ class ChatTable:
         ]
 
     def get_chat_list_by_user_id(
-        self, user_id: str, skip: int = 0, limit: int = 50
+        self,
+        user_id: str,
+        include_archived: bool = False,
+        skip: int = 0,
+        limit: int = 50,
     ) -> List[ChatModel]:
-        return [
-            ChatModel(**model_to_dict(chat))
-            for chat in Chat.select()
-            .where(Chat.archived == False)
-            .where(Chat.user_id == user_id)
-            .order_by(Chat.updated_at.desc())
-            # .limit(limit)
-            # .offset(skip)
-        ]
+        if include_archived:
+            return [
+                ChatModel(**model_to_dict(chat))
+                for chat in Chat.select()
+                .where(Chat.user_id == user_id)
+                .order_by(Chat.updated_at.desc())
+                # .limit(limit)
+                # .offset(skip)
+            ]
+        else:
+            return [
+                ChatModel(**model_to_dict(chat))
+                for chat in Chat.select()
+                .where(Chat.archived == False)
+                .where(Chat.user_id == user_id)
+                .order_by(Chat.updated_at.desc())
+                # .limit(limit)
+                # .offset(skip)
+            ]
 
     def get_chat_list_by_chat_ids(
         self, chat_ids: List[str], skip: int = 0, limit: int = 50

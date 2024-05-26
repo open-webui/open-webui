@@ -17,9 +17,7 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
-	return content
-		.replaceAll('&lt;', '<')
-		.replaceAll('&gt;', '>');
+	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
 };
 
 export const capitalizeFirstLetter = (string) => {
