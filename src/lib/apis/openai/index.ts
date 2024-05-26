@@ -202,6 +202,73 @@ export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 	return res.OPENAI_API_KEYS;
 };
 
+export const getOpenAIParams = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${OPENAI_API_BASE_URL}/params`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.OPENAI_API_PARAMS;
+};
+
+export const updateOpenAIParams = async (token: string = '', params: object[]) => {
+	let error = null;
+
+	const res = await fetch(`${OPENAI_API_BASE_URL}/params/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			params
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res.OPENAI_API_PARAMS;
+};
+
 export const getOpenAIModels = async (token: string = '') => {
 	let error = null;
 
@@ -230,7 +297,7 @@ export const getOpenAIModels = async (token: string = '') => {
 
 	return models
 		? models
-				.map((model) => ({ id: model.id, name: model.name ?? model.id, external: true }))
+				.map((model) => ({ id: model.id, name: model.name ?? model.id, default_params: model.default_params, external: true }))
 				.sort((a, b) => {
 					return a.name.localeCompare(b.name);
 				})

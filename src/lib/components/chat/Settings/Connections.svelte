@@ -5,10 +5,10 @@
 
 	import {
 		getOpenAIConfig,
-		getOpenAIKeys,
+		getOpenAIKeys, getOpenAIParams,
 		getOpenAIUrls,
 		updateOpenAIConfig,
-		updateOpenAIKeys,
+		updateOpenAIKeys, updateOpenAIParams,
 		updateOpenAIUrls
 	} from '$lib/apis/openai';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -17,16 +17,11 @@
 	const i18n = getContext('i18n');
 
 	export let getModels: Function;
-	export let saveSettings: Function;
-
 
 	let OPENAI_API_KEYS = [''];
 	let OPENAI_API_BASE_URLS = [''];
-
-	let ENABLE_OPENAI_API = false;
-
-	let options = {
-		api_url: '',
+	let OPENAI_API_PARAMS = [{
+		// Advanced
 		seed: 0,
 		temperature: '',
 		repeat_penalty: '',
@@ -39,42 +34,18 @@
 		stop: '',
 		tfs_z: '',
 		num_ctx: '',
-		num_predict: '',
-		keep_alive: null,
-		request_format: '',
-	};
+		num_predict: ''
+	}];
 
-	let modelParamsList: any[] = [];
+	let ENABLE_OPENAI_API = false;
 
 	const updateOpenAIHandler = async () => {
 		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
 		OPENAI_API_KEYS = await updateOpenAIKeys(localStorage.token, OPENAI_API_KEYS);
+		OPENAI_API_PARAMS = await updateOpenAIParams(localStorage.token, OPENAI_API_PARAMS);
 
 		await models.set(await getModels());
 	};
-
-	const handleSaveModelParams = () => {
-		let submitData = modelParamsList.map(m => (
-			{
-				api_url: m.api_url,
-				seed: (m.seed !== 0 ? m.seed : undefined) ?? undefined,
-				stop: m.stop !== '' ? m.stop.split(',').filter((e) => e) : undefined,
-				temperature: m.temperature !== '' ? m.temperature : undefined,
-				mirostat: m.mirostat !== '' ? m.mirostat : undefined,
-				mirostat_eta: m.mirostat_eta !== '' ? m.mirostat_eta : undefined,
-				mirostat_tau: m.mirostat_tau !== '' ? m.mirostat_tau : undefined,
-				top_k: m.top_k !== '' ? m.top_k : undefined,
-				top_p: m.top_p !== '' ? m.top_p : undefined,
-				repeat_penalty: m.repeat_penalty !== '' ? m.repeat_penalty : undefined,
-				repeat_last_n: m.repeat_last_n !== '' ? m.repeat_last_n : undefined,
-				tfs_z: m.tfs_z !== '' ? m.tfs_z : undefined,
-				num_ctx: m.num_ctx !== '' ? m.num_ctx : undefined,
-				num_predict: m.num_predict !== '' ? m.num_predict : undefined,
-				keep_alive: m.keep_alive !== null ? m.keep_alive : undefined,
-				request_format: m.request_format !== '' ? m.request_format : undefined,
-			}))
-		localStorage.setItem('models_params', JSON.stringify(submitData));
-	}
 
 	onMount(async () => {
 		if ($user.role === 'admin') {
@@ -83,40 +54,9 @@
 
 			OPENAI_API_BASE_URLS = await getOpenAIUrls(localStorage.token);
 			OPENAI_API_KEYS = await getOpenAIKeys(localStorage.token);
-
-			let modelsParams = JSON.parse(localStorage.getItem('models_params') ?? '{}');
-
-			OPENAI_API_BASE_URLS.forEach(url => {
-				let foundOptions = modelsParams.find(m => m.api_url === url);
-			
-				if(foundOptions) {
-					modelParamsList= [...modelParamsList, 
-					{
-						api_url: url,
-						seed: foundOptions.seed ?? 0,
-						stop: (foundOptions?.stop ?? []).join(','),
-						temperature: foundOptions.temperature ?? '',
-						mirostat: foundOptions.mirostat ?? '',
-						mirostat_eta: foundOptions.mirostat_eta ?? '',
-						mirostat_tau: foundOptions.mirostat_tau ?? '',
-						top_k: foundOptions.top_k ?? '',
-						top_p: foundOptions.top_p ?? '',
-						repeat_penalty: foundOptions.repeat_penalty ?? '',
-						repeat_last_n: foundOptions.repeat_last_n ?? '',
-						tfs_z: foundOptions.tfs_z ?? '',
-						num_ctx: foundOptions.num_ctx ?? '',
-						num_predict: foundOptions.num_predict ?? '',
-						keep_alive: foundOptions.keep_alive ?? null,
-						request_format: foundOptions.request_format ?? '',
-					}]
-
-					return;
-				}
-					modelParamsList= [...modelParamsList, {...options, api_url: url}]
-				})
+			OPENAI_API_PARAMS = await getOpenAIParams(localStorage.token);
 		}
 	});
-	
 </script>
 
 <form
@@ -136,7 +76,7 @@
 						<Switch
 							bind:state={ENABLE_OPENAI_API}
 							on:change={async () => {
-								updateOpenAIConfig(localStorage.token, ENABLE_OPENAI_API);
+								await updateOpenAIConfig(localStorage.token, ENABLE_OPENAI_API);
 							}}
 						/>
 					</div>
@@ -151,7 +91,6 @@
 										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 										placeholder={$i18n.t('API Base URL')}
 										bind:value={url}
-										on:input={(e)=> {modelParamsList[idx].api_url = e.target.value}}
 										autocomplete="off"
 									/>
 								</div>
@@ -171,7 +110,14 @@
 											on:click={() => {
 												OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, ''];
 												OPENAI_API_KEYS = [...OPENAI_API_KEYS, ''];
-												modelParamsList = [...modelParamsList, options];
+												OPENAI_API_PARAMS = [...OPENAI_API_PARAMS, {
+													seed: 0,
+													temperature: '',
+													repetition_penalty: '',
+													top_k: '',
+													top_p: '',
+													num_predict: ''
+												}]
 											}}
 											type="button"
 										>
@@ -194,7 +140,7 @@
 													(url, urlIdx) => idx !== urlIdx
 												);
 												OPENAI_API_KEYS = OPENAI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
-												modelParamsList = modelParamsList.filter((_, keyIdx) => idx !== keyIdx)
+												OPENAI_API_PARAMS = OPENAI_API_PARAMS.filter((_, paramIdx) => idx !== paramIdx)
 											}}
 											type="button"
 										>
@@ -214,8 +160,8 @@
 								{$i18n.t('WebUI will make requests to')}
 								<span class=" text-gray-200">'{url}/models'</span>
 							</div>
-							<DefaultParams 
-								options={modelParamsList[idx]} 
+							<DefaultParams
+								bind:options={OPENAI_API_PARAMS[idx]}
 							/>
 							<hr class=" dark:border-gray-700 mx-2 my-4" />
 						{/each}
@@ -228,7 +174,7 @@
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
 			class="  px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
-			on:click={() => handleSaveModelParams()}
+			type="submit"
 		>
 			{$i18n.t('Save')}
 		</button>

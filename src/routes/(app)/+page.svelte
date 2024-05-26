@@ -47,6 +47,7 @@
 		getSystemPrompt,
 		getUserPrompt
 	} from "$lib/utils/prompt_utils";
+	import ChatSessionSettingModal from "$lib/components/chat/ChatSessionSettingModal.svelte";
 
 	const i18n = getContext('i18n');
 
@@ -57,9 +58,12 @@
 	let currentRequestId = null;
 
 	let showModelSelector = true;
+	let showSessionSetting = false;
 
 	let selectedModels = [''];
 	let atSelectedModel = '';
+
+	let sessionConfig = {}
 
 	let selectedModelfile = null;
 	$: selectedModelfile =
@@ -93,6 +97,7 @@
 		currentId: null
 	};
 
+
 	$: if (history.currentId !== null) {
 		let _messages = [];
 
@@ -105,6 +110,11 @@
 		messages = _messages;
 	} else {
 		messages = [];
+	}
+
+	$: sessionConfig = {
+		system: getSystemPrompt($chatType),
+		model_params: $models.find((model) => model.id === selectedModels[0])?.default_params
 	}
 
 	onMount(async () => {
@@ -139,7 +149,7 @@
 		} else if ($config?.default_models) {
 			selectedModels = $config?.default_models.split(',');
 		} else {
-			selectedModels = [''];
+			selectedModels = [$models[0].id];
 		}
 
 		if ($page.url.searchParams.get('q')) {
@@ -235,10 +245,8 @@
 						models: selectedModels,
 						chat_type: $chatType,
 						embedding_index_id: $selectedChatEmbeddingIndex,
-						system: getSystemPrompt($chatType), // $settings.system ?? undefined,
-						options: {
-							...($settings.options ?? {})
-						},
+						system: sessionConfig.system, // $settings.system ?? undefined,
+						options: sessionConfig.model_params,
 						messages: messages,
 						history: history,
 						tags: [],
@@ -603,7 +611,7 @@
 		scrollToBottom();
 
 		try {
-			const {apiMessages, citations} = await createChatCompletionApiMessages($chatType, userPrompt, $selectedChatEmbeddingIndex, messages, $promptOptions)
+			const {apiMessages, citations} = await createChatCompletionApiMessages($chatType, sessionConfig.system, userPrompt, $selectedChatEmbeddingIndex, messages, $promptOptions)
 			if (citations) {
 				responseMessage.citations = citations
 			}
@@ -894,6 +902,13 @@
 	</title>
 </svelte:head>
 
+{#if showSessionSetting}
+<ChatSessionSettingModal
+		bind:show={showSessionSetting}
+		bind:config={sessionConfig}
+/>
+{/if}
+
 <div
 	class="min-h-screen max-h-screen {$showSidebar
 		? 'md:max-w-[calc(100%-260px)]'
@@ -904,6 +919,9 @@
 		bind:selectedModels
 		bind:showModelSelector
 		shareEnabled={messages.length > 0}
+		sessionSettingHandler={() => {
+			showSessionSetting = true
+		}}
 		{chat}
 		{initNewChat}
 	/>

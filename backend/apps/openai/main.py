@@ -24,13 +24,13 @@ from config import (
     ENABLE_OPENAI_API,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
+    OPENAI_API_PARAMS,
     CACHE_DIR,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     AppConfig,
 )
-from typing import List, Optional
-
+from typing import List, Optional, Dict, Any
 
 import hashlib
 from pathlib import Path
@@ -57,6 +57,7 @@ app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
+app.state.config.OPENAI_API_PARAMS = OPENAI_API_PARAMS
 
 app.state.MODELS = {}
 
@@ -95,6 +96,10 @@ class KeysUpdateForm(BaseModel):
     keys: List[str]
 
 
+class ParamsUpdateForm(BaseModel):
+    params: List[Dict[str, Any]]
+
+
 @app.get("/urls")
 async def get_openai_urls(user=Depends(get_admin_user)):
     return {"OPENAI_API_BASE_URLS": app.state.config.OPENAI_API_BASE_URLS}
@@ -124,7 +129,7 @@ async def get_openai_params(user=Depends(get_admin_user)):
 
 
 @app.post("/params/update")
-async def update_openai_param(form_data: KeysUpdateForm, user=Depends(get_admin_user)):
+async def update_openai_param(form_data: ParamsUpdateForm, user=Depends(get_admin_user)):
     app.state.config.OPENAI_API_PARAMS = form_data.params
     return {"OPENAI_API_PARAMS": app.state.config.OPENAI_API_PARAMS}
 
@@ -245,19 +250,15 @@ async def get_all_models():
         responses = await asyncio.gather(*tasks)
         log.info(f"get_all_models:responses() {responses}")
 
+        model_datas = []
+        for idx, response in enumerate(responses):
+            model_list = response["data"] if (response and "data" in response) else (response if isinstance(response, list) else None)
+            if model_list is not None:
+                model_list = [{**model, "default_params": app.state.config.OPENAI_API_PARAMS[idx]} for model in model_list]
+                model_datas.append(model_list)
+
         models = {
-            "data": merge_models_lists(
-                list(
-                    map(
-                        lambda response: (
-                            response["data"]
-                            if (response and "data" in response)
-                            else (response if isinstance(response, list) else None)
-                        ),
-                        responses,
-                    )
-                )
-            )
+            'data': merge_models_lists(model_datas)
         }
 
         log.info(f"models: {models}")

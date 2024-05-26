@@ -4,41 +4,25 @@
 
 	const i18n = getContext('i18n');
 
+	export let title =  $i18n.t('Default Parameters')
+
 	// Default
-	let showParams: boolean = false;
+	export let showParams: boolean = false;
 
 	export let options = {
-		api_url:'',
 		seed: 0,
 		temperature: '',
-		repeat_penalty: '',
-		repeat_last_n: '',
-		mirostat: '',
-		mirostat_eta: '',
-		mirostat_tau: '',
+		repetition_penalty: '',
 		top_k: '',
 		top_p: '',
-		stop: '',
-		tfs_z: '',
-		num_ctx: '',
 		num_predict: '',
-		keep_alive: null,
-		request_format: '',
-	};
-
-	const updateRequestFormat = () => {
-		if (options.request_format === '') {
-			options.request_format = 'json';
-		} else {
-			options.request_format = '';
-		}
 	};
 
 </script>
 
 <div class="mt-2 space-y-3 pr-1.5">
 	<div class="flex justify-between items-center text-sm">
-		<div class="  font-medium">{$i18n.t('Default Parameters')}</div>
+		<div class="  font-medium">{title}</div>
 		<button
 			class=" text-xs font-medium text-gray-500"
 			type="button"
@@ -61,21 +45,6 @@
 						bind:value={options.seed}
 						autocomplete="off"
 						min="0"
-					/>
-				</div>
-			</div>
-		</div>
-	
-		<div>
-			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" w-20 text-xs font-medium self-center">{$i18n.t('Stop Sequence')}</div>
-				<div class=" flex-1 self-center">
-					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						type="text"
-						placeholder={$i18n.t('Enter stop sequence')}
-						bind:value={options.stop}
-						autocomplete="off"
 					/>
 				</div>
 			</div>
@@ -129,144 +98,6 @@
 	
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Mirostat')}</div>
-	
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					type="button"
-					on:click={() => {
-						options.mirostat = options.mirostat === '' ? 0 : '';
-					}}
-				>
-					{#if options.mirostat === ''}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{/if}
-				</button>
-			</div>
-	
-			{#if options.mirostat !== ''}
-				<div class="flex mt-0.5 space-x-2">
-					<div class=" flex-1">
-						<input
-							id="steps-range"
-							type="range"
-							min="0"
-							max="2"
-							step="1"
-							bind:value={options.mirostat}
-							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-						/>
-					</div>
-					<div>
-						<input
-							bind:value={options.mirostat}
-							type="number"
-							class=" bg-transparent text-center w-14"
-							min="0"
-							max="2"
-							step="1"
-						/>
-					</div>
-				</div>
-			{/if}
-		</div>
-	
-		<div class=" py-0.5 w-full justify-between">
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Mirostat Eta')}</div>
-	
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					type="button"
-					on:click={() => {
-						options.mirostat_eta = options.mirostat_eta === '' ? 0.1 : '';
-					}}
-				>
-					{#if options.mirostat_eta === ''}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{/if}
-				</button>
-			</div>
-	
-			{#if options.mirostat_eta !== ''}
-				<div class="flex mt-0.5 space-x-2">
-					<div class=" flex-1">
-						<input
-							id="steps-range"
-							type="range"
-							min="0"
-							max="1"
-							step="0.05"
-							bind:value={options.mirostat_eta}
-							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-						/>
-					</div>
-					<div>
-						<input
-							bind:value={options.mirostat_eta}
-							type="number"
-							class=" bg-transparent text-center w-14"
-							min="0"
-							max="1"
-							step="0.05"
-						/>
-					</div>
-				</div>
-			{/if}
-		</div>
-	
-		<div class=" py-0.5 w-full justify-between">
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Mirostat Tau')}</div>
-	
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					type="button"
-					on:click={() => {
-						options.mirostat_tau = options.mirostat_tau === '' ? 5.0 : '';
-					}}
-				>
-					{#if options.mirostat_tau === ''}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-					{/if}
-				</button>
-			</div>
-	
-			{#if options.mirostat_tau !== ''}
-				<div class="flex mt-0.5 space-x-2">
-					<div class=" flex-1">
-						<input
-							id="steps-range"
-							type="range"
-							min="0"
-							max="10"
-							step="0.5"
-							bind:value={options.mirostat_tau}
-							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-						/>
-					</div>
-					<div>
-						<input
-							bind:value={options.mirostat_tau}
-							type="number"
-							class=" bg-transparent text-center w-14"
-							min="0"
-							max="10"
-							step="0.5"
-						/>
-					</div>
-				</div>
-			{/if}
-		</div>
-	
-		<div class=" py-0.5 w-full justify-between">
-			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
 	
 				<button
@@ -279,7 +110,7 @@
 					{#if options.top_k === ''}
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 					{/if}
 				</button>
 			</div>
@@ -325,7 +156,7 @@
 					{#if options.top_p === ''}
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 					{/if}
 				</button>
 			</div>
@@ -365,18 +196,18 @@
 					class="p-1 px-3 text-xs flex rounded transition"
 					type="button"
 					on:click={() => {
-						options.repeat_penalty = options.repeat_penalty === '' ? 1.1 : '';
+						options.repetition_penalty = options.repetition_penalty === '' ? 1.1 : '';
 					}}
 				>
-					{#if options.repeat_penalty === ''}
+					{#if options.repetition_penalty === ''}
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 					{/if}
 				</button>
 			</div>
 	
-			{#if options.repeat_penalty !== ''}
+			{#if options.repetition_penalty !== ''}
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" flex-1">
 						<input
@@ -385,13 +216,13 @@
 							min="0"
 							max="2"
 							step="0.05"
-							bind:value={options.repeat_penalty}
+							bind:value={options.repetition_penalty}
 							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
 						/>
 					</div>
 					<div>
 						<input
-							bind:value={options.repeat_penalty}
+							bind:value={options.repetition_penalty}
 							type="number"
 							class=" bg-transparent text-center w-14"
 							min="0"
@@ -402,143 +233,7 @@
 				</div>
 			{/if}
 		</div>
-	
-		<div class=" py-0.5 w-full justify-between">
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Repeat Last N')}</div>
-	
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					type="button"
-					on:click={() => {
-						options.repeat_last_n = options.repeat_last_n === '' ? 64 : '';
-					}}
-				>
-					{#if options.repeat_last_n === ''}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{/if}
-				</button>
-			</div>
-	
-			{#if options.repeat_last_n !== ''}
-				<div class="flex mt-0.5 space-x-2">
-					<div class=" flex-1">
-						<input
-							id="steps-range"
-							type="range"
-							min="-1"
-							max="128"
-							step="1"
-							bind:value={options.repeat_last_n}
-							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-						/>
-					</div>
-					<div>
-						<input
-							bind:value={options.repeat_last_n}
-							type="number"
-							class=" bg-transparent text-center w-14"
-							min="-1"
-							max="128"
-							step="1"
-						/>
-					</div>
-				</div>
-			{/if}
-		</div>
-	
-		<div class=" py-0.5 w-full justify-between">
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Tfs Z')}</div>
-	
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					type="button"
-					on:click={() => {
-						options.tfs_z = options.tfs_z === '' ? 1 : '';
-					}}
-				>
-					{#if options.tfs_z === ''}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{/if}
-				</button>
-			</div>
-	
-			{#if options.tfs_z !== ''}
-				<div class="flex mt-0.5 space-x-2">
-					<div class=" flex-1">
-						<input
-							id="steps-range"
-							type="range"
-							min="0"
-							max="2"
-							step="0.05"
-							bind:value={options.tfs_z}
-							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-						/>
-					</div>
-					<div>
-						<input
-							bind:value={options.tfs_z}
-							type="number"
-							class=" bg-transparent text-center w-14"
-							min="0"
-							max="2"
-							step="0.05"
-						/>
-					</div>
-				</div>
-			{/if}
-		</div>
-	
-		<div class=" py-0.5 w-full justify-between">
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Context Length')}</div>
-	
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					type="button"
-					on:click={() => {
-						options.num_ctx = options.num_ctx === '' ? 2048 : '';
-					}}
-				>
-					{#if options.num_ctx === ''}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{/if}
-				</button>
-			</div>
-	
-			{#if options.num_ctx !== ''}
-				<div class="flex mt-0.5 space-x-2">
-					<div class=" flex-1">
-						<input
-							id="steps-range"
-							type="range"
-							min="-1"
-							max="10240000"
-							step="1"
-							bind:value={options.num_ctx}
-							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-						/>
-					</div>
-					<div class="">
-						<input
-							bind:value={options.num_ctx}
-							type="number"
-							class=" bg-transparent text-center w-14"
-							min="-1"
-							step="10"
-						/>
-					</div>
-				</div>
-			{/if}
-		</div>
+
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Max Tokens')}</div>
@@ -550,15 +245,15 @@
 						options.num_predict = options.num_predict === '' ? 128 : '';
 					}}
 				>
-					{#if options.num_predict === ''}
+					{#if !options.num_predict}
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 					{/if}
 				</button>
 			</div>
 	
-			{#if options.num_predict !== ''}
+			{#if options.num_predict}
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" flex-1">
 						<input
@@ -585,53 +280,5 @@
 			{/if}
 		</div>
 	</div>
-
-		<div class=" py-1 w-full justify-between">
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Keep Alive')}</div>
-
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					type="button"
-					on:click={() => {
-						options.keep_alive = options.keep_alive === null ? '5m' : null;
-					}}
-				>
-					{#if options.keep_alive === null}
-						<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
-					{:else}
-						<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
-					{/if}
-				</button>
-			</div>
-
-			{#if options.keep_alive !== null}
-				<div class="flex mt-1 space-x-2">
-					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						type="text"
-						placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
-						bind:value={options.keep_alive}
-						/>
-				</div>
-			{/if}
-		</div>
-
-		<div>
-			<div class=" py-1 flex w-full justify-between">
-				<div class=" self-center text-sm font-medium">{$i18n.t('Request Mode')}</div>
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					type="button"
-					on:click={updateRequestFormat}
-				>
-					{#if options.request_format === ''}
-						<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
-					{:else if options.request_format === 'json'}
-						<span class="ml-2 self-center"> {$i18n.t('JSON')} </span>
-					{/if}
-				</button>
-			</div>
-		</div>
 	{/if}
 </div>

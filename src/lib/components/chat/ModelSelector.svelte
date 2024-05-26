@@ -157,7 +157,7 @@
 	<span> {$i18n.t($chatType)}</span>
 	{#if supportedTranslateLangs.length > 0}
 		<span class="mx-2">-></span>
-		<select class="capitalize rounded-lg py-2 pl-4 pr-10 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+		<select class="capitalize rounded-lg py-1 pl-4 pr-10 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 				on:change={(e) => promptOptions.set({...$promptOptions, translate_lang: e.target.value})}
 		>
 			{#each supportedTranslateLangs as info}
@@ -166,7 +166,7 @@
 		</select>
 	{/if}
 	{#if embeddingIndexs.length > 0}
-		<select class="ml-2 capitalize rounded-lg py-2 pl-4 pr-10 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+		<select class="ml-2 capitalize rounded-lg py-1 pl-4 pr-10 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 				bind:value={$selectedChatEmbeddingIndex}
 		>
 			{#each embeddingIndexs as info}

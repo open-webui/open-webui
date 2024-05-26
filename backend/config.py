@@ -455,11 +455,12 @@ OPENAI_API_BASE_URLS = PersistentConfig(
 
 OPENAI_API_PARAMS = [
     {
+        'seed': 0,
         'temperature': 0.3,
         'top_p': 0.9,
         'top_k': 40,
         'repetition_penalty': 1.05,
-        'max_tokens': 2048,
+        'num_predict': 1024,
     }
     for url in OPENAI_API_BASE_URLS.value
 ]

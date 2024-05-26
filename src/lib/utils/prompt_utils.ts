@@ -88,7 +88,7 @@ export const getAbstractPrompt = (content: string, question: string) => {
   return `Hãy trả lời câu hỏi dưới đây theo bối cảnh được cung cấp.: Câu hỏi: ${question}\nBối cảnh: ${content}\n### Response: `
 }
 
-export const createChatCompletionApiMessages = async (chatType: string, userPrompt: string, embeddingIndexId: number, messages, promptOptions) => {
+export const createChatCompletionApiMessages = async (chatType: string, systemPrompt: string, userPrompt: string, embeddingIndexId: number, messages, promptOptions) => {
   if (chatType === 'chat_embedding') {
     const chunks = await queryRankedChunk(embeddingIndexId, userPrompt)
     const citations = chunks.map((chunk) => ({
@@ -102,7 +102,7 @@ export const createChatCompletionApiMessages = async (chatType: string, userProm
       apiMessages: [
         {
           role: 'system',
-          content: getSystemPrompt(chatType)
+          content: systemPrompt
         },
         {
           role: 'user',
@@ -117,7 +117,7 @@ export const createChatCompletionApiMessages = async (chatType: string, userProm
       apiMessages: [
         {
           role: 'system',
-          content: getSystemPrompt(chatType)
+          content: systemPrompt
         },
         {
           role: 'user',
@@ -131,7 +131,7 @@ export const createChatCompletionApiMessages = async (chatType: string, userProm
     apiMessages: [
       {
         role: 'system',
-        content: getSystemPrompt(chatType)
+        content: systemPrompt
       },
       ...messages
     ]

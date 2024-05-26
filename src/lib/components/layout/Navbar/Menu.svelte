@@ -18,6 +18,7 @@
 	export let shareEnabled: boolean = false;
 	export let shareHandler: Function;
 	export let downloadHandler: Function;
+	export let sessionSettingHandler: Function;
 
 	// export let tagHandler: Function;
 
@@ -82,10 +83,10 @@
 			align="end"
 			transition={flyAndScale}
 		>
-			<!-- <DropdownMenu.Item
+			 <DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-800 rounded-md"
-				on:click={async () => {
-					await showSettings.set(!$showSettings);
+				on:click={() => {
+					sessionSettingHandler()
 				}}
 			>
 				<svg
@@ -108,8 +109,9 @@
 					/>
 				</svg>
 				<div class="flex items-center">{$i18n.t('Settings')}</div>
-			</DropdownMenu.Item> -->
+			</DropdownMenu.Item>
 
+			{#if shareEnabled}
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				id="chat-share-button"
@@ -183,11 +185,12 @@
 					</DropdownMenu.Item>
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
+			{/if}
 
 			<hr class="border-gray-100 dark:border-gray-800 mt-2.5 mb-1.5" />
 
 			<div class="flex p-1">
-				<Tags chatId={chat.id} />
+				<Tags chatId={chat?.id} />
 			</div>
 		</DropdownMenu.Content>
 	</div>
