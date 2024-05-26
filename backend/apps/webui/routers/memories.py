@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import logging
 
-from apps.web.models.memories import Memories, MemoryModel
+from apps.webui.models.memories import Memories, MemoryModel
 
 from utils.utils import get_verified_user
 from constants import ERROR_MESSAGES

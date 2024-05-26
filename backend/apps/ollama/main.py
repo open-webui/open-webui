@@ -29,8 +29,8 @@ import time
 from urllib.parse import urlparse
 from typing import Optional, List, Union
 
-from apps.web.models.models import Models
-from apps.web.models.users import Users
+from apps.webui.models.models import Models
+from apps.webui.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
     decode_token,

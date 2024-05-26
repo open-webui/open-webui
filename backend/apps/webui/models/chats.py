@@ -7,7 +7,7 @@ import json
 import uuid
 import time
 
-from apps.web.internal.db import DB
+from apps.webui.internal.db import DB
 
 ####################
 # Chat DB Schema

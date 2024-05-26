@@ -25,13 +25,13 @@ from apps.openai.main import app as openai_app, get_all_models as get_openai_mod
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
-from apps.web.main import app as webui_app
+from apps.webui.main import app as webui_app
 
 import asyncio
 from pydantic import BaseModel
 from typing import List, Optional
 
-from apps.web.models.models import Models, ModelModel
+from apps.webui.models.models import Models, ModelModel
 from utils.utils import get_admin_user, get_verified_user
 from apps.rag.utils import rag_messages
 

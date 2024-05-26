@@ -7,8 +7,8 @@ from pydantic import BaseModel
 import json
 import logging
 
-from apps.web.models.users import Users
-from apps.web.models.chats import (
+from apps.webui.models.users import Users
+from apps.webui.models.chats import (
     ChatModel,
     ChatResponse,
     ChatTitleForm,
@@ -18,7 +18,7 @@ from apps.web.models.chats import (
 )
 
 
-from apps.web.models.tags import (
+from apps.webui.models.tags import (
     TagModel,
     ChatIdTagModel,
     ChatIdTagForm,

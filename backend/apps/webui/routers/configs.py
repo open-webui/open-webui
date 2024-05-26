@@ -8,7 +8,7 @@ from pydantic import BaseModel
 import time
 import uuid
 
-from apps.web.models.users import Users
+from apps.webui.models.users import Users
 
 from utils.utils import (
     get_password_hash,

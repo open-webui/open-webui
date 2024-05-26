@@ -8,7 +8,7 @@ import uuid
 import time
 import logging
 
-from apps.web.internal.db import DB
+from apps.webui.internal.db import DB
 
 from config import SRC_LOG_LEVELS
 
