@@ -1,4 +1,6 @@
 <script lang="ts">
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { getContext, createEventDispatcher } from 'svelte';
@@ -12,6 +14,8 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
+
+	let searchValue = '';
 
 	let chats = [];
 
@@ -31,6 +35,13 @@
 		});
 
 		chats = await getArchivedChatList(localStorage.token);
+	};
+
+	const exportChatsHandler = async () => {
+		let blob = new Blob([JSON.stringify(chats)], {
+			type: 'application/json'
+		});
+		saveAs(blob, `archived-chat-export-${Date.now()}.json`);
 	};
 
 	$: if (show) {
@@ -63,10 +74,34 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
+			<div class=" flex w-full mt-2 space-x-2">
+				<div class="flex flex-1">
+					<div class=" self-center ml-1 mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<input
+						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+						bind:value={searchValue}
+						placeholder={$i18n.t('Search Chats')}
+					/>
+				</div>
+			</div>
+			<hr class=" dark:border-gray-850 my-2" />
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if chats.length > 0}
-					<div class="text-left text-sm w-full mb-4 max-h-[22rem] overflow-y-scroll">
+					<div class="text-left text-sm w-full mb-3 max-h-[22rem] overflow-y-scroll">
 						<div class="relative overflow-x-auto">
 							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 								<thead
@@ -79,7 +114,9 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each chats as chat, idx}
+									{#each chats.filter((c) => searchValue === '' || c.title
+												.toLowerCase()
+												.includes(searchValue.toLowerCase())) as chat, idx}
 										<tr
 											class="bg-transparent {idx !== chats.length - 1 &&
 												'border-b'} dark:bg-gray-900 dark:border-gray-850 text-xs"
@@ -154,11 +191,15 @@
 								</tbody>
 							</table>
 						</div>
-						<!-- {#each chats as chat}
-							<div>
-								{JSON.stringify(chat)}
-							</div>
-						{/each} -->
+
+						<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2 m-1">
+							<button
+								class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
+								on:click={() => {
+									exportChatsHandler();
+								}}>Export All Archived Chats</button
+							>
+						</div>
 					</div>
 				{:else}
 					<div class="text-left text-sm w-full mb-8">
