@@ -25,6 +25,7 @@ from config import (
     JWT_EXPIRES_IN,
     WEBUI_BANNERS,
     AppConfig,
+    ENABLE_COMMUNITY_SHARING,
 )
 
 app = FastAPI()
@@ -43,6 +44,7 @@ app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
 
+app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 
 app.state.MODELS = {}
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
