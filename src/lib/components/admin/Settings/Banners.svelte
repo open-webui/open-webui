@@ -52,7 +52,7 @@
 									type: '',
 									title: '',
 									content: '',
-									dismissible: false,
+									dismissible: true,
 									timestamp: Math.floor(Date.now() / 1000)
 								}
 							];
