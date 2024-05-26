@@ -60,7 +60,7 @@
 			await goto('/');
 		}
 		loaded = true;
-		if (($config?.auth_trusted_header ?? false) || $config?.auth === false) {
+		if (($config?.feature_flags.auth_trusted_header ?? false) || $config?.feature_flags.auth === false) {
 			await signInHandler();
 		}
 	});
@@ -102,7 +102,7 @@
 		</div> -->
 
 		<div class="w-full sm:max-w-md px-10 min-h-screen flex flex-col text-center">
-			{#if ($config?.auth_trusted_header ?? false) || $config?.auth === false}
+			{#if ($config?.feature_flags.auth_trusted_header ?? false) || $config?.feature_flags.auth === false}
 				<div class=" my-auto pb-10 w-full">
 					<div
 						class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-bold dark:text-gray-200"
@@ -194,7 +194,7 @@
 								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
 							</button>
 
-							{#if $config.enable_signup}
+							{#if $config?.feature_flags.enable_signup}
 								<div class=" mt-4 text-sm text-center">
 									{mode === 'signin'
 										? $i18n.t("Don't have an account?")

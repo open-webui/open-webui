@@ -126,15 +126,19 @@ type Prompt = {
 };
 
 type Config = {
-	status?: boolean;
-	name?: string;
-	version?: string;
-	default_locale?: string;
-	images?: boolean;
-	default_models?: string[];
-	default_prompt_suggestions?: PromptSuggestion[];
-	auth_trusted_header?: boolean;
-	model_config?: GlobalModelConfig;
+	status: boolean;
+	name: string;
+	version: string;
+	default_locale: string;
+	default_models: string[];
+	default_prompt_suggestions: PromptSuggestion[];
+	feature_flags: {
+		auth?: boolean;
+		enable_signup?: boolean;
+		auth_trusted_header?: boolean;
+		enable_image_generation?: boolean;
+		enable_admin_export?: boolean;
+	};
 };
 
 type PromptSuggestion = {

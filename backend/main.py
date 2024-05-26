@@ -356,14 +356,16 @@ async def get_app_config():
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
-        "auth": WEBUI_AUTH,
-        "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
-        "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
-        "enable_image_generation": images_app.state.config.ENABLED,
-        "enable_admin_export": ENABLE_ADMIN_EXPORT,
         "default_locale": default_locale,
         "default_models": webui_app.state.config.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+        "feature_flags": {
+            "auth": WEBUI_AUTH,
+            "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
+            "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
+            "enable_image_generation": images_app.state.config.ENABLED,
+            "enable_admin_export": ENABLE_ADMIN_EXPORT,
+        },
     }
 
 
