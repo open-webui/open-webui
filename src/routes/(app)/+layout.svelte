@@ -85,12 +85,7 @@
 					documents.set(await getDocs(localStorage.token));
 				})(),
 				(async () => {
-					let _banners = await getBanners(localStorage.token);
-					const dismissedBannerIds = JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]');
-					_banners = _banners.filter((banner) =>
-						banner.dismissible ? !dismissedBannerIds.includes(banner.id) : true
-					);
-					banners.set(_banners);
+					banners.set(await getBanners(localStorage.token));
 				})(),
 				(async () => {
 					tags.set(await getAllChatTags(localStorage.token));
