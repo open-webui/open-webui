@@ -11,41 +11,43 @@
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
 
-Open WebUI is an extensible, feature-rich, and user-friendly self-hosted WebUI designed to operate entirely offline. It supports various LLM runners, including Ollama and OpenAI-compatible APIs. For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
+Imagine having a powerhouse of AI-driven conversations at your fingertips. Open WebUI is a revolutionary, self-hosted WebUI that brings the future of language models to your desktop. With its modular architecture, extensibility, and user-friendly interface, Open WebUI is the perfect platform for anyone looking to unlock the full potential of language models. Capable of operating entirely offline and leveraging various LLM runners, including Ollama and OpenAI-compatible APIs. For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
 
 ![Open WebUI Demo](./demo.gif)
 
 ## Key Features ⭐
 
-- 📚 **Local RAG Integration**: Dive into the future of chat interactions with the groundbreaking Retrieval Augmented Generation (RAG) support. This feature seamlessly integrates document interactions into your chat experience. You can load documents directly into the chat or add files to your document library, effortlessly accessing them using `#` command in the prompt. In its alpha phase, occasional issues may arise as we actively refine and enhance this feature to ensure optimal performance and reliability.
+- 📚 **Local RAG Integration**: Dive into the future of chat interactions with the groundbreaking Retrieval Augmented Generation (RAG) support. This feature seamlessly integrates document interactions into your chat experience. You can load documents directly into the chat or add files to your document library, effortlessly accessing them using `#` command in the prompt. In its alpha phase, occasional issues may arise as we actively refine and enhance this feature to ensure optimal performance and reliability. **Revolutionize chat interactions with RAG support**.
 
-- 🔍 **RAG Embedding Support**: Change the RAG embedding model directly in document settings, enhancing document processing. This feature supports Ollama and OpenAI models.
+- 🔍 **RAG Embedding Support**: Change the RAG embedding model directly in document settings, enhancing document processing. This feature supports Ollama and OpenAI models.  **Take control of your document interactions**.
 
-- 🌐 **Web Browsing Capability**: Seamlessly integrate websites into your chat experience using the `#` command followed by the URL. This feature allows you to incorporate web content directly into your conversations, enhancing the richness and depth of your interactions.
+- 🌐 **Web Browsing Capability**: Seamlessly integrate websites into your chat experience using the `#` command followed by the URL. This feature allows you to incorporate web content directly into your conversations, enhancing the richness and depth of your interactions. **Surf the web within your chat**.
 
-- 🤖 **Multiple Model Support**: Seamlessly switch between different chat models for diverse interactions.
+- 🤖 **Multiple Model Support**: Seamlessly switch between different chat models for diverse interactions. **Explore multiple perspectives in a single chat**.
 
-- 🧩 **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [Open WebUI Community](https://openwebui.com/) integration.
+- 🧩 **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [Open WebUI Community](https://openwebui.com/) integration. **Design your ideal chat model**.
 
-- 💬 **Collaborative Chat**: Harness the collective intelligence of multiple models by seamlessly orchestrating group conversations. Use the `@` command to specify the model, enabling dynamic and diverse dialogues within your chat interface. Immerse yourself in the collective intelligence woven into your chat environment.
+- 👥 **'@' Model Integration**: Harness the collective intelligence of multiple models in a single chat by seamlessly switching to any acessible local or external model during conversations by using the `@` command to specify the model by name. **Unlock the power of multiple models**.
 
-- 🎨 **Image Generation Integration**: Seamlessly incorporate image generation capabilities using options such as AUTOMATIC1111 API (local), ComfyUI (local), and DALL-E, enriching your chat experience with dynamic visual content.
+- 🎨 **Image Generation Integration**: Seamlessly incorporate image generation capabilities using options such as AUTOMATIC1111 API (local), ComfyUI (local), and DALL-E, enriching your chat experience with dynamic visual content. **Bring your chats to life with images**.
 
-- 🤝 **OpenAI API Integration**: Effortlessly integrate OpenAI-compatible API for versatile conversations alongside Ollama models. Customize the API Base URL to link with **LMStudio, Mistral, OpenRouter, and more**.
+- 🤝 **OpenAI API Integration**: Effortlessly integrate OpenAI-compatible API for versatile conversations alongside Ollama models. Customize the API Base URL to link with **LMStudio, Mistral, OpenRouter, and more**. **Tap into the power of OpenAI**.
 
-- 🔄 **Multi-Modal Support**: Seamlessly engage with models that support multimodal interactions, including images (e.g., LLava).
+- 🔄 **Multi-Modal Support**: Seamlessly engage with models that support multimodal interactions, including images (e.g., LLava). **Experience the future of chat interactions**.
 
-- ⚙️ **Fine-Tuned Control with Advanced Parameters**: Gain a deeper level of control by adjusting parameters such as temperature and defining your system prompts to tailor the conversation to your specific preferences and needs.
+- ⚙️ **Fine-Tuned Control with Advanced Parameters**: Gain a deeper level of control by adjusting parameters such as temperature and defining your system prompts to tailor the conversation to your specific preferences and needs. **Tailor your conversations to your needs**.
 
-- 🌐🌍 **Multilingual Support**: Experience Open WebUI in your preferred language with our internationalization (i18n) support. Join us in expanding our supported languages! We're actively seeking contributors!
+- 🌐🌍 **Multilingual Support**: Experience Open WebUI in your preferred language with our internationalization (i18n) support. Join us in expanding our supported languages! We're actively seeking contributors! **Chat in your native tongue**.
 
-- 🌟 **Continuous Updates**: We are committed to improving Open WebUI with regular updates and new features.
+- ↕️ **Bi-Directional Chat Support**: Easily switch between left-to-right and right-to-left chat directions to accommodate various language preferences. **Accommodate diverse language preferences**.
+
+- 🌟 **Continuous Updates**: We are committed to improving Open WebUI with regular updates and new features. **Enjoy the latest innovations in chat technology**.
 
 <details>
   <summary>...and many more features! ⚡️</summary>
 
 <details>
-  <summary>User Experience</summary>
+  <summary>🌈 User Experience</summary>
 
 - 🖥️ **Intuitive Interface**: Our chat interface takes inspiration from ChatGPT, ensuring a user-friendly experience.
 
@@ -64,7 +66,7 @@ Open WebUI is an extensible, feature-rich, and user-friendly self-hosted WebUI d
 </details>
 
 <details>
-  <summary>Conversations</summary>
+  <summary>💬 Conversations</summary>
 
 - 📜 **Prompt Preset Support**: Instantly access preset prompts using the `/` command in the chat input. Load predefined conversation starters effortlessly and expedite your interactions. Effortlessly import prompts through [Open WebUI Community](https://openwebui.com/) integration.
 
@@ -76,10 +78,16 @@ Open WebUI is an extensible, feature-rich, and user-friendly self-hosted WebUI d
 
 - ⚙️ **Many Models Conversations**: Effortlessly engage with various models simultaneously, harnessing their unique strengths for optimal responses. Enhance your experience by leveraging a diverse set of models in parallel.
 
+- 🧠 **Experimental Memory Feature**: Manually input personal information you want LLMs to remember via Settings > Personalization > Memory.
+
+- 📜 **Citations in RAG Feature**: Easily track the context fed to the LLM with added citations in the RAG feature.
+
+- 📹 **Youtube RAG Pipeline**: Dedicated RAG pipeline for Youtube videos, enabling interaction with video transcriptions directly.
+
 </details>
 
 <details>
-  <summary>Model Management</summary>
+  <summary>💻 Model Management</summary>
 
 - 📥🗑️ **Download/Delete Models**: Easily download or remove models directly from the web UI.
 
@@ -88,14 +96,14 @@ Open WebUI is an extensible, feature-rich, and user-friendly self-hosted WebUI d
 </details>
 
 <details>
-  <summary>Collaboration</summary>
+  <summary>👥 Collaboration</summary>
 
 - 🗨️ **Local Chat Sharing**: Generate and share chat links seamlessly between users, enhancing collaboration and communication.
 
 </details>
 
 <details>
-  <summary>History and Archive</summary>
+  <summary>📚 History and Archive</summary>
 
 - 🔄 **Regeneration History Access**: Easily revisit and explore your entire regeneration history.
 
@@ -108,7 +116,7 @@ Open WebUI is an extensible, feature-rich, and user-friendly self-hosted WebUI d
 </details>
 
 <details>
-  <summary>Accessibility</summary>
+  <summary>🎙️ Accessibility</summary>
 
 - 🗣️ **Voice Input Support**: Engage with your model through voice interactions; enjoy the convenience of talking to your model directly. Additionally, explore the option for sending voice input automatically after 3 seconds of silence for a streamlined experience.
 
@@ -117,32 +125,49 @@ Open WebUI is an extensible, feature-rich, and user-friendly self-hosted WebUI d
 </details>
 
 <details>
-  <summary>Integration and Security</summary>
+  <summary>🐍 Code Execution</summary>
+
+- 🐍 **Python Code Execution**: Execute Python code locally in the browser with libraries like 'requests', 'beautifulsoup4', 'numpy', 'pandas', 'seaborn', 'matplotlib', 'scikit-learn', 'scipy', 'regex'.
+
+- 🚀 **Flexible, UI-Agnostic OpenAI-Compatible Pipelines (WIP)**: Seamlessly integrate and customize pipelines for efficient data processing and model training, ensuring ultimate flexibility and scalability.
+
+</details>
+
+<details>
+  <summary>🔓 Integration and Security</summary>
 
 - ✨ **Multiple OpenAI-Compatible API Support**: Seamlessly integrate and customize various OpenAI-compatible APIs, enhancing the versatility of your chat interactions.
 
-- 🔑 **API Key Generation Support**: Generate secret keys to leverage Open WebUI with OpenAI libraries, simplifying integration and development.
+- 🔑 **Simplified API Key Management**: Easily generate and manage secret keys to leverage Open WebUI with OpenAI libraries, streamlining integration and development.
 
-- 🔗 **External Ollama Server Connection**: Seamlessly link to an external Ollama server hosted on a different address by configuring the environment variable.
+- 🌐🔗 **External Ollama Server Connectivity**: Seamlessly link to an external Ollama server hosted on a different address by configuring the environment variable.
 
 - 🔀 **Multiple Ollama Instance Load Balancing**: Effortlessly distribute chat requests across multiple Ollama instances for enhanced performance and reliability.
 
 </details>
 
 <details>
-  <summary>Administration</summary>
+  <summary>👑 Administration</summary>
 
-- 👥 **Multi-User Management**: Easily oversee and administer users via our intuitive admin panel, streamlining user management processes.
+- 👑 **Super Admin Assignment**: Automatically assign the first signup as a super admin as an unchangeable role that cannot be modified by other admins.
 
-- 🔗 **Webhook Integration**: Subscribe to new user sign-up events via webhook (compatible with Google Chat and Microsoft Teams), providing real-time notifications and automation capabilities.
+- 🛡️ **Granular User Permissions**: Restrict user actions and access with customizable role-based permissions, ensuring that only authorized individuals can perform specific tasks.
 
-- 🛡️ **Model Whitelisting**: Admins can whitelist models for users with the 'user' role, enhancing security and access control.
+- 👥 **Multi-User Management**: Seamlessly manage multiple users through our intuitive admin panel, streamlining user administration and simplifying user lifecycle management.
 
-- 📧 **Trusted Email Authentication**: Authenticate using a trusted email header, adding an additional layer of security and authentication.
+- 🔧 **Admin Panel**: Streamlined user management with options to add users directly or in bulk via CSV import, making user onboarding and management efficient.
+
+- 🔗 **Webhook Integration**: Subscribe to new user sign-up events via webhook (compatible with Discord, Google Chat and Microsoft Teams), providing real-time notifications and automation capabilities.
+
+- 🛡️ **Model Whitelisting**: Enhance security and access control by allowing admins to whitelist models for users with the `user` role, ensuring that only authorized models can be accessed.
+
+- 📧 **Trusted Email Authentication**: Authenticate using a trusted email header, adding an extra layer of security and authentication to protect your WebUI.
 
 - 🔐 **Role-Based Access Control (RBAC)**: Ensure secure access with restricted permissions; only authorized individuals can access your Ollama, and exclusive model creation/pulling rights are reserved for administrators.
 
 - 🔒 **Backend Reverse Proxy Support**: Bolster security through direct communication between Open WebUI backend and Ollama. This key feature eliminates the need to expose Ollama over LAN. Requests made to the '/ollama/api' route from the web UI are seamlessly redirected to Ollama from the backend, enhancing overall system security.
+
+- 🔓 **Optional Authentication**: Enjoy the flexibility to disable authentication by setting WEBUI_AUTH to False, ideal for fresh installations without existing users.
 
 </details>
 
