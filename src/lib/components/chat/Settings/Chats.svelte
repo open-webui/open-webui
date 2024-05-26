@@ -75,7 +75,7 @@
 		saveAs(blob, `all-chats-export-${Date.now()}.json`);
 	};
 
-	const deleteChats = async () => {
+	const deleteAllChatsHandler = async () => {
 		await goto('/');
 		await deleteAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
@@ -240,7 +240,7 @@
 					<button
 						class="hover:text-white transition"
 						on:click={() => {
-							deleteChats();
+							deleteAllChatsHandler();
 							showDeleteConfirm = false;
 						}}
 					>
@@ -297,7 +297,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center text-sm font-medium">{$i18n.t('Delete Chats')}</div>
+				<div class=" self-center text-sm font-medium">{$i18n.t('Delete All Chats')}</div>
 			</button>
 		{/if}
 
