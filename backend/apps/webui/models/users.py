@@ -114,7 +114,7 @@ class UsersTable:
 
     def get_user_by_email(self, email: str) -> Optional[UserModel]:
         try:
-            user = User.get(User.email == email and User.oauth_sub.is_null())
+            user = User.get((User.email == email, User.oauth_sub.is_null()))
             return UserModel(**model_to_dict(user))
         except:
             return None
