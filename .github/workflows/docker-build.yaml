@@ -84,6 +84,8 @@ jobs:
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
 
       - name: Export digest
         run: |
@@ -170,7 +172,9 @@ jobs:
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
-          build-args: USE_CUDA=true
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+            USE_CUDA=true
 
       - name: Export digest
         run: |
@@ -257,7 +261,9 @@ jobs:
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
-          build-args: USE_OLLAMA=true
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+            USE_OLLAMA=true
 
       - name: Export digest
         run: |

@@ -1,6 +1,7 @@
 import { APP_NAME } from '$lib/constants';
 import { type Writable, writable } from 'svelte/store';
 import type { GlobalModelConfig, ModelConfig } from '$lib/apis';
+import type { Banner } from '$lib/types';
 
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
@@ -35,6 +36,8 @@ export const documents = writable([
 		title: 'title1'
 	}
 ]);
+
+export const banners: Writable<Banner[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});
 
