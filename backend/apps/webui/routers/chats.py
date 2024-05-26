@@ -148,7 +148,7 @@ async def get_archived_session_user_chat_list(
 ############################
 
 
-@router.get("/archive/all", response_model=List[ChatTitleIdResponse])
+@router.post("/archive/all", response_model=List[ChatTitleIdResponse])
 async def archive_all_chats(user=Depends(get_current_user)):
     return Chats.archive_all_chats_by_user_id(user.id)
 
