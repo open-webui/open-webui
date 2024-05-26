@@ -162,10 +162,10 @@ CHANGELOG = changelog_json
 
 
 ####################################
-# WEBUI_VERSION
+# WEBUI_BUILD_HASH
 ####################################
 
-WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
+WEBUI_BUILD_HASH = os.environ.get("WEBUI_BUILD_HASH", "dev-build")
 
 ####################################
 # DATA/FRONTEND BUILD DIR

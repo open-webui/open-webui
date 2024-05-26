@@ -19,7 +19,7 @@ export default defineConfig({
 	plugins: [sveltekit()],
 	define: {
 		APP_VERSION: JSON.stringify(process.env.npm_package_version),
-		APP_HASH: JSON.stringify(process.env.WEBUI_VERSION || 'dev-build')
+		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')
 	},
 	worker: {
 		format: 'es'

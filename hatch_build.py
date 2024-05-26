@@ -19,5 +19,5 @@ class CustomBuildHook(BuildHookInterface):
         stderr.write("### npm install\n")
         subprocess.run([npm, "install"], check=True)  # noqa: S603
         stderr.write("\n### npm run build\n")
-        os.environ["WEBUI_VERSION"] = version
+        os.environ["APP_BUILD_HASH"] = version
         subprocess.run([npm, "run", "build"], check=True)  # noqa: S603

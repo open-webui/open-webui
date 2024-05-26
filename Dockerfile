@@ -26,7 +26,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
-ENV WEBUI_VERSION=${BUILD_HASH}
+ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
 ######## WebUI backend ########
@@ -159,6 +159,6 @@ HEALTHCHECK CMD curl --silent --fail http://localhost:8080/health | jq -e '.stat
 
 USER $UID:$GID
 
-ENV WEBUI_VERSION=${BUILD_HASH}
+ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
 
 CMD [ "bash", "start.sh"]
