@@ -1,12 +1,13 @@
 <script>
 	import { goto } from '$app/navigation';
-	import { userSignIn, userSignUp } from '$lib/apis/auths';
+	import { getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
+	import { page } from '$app/stores';
 
 	const i18n = getContext('i18n');
 
@@ -21,7 +22,9 @@
 		if (sessionUser) {
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
-			localStorage.token = sessionUser.token;
+			if (sessionUser.token) {
+				localStorage.token = sessionUser.token;
+			}
 			await user.set(sessionUser);
 			goto('/');
 		}
@@ -55,10 +58,35 @@
 		}
 	};
 
+	const checkOauthCallback = async () => {
+		if (!$page.url.hash) {
+			return;
+		}
+		const hash = $page.url.hash.substring(1);
+		if (!hash) {
+			return;
+		}
+		const params = new URLSearchParams(hash);
+		const token = params.get('token');
+		if (!token) {
+			return;
+		}
+		const sessionUser = await getSessionUser(token).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+		if (!sessionUser) {
+			return;
+		}
+		localStorage.token = token;
+		await setSessionUser(sessionUser);
+	};
+
 	onMount(async () => {
 		if ($user !== undefined) {
 			await goto('/');
 		}
+		await checkOauthCallback();
 		loaded = true;
 		if (($config?.auth_trusted_header ?? false) || $config?.auth === false) {
 			await signInHandler();
@@ -217,6 +245,97 @@
 							{/if}
 						</div>
 					</form>
+
+					{#if Object.keys($config?.oauth?.providers ?? {}).length > 0 }
+						<div class="inline-flex items-center justify-center w-full">
+							<hr class="w-64 h-px my-8 bg-gray-200 border-0 dark:bg-gray-700" />
+							<span
+								class="absolute px-3 font-medium text-gray-900 -translate-x-1/2 bg-white left-1/2 dark:text-white dark:bg-gray-950"
+								>{$i18n.t('or')}</span
+							>
+						</div>
+						<div class="flex flex-col space-y-2">
+							{#if $config?.oauth?.providers?.google }
+								<button
+									class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
+									on:click={() => {
+										window.location.href = `${WEBUI_API_BASE_URL}/auths/oauth/google/login`;
+									}}
+								>
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="size-6 mr-3">
+										<path
+											fill="#EA4335"
+											d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+										/><path
+											fill="#4285F4"
+											d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+										/><path
+											fill="#FBBC05"
+											d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+										/><path
+											fill="#34A853"
+											d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+										/><path fill="none" d="M0 0h48v48H0z" />
+									</svg>
+									<span>{$i18n.t('Continue with {{provider}}', { provider: 'Google' })}</span>
+								</button>
+							{/if}
+							{#if $config?.oauth?.providers?.microsoft }
+								<button
+									class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
+									on:click={() => {
+										window.location.href = `${WEBUI_API_BASE_URL}/auths/oauth/microsoft/login`;
+									}}
+								>
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" class="size-6 mr-3">
+										<rect x="1" y="1" width="9" height="9" fill="#f25022" /><rect
+											x="1"
+											y="11"
+											width="9"
+											height="9"
+											fill="#00a4ef"
+										/><rect x="11" y="1" width="9" height="9" fill="#7fba00" /><rect
+											x="11"
+											y="11"
+											width="9"
+											height="9"
+											fill="#ffb900"
+										/>
+									</svg>
+									<span>{$i18n.t('Continue with {{provider}}', { provider: 'Microsoft' })}</span>
+								</button>
+							{/if}
+							{#if $config?.oauth?.providers?.oidc }
+								<button
+									class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
+									on:click={() => {
+										window.location.href = `${WEBUI_API_BASE_URL}/auths/oauth/oidc/login`;
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="size-6 mr-3"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z"
+										/>
+									</svg>
+
+									<span
+										>{$i18n.t('Continue with {{provider}}', {
+											provider: $config?.oauth?.providers?.oidc ?? 'SSO'
+										})}</span
+									>
+								</button>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>

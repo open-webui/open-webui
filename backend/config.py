@@ -286,6 +286,52 @@ JWT_EXPIRES_IN = PersistentConfig(
 )
 
 ####################################
+# OAuth config
+####################################
+
+ENABLE_OAUTH_SIGNUP = PersistentConfig(
+    "ENABLE_OAUTH_SIGNUP",
+    "oauth.enable_signup",
+    os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true",
+)
+
+OAUTH_PROVIDERS = {}
+
+if os.environ.get("GOOGLE_CLIENT_ID") and os.environ.get("GOOGLE_CLIENT_SECRET"):
+    OAUTH_PROVIDERS["google"] = {
+        "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+        "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+        "server_metadata_url": "https://accounts.google.com/.well-known/openid-configuration",
+        "scope": os.environ.get("GOOGLE_OAUTH_SCOPE", "openid email profile"),
+    }
+
+if (
+    os.environ.get("MICROSOFT_CLIENT_ID")
+    and os.environ.get("MICROSOFT_CLIENT_SECRET")
+    and os.environ.get("MICROSOFT_CLIENT_TENANT_ID")
+):
+    OAUTH_PROVIDERS["microsoft"] = {
+        "client_id": os.environ.get("MICROSOFT_CLIENT_ID"),
+        "client_secret": os.environ.get("MICROSOFT_CLIENT_SECRET"),
+        "server_metadata_url": f"https://login.microsoftonline.com/{os.environ.get('MICROSOFT_CLIENT_TENANT_ID')}/v2.0/.well-known/openid-configuration",
+        "scope": os.environ.get("MICROSOFT_OAUTH_SCOPE", "openid email profile"),
+    }
+
+if (
+    os.environ.get("OPENID_CLIENT_ID")
+    and os.environ.get("OPENID_CLIENT_SECRET")
+    and os.environ.get("OPENID_PROVIDER_URL")
+):
+    OAUTH_PROVIDERS["oidc"] = {
+        "client_id": os.environ.get("OPENID_CLIENT_ID"),
+        "client_secret": os.environ.get("OPENID_CLIENT_SECRET"),
+        "server_metadata_url": os.environ.get("OPENID_PROVIDER_URL"),
+        "scope": os.environ.get("OPENID_SCOPE", "openid email profile"),
+        "name": os.environ.get("OPENID_PROVIDER_NAME", "SSO"),
+    }
+
+
+####################################
 # Static DIR
 ####################################
 

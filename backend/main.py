@@ -55,6 +55,7 @@ from config import (
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
     AppConfig,
+    OAUTH_PROVIDERS,
 )
 from constants import ERROR_MESSAGES
 
@@ -364,6 +365,13 @@ async def get_app_config():
         "default_locale": default_locale,
         "default_models": webui_app.state.config.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+        "trusted_header_auth": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
+        "oauth": {
+            "providers": {
+                name: config.get("name", name)
+                for name, config in OAUTH_PROVIDERS.items()
+            }
+        },
     }
 
 

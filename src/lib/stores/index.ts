@@ -134,7 +134,12 @@ type Config = {
 	default_models?: string[];
 	default_prompt_suggestions?: PromptSuggestion[];
 	auth_trusted_header?: boolean;
-	model_config?: GlobalModelConfig;
+	auth: boolean;
+	oauth: {
+		providers: {
+			[key: string]: string;
+		};
+	};
 };
 
 type PromptSuggestion = {

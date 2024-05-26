@@ -26,6 +26,8 @@ class User(Model):
 
     api_key = CharField(null=True, unique=True)
 
+    oauth_sub = TextField(null=True, unique=True)
+
     class Meta:
         database = DB
 
@@ -42,6 +44,8 @@ class UserModel(BaseModel):
     created_at: int  # timestamp in epoch
 
     api_key: Optional[str] = None
+
+    oauth_sub: Optional[str] = None
 
 
 ####################
@@ -73,6 +77,7 @@ class UsersTable:
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
+        oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         user = UserModel(
             **{
@@ -84,6 +89,7 @@ class UsersTable:
                 "last_active_at": int(time.time()),
                 "created_at": int(time.time()),
                 "updated_at": int(time.time()),
+                "oauth_sub": oauth_sub,
             }
         )
         result = User.create(**user.model_dump())
@@ -109,6 +115,13 @@ class UsersTable:
     def get_user_by_email(self, email: str) -> Optional[UserModel]:
         try:
             user = User.get(User.email == email)
+            return UserModel(**model_to_dict(user))
+        except:
+            return None
+
+    def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
+        try:
+            user = User.get(User.oauth_sub == sub)
             return UserModel(**model_to_dict(user))
         except:
             return None
