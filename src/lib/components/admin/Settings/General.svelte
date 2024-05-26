@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { getWebhookUrl, updateWebhookUrl } from '$lib/apis';
+	import {
+		getCommunitySharingEnabledStatus,
+		getWebhookUrl,
+		toggleCommunitySharingEnabledStatus,
+		updateWebhookUrl
+	} from '$lib/apis';
 	import {
 		getDefaultUserRole,
 		getJWTExpiresDuration,
@@ -18,6 +23,7 @@
 	let JWTExpiresIn = '';
 
 	let webhookUrl = '';
+	let communitySharingEnabled = true;
 
 	const toggleSignUpEnabled = async () => {
 		signUpEnabled = await toggleSignUpEnabledStatus(localStorage.token);
@@ -35,6 +41,10 @@
 		webhookUrl = await updateWebhookUrl(localStorage.token, webhookUrl);
 	};
 
+	const toggleCommunitySharingEnabled = async () => {
+		communitySharingEnabled = await toggleCommunitySharingEnabledStatus(localStorage.token);
+	};
+
 	onMount(async () => {
 		await Promise.all([
 			(async () => {
@@ -48,6 +58,9 @@
 			})(),
 			(async () => {
 				webhookUrl = await getWebhookUrl(localStorage.token);
+			})(),
+			(async () => {
+				communitySharingEnabled = await getCommunitySharingEnabledStatus(localStorage.token);
 			})()
 		]);
 	});
@@ -122,6 +135,47 @@
 						<option value="admin">{$i18n.t('admin')}</option>
 					</select>
 				</div>
+			</div>
+
+			<div class="  flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Enable Community Sharing')}</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						toggleCommunitySharingEnabled();
+					}}
+					type="button"
+				>
+					{#if communitySharingEnabled}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								d="M11.5 1A3.5 3.5 0 0 0 8 4.5V7H2.5A1.5 1.5 0 0 0 1 8.5v5A1.5 1.5 0 0 0 2.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 9.5 7V4.5a2 2 0 1 1 4 0v1.75a.75.75 0 0 0 1.5 0V4.5A3.5 3.5 0 0 0 11.5 1Z"
+							/>
+						</svg>
+						<span class="ml-2 self-center">{$i18n.t('Enabled')}</span>
+					{:else}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+
+						<span class="ml-2 self-center">{$i18n.t('Disabled')}</span>
+					{/if}
+				</button>
 			</div>
 
 			<hr class=" dark:border-gray-700 my-3" />

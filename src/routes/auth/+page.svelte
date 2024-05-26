@@ -60,7 +60,10 @@
 			await goto('/');
 		}
 		loaded = true;
-		if (($config?.feature_flags.auth_trusted_header ?? false) || $config?.feature_flags.auth === false) {
+		if (
+			($config?.feature_flags.auth_trusted_header ?? false) ||
+			$config?.feature_flags.auth === false
+		) {
 			await signInHandler();
 		}
 	});
