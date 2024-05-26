@@ -451,7 +451,27 @@
 						</div>
 					{:else}
 						<div class="w-full">
-							{#if message?.error === true}
+							{#if message.content === '' && !message.error}
+								<Skeleton />
+							{:else if !message.error || message.errorContent}
+								{#each tokens as token, tokenIdx}
+									{#if token.type === 'code'}
+										<CodeBlock
+											id={`${message.id}-${tokenIdx}`}
+											lang={token?.lang ?? ''}
+											code={revertSanitizedResponseContent(token?.text ?? '')}
+										/>
+									{:else}
+										{@html marked.parse(token.raw, {
+											...defaults,
+											gfm: true,
+											breaks: true,
+											renderer
+										})}
+									{/if}
+								{/each}
+							{/if}
+							{#if message.error === true}
 								<div
 									class="flex mt-2 mb-4 space-x-2 border px-4 py-3 border-red-800 bg-red-800/30 font-medium rounded-lg"
 								>
@@ -471,28 +491,9 @@
 									</svg>
 
 									<div class=" self-center">
-										{message.content}
+										{message.errorContent ?? message.content}
 									</div>
 								</div>
-							{:else if message.content === ''}
-								<Skeleton />
-							{:else}
-								{#each tokens as token, tokenIdx}
-									{#if token.type === 'code'}
-										<CodeBlock
-											id={`${message.id}-${tokenIdx}`}
-											lang={token?.lang ?? ''}
-											code={revertSanitizedResponseContent(token?.text ?? '')}
-										/>
-									{:else}
-										{@html marked.parse(token.raw, {
-											...defaults,
-											gfm: true,
-											breaks: true,
-											renderer
-										})}
-									{/if}
-								{/each}
 							{/if}
 
 							{#if message.citations}
