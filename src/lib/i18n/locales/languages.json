@@ -27,6 +27,11 @@
 		"code": "de-DE",
 		"title": "Deutsch"
 	},
+	
+	{
+		"code": "da-DK",
+		"title": "Danish"
+	},
 	{
 		"code": "es-ES",
 		"title": "Spanish"
