@@ -12,11 +12,14 @@ export const sanitizeResponseContent = (content: string) => {
 		.replace(/<$/, '')
 		.replaceAll(/<\|[a-z]+\|>/g, ' ')
 		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
 		.trim();
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
-	return content.replaceAll('&lt;', '<');
+	return content
+		.replaceAll('&lt;', '<')
+		.replaceAll('&gt;', '>');
 };
 
 export const capitalizeFirstLetter = (string) => {
