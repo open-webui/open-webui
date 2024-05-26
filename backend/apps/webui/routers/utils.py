@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from fpdf import FPDF
 import markdown
 
-from apps.web.internal.db import DB
+from apps.webui.internal.db import DB
 from utils.utils import get_admin_user
 from utils.misc import calculate_sha256, get_gravatar_url
 

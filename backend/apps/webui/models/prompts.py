@@ -7,7 +7,7 @@ import time
 from utils.utils import decode_token
 from utils.misc import get_gravatar_url
 
-from apps.web.internal.db import DB
+from apps.webui.internal.db import DB
 
 import json
 

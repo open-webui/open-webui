@@ -3,8 +3,8 @@ from peewee import *
 from playhouse.shortcuts import model_to_dict
 from typing import List, Union, Optional
 
-from apps.web.internal.db import DB
-from apps.web.models.chats import Chats
+from apps.webui.internal.db import DB
+from apps.webui.models.chats import Chats
 
 import time
 import uuid

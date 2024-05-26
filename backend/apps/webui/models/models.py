@@ -8,7 +8,7 @@ from peewee import *
 from playhouse.shortcuts import model_to_dict
 from pydantic import BaseModel, ConfigDict
 
-from apps.web.internal.db import DB, JSONField
+from apps.webui.internal.db import DB, JSONField
 
 from typing import List, Union, Optional
 from config import SRC_LOG_LEVELS

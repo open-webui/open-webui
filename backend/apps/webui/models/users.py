@@ -5,8 +5,8 @@ from typing import List, Union, Optional
 import time
 from utils.misc import get_gravatar_url
 
-from apps.web.internal.db import DB
-from apps.web.models.chats import Chats
+from apps.webui.internal.db import DB
+from apps.webui.models.chats import Chats
 
 ####################
 # User DB Schema

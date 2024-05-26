@@ -10,7 +10,7 @@ import uuid
 import csv
 
 
-from apps.web.models.auths import (
+from apps.webui.models.auths import (
     SigninForm,
     SignupForm,
     AddUserForm,
@@ -21,7 +21,7 @@ from apps.web.models.auths import (
     Auths,
     ApiKey,
 )
-from apps.web.models.users import Users
+from apps.webui.models.users import Users
 
 from utils.utils import (
     get_password_hash,

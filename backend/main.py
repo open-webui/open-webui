@@ -22,23 +22,16 @@ from starlette.responses import StreamingResponse, Response
 from apps.ollama.main import app as ollama_app, get_all_models as get_ollama_models
 from apps.openai.main import app as openai_app, get_all_models as get_openai_models
 
-from apps.litellm.main import (
-    app as litellm_app,
-    start_litellm_background,
-    shutdown_litellm_background,
-)
-
-
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
-from apps.web.main import app as webui_app
+from apps.webui.main import app as webui_app
 
 import asyncio
 from pydantic import BaseModel
 from typing import List, Optional
 
-from apps.web.models.models import Models, ModelModel
+from apps.webui.models.models import Models, ModelModel
 from utils.utils import get_admin_user, get_verified_user
 from apps.rag.utils import rag_messages
 
@@ -55,7 +48,6 @@ from config import (
     STATIC_DIR,
     ENABLE_OPENAI_API,
     ENABLE_OLLAMA_API,
-    ENABLE_LITELLM,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     GLOBAL_LOG_LEVEL,
@@ -101,11 +93,7 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if ENABLE_LITELLM:
-        asyncio.create_task(start_litellm_background())
     yield
-    if ENABLE_LITELLM:
-        await shutdown_litellm_background()
 
 
 app = FastAPI(
@@ -263,9 +251,6 @@ async def update_embedding_function(request: Request, call_next):
     return response
 
 
-# TODO: Deprecate LiteLLM
-app.mount("/litellm/api", litellm_app)
-
 app.mount("/ollama", ollama_app)
 app.mount("/openai", openai_app)
 
@@ -373,13 +358,14 @@ async def get_app_config():
         "name": WEBUI_NAME,
         "version": VERSION,
         "auth": WEBUI_AUTH,
+        "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
+        "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
+        "enable_image_generation": images_app.state.config.ENABLED,
+        "enable_admin_export": ENABLE_ADMIN_EXPORT,
         "default_locale": default_locale,
-        "images": images_app.state.config.ENABLED,
         "default_models": webui_app.state.config.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
-        "trusted_header_auth": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
-        "admin_export_enabled": ENABLE_ADMIN_EXPORT,
-        "websearch": RAG_WEB_SEARCH_ENABLED,
+        "enable_websearch": RAG_WEB_SEARCH_ENABLED,
     }
 
 
@@ -403,15 +389,6 @@ async def update_model_filter_config(
     app.state.config.ENABLE_MODEL_FILTER = form_data.enabled
     app.state.config.MODEL_FILTER_LIST = form_data.models
 
-    ollama_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
-    ollama_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
-
-    openai_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
-    openai_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
-
-    litellm_app.state.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
-    litellm_app.state.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
-
     return {
         "enabled": app.state.config.ENABLE_MODEL_FILTER,
         "models": app.state.config.MODEL_FILTER_LIST,
@@ -432,7 +409,6 @@ class UrlForm(BaseModel):
 @app.post("/api/webhook")
 async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
     app.state.config.WEBHOOK_URL = form_data.url
-
     webui_app.state.WEBHOOK_URL = app.state.config.WEBHOOK_URL
 
     return {

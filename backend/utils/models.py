@@ -1,4 +1,4 @@
-from apps.web.models.models import Models, ModelModel, ModelForm, ModelResponse
+from apps.webui.models.models import Models, ModelModel, ModelForm, ModelResponse
 
 
 def get_model_id_from_custom_model_id(id: str):

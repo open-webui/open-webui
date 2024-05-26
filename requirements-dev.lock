@@ -273,7 +273,6 @@ langsmith==0.1.57
     # via langchain-community
     # via langchain-core
 litellm==1.37.20
-    # via litellm
     # via open-webui
 lxml==5.2.2
     # via unstructured
@@ -396,7 +395,6 @@ pandas==2.2.2
     # via open-webui
 passlib==1.7.4
     # via open-webui
-    # via passlib
 pathspec==0.12.1
     # via black
 peewee==3.17.5
@@ -454,7 +452,6 @@ pygments==2.18.0
 pyjwt==2.8.0
     # via litellm
     # via open-webui
-    # via pyjwt
 pymysql==1.1.0
     # via open-webui
 pypandoc==1.13
@@ -559,6 +556,9 @@ scipy==1.13.0
     # via sentence-transformers
 sentence-transformers==2.7.0
     # via open-webui
+setuptools==69.5.1
+    # via ctranslate2
+    # via opentelemetry-instrumentation
 shapely==2.0.4
     # via rapidocr-onnxruntime
 shellingham==1.5.4
@@ -659,7 +659,6 @@ uvicorn==0.22.0
     # via fastapi
     # via litellm
     # via open-webui
-    # via uvicorn
 uvloop==0.19.0
     # via uvicorn
 validators==0.28.1
@@ -687,6 +686,3 @@ youtube-transcript-api==0.6.2
     # via open-webui
 zipp==3.18.1
     # via importlib-metadata
-setuptools==69.5.1
-    # via ctranslate2
-    # via opentelemetry-instrumentation

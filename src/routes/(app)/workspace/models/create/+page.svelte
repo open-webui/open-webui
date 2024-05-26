@@ -62,7 +62,7 @@
 		info.id = id;
 		info.name = name;
 		info.meta.capabilities = capabilities;
-		info.params.stop = params.stop !== null ? params.stop.split(',').filter((s) => s.trim()) : null;
+		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 
 		if ($models.find((m) => m.id === info.id)) {
 			toast.error(
@@ -316,11 +316,9 @@
 					bind:value={info.base_model_id}
 					required
 				>
-					<option value={null} class=" placeholder:text-gray-500"
-						>{$i18n.t('Select a base model')}</option
-					>
+					<option value={null} class=" text-gray-900">{$i18n.t('Select a base model')}</option>
 					{#each $models.filter((m) => !m?.preset) as model}
-						<option value={model.id}>{model.name}</option>
+						<option value={model.id} class=" text-gray-900">{model.name}</option>
 					{/each}
 				</select>
 			</div>

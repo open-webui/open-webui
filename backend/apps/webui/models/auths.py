@@ -5,10 +5,10 @@ import uuid
 import logging
 from peewee import *
 
-from apps.web.models.users import UserModel, Users
+from apps.webui.models.users import UserModel, Users
 from utils.utils import verify_password
 
-from apps.web.internal.db import DB
+from apps.webui.internal.db import DB
 
 from config import SRC_LOG_LEVELS
 

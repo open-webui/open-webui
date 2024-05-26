@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import json
 
-from apps.web.models.documents import (
+from apps.webui.models.documents import (
     Documents,
     DocumentForm,
     DocumentUpdateForm,

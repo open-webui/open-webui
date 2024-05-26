@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.routing import APIRoute
 from fastapi.middleware.cors import CORSMiddleware
-from apps.web.routers import (
+from apps.webui.routers import (
     auths,
     users,
     chats,

@@ -80,6 +80,13 @@
 		return `<code>${code.replaceAll('&amp;', '&')}</code>`;
 	};
 
+	// Open all links in a new tab/window (from https://github.com/markedjs/marked/issues/655#issuecomment-383226346)
+	const origLinkRenderer = renderer.link;
+	renderer.link = (href, title, text) => {
+		const html = origLinkRenderer.call(renderer, href, title, text);
+		return html.replace(/^<a /, '<a target="_blank" rel="nofollow" ');
+	};
+
 	const { extensions, ...defaults } = marked.getDefaults() as marked.MarkedOptions & {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		extensions: any;
@@ -790,7 +797,7 @@
 											</button>
 										</Tooltip>
 
-										{#if $config.images && !readOnly}
+										{#if $config.enable_image_generation && !readOnly}
 											<Tooltip content="Generate Image" placement="bottom">
 												<button
 													class="{isLastMessage

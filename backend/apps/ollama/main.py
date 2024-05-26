@@ -29,8 +29,8 @@ import time
 from urllib.parse import urlparse
 from typing import Optional, List, Union
 
-from apps.web.models.models import Models
-from apps.web.models.users import Users
+from apps.webui.models.models import Models
+from apps.webui.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
     decode_token,
@@ -306,6 +306,9 @@ async def pull_model(
 
     r = None
 
+    # Admin should be able to pull models from any source
+    payload = {**form_data.model_dump(exclude_none=True), "insecure": True}
+
     def get_request():
         nonlocal url
         nonlocal r
@@ -333,7 +336,7 @@ async def pull_model(
             r = requests.request(
                 method="POST",
                 url=f"{url}/api/pull",
-                data=form_data.model_dump_json(exclude_none=True).encode(),
+                data=json.dumps(payload),
                 stream=True,
             )
 

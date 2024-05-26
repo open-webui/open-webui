@@ -7,8 +7,8 @@ from pydantic import BaseModel
 import json
 import logging
 
-from apps.web.models.users import Users
-from apps.web.models.chats import (
+from apps.webui.models.users import Users
+from apps.webui.models.chats import (
     ChatModel,
     ChatResponse,
     ChatTitleForm,
@@ -18,7 +18,7 @@ from apps.web.models.chats import (
 )
 
 
-from apps.web.models.tags import (
+from apps.webui.models.tags import (
     TagModel,
     ChatIdTagModel,
     ChatIdTagForm,
@@ -78,43 +78,25 @@ async def delete_all_user_chats(request: Request, user=Depends(get_current_user)
 async def get_user_chat_list_by_user_id(
     user_id: str, user=Depends(get_admin_user), skip: int = 0, limit: int = 50
 ):
-    return Chats.get_chat_list_by_user_id(user_id, skip, limit)
+    return Chats.get_chat_list_by_user_id(
+        user_id, include_archived=True, skip=skip, limit=limit
+    )
 
 
 ############################
-# GetArchivedChats
+# CreateNewChat
 ############################
 
 
-@router.get("/archived", response_model=List[ChatTitleIdResponse])
-async def get_archived_session_user_chat_list(
-    user=Depends(get_current_user), skip: int = 0, limit: int = 50
-):
-    return Chats.get_archived_chat_list_by_user_id(user.id, skip, limit)
-
-
-############################
-# GetSharedChatById
-############################
-
-
-@router.get("/share/{share_id}", response_model=Optional[ChatResponse])
-async def get_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
-    if user.role == "pending":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
-        )
-
-    if user.role == "user":
-        chat = Chats.get_chat_by_share_id(share_id)
-    elif user.role == "admin":
-        chat = Chats.get_chat_by_id(share_id)
-
-    if chat:
+@router.post("/new", response_model=Optional[ChatResponse])
+async def create_new_chat(form_data: ChatForm, user=Depends(get_current_user)):
+    try:
+        chat = Chats.insert_new_chat(user.id, form_data)
         return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
-    else:
+    except Exception as e:
+        log.exception(e)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
 
 
@@ -150,19 +132,49 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
 
 
 ############################
-# CreateNewChat
+# GetArchivedChats
 ############################
 
 
-@router.post("/new", response_model=Optional[ChatResponse])
-async def create_new_chat(form_data: ChatForm, user=Depends(get_current_user)):
-    try:
-        chat = Chats.insert_new_chat(user.id, form_data)
-        return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
-    except Exception as e:
-        log.exception(e)
+@router.get("/archived", response_model=List[ChatTitleIdResponse])
+async def get_archived_session_user_chat_list(
+    user=Depends(get_current_user), skip: int = 0, limit: int = 50
+):
+    return Chats.get_archived_chat_list_by_user_id(user.id, skip, limit)
+
+
+############################
+# ArchiveAllChats
+############################
+
+
+@router.post("/archive/all", response_model=List[ChatTitleIdResponse])
+async def archive_all_chats(user=Depends(get_current_user)):
+    return Chats.archive_all_chats_by_user_id(user.id)
+
+
+############################
+# GetSharedChatById
+############################
+
+
+@router.get("/share/{share_id}", response_model=Optional[ChatResponse])
+async def get_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
+    if user.role == "pending":
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role == "user":
+        chat = Chats.get_chat_by_share_id(share_id)
+    elif user.role == "admin":
+        chat = Chats.get_chat_by_id(share_id)
+
+    if chat:
+        return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
 
