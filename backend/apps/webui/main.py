@@ -13,7 +13,7 @@ from apps.webui.routers import (
     utils,
 )
 from config import (
-    WEBUI_VERSION,
+    WEBUI_BUILD_HASH,
     WEBUI_AUTH,
     DEFAULT_MODELS,
     DEFAULT_PROMPT_SUGGESTIONS,

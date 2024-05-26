@@ -55,6 +55,7 @@ from config import (
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
     AppConfig,
+    WEBUI_BUILD_HASH,
 )
 from constants import ERROR_MESSAGES
 
@@ -84,7 +85,8 @@ print(
       |_|                                               
 
       
-v{VERSION} - building the best open-source AI user interface.      
+v{VERSION} - building the best open-source AI user interface.
+{f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
 """
 )
