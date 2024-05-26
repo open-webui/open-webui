@@ -1008,7 +1008,9 @@
 		/>
 
 		{#if $banners.length > 0 && !$chatId}
-			<div class="absolute top-16 w-full {$showSidebar ? 'md:max-w-[calc(100%-260px)]' : ''}">
+			<div
+				class="absolute top-[4.25rem] w-full {$showSidebar ? 'md:max-w-[calc(100%-260px)]' : ''}"
+			>
 				<div class=" flex flex-col gap-1 w-full">
 					{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
 						<Banner
