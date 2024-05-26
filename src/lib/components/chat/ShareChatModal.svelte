@@ -134,7 +134,7 @@
 				<div class="flex justify-end">
 					<div class="flex flex-col items-end space-x-1 mt-1.5">
 						<div class="flex gap-1">
-							{#if $config?.feature_flags.enable_community_sharing}
+							{#if $config?.features.enable_community_sharing}
 								<button
 									class=" self-center px-3.5 py-2 rounded-xl text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white"
 									type="button"

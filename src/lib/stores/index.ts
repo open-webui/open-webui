@@ -135,7 +135,7 @@ type Config = {
 	default_locale: string;
 	default_models: string[];
 	default_prompt_suggestions: PromptSuggestion[];
-	feature_flags: {
+	features: {
 		auth: boolean;
 		enable_signup: boolean;
 		auth_trusted_header: boolean;
