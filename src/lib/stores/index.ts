@@ -133,7 +133,7 @@ type Config = {
 	images?: boolean;
 	default_models?: string[];
 	default_prompt_suggestions?: PromptSuggestion[];
-	trusted_header_auth?: boolean;
+	auth_trusted_header?: boolean;
 	model_config?: GlobalModelConfig;
 };
 

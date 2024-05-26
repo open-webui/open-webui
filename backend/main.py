@@ -357,12 +357,13 @@ async def get_app_config():
         "name": WEBUI_NAME,
         "version": VERSION,
         "auth": WEBUI_AUTH,
+        "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
+        "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
+        "enable_image_generation": images_app.state.config.ENABLED,
+        "enable_admin_export": ENABLE_ADMIN_EXPORT,
         "default_locale": default_locale,
-        "images": images_app.state.config.ENABLED,
         "default_models": webui_app.state.config.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
-        "trusted_header_auth": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
-        "admin_export_enabled": ENABLE_ADMIN_EXPORT,
     }
 
 
@@ -386,12 +387,6 @@ async def update_model_filter_config(
     app.state.config.ENABLE_MODEL_FILTER = form_data.enabled
     app.state.config.MODEL_FILTER_LIST = form_data.models
 
-    ollama_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
-    ollama_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
-
-    openai_app.state.config.ENABLE_MODEL_FILTER = app.state.config.ENABLE_MODEL_FILTER
-    openai_app.state.config.MODEL_FILTER_LIST = app.state.config.MODEL_FILTER_LIST
-
     return {
         "enabled": app.state.config.ENABLE_MODEL_FILTER,
         "models": app.state.config.MODEL_FILTER_LIST,
@@ -412,7 +407,6 @@ class UrlForm(BaseModel):
 @app.post("/api/webhook")
 async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
     app.state.config.WEBHOOK_URL = form_data.url
-
     webui_app.state.WEBHOOK_URL = app.state.config.WEBHOOK_URL
 
     return {
