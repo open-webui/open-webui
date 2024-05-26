@@ -63,11 +63,6 @@ ENV OPENAI_API_KEY="" \
     DO_NOT_TRACK=true \
     ANONYMIZED_TELEMETRY=false
 
-# Use locally bundled version of the LiteLLM cost map json
-# to avoid repetitive startup connections
-ENV LITELLM_LOCAL_MODEL_COST_MAP="True"
-
-
 #### Other models #########################################################
 ## whisper TTS model settings ##
 ENV WHISPER_MODEL="base" \
@@ -87,10 +82,10 @@ WORKDIR /app/backend
 ENV HOME /root
 # Create user and group if not root
 RUN if [ $UID -ne 0 ]; then \
-      if [ $GID -ne 0 ]; then \
-        addgroup --gid $GID app; \
-      fi; \
-      adduser --uid $UID --gid $GID --home $HOME --disabled-password --no-create-home app; \
+    if [ $GID -ne 0 ]; then \
+    addgroup --gid $GID app; \
+    fi; \
+    adduser --uid $UID --gid $GID --home $HOME --disabled-password --no-create-home app; \
     fi
 
 RUN mkdir -p $HOME/.cache/chroma

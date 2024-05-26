@@ -34,11 +34,6 @@ fi
 # Check if SPACE_ID is set, if so, configure for space
 if [ -n "$SPACE_ID" ]; then
   echo "Configuring for HuggingFace Space deployment"
-  
-  # Copy litellm_config.yaml with specified ownership
-  echo "Copying litellm_config.yaml to the desired location with specified ownership..."
-  cp -f ./space/litellm_config.yaml ./data/litellm/config.yaml
-
   if [ -n "$ADMIN_USER_EMAIL" ] && [ -n "$ADMIN_USER_PASSWORD" ]; then
     echo "Admin user configured, creating"
     WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" uvicorn main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &

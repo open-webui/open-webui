@@ -10,8 +10,8 @@ import logging
 
 from pydantic import BaseModel
 
-
-from apps.web.models.users import Users
+from apps.webui.models.models import Models
+from apps.webui.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
     decode_token,
@@ -52,7 +52,6 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
@@ -206,7 +205,13 @@ def merge_models_lists(model_lists):
         if models is not None and "error" not in models:
             merged_list.extend(
                 [
-                    {**model, "urlIdx": idx}
+                    {
+                        **model,
+                        "name": model.get("name", model["id"]),
+                        "owned_by": "openai",
+                        "openai": model,
+                        "urlIdx": idx,
+                    }
                     for model in models
                     if "api.openai.com"
                     not in app.state.config.OPENAI_API_BASE_URLS[idx]
@@ -252,7 +257,7 @@ async def get_all_models():
         log.info(f"models: {models}")
         app.state.MODELS = {model["id"]: model for model in models["data"]}
 
-        return models
+    return models
 
 
 @app.get("/models")
@@ -310,38 +315,92 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     body = await request.body()
     # TODO: Remove below after gpt-4-vision fix from Open AI
     # Try to decode the body of the request from bytes to a UTF-8 string (Require add max_token to fix gpt-4-vision)
+
+    payload = None
+
     try:
-        body = body.decode("utf-8")
-        body = json.loads(body)
+        if "chat/completions" in path:
+            body = body.decode("utf-8")
+            body = json.loads(body)
 
-        model = app.state.MODELS[body.get("model")]
+            payload = {**body}
 
-        idx = model["urlIdx"]
+            model_id = body.get("model")
+            model_info = Models.get_model_by_id(model_id)
 
-        if "pipeline" in model and model.get("pipeline"):
-            body["user"] = {"name": user.name, "id": user.id}
-            body["title"] = (
-                True if body["stream"] == False and body["max_tokens"] == 50 else False
-            )
+            if model_info:
+                print(model_info)
+                if model_info.base_model_id:
+                    payload["model"] = model_info.base_model_id
 
-        # Check if the model is "gpt-4-vision-preview" and set "max_tokens" to 4000
-        # This is a workaround until OpenAI fixes the issue with this model
-        if body.get("model") == "gpt-4-vision-preview":
-            if "max_tokens" not in body:
-                body["max_tokens"] = 4000
-            log.debug("Modified body_dict:", body)
+                model_info.params = model_info.params.model_dump()
 
-        # Fix for ChatGPT calls failing because the num_ctx key is in body
-        if "num_ctx" in body:
-            # If 'num_ctx' is in the dictionary, delete it
-            # Leaving it there generates an error with the
-            # OpenAI API (Feb 2024)
-            del body["num_ctx"]
+                if model_info.params:
+                    payload["temperature"] = model_info.params.get("temperature", None)
+                    payload["top_p"] = model_info.params.get("top_p", None)
+                    payload["max_tokens"] = model_info.params.get("max_tokens", None)
+                    payload["frequency_penalty"] = model_info.params.get(
+                        "frequency_penalty", None
+                    )
+                    payload["seed"] = model_info.params.get("seed", None)
+                    payload["stop"] = (
+                        [
+                            bytes(stop, "utf-8").decode("unicode_escape")
+                            for stop in model_info.params["stop"]
+                        ]
+                        if model_info.params.get("stop", None)
+                        else None
+                    )
 
-        # Convert the modified body back to JSON
-        body = json.dumps(body)
+                if model_info.params.get("system", None):
+                    # Check if the payload already has a system message
+                    # If not, add a system message to the payload
+                    if payload.get("messages"):
+                        for message in payload["messages"]:
+                            if message.get("role") == "system":
+                                message["content"] = (
+                                    model_info.params.get("system", None)
+                                    + message["content"]
+                                )
+                                break
+                        else:
+                            payload["messages"].insert(
+                                0,
+                                {
+                                    "role": "system",
+                                    "content": model_info.params.get("system", None),
+                                },
+                            )
+            else:
+                pass
+
+            print(app.state.MODELS)
+            model = app.state.MODELS[payload.get("model")]
+
+            idx = model["urlIdx"]
+
+            if "pipeline" in model and model.get("pipeline"):
+                payload["user"] = {"name": user.name, "id": user.id}
+                payload["title"] = (
+                    True
+                    if payload["stream"] == False and payload["max_tokens"] == 50
+                    else False
+                )
+
+            # Check if the model is "gpt-4-vision-preview" and set "max_tokens" to 4000
+            # This is a workaround until OpenAI fixes the issue with this model
+            if payload.get("model") == "gpt-4-vision-preview":
+                if "max_tokens" not in payload:
+                    payload["max_tokens"] = 4000
+                log.debug("Modified payload:", payload)
+
+            # Convert the modified body back to JSON
+            payload = json.dumps(payload)
+
     except json.JSONDecodeError as e:
         log.error("Error loading request body into a dictionary:", e)
+
+    print(payload)
 
     url = app.state.config.OPENAI_API_BASE_URLS[idx]
     key = app.state.config.OPENAI_API_KEYS[idx]
@@ -361,7 +420,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         r = requests.request(
             method=request.method,
             url=target_url,
-            data=body,
+            data=payload if payload else body,
             headers=headers,
             stream=True,
         )

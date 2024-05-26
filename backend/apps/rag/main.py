@@ -46,7 +46,7 @@ import json
 
 import sentence_transformers
 
-from apps.web.models.documents import (
+from apps.webui.models.documents import (
     Documents,
     DocumentForm,
     DocumentResponse,

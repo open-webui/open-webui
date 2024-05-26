@@ -10,7 +10,7 @@
 		chatId,
 		chats,
 		config,
-		modelfiles,
+		type Model,
 		models,
 		settings,
 		showSidebar,
@@ -35,12 +35,7 @@
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
-	import {
-		LITELLM_API_BASE_URL,
-		OLLAMA_API_BASE_URL,
-		OPENAI_API_BASE_URL,
-		WEBUI_BASE_URL
-	} from '$lib/constants';
+	import { OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import type { Writable } from 'svelte/store';
@@ -60,25 +55,7 @@
 	let showModelSelector = true;
 
 	let selectedModels = [''];
-	let atSelectedModel = '';
-
-	let selectedModelfile = null;
-	$: selectedModelfile =
-		selectedModels.length === 1 &&
-		$modelfiles.filter((modelfile) => modelfile.tagName === selectedModels[0]).length > 0
-			? $modelfiles.filter((modelfile) => modelfile.tagName === selectedModels[0])[0]
-			: null;
-
-	let selectedModelfiles = {};
-	$: selectedModelfiles = selectedModels.reduce((a, tagName, i, arr) => {
-		const modelfile =
-			$modelfiles.filter((modelfile) => modelfile.tagName === tagName)?.at(0) ?? undefined;
-
-		return {
-			...a,
-			...(modelfile && { [tagName]: modelfile })
-		};
-	}, {});
+	let atSelectedModel: Model | undefined;
 
 	let chat = null;
 	let tags = [];
@@ -164,6 +141,7 @@
 
 		if ($page.url.searchParams.get('q')) {
 			prompt = $page.url.searchParams.get('q') ?? '';
+
 			if (prompt) {
 				await tick();
 				submitPrompt(prompt);
@@ -211,7 +189,7 @@
 				await settings.set({
 					..._settings,
 					system: chatContent.system ?? _settings.system,
-					options: chatContent.options ?? _settings.options
+					params: chatContent.options ?? _settings.params
 				});
 				autoScroll = true;
 				await tick();
@@ -300,7 +278,7 @@
 						models: selectedModels,
 						system: $settings.system ?? undefined,
 						options: {
-							...($settings.options ?? {})
+							...($settings.params ?? {})
 						},
 						messages: messages,
 						history: history,
@@ -317,6 +295,7 @@
 
 			// Reset chat input textarea
 			prompt = '';
+			document.getElementById('chat-textarea').style.height = '';
 			files = [];
 
 			// Send prompt
@@ -328,75 +307,92 @@
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
-			(modelId ? [modelId] : atSelectedModel !== '' ? [atSelectedModel.id] : selectedModels).map(
-				async (modelId) => {
-					console.log('modelId', modelId);
-					const model = $models.filter((m) => m.id === modelId).at(0);
+			(modelId
+				? [modelId]
+				: atSelectedModel !== undefined
+				? [atSelectedModel.id]
+				: selectedModels
+			).map(async (modelId) => {
+				console.log('modelId', modelId);
+				const model = $models.filter((m) => m.id === modelId).at(0);
 
-					if (model) {
-						// Create response message
-						let responseMessageId = uuidv4();
-						let responseMessage = {
-							parentId: parentId,
-							id: responseMessageId,
-							childrenIds: [],
-							role: 'assistant',
-							content: '',
-							model: model.id,
-							userContext: null,
-							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-						};
+				if (model) {
+					// If there are image files, check if model is vision capable
+					const hasImages = messages.some((message) =>
+						message.files?.some((file) => file.type === 'image')
+					);
 
-						// Add message to history and Set currentId to messageId
-						history.messages[responseMessageId] = responseMessage;
-						history.currentId = responseMessageId;
+					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
+						toast.error(
+							$i18n.t('Model {{modelName}} is not vision capable', {
+								modelName: model.name ?? model.id
+							})
+						);
+					}
 
-						// Append messageId to childrenIds of parent message
-						if (parentId !== null) {
-							history.messages[parentId].childrenIds = [
-								...history.messages[parentId].childrenIds,
-								responseMessageId
-							];
-						}
+					// Create response message
+					let responseMessageId = uuidv4();
+					let responseMessage = {
+						parentId: parentId,
+						id: responseMessageId,
+						childrenIds: [],
+						role: 'assistant',
+						content: '',
+						model: model.id,
+						modelName: model.name ?? model.id,
+						userContext: null,
+						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+					};
 
-						await tick();
+					// Add message to history and Set currentId to messageId
+					history.messages[responseMessageId] = responseMessage;
+					history.currentId = responseMessageId;
 
-						let userContext = null;
-						if ($settings?.memory ?? false) {
-							if (userContext === null) {
-								const res = await queryMemory(localStorage.token, prompt).catch((error) => {
-									toast.error(error);
-									return null;
-								});
+					// Append messageId to childrenIds of parent message
+					if (parentId !== null) {
+						history.messages[parentId].childrenIds = [
+							...history.messages[parentId].childrenIds,
+							responseMessageId
+						];
+					}
 
-								if (res) {
-									if (res.documents[0].length > 0) {
-										userContext = res.documents.reduce((acc, doc, index) => {
-											const createdAtTimestamp = res.metadatas[index][0].created_at;
-											const createdAtDate = new Date(createdAtTimestamp * 1000)
-												.toISOString()
-												.split('T')[0];
-											acc.push(`${index + 1}. [${createdAtDate}]. ${doc[0]}`);
-											return acc;
-										}, []);
-									}
+					await tick();
 
-									console.log(userContext);
+					let userContext = null;
+					if ($settings?.memory ?? false) {
+						if (userContext === null) {
+							const res = await queryMemory(localStorage.token, prompt).catch((error) => {
+								toast.error(error);
+								return null;
+							});
+
+							if (res) {
+								if (res.documents[0].length > 0) {
+									userContext = res.documents.reduce((acc, doc, index) => {
+										const createdAtTimestamp = res.metadatas[index][0].created_at;
+										const createdAtDate = new Date(createdAtTimestamp * 1000)
+											.toISOString()
+											.split('T')[0];
+										acc.push(`${index + 1}. [${createdAtDate}]. ${doc[0]}`);
+										return acc;
+									}, []);
 								}
+
+								console.log(userContext);
 							}
 						}
-						responseMessage.userContext = userContext;
-
-						if (model?.external) {
-							await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
-						} else if (model) {
-							await sendPromptOllama(model, prompt, responseMessageId, _chatId);
-						}
-					} else {
-						toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 					}
+					responseMessage.userContext = userContext;
+
+					if (model?.owned_by === 'openai') {
+						await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
+					} else if (model) {
+						await sendPromptOllama(model, prompt, responseMessageId, _chatId);
+					}
+				} else {
+					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}
-			)
+			})
 		);
 
 		await chats.set(await getChatList(localStorage.token));
@@ -430,7 +426,7 @@
 				// Prepare the base message object
 				const baseMessage = {
 					role: message.role,
-					content: arr.length - 2 !== idx ? message.content : message?.raContent ?? message.content
+					content: message.content
 				};
 
 				// Extract and format image URLs if any exist
@@ -442,7 +438,6 @@
 				if (imageUrls && imageUrls.length > 0 && message.role === 'user') {
 					baseMessage.images = imageUrls;
 				}
-
 				return baseMessage;
 			});
 
@@ -473,13 +468,15 @@
 			model: model,
 			messages: messagesBody,
 			options: {
-				...($settings.options ?? {}),
+				...($settings.params ?? {}),
 				stop:
-					$settings?.options?.stop ?? undefined
-						? $settings.options.stop.map((str) =>
+					$settings?.params?.stop ?? undefined
+						? $settings.params.stop.map((str) =>
 								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
 						  )
-						: undefined
+						: undefined,
+				num_predict: $settings?.params?.max_tokens ?? undefined,
+				repeat_penalty: $settings?.params?.frequency_penalty ?? undefined
 			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
@@ -605,7 +602,8 @@
 				if ($settings.saveChatHistory ?? true) {
 					chat = await updateChatById(localStorage.token, _chatId, {
 						messages: messages,
-						history: history
+						history: history,
+						models: selectedModels
 					});
 					await chats.set(await getChatList(localStorage.token));
 				}
@@ -716,24 +714,21 @@
 												: message?.raContent ?? message.content
 								  })
 						})),
-					seed: $settings?.options?.seed ?? undefined,
+					seed: $settings?.params?.seed ?? undefined,
 					stop:
-						$settings?.options?.stop ?? undefined
-							? $settings.options.stop.map((str) =>
+						$settings?.params?.stop ?? undefined
+							? $settings.params.stop.map((str) =>
 									decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
 							  )
 							: undefined,
-					temperature: $settings?.options?.temperature ?? undefined,
-					top_p: $settings?.options?.top_p ?? undefined,
-					num_ctx: $settings?.options?.num_ctx ?? undefined,
-					frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
-					max_tokens: $settings?.options?.num_predict ?? undefined,
+					temperature: $settings?.params?.temperature ?? undefined,
+					top_p: $settings?.params?.top_p ?? undefined,
+					frequency_penalty: $settings?.params?.frequency_penalty ?? undefined,
+					max_tokens: $settings?.params?.max_tokens ?? undefined,
 					docs: docs.length > 0 ? docs : undefined,
 					citations: docs.length > 0
 				},
-				model?.source?.toLowerCase() === 'litellm'
-					? `${LITELLM_API_BASE_URL}/v1`
-					: `${OPENAI_API_BASE_URL}`
+				`${OPENAI_API_BASE_URL}`
 			);
 
 			// Wait until history/message have been updated
@@ -797,6 +792,7 @@
 				if ($chatId == _chatId) {
 					if ($settings.saveChatHistory ?? true) {
 						chat = await updateChatById(localStorage.token, _chatId, {
+							models: selectedModels,
 							messages: messages,
 							history: history
 						});
@@ -935,10 +931,8 @@
 					) + ' {{prompt}}',
 				titleModelId,
 				userPrompt,
-				titleModel?.external ?? false
-					? titleModel?.source?.toLowerCase() === 'litellm'
-						? `${LITELLM_API_BASE_URL}/v1`
-						: `${OPENAI_API_BASE_URL}`
+				titleModel?.owned_by === 'openai' ?? false
+					? `${OPENAI_API_BASE_URL}`
 					: `${OLLAMA_API_BASE_URL}/v1`
 			);
 
@@ -1025,16 +1019,12 @@
 					<Messages
 						chatId={$chatId}
 						{selectedModels}
-						{selectedModelfiles}
 						{processing}
 						bind:history
 						bind:messages
 						bind:autoScroll
 						bind:prompt
 						bottomPadding={files.length > 0}
-						suggestionPrompts={chatIdProp
-							? []
-							: selectedModelfile?.suggestionPrompts ?? $config.default_prompt_suggestions}
 						{sendPrompt}
 						{continueGeneration}
 						{regenerateResponse}
@@ -1048,7 +1038,8 @@
 		bind:files
 		bind:prompt
 		bind:autoScroll
-		bind:selectedModel={atSelectedModel}
+		bind:atSelectedModel
+		{selectedModels}
 		{messages}
 		{submitPrompt}
 		{stopResponse}

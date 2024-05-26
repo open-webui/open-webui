@@ -27,6 +27,8 @@ from constants import ERROR_MESSAGES
 BACKEND_DIR = Path(__file__).parent  # the path containing this file
 BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
 
+print(BASE_DIR)
+
 try:
     from dotenv import load_dotenv, find_dotenv
 
@@ -56,7 +58,6 @@ log_sources = [
     "CONFIG",
     "DB",
     "IMAGES",
-    "LITELLM",
     "MAIN",
     "MODELS",
     "OLLAMA",
@@ -122,7 +123,10 @@ def parse_section(section):
 
 
 try:
-    changelog_content = (BASE_DIR / "CHANGELOG.md").read_text()
+    changelog_path = BASE_DIR / "CHANGELOG.md"
+    with open(str(changelog_path.absolute()), "r", encoding="utf8") as file:
+        changelog_content = file.read()
+
 except:
     changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
 
@@ -374,10 +378,10 @@ def create_config_file(file_path):
 
 LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
 
-if not os.path.exists(LITELLM_CONFIG_PATH):
-    log.info("Config file doesn't exist. Creating...")
-    create_config_file(LITELLM_CONFIG_PATH)
-    log.info("Config file created successfully.")
+# if not os.path.exists(LITELLM_CONFIG_PATH):
+#     log.info("Config file doesn't exist. Creating...")
+#     create_config_file(LITELLM_CONFIG_PATH)
+#     log.info("Config file created successfully.")
 
 
 ####################################
@@ -825,18 +829,6 @@ AUDIO_OPENAI_API_VOICE = PersistentConfig(
     "audio.openai.api_voice",
     os.getenv("AUDIO_OPENAI_API_VOICE", "alloy"),
 )
-
-####################################
-# LiteLLM
-####################################
-
-
-ENABLE_LITELLM = os.environ.get("ENABLE_LITELLM", "True").lower() == "true"
-
-LITELLM_PROXY_PORT = int(os.getenv("LITELLM_PROXY_PORT", "14365"))
-if LITELLM_PROXY_PORT < 0 or LITELLM_PROXY_PORT > 65535:
-    raise ValueError("Invalid port number for LITELLM_PROXY_PORT")
-LITELLM_PROXY_HOST = os.getenv("LITELLM_PROXY_HOST", "127.0.0.1")
 
 
 ####################################
