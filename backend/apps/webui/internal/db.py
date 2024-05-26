@@ -31,7 +31,9 @@ else:
 DB = connect(DATABASE_URL)
 log.info(f"Connected to a {DB.__class__.__name__} database.")
 router = Router(
-    DB, migrate_dir=BACKEND_DIR / "apps" / "web" / "internal" / "migrations", logger=log
+    DB,
+    migrate_dir=BACKEND_DIR / "apps" / "webui" / "internal" / "migrations",
+    logger=log,
 )
 router.run()
 DB.connect(reuse_if_open=True)
