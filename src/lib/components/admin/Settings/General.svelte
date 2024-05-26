@@ -36,10 +36,20 @@
 	};
 
 	onMount(async () => {
-		signUpEnabled = await getSignUpEnabledStatus(localStorage.token);
-		defaultUserRole = await getDefaultUserRole(localStorage.token);
-		JWTExpiresIn = await getJWTExpiresDuration(localStorage.token);
-		webhookUrl = await getWebhookUrl(localStorage.token);
+		await Promise.all([
+			(async () => {
+				signUpEnabled = await getSignUpEnabledStatus(localStorage.token);
+			})(),
+			(async () => {
+				defaultUserRole = await getDefaultUserRole(localStorage.token);
+			})(),
+			(async () => {
+				JWTExpiresIn = await getJWTExpiresDuration(localStorage.token);
+			})(),
+			(async () => {
+				webhookUrl = await getWebhookUrl(localStorage.token);
+			})()
+		]);
 	});
 </script>
 
