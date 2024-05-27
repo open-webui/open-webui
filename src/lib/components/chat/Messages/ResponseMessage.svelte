@@ -33,7 +33,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
 	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
-	import MarkdownToken from '$lib/components/chat/Messages/MarkdownToken.svelte';
+	import MarkdownTokens from '$lib/components/chat/Messages/MarkdownTokens.svelte';
 
 	export let message;
 	export let siblings;
@@ -73,25 +73,6 @@
 	let selectedCitation = null;
 
 	$: tokens = marked.lexer(sanitizeResponseContent(message?.content));
-
-	const renderer = new marked.Renderer();
-
-	// For code blocks with simple backticks
-	renderer.codespan = (code) => {
-		return `<code>${code.replaceAll('&amp;', '&')}</code>`;
-	};
-
-	// Open all links in a new tab/window (from https://github.com/markedjs/marked/issues/655#issuecomment-383226346)
-	const origLinkRenderer = renderer.link;
-	renderer.link = (href, title, text) => {
-		const html = origLinkRenderer.call(renderer, href, title, text);
-		return html.replace(/^<a /, '<a target="_blank" rel="nofollow" ');
-	};
-
-	const { extensions, ...defaults } = marked.getDefaults() as marked.MarkedOptions & {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		extensions: any;
-	};
 
 	$: if (message) {
 		renderStyling();
@@ -335,7 +316,6 @@
 
 	onMount(async () => {
 		await tick();
-		console.log(marked.parser)
 		renderStyling();
 	});
 </script>
@@ -445,24 +425,7 @@
 							{:else if message.content === ''}
 								<Skeleton />
 							{:else}
-								{#each tokens as token, tokenIdx}
-									<!--{#if token.type === 'code'}-->
-									<!--	<CodeBlock-->
-									<!--		id={`${message.id}-${tokenIdx}`}-->
-									<!--		lang={token?.lang ?? ''}-->
-									<!--		code={revertSanitizedResponseContent(token?.text ?? '')}-->
-									<!--	/>-->
-									<!--{:else}-->
-									<!--	{@html marked.parse(token.raw, {-->
-									<!--		...defaults,-->
-									<!--		gfm: true,-->
-									<!--		breaks: true,-->
-									<!--		renderer-->
-									<!--	})}-->
-									<!--{/if}-->
-									<!--{@html marked.parser([token])}-->
-									<MarkdownToken id={`${message.id}-${tokenIdx}`} {token} />
-								{/each}
+								<MarkdownTokens id={message.id} {tokens} />
 							{/if}
 
 							{#if message.citations}

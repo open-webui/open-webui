@@ -2,6 +2,7 @@
 	import type { Token } from 'marked';
 	import { unescapeHtml } from '$lib/utils';
 	import { onMount } from 'svelte';
+	import { revertSanitizedResponseContent } from '$lib/utils/index.js';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -29,7 +30,7 @@
 			<svelte:self id={`${id}-em`} tokens={token.tokens} />
 		</em>
 	{:else if token.type === 'codespan'}
-		<code>{unescapeHtml(token.text)}</code>
+			<code>${unescapeHtml(token.text.replaceAll('&amp;', '&'))}</code>
 	{:else if token.type === 'br'}
 		<br />
 	{:else if token.type === 'del'}
