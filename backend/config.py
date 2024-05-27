@@ -318,16 +318,16 @@ if (
     }
 
 if (
-    os.environ.get("OPENID_CLIENT_ID")
-    and os.environ.get("OPENID_CLIENT_SECRET")
+    os.environ.get("OAUTH_CLIENT_ID")
+    and os.environ.get("OAUTH_CLIENT_SECRET")
     and os.environ.get("OPENID_PROVIDER_URL")
 ):
     OAUTH_PROVIDERS["oidc"] = {
-        "client_id": os.environ.get("OPENID_CLIENT_ID"),
-        "client_secret": os.environ.get("OPENID_CLIENT_SECRET"),
+        "client_id": os.environ.get("OAUTH_CLIENT_ID"),
+        "client_secret": os.environ.get("OAUTH_CLIENT_SECRET"),
         "server_metadata_url": os.environ.get("OPENID_PROVIDER_URL"),
-        "scope": os.environ.get("OPENID_SCOPE", "openid email profile"),
-        "name": os.environ.get("OPENID_PROVIDER_NAME", "SSO"),
+        "scope": os.environ.get("OAUTH_SCOPES", "openid email profile"),
+        "name": os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
     }
 
 
