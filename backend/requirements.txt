@@ -56,6 +56,6 @@ faster-whisper==1.0.1
 PyJWT[crypto]==2.8.0
 
 black==24.4.2
-langfuse==2.27.3
+langfuse==2.33.0
 youtube-transcript-api==0.6.2
 pytube
