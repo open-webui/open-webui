@@ -30,7 +30,7 @@
 			<svelte:self id={`${id}-em`} tokens={token.tokens} />
 		</em>
 	{:else if token.type === 'codespan'}
-			<code>${unescapeHtml(token.text.replaceAll('&amp;', '&'))}</code>
+			<code>{unescapeHtml(token.text.replaceAll('&amp;', '&'))}</code>
 	{:else if token.type === 'br'}
 		<br />
 	{:else if token.type === 'del'}

@@ -20,20 +20,9 @@ export const revertSanitizedResponseContent = (content: string) => {
 	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
 };
 
-const unescapeTest = /&(#(?:\d+)|(?:#x[0-9A-Fa-f]+)|(?:\w+));?/gi;
-
 export function unescapeHtml(html: string) {
-	// explicitly match decimal, hex, and named HTML entities
-	return html.replace(unescapeTest, (_, n) => {
-		n = n.toLowerCase();
-		if (n === 'colon') return ':';
-		if (n.charAt(0) === '#') {
-			return n.charAt(1) === 'x'
-				? String.fromCharCode(parseInt(n.substring(2), 16))
-				: String.fromCharCode(+n.substring(1));
-		}
-		return '';
-	});
+	const doc = new DOMParser().parseFromString(html, 'text/html');
+	return doc.documentElement.textContent;
 }
 
 export const capitalizeFirstLetter = (string) => {
