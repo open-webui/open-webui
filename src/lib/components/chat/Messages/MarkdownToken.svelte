@@ -2,8 +2,9 @@
 	import type { Token } from 'marked';
 	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
-	import MarkdownInlineToken from '$lib/components/chat/Messages/MarkdownInlineToken.svelte';
+	import MarkdownInlineToken from '$lib/components/chat/Messages/MarkdownInlineTokens.svelte';
 	import { onMount } from 'svelte';
+	import MarkdownInlineTokens from '$lib/components/chat/Messages/MarkdownInlineTokens.svelte';
 
 	export let id: string;
 	export let token: Token;
@@ -22,9 +23,7 @@
 	<hr />
 {:else if token.type === 'heading'}
 	<svelte:element this={headerComponent(token.depth)}>
-		{#each token.tokens ?? [] as innerToken, tokenIdx}
-			<MarkdownInlineToken id={`${id}-${tokenIdx}`} token={innerToken} />
-		{/each}
+		<MarkdownInlineTokens id={`${id}-h`} tokens={token.tokens} />
 	</svelte:element>
 {:else if token.type === 'code'}
 	<CodeBlock
@@ -38,12 +37,7 @@
 			<tr>
 				{#each token.header as header, headerIdx}
 					<th style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}>
-						{#each header.tokens as innerToken, tokenIdx}
-							<MarkdownInlineToken
-								id={`${id}-header-${headerIdx}-${tokenIdx}`}
-								token={innerToken}
-							/>
-						{/each}
+						<MarkdownInlineTokens id={`${id}-header-${headerIdx}`} tokens={header.tokens} />
 					</th>
 				{/each}
 			</tr>
@@ -53,12 +47,7 @@
 				<tr>
 					{#each row ?? [] as cell, cellIdx}
 						<td style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}>
-							{#each cell.tokens ?? [] as innerToken, tokenIdx}
-								<MarkdownInlineToken
-									id={`${id}-row-${rowIdx}-${cellIdx}-${tokenIdx}`}
-									token={innerToken}
-								/>
-							{/each}
+							<MarkdownInlineTokens id={`${id}-row-${rowIdx}-${cellIdx}`} tokens={cell.tokens} />
 						</td>
 					{/each}
 				</tr>
@@ -74,13 +63,13 @@
 {:else if token.type === 'list'}
 	{#if token.ordered}
 		<ol start={token.start || 1}>
-			<li>
-				{#each token.items as item, itemIdx}
+			{#each token.items as item, itemIdx}
+				<li>
 					{#each item.tokens ?? [] as innerToken, tokenIdx}
 						<svelte:self id={`${id}-${itemIdx}-${tokenIdx}`} token={innerToken} top={token.loose} />
 					{/each}
-				{/each}
-			</li>
+				</li>
+			{/each}
 		</ol>
 	{:else}
 		<ul>
@@ -97,25 +86,19 @@
 	{@html token.text}
 {:else if token.type === 'paragraph'}
 	<p>
-		{#each token.tokens ?? [] as innerToken, tokenIdx}
-			<MarkdownInlineToken id={`${id}-${tokenIdx}`} token={innerToken} />
-		{/each}
+		<MarkdownInlineTokens id={`${id}-p`} tokens={token.tokens ?? []} />
 	</p>
 {:else if token.type === 'text'}
 	{#if top}
 		<p>
 			{#if token.tokens}
-				{#each token.tokens ?? [] as innerToken, tokenIdx}
-					<MarkdownInlineToken id={`${id}-${tokenIdx}`} token={innerToken} />
-				{/each}
+				<MarkdownInlineTokens id={`${id}-t`} tokens={token.tokens} />
 			{:else}
 				{unescapeHtml(token.text)}
 			{/if}
 		</p>
 	{:else if token.tokens}
-		{#each token.tokens ?? [] as innerToken, tokenIdx}
-			<MarkdownInlineToken id={`${id}-${tokenIdx}`} token={innerToken} />
-		{/each}
+		<MarkdownInlineTokens id={`${id}-p`} tokens={token.tokens ?? []} />
 	{:else}
 		{unescapeHtml(token.text)}
 	{/if}
