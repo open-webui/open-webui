@@ -685,6 +685,12 @@
 				{
 					model: model.id,
 					stream: true,
+					stream_options:
+						model.info?.meta?.capabilities?.usage ?? false
+							? {
+									include_usage: true
+							  }
+							: undefined,
 					messages: [
 						$settings.system || (responseMessage?.userContext ?? null)
 							? {
@@ -753,9 +759,10 @@
 
 			if (res && res.ok && res.body) {
 				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
+				let lastUsage = null;
 
 				for await (const update of textStream) {
-					const { value, done, citations, error } = update;
+					const { value, done, citations, error, usage } = update;
 					if (error) {
 						await handleOpenAIError(error, null, model, responseMessage);
 						break;
@@ -769,6 +776,10 @@
 						}
 
 						break;
+					}
+
+					if (usage) {
+						lastUsage = usage;
 					}
 
 					if (citations) {
@@ -802,6 +813,10 @@
 					if (autoScroll) {
 						scrollToBottom();
 					}
+				}
+
+				if (lastUsage) {
+					responseMessage.info = { ...lastUsage, openai: true };
 				}
 
 				if ($chatId == _chatId) {

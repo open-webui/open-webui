@@ -574,6 +574,7 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
 )
 
+
 class BannerModel(BaseModel):
     id: str
     type: str

@@ -106,8 +106,13 @@
 		renderLatex();
 
 		if (message.info) {
-			tooltipInstance = tippy(`#info-${message.id}`, {
-				content: `<span class="text-xs" id="tooltip-${message.id}">response_token/s: ${
+			let tooltipContent = '';
+			if (message.info.openai) {
+				tooltipContent = `prompt_tokens: ${message.info.prompt_tokens ?? 'N/A'}<br/>
+													completion_tokens: ${message.info.completion_tokens ?? 'N/A'}<br/>
+													total_tokens: ${message.info.total_tokens ?? 'N/A'}`;
+			} else {
+				tooltipContent = `response_token/s: ${
 					`${
 						Math.round(
 							((message.info.eval_count ?? 0) / (message.info.eval_duration / 1000000000)) * 100
@@ -137,9 +142,10 @@
                     eval_duration: ${
 											Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
 										}ms<br/>
-                    approximate_total: ${approximateToHumanReadable(
-											message.info.total_duration
-										)}</span>`,
+                    approximate_total: ${approximateToHumanReadable(message.info.total_duration)}`;
+			}
+			tooltipInstance = tippy(`#info-${message.id}`, {
+				content: `<span class="text-xs" id="tooltip-${message.id}">${tooltipContent}</span>`,
 				allowHTML: true
 			});
 		}

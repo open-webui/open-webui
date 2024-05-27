@@ -56,6 +56,20 @@
 		id = name.replace(/\s+/g, '-').toLowerCase();
 	}
 
+	let baseModel = null;
+	$: {
+		baseModel = $models.find((m) => m.id === info.base_model_id);
+		console.log(baseModel);
+		if (baseModel) {
+			if (baseModel.owned_by === 'openai') {
+				capabilities.usage = baseModel.info?.meta?.capabilities?.usage ?? false;
+			} else {
+				delete capabilities.usage;
+			}
+			capabilities = capabilities;
+		}
+	}
+
 	const submitHandler = async () => {
 		loading = true;
 
