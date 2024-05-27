@@ -537,7 +537,7 @@ async def oauth_callback(provider: str, request: Request):
 
     if not user:
         # If the user does not exist, check if merging is enabled
-        if OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
+        if OAUTH_MERGE_ACCOUNTS_BY_EMAIL.value:
             # Check if the user exists by email
             email = user_data.get("email", "").lower()
             if not email:
