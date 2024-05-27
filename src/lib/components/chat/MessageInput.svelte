@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { type Model, mobile, settings, showSidebar, models } from '$lib/stores';
+	import { type Model, mobile, settings, showSidebar, models, config } from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
@@ -20,6 +20,8 @@
 	import Models from './MessageInput/Models.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import InputMenu from './MessageInput/InputMenu.svelte';
+	import { t } from 'i18next';
 
 	const i18n = getContext('i18n');
 
@@ -47,9 +49,7 @@
 	export let files = [];
 
 	export let speechRecognitionEnabled = true;
-
-	export let webSearchAvailable = false;
-	export let useWebSearch = false;
+	export let webSearchEnabled = false;
 
 	export let prompt = '';
 	export let messages = [];
@@ -779,13 +779,19 @@
 
 						<div class=" flex">
 							<div class=" ml-1 flex items-center">
-								<Tooltip content={$i18n.t('Upload files')}>
+								<InputMenu
+									bind:webSearchEnabled
+									uploadFilesHandler={() => {
+										filesInputElement.click();
+									}}
+									onClose={async () => {
+										await tick();
+										chatTextAreaElement?.focus();
+									}}
+								>
 									<button
-										class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+										class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-none focus:outline-none"
 										type="button"
-										on:click={() => {
-											filesInputElement.click();
-										}}
 									>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
@@ -798,7 +804,7 @@
 											/>
 										</svg>
 									</button>
-								</Tooltip>
+								</InputMenu>
 							</div>
 
 							<textarea
@@ -969,19 +975,19 @@
 
 							<div class="self-end mb-2 flex space-x-1 mr-1">
 								{#if messages.length == 0 || messages.at(-1).done == true}
-									{#if webSearchAvailable}
+									<!-- {#if $config?.features.enable_web_search ?? false}
 										<Tooltip
-											content={useWebSearch
+											content={webSearchEnabled
 												? $i18n.t('Web Search Enabled')
 												: $i18n.t('Web Search Disabled')}
 										>
-											{#if useWebSearch}
+											{#if webSearchEnabled}
 												<button
 													id="toggle-websearch-button"
 													class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-1.5 mr-0.5 self-center"
 													type="button"
 													on:click={() => {
-														useWebSearch = !useWebSearch;
+														webSearchEnabled = !webSearchEnabled;
 													}}
 												>
 													<svg
@@ -998,15 +1004,15 @@
 											{:else}
 												<button
 													id="toggle-websearch-button"
-													class=" {useWebSearch
+													class=" {webSearchEnabled
 														? 'text-gray-600 dark:text-gray-300'
 														: 'text-gray-300 dark:text-gray-600 disabled'} hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-1.5 mr-0.5 self-center"
 													type="button"
 													on:click={() => {
-														useWebSearch = !useWebSearch;
+														webSearchEnabled = !webSearchEnabled;
 													}}
 												>
-													{#if useWebSearch}
+													{#if webSearchEnabled}
 														<svg
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 24 24"
@@ -1036,7 +1042,7 @@
 												</button>
 											{/if}
 										</Tooltip>
-									{/if}
+									{/if} -->
 
 									<Tooltip content={$i18n.t('Record voice')}>
 										{#if speechRecognitionEnabled}

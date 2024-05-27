@@ -65,7 +65,7 @@
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 
-	let useWebSearch = false;
+	let webSearchEnabled = false;
 
 	let chat = null;
 	let tags = [];
@@ -406,7 +406,7 @@
 					}
 					responseMessage.userContext = userContext;
 
-					if (useWebSearch) {
+					if (webSearchEnabled) {
 						await getWebSearchResultsAsFiles(model.id, parentId, responseMessageId);
 					}
 
@@ -1159,12 +1159,11 @@
 		bind:files
 		bind:prompt
 		bind:autoScroll
-		bind:useWebSearch
+		bind:webSearchEnabled
 		bind:atSelectedModel
 		{selectedModels}
 		{messages}
 		{submitPrompt}
 		{stopResponse}
-		webSearchAvailable={$config?.features.enable_web_search ?? false}
 	/>
 {/if}
