@@ -24,10 +24,6 @@
 		settings.set({ ...$settings, models: selectedModels });
 		await updateUserSettings(localStorage.token, { ui: $settings });
 
-		if ($user.role === 'admin') {
-			console.log('setting default models globally');
-			await setDefaultModels(localStorage.token, selectedModels.join(','));
-		}
 		toast.success($i18n.t('Default model updated'));
 	};
 

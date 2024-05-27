@@ -137,6 +137,7 @@
 		} else if ($settings?.models) {
 			selectedModels = $settings?.models;
 		} else if ($config?.default_models) {
+			console.log($config?.default_models.split(',') ?? '');
 			selectedModels = $config?.default_models.split(',');
 		} else {
 			selectedModels = [''];
@@ -204,6 +205,7 @@
 					system: chatContent.system ?? $settings.system,
 					params: chatContent.options ?? $settings.params
 				});
+
 				autoScroll = true;
 				await tick();
 
