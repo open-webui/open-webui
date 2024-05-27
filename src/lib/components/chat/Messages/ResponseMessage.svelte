@@ -34,6 +34,7 @@
 	import RateComment from './RateComment.svelte';
 	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 
 	export let message;
 	export let siblings;
@@ -389,11 +390,21 @@
 								</div>
 							{/if}
 
-							<div class="flex flex-col justify-center -space-y-0.5">
-								<div class=" text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
-									{message.status.description}
+							{#if message?.status?.action === 'web_search' && message?.status?.urls}
+								<WebSearchResults urls={message?.status?.urls}>
+									<div class="flex flex-col justify-center -space-y-0.5">
+										<div class="text-base line-clamp-1 text-wrap">
+											{message.status.description}
+										</div>
+									</div>
+								</WebSearchResults>
+							{:else}
+								<div class="flex flex-col justify-center -space-y-0.5">
+									<div class=" text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
+										{message.status.description}
+									</div>
 								</div>
-							</div>
+							{/if}
 						</div>
 					{/if}
 

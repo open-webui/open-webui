@@ -403,14 +403,8 @@ export const generateSearchQuery = async (
 	let error = null;
 
 	// TODO: Allow users to specify the prompt
-
 	// Get the current date in the format "January 20, 2024"
 	const currentDate = new Intl.DateTimeFormat('en-US', {
-		year: 'numeric',
-		month: 'long',
-		day: '2-digit'
-	}).format(new Date());
-	const yesterdayDate = new Intl.DateTimeFormat('en-US', {
 		year: 'numeric',
 		month: 'long',
 		day: '2-digit'
@@ -430,14 +424,6 @@ export const generateSearchQuery = async (
 				{
 					role: 'assistant',
 					content: `You are tasked with generating web search queries. Give me an appropriate query to answer my question for google search. Answer with only the query. Today is ${currentDate}.`
-				},
-				{
-					role: 'user',
-					content: 'What is the current weather in Paris?'
-				},
-				{
-					role: 'assistant',
-					content: `Weather in Paris ${currentDate}`
 				},
 				{
 					role: 'user',

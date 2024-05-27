@@ -434,17 +434,21 @@
 		};
 		messages = messages;
 
-		const searchQuery = await generateChatSearchQuery(model, parentId);
-		if (!searchQuery) {
-			toast.warning($i18n.t('No search query generated'));
-			responseMessage.status = {
-				...responseMessage.status,
-				done: true,
-				error: true,
-				description: 'No search query generated'
-			};
-			messages = messages;
-			return;
+		const prompt = history.messages[parentId].content;
+		let searchQuery = prompt;
+		if (prompt.length > 100) {
+			searchQuery = await generateChatSearchQuery(model, prompt);
+			if (!searchQuery) {
+				toast.warning($i18n.t('No search query generated'));
+				responseMessage.status = {
+					...responseMessage.status,
+					done: true,
+					error: true,
+					description: 'No search query generated'
+				};
+				messages = messages;
+				return;
+			}
 		}
 
 		responseMessage.status = {
@@ -469,7 +473,8 @@
 		responseMessage.status = {
 			...responseMessage.status,
 			done: true,
-			description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length })
+			description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
+			urls: results.filenames
 		};
 
 		if (responseMessage?.files ?? undefined === undefined) {
@@ -1034,15 +1039,14 @@
 		}
 	};
 
-	const generateChatSearchQuery = async (modelId: string, messageId: string) => {
+	const generateChatSearchQuery = async (modelId: string, prompt: string) => {
 		const model = $models.find((model) => model.id === modelId);
 		const taskModelId =
 			model?.owned_by === 'openai' ?? false
 				? $settings?.title?.modelExternal ?? modelId
 				: $settings?.title?.model ?? modelId;
 		const taskModel = $models.find((model) => model.id === taskModelId);
-		const userMessage = history.messages[messageId];
-		const userPrompt = userMessage.content;
+
 		const previousMessages = messages
 			.filter((message) => message.role === 'user')
 			.map((message) => message.content);
@@ -1051,7 +1055,7 @@
 			localStorage.token,
 			taskModelId,
 			previousMessages,
-			userPrompt,
+			prompt,
 			taskModel?.owned_by === 'openai' ?? false
 				? `${OPENAI_API_BASE_URL}`
 				: `${OLLAMA_API_BASE_URL}/v1`
