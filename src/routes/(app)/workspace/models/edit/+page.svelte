@@ -107,6 +107,10 @@
 				params = { ...params, ...model?.info?.params };
 				params.stop = params?.stop ? (params?.stop ?? []).join(',') : null;
 
+				if (model?.owned_by === 'openai') {
+					capabilities.usage = false;
+				}
+
 				if (model?.info?.meta?.capabilities) {
 					capabilities = { ...capabilities, ...model?.info?.meta?.capabilities };
 				}
