@@ -33,6 +33,7 @@
 	import ArchiveBox from '../icons/ArchiveBox.svelte';
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
+	import { updateUserSettings } from '$lib/apis/users';
 
 	const BREAKPOINT = 768;
 
@@ -184,6 +185,8 @@
 	const saveSettings = async (updated) => {
 		await settings.set({ ...$settings, ...updated });
 		localStorage.setItem('settings', JSON.stringify($settings));
+		await updateUserSettings(localStorage.token, { ui: $settings });
+
 		location.href = '/';
 	};
 

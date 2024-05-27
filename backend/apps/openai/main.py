@@ -198,7 +198,7 @@ async def fetch_url(url, key):
 
 
 def merge_models_lists(model_lists):
-    log.info(f"merge_models_lists {model_lists}")
+    log.debug(f"merge_models_lists {model_lists}")
     merged_list = []
 
     for idx, models in enumerate(model_lists):
@@ -237,7 +237,7 @@ async def get_all_models():
         ]
 
         responses = await asyncio.gather(*tasks)
-        log.info(f"get_all_models:responses() {responses}")
+        log.debug(f"get_all_models:responses() {responses}")
 
         models = {
             "data": merge_models_lists(
@@ -254,7 +254,7 @@ async def get_all_models():
             )
         }
 
-        log.info(f"models: {models}")
+        log.debug(f"models: {models}")
         app.state.MODELS = {model["id"]: model for model in models["data"]}
 
     return models

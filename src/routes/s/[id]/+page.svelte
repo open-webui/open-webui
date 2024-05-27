@@ -98,12 +98,6 @@
 						: convertMessagesToHistory(chatContent.messages);
 				title = chatContent.title;
 
-				let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-				await settings.set({
-					..._settings,
-					system: chatContent.system ?? _settings.system,
-					options: chatContent.options ?? _settings.options
-				});
 				autoScroll = true;
 				await tick();
 

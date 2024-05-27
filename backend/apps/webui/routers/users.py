@@ -9,7 +9,13 @@ import time
 import uuid
 import logging
 
-from apps.webui.models.users import UserModel, UserUpdateForm, UserRoleUpdateForm, Users
+from apps.webui.models.users import (
+    UserModel,
+    UserUpdateForm,
+    UserRoleUpdateForm,
+    UserSettings,
+    Users,
+)
 from apps.webui.models.auths import Auths
 from apps.webui.models.chats import Chats
 
@@ -69,6 +75,42 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
 
 
 ############################
+# GetUserSettingsBySessionUser
+############################
+
+
+@router.get("/user/settings", response_model=Optional[UserSettings])
+async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
+    user = Users.get_user_by_id(user.id)
+    if user:
+        return user.settings
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+
+############################
+# UpdateUserSettingsBySessionUser
+############################
+
+
+@router.post("/user/settings/update", response_model=UserSettings)
+async def update_user_settings_by_session_user(
+    form_data: UserSettings, user=Depends(get_verified_user)
+):
+    user = Users.update_user_by_id(user.id, {"settings": form_data.model_dump()})
+    if user:
+        return user.settings
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+
+############################
 # GetUserById
 ############################
 
@@ -81,6 +123,8 @@ class UserResponse(BaseModel):
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
 
+    # Check if user_id is a shared chat
+    # If it is, get the user_id from the chat
     if user_id.startswith("shared-"):
         chat_id = user_id.replace("shared-", "")
         chat = Chats.get_chat_by_id(chat_id)
