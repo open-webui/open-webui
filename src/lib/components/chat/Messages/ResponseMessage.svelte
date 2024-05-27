@@ -383,7 +383,7 @@
 			>
 				<div>
 					{#if message?.status}
-						<div class="flex items-center gap-2 py-1.5">
+						<div class="flex items-center gap-2 pt-1 pb-1">
 							{#if message?.status?.done === false}
 								<div class="">
 									<Spinner className="size-4" />
