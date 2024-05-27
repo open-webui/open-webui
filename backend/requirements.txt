@@ -48,7 +48,7 @@ validators==0.28.1
 opencv-python-headless==4.9.0.80
 rapidocr-onnxruntime==1.2.3
 
-fpdf2==2.7.8
+fpdf2==2.7.9
 rank-bm25==0.2.2
 
 faster-whisper==1.0.1
