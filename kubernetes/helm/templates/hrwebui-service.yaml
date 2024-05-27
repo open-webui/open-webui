@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hrwebui.name" . }}
+  labels:
+    {{- include "hrwebui.labels" . | nindent 4 }}
+    {{- with .Values.hrwebui.service.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.hrwebui.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    {{- include "hrwebui.selectorLabels" . | nindent 4 }}
+  type: {{ .Values.hrwebui.service.type | default "ClusterIP" }}
+  ports:
+  - protocol: TCP
+    name: http
+    port: {{ .Values.hrwebui.service.port }}
+    targetPort: {{ .Values.hrwebui.service.containerPort }}
+    {{- if .Values.hrwebui.service.nodePort }}
+    nodePort: {{ .Values.hrwebui.service.nodePort | int }}
+    {{- end }}
+  {{- if .Values.hrwebui.service.loadBalancerClass }}
+  loadBalancerClass: {{ .Values.hrwebui.service.loadBalancerClass | quote }}
+  {{- end }}
+

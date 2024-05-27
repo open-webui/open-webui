@@ -1,3 +1,4 @@
+{{- if .Values.webui.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -19,11 +20,11 @@ spec:
   - protocol: TCP
     name: http
     port: {{ .Values.webui.service.port }}
-    targetPort: http
+    targetPort: {{ .Values.webui.service.containerPort }}
     {{- if .Values.webui.service.nodePort }}
     nodePort: {{ .Values.webui.service.nodePort | int }}
     {{- end }}
   {{- if .Values.webui.service.loadBalancerClass }}
   loadBalancerClass: {{ .Values.webui.service.loadBalancerClass | quote }}
   {{- end }}
-
+{{- end }}

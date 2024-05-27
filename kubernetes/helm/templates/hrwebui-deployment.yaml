@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hrwebui.name" . }}
+  labels:
+    {{- include "hrwebui.labels" . | nindent 4 }}
+  {{- with .Values.hrwebui.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.hrwebui.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "hrwebui.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "hrwebui.labels" . | nindent 8 }}
+      {{- with .Values.hrwebui.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      containers:
+      - name: hrwebui
+        {{- with .Values.hrwebui.image }}
+        image: {{ .repository }}:{{ .tag | default $.Chart.AppVersion }}
+        imagePullPolicy: {{ .pullPolicy }}
+        {{- end }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.hrwebui.service.containerPort }}
+        {{- with .Values.hrwebui.resources }}
+        resources: {{- toYaml . | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        - name: data
+          mountPath: /app/backend/data
+        env:
+        - name: OLLAMA_BASE_URL
+          value: http://192.168.100.14:31774
+          # value: {{ include "ollama.url" . | quote }}
+        tty: true
+      imagePullSecrets:
+      - name: {{.Values.hrwebui.imagePullSecrets.name}}
+      {{- with .Values.hrwebui.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+      {{- if and .Values.hrwebui.persistence.enabled .Values.hrwebui.persistence.existingClaim }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.hrwebui.persistence.existingClaim }}
+      {{- else if not .Values.hrwebui.persistence.enabled }}
+      - name: data
+        emptyDir: {}
+      {{- else if and .Values.hrwebui.persistence.enabled (not .Values.hrwebui.persistence.existingClaim) }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "hrwebui.name" . }}
+      {{- end }}

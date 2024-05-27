@@ -1,7 +1,7 @@
 nameOverride: ""
 
 ollama:
-  externalHost: ""
+  externalHost: "true"
   annotations: {}
   podAnnotations: {}
   replicaCount: 1
@@ -36,6 +36,7 @@ ollama:
     enabled: false
 
 webui:
+  enabled: false
   annotations: {}
   podAnnotations: {}
   replicaCount: 1
@@ -66,10 +67,54 @@ webui:
   nodeSelector: {}
   tolerations: []
   service:
-    type: ClusterIP
+    type: NodePort
     annotations: {}
     port: 80
     containerPort: 8080
-    nodePort: ""
+    nodePort: 31030
+    labels: {}
+    loadBalancerClass: "" 
+
+hrwebui:
+  enabled: true
+  annotations: {}
+  podAnnotations: {}
+  replicaCount: 1
+  image:
+    repository: ghcr.io/ciai-engineering/open-webui
+    tag: "git-45dc516"
+    pullPolicy: Always
+  resources: {}
+  imagePullSecrets: 
+    name: ragsecret
+  ingress:
+    enabled: false
+    class: ""
+    # -- Use appropriate annotations for your Ingress controller, e.g., for NGINX:
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    annotations: {}
+    host: ""
+    tls: false
+    existingSecret: ""
+  persistence:
+    enabled: true
+    size: 2Gi
+    existingClaim: ""
+    # -- If using multiple replicas, you must update accessModes to ReadWriteMany
+    accessModes:
+    - ReadWriteOnce
+    storageClass: ""
+    selector: {}
+    annotations: {}
+  nodeSelector: {
+    kubernetes.io/hostname: ciai-cpu-w05588
+    }
+  tolerations: []
+  service:
+    type: NodePort
+    annotations: {}
+    port: 80
+    containerPort: 8080
+    nodePort: 31032
     labels: {}
     loadBalancerClass: "" 

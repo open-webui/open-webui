@@ -1,0 +1,27 @@
+{{- if and .Values.hrwebui.persistence.enabled (not .Values.hrwebui.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "hrwebui.name" . }}
+  labels:
+    {{- include "hrwebui.selectorLabels" . | nindent 4 }}
+  {{- with .Values.hrwebui.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- range .Values.hrwebui.persistence.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.hrwebui.persistence.size }}
+  {{- if .Values.hrwebui.persistence.storageClass }}
+  storageClassName: {{ .Values.hrwebui.persistence.storageClass }}
+  {{- end }}
+  {{- with .Values.hrwebui.persistence.selector }}
+  selector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
