@@ -1,11 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from peewee import *
 from playhouse.shortcuts import model_to_dict
 from typing import List, Union, Optional
 import time
 from utils.misc import get_gravatar_url
 
-from apps.webui.internal.db import DB
+from apps.webui.internal.db import DB, JSONField
 from apps.webui.models.chats import Chats
 
 ####################
@@ -25,9 +25,16 @@ class User(Model):
     created_at = BigIntegerField()
 
     api_key = CharField(null=True, unique=True)
+    settings = JSONField(null=True)
 
     class Meta:
         database = DB
+
+
+class UserSettings(BaseModel):
+    ui: Optional[dict] = {}
+    model_config = ConfigDict(extra="allow")
+    pass
 
 
 class UserModel(BaseModel):
@@ -42,6 +49,7 @@ class UserModel(BaseModel):
     created_at: int  # timestamp in epoch
 
     api_key: Optional[str] = None
+    settings: Optional[UserSettings] = None
 
 
 ####################

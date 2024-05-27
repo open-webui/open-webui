@@ -35,6 +35,7 @@
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { getBanners } from '$lib/apis/configs';
+	import { getUserSettings } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
@@ -72,7 +73,13 @@
 				// IndexedDB Not Found
 			}
 
-			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+			const userSettings = await getUserSettings(localStorage.token);
+
+			if (userSettings) {
+				await settings.set(userSettings.ui);
+			} else {
+				await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+			}
 
 			await Promise.all([
 				(async () => {

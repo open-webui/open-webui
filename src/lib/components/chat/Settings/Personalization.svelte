@@ -19,8 +19,7 @@
 	let enableMemory = false;
 
 	onMount(async () => {
-		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-		enableMemory = settings?.memory ?? false;
+		enableMemory = $settings?.memory ?? false;
 	});
 </script>
 

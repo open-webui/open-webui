@@ -2,7 +2,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { chats, user, config } from '$lib/stores';
+	import { chats, user, settings } from '$lib/stores';
 
 	import {
 		archiveAllChats,
@@ -99,9 +99,7 @@
 	};
 
 	onMount(async () => {
-		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-
-		saveChatHistory = settings.saveChatHistory ?? true;
+		saveChatHistory = $settings.saveChatHistory ?? true;
 	});
 </script>
 

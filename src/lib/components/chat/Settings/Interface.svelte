@@ -104,23 +104,18 @@
 			promptSuggestions = $config?.default_prompt_suggestions;
 		}
 
-		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-
-		titleAutoGenerate = settings?.title?.auto ?? true;
-		titleAutoGenerateModel = settings?.title?.model ?? '';
-		titleAutoGenerateModelExternal = settings?.title?.modelExternal ?? '';
+		titleAutoGenerate = $settings?.title?.auto ?? true;
+		titleAutoGenerateModel = $settings?.title?.model ?? '';
+		titleAutoGenerateModelExternal = $settings?.title?.modelExternal ?? '';
 		titleGenerationPrompt =
-			settings?.title?.prompt ??
-			$i18n.t(
-				"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
-			) + ' {{prompt}}';
-
-		responseAutoCopy = settings.responseAutoCopy ?? false;
-		showUsername = settings.showUsername ?? false;
-		chatBubble = settings.chatBubble ?? true;
-		fullScreenMode = settings.fullScreenMode ?? false;
-		splitLargeChunks = settings.splitLargeChunks ?? false;
-		chatDirection = settings.chatDirection ?? 'LTR';
+			$settings?.title?.prompt ??
+			`Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title': {{prompt}}`;
+		responseAutoCopy = $settings.responseAutoCopy ?? false;
+		showUsername = $settings.showUsername ?? false;
+		chatBubble = $settings.chatBubble ?? true;
+		fullScreenMode = $settings.fullScreenMode ?? false;
+		splitLargeChunks = $settings.splitLargeChunks ?? false;
+		chatDirection = $settings.chatDirection ?? 'LTR';
 	});
 </script>
 
