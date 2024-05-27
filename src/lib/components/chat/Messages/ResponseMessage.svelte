@@ -33,6 +33,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
 	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
+	import MarkdownToken from '$lib/components/chat/Messages/MarkdownToken.svelte';
 
 	export let message;
 	export let siblings;
@@ -334,6 +335,7 @@
 
 	onMount(async () => {
 		await tick();
+		console.log(marked.parser)
 		renderStyling();
 	});
 </script>
@@ -444,20 +446,22 @@
 								<Skeleton />
 							{:else}
 								{#each tokens as token, tokenIdx}
-									{#if token.type === 'code'}
-										<CodeBlock
-											id={`${message.id}-${tokenIdx}`}
-											lang={token?.lang ?? ''}
-											code={revertSanitizedResponseContent(token?.text ?? '')}
-										/>
-									{:else}
-										{@html marked.parse(token.raw, {
-											...defaults,
-											gfm: true,
-											breaks: true,
-											renderer
-										})}
-									{/if}
+									<!--{#if token.type === 'code'}-->
+									<!--	<CodeBlock-->
+									<!--		id={`${message.id}-${tokenIdx}`}-->
+									<!--		lang={token?.lang ?? ''}-->
+									<!--		code={revertSanitizedResponseContent(token?.text ?? '')}-->
+									<!--	/>-->
+									<!--{:else}-->
+									<!--	{@html marked.parse(token.raw, {-->
+									<!--		...defaults,-->
+									<!--		gfm: true,-->
+									<!--		breaks: true,-->
+									<!--		renderer-->
+									<!--	})}-->
+									<!--{/if}-->
+									<!--{@html marked.parser([token])}-->
+									<MarkdownToken id={`${message.id}-${tokenIdx}`} {token} />
 								{/each}
 							{/if}
 
