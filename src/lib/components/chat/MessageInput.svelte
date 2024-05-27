@@ -46,7 +46,6 @@
 
 	export let files = [];
 
-	export let fileUploadEnabled = true;
 	export let speechRecognitionEnabled = true;
 
 	export let webSearchAvailable = false;
@@ -779,37 +778,33 @@
 						{/if}
 
 						<div class=" flex">
-							{#if fileUploadEnabled}
-								<div class=" self-end mb-2 ml-1">
-									<Tooltip content={$i18n.t('Upload files')}>
-										<button
-											class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-											type="button"
-											on:click={() => {
-												filesInputElement.click();
-											}}
+							<div class=" ml-1 flex items-center">
+								<Tooltip content={$i18n.t('Upload files')}>
+									<button
+										class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+										type="button"
+										on:click={() => {
+											filesInputElement.click();
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="size-5"
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="w-[1.2rem] h-[1.2rem]"
-											>
-												<path
-													d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-												/>
-											</svg>
-										</button>
-									</Tooltip>
-								</div>
-							{/if}
+											<path
+												d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+							</div>
 
 							<textarea
 								id="chat-textarea"
 								bind:this={chatTextAreaElement}
-								class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
-									? ''
-									: ' pl-4'} rounded-xl resize-none h-[48px]"
+								class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-3 rounded-xl resize-none h-[48px]"
 								placeholder={chatInputPlaceholder !== ''
 									? chatInputPlaceholder
 									: isRecording

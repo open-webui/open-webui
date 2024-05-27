@@ -48,8 +48,7 @@
 	import { runWebSearch } from '$lib/apis/rag';
 	import Banner from '../common/Banner.svelte';
 	import { getUserSettings } from '$lib/apis/users';
-  
-  
+
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	export let chatIdProp = '';
@@ -408,7 +407,7 @@
 					responseMessage.userContext = userContext;
 
 					if (useWebSearch) {
-						await runWebSearchForPrompt(model.id, parentId, responseMessageId);
+						await getWebSearchResultsAsFiles(model.id, parentId, responseMessageId);
 					}
 
 					if (model?.owned_by === 'openai') {
@@ -425,10 +424,15 @@
 		await chats.set(await getChatList(localStorage.token));
 	};
 
-	const runWebSearchForPrompt = async (model: string, parentId: string, responseId: string) => {
+	const getWebSearchResultsAsFiles = async (
+		model: string,
+		parentId: string,
+		responseId: string
+	) => {
 		const responseMessage = history.messages[responseId];
 		responseMessage.progress = $i18n.t('Generating search query');
 		messages = messages;
+
 		const searchQuery = await generateChatSearchQuery(model, parentId);
 		if (!searchQuery) {
 			toast.warning($i18n.t('No search query generated'));
@@ -436,8 +440,10 @@
 			messages = messages;
 			return;
 		}
+
 		responseMessage.progress = $i18n.t("Searching the web for '{{searchQuery}}'", { searchQuery });
 		messages = messages;
+
 		const searchDocument = await runWebSearch(localStorage.token, searchQuery);
 		if (searchDocument === undefined) {
 			toast.warning($i18n.t('No search results found'));
@@ -445,9 +451,11 @@
 			messages = messages;
 			return;
 		}
+
 		if (!responseMessage.files) {
 			responseMessage.files = [];
 		}
+
 		responseMessage.files.push({
 			collection_name: searchDocument.collection_name,
 			name: searchQuery,
@@ -1157,6 +1165,6 @@
 		{messages}
 		{submitPrompt}
 		{stopResponse}
-		webSearchAvailable={$config.enable_websearch ?? false}
+		webSearchAvailable={$config?.features.enable_web_search ?? false}
 	/>
 {/if}

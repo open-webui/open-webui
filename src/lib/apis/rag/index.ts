@@ -519,7 +519,7 @@ export const runWebSearch = async (
 	query: string,
 	collection_name?: string
 ): Promise<SearchDocument | undefined> => {
-	return await fetch(`${RAG_API_BASE_URL}/websearch`, {
+	return await fetch(`${RAG_API_BASE_URL}/web/search`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

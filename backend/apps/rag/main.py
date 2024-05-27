@@ -642,8 +642,8 @@ def resolve_hostname(hostname):
     return ipv4_addresses, ipv6_addresses
 
 
-@app.post("/websearch")
-def store_websearch(form_data: SearchForm, user=Depends(get_current_user)):
+@app.post("/web/search")
+def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
     try:
         try:
             web_results = search_web(form_data.query)

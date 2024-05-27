@@ -138,8 +138,8 @@ type Config = {
 	features: {
 		auth: boolean;
 		auth_trusted_header: boolean;
-    enable_signup: boolean;
-    enable_websearch?: boolean;
+		enable_signup: boolean;
+		enable_web_search?: boolean;
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
 		enable_community_sharing: boolean;
