@@ -76,7 +76,7 @@
 					<div class=" flex justify-between">
 						<div class="flex flex-row flex-1 border rounded-xl dark:border-gray-800">
 							<select
-								class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none"
+								class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-none text-gray-900"
 								bind:value={banner.type}
 							>
 								{#if banner.type == ''}
