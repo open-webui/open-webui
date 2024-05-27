@@ -1,4 +1,4 @@
-<div class="w-full mt-3 mb-4">
+<div class="w-full mt-2 mb-4">
 	<div class="animate-pulse flex w-full">
 		<div class="space-y-2 w-full">
 			<div class="h-2 bg-gray-200 dark:bg-gray-600 rounded mr-14" />
