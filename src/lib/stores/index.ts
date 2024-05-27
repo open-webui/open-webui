@@ -1,6 +1,7 @@
 import { APP_NAME } from '$lib/constants';
 import { type Writable, writable } from 'svelte/store';
 import type { GlobalModelConfig, ModelConfig } from '$lib/apis';
+import type { Banner } from '$lib/types';
 
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
@@ -35,6 +36,8 @@ export const documents = writable([
 		title: 'title1'
 	}
 ]);
+
+export const banners: Writable<Banner[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});
 
@@ -126,15 +129,20 @@ type Prompt = {
 };
 
 type Config = {
-	status?: boolean;
-	name?: string;
-	version?: string;
-	default_locale?: string;
-	images?: boolean;
-	default_models?: string[];
-	default_prompt_suggestions?: PromptSuggestion[];
-	auth_trusted_header?: boolean;
-	auth: boolean;
+	status: boolean;
+	name: string;
+	version: string;
+	default_locale: string;
+	default_models: string[];
+	default_prompt_suggestions: PromptSuggestion[];
+	features: {
+		auth: boolean;
+		enable_signup: boolean;
+		auth_trusted_header: boolean;
+		enable_image_generation: boolean;
+		enable_admin_export: boolean;
+		enable_community_sharing: boolean;
+	};
 	oauth: {
 		providers: {
 			[key: string]: string;

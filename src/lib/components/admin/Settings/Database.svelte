@@ -34,7 +34,7 @@
 		<div>
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('Database')}</div>
 
-			{#if $config?.enable_admin_export ?? true}
+			{#if $config?.features.enable_admin_export ?? true}
 				<div class="  flex w-full justify-between">
 					<!-- <div class=" self-center text-xs font-medium">{$i18n.t('Allow Chat Deletion')}</div> -->
 

@@ -8,6 +8,8 @@ from chromadb import Settings
 from base64 import b64encode
 from bs4 import BeautifulSoup
 from typing import TypeVar, Generic, Union
+from pydantic import BaseModel
+from typing import Optional
 
 from pathlib import Path
 import json
@@ -166,10 +168,10 @@ CHANGELOG = changelog_json
 
 
 ####################################
-# WEBUI_VERSION
+# WEBUI_BUILD_HASH
 ####################################
 
-WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
+WEBUI_BUILD_HASH = os.environ.get("WEBUI_BUILD_HASH", "dev-build")
 
 ####################################
 # DATA/FRONTEND BUILD DIR
@@ -694,6 +696,27 @@ WEBHOOK_URL = PersistentConfig(
 )
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
+
+ENABLE_COMMUNITY_SHARING = PersistentConfig(
+    "ENABLE_COMMUNITY_SHARING",
+    "ui.enable_community_sharing",
+    os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
+)
+
+class BannerModel(BaseModel):
+    id: str
+    type: str
+    title: Optional[str] = None
+    content: str
+    dismissible: bool
+    timestamp: int
+
+
+WEBUI_BANNERS = PersistentConfig(
+    "WEBUI_BANNERS",
+    "ui.banners",
+    [BannerModel(**banner) for banner in json.loads("[]")],
+)
 
 ####################################
 # WEBUI_SECRET_KEY

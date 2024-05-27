@@ -15,7 +15,8 @@
 		settings,
 		showSidebar,
 		tags as _tags,
-		WEBUI_NAME
+		WEBUI_NAME,
+		banners
 	} from '$lib/stores';
 	import { convertMessagesToHistory, copyToClipboard, splitStream } from '$lib/utils';
 
@@ -40,6 +41,8 @@
 	import { queryMemory } from '$lib/apis/memories';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import Banner from '../common/Banner.svelte';
+	import { getUserSettings } from '$lib/apis/users';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -134,6 +137,7 @@
 		} else if ($settings?.models) {
 			selectedModels = $settings?.models;
 		} else if ($config?.default_models) {
+			console.log($config?.default_models.split(',') ?? '');
 			selectedModels = $config?.default_models.split(',');
 		} else {
 			selectedModels = [''];
@@ -152,10 +156,13 @@
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
-		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-		settings.set({
-			..._settings
-		});
+		const userSettings = await getUserSettings(localStorage.token);
+
+		if (userSettings) {
+			settings.set(userSettings.ui);
+		} else {
+			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+		}
 
 		const chatInput = document.getElementById('chat-textarea');
 		setTimeout(() => chatInput?.focus(), 0);
@@ -185,12 +192,20 @@
 						: convertMessagesToHistory(chatContent.messages);
 				title = chatContent.title;
 
-				let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+				const userSettings = await getUserSettings(localStorage.token);
+
+				if (userSettings) {
+					await settings.set(userSettings.ui);
+				} else {
+					await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+				}
+
 				await settings.set({
-					..._settings,
-					system: chatContent.system ?? _settings.system,
-					params: chatContent.options ?? _settings.params
+					...$settings,
+					system: chatContent.system ?? $settings.system,
+					params: chatContent.options ?? $settings.params
 				});
+
 				autoScroll = true;
 				await tick();
 
@@ -1004,6 +1019,34 @@
 			{chat}
 			{initNewChat}
 		/>
+
+		{#if $banners.length > 0 && !$chatId && selectedModels.length <= 1}
+			<div
+				class="absolute top-[4.25rem] w-full {$showSidebar ? 'md:max-w-[calc(100%-260px)]' : ''}"
+			>
+				<div class=" flex flex-col gap-1 w-full">
+					{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
+						<Banner
+							{banner}
+							on:dismiss={(e) => {
+								const bannerId = e.detail;
+
+								localStorage.setItem(
+									'dismissedBannerIds',
+									JSON.stringify(
+										[
+											bannerId,
+											...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]')
+										].filter((id) => $banners.find((b) => b.id === id))
+									)
+								);
+							}}
+						/>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
 		<div class="flex flex-col flex-auto">
 			<div
 				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full"

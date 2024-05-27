@@ -15,7 +15,7 @@ from apps.webui.routers import (
     utils,
 )
 from config import (
-    WEBUI_VERSION,
+    WEBUI_BUILD_HASH,
     WEBUI_AUTH,
     DEFAULT_MODELS,
     DEFAULT_PROMPT_SUGGESTIONS,
@@ -26,8 +26,8 @@ from config import (
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     JWT_EXPIRES_IN,
     AppConfig,
-    WEBUI_SECRET_KEY,
-    OAUTH_PROVIDERS,
+    ENABLE_COMMUNITY_SHARING,
+    WEBUI_BANNERS,
 )
 
 app = FastAPI()
@@ -44,7 +44,9 @@ app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
+app.state.config.BANNERS = WEBUI_BANNERS
 
+app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 
 app.state.MODELS = {}
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER

@@ -1,4 +1,5 @@
 # noqa: INP001
+import os
 import shutil
 import subprocess
 from sys import stderr
@@ -18,4 +19,5 @@ class CustomBuildHook(BuildHookInterface):
         stderr.write("### npm install\n")
         subprocess.run([npm, "install"], check=True)  # noqa: S603
         stderr.write("\n### npm run build\n")
+        os.environ["APP_BUILD_HASH"] = version
         subprocess.run([npm, "run", "build"], check=True)  # noqa: S603
