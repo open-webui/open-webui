@@ -22,8 +22,6 @@
 			return;
 		}
 		settings.set({ ...$settings, models: selectedModels });
-
-		localStorage.setItem('settings', JSON.stringify($settings));
 		await updateUserSettings(localStorage.token, { ui: $settings });
 
 		if ($user.role === 'admin') {

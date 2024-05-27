@@ -184,9 +184,7 @@
 
 	const saveSettings = async (updated) => {
 		await settings.set({ ...$settings, ...updated });
-		localStorage.setItem('settings', JSON.stringify($settings));
 		await updateUserSettings(localStorage.token, { ui: $settings });
-
 		location.href = '/';
 	};
 

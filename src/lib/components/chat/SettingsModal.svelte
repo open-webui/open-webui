@@ -27,8 +27,6 @@
 		console.log(updated);
 		await settings.set({ ...$settings, ...updated });
 		await models.set(await getModels());
-
-		localStorage.setItem('settings', JSON.stringify($settings));
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
