@@ -655,7 +655,7 @@ def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
             )
         urls = [result.link for result in web_results]
         loader = get_web_loader(urls)
-        data = loader.aload()
+        data = loader.load()
 
         collection_name = form_data.collection_name
         if collection_name == "":

@@ -407,7 +407,7 @@
 					responseMessage.userContext = userContext;
 
 					if (webSearchEnabled) {
-						await getWebSearchResultsAsFiles(model.id, parentId, responseMessageId);
+						await getWebSearchResults(model.id, parentId, responseMessageId);
 					}
 
 					if (model?.owned_by === 'openai') {
@@ -424,47 +424,65 @@
 		await chats.set(await getChatList(localStorage.token));
 	};
 
-	const getWebSearchResultsAsFiles = async (
-		model: string,
-		parentId: string,
-		responseId: string
-	) => {
+	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
 		const responseMessage = history.messages[responseId];
-		responseMessage.progress = $i18n.t('Generating search query');
+
+		responseMessage.status = {
+			done: false,
+			action: 'web_search',
+			description: $i18n.t('Generating search query')
+		};
 		messages = messages;
 
 		const searchQuery = await generateChatSearchQuery(model, parentId);
 		if (!searchQuery) {
 			toast.warning($i18n.t('No search query generated'));
-			responseMessage.progress = undefined;
+			responseMessage.status = {
+				...responseMessage.status,
+				done: true,
+				error: true,
+				description: 'No search query generated'
+			};
 			messages = messages;
 			return;
 		}
 
-		responseMessage.progress = $i18n.t("Searching the web for '{{searchQuery}}'", { searchQuery });
+		responseMessage.status = {
+			...responseMessage.status,
+			description: $i18n.t("Searching the web for '{{searchQuery}}'", { searchQuery })
+		};
 		messages = messages;
 
-		const searchDocument = await runWebSearch(localStorage.token, searchQuery);
-		if (searchDocument === undefined) {
+		const results = await runWebSearch(localStorage.token, searchQuery);
+		if (results === undefined) {
 			toast.warning($i18n.t('No search results found'));
-			responseMessage.progress = undefined;
+			responseMessage.status = {
+				...responseMessage.status,
+				done: true,
+				error: true,
+				description: 'No search results found'
+			};
 			messages = messages;
 			return;
 		}
 
-		if (!responseMessage.files) {
+		responseMessage.status = {
+			...responseMessage.status,
+			done: true,
+			description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length })
+		};
+
+		if (responseMessage?.files ?? undefined === undefined) {
 			responseMessage.files = [];
 		}
 
 		responseMessage.files.push({
-			collection_name: searchDocument.collection_name,
+			collection_name: results.collection_name,
 			name: searchQuery,
-			type: 'websearch',
-			upload_status: true,
-			error: '',
-			urls: searchDocument.filenames
+			type: 'web_search_results',
+			urls: results.filenames
 		});
-		responseMessage.progress = undefined;
+
 		messages = messages;
 	};
 
@@ -530,7 +548,9 @@
 		const docs = messages
 			.filter((message) => message?.files ?? null)
 			.map((message) =>
-				message.files.filter((item) => ['doc', 'collection', 'websearch'].includes(item.type))
+				message.files.filter((item) =>
+					['doc', 'collection', 'web_search_results'].includes(item.type)
+				)
 			)
 			.flat(1);
 
@@ -726,7 +746,9 @@
 		const docs = messages
 			.filter((message) => message?.files ?? null)
 			.map((message) =>
-				message.files.filter((item) => ['doc', 'collection', 'websearch'].includes(item.type))
+				message.files.filter((item) =>
+					['doc', 'collection', 'web_search_results'].includes(item.type)
+				)
 			)
 			.flat(1);
 
@@ -962,7 +984,7 @@
 			const model = $models.filter((m) => m.id === responseMessage.model).at(0);
 
 			if (model) {
-				if (model?.external) {
+				if (model?.owned_by === 'openai') {
 					await sendPromptOpenAI(
 						model,
 						history.messages[responseMessage.parentId].content,
@@ -987,7 +1009,7 @@
 			const model = $models.find((model) => model.id === selectedModels[0]);
 
 			const titleModelId =
-				model?.external ?? false
+				model?.owned_by === 'openai' ?? false
 					? $settings?.title?.modelExternal ?? selectedModels[0]
 					: $settings?.title?.model ?? selectedModels[0];
 			const titleModel = $models.find((model) => model.id === titleModelId);
@@ -1015,7 +1037,7 @@
 	const generateChatSearchQuery = async (modelId: string, messageId: string) => {
 		const model = $models.find((model) => model.id === modelId);
 		const taskModelId =
-			model?.external ?? false
+			model?.owned_by === 'openai' ?? false
 				? $settings?.title?.modelExternal ?? modelId
 				: $settings?.title?.model ?? modelId;
 		const taskModel = $models.find((model) => model.id === taskModelId);
@@ -1024,6 +1046,7 @@
 		const previousMessages = messages
 			.filter((message) => message.role === 'user')
 			.map((message) => message.content);
+
 		return await generateSearchQuery(
 			localStorage.token,
 			taskModelId,

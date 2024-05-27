@@ -550,6 +550,8 @@ def search_web(query: str) -> list[SearchResult]:
     Args:
         query (str): The query to search for
     """
+
+    # TODO: add playwright to search the web
     if SEARXNG_QUERY_URL:
         return search_searxng(SEARXNG_QUERY_URL, query)
     elif GOOGLE_PSE_API_KEY and GOOGLE_PSE_ENGINE_ID:

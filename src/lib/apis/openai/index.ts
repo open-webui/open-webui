@@ -433,57 +433,23 @@ export const generateSearchQuery = async (
 				},
 				{
 					role: 'user',
-					content: `Previous Questions:
-- Who is the president of France?
-
-Current Question: What about Mexico?`
-				},
-				{
-					role: 'assistant',
-					content: 'President of Mexico'
-				},
-				{
-					role: 'user',
-					content: `Previous questions: 
-- When is the next formula 1 grand prix?
-
-Current Question: Where is it being hosted?`
-				},
-				{
-					role: 'assistant',
-					content: 'location of next formula 1 grand prix'
-				},
-				{
-					role: 'user',
-					content: 'Current Question: What type of printhead does the Epson F2270 DTG printer use?'
-				},
-				{
-					role: 'assistant',
-					content: 'Epson F2270 DTG printer printhead'
-				},
-				{
-					role: 'user',
-					content: 'What were the news yesterday?'
-				},
-				{
-					role: 'assistant',
-					content: `news ${yesterdayDate}`
-				},
-				{
-					role: 'user',
 					content: 'What is the current weather in Paris?'
 				},
 				{
 					role: 'assistant',
-					content: `weather in Paris ${currentDate}`
+					content: `Weather in Paris ${currentDate}`
 				},
 				{
 					role: 'user',
-					content:
-						(previousMessages.length > 0
-							? `Previous Questions:\n${previousMessages.join('\n')}\n\n`
-							: '') + `Current Question: ${prompt}`
+					content: prompt
 				}
+				// {
+				// 	role: 'user',
+				// 	content:
+				// 		(previousMessages.length > 0
+				// 			? `Previous Questions:\n${previousMessages.join('\n')}\n\n`
+				// 			: '') + `Current Question: ${prompt}`
+				// }
 			],
 			stream: false,
 			// Restricting the max tokens to 30 to avoid long search queries

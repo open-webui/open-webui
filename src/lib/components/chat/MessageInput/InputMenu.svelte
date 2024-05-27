@@ -13,6 +13,7 @@
 	import DocumentArrowUpSolid from '$lib/components/icons/DocumentArrowUpSolid.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
+	import { config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -45,16 +46,20 @@
 			align="start"
 			transition={flyAndScale}
 		>
-			<div class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl">
-				<div class="flex-1 flex items-center gap-2">
-					<GlobeAltSolid />
-					<div class="flex items-center">{$i18n.t('Web Search')}</div>
+			{#if $config?.features?.enable_web_search}
+				<div
+					class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+				>
+					<div class="flex-1 flex items-center gap-2">
+						<GlobeAltSolid />
+						<div class="flex items-center">{$i18n.t('Web Search')}</div>
+					</div>
+
+					<Switch bind:state={webSearchEnabled} />
 				</div>
 
-				<Switch bind:state={webSearchEnabled} />
-			</div>
-
-			<hr class="border-gray-100 dark:border-gray-800 my-1" />
+				<hr class="border-gray-100 dark:border-gray-800 my-1" />
+			{/if}
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
@@ -65,16 +70,6 @@
 				<DocumentArrowUpSolid />
 				<div class="flex items-center">{$i18n.t('Upload Files')}</div>
 			</DropdownMenu.Item>
-
-			<!-- <DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
-				on:click={() => {
-					shareHandler();
-				}}
-			>
-				<DocumentArrowUpSolid />
-				<div class="flex items-center">{$i18n.t('Upload Files')}</div>
-			</DropdownMenu.Item> -->
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
