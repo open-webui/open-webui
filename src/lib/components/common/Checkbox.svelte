@@ -29,6 +29,7 @@
 			dispatch('change', _state);
 		}
 	}}
+	type="button"
 >
 	<div class="top-0 left-0 absolute w-full flex justify-center">
 		{#if _state === 'checked'}

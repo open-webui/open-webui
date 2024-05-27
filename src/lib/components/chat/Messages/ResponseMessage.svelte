@@ -14,7 +14,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, settings } from '$lib/stores';
+	import { config, models, settings } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -34,7 +34,6 @@
 	import RateComment from './RateComment.svelte';
 	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
 
-	export let modelfiles = [];
 	export let message;
 	export let siblings;
 
@@ -51,6 +50,9 @@
 	export let copyToClipboard: Function;
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
+
+	let model = null;
+	$: model = $models.find((m) => m.id === message.model);
 
 	let edit = false;
 	let editedContent = '';
@@ -76,6 +78,13 @@
 	// For code blocks with simple backticks
 	renderer.codespan = (code) => {
 		return `<code>${code.replaceAll('&amp;', '&')}</code>`;
+	};
+
+	// Open all links in a new tab/window (from https://github.com/markedjs/marked/issues/655#issuecomment-383226346)
+	const origLinkRenderer = renderer.link;
+	renderer.link = (href, title, text) => {
+		const html = origLinkRenderer.call(renderer, href, title, text);
+		return html.replace(/^<a /, '<a target="_blank" rel="nofollow" ');
 	};
 
 	const { extensions, ...defaults } = marked.getDefaults() as marked.MarkedOptions & {
@@ -338,17 +347,13 @@
 		dir={$settings.chatDirection}
 	>
 		<ProfileImage
-			src={modelfiles[message.model]?.imageUrl ??
+			src={model?.info?.meta?.profile_image_url ??
 				($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
 		/>
 
 		<div class="w-full overflow-hidden pl-1">
 			<Name>
-				{#if message.model in modelfiles}
-					{modelfiles[message.model]?.title}
-				{:else}
-					{message.model ? ` ${message.model}` : ''}
-				{/if}
+				{model?.name ?? message.model}
 
 				{#if message.timestamp}
 					<span
@@ -391,7 +396,7 @@
 							<div class=" mt-2 mb-1 flex justify-end space-x-1.5 text-sm font-medium">
 								<button
 									id="close-edit-message-button"
-									class=" px-4 py-2 bg-gray-900 hover:bg-gray-850 text-gray-100 transition rounded-3xl"
+									class="px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 transition rounded-3xl"
 									on:click={() => {
 										cancelEditMessage();
 									}}
@@ -401,7 +406,7 @@
 
 								<button
 									id="save-edit-message-button"
-									class="px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 transition rounded-3xl"
+									class=" px-4 py-2 bg-gray-900 hover:bg-gray-850 text-gray-100 transition rounded-3xl"
 									on:click={() => {
 										editMessageConfirmHandler();
 									}}
@@ -442,8 +447,8 @@
 									{#if token.type === 'code'}
 										<CodeBlock
 											id={`${message.id}-${tokenIdx}`}
-											lang={token.lang}
-											code={revertSanitizedResponseContent(token.text)}
+											lang={token?.lang ?? ''}
+											code={revertSanitizedResponseContent(token?.text ?? '')}
 										/>
 									{:else}
 										{@html marked.parse(token.raw, {
@@ -688,7 +693,7 @@
 											</button>
 										</Tooltip>
 
-										{#if $config.images && !readOnly}
+										{#if $config?.features.enable_image_generation && !readOnly}
 											<Tooltip content="Generate Image" placement="bottom">
 												<button
 													class="{isLastMessage

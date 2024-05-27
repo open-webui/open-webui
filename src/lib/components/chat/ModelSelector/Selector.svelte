@@ -12,7 +12,9 @@
 
 	import { user, MODEL_DOWNLOAD_POOL, models, mobile } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
-	import { capitalizeFirstLetter, getModels, splitStream } from '$lib/utils';
+	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
+	import { getModels } from '$lib/apis';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -23,7 +25,12 @@
 	export let searchEnabled = true;
 	export let searchPlaceholder = $i18n.t('Search a model');
 
-	export let items = [{ value: 'mango', label: 'Mango' }];
+	export let items: {
+		label: string;
+		value: string;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		[key: string]: any;
+	} = [];
 
 	export let className = 'w-[30rem]';
 
@@ -239,19 +246,37 @@
 						}}
 					>
 						<div class="flex items-center gap-2">
-							<div class="line-clamp-1">
-								{item.label}
-
-								<span class=" text-xs font-medium text-gray-600 dark:text-gray-400"
-									>{item.info?.details?.parameter_size ?? ''}</span
-								>
+							<div class="flex items-center">
+								<div class="line-clamp-1">
+									{item.label}
+								</div>
+								{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
+									<div class="flex ml-1 items-center">
+										<Tooltip
+											content={`${
+												item.model.ollama?.details?.quantization_level
+													? item.model.ollama?.details?.quantization_level + ' '
+													: ''
+											}${
+												item.model.ollama?.size
+													? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
+													: ''
+											}`}
+											className="self-end"
+										>
+											<span class=" text-xs font-medium text-gray-600 dark:text-gray-400"
+												>{item.model.ollama?.details?.parameter_size ?? ''}</span
+											>
+										</Tooltip>
+									</div>
+								{/if}
 							</div>
 
 							<!-- {JSON.stringify(item.info)} -->
 
-							{#if item.info.external}
-								<Tooltip content={item.info?.source ?? 'External'}>
-									<div class=" mr-2">
+							{#if item.model.owned_by === 'openai'}
+								<Tooltip content={`${'External'}`}>
+									<div class="">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											viewBox="0 0 16 16"
@@ -271,15 +296,15 @@
 										</svg>
 									</div>
 								</Tooltip>
-							{:else}
+							{/if}
+
+							{#if item.model?.info?.meta?.description}
 								<Tooltip
-									content={`${
-										item.info?.details?.quantization_level
-											? item.info?.details?.quantization_level + ' '
-											: ''
-									}${item.info.size ? `(${(item.info.size / 1024 ** 3).toFixed(1)}GB)` : ''}`}
+									content={`${sanitizeResponseContent(
+										item.model?.info?.meta?.description
+									).replaceAll('\n', '<br>')}`}
 								>
-									<div class=" mr-2">
+									<div class="">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
