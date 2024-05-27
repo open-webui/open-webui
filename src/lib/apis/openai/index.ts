@@ -1,5 +1,6 @@
 import { OPENAI_API_BASE_URL } from '$lib/constants';
 import { promptTemplate } from '$lib/utils';
+import { type Model, models, settings } from '$lib/stores';
 
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
@@ -390,4 +391,120 @@ export const generateTitle = async (
 	}
 
 	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? 'New Chat';
+};
+
+export const generateSearchQuery = async (
+	token: string = '',
+	model: string,
+	previousMessages: string[],
+	prompt: string,
+	url: string = OPENAI_API_BASE_URL
+): Promise<string | undefined> => {
+	let error = null;
+
+	// TODO: Allow users to specify the prompt
+
+	// Get the current date in the format "January 20, 2024"
+	const currentDate = new Intl.DateTimeFormat('en-US', {
+		year: 'numeric',
+		month: 'long',
+		day: '2-digit'
+	}).format(new Date());
+	const yesterdayDate = new Intl.DateTimeFormat('en-US', {
+		year: 'numeric',
+		month: 'long',
+		day: '2-digit'
+	}).format(new Date());
+
+	const res = await fetch(`${url}/chat/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			// Few shot prompting
+			messages: [
+				{
+					role: 'assistant',
+					content: `You are tasked with generating web search queries. Give me an appropriate query to answer my question for google search. Answer with only the query. Today is ${currentDate}.`
+				},
+				{
+					role: 'user',
+					content: `Previous Questions:
+- Who is the president of France?
+
+Current Question: What about Mexico?`
+				},
+				{
+					role: 'assistant',
+					content: 'President of Mexico'
+				},
+				{
+					role: 'user',
+					content: `Previous questions: 
+- When is the next formula 1 grand prix?
+
+Current Question: Where is it being hosted?`
+				},
+				{
+					role: 'assistant',
+					content: 'location of next formula 1 grand prix'
+				},
+				{
+					role: 'user',
+					content: 'Current Question: What type of printhead does the Epson F2270 DTG printer use?'
+				},
+				{
+					role: 'assistant',
+					content: 'Epson F2270 DTG printer printhead'
+				},
+				{
+					role: 'user',
+					content: 'What were the news yesterday?'
+				},
+				{
+					role: 'assistant',
+					content: `news ${yesterdayDate}`
+				},
+				{
+					role: 'user',
+					content: 'What is the current weather in Paris?'
+				},
+				{
+					role: 'assistant',
+					content: `weather in Paris ${currentDate}`
+				},
+				{
+					role: 'user',
+					content:
+						(previousMessages.length > 0
+							? `Previous Questions:\n${previousMessages.join('\n')}\n\n`
+							: '') + `Current Question: ${prompt}`
+				}
+			],
+			stream: false,
+			// Restricting the max tokens to 30 to avoid long search queries
+			max_tokens: 30
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return undefined;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? undefined;
 };

@@ -380,6 +380,105 @@
 				class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
 			>
 				<div>
+					{#if message.progress || message.files}
+						<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
+							{#if message.progress}
+								<div>
+									<button
+										class="h-16 flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none text-left"
+										type="button"
+									>
+										<div class="p-2.5 bg-red-400 text-white rounded-lg">
+											<svg
+												class=" w-6 h-6 translate-y-[0.5px]"
+												fill="currentColor"
+												viewBox="0 0 24 24"
+												xmlns="http://www.w3.org/2000/svg"
+												><style>
+													.spinner_qM83 {
+														animation: spinner_8HQG 1.05s infinite;
+													}
+													.spinner_oXPr {
+														animation-delay: 0.1s;
+													}
+													.spinner_ZTLf {
+														animation-delay: 0.2s;
+													}
+													@keyframes spinner_8HQG {
+														0%,
+														57.14% {
+															animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
+															transform: translate(0);
+														}
+														28.57% {
+															animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
+															transform: translateY(-6px);
+														}
+														100% {
+															transform: translate(0);
+														}
+													}
+												</style><circle class="spinner_qM83" cx="4" cy="12" r="2.5" /><circle
+													class="spinner_qM83 spinner_oXPr"
+													cx="12"
+													cy="12"
+													r="2.5"
+												/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="2.5" /></svg
+											>
+										</div>
+
+										<div class="flex flex-col justify-center -space-y-0.5">
+											<div class=" dark:text-gray-100 text-sm font-medium line-clamp-2 text-wrap">
+												{message.progress}
+											</div>
+										</div>
+									</button>
+								</div>
+							{/if}
+							{#if message.files}
+								{#each message.files as file}
+									<div>
+										{#if file.type === 'websearch'}
+											<button
+												class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none text-left"
+												type="button"
+											>
+												<div class="p-2.5 bg-red-400 text-white rounded-lg">
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 24 24"
+														fill="currentColor"
+														class="w-6 h-6"
+													>
+														<path
+															d="M11.625 16.5a1.875 1.875 0 1 0 0-3.75 1.875 1.875 0 0 0 0 3.75Z"
+														/>
+														<path
+															fill-rule="evenodd"
+															d="M5.625 1.5H9a3.75 3.75 0 0 1 3.75 3.75v1.875c0 1.036.84 1.875 1.875 1.875H16.5a3.75 3.75 0 0 1 3.75 3.75v7.875c0 1.035-.84 1.875-1.875 1.875H5.625a1.875 1.875 0 0 1-1.875-1.875V3.375c0-1.036.84-1.875 1.875-1.875Zm6 16.5c.66 0 1.277-.19 1.797-.518l1.048 1.048a.75.75 0 0 0 1.06-1.06l-1.047-1.048A3.375 3.375 0 1 0 11.625 18Z"
+															clip-rule="evenodd"
+														/>
+														<path
+															d="M14.25 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 16.5 7.5h-1.875a.375.375 0 0 1-.375-.375V5.25Z"
+														/>
+													</svg>
+												</div>
+
+												<div class="flex flex-col justify-center -space-y-0.5">
+													<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
+														{file.name}
+													</div>
+
+													<div class=" text-gray-500 text-sm">{$i18n.t('Search Results')}</div>
+												</div>
+											</button>
+										{/if}
+									</div>
+								{/each}
+							{/if}
+						</div>
+					{/if}
+
 					{#if edit === true}
 						<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
 							<textarea
@@ -467,6 +566,11 @@
 										citation.document.forEach((document, index) => {
 											const metadata = citation.metadata?.[index];
 											const id = metadata?.source ?? 'N/A';
+											let source = citation?.source;
+											// Check if ID looks like a URL
+											if (id.startsWith('http://') || id.startsWith('https://')) {
+												source = { name: id };
+											}
 
 											const existingSource = acc.find((item) => item.id === id);
 
@@ -474,7 +578,7 @@
 												existingSource.document.push(document);
 												existingSource.metadata.push(metadata);
 											} else {
-												acc.push( { id: id, source: citation?.source, document: [document], metadata: metadata ? [metadata] : [] } );
+												acc.push( { id: id, source: source, document: [document], metadata: metadata ? [metadata] : [] } );
 											}
 										});
 										return acc;

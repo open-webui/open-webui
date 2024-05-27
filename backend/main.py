@@ -54,6 +54,7 @@ from config import (
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
+    RAG_WEB_SEARCH_ENABLED,
     AppConfig,
     WEBUI_BUILD_HASH,
 )
@@ -365,9 +366,10 @@ async def get_app_config():
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
+            "enable_websearch": RAG_WEB_SEARCH_ENABLED,
             "enable_image_generation": images_app.state.config.ENABLED,
-            "enable_admin_export": ENABLE_ADMIN_EXPORT,
             "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
+            "enable_admin_export": ENABLE_ADMIN_EXPORT,
         },
     }
 
