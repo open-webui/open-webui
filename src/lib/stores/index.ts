@@ -142,6 +142,7 @@ type Config = {
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
 		enable_community_sharing: boolean;
+		enable_message_rating: boolean;
 	};
 };
 

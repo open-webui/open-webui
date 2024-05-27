@@ -1,8 +1,10 @@
 <script lang="ts">
 	import {
 		getCommunitySharingEnabledStatus,
+		getMessageRatingEnabledStatus,
 		getWebhookUrl,
 		toggleCommunitySharingEnabledStatus,
+		toggleMessageRatingEnabledStatus,
 		updateWebhookUrl
 	} from '$lib/apis';
 	import {
@@ -24,6 +26,7 @@
 
 	let webhookUrl = '';
 	let communitySharingEnabled = true;
+	let messageRatingEnabled = true;
 
 	const toggleSignUpEnabled = async () => {
 		signUpEnabled = await toggleSignUpEnabledStatus(localStorage.token);
@@ -45,6 +48,10 @@
 		communitySharingEnabled = await toggleCommunitySharingEnabledStatus(localStorage.token);
 	};
 
+	const toggleMessageRatingEnabled = async () => {
+		messageRatingEnabled = await toggleMessageRatingEnabledStatus(localStorage.token);
+	};
+
 	onMount(async () => {
 		await Promise.all([
 			(async () => {
@@ -61,6 +68,9 @@
 			})(),
 			(async () => {
 				communitySharingEnabled = await getCommunitySharingEnabledStatus(localStorage.token);
+			})(),
+			(async () => {
+				messageRatingEnabled = await getMessageRatingEnabledStatus(localStorage.token);
 			})()
 		]);
 	});
@@ -173,6 +183,24 @@
 							/>
 						</svg>
 
+						<span class="ml-2 self-center">{$i18n.t('Disabled')}</span>
+					{/if}
+				</button>
+			</div>
+
+			<div class="  flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Enable Message Rating')}</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						toggleMessageRatingEnabled();
+					}}
+					type="button"
+				>
+					{#if messageRatingEnabled}
+						<span class="ml-2 self-center">{$i18n.t('Enabled')}</span>
+					{:else}
 						<span class="ml-2 self-center">{$i18n.t('Disabled')}</span>
 					{/if}
 				</button>

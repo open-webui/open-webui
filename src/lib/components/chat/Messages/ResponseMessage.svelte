@@ -789,7 +789,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if !readOnly}
+										{#if ($config?.features.enable_message_rating ?? true) && !readOnly}
 											<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 												<button
 													class="{isLastMessage

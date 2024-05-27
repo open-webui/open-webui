@@ -368,6 +368,7 @@ async def get_app_config():
             "enable_image_generation": images_app.state.config.ENABLED,
             "enable_admin_export": ENABLE_ADMIN_EXPORT,
             "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
+            "enable_message_rating": webui_app.state.config.ENABLE_MESSAGE_RATING,
         },
     }
 
@@ -430,6 +431,19 @@ async def toggle_community_sharing(request: Request, user=Depends(get_admin_user
         not webui_app.state.config.ENABLE_COMMUNITY_SHARING
     )
     return webui_app.state.config.ENABLE_COMMUNITY_SHARING
+
+
+@app.get("/api/message_rating", response_model=bool)
+async def get_message_annotation_status(request: Request, user=Depends(get_admin_user)):
+    return webui_app.state.config.ENABLE_MESSAGE_RATING
+
+
+@app.get("/api/message_rating/toggle", response_model=bool)
+async def toggle_message_annotation(request: Request, user=Depends(get_admin_user)):
+    webui_app.state.config.ENABLE_MESSAGE_RATING = (
+        not webui_app.state.config.ENABLE_MESSAGE_RATING
+    )
+    return webui_app.state.config.ENABLE_MESSAGE_RATING
 
 
 @app.get("/api/version")
