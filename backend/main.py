@@ -56,6 +56,7 @@ from config import (
     ENABLE_ADMIN_EXPORT,
     RAG_WEB_SEARCH_ENABLED,
     AppConfig,
+    WEBUI_BUILD_HASH,
 )
 from constants import ERROR_MESSAGES
 
@@ -85,7 +86,8 @@ print(
       |_|                                               
 
       
-v{VERSION} - building the best open-source AI user interface.      
+v{VERSION} - building the best open-source AI user interface.
+{f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
 """
 )
@@ -357,15 +359,18 @@ async def get_app_config():
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
-        "auth": WEBUI_AUTH,
-        "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
-        "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
-        "enable_image_generation": images_app.state.config.ENABLED,
-        "enable_admin_export": ENABLE_ADMIN_EXPORT,
         "default_locale": default_locale,
         "default_models": webui_app.state.config.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
-        "enable_websearch": RAG_WEB_SEARCH_ENABLED,
+        "features": {
+            "auth": WEBUI_AUTH,
+            "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
+            "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
+            "enable_websearch": RAG_WEB_SEARCH_ENABLED,
+            "enable_image_generation": images_app.state.config.ENABLED,
+            "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
+            "enable_admin_export": ENABLE_ADMIN_EXPORT,
+        },
     }
 
 
@@ -414,6 +419,19 @@ async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
     return {
         "url": app.state.config.WEBHOOK_URL,
     }
+
+
+@app.get("/api/community_sharing", response_model=bool)
+async def get_community_sharing_status(request: Request, user=Depends(get_admin_user)):
+    return webui_app.state.config.ENABLE_COMMUNITY_SHARING
+
+
+@app.get("/api/community_sharing/toggle", response_model=bool)
+async def toggle_community_sharing(request: Request, user=Depends(get_admin_user)):
+    webui_app.state.config.ENABLE_COMMUNITY_SHARING = (
+        not webui_app.state.config.ENABLE_COMMUNITY_SHARING
+    )
+    return webui_app.state.config.ENABLE_COMMUNITY_SHARING
 
 
 @app.get("/api/version")

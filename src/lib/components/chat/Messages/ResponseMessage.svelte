@@ -797,7 +797,7 @@
 											</button>
 										</Tooltip>
 
-										{#if $config.enable_image_generation && !readOnly}
+										{#if $config?.features.enable_image_generation && !readOnly}
 											<Tooltip content="Generate Image" placement="bottom">
 												<button
 													class="{isLastMessage

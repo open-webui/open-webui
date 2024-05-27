@@ -4,7 +4,7 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, user, theme } from '$lib/stores';
+	import { models, settings, theme } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -71,23 +71,22 @@
 	onMount(async () => {
 		selectedTheme = localStorage.theme ?? 'system';
 
-		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 		languages = await getLanguages();
 
-		notificationEnabled = settings.notificationEnabled ?? false;
-		system = settings.system ?? '';
+		notificationEnabled = $settings.notificationEnabled ?? false;
+		system = $settings.system ?? '';
 
-		requestFormat = settings.requestFormat ?? '';
-		keepAlive = settings.keepAlive ?? null;
+		requestFormat = $settings.requestFormat ?? '';
+		keepAlive = $settings.keepAlive ?? null;
 
-		params.seed = settings.seed ?? 0;
-		params.temperature = settings.temperature ?? '';
-		params.frequency_penalty = settings.frequency_penalty ?? '';
-		params.top_k = settings.top_k ?? '';
-		params.top_p = settings.top_p ?? '';
-		params.num_ctx = settings.num_ctx ?? '';
-		params = { ...params, ...settings.params };
-		params.stop = settings?.params?.stop ? (settings?.params?.stop ?? []).join(',') : null;
+		params.seed = $settings.seed ?? 0;
+		params.temperature = $settings.temperature ?? '';
+		params.frequency_penalty = $settings.frequency_penalty ?? '';
+		params.top_k = $settings.top_k ?? '';
+		params.top_p = $settings.top_p ?? '';
+		params.num_ctx = $settings.num_ctx ?? '';
+		params = { ...params, ...$settings.params };
+		params.stop = $settings?.params?.stop ? ($settings?.params?.stop ?? []).join(',') : null;
 	});
 
 	const applyTheme = (_theme: string) => {
