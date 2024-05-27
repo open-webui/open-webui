@@ -118,6 +118,14 @@ app.state.MODELS = {}
 
 origins = ["*"]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Custom middleware to add security headers
 # class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -219,15 +227,6 @@ class RAGMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(RAGMiddleware)
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 @app.middleware("http")
