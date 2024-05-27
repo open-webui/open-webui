@@ -1,36 +1,34 @@
-from fastapi import FastAPI, Depends
-from fastapi.routing import APIRoute
-from fastapi.middleware.cors import CORSMiddleware
 from apps.webui.routers import (
     auths,
-    users,
     chats,
+    configs,
     documents,
-    tools,
+    memories,
     models,
     prompts,
-    configs,
-    memories,
+    tools,
+    users,
     utils,
 )
 from config import (
-    WEBUI_BUILD_HASH,
-    SHOW_ADMIN_DETAILS,
     ADMIN_EMAIL,
-    WEBUI_AUTH,
     DEFAULT_MODELS,
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_USER_ROLE,
+    ENABLE_COMMUNITY_SHARING,
     ENABLE_SIGNUP,
+    JWT_EXPIRES_IN,
+    SHOW_ADMIN_DETAILS,
     USER_PERMISSIONS,
     WEBHOOK_URL,
+    WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
-    JWT_EXPIRES_IN,
     WEBUI_BANNERS,
-    ENABLE_COMMUNITY_SHARING,
     AppConfig,
 )
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 

@@ -1,18 +1,15 @@
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import HTTPException, status, Depends
-
-from apps.webui.models.users import Users
-
-from pydantic import BaseModel
-from typing import Union, Optional
-from constants import ERROR_MESSAGES
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-import requests
-import jwt
-import uuid
 import logging
+import uuid
+from datetime import datetime, timedelta
+from typing import Optional, Union
+
 import config
+import jwt
+from apps.webui.models.users import Users
+from constants import ERROR_MESSAGES
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from passlib.context import CryptContext
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 

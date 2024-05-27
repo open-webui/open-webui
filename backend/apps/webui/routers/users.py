@@ -1,33 +1,24 @@
-from fastapi import Response, Request
-from fastapi import Depends, FastAPI, HTTPException, status
-from datetime import datetime, timedelta
-from typing import List, Union, Optional
-
-from fastapi import APIRouter
-from pydantic import BaseModel
-import time
-import uuid
 import logging
+from typing import List, Optional
 
-from apps.webui.models.users import (
-    UserModel,
-    UserUpdateForm,
-    UserRoleUpdateForm,
-    UserSettings,
-    Users,
-)
 from apps.webui.models.auths import Auths
 from apps.webui.models.chats import Chats
-
-from utils.utils import (
-    get_verified_user,
-    get_password_hash,
-    get_current_user,
-    get_admin_user,
+from apps.webui.models.users import (
+    UserModel,
+    UserRoleUpdateForm,
+    Users,
+    UserSettings,
+    UserUpdateForm,
 )
-from constants import ERROR_MESSAGES
-
 from config import SRC_LOG_LEVELS
+from constants import ERROR_MESSAGES
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
+from utils.utils import (
+    get_admin_user,
+    get_password_hash,
+    get_verified_user,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])

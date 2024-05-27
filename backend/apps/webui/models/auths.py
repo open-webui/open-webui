@@ -1,16 +1,13 @@
-from pydantic import BaseModel
-from typing import List, Union, Optional
-import time
-import uuid
 import logging
-from peewee import *
-
-from apps.webui.models.users import UserModel, Users
-from utils.utils import verify_password
+import uuid
+from typing import Optional
 
 from apps.webui.internal.db import DB
-
+from apps.webui.models.users import UserModel, Users
 from config import SRC_LOG_LEVELS
+from peewee import BooleanField, CharField, Model, TextField
+from pydantic import BaseModel
+from utils.utils import verify_password
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])

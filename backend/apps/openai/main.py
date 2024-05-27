@@ -1,40 +1,34 @@
-from fastapi import FastAPI, Request, Response, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
-
-import requests
-import aiohttp
 import asyncio
+import hashlib
 import json
 import logging
-
-from pydantic import BaseModel
-from starlette.background import BackgroundTask
-
-from apps.webui.models.models import Models
-from apps.webui.models.users import Users
-from constants import ERROR_MESSAGES
-from utils.utils import (
-    decode_token,
-    get_current_user,
-    get_verified_user,
-    get_admin_user,
-)
-from config import (
-    SRC_LOG_LEVELS,
-    ENABLE_OPENAI_API,
-    OPENAI_API_BASE_URLS,
-    OPENAI_API_KEYS,
-    CACHE_DIR,
-    ENABLE_MODEL_FILTER,
-    MODEL_FILTER_LIST,
-    AppConfig,
-)
+from pathlib import Path
 from typing import List, Optional
 
-
-import hashlib
-from pathlib import Path
+import aiohttp
+import requests
+from apps.webui.models.models import Models
+from config import (
+    CACHE_DIR,
+    ENABLE_MODEL_FILTER,
+    ENABLE_OPENAI_API,
+    MODEL_FILTER_LIST,
+    OPENAI_API_BASE_URLS,
+    OPENAI_API_KEYS,
+    SRC_LOG_LEVELS,
+    AppConfig,
+)
+from constants import ERROR_MESSAGES
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, StreamingResponse
+from pydantic import BaseModel
+from starlette.background import BackgroundTask
+from utils.utils import (
+    get_admin_user,
+    get_current_user,
+    get_verified_user,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])

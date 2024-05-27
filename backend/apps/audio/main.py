@@ -1,55 +1,49 @@
-import os
-import logging
-from fastapi import (
-    FastAPI,
-    Request,
-    Depends,
-    HTTPException,
-    status,
-    UploadFile,
-    File,
-    Form,
-)
-
-from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
-
-from fastapi.middleware.cors import CORSMiddleware
-from faster_whisper import WhisperModel
-from pydantic import BaseModel
-
-import uuid
-import requests
 import hashlib
-from pathlib import Path
 import json
+import logging
+import os
+import uuid
+from pathlib import Path
 
-from constants import ERROR_MESSAGES
-from utils.utils import (
-    decode_token,
-    get_current_user,
-    get_verified_user,
-    get_admin_user,
-)
-from utils.misc import calculate_sha256
-
+import requests
 from config import (
-    SRC_LOG_LEVELS,
-    CACHE_DIR,
-    UPLOAD_DIR,
-    WHISPER_MODEL,
-    WHISPER_MODEL_DIR,
-    WHISPER_MODEL_AUTO_UPDATE,
-    DEVICE_TYPE,
-    AUDIO_STT_OPENAI_API_BASE_URL,
-    AUDIO_STT_OPENAI_API_KEY,
-    AUDIO_TTS_OPENAI_API_BASE_URL,
-    AUDIO_TTS_OPENAI_API_KEY,
     AUDIO_STT_ENGINE,
     AUDIO_STT_MODEL,
+    AUDIO_STT_OPENAI_API_BASE_URL,
+    AUDIO_STT_OPENAI_API_KEY,
     AUDIO_TTS_ENGINE,
     AUDIO_TTS_MODEL,
+    AUDIO_TTS_OPENAI_API_BASE_URL,
+    AUDIO_TTS_OPENAI_API_KEY,
     AUDIO_TTS_VOICE,
+    CACHE_DIR,
+    DEVICE_TYPE,
+    SRC_LOG_LEVELS,
+    WHISPER_MODEL,
+    WHISPER_MODEL_AUTO_UPDATE,
+    WHISPER_MODEL_DIR,
     AppConfig,
+)
+from constants import ERROR_MESSAGES
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from faster_whisper import WhisperModel
+from pydantic import BaseModel
+from pydub import AudioSegment
+from pydub.utils import mediainfo
+from utils.utils import (
+    get_admin_user,
+    get_current_user,
+    get_verified_user,
 )
 
 log = logging.getLogger(__name__)
@@ -103,10 +97,6 @@ class STTConfigForm(BaseModel):
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
     stt: STTConfigForm
-
-
-from pydub import AudioSegment
-from pydub.utils import mediainfo
 
 
 def is_mp4_audio(file_path):
@@ -204,7 +194,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         body = json.loads(body)
         body["model"] = app.state.config.TTS_MODEL
         body = json.dumps(body).encode("utf-8")
-    except Exception as e:
+    except Exception:
         pass
 
     r = None

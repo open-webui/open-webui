@@ -1,54 +1,45 @@
-import re
-import requests
-from fastapi import (
-    FastAPI,
-    Request,
-    Depends,
-    HTTPException,
-    status,
-    UploadFile,
-    File,
-    Form,
-)
-from fastapi.middleware.cors import CORSMiddleware
-from faster_whisper import WhisperModel
-
-from constants import ERROR_MESSAGES
-from utils.utils import (
-    get_current_user,
-    get_admin_user,
-)
-
-from apps.images.utils.comfyui import ImageGenerationPayload, comfyui_generate_image
-from utils.misc import calculate_sha256
-from typing import Optional
-from pydantic import BaseModel
-from pathlib import Path
-import mimetypes
-import uuid
 import base64
 import json
 import logging
+import mimetypes
+import re
+import uuid
+from pathlib import Path
+from typing import Optional
 
+import requests
+from apps.images.utils.comfyui import ImageGenerationPayload, comfyui_generate_image
 from config import (
-    SRC_LOG_LEVELS,
-    CACHE_DIR,
-    IMAGE_GENERATION_ENGINE,
-    ENABLE_IMAGE_GENERATION,
     AUTOMATIC1111_BASE_URL,
+    CACHE_DIR,
     COMFYUI_BASE_URL,
     COMFYUI_CFG_SCALE,
     COMFYUI_SAMPLER,
     COMFYUI_SCHEDULER,
     COMFYUI_SD3,
-    IMAGES_OPENAI_API_BASE_URL,
-    IMAGES_OPENAI_API_KEY,
+    ENABLE_IMAGE_GENERATION,
+    IMAGE_GENERATION_ENGINE,
     IMAGE_GENERATION_MODEL,
     IMAGE_SIZE,
     IMAGE_STEPS,
+    IMAGES_OPENAI_API_BASE_URL,
+    IMAGES_OPENAI_API_KEY,
+    SRC_LOG_LEVELS,
     AppConfig,
 )
-
+from constants import ERROR_MESSAGES
+from fastapi import (
+    Depends,
+    FastAPI,
+    HTTPException,
+    Request,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from utils.utils import (
+    get_admin_user,
+    get_current_user,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["IMAGES"])

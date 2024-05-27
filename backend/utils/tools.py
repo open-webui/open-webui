@@ -1,5 +1,5 @@
 import inspect
-from typing import get_type_hints, List, Dict, Any
+from typing import List, get_type_hints
 
 
 def doc_to_dict(docstring):

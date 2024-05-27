@@ -1,19 +1,16 @@
-import websocket  # NOTE: websocket-client (https://github.com/websocket-client/websocket-client)
-import uuid
 import json
-import urllib.request
-import urllib.parse
-import random
 import logging
+import random
+import urllib.parse
+import urllib.request
+from typing import Optional
 
+import websocket  # NOTE: websocket-client (https://github.com/websocket-client/websocket-client)
 from config import SRC_LOG_LEVELS
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["COMFYUI"])
-
-from pydantic import BaseModel
-
-from typing import Optional
 
 COMFYUI_DEFAULT_PROMPT = """
 {

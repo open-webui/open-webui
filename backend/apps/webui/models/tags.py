@@ -1,16 +1,13 @@
-from pydantic import BaseModel
-from typing import List, Union, Optional
-from peewee import *
-from playhouse.shortcuts import model_to_dict
-
-import json
-import uuid
-import time
 import logging
+import time
+import uuid
+from typing import List, Optional
 
 from apps.webui.internal.db import DB
-
 from config import SRC_LOG_LEVELS
+from peewee import BigIntegerField, CharField, Model, TextField
+from playhouse.shortcuts import model_to_dict
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])

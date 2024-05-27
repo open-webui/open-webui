@@ -1,8 +1,8 @@
 import logging
 
 from apps.rag.search.main import SearchResult
-from duckduckgo_search import DDGS
 from config import SRC_LOG_LEVELS
+from duckduckgo_search import DDGS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])

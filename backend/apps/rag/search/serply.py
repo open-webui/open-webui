@@ -1,9 +1,7 @@
-import json
 import logging
-
-import requests
 from urllib.parse import urlencode
 
+import requests
 from apps.rag.search.main import SearchResult
 from config import SRC_LOG_LEVELS
 

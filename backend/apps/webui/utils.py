@@ -1,5 +1,5 @@
-from importlib import util
 import os
+from importlib import util
 
 from config import TOOLS_DIR
 

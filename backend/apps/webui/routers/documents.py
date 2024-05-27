@@ -1,21 +1,16 @@
-from fastapi import Depends, FastAPI, HTTPException, status
-from datetime import datetime, timedelta
-from typing import List, Union, Optional
-
-from fastapi import APIRouter
-from pydantic import BaseModel
 import json
+from typing import List, Optional
 
 from apps.webui.models.documents import (
-    Documents,
     DocumentForm,
-    DocumentUpdateForm,
-    DocumentModel,
     DocumentResponse,
+    Documents,
+    DocumentUpdateForm,
 )
-
-from utils.utils import get_current_user, get_admin_user
 from constants import ERROR_MESSAGES
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from utils.utils import get_admin_user, get_current_user
 
 router = APIRouter()
 

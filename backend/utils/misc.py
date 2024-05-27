@@ -1,9 +1,8 @@
-from pathlib import Path
 import hashlib
-import json
 import re
 from datetime import timedelta
-from typing import Optional, List
+from pathlib import Path
+from typing import List, Optional
 
 
 def get_last_user_message(messages: List[dict]) -> str:

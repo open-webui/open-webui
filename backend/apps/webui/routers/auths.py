@@ -1,43 +1,36 @@
-import logging
 
-from fastapi import Request, UploadFile, File
-from fastapi import Depends, HTTPException, status
-
-from fastapi import APIRouter
-from pydantic import BaseModel
 import re
 import uuid
-import csv
-
 
 from apps.webui.models.auths import (
-    SigninForm,
-    SignupForm,
     AddUserForm,
-    UpdateProfileForm,
-    UpdatePasswordForm,
-    UserResponse,
-    SigninResponse,
-    Auths,
     ApiKey,
+    Auths,
+    SigninForm,
+    SigninResponse,
+    SignupForm,
+    UpdatePasswordForm,
+    UpdateProfileForm,
+    UserResponse,
 )
 from apps.webui.models.users import Users
-
-from utils.utils import (
-    get_password_hash,
-    get_current_user,
-    get_admin_user,
-    create_token,
-    create_api_key,
-)
-from utils.misc import parse_duration, validate_email_format
-from utils.webhook import post_webhook
-from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from config import (
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
 )
+from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
+from utils.misc import parse_duration, validate_email_format
+from utils.utils import (
+    create_api_key,
+    create_token,
+    get_admin_user,
+    get_current_user,
+    get_password_hash,
+)
+from utils.webhook import post_webhook
 
 router = APIRouter()
 

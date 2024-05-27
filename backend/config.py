@@ -1,26 +1,21 @@
-import os
-import sys
-import logging
 import importlib.metadata
-import pkgutil
-import chromadb
-from chromadb import Settings
-from base64 import b64encode
-from bs4 import BeautifulSoup
-from typing import TypeVar, Generic, Union
-from pydantic import BaseModel
-from typing import Optional
-
-from pathlib import Path
 import json
-import yaml
+import logging
+import os
+import pkgutil
+import shutil
+import sys
+from pathlib import Path
+from typing import Generic, Optional, TypeVar
 
+import chromadb
 import markdown
 import requests
-import shutil
-
-from secrets import token_bytes
+import yaml
+from bs4 import BeautifulSoup
+from chromadb import Settings
 from constants import ERROR_MESSAGES
+from pydantic import BaseModel
 
 ####################################
 # Load .env file
@@ -32,7 +27,7 @@ BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
 print(BASE_DIR)
 
 try:
-    from dotenv import load_dotenv, find_dotenv
+    from dotenv import find_dotenv, load_dotenv
 
     load_dotenv(find_dotenv(str(BASE_DIR / ".env")))
 except ImportError:
