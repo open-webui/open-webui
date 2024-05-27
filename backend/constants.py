@@ -80,3 +80,7 @@ class ERROR_MESSAGES(str, Enum):
     INVALID_URL = (
         "Oops! The URL you provided is invalid. Please double-check and try again."
     )
+
+    WEB_SEARCH_ERROR = (
+        "Oops! Something went wrong while searching the web. Please try again later."
+    )

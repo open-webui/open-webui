@@ -33,6 +33,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
 	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 
 	export let message;
 	export let siblings;
@@ -364,7 +366,7 @@
 				{/if}
 			</Name>
 
-			{#if message.files}
+			{#if (message?.files ?? []).filter((f) => f.type === 'image').length > 0}
 				<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
 					{#each message.files as file}
 						<div>
@@ -380,6 +382,32 @@
 				class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
 			>
 				<div>
+					{#if message?.status}
+						<div class="flex items-center gap-2 pt-1 pb-1">
+							{#if message?.status?.done === false}
+								<div class="">
+									<Spinner className="size-4" />
+								</div>
+							{/if}
+
+							{#if message?.status?.action === 'web_search' && message?.status?.urls}
+								<WebSearchResults urls={message?.status?.urls}>
+									<div class="flex flex-col justify-center -space-y-0.5">
+										<div class="text-base line-clamp-1 text-wrap">
+											{message.status.description}
+										</div>
+									</div>
+								</WebSearchResults>
+							{:else}
+								<div class="flex flex-col justify-center -space-y-0.5">
+									<div class=" text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
+										{message.status.description}
+									</div>
+								</div>
+							{/if}
+						</div>
+					{/if}
+
 					{#if edit === true}
 						<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
 							<textarea
@@ -467,6 +495,11 @@
 										citation.document.forEach((document, index) => {
 											const metadata = citation.metadata?.[index];
 											const id = metadata?.source ?? 'N/A';
+											let source = citation?.source;
+											// Check if ID looks like a URL
+											if (id.startsWith('http://') || id.startsWith('https://')) {
+												source = { name: id };
+											}
 
 											const existingSource = acc.find((item) => item.id === id);
 
@@ -474,7 +507,7 @@
 												existingSource.document.push(document);
 												existingSource.metadata.push(metadata);
 											} else {
-												acc.push( { id: id, source: citation?.source, document: [document], metadata: metadata ? [metadata] : [] } );
+												acc.push( { id: id, source: source, document: [document], metadata: metadata ? [metadata] : [] } );
 											}
 										});
 										return acc;

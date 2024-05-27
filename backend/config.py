@@ -574,6 +574,7 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
 )
 
+
 class BannerModel(BaseModel):
     id: str
     type: str
@@ -763,6 +764,28 @@ YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     "YOUTUBE_LOADER_LANGUAGE",
     "rag.youtube_loader_language",
     os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(","),
+)
+
+SEARXNG_QUERY_URL = os.getenv("SEARXNG_QUERY_URL", "")
+GOOGLE_PSE_API_KEY = os.getenv("GOOGLE_PSE_API_KEY", "")
+GOOGLE_PSE_ENGINE_ID = os.getenv("GOOGLE_PSE_ENGINE_ID", "")
+BRAVE_SEARCH_API_KEY = os.getenv("BRAVE_SEARCH_API_KEY", "")
+SERPSTACK_API_KEY = os.getenv("SERPSTACK_API_KEY", "")
+SERPSTACK_HTTPS = os.getenv("SERPSTACK_HTTPS", "True").lower() == "true"
+SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
+
+
+RAG_WEB_SEARCH_ENABLED = (
+    SEARXNG_QUERY_URL != ""
+    or (GOOGLE_PSE_API_KEY != "" and GOOGLE_PSE_ENGINE_ID != "")
+    or BRAVE_SEARCH_API_KEY != ""
+    or SERPSTACK_API_KEY != ""
+    or SERPER_API_KEY != ""
+)
+
+RAG_WEB_SEARCH_RESULT_COUNT = int(os.getenv("RAG_WEB_SEARCH_RESULT_COUNT", "3"))
+RAG_WEB_SEARCH_CONCURRENT_REQUESTS = int(
+    os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")
 )
 
 ####################################

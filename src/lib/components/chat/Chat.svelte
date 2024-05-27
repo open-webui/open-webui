@@ -31,7 +31,11 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { generateOpenAIChatCompletion, generateTitle } from '$lib/apis/openai';
+	import {
+		generateOpenAIChatCompletion,
+		generateSearchQuery,
+		generateTitle
+	} from '$lib/apis/openai';
 
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
@@ -41,6 +45,7 @@
 	import { queryMemory } from '$lib/apis/memories';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import { runWebSearch } from '$lib/apis/rag';
 	import Banner from '../common/Banner.svelte';
 	import { getUserSettings } from '$lib/apis/users';
 
@@ -59,6 +64,8 @@
 
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
+
+	let webSearchEnabled = false;
 
 	let chat = null;
 	let tags = [];
@@ -399,6 +406,10 @@
 					}
 					responseMessage.userContext = userContext;
 
+					if (webSearchEnabled) {
+						await getWebSearchResults(model.id, parentId, responseMessageId);
+					}
+
 					if (model?.owned_by === 'openai') {
 						await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
 					} else if (model) {
@@ -411,6 +422,73 @@
 		);
 
 		await chats.set(await getChatList(localStorage.token));
+	};
+
+	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
+		const responseMessage = history.messages[responseId];
+
+		responseMessage.status = {
+			done: false,
+			action: 'web_search',
+			description: $i18n.t('Generating search query')
+		};
+		messages = messages;
+
+		const prompt = history.messages[parentId].content;
+		let searchQuery = prompt;
+		if (prompt.length > 100) {
+			searchQuery = await generateChatSearchQuery(model, prompt);
+			if (!searchQuery) {
+				toast.warning($i18n.t('No search query generated'));
+				responseMessage.status = {
+					...responseMessage.status,
+					done: true,
+					error: true,
+					description: 'No search query generated'
+				};
+				messages = messages;
+				return;
+			}
+		}
+
+		responseMessage.status = {
+			...responseMessage.status,
+			description: $i18n.t("Searching the web for '{{searchQuery}}'", { searchQuery })
+		};
+		messages = messages;
+
+		const results = await runWebSearch(localStorage.token, searchQuery);
+		if (results === undefined) {
+			toast.warning($i18n.t('No search results found'));
+			responseMessage.status = {
+				...responseMessage.status,
+				done: true,
+				error: true,
+				description: 'No search results found'
+			};
+			messages = messages;
+			return;
+		}
+
+		responseMessage.status = {
+			...responseMessage.status,
+			done: true,
+			description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
+			urls: results.filenames
+		};
+
+		if (responseMessage?.files ?? undefined === undefined) {
+			responseMessage.files = [];
+		}
+
+		responseMessage.files.push({
+			collection_name: results.collection_name,
+			name: searchQuery,
+			type: 'web_search_results',
+			urls: results.filenames
+		});
+
+		messages = messages;
 	};
 
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
@@ -475,7 +553,9 @@
 		const docs = messages
 			.filter((message) => message?.files ?? null)
 			.map((message) =>
-				message.files.filter((item) => item.type === 'doc' || item.type === 'collection')
+				message.files.filter((item) =>
+					['doc', 'collection', 'web_search_results'].includes(item.type)
+				)
 			)
 			.flat(1);
 
@@ -671,7 +751,9 @@
 		const docs = messages
 			.filter((message) => message?.files ?? null)
 			.map((message) =>
-				message.files.filter((item) => item.type === 'doc' || item.type === 'collection')
+				message.files.filter((item) =>
+					['doc', 'collection', 'web_search_results'].includes(item.type)
+				)
 			)
 			.flat(1);
 
@@ -907,7 +989,7 @@
 			const model = $models.filter((m) => m.id === responseMessage.model).at(0);
 
 			if (model) {
-				if (model?.external) {
+				if (model?.owned_by === 'openai') {
 					await sendPromptOpenAI(
 						model,
 						history.messages[responseMessage.parentId].content,
@@ -932,7 +1014,7 @@
 			const model = $models.find((model) => model.id === selectedModels[0]);
 
 			const titleModelId =
-				model?.external ?? false
+				model?.owned_by === 'openai' ?? false
 					? $settings?.title?.modelExternal ?? selectedModels[0]
 					: $settings?.title?.model ?? selectedModels[0];
 			const titleModel = $models.find((model) => model.id === titleModelId);
@@ -955,6 +1037,29 @@
 		} else {
 			return `${userPrompt}`;
 		}
+	};
+
+	const generateChatSearchQuery = async (modelId: string, prompt: string) => {
+		const model = $models.find((model) => model.id === modelId);
+		const taskModelId =
+			model?.owned_by === 'openai' ?? false
+				? $settings?.title?.modelExternal ?? modelId
+				: $settings?.title?.model ?? modelId;
+		const taskModel = $models.find((model) => model.id === taskModelId);
+
+		const previousMessages = messages
+			.filter((message) => message.role === 'user')
+			.map((message) => message.content);
+
+		return await generateSearchQuery(
+			localStorage.token,
+			taskModelId,
+			previousMessages,
+			prompt,
+			taskModel?.owned_by === 'openai' ?? false
+				? `${OPENAI_API_BASE_URL}`
+				: `${OLLAMA_API_BASE_URL}/v1`
+		);
 	};
 
 	const setChatTitle = async (_chatId, _title) => {
@@ -1081,6 +1186,7 @@
 		bind:files
 		bind:prompt
 		bind:autoScroll
+		bind:webSearchEnabled
 		bind:atSelectedModel
 		{selectedModels}
 		{messages}

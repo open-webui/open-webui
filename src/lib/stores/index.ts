@@ -137,8 +137,9 @@ type Config = {
 	default_prompt_suggestions: PromptSuggestion[];
 	features: {
 		auth: boolean;
-		enable_signup: boolean;
 		auth_trusted_header: boolean;
+		enable_signup: boolean;
+		enable_web_search?: boolean;
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
 		enable_community_sharing: boolean;

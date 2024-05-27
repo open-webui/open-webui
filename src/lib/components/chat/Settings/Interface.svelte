@@ -4,6 +4,7 @@
 	import { config, models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -280,7 +281,29 @@
 		<hr class=" dark:border-gray-700" />
 
 		<div>
-			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Title Auto-Generation Model')}</div>
+			<div class=" mb-2.5 text-sm font-medium flex">
+				<div class=" mr-1">{$i18n.t('Set Task Model')}</div>
+				<Tooltip
+					content={$i18n.t(
+						'A task model is used when performing tasks such as generating titles for chats and web search queries'
+					)}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="1.5"
+						stroke="currentColor"
+						class="w-5 h-5"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+						/>
+					</svg>
+				</Tooltip>
+			</div>
 			<div class="flex w-full gap-2 pr-2">
 				<div class="flex-1">
 					<div class=" text-xs mb-1">Local Models</div>
