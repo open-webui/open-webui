@@ -112,9 +112,16 @@ class UsersTable:
         except:
             return None
 
-    def get_user_by_email(self, email: str) -> Optional[UserModel]:
+    def get_user_by_email(
+        self, email: str, oauth_user: bool = False
+    ) -> Optional[UserModel]:
         try:
-            user = User.get((User.email == email, User.oauth_sub.is_null()))
+            conditions = (
+                (User.email == email, User.oauth_sub.is_null())
+                if not oauth_user
+                else (User.email == email)
+            )
+            user = User.get(conditions)
             return UserModel(**model_to_dict(user))
         except:
             return None
@@ -170,6 +177,18 @@ class UsersTable:
     def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
             query = User.update(last_active_at=int(time.time())).where(User.id == id)
+            query.execute()
+
+            user = User.get(User.id == id)
+            return UserModel(**model_to_dict(user))
+        except:
+            return None
+
+    def update_user_oauth_sub_by_id(
+        self, id: str, oauth_sub: str
+    ) -> Optional[UserModel]:
+        try:
+            query = User.update(oauth_sub=oauth_sub).where(User.id == id)
             query.execute()
 
             user = User.get(User.id == id)

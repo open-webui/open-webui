@@ -58,12 +58,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# SessionMiddleware is used by authlib for oauth
-if len(OAUTH_PROVIDERS) > 0:
-    app.add_middleware(
-        SessionMiddleware, secret_key=WEBUI_SECRET_KEY, session_cookie="oui-session"
-    )
-
 app.include_router(auths.router, prefix="/auths", tags=["auths"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(chats.router, prefix="/chats", tags=["chats"])

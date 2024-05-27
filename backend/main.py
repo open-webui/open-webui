@@ -1,4 +1,8 @@
+import uuid
 from contextlib import asynccontextmanager
+
+from authlib.integrations.starlette_client import OAuth
+from authlib.oidc.core import UserInfo
 from bs4 import BeautifulSoup
 import json
 import markdown
@@ -17,7 +21,8 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import StreamingResponse, Response
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import StreamingResponse, Response, RedirectResponse
 
 from apps.ollama.main import app as ollama_app, get_all_models as get_ollama_models
 from apps.openai.main import app as openai_app, get_all_models as get_openai_models
@@ -31,8 +36,16 @@ import asyncio
 from pydantic import BaseModel
 from typing import List, Optional
 
-from apps.webui.models.models import Models, ModelModel
-from utils.utils import get_admin_user, get_verified_user
+from apps.webui.models.auths import Auths
+from apps.webui.models.models import Models
+from apps.webui.models.users import Users
+from utils.misc import parse_duration
+from utils.utils import (
+    get_admin_user,
+    get_verified_user,
+    get_password_hash,
+    create_token,
+)
 from apps.rag.utils import rag_messages
 
 from config import (
@@ -56,8 +69,12 @@ from config import (
     ENABLE_ADMIN_EXPORT,
     AppConfig,
     OAUTH_PROVIDERS,
+    ENABLE_OAUTH_SIGNUP,
+    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+    WEBUI_SECRET_KEY,
 )
-from constants import ERROR_MESSAGES
+from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from utils.webhook import post_webhook
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -451,6 +468,103 @@ async def get_app_latest_release_version():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
         )
+
+
+############################
+# OAuth Login & Callback
+############################
+
+oauth = OAuth()
+
+for provider_name, provider_config in OAUTH_PROVIDERS.items():
+    oauth.register(
+        name=provider_name,
+        client_id=provider_config["client_id"],
+        client_secret=provider_config["client_secret"],
+        server_metadata_url=provider_config["server_metadata_url"],
+        client_kwargs={
+            "scope": provider_config["scope"],
+        },
+    )
+
+# SessionMiddleware is used by authlib for oauth
+if len(OAUTH_PROVIDERS) > 0:
+    app.add_middleware(
+        SessionMiddleware, secret_key=WEBUI_SECRET_KEY, session_cookie="oui-session"
+    )
+
+
+@app.get("/oauth/{provider}/login")
+async def oauth_login(provider: str, request: Request):
+    if provider not in OAUTH_PROVIDERS:
+        raise HTTPException(404)
+    redirect_uri = request.url_for("oauth_callback", provider=provider)
+    return await oauth.create_client(provider).authorize_redirect(request, redirect_uri)
+
+
+@app.get("/oauth/{provider}/callback")
+async def oauth_callback(provider: str, request: Request):
+    if provider not in OAUTH_PROVIDERS:
+        raise HTTPException(404)
+    client = oauth.create_client(provider)
+    token = await client.authorize_access_token(request)
+    user_data: UserInfo = token["userinfo"]
+
+    sub = user_data.get("sub")
+    if not sub:
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+    provider_sub = f"{provider}@{sub}"
+
+    # Check if the user exists
+    user = Users.get_user_by_oauth_sub(provider_sub)
+
+    if not user:
+        # If the user does not exist, check if merging is enabled
+        if OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
+            # Check if the user exists by email
+            email = user_data.get("email", "").lower()
+            if not email:
+                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+            user = Users.get_user_by_email(user_data.get("email", "").lower(), True)
+            if user:
+                # Update the user with the new oauth sub
+                Users.update_user_oauth_sub_by_id(user.id, provider_sub)
+
+    if not user:
+        # If the user does not exist, check if signups are enabled
+        if ENABLE_OAUTH_SIGNUP.value:
+            user = Auths.insert_new_auth(
+                email=user_data.get("email", "").lower(),
+                password=get_password_hash(
+                    str(uuid.uuid4())
+                ),  # Random password, not used
+                name=user_data.get("name", "User"),
+                profile_image_url=user_data.get("picture", "/user.png"),
+                role=webui_app.state.config.DEFAULT_USER_ROLE,
+                oauth_sub=provider_sub,
+            )
+
+            if webui_app.state.config.WEBHOOK_URL:
+                post_webhook(
+                    webui_app.state.config.WEBHOOK_URL,
+                    WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                    {
+                        "action": "signup",
+                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        "user": user.model_dump_json(exclude_none=True),
+                    },
+                )
+        else:
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+    jwt_token = create_token(
+        data={"id": user.id},
+        expires_delta=parse_duration(webui_app.state.config.JWT_EXPIRES_IN),
+    )
+
+    # Redirect back to the frontend with the JWT token
+    redirect_url = f"{request.base_url}auth#token={jwt_token}"
+    return RedirectResponse(url=redirect_url)
 
 
 @app.get("/manifest.json")

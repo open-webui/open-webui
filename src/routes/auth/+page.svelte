@@ -259,7 +259,7 @@
 								<button
 									class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
 									on:click={() => {
-										window.location.href = `${WEBUI_API_BASE_URL}/auths/oauth/google/login`;
+										window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
 									}}
 								>
 									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="size-6 mr-3">
@@ -284,7 +284,7 @@
 								<button
 									class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
 									on:click={() => {
-										window.location.href = `${WEBUI_API_BASE_URL}/auths/oauth/microsoft/login`;
+										window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
 									}}
 								>
 									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" class="size-6 mr-3">
@@ -309,7 +309,7 @@
 								<button
 									class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
 									on:click={() => {
-										window.location.href = `${WEBUI_API_BASE_URL}/auths/oauth/oidc/login`;
+										window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
 									}}
 								>
 									<svg
