@@ -32,7 +32,9 @@
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div class=" flex max-w-full w-full mx-auto px-5 pt-3 md:px-[1.3rem]">
 		<div class="flex flex-wrap justify-between items-center w-full max-w-full">
-			<a class="flex self-center" href="/">
+			<button class="flex self-center" on:click={() => {
+				initNewChat();
+			}}>
 				<img
 					src="/logo-mbzuai.svg"
 					alt="logo-mbzuai"
@@ -42,7 +44,7 @@
 					class="ml-4 w-[70px]"
 					alt="logo-ciai"
 				/>
-			</a>
+			</button>
 
 			<div class="overflow-hidden ml-6 flex-1 text-xl font-semibold text-black dark:text-white">
 				Munir - MBZUAI HR LLM Service
