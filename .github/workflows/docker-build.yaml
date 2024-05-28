@@ -375,12 +375,12 @@ jobs:
   #           latest=${{ github.ref == 'refs/heads/main' }}
   #           suffix=-ollama,onlatest=true
 
-      - name: Create manifest list and push
-        working-directory: /tmp/digests
-        run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
+      # - name: Create manifest list and push
+      #   working-directory: /tmp/digests
+      #   run: |
+      #     docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+      #       $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
 
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+      # - name: Inspect image
+      #   run: |
+      #     docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
