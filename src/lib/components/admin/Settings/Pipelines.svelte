@@ -10,10 +10,12 @@
 		getPipelineValves,
 		getPipelineValvesSpec,
 		updatePipelineValves,
-		getPipelines
+		getPipelines,
+		getModels
 	} from '$lib/apis';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { toast } from 'svelte-sonner';
+	import { models } from '$lib/stores';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -39,6 +41,7 @@
 			if (res) {
 				toast.success('Valves updated successfully');
 				setPipelines();
+				models.set(await getModels(localStorage.token));
 				saveHandler();
 			}
 		} else {
@@ -46,11 +49,17 @@
 		}
 	};
 
+	const getValves = async (idx) => {
+		valves_spec = await getPipelineValvesSpec(localStorage.token, pipelines[idx].id);
+		valves = await getPipelineValves(localStorage.token, pipelines[idx].id);
+	};
+
 	const setPipelines = async () => {
 		pipelines = await getPipelines(localStorage.token);
 
 		if (pipelines.length > 0) {
 			selectedPipelineIdx = 0;
+			await getValves(selectedPipelineIdx);
 		}
 	};
 
@@ -82,14 +91,7 @@
 								placeholder={$i18n.t('Select a pipeline')}
 								on:change={async () => {
 									await tick();
-									valves_spec = await getPipelineValvesSpec(
-										localStorage.token,
-										pipelines[selectedPipelineIdx].id
-									);
-									valves = await getPipelineValves(
-										localStorage.token,
-										pipelines[selectedPipelineIdx].id
-									);
+									await getValves(selectedPipelineIdx);
 								}}
 							>
 								{#each pipelines as pipeline, idx}
