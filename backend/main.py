@@ -245,6 +245,7 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                 model
                 for model in app.state.MODELS.values()
                 if "pipeline" in model
+                and "type" in model["pipeline"]
                 and model["pipeline"]["type"] == "filter"
                 and (
                     model["pipeline"]["pipelines"] == ["*"]
@@ -279,11 +280,10 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                     if key != "":
                         headers = {"Authorization": f"Bearer {key}"}
                         r = requests.post(
-                            f"{url}/filter",
+                            f"{url}/{filter['id']}/filter",
                             headers=headers,
                             json={
                                 "user": user,
-                                "model": filter["id"],
                                 "body": data,
                             },
                         )
@@ -448,7 +448,7 @@ async def get_models(user=Depends(get_verified_user)):
     models = [
         model
         for model in models
-        if "pipeline" not in model or model["pipeline"]["type"] != "filter"
+        if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
     ]
 
     if app.state.config.ENABLE_MODEL_FILTER:
