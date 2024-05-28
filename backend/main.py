@@ -477,6 +477,7 @@ async def get_pipeline_valves(pipeline_id: str, user=Depends(get_admin_user)):
     if pipeline_id in app.state.MODELS and "pipeline" in app.state.MODELS[pipeline_id]:
         pipeline = app.state.MODELS[pipeline_id]
 
+        r = None
         try:
             urlIdx = pipeline["urlIdx"]
 
@@ -495,12 +496,23 @@ async def get_pipeline_valves(pipeline_id: str, user=Depends(get_admin_user)):
             # Handle connection error here
             print(f"Connection error: {e}")
 
+            detail = "Pipeline not found"
+
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "detail" in res:
+                        detail = res["detail"]
+                except:
+                    pass
+
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Pipeline not found",
+                status_code=(
+                    r.status_code if r is not None else status.HTTP_404_NOT_FOUND
+                ),
+                detail=detail,
             )
 
-        return {"data": pipeline["pipeline"]["valves"]}
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -514,6 +526,7 @@ async def get_pipeline_valves_spec(pipeline_id: str, user=Depends(get_admin_user
     if pipeline_id in app.state.MODELS and "pipeline" in app.state.MODELS[pipeline_id]:
         pipeline = app.state.MODELS[pipeline_id]
 
+        r = None
         try:
             urlIdx = pipeline["urlIdx"]
 
@@ -532,12 +545,21 @@ async def get_pipeline_valves_spec(pipeline_id: str, user=Depends(get_admin_user
             # Handle connection error here
             print(f"Connection error: {e}")
 
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Pipeline not found",
-            )
+            detail = "Pipeline not found"
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "detail" in res:
+                        detail = res["detail"]
+                except:
+                    pass
 
-        return {"data": pipeline["pipeline"]["valves"]}
+            raise HTTPException(
+                status_code=(
+                    r.status_code if r is not None else status.HTTP_404_NOT_FOUND
+                ),
+                detail=detail,
+            )
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -554,6 +576,7 @@ async def update_pipeline_valves(
     if pipeline_id in app.state.MODELS and "pipeline" in app.state.MODELS[pipeline_id]:
         pipeline = app.state.MODELS[pipeline_id]
 
+        r = None
         try:
             urlIdx = pipeline["urlIdx"]
 
@@ -576,9 +599,21 @@ async def update_pipeline_valves(
             # Handle connection error here
             print(f"Connection error: {e}")
 
+            detail = "Pipeline not found"
+
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "detail" in res:
+                        detail = res["detail"]
+                except:
+                    pass
+
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Pipeline not found",
+                status_code=(
+                    r.status_code if r is not None else status.HTTP_404_NOT_FOUND
+                ),
+                detail=detail,
             )
     else:
         raise HTTPException(

@@ -185,35 +185,30 @@
 				{#if selectedTab === 'general'}
 					<General
 						saveHandler={() => {
-							show = false;
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'users'}
 					<Users
 						saveHandler={() => {
-							show = false;
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'db'}
 					<Database
 						saveHandler={() => {
-							show = false;
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'banners'}
 					<Banners
 						saveHandler={() => {
-							show = false;
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'pipelines'}
 					<Pipelines
 						saveHandler={() => {
-							show = false;
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>

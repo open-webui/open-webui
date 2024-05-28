@@ -156,7 +156,12 @@ export const updatePipelineValves = async (
 		})
 		.catch((err) => {
 			console.log(err);
-			error = err;
+
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
 			return null;
 		});
 
