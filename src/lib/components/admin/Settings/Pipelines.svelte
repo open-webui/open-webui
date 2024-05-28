@@ -38,6 +38,7 @@
 
 			if (res) {
 				toast.success('Valves updated successfully');
+				setPipelines();
 				saveHandler();
 			}
 		} else {
@@ -45,12 +46,16 @@
 		}
 	};
 
-	onMount(async () => {
+	const setPipelines = async () => {
 		pipelines = await getPipelines(localStorage.token);
 
 		if (pipelines.length > 0) {
 			selectedPipelineIdx = 0;
 		}
+	};
+
+	onMount(async () => {
+		setPipelines();
 	});
 </script>
 
