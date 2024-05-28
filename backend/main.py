@@ -32,7 +32,12 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from apps.webui.models.models import Models, ModelModel
-from utils.utils import get_admin_user, get_verified_user
+from utils.utils import (
+    get_admin_user,
+    get_verified_user,
+    get_current_user,
+    get_http_authorization_cred,
+)
 from apps.rag.utils import rag_messages
 
 from config import (
@@ -244,7 +249,6 @@ class PipelineMiddleware(BaseHTTPMiddleware):
             data = json.loads(body_str) if body_str else {}
 
             model_id = data["model"]
-
             valves = [
                 model
                 for model in app.state.MODELS.values()
@@ -258,7 +262,20 @@ class PipelineMiddleware(BaseHTTPMiddleware):
             ]
             sorted_valves = sorted(valves, key=lambda x: x["pipeline"]["priority"])
 
+            user = None
+            if len(sorted_valves) > 0:
+                try:
+                    user = get_current_user(
+                        get_http_authorization_cred(
+                            request.headers.get("Authorization")
+                        )
+                    )
+                    user = {"id": user.id, "name": user.name, "role": user.role}
+                except:
+                    pass
+
             for valve in sorted_valves:
+
                 try:
                     urlIdx = valve["urlIdx"]
 
@@ -271,6 +288,7 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                             f"{url}/valve",
                             headers=headers,
                             json={
+                                "user": user,
                                 "model": valve["id"],
                                 "body": data,
                             },
