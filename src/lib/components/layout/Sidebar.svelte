@@ -34,6 +34,7 @@
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import NewChatSelector from '../chat/ModelSelector/NewChatSelector.svelte';
+	import Logo from "$lib/components/icons/Logo.svelte";
 
 	const BREAKPOINT = 768;
 
@@ -232,15 +233,10 @@
 				class="flex flex-1 justify-between rounded-xl"
 			>
 				<div class="p-2 self-center mx-1.5">
-					<img
-						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class=" size-6 -translate-x-1.5 rounded-full"
-						alt="logo"
-					/>
+					<Logo />
 				</div>
 				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white">
-					{$i18n.t('New Chat')}
+					{$i18n.t('Lành GPT')}
 				</div>
 				<div class="self-center ml-auto rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition">
 					<!-- <svg
@@ -348,7 +344,7 @@
 				</div>
 
 				<div class="flex self-center">
-					<div class=" self-center font-medium text-sm">{$i18n.t('Embedding')}</div>
+					<div class=" self-center font-medium text-sm">{$i18n.t('Kho văn bản')}</div>
 				</div>
 			</a>
 		</div>

@@ -44,9 +44,11 @@
 	} from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
-	import {createChatCompletionApiMessages, getSystemPrompt} from "$lib/utils/prompt_utils";
+	import {createChatCompletionApiMessages, getAbstractPrompt, getSystemPrompt} from "$lib/utils/prompt_utils";
 	import {getUserPrompt} from "$lib/utils/prompt_utils.js";
 	import ChatSessionSettingModal from "$lib/components/chat/ChatSessionSettingModal.svelte";
+	import {queryRankedChunk} from "$lib/apis/embedding";
+	import {highlightText} from "$lib/apis/documents";
 
 	const i18n = getContext('i18n');
 
@@ -267,12 +269,29 @@
 			prompt = '';
 			files = [];
 
-			// Send prompt
-			await sendPrompt(userPrompt, userMessageId);
+			if ($chatType === 'chat_embedding') {
+				const chunks = await queryRankedChunk($selectedChatEmbeddingIndex, userPrompt)
+				chunks.sort((chunk1, chunk2) => chunk1.score > chunk2.score ? 1 : -1)
+				await Promise.all(chunks.map((chunk) => {
+					const citations = [{
+						source: {
+							type: 'doc',
+							name: chunk.metadata.file_name,
+						},
+						document: [chunk.text],
+						score: chunk.score
+					}]
+					const prompt = getAbstractPrompt(chunk.text, userPrompt)
+					return sendPrompt(prompt, userMessageId, null, citations);
+				}))
+			} else {
+				// Send prompt
+				await sendPrompt(userPrompt, userMessageId);
+			}
 		}
 	};
 
-	const sendPrompt = async (prompt, parentId, modelId = null) => {
+	const sendPrompt = async (prompt, parentId, modelId = null, citations = null) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
@@ -294,6 +313,10 @@
 							userContext: null,
 							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 						};
+
+						if (citations) {
+							responseMessage.citations = citations
+						}
 
 						// Add message to history and Set currentId to messageId
 						history.messages[responseMessageId] = responseMessage;
@@ -667,6 +690,11 @@
 							controller.abort('User: Stop Response');
 						}
 
+						if ($chatType === 'chat_embedding') {
+							const highlightedContent = await highlightText(responseMessage.citations[0].document[0], responseMessage.content)
+							responseMessage.citations[0].document[0] = highlightedContent
+						}
+
 						break;
 					}
 
@@ -983,7 +1011,7 @@
 		bind:files
 		bind:prompt
 		bind:autoScroll
-		bind:selectedModel={atSelectedModel}
+		selectedModel={{name: selectedModels[0]}}
 		{messages}
 		{submitPrompt}
 		{stopResponse}

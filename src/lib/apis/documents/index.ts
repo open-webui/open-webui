@@ -218,3 +218,36 @@ export const deleteDocByName = async (token: string, name: string) => {
 
 	return res;
 };
+
+export const highlightText = async (context: string, query: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/highlight`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${localStorage.token}`
+		},
+		body: JSON.stringify({context, query})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.text();
+			return res.text();
+		})
+		.then((text) => {
+			return text;
+		})
+		.catch((err) => {
+			error = err.detail;
+
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

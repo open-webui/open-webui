@@ -43,11 +43,13 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import {
-		createChatCompletionApiMessages,
+		createChatCompletionApiMessages, getAbstractPrompt,
 		getSystemPrompt,
 		getUserPrompt
 	} from "$lib/utils/prompt_utils";
 	import ChatSessionSettingModal from "$lib/components/chat/ChatSessionSettingModal.svelte";
+	import {highlightText} from "$lib/apis/documents";
+	import {queryRankedChunk} from "$lib/apis/embedding";
 
 	const i18n = getContext('i18n');
 
@@ -117,6 +119,18 @@
 		model_params: $models.find((model) => model.id === selectedModels[0])?.default_params
 	}
 
+	$: (() => {
+		if ($page.url.searchParams.get('models')) {
+			selectedModels = $page.url.searchParams.get('models')?.split(',');
+		} else if ($settings?.models) {
+			selectedModels = $settings?.models;
+		} else if ($config?.default_models) {
+			selectedModels = $config?.default_models.split(',');
+		} else {
+			selectedModels = [$models[$config.chat_type_model_map?.[$chatType] || 0].id];
+		}
+	})()
+
 	onMount(async () => {
 		await initNewChat();
 	});
@@ -141,16 +155,6 @@
 			messages: {},
 			currentId: null
 		};
-
-		if ($page.url.searchParams.get('models')) {
-			selectedModels = $page.url.searchParams.get('models')?.split(',');
-		} else if ($settings?.models) {
-			selectedModels = $settings?.models;
-		} else if ($config?.default_models) {
-			selectedModels = $config?.default_models.split(',');
-		} else {
-			selectedModels = [$models[0].id];
-		}
 
 		if ($page.url.searchParams.get('q')) {
 			prompt = $page.url.searchParams.get('q') ?? '';
@@ -264,12 +268,36 @@
 			prompt = '';
 			files = [];
 
-			// Send prompt
-			await sendPrompt(userPrompt, userMessageId);
+			if ($chatType === 'chat_embedding') {
+				const chunks = await queryRankedChunk($selectedChatEmbeddingIndex, userPrompt)
+				chunks.sort((chunk1, chunk2) => chunk1.score > chunk2.score ? 1 : -1)
+				await Promise.all(chunks.map((chunk) => {
+					const citations = [{
+						source: {
+							type: 'doc',
+							name: chunk.metadata.file_name,
+						},
+						document: [chunk.text],
+						score: chunk.score
+					}]
+					const prompt = getAbstractPrompt(chunk.text, userPrompt)
+					return sendPrompt(prompt, userMessageId, null, citations);
+				}))
+			} else {
+				// Send prompt
+				await sendPrompt(userPrompt, userMessageId);
+			}
+
+			if (messages.length == 2) {
+				window.history.replaceState(history.state, '', `/c/${$chatId}`);
+
+				const _title = await generateChatTitle(userPrompt);
+				await setChatTitle($chatId, _title);
+			}
 		}
 	};
 
-	const sendPrompt = async (prompt, parentId, modelId = null) => {
+	const sendPrompt = async (prompt, parentId, modelId = null, citations = null) => {
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
@@ -291,6 +319,10 @@
 							userContext: null,
 							timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 						};
+
+						if (citations) {
+							responseMessage.citations = citations
+						}
 
 						// Add message to history and Set currentId to messageId
 						history.messages[responseMessageId] = responseMessage;
@@ -664,6 +696,11 @@
 							controller.abort('User: Stop Response');
 						}
 
+						if ($chatType === 'chat_embedding') {
+							const highlightedContent = await highlightText(responseMessage.citations[0].document[0], responseMessage.content)
+							responseMessage.citations[0].document[0] = highlightedContent
+						}
+
 						break;
 					}
 
@@ -722,13 +759,6 @@
 
 		if (autoScroll) {
 			scrollToBottom();
-		}
-
-		if (messages.length == 2) {
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
-
-			const _title = await generateChatTitle(userPrompt);
-			await setChatTitle(_chatId, _title);
 		}
 	};
 
@@ -962,7 +992,7 @@
 	bind:files
 	bind:prompt
 	bind:autoScroll
-	bind:selectedModel={atSelectedModel}
+	selectedModel={{name: selectedModels[0]}}
 	{messages}
 	{submitPrompt}
 	{stopResponse}

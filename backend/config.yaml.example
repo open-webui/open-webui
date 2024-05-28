@@ -1,0 +1,52 @@
+openai:
+  models:
+    - url: http://118.69.81.93:8600/v1
+      key: ABC
+      default_params:
+        seed: 0
+        temperature: 0.8
+        top_p: 0.9
+        top_k: 40
+        repetition_penalty: 1.05
+        num_predict: 1024
+    - url: http://118.69.81.93:8600/v1
+      key: ABC
+      default_params:
+        seed: 0
+        temperature: 0.8
+        top_p: 0.9
+        top_k: 40
+        repetition_penalty: 1.05
+        num_predict: 1024
+chat_type_model_map:
+  chat: 0
+  chat_law: 0
+  chat_buddhism: 0
+  chat_embedding: 0
+  translate: 1
+  translate_coding: 1
+  translate_ancient: 1
+  summary: 0
+  summary_emphasis: 0
+  faq: 0
+  faq_simple_analysis: 0
+  negative_conversation: 0
+  positive_conversation: 0
+  intelligent_conversation: 0
+  faq_case_1: 0
+  faq_case_2: 0
+  faq_case_3: 0
+  faq_create_example: 0
+  faq_create_verdict_scenario: 0
+  long_summary: 0
+  long_summary_emphasis: 0
+  long_faq: 0
+  long_faq_simple_analysis: 0
+  long_negative_conversation: 0
+  long_positive_conversation: 0
+  long_intelligent_conversation: 0
+  long_faq_case_1: 0
+  long_faq_case_2: 0
+  long_faq_case_3: 0
+  long_faq_create_example: 0
+  long_faq_create_verdict_scenario: 0

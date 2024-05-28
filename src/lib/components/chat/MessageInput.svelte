@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { mobile, modelfiles, settings, showSidebar } from '$lib/stores';
+	import {chatType, mobile, modelfiles, settings, showSidebar} from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
@@ -20,6 +20,7 @@
 	import Models from './MessageInput/Models.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Logo from "$lib/components/icons/Logo.svelte";
 
 	const i18n = getContext('i18n');
 
@@ -504,18 +505,9 @@
 							class="px-3 py-2.5 text-left w-full flex justify-between items-center absolute bottom-0 left-0 right-0 bg-gradient-to-t from-50% from-white dark:from-gray-900"
 						>
 							<div class="flex items-center gap-2 text-sm dark:text-gray-500">
-								<img
-									crossorigin="anonymous"
-									alt="model profile"
-									class="size-5 max-w-[28px] object-cover rounded-full"
-									src={$modelfiles.find((modelfile) => modelfile.tagName === selectedModel.id)
-										?.imageUrl ??
-										($i18n.language === 'dg-DG'
-											? `/doge.png`
-											: `${WEBUI_BASE_URL}/static/favicon.png`)}
-								/>
+								<Logo size={16} />
 								<div>
-									Talking to <span class=" font-medium">{selectedModel.name} </span>
+									Bạn đang sử dụng {$i18n.t($chatType)} với model <span class=" font-medium">{selectedModel.name} </span>
 								</div>
 							</div>
 							<div>

@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import {selectedIndexId, WEBUI_NAME} from '$lib/stores';
+	import {chats, selectedIndexId, WEBUI_NAME} from '$lib/stores';
 
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import CreateIndexModal from '$lib/components/embedding/CreateIndexModal.svelte';
 	import {getEmbeddingIndex} from "$lib/apis/embedding";
 	import {goto} from "$app/navigation";
+	import TagList from "$lib/components/common/Tags/TagList.svelte";
+	import {getChatList} from "$lib/apis/chats";
 
 	const i18n = getContext('i18n');
 
@@ -34,7 +36,7 @@
 </svelte:head>
 
 <CreateIndexModal bind:show={showCreateIndexModal} onClose={(index) => {
-	listIndex = [...listIndex, index]
+	listIndex = [index, ...listIndex]
 	console.log(listIndex)
 }} />
 
@@ -127,9 +129,12 @@
 			<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 				<div class=" flex items-center space-x-3">
 					<div class=" self-center flex-1">
-						<div class=" font-bold line-clamp-1">{embeddingIndex.name}</div>
-						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-							{embeddingIndex.num_docs} Documents
+						<div class="font-bold line-clamp-1">{embeddingIndex.name}<span class="text-xs ml-4 font-light">({embeddingIndex.num_docs} {$i18n.t('Documents')})</span></div>
+						<div class="mt-1 text-xs overflow-hidden text-ellipsis line-clamp-1">
+							Phân loại: {embeddingIndex.category}
+						</div>
+						<div class="mt-1 text-xs overflow-hidden text-ellipsis line-clamp-1">
+							{embeddingIndex.geographic}
 						</div>
 					</div>
 				</div>

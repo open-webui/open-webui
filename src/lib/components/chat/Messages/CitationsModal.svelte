@@ -63,7 +63,7 @@
 							{$i18n.t('Content')}
 						</div>
 						<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
-							{document.document}
+							{@html citation.document}
 						</pre>
 					</div>
 

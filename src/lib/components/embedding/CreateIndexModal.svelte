@@ -43,29 +43,29 @@
 
 		<div class="flex flex-col md:flex-row w-full p-8 md:space-x-4">
 			<div class="flex-1 md:min-h-[300px]">
-				<div class=" mb-2 text-sm font-medium">{$i18n.t('Embedding Model')}</div>
+				<div class=" mb-2 text-sm font-medium">{$i18n.t('Embedding name')}</div>
 				<div class="flex-1 mr-2">
 					<input
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t("Index name")}
+							placeholder={$i18n.t("Tên gợi nhớ")}
 							bind:value={name}
 					/>
 				</div>
 
-				<div class="mt-4 mb-2 text-sm font-medium">{$i18n.t('Category')}</div>
+				<div class="mt-4 mb-2 text-sm font-medium">{$i18n.t('Phân loại')}</div>
 				<div class="flex-1 mr-2">
 					<input
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t("Category")}
+							placeholder={$i18n.t("Luật pháp, Văn hóa, ...")}
 							bind:value={category}
 					/>
 				</div>
 
-				<div class="mt-4 mb-2 text-sm font-medium">{$i18n.t('Geographic')}</div>
+				<div class="mt-4 mb-2 text-sm font-medium">{$i18n.t('Thông tin khác')}</div>
 				<div class="flex-1 mr-2">
-					<input
+					<textarea
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t("Geographic")}
+							placeholder={$i18n.t("Thông tin khác")}
 							bind:value={geographic}
 					/>
 				</div>
@@ -74,7 +74,10 @@
 					<button
 							class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 							type="submit"
-							on:click={() => handleCreateIndex()}
+							on:click={() => {
+								handleCreateIndex()
+								show = false
+							}}
 					>
 						{$i18n.t('Create')}
 					</button>

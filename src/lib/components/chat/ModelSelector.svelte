@@ -154,7 +154,7 @@
 </div>
 
 <div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
-	<span> {$i18n.t($chatType)}</span>
+	<span>{$i18n.t($chatType)}</span>
 	{#if supportedTranslateLangs.length > 0}
 		<span class="mx-2">-></span>
 		<select class="capitalize rounded-lg py-1 pl-4 pr-10 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"

@@ -31,6 +31,14 @@ except ImportError:
 
 
 ####################################
+# Load yaml configs
+####################################
+with open('config.yaml') as f:
+    yaml_config = yaml.load(f, Loader=yaml.FullLoader)
+    print(yaml_config)
+
+
+####################################
 # LOGGING
 ####################################
 
@@ -432,38 +440,17 @@ OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
-OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
-OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
-
-OPENAI_API_KEYS = [url.strip() for url in OPENAI_API_KEYS.split(";")]
+OPENAI_API_KEYS = list(map(lambda info: info['key'], yaml_config.get("openai", {}).get("models", [])))
 OPENAI_API_KEYS = PersistentConfig(
     "OPENAI_API_KEYS", "openai.api_keys", OPENAI_API_KEYS
 )
 
-OPENAI_API_BASE_URLS = os.environ.get("OPENAI_API_BASE_URLS", "")
-OPENAI_API_BASE_URLS = (
-    OPENAI_API_BASE_URLS if OPENAI_API_BASE_URLS != "" else OPENAI_API_BASE_URL
-)
-
-OPENAI_API_BASE_URLS = [
-    url.strip() if url != "" else "https://api.openai.com/v1"
-    for url in OPENAI_API_BASE_URLS.split(";")
-]
+OPENAI_API_BASE_URLS = list(map(lambda info: info['url'], yaml_config.get("openai", {}).get("models", [])))
 OPENAI_API_BASE_URLS = PersistentConfig(
     "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
 )
 
-OPENAI_API_PARAMS = [
-    {
-        'seed': 0,
-        'temperature': 0.3,
-        'top_p': 0.9,
-        'top_k': 40,
-        'repetition_penalty': 1.05,
-        'num_predict': 1024,
-    }
-    for url in OPENAI_API_BASE_URLS.value
-]
+OPENAI_API_PARAMS = list(map(lambda info: info['default_params'], yaml_config.get("openai", {}).get("models", [])))
 OPENAI_API_PARAMS = PersistentConfig(
     "OPENAI_API_PARAMS", "openai.api_params", OPENAI_API_PARAMS
 )
@@ -853,3 +840,8 @@ DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 
 HATTO_LLM_BASE_URL = os.environ.get("HATTO_LLM_BASE_URL", "http://localhost:8081/api")
 HATTO_LLM_API_KEY = os.environ.get("HATTO_LLM_API_KEY", "5f4dcc3b5aa765d61d8327deb882cf99")
+
+####################################
+# Chat config
+####################################
+CHAT_TYPE_MODEL_MAP = yaml_config.get("chat_type_model_map", {})

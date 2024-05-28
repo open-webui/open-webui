@@ -13,6 +13,7 @@ from apps.web.models.documents import (
     DocumentModel,
     DocumentResponse,
 )
+from rank_bm25 import BM25Okapi
 
 from utils.utils import get_current_user, get_admin_user
 from constants import ERROR_MESSAGES
@@ -105,6 +106,11 @@ class TagDocumentForm(BaseModel):
     tags: List[dict]
 
 
+class HighLightTextForm(BaseModel):
+    context: str
+    query: str
+
+
 @router.post("/name/{name}/tags", response_model=Optional[DocumentResponse])
 async def tag_doc_by_name(form_data: TagDocumentForm, user=Depends(get_current_user)):
     doc = Documents.update_doc_content_by_name(form_data.name, {"tags": form_data.tags})
@@ -156,3 +162,22 @@ async def update_doc_by_name(
 async def delete_doc_by_name(name: str, user=Depends(get_admin_user)):
     result = Documents.delete_doc_by_name(name)
     return result
+
+
+############################
+# HighlightText
+############################
+
+@router.post("/highlight", response_model=str)
+async def highlight_text(form_data: HighLightTextForm, user=Depends(get_current_user)):
+    corpus = form_data.context.split(".\n")
+
+    tokenized_corpus = [doc.split(" ") for doc in corpus]
+
+    bm25 = BM25Okapi(tokenized_corpus)
+
+    tokenized_query = form_data.query.split(" ")
+    r = bm25.get_scores(tokenized_query)
+
+    corpus[r.argmax()] = f"<span style='background-color: #ffed0066;'>{corpus[r.argmax()]}</span>"
+    return '.\n'.join(corpus)

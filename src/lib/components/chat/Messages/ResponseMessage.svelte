@@ -469,7 +469,7 @@
 												existingSource.document.push(document);
 												existingSource.metadata.push(metadata);
 											} else {
-												acc.push( { id: id, source: citation?.source, document: [document], metadata: metadata ? [metadata] : [] } );
+												acc.push( { id: id, source: citation?.source, document: [document], metadata: metadata ? [metadata] : [], score: citation?.score } );
 											}
 										});
 										return acc;
@@ -488,6 +488,11 @@
 												<div class="flex-1 mx-2 line-clamp-1">
 													{citation.source.name}
 												</div>
+												{#if citation.score}
+												<div class="bg-white dark:bg-gray-700 mx-2 px-2 rounded-full">
+													{citation.score}
+												</div>
+												{/if}
 											</button>
 										</div>
 									{/each}
