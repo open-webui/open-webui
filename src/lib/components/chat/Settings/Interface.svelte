@@ -313,12 +313,10 @@
 						placeholder={$i18n.t('Select a model')}
 					>
 						<option value="" selected>{$i18n.t('Current Model')}</option>
-						{#each $models as model}
-							{#if model.size != null}
-								<option value={model.name} class="bg-gray-100 dark:bg-gray-700">
-									{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}
-								</option>
-							{/if}
+						{#each $models.filter((m) => m.owned_by === 'ollama') as model}
+							<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+								{model.name}
+							</option>
 						{/each}
 					</select>
 				</div>
@@ -332,11 +330,9 @@
 					>
 						<option value="" selected>{$i18n.t('Current Model')}</option>
 						{#each $models as model}
-							{#if model.name !== 'hr'}
-								<option value={model.name} class="bg-gray-100 dark:bg-gray-700">
-									{model.name}
-								</option>
-							{/if}
+							<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+								{model.name}
+							</option>
 						{/each}
 					</select>
 				</div>
