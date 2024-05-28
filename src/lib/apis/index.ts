@@ -49,6 +49,35 @@ export const getModels = async (token: string = '') => {
 	return models;
 };
 
+export const getPipelines = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	let pipelines = res?.data ?? [];
+	return pipelines;
+};
+
 export const getBackendConfig = async () => {
 	let error = null;
 

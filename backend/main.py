@@ -464,6 +464,13 @@ async def get_models(user=Depends(get_verified_user)):
     return {"data": models}
 
 
+@app.get("/api/pipelines")
+async def get_pipelines(user=Depends(get_admin_user)):
+    models = await get_all_models()
+    pipelines = [model for model in models if "pipeline" in model]
+    return {"data": pipelines}
+
+
 @app.get("/api/config")
 async def get_app_config():
     # Checking and Handling the Absence of 'ui' in CONFIG_DATA
