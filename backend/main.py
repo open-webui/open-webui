@@ -471,6 +471,122 @@ async def get_pipelines(user=Depends(get_admin_user)):
     return {"data": pipelines}
 
 
+@app.get("/api/pipelines/{pipeline_id}/valves")
+async def get_pipeline_valves(pipeline_id: str, user=Depends(get_admin_user)):
+    models = await get_all_models()
+    if pipeline_id in app.state.MODELS and "pipeline" in app.state.MODELS[pipeline_id]:
+        pipeline = app.state.MODELS[pipeline_id]
+
+        try:
+            urlIdx = pipeline["urlIdx"]
+
+            url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
+            key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
+
+            if key != "":
+                headers = {"Authorization": f"Bearer {key}"}
+                r = requests.get(f"{url}/{pipeline['id']}/valves", headers=headers)
+
+                r.raise_for_status()
+                data = r.json()
+
+                return {**data}
+        except Exception as e:
+            # Handle connection error here
+            print(f"Connection error: {e}")
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Pipeline not found",
+            )
+
+        return {"data": pipeline["pipeline"]["valves"]}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pipeline not found",
+        )
+
+
+@app.get("/api/pipelines/{pipeline_id}/valves/spec")
+async def get_pipeline_valves_spec(pipeline_id: str, user=Depends(get_admin_user)):
+    models = await get_all_models()
+    if pipeline_id in app.state.MODELS and "pipeline" in app.state.MODELS[pipeline_id]:
+        pipeline = app.state.MODELS[pipeline_id]
+
+        try:
+            urlIdx = pipeline["urlIdx"]
+
+            url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
+            key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
+
+            if key != "":
+                headers = {"Authorization": f"Bearer {key}"}
+                r = requests.get(f"{url}/{pipeline['id']}/valves/spec", headers=headers)
+
+                r.raise_for_status()
+                data = r.json()
+
+                return {**data}
+        except Exception as e:
+            # Handle connection error here
+            print(f"Connection error: {e}")
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Pipeline not found",
+            )
+
+        return {"data": pipeline["pipeline"]["valves"]}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pipeline not found",
+        )
+
+
+@app.post("/api/pipelines/{pipeline_id}/valves/update")
+async def update_pipeline_valves(
+    pipeline_id: str, form_data: dict, user=Depends(get_admin_user)
+):
+    models = await get_all_models()
+
+    if pipeline_id in app.state.MODELS and "pipeline" in app.state.MODELS[pipeline_id]:
+        pipeline = app.state.MODELS[pipeline_id]
+
+        try:
+            urlIdx = pipeline["urlIdx"]
+
+            url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
+            key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
+
+            if key != "":
+                headers = {"Authorization": f"Bearer {key}"}
+                r = requests.post(
+                    f"{url}/{pipeline['id']}/valves/update",
+                    headers=headers,
+                    json={**form_data},
+                )
+
+                r.raise_for_status()
+                data = r.json()
+
+                return {**data}
+        except Exception as e:
+            # Handle connection error here
+            print(f"Connection error: {e}")
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Pipeline not found",
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pipeline not found",
+        )
+
+
 @app.get("/api/config")
 async def get_app_config():
     # Checking and Handling the Absence of 'ui' in CONFIG_DATA
