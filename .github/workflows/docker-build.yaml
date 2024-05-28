@@ -199,7 +199,7 @@ jobs:
   #       uses: docker/login-action@v3
   #       with:
   #         registry: ${{ env.REGISTRY }}
-  #         username: ${{ secrets.USERNAME }}
+  #         username: ${{ secrets.DOCKER_USERNAME }}
   #         password: ${{ secrets.DOCKER_PASSWORD }}
 
   #     - name: Extract metadata for Docker images (ollama tag)
@@ -263,7 +263,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.USERNAME }}
+          username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata for Docker images (default latest tag)
@@ -309,7 +309,7 @@ jobs:
   #       uses: docker/login-action@v3
   #       with:
   #         registry: ${{ env.REGISTRY }}
-  #         username: ${{ secrets.USERNAME }}
+  #         username: ${{ secrets.DOCKER_USERNAME }}
   #         password: ${{ secrets.DOCKER_PASSWORD }}
 
   #     - name: Extract metadata for Docker images (default latest tag)
@@ -356,7 +356,7 @@ jobs:
   #       uses: docker/login-action@v3
   #       with:
   #         registry: ${{ env.REGISTRY }}
-  #         username: ${{ secrets.USERNAME }}
+  #         username: ${{ secrets.DOCKER_USERNAME }}
   #         password: ${{ secrets.DOCKER_PASSWORD }}
 
   #     - name: Extract metadata for Docker images (default ollama tag)
