@@ -1,6 +1,9 @@
 from peewee import *
 from peewee_migrate import Router
-from playhouse.db_url import connect
+from playhouse.shortcuts import ReconnectMixin
+from playhouse.db_url import PooledPostgresqlDatabase, connect, register_database
+from psycopg2 import OperationalError
+from psycopg2.errors import InterfaceError
 from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL
 import os
 import logging
@@ -15,6 +18,21 @@ if os.path.exists(f"{DATA_DIR}/ollama.db"):
     log.info("Database migrated from Ollama-WebUI successfully.")
 else:
     pass
+
+
+class PGReconnectMixin(ReconnectMixin):
+    reconnect_errors = (
+        # Postgres error examples:
+        (OperationalError, 'termin'),
+        (InterfaceError, 'closed'),
+    )
+
+
+class ReconnectingPostgresqlDatabase(PGReconnectMixin, PooledPostgresqlDatabase):
+    pass
+
+
+register_database(ReconnectingPostgresqlDatabase, 'postgres+pool', 'postgresql+pool')
 
 DB = connect(DATABASE_URL)
 log.info(f"Connected to a {DB.__class__.__name__} database.")
