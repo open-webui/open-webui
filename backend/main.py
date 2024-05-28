@@ -12,6 +12,7 @@ import mimetypes
 
 from fastapi import FastAPI, Request, Depends, status
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from fastapi import HTTPException
 from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
@@ -122,15 +123,6 @@ app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.MODELS = {}
 
 origins = ["*"]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 # Custom middleware to add security headers
 # class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -253,6 +245,7 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                 model
                 for model in app.state.MODELS.values()
                 if "pipeline" in model
+                and "type" in model["pipeline"]
                 and model["pipeline"]["type"] == "filter"
                 and (
                     model["pipeline"]["pipelines"] == ["*"]
@@ -276,10 +269,8 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                 except:
                     pass
 
-            print(sorted_filters)
-
             for filter in sorted_filters:
-
+                r = None
                 try:
                     urlIdx = filter["urlIdx"]
 
@@ -289,11 +280,10 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                     if key != "":
                         headers = {"Authorization": f"Bearer {key}"}
                         r = requests.post(
-                            f"{url}/filter",
+                            f"{url}/{filter['id']}/filter",
                             headers=headers,
                             json={
                                 "user": user,
-                                "model": filter["id"],
                                 "body": data,
                             },
                         )
@@ -303,7 +293,20 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                 except Exception as e:
                     # Handle connection error here
                     print(f"Connection error: {e}")
-                    pass
+
+                    if r is not None:
+                        try:
+                            res = r.json()
+                            if "detail" in res:
+                                return JSONResponse(
+                                    status_code=r.status_code,
+                                    content=res,
+                                )
+                        except:
+                            pass
+
+                    else:
+                        pass
 
             modified_body_bytes = json.dumps(data).encode("utf-8")
             # Replace the request body with the modified one
@@ -326,6 +329,15 @@ class PipelineMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(PipelineMiddleware)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.middleware("http")
@@ -436,7 +448,7 @@ async def get_models(user=Depends(get_verified_user)):
     models = [
         model
         for model in models
-        if "pipeline" not in model or model["pipeline"]["type"] != "filter"
+        if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
     ]
 
     if app.state.config.ENABLE_MODEL_FILTER:
@@ -450,6 +462,164 @@ async def get_models(user=Depends(get_verified_user)):
             return {"data": models}
 
     return {"data": models}
+
+
+@app.get("/api/pipelines")
+async def get_pipelines(user=Depends(get_admin_user)):
+    models = await get_all_models()
+    pipelines = [model for model in models if "pipeline" in model]
+    return {"data": pipelines}
+
+
+@app.get("/api/pipelines/{pipeline_id}/valves")
+async def get_pipeline_valves(pipeline_id: str, user=Depends(get_admin_user)):
+    models = await get_all_models()
+    if pipeline_id in app.state.MODELS and "pipeline" in app.state.MODELS[pipeline_id]:
+        pipeline = app.state.MODELS[pipeline_id]
+
+        r = None
+        try:
+            urlIdx = pipeline["urlIdx"]
+
+            url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
+            key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
+
+            if key != "":
+                headers = {"Authorization": f"Bearer {key}"}
+                r = requests.get(f"{url}/{pipeline['id']}/valves", headers=headers)
+
+                r.raise_for_status()
+                data = r.json()
+
+                return {**data}
+        except Exception as e:
+            # Handle connection error here
+            print(f"Connection error: {e}")
+
+            detail = "Pipeline not found"
+
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "detail" in res:
+                        detail = res["detail"]
+                except:
+                    pass
+
+            raise HTTPException(
+                status_code=(
+                    r.status_code if r is not None else status.HTTP_404_NOT_FOUND
+                ),
+                detail=detail,
+            )
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pipeline not found",
+        )
+
+
+@app.get("/api/pipelines/{pipeline_id}/valves/spec")
+async def get_pipeline_valves_spec(pipeline_id: str, user=Depends(get_admin_user)):
+    models = await get_all_models()
+    if pipeline_id in app.state.MODELS and "pipeline" in app.state.MODELS[pipeline_id]:
+        pipeline = app.state.MODELS[pipeline_id]
+
+        r = None
+        try:
+            urlIdx = pipeline["urlIdx"]
+
+            url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
+            key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
+
+            if key != "":
+                headers = {"Authorization": f"Bearer {key}"}
+                r = requests.get(f"{url}/{pipeline['id']}/valves/spec", headers=headers)
+
+                r.raise_for_status()
+                data = r.json()
+
+                return {**data}
+        except Exception as e:
+            # Handle connection error here
+            print(f"Connection error: {e}")
+
+            detail = "Pipeline not found"
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "detail" in res:
+                        detail = res["detail"]
+                except:
+                    pass
+
+            raise HTTPException(
+                status_code=(
+                    r.status_code if r is not None else status.HTTP_404_NOT_FOUND
+                ),
+                detail=detail,
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pipeline not found",
+        )
+
+
+@app.post("/api/pipelines/{pipeline_id}/valves/update")
+async def update_pipeline_valves(
+    pipeline_id: str, form_data: dict, user=Depends(get_admin_user)
+):
+    models = await get_all_models()
+
+    if pipeline_id in app.state.MODELS and "pipeline" in app.state.MODELS[pipeline_id]:
+        pipeline = app.state.MODELS[pipeline_id]
+
+        r = None
+        try:
+            urlIdx = pipeline["urlIdx"]
+
+            url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
+            key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
+
+            if key != "":
+                headers = {"Authorization": f"Bearer {key}"}
+                r = requests.post(
+                    f"{url}/{pipeline['id']}/valves/update",
+                    headers=headers,
+                    json={**form_data},
+                )
+
+                r.raise_for_status()
+                data = r.json()
+
+                return {**data}
+        except Exception as e:
+            # Handle connection error here
+            print(f"Connection error: {e}")
+
+            detail = "Pipeline not found"
+
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "detail" in res:
+                        detail = res["detail"]
+                except:
+                    pass
+
+            raise HTTPException(
+                status_code=(
+                    r.status_code if r is not None else status.HTTP_404_NOT_FOUND
+                ),
+                detail=detail,
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pipeline not found",
+        )
 
 
 @app.get("/api/config")
