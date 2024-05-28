@@ -41,7 +41,7 @@
 	}}
 >
 	<div class=" space-y-2 pr-1.5 overflow-y-scroll max-h-80 h-full">
-		{#if pipelines !== null}
+		{#if pipelines !== null && pipelines.length > 0}
 			<div class="flex w-full justify-between mb-2">
 				<div class=" self-center text-sm font-semibold">
 					{$i18n.t('Pipelines')}
