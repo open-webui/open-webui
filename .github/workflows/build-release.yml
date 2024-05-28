@@ -38,7 +38,6 @@ jobs:
     - name: Create GitHub release
       uses: actions/github-script@v5
       with:
-        github-token: ${{ secrets.REGISTRY_PASSWORD }}
         script: |
           const changelog = `${{ steps.changelog.outputs.content }}`;
           const release = await github.rest.repos.createRelease({
@@ -49,14 +48,18 @@ jobs:
             body: changelog,
           })
           console.log(`Created release ${release.data.html_url}`)
-
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        
     - name: Upload package to GitHub release
       uses: actions/upload-artifact@v3
       with:
         name: package
         path: .
       env:
-        REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Trigger Docker build workflow
       uses: actions/github-script@v7
