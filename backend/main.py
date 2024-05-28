@@ -12,6 +12,7 @@ import mimetypes
 
 from fastapi import FastAPI, Request, Depends, status
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from fastapi import HTTPException
 from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
@@ -122,15 +123,6 @@ app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.MODELS = {}
 
 origins = ["*"]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 # Custom middleware to add security headers
 # class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -276,10 +268,8 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                 except:
                     pass
 
-            print(sorted_filters)
-
             for filter in sorted_filters:
-
+                r = None
                 try:
                     urlIdx = filter["urlIdx"]
 
@@ -303,7 +293,20 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                 except Exception as e:
                     # Handle connection error here
                     print(f"Connection error: {e}")
-                    pass
+
+                    if r is not None:
+                        try:
+                            res = r.json()
+                            if "detail" in res:
+                                return JSONResponse(
+                                    status_code=r.status_code,
+                                    content=res,
+                                )
+                        except:
+                            pass
+
+                    else:
+                        pass
 
             modified_body_bytes = json.dumps(data).encode("utf-8")
             # Replace the request body with the modified one
@@ -326,6 +329,15 @@ class PipelineMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(PipelineMiddleware)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.middleware("http")
