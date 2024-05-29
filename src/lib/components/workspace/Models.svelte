@@ -307,9 +307,15 @@
 
 					for (const model of savedModels) {
 						if (model?.info ?? false) {
-							await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
-								return null;
-							});
+							if ($models.find((m) => m.id === model.id)) {
+								await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
+									return null;
+								});
+							} else {
+								await addNewModel(localStorage.token, model.info).catch((error) => {
+									return null;
+								});
+							}
 						}
 					}
 
