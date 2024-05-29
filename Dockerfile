@@ -134,6 +134,14 @@ COPY --from=build /app/package.json /app/open-webui-modified/package.json
 # copy backend files
 # COPY ./backend .
 
+RUN cp /app/open-webui-modified/.env.example /app/open-webui-modified/.env
+RUN rm -rf /app/open-webui-modified/backend/data/cache
+RUN rm -rf /app/open-webui-modified/backend/data/docs
+RUN rm -rf /app/open-webui-modified/backend/data/uploads
+RUN rm -rf /app/open-webui-modified/backend/data/vector_db
+RUN rm -f /app/open-webui-modified/backend/data/webui.db
+RUN rm -rf /app/backend
+
 EXPOSE 8080
 
 # CMD [ "bash", "start.sh"]
