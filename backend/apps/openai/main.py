@@ -140,7 +140,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         headers["Content-Type"] = "application/json"
         if "openrouter.ai" in app.state.config.OPENAI_API_BASE_URLS[idx]:
             headers["HTTP-Referer"] = "https://openwebui.com/"
-            headers["X-Title"] = "Open WebUI"
+            headers["X-Title"] = "Cerebrum LLM UI"
         r = None
         try:
             r = requests.post(
@@ -165,7 +165,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         except Exception as e:
             log.exception(e)
-            error_detail = "Open WebUI: Server Connection Error"
+            error_detail = "Cerebrum LLM UI: Server Connection Error"
             if r is not None:
                 try:
                     res = r.json()
@@ -288,7 +288,7 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
             return response_data
         except Exception as e:
             log.exception(e)
-            error_detail = "Open WebUI: Server Connection Error"
+            error_detail = "Cerebrum LLM UI: Server Connection Error"
             if r is not None:
                 try:
                     res = r.json()
@@ -372,7 +372,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             return response_data
     except Exception as e:
         log.exception(e)
-        error_detail = "Open WebUI: Server Connection Error"
+        error_detail = "Cerebrum LLM UI: Server Connection Error"
         if r is not None:
             try:
                 res = r.json()
