@@ -34,6 +34,8 @@
 	let OPENAI_API_KEYS = [''];
 	let OPENAI_API_BASE_URLS = [''];
 
+	let pipelineUrls = {};
+
 	let ENABLE_OPENAI_API = null;
 	let ENABLE_OLLAMA_API = null;
 
@@ -48,7 +50,9 @@
 
 		if (res) {
 			toast.success($i18n.t('Server connection verified'));
-			console.log(res);
+			if (res.pipelines) {
+				pipelineUrls[OPENAI_API_BASE_URLS[idx]] = true;
+			}
 		}
 	};
 
@@ -100,6 +104,13 @@
 				})()
 			]);
 
+			OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
+				const res = await getOpenAIModels(localStorage.token, idx);
+				if (res.pipelines) {
+					pipelineUrls[url] = true;
+				}
+			});
+
 			const ollamaConfig = await getOllamaConfig(localStorage.token);
 			const openaiConfig = await getOpenAIConfig(localStorage.token);
 
@@ -139,13 +150,38 @@
 						<div class="flex flex-col gap-1">
 							{#each OPENAI_API_BASE_URLS as url, idx}
 								<div class="flex w-full gap-2">
-									<div class="flex-1">
+									<div class="flex-1 relative">
 										<input
-											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+											class="w-full rounded-lg py-2 px-4 {pipelineUrls[url]
+												? 'pr-8'
+												: ''} text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={url}
 											autocomplete="off"
 										/>
+
+										{#if pipelineUrls[url]}
+											<div class=" absolute top-2.5 right-2.5">
+												<Tooltip content="Pipelines">
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 24 24"
+														fill="currentColor"
+														class="size-4"
+													>
+														<path
+															d="M11.644 1.59a.75.75 0 0 1 .712 0l9.75 5.25a.75.75 0 0 1 0 1.32l-9.75 5.25a.75.75 0 0 1-.712 0l-9.75-5.25a.75.75 0 0 1 0-1.32l9.75-5.25Z"
+														/>
+														<path
+															d="m3.265 10.602 7.668 4.129a2.25 2.25 0 0 0 2.134 0l7.668-4.13 1.37.739a.75.75 0 0 1 0 1.32l-9.75 5.25a.75.75 0 0 1-.71 0l-9.75-5.25a.75.75 0 0 1 0-1.32l1.37-.738Z"
+														/>
+														<path
+															d="m10.933 19.231-7.668-4.13-1.37.739a.75.75 0 0 0 0 1.32l9.75 5.25c.221.12.489.12.71 0l9.75-5.25a.75.75 0 0 0 0-1.32l-1.37-.738-7.668 4.13a2.25 2.25 0 0 1-2.134-.001Z"
+														/>
+													</svg>
+												</Tooltip>
+											</div>
+										{/if}
 									</div>
 
 									<div class="flex-1">

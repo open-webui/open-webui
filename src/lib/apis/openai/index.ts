@@ -206,14 +206,17 @@ export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/models${urlIdx ? `/${urlIdx}` : ''}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+	const res = await fetch(
+		`${OPENAI_API_BASE_URL}/models${typeof urlIdx === 'number' ? `/${urlIdx}` : ''}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
 		}
-	})
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
