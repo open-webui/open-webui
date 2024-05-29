@@ -135,10 +135,10 @@ export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 	return res.OLLAMA_BASE_URLS;
 };
 
-export const getOllamaVersion = async (token: string = '') => {
+export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/version`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/version${urlIdx ? `/${urlIdx}` : ''}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

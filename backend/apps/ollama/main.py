@@ -219,6 +219,8 @@ async def get_ollama_tags(
         return models
     else:
         url = app.state.config.OLLAMA_BASE_URLS[url_idx]
+
+        r = None
         try:
             r = requests.request(method="GET", url=f"{url}/api/tags")
             r.raise_for_status()
@@ -270,6 +272,8 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
             )
     else:
         url = app.state.config.OLLAMA_BASE_URLS[url_idx]
+
+        r = None
         try:
             r = requests.request(method="GET", url=f"{url}/api/version")
             r.raise_for_status()

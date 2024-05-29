@@ -203,10 +203,10 @@ export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 	return res.OPENAI_API_KEYS;
 };
 
-export const getOpenAIModels = async (token: string = '') => {
+export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/models`, {
+	const res = await fetch(`${OPENAI_API_BASE_URL}/models${urlIdx ? `/${urlIdx}` : ''}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -227,20 +227,7 @@ export const getOpenAIModels = async (token: string = '') => {
 		throw error;
 	}
 
-	const models = Array.isArray(res) ? res : res?.data ?? null;
-
-	return models
-		? models
-				.map((model) => ({
-					id: model.id,
-					name: model.name ?? model.id,
-					external: true,
-					custom_info: model.custom_info
-				}))
-				.sort((a, b) => {
-					return a.name.localeCompare(b.name);
-				})
-		: models;
+	return res;
 };
 
 export const getOpenAIModelsDirect = async (

@@ -407,9 +407,6 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     target_url = f"{url}/{path}"
 
-    if key == "":
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
-
     headers = {}
     headers["Authorization"] = f"Bearer {key}"
     headers["Content-Type"] = "application/json"
