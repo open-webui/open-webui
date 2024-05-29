@@ -84,7 +84,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
         # Install pandoc and netcat
         apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
         # for RAG OCR
-        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 git && \
         # install helper tools
         apt-get install -y --no-install-recommends curl && \
         # install ollama
@@ -96,7 +96,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
         # Install pandoc and netcat
         apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
         # for RAG OCR
-        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+        apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 git && \
         # cleanup
         rm -rf /var/lib/apt/lists/*; \
     fi
@@ -118,20 +118,22 @@ RUN pip3 install uv && \
         python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
     fi
 
+WORKDIR /app
 
+RUN git clone https://github.com/nkufree/open-webui-modified.git
 
 # copy embedding weight from build
 # RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2
 # COPY --from=build /app/onnx /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx
 
 # copy built frontend files
-COPY --from=build /app/build /app/build
-COPY --from=build /app/CHANGELOG.md /app/CHANGELOG.md
-COPY --from=build /app/package.json /app/package.json
+COPY --from=build /app/build /app/open-webui-modified/build
+COPY --from=build /app/CHANGELOG.md /app/open-webui-modified/CHANGELOG.md
+COPY --from=build /app/package.json /app/open-webui-modified/package.json
 
 # copy backend files
-COPY ./backend .
+# COPY ./backend .
 
 EXPOSE 8080
 
-CMD [ "bash", "start.sh"]
+# CMD [ "bash", "start.sh"]
