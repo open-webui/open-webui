@@ -32,6 +32,10 @@
 		const pipeline = pipelines[selectedPipelineIdx];
 
 		if (pipeline && (pipeline?.pipeline?.valves ?? false)) {
+			if (valves?.pipelines ?? false) {
+				valves.pipelines = valves.pipelines.split(',').map((v) => v.trim());
+			}
+
 			const res = await updatePipelineValves(localStorage.token, pipeline.id, valves).catch(
 				(error) => {
 					toast.error(error);
@@ -52,6 +56,10 @@
 	const getValves = async (idx) => {
 		valves_spec = await getPipelineValvesSpec(localStorage.token, pipelines[idx].id);
 		valves = await getPipelineValves(localStorage.token, pipelines[idx].id);
+
+		if (valves?.pipelines ?? false) {
+			valves.pipelines = valves.pipelines.join(',');
+		}
 	};
 
 	const setPipelines = async () => {

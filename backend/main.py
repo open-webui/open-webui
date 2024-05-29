@@ -250,8 +250,8 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                 and (
                     model["pipeline"]["pipelines"] == ["*"]
                     or any(
-                        model_id == target_model["id"]
-                        for target_model in model["pipeline"]["pipelines"]
+                        model_id == target_model_id
+                        for target_model_id in model["pipeline"]["pipelines"]
                     )
                 )
             ]
