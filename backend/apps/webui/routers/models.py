@@ -82,7 +82,6 @@ async def update_model_by_id(
     else:
         if form_data.id in request.app.state.MODELS:
             model = Models.insert_new_model(form_data, user.id)
-            print(model)
             if model:
                 return model
             else:
