@@ -484,14 +484,13 @@ async def get_pipeline_valves(pipeline_id: str, user=Depends(get_admin_user)):
             url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
             key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
 
-            if key != "":
-                headers = {"Authorization": f"Bearer {key}"}
-                r = requests.get(f"{url}/{pipeline['id']}/valves", headers=headers)
+            headers = {"Authorization": f"Bearer {key}"}
+            r = requests.get(f"{url}/{pipeline['id']}/valves", headers=headers)
 
-                r.raise_for_status()
-                data = r.json()
+            r.raise_for_status()
+            data = r.json()
 
-                return {**data}
+            return {**data}
         except Exception as e:
             # Handle connection error here
             print(f"Connection error: {e}")
@@ -533,14 +532,13 @@ async def get_pipeline_valves_spec(pipeline_id: str, user=Depends(get_admin_user
             url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
             key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
 
-            if key != "":
-                headers = {"Authorization": f"Bearer {key}"}
-                r = requests.get(f"{url}/{pipeline['id']}/valves/spec", headers=headers)
+            headers = {"Authorization": f"Bearer {key}"}
+            r = requests.get(f"{url}/{pipeline['id']}/valves/spec", headers=headers)
 
-                r.raise_for_status()
-                data = r.json()
+            r.raise_for_status()
+            data = r.json()
 
-                return {**data}
+            return {**data}
         except Exception as e:
             # Handle connection error here
             print(f"Connection error: {e}")
@@ -583,18 +581,17 @@ async def update_pipeline_valves(
             url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
             key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
 
-            if key != "":
-                headers = {"Authorization": f"Bearer {key}"}
-                r = requests.post(
-                    f"{url}/{pipeline['id']}/valves/update",
-                    headers=headers,
-                    json={**form_data},
-                )
+            headers = {"Authorization": f"Bearer {key}"}
+            r = requests.post(
+                f"{url}/{pipeline['id']}/valves/update",
+                headers=headers,
+                json={**form_data},
+            )
 
-                r.raise_for_status()
-                data = r.json()
+            r.raise_for_status()
+            data = r.json()
 
-                return {**data}
+            return {**data}
         except Exception as e:
             # Handle connection error here
             print(f"Connection error: {e}")
