@@ -78,6 +78,78 @@ export const getPipelinesList = async (token: string = '') => {
 	return pipelines;
 };
 
+export const downloadPipeline = async (token: string, url: string, urlIdx: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines/add`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			url: url,
+			urlIdx: urlIdx
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const deletePipeline = async (token: string, id: string, urlIdx: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines/delete`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			id: id,
+			urlIdx: urlIdx
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getPipelines = async (token: string, urlIdx?: string) => {
 	let error = null;
 

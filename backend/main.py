@@ -480,6 +480,92 @@ async def get_pipelines_list(user=Depends(get_admin_user)):
     }
 
 
+class AddPipelineForm(BaseModel):
+    url: str
+    urlIdx: int
+
+
+@app.post("/api/pipelines/add")
+async def add_pipeline(form_data: AddPipelineForm, user=Depends(get_admin_user)):
+
+    r = None
+    try:
+        urlIdx = form_data.urlIdx
+
+        url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
+        key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
+
+        headers = {"Authorization": f"Bearer {key}"}
+        r = requests.post(
+            f"{url}/pipelines/add", headers=headers, json={"url": form_data.url}
+        )
+
+        r.raise_for_status()
+        data = r.json()
+
+        return {**data}
+    except Exception as e:
+        # Handle connection error here
+        print(f"Connection error: {e}")
+
+        detail = "Pipeline not found"
+        if r is not None:
+            try:
+                res = r.json()
+                if "detail" in res:
+                    detail = res["detail"]
+            except:
+                pass
+
+        raise HTTPException(
+            status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
+            detail=detail,
+        )
+
+
+class DeletePipelineForm(BaseModel):
+    id: str
+    urlIdx: int
+
+
+@app.delete("/api/pipelines/delete")
+async def delete_pipeline(form_data: DeletePipelineForm, user=Depends(get_admin_user)):
+
+    r = None
+    try:
+        urlIdx = form_data.urlIdx
+
+        url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
+        key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
+
+        headers = {"Authorization": f"Bearer {key}"}
+        r = requests.delete(
+            f"{url}/pipelines/delete", headers=headers, json={"id": form_data.id}
+        )
+
+        r.raise_for_status()
+        data = r.json()
+
+        return {**data}
+    except Exception as e:
+        # Handle connection error here
+        print(f"Connection error: {e}")
+
+        detail = "Pipeline not found"
+        if r is not None:
+            try:
+                res = r.json()
+                if "detail" in res:
+                    detail = res["detail"]
+            except:
+                pass
+
+        raise HTTPException(
+            status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
+            detail=detail,
+        )
+
+
 @app.get("/api/pipelines")
 async def get_pipelines(urlIdx: Optional[int] = None, user=Depends(get_admin_user)):
     models = await get_all_models()
