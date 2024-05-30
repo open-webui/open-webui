@@ -120,7 +120,7 @@
 			class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 			on:click={() => {
 				selectedIndexId.set(embeddingIndex.id)
-				goto(`/workspace/embedding/detail?id=${embeddingIndex.id}`);
+				goto(`/embedding/detail?id=${embeddingIndex.id}`);
 			}}
 		>
 <!--			<div class="my-auto flex items-center">-->

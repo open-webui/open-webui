@@ -25,7 +25,7 @@
 		documents,
 		tags,
 		showChangelog,
-		config
+		config, showWelcome
 	} from '$lib/stores';
 	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -36,6 +36,7 @@
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import WelcomeModal from "$lib/components/WelcomeModal.svelte";
 
 	const i18n = getContext('i18n');
 
@@ -166,8 +167,12 @@
 				}
 			});
 
-			if ($user.role === 'admin') {
-				showChangelog.set(localStorage.version !== $config.version);
+			// if ($user.role === 'admin') {
+			// 	showChangelog.set(localStorage.version !== $config.version);
+			// }
+
+			if (!localStorage.getItem("webcome")) {
+				showWelcome.set(true)
 			}
 
 			await tick();
@@ -195,6 +200,7 @@
 <ShortcutsModal bind:show={showShortcuts} />
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
+<WelcomeModal bind:show={$showWelcome} />
 
 <div class="app relative">
 	<div

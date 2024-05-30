@@ -7,6 +7,7 @@
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import { showSettings } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
+	import Help from "$lib/components/icons/Help.svelte";
 
 	const i18n = getContext('i18n');
 
@@ -106,6 +107,15 @@
 					<div class=" self-center font-medium">{$i18n.t('Admin Panel')}</div>
 				</button>
 			{/if}
+
+			<div
+					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+			>
+				<div class=" self-center mr-3">
+					<Help className="w-5 h-5" />
+				</div>
+				<div class=" self-center font-medium"><a href="mailto:support@lanhgpt.ai">support@lanhgpt.ai</a></div>
+			</div>
 
 			<hr class=" dark:border-gray-800 my-2 p-0" />
 

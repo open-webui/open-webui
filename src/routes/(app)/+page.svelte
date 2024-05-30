@@ -16,7 +16,7 @@
 		config,
 		WEBUI_NAME,
 		tags as _tags,
-		showSidebar, chatType, promptOptions, selectedChatEmbeddingIndex
+		showSidebar, chatType, promptOptions, selectedChatEmbeddingIndex, isNewChat
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream } from '$lib/utils';
 
@@ -43,7 +43,7 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import {
-		createChatCompletionApiMessages, getAbstractPrompt,
+		createChatCompletionApiMessages, getAbstractPrompt, getDefaultParams,
 		getSystemPrompt,
 		getUserPrompt
 	} from "$lib/utils/prompt_utils";
@@ -87,6 +87,7 @@
 
 	let params = new URL(document.location.toString()).searchParams;
 	chatType.set(params.get('type') || 'chat')
+	let currentChatType = $chatType
 	let chat = null;
 	let tags = [];
 
@@ -100,7 +101,7 @@
 	};
 
 
-	$: if (history.currentId !== null) {
+	$: if (history.currentId !== null && !$isNewChat) {
 		let _messages = [];
 
 		let currentMessage = history.messages[history.currentId];
@@ -111,15 +112,24 @@
 		}
 		messages = _messages;
 	} else {
+		isNewChat.set(false)
+		history = {
+			messages: {},
+			currentId: null
+		}
 		messages = [];
 	}
 
 	$: sessionConfig = {
 		system: getSystemPrompt($chatType),
-		model_params: $models.find((model) => model.id === selectedModels[0])?.default_params
+		model_params: {...$models.find((model) => model.id === selectedModels[0])?.default_params, ...getDefaultParams($chatType)}
 	}
 
 	$: (() => {
+		if (currentChatType === $chatType && !!selectedModels?.[0]) {
+			return
+		}
+		currentChatType = $chatType
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
 		} else if ($settings?.models) {
@@ -270,19 +280,52 @@
 
 			if ($chatType === 'chat_embedding') {
 				const chunks = await queryRankedChunk($selectedChatEmbeddingIndex, userPrompt)
-				chunks.sort((chunk1, chunk2) => chunk1.score > chunk2.score ? 1 : -1)
-				await Promise.all(chunks.map((chunk) => {
-					const citations = [{
-						source: {
-							type: 'doc',
-							name: chunk.metadata.file_name,
-						},
-						document: [chunk.text],
-						score: chunk.score
-					}]
-					const prompt = getAbstractPrompt(chunk.text, userPrompt)
-					return sendPrompt(prompt, userMessageId, null, citations);
-				}))
+				if (!chunks || chunks.length === 0) {
+					let responseMessageId = uuidv4();
+					let responseMessage = {
+						parentId: userMessageId,
+						id: responseMessageId,
+						childrenIds: [],
+						role: 'assistant',
+						content: 'Không có dữ liệu nào liên quan câu hỏi này.',
+						model: selectedModels[0],
+						userContext: null,
+						done: true,
+						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+					};
+
+					// Add message to history and Set currentId to messageId
+					history.messages[responseMessageId] = responseMessage;
+					history.currentId = responseMessageId;
+
+					// Append messageId to childrenIds of parent message
+					if (userMessageId !== null) {
+						history.messages[userMessageId].childrenIds = [
+							...history.messages[userMessageId].childrenIds,
+							responseMessageId
+						];
+					}
+					if ($settings.saveChatHistory ?? true) {
+						chat = await updateChatById(localStorage.token, $chatId, {
+							messages: messages,
+							history: history
+						});
+					}
+				} else {
+					chunks.sort((chunk1, chunk2) => chunk1.score > chunk2.score ? 1 : -1)
+					await Promise.all(chunks.map((chunk) => {
+						const citations = [{
+							source: {
+								type: 'doc',
+								name: chunk.metadata.file_name,
+							},
+							document: [chunk.text],
+							score: chunk.score
+						}]
+						const prompt = getAbstractPrompt(chunk.text, userPrompt)
+						return sendPrompt(prompt, userMessageId, null, citations);
+					}))
+				}
 			} else {
 				// Send prompt
 				await sendPrompt(userPrompt, userMessageId);
@@ -654,18 +697,18 @@
 					model: model.id,
 					stream: true,
 					messages: apiMessages,
-					seed: $settings?.options?.seed ?? undefined,
+					seed: sessionConfig?.model_params?.seed ?? undefined,
 					stop:
 						$settings?.options?.stop ?? undefined
 							? $settings.options.stop.map((str) =>
 									decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
 							  )
 							: undefined,
-					temperature: $settings?.options?.temperature ?? undefined,
-					top_p: $settings?.options?.top_p ?? undefined,
-					num_ctx: $settings?.options?.num_ctx ?? undefined,
-					frequency_penalty: $settings?.options?.repeat_penalty ?? undefined,
-					max_tokens: $settings?.options?.num_predict ?? undefined,
+					temperature: sessionConfig?.model_params?.temperature ?? undefined,
+					top_p: sessionConfig?.model_params?.top_p ?? undefined,
+					num_ctx: sessionConfig?.model_params?.num_ctx ?? undefined,
+					frequency_penalty: sessionConfig?.model_params?.repetition_penalty ?? undefined,
+					max_tokens: sessionConfig?.model_params?.num_predict ?? undefined,
 					docs: docs.length > 0 ? docs : undefined,
 					citations: docs.length > 0
 				},

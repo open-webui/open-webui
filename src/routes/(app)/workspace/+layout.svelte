@@ -39,12 +39,12 @@
 			class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-xl bg-transparent/10 p-1"
 		>
 			{#if $user?.role === 'admin'}
-				<a
-					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/modelfiles')
-						? 'bg-gray-50 dark:bg-gray-850'
-						: ''} transition"
-					href="/workspace/modelfiles">{$i18n.t('Modelfiles')}</a
-				>
+<!--				<a-->
+<!--					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/modelfiles')-->
+<!--						? 'bg-gray-50 dark:bg-gray-850'-->
+<!--						: ''} transition"-->
+<!--					href="/workspace/modelfiles">{$i18n.t('Modelfiles')}</a-->
+<!--				>-->
 
 				<a
 					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/prompts')
@@ -69,13 +69,6 @@
 					href="/workspace/playground">{$i18n.t('Playground')}</a
 				>
 			{/if}
-
-			<a
-					class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/embedding')
-					? 'bg-gray-50 dark:bg-gray-850'
-					: ''} transition"
-					href="/workspace/embedding">{$i18n.t('Embedding')}</a
-			>
 		</div>
 	</div>
 

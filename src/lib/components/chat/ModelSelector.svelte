@@ -17,6 +17,7 @@
 	import Selector from './ModelSelector/Selector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import {getEmbeddingIndex} from "$lib/apis/embedding";
+	import Logo from "$lib/components/icons/Logo.svelte";
 
 	const i18n = getContext('i18n');
 
@@ -44,19 +45,21 @@
 	const getDesLanguageOption = (type: string) => {
 		if (type === 'translate' || type === 'translate_coding') {
 			return [
-				{value: 'English', label: 'English'},
-				{value: 'Chinese', label: 'Chinese'},
 				{value: 'Việt', label: 'Tiếng Việt'},
+				{value: 'Anh', label: 'Anh'},
+				{value: 'Hoa', label: 'Hoa'},
+				{value: 'French', label: 'French'},
 				{value: 'Russian', label: 'Russian'},
-				{value: 'Japan', label: 'Japan'},
 				{value: 'German', label: 'German'}
 			]
 		} else if (type === 'translate_ancient') {
 			return [
 				{value: 'Việt', label: 'Tiếng Việt'},
 				{value: 'Hán Việt', label: 'Hán Việt'},
-				{value: 'Trung Hoa cổ', label: 'Trung Hoa cổ'},
-				{value: 'Hoa', label: 'Hoa'}
+				{value: 'Trung Hoa Cổ Văn', label: 'Trung Hoa Cổ Văn'},
+				{value: 'Anh', label: 'Anh'},
+				{value: 'German', label: 'German'},
+				{value: 'French', label: 'French'}
 			]
 		}
 		return []
@@ -83,7 +86,7 @@
 	$: (async () => embeddingIndexs = await loadEmbeddingIndex($chatType))()
 </script>
 
-<div class="flex flex-col w-full items-center md:items-start">
+<div class="flex flex-col w-full items-start">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">

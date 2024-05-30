@@ -1,7 +1,7 @@
 import { browser, dev } from '$app/environment';
 // import { version } from '../../package.json';
 
-export const APP_NAME = 'Open WebUI';
+export const APP_NAME = 'LànhGPT - An Nhiên An Lành';
 export const WEBUI_BASE_URL = browser ? (dev ? `http://${location.hostname}:8080` : ``) : ``;
 export const HATTO_LLM_BASE_URL = browser ? (dev ? `http://${location.hostname}:8081` : ``) : ``;
 

@@ -43,25 +43,6 @@
 						}}
 					>
 						<Logo />
-						<!--{#if model in modelfiles}-->
-						<!--	<img-->
-						<!--		crossorigin="anonymous"-->
-						<!--		src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}-->
-						<!--		alt="modelfile"-->
-						<!--		class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"-->
-						<!--		draggable="false"-->
-						<!--	/>-->
-						<!--{:else}-->
-						<!--	<img-->
-						<!--		crossorigin="anonymous"-->
-						<!--		src={$i18n.language === 'dg-DG'-->
-						<!--			? `/doge.png`-->
-						<!--			: `${WEBUI_BASE_URL}/static/favicon.png`}-->
-						<!--		class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"-->
-						<!--		alt="logo"-->
-						<!--		draggable="false"-->
-						<!--	/>-->
-						<!--{/if}-->
 					</button>
 				{/each}
 			</div>
@@ -100,8 +81,8 @@
 			</div>
 		</div>
 
-		<div class=" w-full" in:fade={{ duration: 200, delay: 300 }}>
-			<Suggestions {suggestionPrompts} {submitPrompt} />
-		</div>
+<!--		<div class=" w-full" in:fade={{ duration: 200, delay: 300 }}>-->
+<!--			<Suggestions {suggestionPrompts} {submitPrompt} />-->
+<!--		</div>-->
 	</div>
 {/key}

@@ -1,4 +1,5 @@
 import {queryRankedChunk} from "$lib/apis/embedding";
+import {chatType} from "$lib/stores";
 
 export const getSystemPrompt = (chatType: string | null): string => {
   switch (chatType) {
@@ -115,20 +116,21 @@ Dự đoán phán quyết của Toà án cùng các điều khoản Luật áp d
 ** Các điều khoản Luật áp dụng: "điều...của Luật...năm... (tiêu đề của điều Luật này...)"
 `
     case 'translate':
-      return `Dịch đoạn văn sang tiếng ${options.translate_lang || 'Việt'}. Không tóm tắt, không lược dịch và không được bỏ sót từ nào.
+      return `Dịch đoạn văn sang tiếng ${options.translate_lang || 'Việt'}. Không tóm tắt, không lược dịch và không được bỏ sót từ nào.\n
 ${content}`
     case 'translate_coding':
-      return `Bạn là AI dịch các bài viết lập trình đa ngôn ngữ và công thức toán lý hoá chuyên nghiệp, hãy dịch đoạn văn dưới đây sang tiếng ${options.translate_lang || 'Việt'}, bao gồm cả các câu ghi chú hoặc câu trong cú pháp in trong đoạn lập trình nếu có. Bảo lưu đầy đủ cú pháp lập trình, mã lệnh SQL và các cú pháp Latex hoặc ký hiệu toán nếu có nếu có. Không tóm tắt, không lược dịch và không được bỏ sót từ nào.
+      return `Bạn là AI dịch các bài viết lập trình đa ngôn ngữ và công thức toán lý hoá chuyên nghiệp, hãy dịch đoạn văn dưới đây sang tiếng ${options.translate_lang || 'Việt'}, bao gồm cả các câu ghi chú hoặc câu trong cú pháp in trong đoạn lập trình nếu có. Bảo lưu đầy đủ cú pháp lập trình, mã lệnh SQL và các cú pháp Latex hoặc ký hiệu toán nếu có nếu có. Không tóm tắt, không lược dịch và không được bỏ sót từ nào.\n
 ${content}`
     case 'translate_ancient':
-      return `Bạn là 1 chuyên gia dịch kinh Phật cổ. Không tóm tắt, không lược dịch mà chỉ dịch chính xác không bỏ sót bất kỳ chữ nào. Hãy dịch đoạn văn sang tiếng ${options.translate_lang || 'Việt'} theo phong cách Kinh Phật cổ.
+      return `Bạn là 1 chuyên gia dịch kinh Phật cổ. Không tóm tắt, không lược dịch mà chỉ dịch chính xác không bỏ sót bất kỳ chữ nào. Hãy dịch đoạn văn sang tiếng ${options.translate_lang || 'Việt'} theo phong cách Kinh Phật cổ.\n
 ${content}`
   }
   return content
 }
 
 export const getAbstractPrompt = (content: string, question: string) => {
-  return `Hãy trả lời câu hỏi dưới đây theo bối cảnh được cung cấp.: Câu hỏi: ${question}\nBối cảnh: ${content}\n### Response: `
+  return `Hãy trả lời câu hỏi nếu bạn tìm thấy câu trả lời cho câu hỏi trong bối cảnh được cung cấp dưới đây. Nếu không tìm thấy câu trả lời, hãy phản hồi 'Đoạn văn này không có nội dung bạn muốn tìm. Hãy đặt một câu hỏi khác.'\n
+Câu hỏi: ${question}\nBối cảnh: ${content}\n### Response: `
 }
 
 export const createChatCompletionApiMessages = async (chatType: string, systemPrompt: string, userPrompt: string, embeddingIndexId: number, messages, promptOptions) => {
@@ -221,5 +223,77 @@ export const createChatCompletionApiMessages = async (chatType: string, systemPr
                 : message?.raContent ?? message.content
           })
       }))
+  }
+}
+
+export const getDefaultParams = (chatType: string) => {
+  switch (chatType) {
+    case 'chat':
+      return {
+        temperature: 0.8,
+        top_p: 0.95,
+        top_k: 20,
+        repetition_penalty: 1.1,
+      }
+    case 'chat_law':
+    case 'chat_buddhism':
+      return {
+        temperature: 0.0,
+        top_p: 0.95,
+        top_k: 10,
+        repetition_penalty: 1.1,
+      }
+    case 'chat_embedding':
+      return {
+        temperature: 0.0,
+        top_p: 0.95,
+        top_k: 20,
+        repetition_penalty: 1.1,
+      }
+    case 'translate':
+    case 'translate_coding':
+    case 'translate_ancient':
+      return {
+        temperature: 0.0,
+        top_p: 0.95,
+        top_k: 20,
+        repetition_penalty: 1.1,
+      }
+    case 'summary':
+    case 'summary_emphasis':
+    case 'faq':
+    case 'faq_simple_analysis':
+    case 'negative_conversation':
+    case 'positive_conversation':
+    case 'intelligent_conversation':
+    case 'faq_case_1':
+    case 'faq_case_2':
+    case 'faq_case_3':
+    case 'faq_create_example':
+    case 'faq_create_verdict_scenario':
+      return {
+        temperature: 0.0,
+        top_p: 0.95,
+        top_k: 20,
+        repetition_penalty: 1.1,
+      }
+    case 'long_summary':
+    case 'long_summary_emphasis':
+    case 'long_faq':
+    case 'long_faq_simple_analysis':
+    case 'long_negative_conversation':
+    case 'long_positive_conversation':
+    case 'long_intelligent_conversation':
+    case 'long_faq_case_1':
+    case 'long_faq_case_2':
+    case 'long_faq_case_3':
+    case 'long_faq_create_example':
+    case 'long_faq_create_verdict_scenario':
+      return {
+        temperature: 0.2,
+        top_p: 0.95,
+        top_k: 10,
+        repetition_penalty: 1.1,
+      }
   }
 }

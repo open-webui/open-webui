@@ -4,7 +4,7 @@
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { goto } from '$app/navigation';
-	import { mobile, showSidebar, chatType } from '$lib/stores';
+	import {mobile, showSidebar, chatType, isNewChat} from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -16,12 +16,16 @@
 	const handleCreateNewChat = async (type) => {
 		show = false;
 		selectedChatId = null;
+		await isNewChat.set(true)
 		await chatType.set(type)
 		await goto(`/?type=${type}`);
 		const newChatButton = document.getElementById('new-chat-button');
 		setTimeout(() => {
 			newChatButton?.click();
-		}, 0);
+		}, 100);
+		if (window.innerWidth < 768) {
+			showSidebar.set(false)
+		}
 	}
 
 </script>

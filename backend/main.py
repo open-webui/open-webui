@@ -264,9 +264,9 @@ webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
 async def get_app_config():
     # Checking and Handling the Absence of 'ui' in CONFIG_DATA
 
-    default_locale = "en-US"
+    default_locale = "vi-VN"
     if "ui" in CONFIG_DATA:
-        default_locale = CONFIG_DATA["ui"].get("default_locale", "en-US")
+        default_locale = CONFIG_DATA["ui"].get("default_locale", "vi-VN")
 
     # The Rest of the Function Now Uses the Variables Defined Above
     return {

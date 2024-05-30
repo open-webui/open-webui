@@ -44,7 +44,12 @@
 	} from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
-	import {createChatCompletionApiMessages, getAbstractPrompt, getSystemPrompt} from "$lib/utils/prompt_utils";
+	import {
+		createChatCompletionApiMessages,
+		getAbstractPrompt,
+		getDefaultParams,
+		getSystemPrompt
+	} from "$lib/utils/prompt_utils";
 	import {getUserPrompt} from "$lib/utils/prompt_utils.js";
 	import ChatSessionSettingModal from "$lib/components/chat/ChatSessionSettingModal.svelte";
 	import {queryRankedChunk} from "$lib/apis/embedding";
@@ -131,7 +136,7 @@
 
 	$: sessionConfig = {
 		system: getSystemPrompt($chatType),
-		model_params: chat?.chat.options || $models.find((model) => model.id === selectedModels[0])?.default_params
+		model_params: chat?.chat.options || {...$models.find((model) => model.id === selectedModels[0])?.default_params, ...getDefaultParams($chatType)}
 	}
 
 	//////////////////////////
@@ -271,6 +276,40 @@
 
 			if ($chatType === 'chat_embedding') {
 				const chunks = await queryRankedChunk($selectedChatEmbeddingIndex, userPrompt)
+				if (!chunks || chunks.length === 0) {
+					let responseMessageId = uuidv4();
+					let responseMessage = {
+						parentId: userMessageId,
+						id: responseMessageId,
+						childrenIds: [],
+						role: 'assistant',
+						content: 'Không có dữ liệu nào liên quan câu hỏi này.',
+						model: selectedModels[0],
+						userContext: null,
+						done: true,
+						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+					};
+
+					// Add message to history and Set currentId to messageId
+					history.messages[responseMessageId] = responseMessage;
+					history.currentId = responseMessageId;
+
+					// Append messageId to childrenIds of parent message
+					if (userMessageId !== null) {
+						history.messages[userMessageId].childrenIds = [
+							...history.messages[userMessageId].childrenIds,
+							responseMessageId
+						];
+					}
+					if ($settings.saveChatHistory ?? true) {
+						chat = await updateChatById(localStorage.token, $chatId, {
+							messages: messages,
+							history: history
+						});
+					}
+					return
+				}
+
 				chunks.sort((chunk1, chunk2) => chunk1.score > chunk2.score ? 1 : -1)
 				await Promise.all(chunks.map((chunk) => {
 					const citations = [{
@@ -690,7 +729,7 @@
 							controller.abort('User: Stop Response');
 						}
 
-						if ($chatType === 'chat_embedding') {
+						if ($chatType === 'chat_embedding' && responseMessage.citations) {
 							const highlightedContent = await highlightText(responseMessage.citations[0].document[0], responseMessage.content)
 							responseMessage.citations[0].document[0] = highlightedContent
 						}

@@ -301,31 +301,31 @@
 	</div>
 </div>
 
-<div class=" my-16">
-	<div class=" text-lg font-semibold mb-3">{$i18n.t('Made by OpenWebUI Community')}</div>
+<!--<div class=" my-16">-->
+<!--	<div class=" text-lg font-semibold mb-3">{$i18n.t('Made by OpenWebUI Community')}</div>-->
 
-	<a
-		class=" flex space-x-4 cursor-pointer w-full mb-3 px-3 py-2"
-		href="https://openwebui.com/?type=prompts"
-		target="_blank"
-	>
-		<div class=" self-center w-10">
-			<div
-				class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
-			>
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6">
-					<path
-						fill-rule="evenodd"
-						d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
-		</div>
+<!--	<a-->
+<!--		class=" flex space-x-4 cursor-pointer w-full mb-3 px-3 py-2"-->
+<!--		href="https://openwebui.com/?type=prompts"-->
+<!--		target="_blank"-->
+<!--	>-->
+<!--		<div class=" self-center w-10">-->
+<!--			<div-->
+<!--				class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"-->
+<!--			>-->
+<!--				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6">-->
+<!--					<path-->
+<!--						fill-rule="evenodd"-->
+<!--						d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z"-->
+<!--						clip-rule="evenodd"-->
+<!--					/>-->
+<!--				</svg>-->
+<!--			</div>-->
+<!--		</div>-->
 
-		<div class=" self-center">
-			<div class=" font-bold">{$i18n.t('Discover a prompt')}</div>
-			<div class=" text-sm">{$i18n.t('Discover, download, and explore custom prompts')}</div>
-		</div>
-	</a>
-</div>
+<!--		<div class=" self-center">-->
+<!--			<div class=" font-bold">{$i18n.t('Discover a prompt')}</div>-->
+<!--			<div class=" text-sm">{$i18n.t('Discover, download, and explore custom prompts')}</div>-->
+<!--		</div>-->
+<!--	</a>-->
+<!--</div>-->

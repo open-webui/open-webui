@@ -48,7 +48,7 @@ export const initI18n = (defaultLocale: string | undefined) => {
 
 	i18next
 		.use(resourcesToBackend(loadResource))
-		.use(LanguageDetector)
+		// .use(LanguageDetector)
 		.init({
 			debug: false,
 			detection: {

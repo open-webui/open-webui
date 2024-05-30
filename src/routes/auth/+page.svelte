@@ -7,6 +7,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
+	import Logo from "$lib/components/icons/Logo.svelte";
 
 	const i18n = getContext('i18n');
 
@@ -75,13 +76,11 @@
 {#if loaded}
 	<div class="fixed m-10 z-50">
 		<div class="flex space-x-2">
-			<div class=" self-center">
-				<img
-					crossorigin="anonymous"
-					src="{WEBUI_BASE_URL}/static/favicon.png"
-					class=" w-8 rounded-full"
-					alt="logo"
-				/>
+			<div class="p-2 self-center mx-1.5">
+				<Logo />
+			</div>
+			<div class=" self-center font-medium text-sm text-gray-850 dark:text-white">
+				{$i18n.t('LànhGPT')}
 			</div>
 		</div>
 	</div>
@@ -109,8 +108,6 @@
 					>
 						<div>
 							{$i18n.t('Signing in')}
-							{$i18n.t('to')}
-							{$WEBUI_NAME}
 						</div>
 
 						<div>
@@ -119,7 +116,7 @@
 					</div>
 				</div>
 			{:else}
-				<div class="  my-auto pb-10 w-full dark:text-gray-100">
+				<div class="flex-1 flex flex-col justify-center my-auto pb-10 w-full dark:text-gray-100">
 					<form
 						class=" flex flex-col justify-center"
 						on:submit|preventDefault={() => {
@@ -129,8 +126,6 @@
 						<div class="mb-1">
 							<div class=" text-2xl font-bold">
 								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Sign up')}
-								{$i18n.t('to')}
-								{$WEBUI_NAME}
 							</div>
 
 							{#if mode === 'signup'}
@@ -215,6 +210,9 @@
 							</div>
 						</div>
 					</form>
+				</div>
+				<div class="text-white dark:text-gray-100 text-sm py-4">
+					LanhGPT V.08 - Sản phẩm của Công ty EraX (c)
 				</div>
 			{/if}
 		</div>

@@ -44,10 +44,13 @@ export const showFilesListSidebar = writable(false);
 export const showSettings = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
+export const showWelcome = writable(false);
 
 // Embedding
 export const selectedIndexId = writable(0)
 export const selectedChatEmbeddingIndex = writable(0)
+
+export const isNewChat = writable(false)
 
 type Model = OpenAIModel | OllamaModel;
 

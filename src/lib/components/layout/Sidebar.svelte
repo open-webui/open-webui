@@ -226,7 +226,7 @@
 	<div
 		class="py-2.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] z-50 {$showSidebar
 			? ''
-			: 'invisible'}"
+			: 'hidden'}"
 	>
 		<div class="px-2.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<div
@@ -319,7 +319,7 @@
 		<div class="px-2.5 flex justify-center text-gray-800 dark:text-gray-200">
 			<a
 					class="flex-grow flex space-x-3 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/workspace/embedding"
+					href="/embedding"
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
