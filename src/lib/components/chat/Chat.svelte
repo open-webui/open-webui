@@ -626,7 +626,11 @@
 						if (res !== null) {
 							// Update chat history with the new messages
 							for (const message of res.messages) {
-								history.messages[message.id] = { ...history.messages[message.id], ...message };
+								history.messages[message.id] = {
+									...history.messages[message.id],
+									originalContent: history.messages[message.id].content,
+									...message
+								};
 							}
 						}
 					}
