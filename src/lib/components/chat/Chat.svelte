@@ -236,6 +236,15 @@
 		}
 	};
 
+	const createMessagesList = (responseMessageId) => {
+		const message = history.messages[responseMessageId];
+		if (message.parentId) {
+			return [...createMessagesList(message.parentId), message];
+		} else {
+			return [message];
+		}
+	};
+
 	//////////////////////////
 	// Ollama functions
 	//////////////////////////
@@ -599,6 +608,7 @@
 						controller.abort('User: Stop Response');
 						await cancelOllamaRequest(localStorage.token, currentRequestId);
 					} else {
+						const messages = createMessagesList(responseMessageId);
 						const res = await chatCompleted(localStorage.token, {
 							model: model,
 							messages: messages.map((m) => ({
@@ -880,6 +890,8 @@
 						if (stopResponseFlag) {
 							controller.abort('User: Stop Response');
 						} else {
+							const messages = createMessagesList(responseMessageId);
+
 							const res = await chatCompleted(localStorage.token, {
 								model: model,
 								messages: messages.map((m) => ({
