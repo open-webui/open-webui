@@ -48,6 +48,7 @@
 	import { runWebSearch } from '$lib/apis/rag';
 	import Banner from '../common/Banner.svelte';
 	import { getUserSettings } from '$lib/apis/users';
+	import { chatCompleted } from '$lib/apis';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -576,7 +577,8 @@
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
 			docs: docs.length > 0 ? docs : undefined,
-			citations: docs.length > 0
+			citations: docs.length > 0,
+			chat_id: $chatId
 		});
 
 		if (res && res.ok) {
@@ -596,6 +598,27 @@
 					if (stopResponseFlag) {
 						controller.abort('User: Stop Response');
 						await cancelOllamaRequest(localStorage.token, currentRequestId);
+					} else {
+						const res = await chatCompleted(localStorage.token, {
+							model: model,
+							messages: messages.map((m) => ({
+								id: m.id,
+								role: m.role,
+								content: m.content,
+								timestamp: m.timestamp
+							})),
+							chat_id: $chatId
+						}).catch((error) => {
+							console.error(error);
+							return null;
+						});
+
+						if (res !== null) {
+							// Update chat history with the new messages
+							for (const message of res.messages) {
+								history.messages[message.id] = { ...history.messages[message.id], ...message };
+							}
+						}
 					}
 
 					currentRequestId = null;
@@ -829,7 +852,8 @@
 					frequency_penalty: $settings?.params?.frequency_penalty ?? undefined,
 					max_tokens: $settings?.params?.max_tokens ?? undefined,
 					docs: docs.length > 0 ? docs : undefined,
-					citations: docs.length > 0
+					citations: docs.length > 0,
+					chat_id: $chatId
 				},
 				`${OPENAI_API_BASE_URL}`
 			);
@@ -855,6 +879,27 @@
 
 						if (stopResponseFlag) {
 							controller.abort('User: Stop Response');
+						} else {
+							const res = await chatCompleted(localStorage.token, {
+								model: model,
+								messages: messages.map((m) => ({
+									id: m.id,
+									role: m.role,
+									content: m.content,
+									timestamp: m.timestamp
+								})),
+								chat_id: $chatId
+							}).catch((error) => {
+								console.error(error);
+								return null;
+							});
+
+							if (res !== null) {
+								// Update chat history with the new messages
+								for (const message of res.messages) {
+									history.messages[message.id] = { ...history.messages[message.id], ...message };
+								}
+							}
 						}
 
 						break;
