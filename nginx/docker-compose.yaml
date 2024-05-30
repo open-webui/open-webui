@@ -1,0 +1,23 @@
+services:
+
+
+  nginx:
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nginx:${NGINX_DOCKER_TAG-latest}
+    ports:
+      - 443:443
+      - 80:80
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+
+
+volumes:
+  ollama: {}
+  open-webui: {}
+
+
