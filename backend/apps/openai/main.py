@@ -219,7 +219,7 @@ def merge_models_lists(model_lists):
     return merged_list
 
 
-async def get_all_models():
+async def get_all_models(raw: bool = False):
     log.info("get_all_models()")
 
     if (
@@ -235,6 +235,9 @@ async def get_all_models():
 
         responses = await asyncio.gather(*tasks)
         log.debug(f"get_all_models:responses() {responses}")
+
+        if raw:
+            return responses
 
         models = {
             "data": merge_models_lists(

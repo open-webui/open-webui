@@ -154,7 +154,7 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 	let error = null;
 
 	const searchParams = new URLSearchParams();
-	if (urlIdx) {
+	if (urlIdx !== undefined) {
 		searchParams.append('urlIdx', urlIdx);
 	}
 
@@ -188,7 +188,7 @@ export const getPipelineValves = async (token: string, pipeline_id: string, urlI
 	let error = null;
 
 	const searchParams = new URLSearchParams();
-	if (urlIdx) {
+	if (urlIdx !== undefined) {
 		searchParams.append('urlIdx', urlIdx);
 	}
 
@@ -224,7 +224,7 @@ export const getPipelineValvesSpec = async (token: string, pipeline_id: string, 
 	let error = null;
 
 	const searchParams = new URLSearchParams();
-	if (urlIdx) {
+	if (urlIdx !== undefined) {
 		searchParams.append('urlIdx', urlIdx);
 	}
 
@@ -265,7 +265,7 @@ export const updatePipelineValves = async (
 	let error = null;
 
 	const searchParams = new URLSearchParams();
-	if (urlIdx) {
+	if (urlIdx !== undefined) {
 		searchParams.append('urlIdx', urlIdx);
 	}
 

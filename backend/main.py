@@ -466,8 +466,10 @@ async def get_models(user=Depends(get_verified_user)):
 
 @app.get("/api/pipelines/list")
 async def get_pipelines_list(user=Depends(get_admin_user)):
-    models = await get_all_models()
-    urlIdxs = list(set([model["urlIdx"] for model in models if "pipeline" in model]))
+    responses = await get_openai_models(raw=True)
+
+    print(responses)
+    urlIdxs = [idx for idx, response in enumerate(responses) if "pipelines" in response]
 
     return {
         "data": [
@@ -716,9 +718,7 @@ async def update_pipeline_valves(
                 pass
 
         raise HTTPException(
-            status_code=(
-                r.status_code if r is not None else status.HTTP_404_NOT_FOUND
-            ),
+            status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
             detail=detail,
         )
 
