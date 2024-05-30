@@ -89,11 +89,15 @@
 		valves = null;
 		valves_spec = null;
 
-		pipelines = await getPipelines(localStorage.token, selectedPipelinesUrlIdx);
+		if (PIPELINES_LIST.length > 0) {
+			pipelines = await getPipelines(localStorage.token, selectedPipelinesUrlIdx);
 
-		if (pipelines.length > 0) {
-			selectedPipelineIdx = 0;
-			await getValves(selectedPipelineIdx);
+			if (pipelines.length > 0) {
+				selectedPipelineIdx = 0;
+				await getValves(selectedPipelineIdx);
+			}
+		} else {
+			pipelines = [];
 		}
 	};
 
@@ -136,6 +140,7 @@
 
 	onMount(async () => {
 		PIPELINES_LIST = await getPipelinesList(localStorage.token);
+		console.log(PIPELINES_LIST);
 
 		if (PIPELINES_LIST.length > 0) {
 			selectedPipelinesUrlIdx = PIPELINES_LIST[0]['idx'];
