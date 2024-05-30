@@ -7,6 +7,12 @@ from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL, BACKEND_DIR
 import os
 import logging
 
+from peewee_migrate import Router
+from playhouse.db_url import connect
+
+from apps.webui.internal.wrappers import PeeweeConnectionState, register_peewee_databases
+from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])
 
@@ -20,6 +26,8 @@ class JSONField(TextField):
             return json.loads(value)
 
 
+register_peewee_databases()
+
 # Check if the file exists
 if os.path.exists(f"{DATA_DIR}/ollama.db"):
     # Rename the file
@@ -29,6 +37,7 @@ else:
     pass
 
 DB = connect(DATABASE_URL)
+DB._state = PeeweeConnectionState()
 log.info(f"Connected to a {DB.__class__.__name__} database.")
 router = Router(
     DB,
