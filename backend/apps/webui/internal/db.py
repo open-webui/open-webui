@@ -1,17 +1,13 @@
+import os
+import logging
 import json
 
 from peewee import *
 from peewee_migrate import Router
 from playhouse.db_url import connect
-from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL, BACKEND_DIR
-import os
-import logging
-
-from peewee_migrate import Router
-from playhouse.db_url import connect
 
 from apps.webui.internal.wrappers import PeeweeConnectionState, register_peewee_databases
-from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL
+from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL, BACKEND_DIR
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])
