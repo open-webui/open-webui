@@ -280,7 +280,7 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                     if key != "":
                         headers = {"Authorization": f"Bearer {key}"}
                         r = requests.post(
-                            f"{url}/{filter['id']}/filter",
+                            f"{url}/{filter['id']}/filter/inlet",
                             headers=headers,
                             json={
                                 "user": user,
