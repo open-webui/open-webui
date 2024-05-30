@@ -184,17 +184,25 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 	return pipelines;
 };
 
-export const getPipelineValves = async (token: string = '', pipeline_id: string) => {
+export const getPipelineValves = async (token: string, pipeline_id: string, urlIdx: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines/${pipeline_id}/valves`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+	const searchParams = new URLSearchParams();
+	if (urlIdx) {
+		searchParams.append('urlIdx', urlIdx);
+	}
+
+	const res = await fetch(
+		`${WEBUI_BASE_URL}/api/pipelines/${pipeline_id}/valves?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
 		}
-	})
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -212,17 +220,25 @@ export const getPipelineValves = async (token: string = '', pipeline_id: string)
 	return res;
 };
 
-export const getPipelineValvesSpec = async (token: string = '', pipeline_id: string) => {
+export const getPipelineValvesSpec = async (token: string, pipeline_id: string, urlIdx: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines/${pipeline_id}/valves/spec`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+	const searchParams = new URLSearchParams();
+	if (urlIdx) {
+		searchParams.append('urlIdx', urlIdx);
+	}
+
+	const res = await fetch(
+		`${WEBUI_BASE_URL}/api/pipelines/${pipeline_id}/valves/spec?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
 		}
-	})
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -243,19 +259,28 @@ export const getPipelineValvesSpec = async (token: string = '', pipeline_id: str
 export const updatePipelineValves = async (
 	token: string = '',
 	pipeline_id: string,
-	valves: object
+	valves: object,
+	urlIdx: string
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines/${pipeline_id}/valves/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify(valves)
-	})
+	const searchParams = new URLSearchParams();
+	if (urlIdx) {
+		searchParams.append('urlIdx', urlIdx);
+	}
+
+	const res = await fetch(
+		`${WEBUI_BASE_URL}/api/pipelines/${pipeline_id}/valves/update?${searchParams.toString()}`,
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			},
+			body: JSON.stringify(valves)
+		}
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();

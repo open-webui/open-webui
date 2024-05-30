@@ -39,16 +39,19 @@
 	const updateHandler = async () => {
 		const pipeline = pipelines[selectedPipelineIdx];
 
-		if (pipeline && (pipeline?.pipeline?.valves ?? false)) {
+		if (pipeline && (pipeline?.valves ?? false)) {
 			if (valves?.pipelines ?? false) {
 				valves.pipelines = valves.pipelines.split(',').map((v) => v.trim());
 			}
 
-			const res = await updatePipelineValves(localStorage.token, pipeline.id, valves).catch(
-				(error) => {
-					toast.error(error);
-				}
-			);
+			const res = await updatePipelineValves(
+				localStorage.token,
+				pipeline.id,
+				valves,
+				selectedPipelinesUrlIdx
+			).catch((error) => {
+				toast.error(error);
+			});
 
 			if (res) {
 				toast.success('Valves updated successfully');
@@ -65,8 +68,16 @@
 		valves = null;
 		valves_spec = null;
 
-		valves_spec = await getPipelineValvesSpec(localStorage.token, pipelines[idx].id);
-		valves = await getPipelineValves(localStorage.token, pipelines[idx].id);
+		valves_spec = await getPipelineValvesSpec(
+			localStorage.token,
+			pipelines[idx].id,
+			selectedPipelinesUrlIdx
+		);
+		valves = await getPipelineValves(
+			localStorage.token,
+			pipelines[idx].id,
+			selectedPipelinesUrlIdx
+		);
 
 		if (valves?.pipelines ?? false) {
 			valves.pipelines = valves.pipelines.join(',');
@@ -269,7 +280,7 @@
 									>
 										{#each pipelines as pipeline, idx}
 											<option value={idx} class="bg-gray-100 dark:bg-gray-700"
-												>{pipeline.name} ({pipeline.pipeline.type ?? 'pipe'})</option
+												>{pipeline.name} ({pipeline.type ?? 'pipe'})</option
 											>
 										{/each}
 									</select>
@@ -299,7 +310,7 @@
 						{/if}
 
 						<div class="space-y-1">
-							{#if pipelines[selectedPipelineIdx].pipeline.valves}
+							{#if pipelines[selectedPipelineIdx].valves}
 								{#if valves}
 									{#each Object.keys(valves_spec.properties) as property, idx}
 										<div class=" py-0.5 w-full justify-between">
