@@ -120,11 +120,6 @@
 		messages = [];
 	}
 
-	$: sessionConfig = {
-		system: getSystemPrompt($chatType),
-		model_params: {...$models.find((model) => model.id === selectedModels[0])?.default_params, ...getDefaultParams($chatType)}
-	}
-
 	$: (() => {
 		if (currentChatType === $chatType && !!selectedModels?.[0]) {
 			return
@@ -138,6 +133,10 @@
 			selectedModels = $config?.default_models.split(',');
 		} else {
 			selectedModels = [$models[$config.chat_type_model_map?.[$chatType] || 0].id];
+		}
+		sessionConfig = {
+			system: getSystemPrompt($chatType),
+			model_params: {...$models.find((model) => model.id === selectedModels[0])?.default_params, ...getDefaultParams($chatType)}
 		}
 	})()
 

@@ -134,11 +134,6 @@
 		})();
 	}
 
-	$: sessionConfig = {
-		system: getSystemPrompt($chatType),
-		model_params: chat?.chat.options || {...$models.find((model) => model.id === selectedModels[0])?.default_params, ...getDefaultParams($chatType)}
-	}
-
 	//////////////////////////
 	// Web functions
 	//////////////////////////
@@ -168,6 +163,11 @@
 						? chatContent.history
 						: convertMessagesToHistory(chatContent.messages);
 				title = chatContent.title;
+
+				sessionConfig = {
+					system: getSystemPrompt(chatContent.chat_type),
+					model_params: chat?.chat.options || {...$models.find((model) => model.id === selectedModels[0])?.default_params, ...getDefaultParams($chatType)}
+				}
 
 				let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 				await settings.set({
