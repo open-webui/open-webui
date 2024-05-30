@@ -464,10 +464,37 @@ async def get_models(user=Depends(get_verified_user)):
     return {"data": models}
 
 
-@app.get("/api/pipelines")
-async def get_pipelines(user=Depends(get_admin_user)):
+@app.get("/api/pipelines/list")
+async def get_pipelines_list(user=Depends(get_admin_user)):
     models = await get_all_models()
-    pipelines = [model for model in models if "pipeline" in model]
+    urlIdxs = list(set([model["urlIdx"] for model in models if "pipeline" in model]))
+
+    return {
+        "data": [
+            {
+                "url": openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx],
+                "idx": urlIdx,
+            }
+            for urlIdx in urlIdxs
+        ]
+    }
+
+
+@app.get("/api/pipelines")
+async def get_pipelines(urlIdx: Optional[int] = None, user=Depends(get_admin_user)):
+    models = await get_all_models()
+
+    print(urlIdx)
+
+    if urlIdx is None:
+        pipelines = [model for model in models if "pipeline" in model]
+    else:
+        pipelines = [
+            model
+            for model in models
+            if "pipeline" in model and model["urlIdx"] == urlIdx
+        ]
+
     return {"data": pipelines}
 
 
