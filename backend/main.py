@@ -140,6 +140,7 @@ origins = ["*"]
 class RAGMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         return_citations = False
+        missing_checksums = None
 
         if request.method == "POST" and (
             "/ollama/api/chat" in request.url.path
@@ -162,7 +163,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
             # data["modified"] = True  # Example modification
             if "docs" in data:
                 data = {**data}
-                data["messages"], citations = rag_messages(
+                data["messages"], citations, missing_checksums = rag_messages(
                     docs=data["docs"],
                     messages=data["messages"],
                     template=rag_app.state.config.RAG_TEMPLATE,
@@ -202,11 +203,11 @@ class RAGMiddleware(BaseHTTPMiddleware):
                 content_type = response.headers.get("Content-Type")
                 if "text/event-stream" in content_type:
                     return StreamingResponse(
-                        self.openai_stream_wrapper(response.body_iterator, citations),
+                        self.openai_stream_wrapper(response.body_iterator, citations, missing_checksums),
                     )
                 if "application/x-ndjson" in content_type:
                     return StreamingResponse(
-                        self.ollama_stream_wrapper(response.body_iterator, citations),
+                        self.ollama_stream_wrapper(response.body_iterator, citations, missing_checksums),
                     )
 
         return response
@@ -214,13 +215,15 @@ class RAGMiddleware(BaseHTTPMiddleware):
     async def _receive(self, body: bytes):
         return {"type": "http.request", "body": body, "more_body": False}
 
-    async def openai_stream_wrapper(self, original_generator, citations):
+    async def openai_stream_wrapper(self, original_generator, citations, missing_checksums):
         yield f"data: {json.dumps({'citations': citations})}\n\n"
+        yield f"data: {json.dumps({'missingChecksums': missing_checksums})}\n\n"
         async for data in original_generator:
             yield data
 
-    async def ollama_stream_wrapper(self, original_generator, citations):
+    async def ollama_stream_wrapper(self, original_generator, citations, missing_checksums):
         yield f"{json.dumps({'citations': citations})}\n"
+        yield f"{json.dumps({'missingChecksums': missing_checksums})}\n"
         async for data in original_generator:
             yield data
 

@@ -430,6 +430,13 @@
 						</div>
 					{/if}
 
+					{#if message.missingChecksums && message.missingChecksums.length > 0}
+						<span class="text-red-700/50 dark:text-red-300/50 py-3 relative" role="alert">
+							<strong class="font-bold">{$i18n.t('Warning:')}</strong>
+							<span class="block sm:inline">{$i18n.t('At least one file in your conversation does not exist any more.')} {$i18n.t('The following answer may be incomplete.')}</span>
+						</span>
+					{/if}
+
 					{#if edit === true}
 						<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
 							<textarea

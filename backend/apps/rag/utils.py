@@ -148,6 +148,7 @@ def query_collection(
     k: int,
 ):
     results = []
+    missingChecksums = []
     for collection_name in collection_names:
         try:
             result = query_doc(
@@ -157,9 +158,9 @@ def query_collection(
                 embedding_function=embedding_function,
             )
             results.append(result)
-        except:
-            pass
-    return merge_and_sort_query_results(results, k=k)
+        except ValueError as e:
+            missingChecksums.append(collection_name)
+    return merge_and_sort_query_results(results, k=k), missingChecksums
 
 
 def query_collection_with_hybrid_search(
@@ -275,6 +276,7 @@ def rag_messages(
 
     extracted_collections = []
     relevant_contexts = []
+    missing_checksums = []
 
     for doc in docs:
         context = None
@@ -295,7 +297,7 @@ def rag_messages(
                 context = doc["content"]
             else:
                 if hybrid_search:
-                    context = query_collection_with_hybrid_search(
+                    context, missing_contexts = query_collection_with_hybrid_search(
                         collection_names=collection_names,
                         query=query,
                         embedding_function=embedding_function,
@@ -304,12 +306,13 @@ def rag_messages(
                         r=r,
                     )
                 else:
-                    context = query_collection(
+                    context, missing_contexts = query_collection(
                         collection_names=collection_names,
                         query=query,
                         embedding_function=embedding_function,
                         k=k,
                     )
+                missing_checksums.extend(missing_contexts)
         except Exception as e:
             log.exception(e)
             context = None
@@ -368,7 +371,7 @@ def rag_messages(
 
     messages[last_user_message_idx] = new_user_message
 
-    return messages, citations
+    return messages, citations, missing_checksums
 
 
 def get_model_path(model: str, update_model: bool = False):

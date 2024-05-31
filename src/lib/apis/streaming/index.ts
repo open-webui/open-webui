@@ -6,6 +6,7 @@ type TextStreamUpdate = {
 	value: string;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	citations?: any;
+	missingChecksums?: string[];
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	error?: any;
 	usage?: ResponseUsage;
@@ -67,6 +68,10 @@ async function* openAIStreamToIterator(
 			if (parsedData.citations) {
 				yield { done: false, value: '', citations: parsedData.citations };
 				continue;
+			}
+
+			if (parsedData.missingChecksums) {
+				yield { done: false, value: '', missingChecksums: parsedData.missingChecksums };
 			}
 
 			yield {

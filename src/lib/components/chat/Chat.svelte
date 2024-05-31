@@ -666,6 +666,11 @@
 								continue;
 							}
 
+							if ('missingChecksums' in data) {
+								responseMessage.missingChecksums = data.missingChecksums;
+								continue;
+							}
+
 							if ('detail' in data) {
 								throw data;
 							}
@@ -888,7 +893,7 @@
 				let lastUsage = null;
 
 				for await (const update of textStream) {
-					const { value, done, citations, error, usage } = update;
+					const { value, done, citations, error, usage, missingChecksums } = update;
 					if (error) {
 						await handleOpenAIError(error, null, model, responseMessage);
 						break;
@@ -914,6 +919,11 @@
 
 					if (citations) {
 						responseMessage.citations = citations;
+						continue;
+					}
+
+					if (missingChecksums) {
+						responseMessage.missingChecksums = missingChecksums;
 						continue;
 					}
 
