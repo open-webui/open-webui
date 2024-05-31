@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import Sortable from 'sortablejs';
+
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, tick } from 'svelte';
 
 	import { WEBUI_NAME, modelfiles, models, settings, user } from '$lib/stores';
 	import { addNewModel, deleteModelById, getModelInfos, updateModelById } from '$lib/apis/models';
@@ -12,6 +14,7 @@
 	import { goto } from '$app/navigation';
 
 	import { getModels } from '$lib/apis';
+
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ModelMenu from './Models/ModelMenu.svelte';
 
@@ -22,6 +25,9 @@
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
 
+	let _models = [];
+
+	let sortable = null;
 	let searchValue = '';
 
 	const deleteModelHandler = async (model) => {
@@ -42,6 +48,7 @@
 		}
 
 		await models.set(await getModels(localStorage.token));
+		_models = $models;
 	};
 
 	const cloneModelHandler = async (model) => {
@@ -109,6 +116,7 @@
 		}
 
 		await models.set(await getModels(localStorage.token));
+		_models = $models;
 	};
 
 	const downloadModels = async (models) => {
@@ -118,13 +126,58 @@
 		saveAs(blob, `models-export-${Date.now()}.json`);
 	};
 
-	onMount(() => {
+	const positionChangeHanlder = async () => {
+		// Get the new order of the models
+		const modelIds = Array.from(document.getElementById('model-list').children).map((child) =>
+			child.id.replace('model-item-', '')
+		);
+
+		// Update the position of the models
+		for (const [index, id] of modelIds.entries()) {
+			const model = $models.find((m) => m.id === id);
+			if (model) {
+				let info = model.info;
+
+				if (!info) {
+					info = {
+						id: model.id,
+						name: model.name,
+						meta: {
+							position: index
+						},
+						params: {}
+					};
+				}
+
+				info.meta = {
+					...info.meta,
+					position: index
+				};
+				await updateModelById(localStorage.token, info.id, info);
+			}
+		}
+
+		await tick();
+		await models.set(await getModels(localStorage.token));
+	};
+
+	onMount(async () => {
 		// Legacy code to sync localModelfiles with models
+		_models = $models;
 		localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
 
 		if (localModelfiles) {
 			console.log(localModelfiles);
 		}
+
+		// SortableJS
+		sortable = new Sortable(document.getElementById('model-list'), {
+			animation: 150,
+			onUpdate: async (event) => {
+				console.log(event);
+				positionChangeHanlder();
+			}
+		});
 	});
 </script>
 
@@ -202,12 +255,13 @@
 
 <hr class=" dark:border-gray-850" />
 
-<div class=" my-2 mb-5">
-	{#each $models.filter((m) => searchValue === '' || m.name
+<div class=" my-2 mb-5" id="model-list">
+	{#each _models.filter((m) => searchValue === '' || m.name
 				.toLowerCase()
 				.includes(searchValue.toLowerCase())) as model}
 		<div
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
+			id="model-item-{model.id}"
 		>
 			<a
 				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
