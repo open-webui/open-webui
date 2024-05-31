@@ -15,7 +15,7 @@ export const getAudioConfig = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -27,6 +27,12 @@ export const getAudioConfig = async (token: string) => {
 	return res;
 };
 
+type AllTalkConfigForm = {
+	url: string;
+	model: string;
+	speaker: string;
+};
+
 type OpenAIConfigForm = {
 	url: string;
 	key: string;
@@ -34,10 +40,18 @@ type OpenAIConfigForm = {
 	speaker: string;
 };
 
-export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
+export const updateAlltalkAudioConfig = async (token: string, payload: AllTalkConfigForm) => {
+	return updateAudioConfig('alltalk', token, payload);
+};
+
+export const updateOpenAIAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
+	return updateAudioConfig('openai', token, payload);
+};
+
+export const updateAudioConfig = async (provider: string, token: string, payload: object) => {
 	let error = null;
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/config/update`, {
+	const res = await fetch(`${AUDIO_API_BASE_URL}/${provider}/config/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -52,7 +66,7 @@ export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -83,7 +97,7 @@ export const transcribeAudio = async (token: string, file: File) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -120,8 +134,7 @@ export const synthesizeOpenAISpeech = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
-
+			console.error(err);
 			return null;
 		});
 

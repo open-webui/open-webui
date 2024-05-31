@@ -45,6 +45,9 @@ from config import (
     AUDIO_OPENAI_API_KEY,
     AUDIO_OPENAI_API_MODEL,
     AUDIO_OPENAI_API_VOICE,
+    AUDIO_ALLTALK_API_BASE_URL,
+    AUDIO_ALLTALK_API_MODEL,
+    AUDIO_ALLTALK_API_VOICE,
     AppConfig,
 )
 
@@ -61,10 +64,17 @@ app.add_middleware(
 )
 
 app.state.config = AppConfig()
+
+# setting openai api config
 app.state.config.OPENAI_API_BASE_URL = AUDIO_OPENAI_API_BASE_URL
 app.state.config.OPENAI_API_KEY = AUDIO_OPENAI_API_KEY
 app.state.config.OPENAI_API_MODEL = AUDIO_OPENAI_API_MODEL
 app.state.config.OPENAI_API_VOICE = AUDIO_OPENAI_API_VOICE
+
+# setting alltalk api config
+app.state.config.ALLTALK_API_BASE_URL = AUDIO_ALLTALK_API_BASE_URL
+app.state.config.ALLTALK_API_MODEL = AUDIO_ALLTALK_API_MODEL
+app.state.config.ALLTALK_API_VOICE = AUDIO_ALLTALK_API_VOICE
 
 # setting device type for whisper model
 whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
@@ -73,6 +83,10 @@ log.info(f"whisper_device_type: {whisper_device_type}")
 SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+class AllTalkConfigForm(BaseModel):
+	url: str
+	model: str
+	speaker: str
 
 class OpenAIConfigUpdateForm(BaseModel):
     url: str
@@ -84,14 +98,42 @@ class OpenAIConfigUpdateForm(BaseModel):
 @app.get("/config")
 async def get_openai_config(user=Depends(get_admin_user)):
     return {
-        "OPENAI_API_BASE_URL": app.state.config.OPENAI_API_BASE_URL,
-        "OPENAI_API_KEY": app.state.config.OPENAI_API_KEY,
-        "OPENAI_API_MODEL": app.state.config.OPENAI_API_MODEL,
-        "OPENAI_API_VOICE": app.state.config.OPENAI_API_VOICE,
+        "openai":{
+            "OPENAI_API_BASE_URL": app.state.config.OPENAI_API_BASE_URL,
+            "OPENAI_API_KEY": app.state.config.OPENAI_API_KEY,
+            "OPENAI_API_MODEL": app.state.config.OPENAI_API_MODEL,
+            "OPENAI_API_VOICE": app.state.config.OPENAI_API_VOICE,
+        },
+        "alltalk":{
+            "ALLTALK_API_BASE_URL": app.state.config.ALLTALK_API_BASE_URL,
+            "ALLTALK_API_MODEL": app.state.config.ALLTALK_API_MODEL,
+            "ALLTALK_API_VOICE": app.state.config.ALLTALK_API_VOICE,
+        }
+    }
+
+@app.post("/alltalk/config/update")
+async def update_provider_config(
+    form_data: AllTalkConfigForm, user=Depends(get_admin_user)
+):
+    if form_data.url == "":
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_URL_NOT_FOUND)
+
+    print("form_data url: " + form_data.url)
+    print("form_data model: " + form_data.model)
+    print("form_data speaker: " + form_data.speaker)
+    app.state.config.ALLTALK_API_BASE_URL = form_data.url
+    app.state.config.ALLTALK_API_MODEL = form_data.model
+    app.state.config.ALLTALK_API_VOICE = form_data.speaker
+
+    return {
+        "status": True,
+        "ALLTALK_API_BASE_URL": app.state.config.ALLTALK_API_BASE_URL,
+        "ALLTALK_API_MODEL": app.state.config.ALLTALK_API_MODEL,
+        "ALLTALK_API_VOICE": app.state.config.ALLTALK_API_VOICE,
     }
 
 
-@app.post("/config/update")
+@app.post("/openai/config/update")
 async def update_openai_config(
     form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user)
 ):

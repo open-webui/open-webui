@@ -484,6 +484,24 @@ except:
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 ####################################
+# ALLTALK_API
+####################################
+
+ENABLE_ALLTALK_API = PersistentConfig(
+    "ENABLE_ALLTALK_API",
+    "alltalk.enable",
+    os.environ.get("ENABLE_ALLTALK_API", "True").lower() == "true",
+)
+
+ALLTALK_API_BASE_URL = os.environ.get("ALLTALK_API_BASE_URL", "")
+
+if ALLTALK_API_BASE_URL == "":
+    ALLTALK_API_BASE_URL = "http://127.0.0.1:7851"
+
+ALLTALK_API_MODEL = ''
+ALLTALK_API_VOICE = ''
+
+####################################
 # WEBUI
 ####################################
 
@@ -876,6 +894,23 @@ AUDIO_OPENAI_API_VOICE = PersistentConfig(
     os.getenv("AUDIO_OPENAI_API_VOICE", "alloy"),
 )
 
+AUDIO_ALLTALK_API_BASE_URL = PersistentConfig(
+    "AUDIO_ALLTALK_API_BASE_URL",
+    "audio.alltalk.api_base_url",
+    os.getenv("AUDIO_ALLTALK_API_BASE_URL", ALLTALK_API_BASE_URL),
+)
+
+AUDIO_ALLTALK_API_MODEL = PersistentConfig(
+    "AUDIO_ALLTALK_API_MODEL",
+    "audio.alltalk.api_model",
+    os.getenv("AUDIO_ALLTALK_API_MODEL", ""),
+)
+
+AUDIO_ALLTALK_API_VOICE = PersistentConfig(
+    "AUDIO_ALLTALK_API_VOICE",
+    "audio.alltalk.api_voice",
+    os.getenv("AUDIO_ALLTALK_API_VOICE", ""),
+)
 
 ####################################
 # Database

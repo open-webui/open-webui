@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
+	import { getAudioConfig, updateAudioConfig, updateOpenAIAudioConfig } from '$lib/apis/audio';
+	import { Alltalk } from '$lib/apis/audio/providers/Alltalk';
 	import { user, settings } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -8,6 +9,8 @@
 	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
+
+	let alltalk: Alltalk = new Alltalk();
 
 	// Audio
 
@@ -21,7 +24,7 @@
 	let speechAutoSend = false;
 	let responseAutoPlayback = false;
 
-	let TTSEngines = ['', 'openai'];
+	let TTSEngines = ['', 'openai', 'alltalk'];
 	let TTSEngine = '';
 
 	let voices = [];
@@ -29,30 +32,42 @@
 	let models = [];
 	let model = '';
 
-	const getOpenAIVoices = () => {
-		voices = [
-			{ name: 'alloy' },
-			{ name: 'echo' },
-			{ name: 'fable' },
-			{ name: 'onyx' },
-			{ name: 'nova' },
-			{ name: 'shimmer' }
-		];
-	};
-
-	const getOpenAIVoicesModel = () => {
-		models = [{ name: 'tts-1' }, { name: 'tts-1-hd' }];
-	};
-
-	const getWebAPIVoices = () => {
-		const getVoicesLoop = setInterval(async () => {
-			voices = await speechSynthesis.getVoices();
-
-			// do your loop
-			if (voices.length > 0) {
-				clearInterval(getVoicesLoop);
+	const TTSEngineConfig = {
+		openai: {
+			voices: [
+				{ name: 'alloy' },
+				{ name: 'echo' },
+				{ name: 'fable' },
+				{ name: 'onyx' },
+				{ name: 'nova' },
+				{ name: 'shimmer' }
+			],
+			models: [{ name: 'tts-1' }, { name: 'tts-1-hd' }],
+			url: '',
+			key: '',
+			getVoices: async () => {
+				voices = TTSEngineConfig.openai.voices;
+			},
+			getModels: async () => {
+				models = TTSEngineConfig.openai.models;
 			}
-		}, 100);
+		},
+		alltalk: {
+		},
+		webapi: {
+			voices: [],
+			url: '',
+			getVoices: async () => {
+				const getVoicesLoop = setInterval(async () => {
+					voices = await speechSynthesis.getVoices();
+
+					// do your loop
+					if (voices.length > 0) {
+						clearInterval(getVoicesLoop);
+					}
+				}, 100);
+			}
+		}
 	};
 
 	const toggleConversationMode = async () => {
@@ -80,9 +95,23 @@
 		saveSettings({ speechAutoSend: speechAutoSend });
 	};
 
+	const assignConfig = (config: any, provider: string) => {
+		if (provider === 'openai') {
+			OpenAIUrl = config.OPENAI_API_BASE_URL;
+			OpenAIKey = config.OPENAI_API_KEY;
+			model = config.OPENAI_API_MODEL;
+			speaker = config.OPENAI_API_VOICE;
+		}else if(provider === 'alltalk'){
+			console.log("alltalk config: ", config);
+			alltalk.baseUrl = config.ALLTALK_API_BASE_URL;
+			alltalk.currentVoice = config.ALLTALK_API_VOICE;
+			alltalk.setup();
+		}
+	};
+
 	const updateConfigHandler = async () => {
 		if (TTSEngine === 'openai') {
-			const res = await updateAudioConfig(localStorage.token, {
+			const res = await updateOpenAIAudioConfig(localStorage.token, {
 				url: OpenAIUrl,
 				key: OpenAIKey,
 				model: model,
@@ -90,11 +119,16 @@
 			});
 
 			if (res) {
-				OpenAIUrl = res.OPENAI_API_BASE_URL;
-				OpenAIKey = res.OPENAI_API_KEY;
-				model = res.OPENAI_API_MODEL;
-				speaker = res.OPENAI_API_VOICE;
+				assignConfig(res, 'openai');
 			}
+		}else if(TTSEngine === 'alltalk'){
+			const res = await updateAudioConfig(TTSEngine, localStorage.token, {
+				url: alltalk.baseUrl,
+				model: model,
+				speaker: alltalk.currentVoice
+			});
+			assignConfig(res, 'alltalk');
+			console.log("updating alltalk config: ", res);
 		}
 	};
 
@@ -109,20 +143,20 @@
 		model = $settings?.audio?.model ?? '';
 
 		if (TTSEngine === 'openai') {
-			getOpenAIVoices();
-			getOpenAIVoicesModel();
+			TTSEngineConfig[TTSEngine].getVoices();
+			TTSEngineConfig[TTSEngine].getModels();
+		} else if(TTSEngine === 'alltalk'){
+			alltalk.getVoices();
 		} else {
-			getWebAPIVoices();
+			TTSEngineConfig.webapi.getVoices();
 		}
 
 		if ($user.role === 'admin') {
 			const res = await getAudioConfig(localStorage.token);
 
 			if (res) {
-				OpenAIUrl = res.OPENAI_API_BASE_URL;
-				OpenAIKey = res.OPENAI_API_KEY;
-				model = res.OPENAI_API_MODEL;
-				speaker = res.OPENAI_API_VOICE;
+				assignConfig(res.openai, 'openai');
+				assignConfig(res.alltalk, 'alltalk');
 			}
 		}
 	});
@@ -226,17 +260,21 @@
 						placeholder="Select a mode"
 						on:change={(e) => {
 							if (e.target.value === 'openai') {
-								getOpenAIVoices();
+								TTSEngineConfig.openai.getVoices();
 								speaker = 'alloy';
 								model = 'tts-1';
+							} else if(TTSEngine === 'alltalk'){
+								alltalk.getVoices();
 							} else {
-								getWebAPIVoices();
+								TTSEngineConfig.webapi.getVoices();
 								speaker = '';
 							}
 						}}
 					>
+						<!-- TODO iterate in a list -->
 						<option value="">{$i18n.t('Default (Web API)')}</option>
 						<option value="openai">{$i18n.t('Open AI')}</option>
+						<option value="alltalk">{$i18n.t('All Talk TTS')}</option>
 					</select>
 				</div>
 			</div>
@@ -255,6 +293,15 @@
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder={$i18n.t('API Key')}
 							bind:value={OpenAIKey}
+							required
+						/>
+					</div>
+				{:else if TTSEngine === 'alltalk'}
+					<div class="mt-1 flex gap-2 mb-1">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('API Base URL')}
+							bind:value={alltalk.baseUrl}
 							required
 						/>
 					</div>
@@ -340,6 +387,26 @@
 					</div>
 				</div>
 			</div>
+			{:else if TTSEngine === 'alltalk'}
+				<div>
+					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+					<div class="flex w-full">
+						<div class="flex-1">
+							<input
+								list="voice-list"
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								bind:value={alltalk.currentVoice}
+								placeholder="Select a voice"
+							/>
+
+							<datalist id="voice-list">
+								{#each alltalk?.voicesList as voice}
+									<option value={voice} />
+								{/each}
+							</datalist>
+						</div>
+					</div>
+				</div>
 		{/if}
 	</div>
 
