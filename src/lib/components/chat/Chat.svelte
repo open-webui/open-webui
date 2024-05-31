@@ -951,25 +951,25 @@
 						messages = messages;
 					}
 
-					if ($settings.notificationEnabled && !document.hasFocus()) {
-						const notification = new Notification(`OpenAI ${model}`, {
-							body: responseMessage.content,
-							icon: `${WEBUI_BASE_URL}/static/favicon.png`
-						});
-					}
-
-					if ($settings.responseAutoCopy) {
-						copyToClipboard(responseMessage.content);
-					}
-
-					if ($settings.responseAutoPlayback) {
-						await tick();
-						document.getElementById(`speak-button-${responseMessage.id}`)?.click();
-					}
-
 					if (autoScroll) {
 						scrollToBottom();
 					}
+				}
+
+				if ($settings.notificationEnabled && !document.hasFocus()) {
+					const notification = new Notification(`OpenAI ${model}`, {
+						body: responseMessage.content,
+						icon: `${WEBUI_BASE_URL}/static/favicon.png`
+					});
+				}
+
+				if ($settings.responseAutoCopy) {
+					copyToClipboard(responseMessage.content);
+				}
+
+				if ($settings.responseAutoPlayback) {
+					await tick();
+					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
 				}
 
 				if (lastUsage) {
