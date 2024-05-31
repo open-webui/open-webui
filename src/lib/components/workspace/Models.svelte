@@ -210,10 +210,10 @@
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 		>
 			<a
-				class=" flex flex-1 space-x-4 cursor-pointer w-full"
+				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
 				href={`/?models=${encodeURIComponent(model.id)}`}
 			>
-				<div class=" self-center w-10">
+				<div class=" self-start w-8 pt-0.5">
 					<div
 						class=" rounded-full bg-stone-700 {model?.info?.meta?.hidden ?? false
 							? 'brightness-90 dark:brightness-50'
@@ -230,8 +230,8 @@
 				<div
 					class=" flex-1 self-center {model?.info?.meta?.hidden ?? false ? 'text-gray-500' : ''}"
 				>
-					<div class=" font-bold line-clamp-1">{model.name}</div>
-					<div class=" text-sm overflow-hidden text-ellipsis line-clamp-1">
+					<div class="  font-bold line-clamp-1">{model.name}</div>
+					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 						{!!model?.info?.meta?.description ? model?.info?.meta?.description : model.id}
 					</div>
 				</div>
