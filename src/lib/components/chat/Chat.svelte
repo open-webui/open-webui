@@ -16,9 +16,15 @@
 		showSidebar,
 		tags as _tags,
 		WEBUI_NAME,
-		banners
+		banners,
+		user
 	} from '$lib/stores';
-	import { convertMessagesToHistory, copyToClipboard, splitStream } from '$lib/utils';
+	import {
+		convertMessagesToHistory,
+		copyToClipboard,
+		promptTemplate,
+		splitStream
+	} from '$lib/utils';
 
 	import { cancelOllamaRequest, generateChatCompletion } from '$lib/apis/ollama';
 	import {
@@ -515,7 +521,7 @@
 			$settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
-						content: `${$settings?.system ?? ''}${
+						content: `${promptTemplate($settings?.system ?? '', $user.name)}${
 							responseMessage?.userContext ?? null
 								? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 								: ''
@@ -816,7 +822,7 @@
 						$settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
-									content: `${$settings?.system ?? ''}${
+									content: `${promptTemplate($settings?.system ?? '', $user.name)}${
 										responseMessage?.userContext ?? null
 											? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 											: ''
