@@ -1,8 +1,8 @@
 from contextvars import ContextVar
 
-from peewee import PostgresqlDatabase, InterfaceError as PeeWeeInterfaceError, MySQLDatabase, _ConnectionState
+from peewee import PostgresqlDatabase, InterfaceError as PeeWeeInterfaceError, _ConnectionState
 from playhouse.db_url import register_database
-from playhouse.pool import PooledPostgresqlDatabase, PooledMySQLDatabase
+from playhouse.pool import PooledPostgresqlDatabase
 from playhouse.shortcuts import ReconnectMixin
 from psycopg2 import OperationalError
 from psycopg2.errors import InterfaceError
@@ -26,7 +26,7 @@ class PeeweeConnectionState(_ConnectionState):
 
 class CustomReconnectMixin(ReconnectMixin):
     reconnect_errors = (
-        # default ReconnectMixin exceptions (MySQL specific)
+        # default ReconnectMixin exceptions
         *ReconnectMixin.reconnect_errors,
         # psycopg2
         (OperationalError, 'termin'),
@@ -44,16 +44,6 @@ class ReconnectingPooledPostgresqlDatabase(CustomReconnectMixin, PooledPostgresq
     pass
 
 
-class ReconnectingMySQLDatabase(CustomReconnectMixin, MySQLDatabase):
-    pass
-
-
-class ReconnectingPooledMySQLDatabase(CustomReconnectMixin, PooledMySQLDatabase):
-    pass
-
-
 def register_peewee_databases():
-    register_database(MySQLDatabase, 'mysql')
-    register_database(PooledMySQLDatabase, 'mysql+pool')
     register_database(ReconnectingPostgresqlDatabase, 'postgres', 'postgresql')
     register_database(ReconnectingPooledPostgresqlDatabase, 'postgres+pool', 'postgresql+pool')
