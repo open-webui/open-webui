@@ -42,10 +42,14 @@
 	let searchValue = '';
 	let ollamaVersion = null;
 
-	$: filteredItems = items.filter((item) =>
-		searchValue
-			? item.value.toLowerCase().includes(searchValue.toLowerCase())
-			: true && !(item.model?.info?.meta?.hidden ?? false)
+	$: filteredItems = items.filter(
+		(item) =>
+			(searchValue
+				? item.value.toLowerCase().includes(searchValue.toLowerCase()) ||
+				  (item.model?.info?.meta?.tags ?? []).some((tag) =>
+						tag.name.toLowerCase().includes(searchValue.toLowerCase())
+				  )
+				: true) && !(item.model?.info?.meta?.hidden ?? false)
 	);
 
 	const pullModelHandler = async () => {
@@ -324,10 +328,22 @@
 									</div>
 								</Tooltip>
 							{/if}
+
+							{#if (item?.model?.info?.meta?.tags ?? []).length > 0}
+								<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
+									{#each item.model?.info?.meta.tags as tag}
+										<div
+											class=" text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+										>
+											{tag.name}
+										</div>
+									{/each}
+								</div>
+							{/if}
 						</div>
 
 						{#if value === item.value}
-							<div class="ml-auto">
+							<div class="ml-auto pl-2">
 								<Check />
 							</div>
 						{/if}
