@@ -42,9 +42,11 @@
 	let searchValue = '';
 	let ollamaVersion = null;
 
-	$: filteredItems = searchValue
-		? items.filter((item) => item.value.toLowerCase().includes(searchValue.toLowerCase()))
-		: items;
+	$: filteredItems = items.filter((item) =>
+		searchValue
+			? item.value.toLowerCase().includes(searchValue.toLowerCase())
+			: true && !(item.model?.info?.meta?.hidden ?? false)
+	);
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');

@@ -460,7 +460,7 @@
 			</div>
 
 			<div class="my-2">
-				<div class="flex w-full justify-between">
+				<div class="flex w-full justify-between mb-1">
 					<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
 				</div>
 				<div class="flex flex-col">
@@ -473,7 +473,7 @@
 								}}
 							/>
 
-							<div class=" py-1.5 text-sm w-full capitalize">
+							<div class=" py-0.5 text-sm w-full capitalize">
 								{$i18n.t(capability)}
 							</div>
 						</div>
