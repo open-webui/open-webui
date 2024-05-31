@@ -289,6 +289,32 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_current_
 
 
 ############################
+# CloneChat
+############################
+
+
+@router.get("/{id}/clone", response_model=Optional[ChatResponse])
+async def clone_chat_by_id(id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+
+        chat_body = json.loads(chat.chat)
+        updated_chat = {
+            **chat_body,
+            "originalChatId": chat.id,
+            "branchPointMessageId": chat_body["history"]["currentId"],
+            "title": f"Clone of {chat.title}",
+        }
+
+        chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))
+        return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
 # ArchiveChat
 ############################
 

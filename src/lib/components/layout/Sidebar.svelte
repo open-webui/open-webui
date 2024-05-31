@@ -22,7 +22,8 @@
 		getChatListByTagName,
 		updateChatById,
 		getAllChatTags,
-		archiveChatById
+		archiveChatById,
+		cloneChatById
 	} from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	import { fade, slide } from 'svelte/transition';
@@ -178,6 +179,18 @@
 				goto('/');
 			}
 
+			await chats.set(await getChatList(localStorage.token));
+		}
+	};
+
+	const cloneChatHandler = async (id) => {
+		const res = await cloneChatById(localStorage.token, id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			goto(`/c/${res.id}`);
 			await chats.set(await getChatList(localStorage.token));
 		}
 	};
@@ -601,6 +614,9 @@
 								<div class="flex self-center space-x-1 z-10">
 									<ChatMenu
 										chatId={chat.id}
+										cloneChatHandler={() => {
+											cloneChatHandler(chat.id);
+										}}
 										shareHandler={() => {
 											shareChatId = selectedChatId;
 											showShareChatModal = true;
