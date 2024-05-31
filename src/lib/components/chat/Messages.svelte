@@ -340,6 +340,7 @@
 									<CompareMessages
 										bind:history
 										{messages}
+										{readOnly}
 										{chatId}
 										parentMessage={history.messages[message.parentId]}
 										{messageIdx}
