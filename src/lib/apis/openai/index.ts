@@ -336,6 +336,7 @@ export const generateTitle = async (
 	template: string,
 	model: string,
 	prompt: string,
+	chat_id?: string,
 	url: string = OPENAI_API_BASE_URL
 ) => {
 	let error = null;
@@ -361,7 +362,9 @@ export const generateTitle = async (
 			],
 			stream: false,
 			// Restricting the max tokens to 50 to avoid long titles
-			max_tokens: 50
+			max_tokens: 50,
+			...(chat_id && { chat_id: chat_id }),
+			title: true
 		})
 	})
 		.then(async (res) => {

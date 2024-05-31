@@ -315,8 +315,12 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                     else:
                         pass
 
-            if "chat_id" in data:
-                del data["chat_id"]
+            if "pipeline" not in app.state.MODELS[model_id]:
+                if "chat_id" in data:
+                    del data["chat_id"]
+
+                if "title" in data:
+                    del data["title"]
 
             modified_body_bytes = json.dumps(data).encode("utf-8")
             # Replace the request body with the modified one

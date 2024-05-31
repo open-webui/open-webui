@@ -1118,6 +1118,7 @@
 					) + ' {{prompt}}',
 				titleModelId,
 				userPrompt,
+				$chatId,
 				titleModel?.owned_by === 'openai' ?? false
 					? `${OPENAI_API_BASE_URL}`
 					: `${OLLAMA_API_BASE_URL}/v1`
