@@ -10,6 +10,7 @@
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
+	import Tags from '$lib/components/common/Tags.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -262,7 +263,7 @@
 				<button
 					class=" {info.meta.profile_image_url
 						? ''
-						: 'p-6'} rounded-full dark:bg-gray-700 border border-dashed border-gray-200"
+						: 'p-4'} rounded-full dark:bg-gray-700 border border-dashed border-gray-200 flex items-center"
 					type="button"
 					on:click={() => {
 						filesInputElement.click();
@@ -272,7 +273,7 @@
 						<img
 							src={info.meta.profile_image_url}
 							alt="modelfile profile"
-							class=" rounded-full w-20 h-20 object-cover"
+							class=" rounded-full size-16 object-cover"
 						/>
 					{:else}
 						<svg
@@ -338,17 +339,39 @@
 			</div>
 		</div>
 
-		<div class="my-2">
-			<div class=" text-sm font-semibold mb-2">{$i18n.t('Description')}</div>
+		<div class="my-1">
+			<div class="flex w-full justify-between items-center mb-1">
+				<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
 
-			<div>
+				<button
+					class="p-1 text-xs flex rounded transition"
+					type="button"
+					on:click={() => {
+						if (info.meta.description === null) {
+							info.meta.description = '';
+						} else {
+							info.meta.description = null;
+						}
+					}}
+				>
+					{#if info.meta.description === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+
+			{#if info.meta.description !== null}
 				<input
 					class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
 					placeholder={$i18n.t('Add a short description about what this model does')}
 					bind:value={info.meta.description}
 				/>
-			</div>
+			{/if}
 		</div>
+
+		<hr class=" dark:border-gray-850 my-1" />
 
 		<div class="my-2">
 			<div class="flex w-full justify-between">
@@ -401,7 +424,9 @@
 			</div>
 		</div>
 
-		<div class="my-2">
+		<hr class=" dark:border-gray-850 my-1" />
+
+		<div class="my-1">
 			<div class="flex w-full justify-between items-center">
 				<div class="flex w-full justify-between items-center">
 					<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt suggestions')}</div>
@@ -491,8 +516,8 @@
 			{/if}
 		</div>
 
-		<div class="my-2">
-			<div class="flex w-full justify-between">
+		<div class="my-1">
+			<div class="flex w-full justify-between mb-1">
 				<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
 			</div>
 			<div class="flex flex-col">
@@ -505,7 +530,7 @@
 							}}
 						/>
 
-						<div class=" py-1.5 text-sm w-full capitalize">
+						<div class=" py-0.5 text-sm w-full capitalize">
 							{$i18n.t(capability)}
 						</div>
 					</div>
@@ -513,7 +538,30 @@
 			</div>
 		</div>
 
-		<div class="my-2 text-gray-500">
+		<div class="my-1">
+			<div class="flex w-full justify-between items-center">
+				<div class=" self-center text-sm font-semibold">{$i18n.t('Tags')}</div>
+			</div>
+
+			<div class="mt-2">
+				<Tags
+					tags={info?.meta?.tags ?? []}
+					deleteTag={(tagName) => {
+						info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+					}}
+					addTag={(tagName) => {
+						console.log(tagName);
+						if (!(info?.meta?.tags ?? null)) {
+							info.meta.tags = [{ name: tagName }];
+						} else {
+							info.meta.tags = [...info.meta.tags, { name: tagName }];
+						}
+					}}
+				/>
+			</div>
+		</div>
+
+		<div class="my-2 text-gray-300 dark:text-gray-700">
 			<div class="flex w-full justify-between mb-2">
 				<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
 
