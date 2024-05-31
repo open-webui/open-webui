@@ -789,7 +789,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if !readOnly}
+										{#if !readOnly || true}
 											<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 												<button
 													class="{isLastMessage

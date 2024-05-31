@@ -722,6 +722,15 @@
 						break;
 					}
 					if (done || stopResponseFlag || _chatId !== $chatId) {
+						if ($chatType === 'chat_embedding' && responseMessage.content.includes('Đoạn văn này không có nội dung bạn muốn tìm')) {
+							delete history.messages[responseMessageId];
+							if (responseMessage.parentId !== null) {
+								history.messages[responseMessage.parentId].childrenIds = history.messages[responseMessage.parentId].childrenIds.filter(_id => _id !== responseMessageId);
+							}
+							messages = messages;
+							break
+						}
+
 						responseMessage.done = true;
 						messages = messages;
 

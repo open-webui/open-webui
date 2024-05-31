@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { chats, config, modelfiles, settings, user as _user, mobile } from '$lib/stores';
+	import { chats, config, modelfiles, settings, user as _user, mobile, chatType } from '$lib/stores';
 	import { tick, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -299,7 +299,7 @@
 								<UserMessage
 									on:delete={() => messageDeleteHandler(message.id)}
 									{user}
-									{readOnly}
+									readOnly={$chatType === 'chat_embedding'}
 									{message}
 									isFirstMessage={messageIdx === 0}
 									siblings={message.parentId !== null
@@ -319,7 +319,7 @@
 										modelfiles={selectedModelfiles}
 										siblings={history.messages[message.parentId]?.childrenIds ?? []}
 										isLastMessage={messageIdx + 1 === messages.length}
-										{readOnly}
+										readOnly={$chatType === 'chat_embedding'}
 										{updateChatMessages}
 										{confirmEditResponseMessage}
 										{showPreviousMessage}
