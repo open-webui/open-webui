@@ -216,7 +216,7 @@
 				<div class=" self-center w-10">
 					<div
 						class=" rounded-full bg-stone-700 {model?.info?.meta?.hidden ?? false
-							? 'brightness-50'
+							? 'brightness-90 dark:brightness-50'
 							: ''} "
 					>
 						<img
