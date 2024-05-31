@@ -271,6 +271,11 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                 except:
                     pass
 
+            model = app.state.MODELS[model_id]
+
+            if "pipeline" in model:
+                sorted_filters.append(model)
+
             for filter in sorted_filters:
                 r = None
                 try:
@@ -489,6 +494,11 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
         )
     ]
     sorted_filters = sorted(filters, key=lambda x: x["pipeline"]["priority"])
+
+    model = app.state.MODELS[model_id]
+
+    if "pipeline" in model:
+        sorted_filters = [model] + sorted_filters
 
     for filter in sorted_filters:
         r = None

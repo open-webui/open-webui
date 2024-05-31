@@ -899,7 +899,7 @@
 							const messages = createMessagesList(responseMessageId);
 
 							const res = await chatCompleted(localStorage.token, {
-								model: model,
+								model: model.id,
 								messages: messages.map((m) => ({
 									id: m.id,
 									role: m.role,
