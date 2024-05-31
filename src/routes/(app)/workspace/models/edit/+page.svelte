@@ -70,9 +70,9 @@
 		const res = await updateModelById(localStorage.token, info.id, info);
 
 		if (res) {
+			await models.set(await getModels(localStorage.token));
 			toast.success('Model updated successfully');
 			await goto('/workspace/models');
-			await models.set(await getModels(localStorage.token));
 		}
 
 		loading = false;
