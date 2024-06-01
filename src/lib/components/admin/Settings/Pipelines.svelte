@@ -40,8 +40,10 @@
 		const pipeline = pipelines[selectedPipelineIdx];
 
 		if (pipeline && (pipeline?.valves ?? false)) {
-			if (valves?.pipelines ?? false) {
-				valves.pipelines = valves.pipelines.split(',').map((v) => v.trim());
+			for (const property in valves_spec.properties) {
+				if (valves_spec.properties[property]?.type === 'array') {
+					valves[property] = valves[property].split(',').map((v) => v.trim());
+				}
 			}
 
 			const res = await updatePipelineValves(
@@ -79,8 +81,10 @@
 			selectedPipelinesUrlIdx
 		);
 
-		if (valves?.pipelines ?? false) {
-			valves.pipelines = valves.pipelines.join(',');
+		for (const property in valves_spec.properties) {
+			if (valves_spec.properties[property]?.type === 'array') {
+				valves[property] = valves[property].join(',');
+			}
 		}
 	};
 
