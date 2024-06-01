@@ -7,7 +7,7 @@
 
 	import { onMount, getContext, tick } from 'svelte';
 
-	import { WEBUI_NAME, modelfiles, models, settings, user } from '$lib/stores';
+	import { WEBUI_NAME, mobile, models, settings, user } from '$lib/stores';
 	import { addNewModel, deleteModelById, getModelInfos, updateModelById } from '$lib/apis/models';
 
 	import { deleteModel } from '$lib/apis/ollama';
@@ -170,14 +170,16 @@
 			console.log(localModelfiles);
 		}
 
-		// SortableJS
-		sortable = new Sortable(document.getElementById('model-list'), {
-			animation: 150,
-			onUpdate: async (event) => {
-				console.log(event);
-				positionChangeHanlder();
-			}
-		});
+		if (!$mobile) {
+			// SortableJS
+			sortable = new Sortable(document.getElementById('model-list'), {
+				animation: 150,
+				onUpdate: async (event) => {
+					console.log(event);
+					positionChangeHanlder();
+				}
+			});
+		}
 	});
 </script>
 
