@@ -46,6 +46,7 @@
 		(item) =>
 			(searchValue
 				? item.value.toLowerCase().includes(searchValue.toLowerCase()) ||
+				  item.label.toLowerCase().includes(searchValue.toLowerCase()) ||
 				  (item.model?.info?.meta?.tags ?? []).some((tag) =>
 						tag.name.toLowerCase().includes(searchValue.toLowerCase())
 				  )
