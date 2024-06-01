@@ -251,35 +251,9 @@
 							show = false;
 						}}
 					>
-						<div class="flex items-center gap-2">
-							<div class="flex items-center">
-								<div class="line-clamp-1">
-									{item.label}
-								</div>
-								{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
-									<div class="flex ml-1 items-center">
-										<Tooltip
-											content={`${
-												item.model.ollama?.details?.quantization_level
-													? item.model.ollama?.details?.quantization_level + ' '
-													: ''
-											}${
-												item.model.ollama?.size
-													? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
-													: ''
-											}`}
-											className="self-end"
-										>
-											<span class=" text-xs font-medium text-gray-600 dark:text-gray-400"
-												>{item.model.ollama?.details?.parameter_size ?? ''}</span
-											>
-										</Tooltip>
-									</div>
-								{/if}
-							</div>
-
-							{#if (item?.model?.info?.meta?.tags ?? []).length > 0}
-								<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
+						<div class="flex flex-col">
+							{#if $mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+								<div class="flex gap-0.5 self-start h-full mb-0.5 -translate-x-1">
 									{#each item.model?.info?.meta.tags as tag}
 										<div
 											class=" text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
@@ -289,57 +263,97 @@
 									{/each}
 								</div>
 							{/if}
-
-							<!-- {JSON.stringify(item.info)} -->
-
-							{#if item.model.owned_by === 'openai'}
-								<Tooltip content={`${'External'}`}>
-									<div class="">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="size-3"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M8.914 6.025a.75.75 0 0 1 1.06 0 3.5 3.5 0 0 1 0 4.95l-2 2a3.5 3.5 0 0 1-5.396-4.402.75.75 0 0 1 1.251.827 2 2 0 0 0 3.085 2.514l2-2a2 2 0 0 0 0-2.828.75.75 0 0 1 0-1.06Z"
-												clip-rule="evenodd"
-											/>
-											<path
-												fill-rule="evenodd"
-												d="M7.086 9.975a.75.75 0 0 1-1.06 0 3.5 3.5 0 0 1 0-4.95l2-2a3.5 3.5 0 0 1 5.396 4.402.75.75 0 0 1-1.251-.827 2 2 0 0 0-3.085-2.514l-2 2a2 2 0 0 0 0 2.828.75.75 0 0 1 0 1.06Z"
-												clip-rule="evenodd"
-											/>
-										</svg>
+							<div class="flex items-center gap-2">
+								<div class="flex items-center">
+									<div class="line-clamp-1">
+										{item.label}
 									</div>
-								</Tooltip>
-							{/if}
+									{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
+										<div class="flex ml-1 items-center translate-y-[0.5px]">
+											<Tooltip
+												content={`${
+													item.model.ollama?.details?.quantization_level
+														? item.model.ollama?.details?.quantization_level + ' '
+														: ''
+												}${
+													item.model.ollama?.size
+														? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
+														: ''
+												}`}
+												className="self-end"
+											>
+												<span
+													class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
+													>{item.model.ollama?.details?.parameter_size ?? ''}</span
+												>
+											</Tooltip>
+										</div>
+									{/if}
+								</div>
 
-							{#if item.model?.info?.meta?.description}
-								<Tooltip
-									content={`${sanitizeResponseContent(
-										item.model?.info?.meta?.description
-									).replaceAll('\n', '<br>')}`}
-								>
-									<div class="">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="1.5"
-											stroke="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-											/>
-										</svg>
+								{#if !$mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+									<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
+										{#each item.model?.info?.meta.tags as tag}
+											<div
+												class=" text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+											>
+												{tag.name}
+											</div>
+										{/each}
 									</div>
-								</Tooltip>
-							{/if}
+								{/if}
+
+								<!-- {JSON.stringify(item.info)} -->
+
+								{#if item.model.owned_by === 'openai'}
+									<Tooltip content={`${'External'}`}>
+										<div class="">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="size-3"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M8.914 6.025a.75.75 0 0 1 1.06 0 3.5 3.5 0 0 1 0 4.95l-2 2a3.5 3.5 0 0 1-5.396-4.402.75.75 0 0 1 1.251.827 2 2 0 0 0 3.085 2.514l2-2a2 2 0 0 0 0-2.828.75.75 0 0 1 0-1.06Z"
+													clip-rule="evenodd"
+												/>
+												<path
+													fill-rule="evenodd"
+													d="M7.086 9.975a.75.75 0 0 1-1.06 0 3.5 3.5 0 0 1 0-4.95l2-2a3.5 3.5 0 0 1 5.396 4.402.75.75 0 0 1-1.251-.827 2 2 0 0 0-3.085-2.514l-2 2a2 2 0 0 0 0 2.828.75.75 0 0 1 0 1.06Z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										</div>
+									</Tooltip>
+								{/if}
+
+								{#if item.model?.info?.meta?.description}
+									<Tooltip
+										content={`${sanitizeResponseContent(
+											item.model?.info?.meta?.description
+										).replaceAll('\n', '<br>')}`}
+									>
+										<div class="">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="1.5"
+												stroke="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+												/>
+											</svg>
+										</div>
+									</Tooltip>
+								{/if}
+							</div>
 						</div>
 
 						{#if value === item.value}
