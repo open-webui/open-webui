@@ -471,6 +471,7 @@
 									{/if}
 								{/each}
 							{/if}
+
 							{#if message.error}
 								<div
 									class="flex mt-2 mb-4 space-x-2 border px-4 py-3 border-red-800 bg-red-800/30 font-medium rounded-lg"

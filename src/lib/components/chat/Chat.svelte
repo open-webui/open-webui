@@ -1034,11 +1034,12 @@
 		}
 
 		responseMessage.error = {
-			content: $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-				provider: model.name ?? model.id
-			}) +
-			'\n' +
-			errorMessage;
+			content:
+				$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+					provider: model.name ?? model.id
+				}) +
+				'\n' +
+				errorMessage
 		};
 		responseMessage.done = true;
 
