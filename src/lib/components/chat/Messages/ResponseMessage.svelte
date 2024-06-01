@@ -453,7 +453,9 @@
 						<div class="w-full">
 							{#if message.content === '' && !message.error}
 								<Skeleton />
-							{:else if !message.error}
+							{:else if message.content && message.error !== true}
+								<!-- always show message contents even if there's an error -->
+								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								{#each tokens as token, tokenIdx}
 									{#if token.type === 'code'}
 										<CodeBlock
