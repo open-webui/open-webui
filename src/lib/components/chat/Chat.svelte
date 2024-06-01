@@ -680,9 +680,10 @@
 									responseMessage.done = true;
 
 									if (responseMessage.content == '') {
-										responseMessage.error = true;
-										responseMessage.content =
-											'Oops! No text generated from Ollama, Please try again.';
+										responseMessage.error = {
+											code: 400,
+											content: `Oops! No text generated from Ollama, Please try again.`
+										};
 									}
 
 									responseMessage.context = data.context ?? null;
@@ -754,24 +755,21 @@
 				console.log(error);
 				if ('detail' in error) {
 					toast.error(error.detail);
-					responseMessage.content = error.detail;
+					responseMessage.error = { content: error.detail };
 				} else {
 					toast.error(error.error);
-					responseMessage.content = error.error;
+					responseMessage.error = { content: error.error };
 				}
 			} else {
 				toast.error(
 					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: 'Ollama' })
 				);
-				responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-					provider: 'Ollama'
-				});
+				responseMessage.error = {
+					content: $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+						provider: 'Ollama'
+					})
+				};
 			}
-
-			responseMessage.error = true;
-			responseMessage.content = $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-				provider: 'Ollama'
-			});
 			responseMessage.done = true;
 			messages = messages;
 		}
@@ -1035,13 +1033,13 @@
 			errorMessage = innerError.message;
 		}
 
-		responseMessage.error = true;
-		responseMessage.content =
-			$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+		responseMessage.error = {
+			content: $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
 				provider: model.name ?? model.id
 			}) +
 			'\n' +
 			errorMessage;
+		};
 		responseMessage.done = true;
 
 		messages = messages;
