@@ -453,7 +453,7 @@
 						<div class="w-full">
 							{#if message.content === '' && !message.error}
 								<Skeleton />
-							{:else if !message.error || message.errorContent}
+							{:else if !message.error}
 								{#each tokens as token, tokenIdx}
 									{#if token.type === 'code'}
 										<CodeBlock
@@ -471,7 +471,7 @@
 									{/if}
 								{/each}
 							{/if}
-							{#if message.error === true}
+							{#if message.error}
 								<div
 									class="flex mt-2 mb-4 space-x-2 border px-4 py-3 border-red-800 bg-red-800/30 font-medium rounded-lg"
 								>
@@ -491,7 +491,7 @@
 									</svg>
 
 									<div class=" self-center">
-										{message.errorContent ?? message.content}
+										{message?.error?.content ?? message.content}
 									</div>
 								</div>
 							{/if}
