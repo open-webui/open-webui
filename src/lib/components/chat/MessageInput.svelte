@@ -778,7 +778,7 @@
 						{/if}
 
 						<div class=" flex">
-							<div class=" ml-1 flex items-center">
+							<div class=" ml-1 self-end mb-2 flex space-x-1">
 								<InputMenu
 									bind:webSearchEnabled
 									uploadFilesHandler={() => {
