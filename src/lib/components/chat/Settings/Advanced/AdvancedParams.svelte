@@ -379,7 +379,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
-			<div class=" self-center text-xs font-medium">{$i18n.t('Frequencey Penalty')}</div>
+			<div class=" self-center text-xs font-medium">{$i18n.t('Frequency Penalty')}</div>
 
 			<button
 				class="p-1 px-3 text-xs flex rounded transition"
