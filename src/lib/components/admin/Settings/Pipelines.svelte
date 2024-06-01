@@ -263,6 +263,14 @@
 							{/if}
 						</button>
 					</div>
+
+					<div class="mt-2 text-xs text-gray-500">
+						<span class=" font-semibold dark:text-gray-200">Warning:</span> Pipelines are a plugin
+						system with arbitrary code execution —
+						<span class=" font-medium dark:text-gray-400"
+							>don't fetch random pipelines from sources you don't trust.</span
+						>
+					</div>
 				</div>
 
 				<hr class=" dark:border-gray-800 my-3 w-full" />
