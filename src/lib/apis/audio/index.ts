@@ -116,7 +116,7 @@ export const synthesizeOpenAISpeech = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/speech`, {
+	const res = await fetch(`${AUDIO_API_BASE_URL}/openai/speech`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,

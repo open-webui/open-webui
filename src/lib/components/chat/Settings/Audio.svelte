@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getAudioConfig, updateAudioConfig, updateOpenAIAudioConfig } from '$lib/apis/audio';
-	import { Alltalk } from '$lib/apis/audio/providers/Alltalk';
+	import { Alltalk } from '$lib/apis/audio/providers/alltalk/Alltalk';
 	import { user, settings } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -406,6 +406,26 @@
 							</datalist>
 						</div>
 					</div>
+					<button
+						class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+						type="button"
+						on:click={() => {
+							alltalk.previewVoice();
+						}}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
+							/>
+						</svg>
+					</button>
 				</div>
 		{/if}
 	</div>

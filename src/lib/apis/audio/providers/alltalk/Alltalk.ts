@@ -1,3 +1,5 @@
+import { AUDIO_API_BASE_URL } from '$lib/constants';
+
 export class Alltalk {
     isReady: boolean = false;
     provider: string = 'alltalk';
@@ -12,9 +14,7 @@ export class Alltalk {
     }
 
     async setup() {
-        console.log("setup called. baseUrl: ", this.baseUrl);
         this.isReady = await this.getReady();
-        console.log("isReady: ", this.isReady);
         await this.getVoices();
     }
 
@@ -36,14 +36,10 @@ export class Alltalk {
         }).then((res) => res.json());
 
         this.voicesList = res.voices;
-        console.log("fetched voices: ", this.voicesList);
 
         if (this.voicesList.length > 0 && !this.currentVoice) {
             this.currentVoice = this.voicesList[0];
         }
-
-        console.log("current voice: ", this.currentVoice);
-
 
         return this.voicesList;
     }
@@ -55,18 +51,30 @@ export class Alltalk {
     }
 
     async previewVoice(voice: string) {
-        return await fetch(`${this.baseUrl}/api/previewvoice/`, {
+        const res = await this.getPreviewVoice(voice);
+        if (res.status === 'generate-success') {
+            const audio = new Audio(res.output_file_url);
+            audio.play();
+        }
+    }
+
+    async getPreviewVoice(voice: string) {
+        voice = voice || this.currentVoice;
+
+        return await fetch(`${AUDIO_API_BASE_URL}/${this.provider}/previewvoice`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
+                'Content-Type': 'application/json'
             },
-            body: `voice=${voice}`
+            body: JSON.stringify({ voice: voice })
         }).then((res) => res.json());
+
     }
 
     async reload(tts_method: string) {
         return await fetch(`${this.baseUrl}/api/reload?tts_method=${tts_method}`, {
-            method: 'POST'
+            method: 'POST',
+            body: JSON.stringify({ tts_method: tts_method })
         }).then((res) => res.json());
     }
 
