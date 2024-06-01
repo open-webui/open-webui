@@ -67,6 +67,12 @@
 		info.meta.capabilities = capabilities;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 
+		Object.keys(info.params).forEach((key) => {
+			if (info.params[key] === '' || info.params[key] === null) {
+				delete info.params[key];
+			}
+		});
+
 		const res = await updateModelById(localStorage.token, info.id, info);
 
 		if (res) {

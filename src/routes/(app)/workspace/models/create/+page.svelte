@@ -79,6 +79,12 @@
 		info.meta.capabilities = capabilities;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 
+		Object.keys(info.params).forEach((key) => {
+			if (info.params[key] === '' || info.params[key] === null) {
+				delete info.params[key];
+			}
+		});
+
 		if ($models.find((m) => m.id === info.id)) {
 			toast.error(
 				`Error: A model with the ID '${info.id}' already exists. Please select a different ID to proceed.`
