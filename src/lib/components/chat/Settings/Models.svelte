@@ -8,7 +8,6 @@
 		getOllamaUrls,
 		getOllamaVersion,
 		pullModel,
-		cancelOllamaRequest,
 		uploadModel
 	} from '$lib/apis/ollama';
 
@@ -67,12 +66,14 @@
 			console.log(model);
 
 			updateModelId = model.id;
-			const res = await pullModel(localStorage.token, model.id, selectedOllamaUrlIdx).catch(
-				(error) => {
-					toast.error(error);
-					return null;
-				}
-			);
+			const [res, controller] = await pullModel(
+				localStorage.token,
+				model.id,
+				selectedOllamaUrlIdx
+			).catch((error) => {
+				toast.error(error);
+				return null;
+			});
 
 			if (res) {
 				const reader = res.body
@@ -141,16 +142,28 @@
 			return;
 		}
 
-		const res = await pullModel(localStorage.token, sanitizedModelTag, '0').catch((error) => {
-			toast.error(error);
-			return null;
-		});
+		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, '0').catch(
+			(error) => {
+				toast.error(error);
+				return null;
+			}
+		);
 
 		if (res) {
 			const reader = res.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))
 				.getReader();
+
+			MODEL_DOWNLOAD_POOL.set({
+				...$MODEL_DOWNLOAD_POOL,
+				[sanitizedModelTag]: {
+					...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
+					abortController: controller,
+					reader,
+					done: false
+				}
+			});
 
 			while (true) {
 				try {
@@ -168,19 +181,6 @@
 							}
 							if (data.detail) {
 								throw data.detail;
-							}
-
-							if (data.id) {
-								MODEL_DOWNLOAD_POOL.set({
-									...$MODEL_DOWNLOAD_POOL,
-									[sanitizedModelTag]: {
-										...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
-										requestId: data.id,
-										reader,
-										done: false
-									}
-								});
-								console.log(data);
 							}
 
 							if (data.status) {
@@ -416,11 +416,12 @@
 	};
 
 	const cancelModelPullHandler = async (model: string) => {
-		const { reader, requestId } = $MODEL_DOWNLOAD_POOL[model];
+		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];
+		if (abortController) {
+			abortController.abort();
+		}
 		if (reader) {
 			await reader.cancel();
-
-			await cancelOllamaRequest(localStorage.token, requestId);
 			delete $MODEL_DOWNLOAD_POOL[model];
 			MODEL_DOWNLOAD_POOL.set({
 				...$MODEL_DOWNLOAD_POOL
