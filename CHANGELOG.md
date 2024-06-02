@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **🖱️ Single Model Export Button**: Easily export models with just one click using the new single model export button.
-- **🖥️ Advanced Parameters Support**: Added support for `num_thread`, `use_mmap`, and `use_mlock` parameters for Ollama.
+- **🖥️ Advanced Parameters Support**: Added support for 'num_thread', 'use_mmap', and 'use_mlock' parameters for Ollama.
 - **🌐 Improved Vietnamese Translation**: Enhanced Vietnamese language support for a better user experience for our Vietnamese-speaking community.
 
 ### Fixed
