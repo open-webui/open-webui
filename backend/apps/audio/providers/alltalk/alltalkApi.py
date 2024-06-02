@@ -26,11 +26,8 @@ class AllTalkTTSAPI:
         return response.json()
 
     def switch_model(self, tts_method):
-        url = f"{self.base_url}/api/reload"
-        params = {'tts_method': tts_method}
-        response = requests.post(url, params=params)
-        print("switch_model")
-        print(response)
+        url = f"{self.base_url}/api/reload?tts_method={tts_method}"
+        response = requests.post(url)
         return response
 
     def switch_deepspeed(self, new_deepspeed_value):

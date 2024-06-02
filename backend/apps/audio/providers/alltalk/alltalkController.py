@@ -95,6 +95,9 @@ async def update_provider_config(
 
     update_alltalk_base_url(form_data.url)
 
+    print("form_data.model: " + form_data.model)
+    print("config.ALLTALK_API_MODEL: " + config.ALLTALK_API_MODEL)
+
     # Update the config to the TTS server if the values have changed
     if (config.ALLTALK_API_MODEL != form_data.model):
         await switch_model(form_data.model)

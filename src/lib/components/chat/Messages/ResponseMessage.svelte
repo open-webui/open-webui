@@ -264,6 +264,8 @@
 						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
 					}
 				}
+			} else if($settings?.audio?.TTSEngine === 'alltalk') {
+
 			} else {
 				let voices = [];
 				const getVoicesLoop = setInterval(async () => {

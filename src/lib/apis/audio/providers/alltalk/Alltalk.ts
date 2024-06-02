@@ -1,10 +1,18 @@
 import { AlltalkApi } from './AlltalkApi';
 import type { CurrentSettings } from './alltalkApiModel';
 
-interface PreviewVoicePayload {
+type PreviewVoicePayload = {
     lastVoice: string; // last voice used for previewing.
     lastUrl: string; // last URL recieved from previewing.
 }
+
+export type AllTalkConfigForm = {
+	url: string;
+	model: string;
+	speaker: string;
+	deepspeed: boolean;
+	low_vram: boolean;
+};
 
 export class Alltalk {
     isReady: boolean = false;
@@ -25,7 +33,7 @@ export class Alltalk {
         this.api = new AlltalkApi();
     }
 
-    async setup() {
+    async setup(): Promise<void> {
         console.log("Setting up Alltalk");
         console.log("baseUrl: ", this.baseUrl);
         if (!this.baseUrl) {
@@ -50,6 +58,7 @@ export class Alltalk {
         let result = null;
         if (!this.currentsSettings) {
             await this.getCurrentSettings();
+            this.currentModel = this.currentsSettings.current_model_loaded;
         }
         result = this.currentsSettings.models_available.map((model) => model.model_name);
         console.log("modelList: ", result);
@@ -63,10 +72,11 @@ export class Alltalk {
         this.currentModel = res.current_model_loaded;
         this.useDeepSpeed = res.deepspeed_status;
         this.useLowVRAM = res.low_vram_status;
+        console.log("after getting settings: ", this);
         return res;
     }
 
-    async getPreviewVoice(voice: string, forceReload: boolean = false) {
+    async getPreviewVoice(voice: string, forceReload: boolean = false): Promise<string | null>{
         voice = voice || this.currentVoice;
 
         let result = null;
@@ -88,5 +98,10 @@ export class Alltalk {
         return result;
     }
 
+    async toggleSpeakMessage(/*message: string, voice: string, model: string, deepspeed: boolean, low_vram: boolean*/) {
+        //const res = await this.api.toggleSpeakMessage(message, voice, model, deepspeed, low_vram);
+        //return res;
+        return null;
+    }
 
 }

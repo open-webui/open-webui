@@ -1,4 +1,8 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
+import { Alltalk } from '$lib/apis/audio/providers/alltalk/Alltalk';
+import type { AllTalkConfigForm } from '$lib/apis/audio/providers/alltalk/Alltalk';
+
+export const _alltalk: Alltalk = new Alltalk();
 
 export const getAudioConfig = async (token: string) => {
 	let error = null;
@@ -25,14 +29,6 @@ export const getAudioConfig = async (token: string) => {
 	}
 
 	return res;
-};
-
-type AllTalkConfigForm = {
-	url: string;
-	model: string;
-	speaker: string;
-	deepspeed: boolean;
-	low_vram: boolean;
 };
 
 type OpenAIConfigForm = {
