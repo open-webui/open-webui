@@ -550,7 +550,11 @@ async def get_pipelines_list(user=Depends(get_admin_user)):
     responses = await get_openai_models(raw=True)
 
     print(responses)
-    urlIdxs = [idx for idx, response in enumerate(responses) if "pipelines" in response]
+    urlIdxs = [
+        idx
+        for idx, response in enumerate(responses)
+        if response != None and "pipelines" in response
+    ]
 
     return {
         "data": [
