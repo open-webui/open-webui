@@ -153,7 +153,7 @@ async def cleanup_response(
         await session.close()
 
 
-async def post_streaming_url(url, payload):
+async def post_streaming_url(url: str, payload: str):
     r = None
     try:
         session = aiohttp.ClientSession()
