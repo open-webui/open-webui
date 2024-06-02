@@ -228,6 +228,27 @@ async def get_all_models(raw: bool = False):
     ) or not app.state.config.ENABLE_OPENAI_API:
         models = {"data": []}
     else:
+        # Check if API KEYS length is same than API URLS length
+        if len(app.state.config.OPENAI_API_KEYS) != len(
+            app.state.config.OPENAI_API_BASE_URLS
+        ):
+            # if there are more keys than urls, remove the extra keys
+            if len(app.state.config.OPENAI_API_KEYS) > len(
+                app.state.config.OPENAI_API_BASE_URLS
+            ):
+                app.state.config.OPENAI_API_KEYS = app.state.config.OPENAI_API_KEYS[
+                    : len(app.state.config.OPENAI_API_BASE_URLS)
+                ]
+            # if there are more urls than keys, add empty keys
+            else:
+                app.state.config.OPENAI_API_KEYS += [
+                    ""
+                    for _ in range(
+                        len(app.state.config.OPENAI_API_BASE_URLS)
+                        - len(app.state.config.OPENAI_API_KEYS)
+                    )
+                ]
+
         tasks = [
             fetch_url(f"{url}/models", app.state.config.OPENAI_API_KEYS[idx])
             for idx, url in enumerate(app.state.config.OPENAI_API_BASE_URLS)
