@@ -1,0 +1,442 @@
+{
+	"kind": "customsearch#search",
+	"url": {
+		"type": "application/json",
+		"template": "https://www.googleapis.com/customsearch/v1?q={searchTerms}&num={count?}&start={startIndex?}&lr={language?}&safe={safe?}&cx={cx?}&sort={sort?}&filter={filter?}&gl={gl?}&cr={cr?}&googlehost={googleHost?}&c2coff={disableCnTwTranslation?}&hq={hq?}&hl={hl?}&siteSearch={siteSearch?}&siteSearchFilter={siteSearchFilter?}&exactTerms={exactTerms?}&excludeTerms={excludeTerms?}&linkSite={linkSite?}&orTerms={orTerms?}&dateRestrict={dateRestrict?}&lowRange={lowRange?}&highRange={highRange?}&searchType={searchType}&fileType={fileType?}&rights={rights?}&imgSize={imgSize?}&imgType={imgType?}&imgColorType={imgColorType?}&imgDominantColor={imgDominantColor?}&alt=json"
+	},
+	"queries": {
+		"request": [
+			{
+				"title": "Google Custom Search - lectures",
+				"totalResults": "2450000000",
+				"searchTerms": "lectures",
+				"count": 10,
+				"startIndex": 1,
+				"inputEncoding": "utf8",
+				"outputEncoding": "utf8",
+				"safe": "off",
+				"cx": "0473ef98502d44e18"
+			}
+		],
+		"nextPage": [
+			{
+				"title": "Google Custom Search - lectures",
+				"totalResults": "2450000000",
+				"searchTerms": "lectures",
+				"count": 10,
+				"startIndex": 11,
+				"inputEncoding": "utf8",
+				"outputEncoding": "utf8",
+				"safe": "off",
+				"cx": "0473ef98502d44e18"
+			}
+		]
+	},
+	"context": {
+		"title": "LLM Search"
+	},
+	"searchInformation": {
+		"searchTime": 0.445959,
+		"formattedSearchTime": "0.45",
+		"totalResults": "2450000000",
+		"formattedTotalResults": "2,450,000,000"
+	},
+	"items": [
+		{
+			"kind": "customsearch#result",
+			"title": "The Feynman Lectures on Physics",
+			"htmlTitle": "The Feynman \u003cb\u003eLectures\u003c/b\u003e on Physics",
+			"link": "https://www.feynmanlectures.caltech.edu/",
+			"displayLink": "www.feynmanlectures.caltech.edu",
+			"snippet": "This edition has been designed for ease of reading on devices of any size or shape; text, figures and equations can all be zoomed without degradation.",
+			"htmlSnippet": "This edition has been designed for ease of reading on devices of any size or shape; text, figures and equations can all be zoomed without degradation.",
+			"cacheId": "CyXMWYWs9UEJ",
+			"formattedUrl": "https://www.feynmanlectures.caltech.edu/",
+			"htmlFormattedUrl": "https://www.feynman\u003cb\u003electures\u003c/b\u003e.caltech.edu/",
+			"pagemap": {
+				"metatags": [
+					{
+						"viewport": "width=device-width, initial-scale=1.0"
+					}
+				]
+			}
+		},
+		{
+			"kind": "customsearch#result",
+			"title": "Video Lectures",
+			"htmlTitle": "Video \u003cb\u003eLectures\u003c/b\u003e",
+			"link": "https://www.reddit.com/r/lectures/",
+			"displayLink": "www.reddit.com",
+			"snippet": "r/lectures: This subreddit is all about video lectures, talks and interesting public speeches. The topics include mathematics, physics, computer…",
+			"htmlSnippet": "r/\u003cb\u003electures\u003c/b\u003e: This subreddit is all about video \u003cb\u003electures\u003c/b\u003e, talks and interesting public speeches. The topics include mathematics, physics, computer…",
+			"formattedUrl": "https://www.reddit.com/r/lectures/",
+			"htmlFormattedUrl": "https://www.reddit.com/r/\u003cb\u003electures\u003c/b\u003e/",
+			"pagemap": {
+				"cse_thumbnail": [
+					{
+						"src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTZtOjhfkgUKQbL3DZxe5F6OVsgeDNffleObjJ7n9RllKQTSsimax7VIaY&s",
+						"width": "192",
+						"height": "192"
+					}
+				],
+				"metatags": [
+					{
+						"og:image": "https://www.redditstatic.com/shreddit/assets/favicon/192x192.png",
+						"theme-color": "#000000",
+						"og:image:width": "256",
+						"og:type": "website",
+						"twitter:card": "summary",
+						"twitter:title": "r/lectures",
+						"og:site_name": "Reddit",
+						"og:title": "r/lectures",
+						"og:image:height": "256",
+						"bingbot": "noarchive",
+						"msapplication-navbutton-color": "#000000",
+						"og:description": "This subreddit is all about video lectures, talks and interesting public speeches.\n\nThe topics include mathematics, physics, computer science, programming, engineering, biology, medicine, economics, politics, social sciences, and any other subjects!",
+						"twitter:image": "https://www.redditstatic.com/shreddit/assets/favicon/192x192.png",
+						"apple-mobile-web-app-status-bar-style": "black",
+						"twitter:site": "@reddit",
+						"viewport": "width=device-width, initial-scale=1, viewport-fit=cover",
+						"apple-mobile-web-app-capable": "yes",
+						"og:ttl": "600",
+						"og:url": "https://www.reddit.com/r/lectures/"
+					}
+				],
+				"cse_image": [
+					{
+						"src": "https://www.redditstatic.com/shreddit/assets/favicon/192x192.png"
+					}
+				]
+			}
+		},
+		{
+			"kind": "customsearch#result",
+			"title": "Lectures & Discussions | Flint Institute of Arts",
+			"htmlTitle": "\u003cb\u003eLectures\u003c/b\u003e &amp; Discussions | Flint Institute of Arts",
+			"link": "https://flintarts.org/events/lectures",
+			"displayLink": "flintarts.org",
+			"snippet": "It will trace the intricate relationship between jewelry, attire, and the expression of personal identity, social hierarchy, and spiritual belief systems that ...",
+			"htmlSnippet": "It will trace the intricate relationship between jewelry, attire, and the expression of personal identity, social hierarchy, and spiritual belief systems that&nbsp;...",
+			"cacheId": "jvpb9DxrfxoJ",
+			"formattedUrl": "https://flintarts.org/events/lectures",
+			"htmlFormattedUrl": "https://flintarts.org/events/\u003cb\u003electures\u003c/b\u003e",
+			"pagemap": {
+				"cse_thumbnail": [
+					{
+						"src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS23tMtAeNhJbOWdGxShYsmnyzFdzOC9Hb7lRykA9Pw72z1IlKTkjTdZw&s",
+						"width": "447",
+						"height": "113"
+					}
+				],
+				"metatags": [
+					{
+						"og:image": "https://flintarts.org/uploads/images/page-headers/_headerImage/nightshot.jpg",
+						"og:type": "website",
+						"viewport": "width=device-width, initial-scale=1",
+						"og:title": "Lectures & Discussions | Flint Institute of Arts",
+						"og:description": "The Flint Institute of Arts is the second largest art museum in Michigan and one of the largest museum art schools in the nation."
+					}
+				],
+				"cse_image": [
+					{
+						"src": "https://flintarts.org/uploads/images/page-headers/_headerImage/nightshot.jpg"
+					}
+				]
+			}
+		},
+		{
+			"kind": "customsearch#result",
+			"title": "Mandel Lectures | Mandel Center for the Humanities ... - Waltham",
+			"htmlTitle": "Mandel \u003cb\u003eLectures\u003c/b\u003e | Mandel Center for the Humanities ... - Waltham",
+			"link": "https://www.brandeis.edu/mandel-center-humanities/mandel-lectures.html",
+			"displayLink": "www.brandeis.edu",
+			"snippet": "Past Lectures · Lecture 1: \"Invisible Music: The Sonic Idea of Black Revolution From Captivity to Reconstruction\" · Lecture 2: \"Solidarity in Sound: Grassroots ...",
+			"htmlSnippet": "Past \u003cb\u003eLectures\u003c/b\u003e &middot; \u003cb\u003eLecture\u003c/b\u003e 1: &quot;Invisible Music: The Sonic Idea of Black Revolution From Captivity to Reconstruction&quot; &middot; \u003cb\u003eLecture\u003c/b\u003e 2: &quot;Solidarity in Sound: Grassroots&nbsp;...",
+			"cacheId": "cQLOZr0kgEEJ",
+			"formattedUrl": "https://www.brandeis.edu/mandel-center-humanities/mandel-lectures.html",
+			"htmlFormattedUrl": "https://www.brandeis.edu/mandel-center-humanities/mandel-\u003cb\u003electures\u003c/b\u003e.html",
+			"pagemap": {
+				"cse_thumbnail": [
+					{
+						"src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQWlU7bcJ5pIHk7RBCk2QKE-48ejF7hyPV0pr-20_cBt2BGdfKtiYXBuyw&s",
+						"width": "275",
+						"height": "183"
+					}
+				],
+				"metatags": [
+					{
+						"og:image": "https://www.brandeis.edu/mandel-center-humanities/events/events-images/mlhzumba",
+						"twitter:card": "summary_large_image",
+						"viewport": "width=device-width,initial-scale=1,minimum-scale=1",
+						"og:title": "Mandel Lectures in the Humanities",
+						"og:url": "https://www.brandeis.edu/mandel-center-humanities/mandel-lectures.html",
+						"og:description": "Annual Lecture Series",
+						"twitter:image": "https://www.brandeis.edu/mandel-center-humanities/events/events-images/mlhzumba"
+					}
+				],
+				"cse_image": [
+					{
+						"src": "https://www.brandeis.edu/mandel-center-humanities/events/events-images/mlhzumba"
+					}
+				]
+			}
+		},
+		{
+			"kind": "customsearch#result",
+			"title": "Brian Douglas - YouTube",
+			"htmlTitle": "Brian Douglas - YouTube",
+			"link": "https://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg",
+			"displayLink": "www.youtube.com",
+			"snippet": "Welcome to Control Systems Lectures! This collection of videos is intended to supplement a first year controls class, not replace it.",
+			"htmlSnippet": "Welcome to Control Systems \u003cb\u003eLectures\u003c/b\u003e! This collection of videos is intended to supplement a first year controls class, not replace it.",
+			"cacheId": "NEROyBHolL0J",
+			"formattedUrl": "https://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg",
+			"htmlFormattedUrl": "https://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg",
+			"pagemap": {
+				"hcard": [
+					{
+						"fn": "Brian Douglas",
+						"url": "https://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg"
+					}
+				],
+				"cse_thumbnail": [
+					{
+						"src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7G0CeCBz_wVTZgjnhEr2QbiKP7f3uYzKitZYn74Mi32cDmVxvsegJoLI&s",
+						"width": "225",
+						"height": "225"
+					}
+				],
+				"imageobject": [
+					{
+						"width": "900",
+						"url": "https://yt3.googleusercontent.com/ytc/AIdro_nLo68wetImbwGUYP3stve_iKmAEccjhqB-q4o79xdInN4=s900-c-k-c0x00ffffff-no-rj",
+						"height": "900"
+					}
+				],
+				"person": [
+					{
+						"name": "Brian Douglas",
+						"url": "https://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg"
+					}
+				],
+				"metatags": [
+					{
+						"apple-itunes-app": "app-id=544007664, app-argument=https://m.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg?referring_app=com.apple.mobilesafari-smartbanner, affiliate-data=ct=smart_app_banner_polymer&pt=9008",
+						"og:image": "https://yt3.googleusercontent.com/ytc/AIdro_nLo68wetImbwGUYP3stve_iKmAEccjhqB-q4o79xdInN4=s900-c-k-c0x00ffffff-no-rj",
+						"twitter:app:url:iphone": "vnd.youtube://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg",
+						"twitter:app:id:googleplay": "com.google.android.youtube",
+						"theme-color": "rgb(255, 255, 255)",
+						"og:image:width": "900",
+						"twitter:card": "summary",
+						"og:site_name": "YouTube",
+						"twitter:url": "https://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg",
+						"twitter:app:url:ipad": "vnd.youtube://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg",
+						"al:android:package": "com.google.android.youtube",
+						"twitter:app:name:googleplay": "YouTube",
+						"al:ios:url": "vnd.youtube://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg",
+						"twitter:app:id:iphone": "544007664",
+						"og:description": "Welcome to Control Systems Lectures!  This collection of videos is intended to supplement a first year controls class, not replace it.  My goal is to take specific concepts in controls and expand on them in order to provide an intuitive understanding which will ultimately make you a better controls engineer.  \n\nI'm glad you made it to my channel and I hope you find it useful.\n\nShoot me a message at controlsystemlectures@gmail.com, leave a comment or question and I'll get back to you if I can. Don't forget to subscribe!\n \nTwitter: @BrianBDouglas for engineering tweets and announcement of new videos.\nWebpage: http://engineeringmedia.com\n\nHere is the hardware/software I use: http://www.youtube.com/watch?v=m-M5_mIyHe4\n\nHere's a list of my favorite references: http://bit.ly/2skvmWd\n\n--Brian",
+						"al:ios:app_store_id": "544007664",
+						"twitter:image": "https://yt3.googleusercontent.com/ytc/AIdro_nLo68wetImbwGUYP3stve_iKmAEccjhqB-q4o79xdInN4=s900-c-k-c0x00ffffff-no-rj",
+						"twitter:site": "@youtube",
+						"og:type": "profile",
+						"twitter:title": "Brian Douglas",
+						"al:ios:app_name": "YouTube",
+						"og:title": "Brian Douglas",
+						"og:image:height": "900",
+						"twitter:app:id:ipad": "544007664",
+						"al:web:url": "https://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg?feature=applinks",
+						"al:android:url": "https://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg?feature=applinks",
+						"fb:app_id": "87741124305",
+						"twitter:app:url:googleplay": "https://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg",
+						"twitter:app:name:ipad": "YouTube",
+						"viewport": "width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no,",
+						"twitter:description": "Welcome to Control Systems Lectures!  This collection of videos is intended to supplement a first year controls class, not replace it.  My goal is to take specific concepts in controls and expand on them in order to provide an intuitive understanding which will ultimately make you a better controls engineer.  \n\nI'm glad you made it to my channel and I hope you find it useful.\n\nShoot me a message at controlsystemlectures@gmail.com, leave a comment or question and I'll get back to you if I can. Don't forget to subscribe!\n \nTwitter: @BrianBDouglas for engineering tweets and announcement of new videos.\nWebpage: http://engineeringmedia.com\n\nHere is the hardware/software I use: http://www.youtube.com/watch?v=m-M5_mIyHe4\n\nHere's a list of my favorite references: http://bit.ly/2skvmWd\n\n--Brian",
+						"og:url": "https://www.youtube.com/channel/UCq0imsn84ShAe9PBOFnoIrg",
+						"al:android:app_name": "YouTube",
+						"twitter:app:name:iphone": "YouTube"
+					}
+				],
+				"cse_image": [
+					{
+						"src": "https://yt3.googleusercontent.com/ytc/AIdro_nLo68wetImbwGUYP3stve_iKmAEccjhqB-q4o79xdInN4=s900-c-k-c0x00ffffff-no-rj"
+					}
+				]
+			}
+		},
+		{
+			"kind": "customsearch#result",
+			"title": "Lecture - Wikipedia",
+			"htmlTitle": "\u003cb\u003eLecture\u003c/b\u003e - Wikipedia",
+			"link": "https://en.wikipedia.org/wiki/Lecture",
+			"displayLink": "en.wikipedia.org",
+			"snippet": "Lecture ... For the academic rank, see Lecturer. A lecture (from Latin: lēctūra 'reading') is an oral presentation intended to present information or teach people ...",
+			"htmlSnippet": "\u003cb\u003eLecture\u003c/b\u003e ... For the academic rank, see \u003cb\u003eLecturer\u003c/b\u003e. A \u003cb\u003electure\u003c/b\u003e (from Latin: lēctūra &#39;reading&#39;) is an oral presentation intended to present information or teach people&nbsp;...",
+			"cacheId": "d9Pjta02fmgJ",
+			"formattedUrl": "https://en.wikipedia.org/wiki/Lecture",
+			"htmlFormattedUrl": "https://en.wikipedia.org/wiki/Lecture",
+			"pagemap": {
+				"metatags": [
+					{
+						"referrer": "origin",
+						"og:image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/ADFA_Lecture_Theatres.jpg/1200px-ADFA_Lecture_Theatres.jpg",
+						"theme-color": "#eaecf0",
+						"og:image:width": "1200",
+						"og:type": "website",
+						"viewport": "width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=0.25, maximum-scale=5.0",
+						"og:title": "Lecture - Wikipedia",
+						"og:image:height": "799",
+						"format-detection": "telephone=no"
+					}
+				]
+			}
+		},
+		{
+			"kind": "customsearch#result",
+			"title": "Mount Wilson Observatory | Lectures",
+			"htmlTitle": "Mount Wilson Observatory | \u003cb\u003eLectures\u003c/b\u003e",
+			"link": "https://www.mtwilson.edu/lectures/",
+			"displayLink": "www.mtwilson.edu",
+			"snippet": "Talks & Telescopes: August 24, 2024 – Panel: The Triumph of Hubble ... Compelling talks followed by picnicking and convivial stargazing through both the big ...",
+			"htmlSnippet": "Talks &amp; Telescopes: August 24, 2024 – Panel: The Triumph of Hubble ... Compelling talks followed by picnicking and convivial stargazing through both the big&nbsp;...",
+			"cacheId": "wdXI0azqx5UJ",
+			"formattedUrl": "https://www.mtwilson.edu/lectures/",
+			"htmlFormattedUrl": "https://www.mtwilson.edu/\u003cb\u003electures\u003c/b\u003e/",
+			"pagemap": {
+				"metatags": [
+					{
+						"viewport": "width=device-width,initial-scale=1,user-scalable=no"
+					}
+				],
+				"webpage": [
+					{
+						"image": "http://www.mtwilson.edu/wp-content/uploads/2016/09/Logo.jpg",
+						"url": "https://www.facebook.com/WilsonObs"
+					}
+				]
+			}
+		},
+		{
+			"kind": "customsearch#result",
+			"title": "Lectures | NBER",
+			"htmlTitle": "\u003cb\u003eLectures\u003c/b\u003e | NBER",
+			"link": "https://www.nber.org/research/lectures",
+			"displayLink": "www.nber.org",
+			"snippet": "Results 1 - 50 of 354 ... Among featured events at the NBER Summer Institute are the Martin Feldstein Lecture, which examines a current issue involving economic ...",
+			"htmlSnippet": "Results 1 - 50 of 354 \u003cb\u003e...\u003c/b\u003e Among featured events at the NBER Summer Institute are the Martin Feldstein \u003cb\u003eLecture\u003c/b\u003e, which examines a current issue involving economic&nbsp;...",
+			"cacheId": "CvvP3U3nb44J",
+			"formattedUrl": "https://www.nber.org/research/lectures",
+			"htmlFormattedUrl": "https://www.nber.org/research/\u003cb\u003electures\u003c/b\u003e",
+			"pagemap": {
+				"cse_thumbnail": [
+					{
+						"src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTmeViEZyV1YmFEFLhcA6WdgAG3v3RV6tB93ncyxSJ5JPst_p2aWrL7D1k&s",
+						"width": "310",
+						"height": "163"
+					}
+				],
+				"metatags": [
+					{
+						"og:image": "https://www.nber.org/sites/default/files/2022-06/NBER-FB-Share-Tile-1200.jpg",
+						"og:site_name": "NBER",
+						"handheldfriendly": "true",
+						"viewport": "width=device-width, initial-scale=1.0",
+						"og:title": "Lectures",
+						"mobileoptimized": "width",
+						"og:url": "https://www.nber.org/research/lectures"
+					}
+				],
+				"cse_image": [
+					{
+						"src": "https://www.nber.org/sites/default/files/2022-06/NBER-FB-Share-Tile-1200.jpg"
+					}
+				]
+			}
+		},
+		{
+			"kind": "customsearch#result",
+			"title": "STUDENTS CANNOT ACCESS RECORDED LECTURES ... - Solved",
+			"htmlTitle": "STUDENTS CANNOT ACCESS RECORDED LECTURES ... - Solved",
+			"link": "https://community.canvaslms.com/t5/Canvas-Question-Forum/STUDENTS-CANNOT-ACCESS-RECORDED-LECTURES/td-p/190358",
+			"displayLink": "community.canvaslms.com",
+			"snippet": "Mar 19, 2020 ... I believe the issue is that students were not invited. Are you trying to capture your screen? If not, there is an option to just record your web ...",
+			"htmlSnippet": "Mar 19, 2020 \u003cb\u003e...\u003c/b\u003e I believe the issue is that students were not invited. Are you trying to capture your screen? If not, there is an option to just record your web&nbsp;...",
+			"cacheId": "wqrynQXX61sJ",
+			"formattedUrl": "https://community.canvaslms.com/t5/Canvas...LECTURES/td-p/190358",
+			"htmlFormattedUrl": "https://community.canvaslms.com/t5/Canvas...\u003cb\u003eLECTURES\u003c/b\u003e/td-p/190358",
+			"pagemap": {
+				"cse_thumbnail": [
+					{
+						"src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUqXau3N8LfKgSD7OJOvV7xzGarLKRU-ckWXy1ZQ1p4CLPsedvLKmLMhk&s",
+						"width": "310",
+						"height": "163"
+					}
+				],
+				"metatags": [
+					{
+						"og:image": "https://community.canvaslms.com/html/@6A1FDD4D5FF35E4BBB4083A1022FA0DB/assets/CommunityPreview23.png",
+						"og:type": "article",
+						"article:section": "Canvas Question Forum",
+						"article:published_time": "2020-03-19T15:50:03.409Z",
+						"og:site_name": "Instructure Community",
+						"article:modified_time": "2020-03-19T13:55:53-07:00",
+						"viewport": "width=device-width, initial-scale=1.0, user-scalable=yes",
+						"og:title": "STUDENTS CANNOT ACCESS RECORDED LECTURES",
+						"og:url": "https://community.canvaslms.com/t5/Canvas-Question-Forum/STUDENTS-CANNOT-ACCESS-RECORDED-LECTURES/m-p/190358#M93667",
+						"og:description": "I can access and see my recorded lectures but my students can't. They have an error message when they try to open the recorded presentation or notes.",
+						"article:author": "https://community.canvaslms.com/t5/user/viewprofilepage/user-id/794287",
+						"twitter:image": "https://community.canvaslms.com/html/@6A1FDD4D5FF35E4BBB4083A1022FA0DB/assets/CommunityPreview23.png"
+					}
+				],
+				"cse_image": [
+					{
+						"src": "https://community.canvaslms.com/html/@6A1FDD4D5FF35E4BBB4083A1022FA0DB/assets/CommunityPreview23.png"
+					}
+				]
+			}
+		},
+		{
+			"kind": "customsearch#result",
+			"title": "Public Lecture Series - Sam Fox School of Design & Visual Arts",
+			"htmlTitle": "Public \u003cb\u003eLecture\u003c/b\u003e Series - Sam Fox School of Design &amp; Visual Arts",
+			"link": "https://samfoxschool.wustl.edu/calendar/series/2-public-lecture-series",
+			"displayLink": "samfoxschool.wustl.edu",
+			"snippet": "The Sam Fox School's Spring 2024 Public Lecture Series highlights design and art as catalysts for change. Renowned speakers will delve into themes like ...",
+			"htmlSnippet": "The Sam Fox School&#39;s Spring 2024 Public \u003cb\u003eLecture\u003c/b\u003e Series highlights design and art as catalysts for change. Renowned speakers will delve into themes like&nbsp;...",
+			"cacheId": "B-cgQG0j6tUJ",
+			"formattedUrl": "https://samfoxschool.wustl.edu/calendar/series/2-public-lecture-series",
+			"htmlFormattedUrl": "https://samfoxschool.wustl.edu/calendar/series/2-public-lecture-series",
+			"pagemap": {
+				"cse_thumbnail": [
+					{
+						"src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSmHaGianm-64m-qauYjkPK_Q0JKWe-7yom4m1ogFYTmpWArA7k6dmk0sR&s",
+						"width": "307",
+						"height": "164"
+					}
+				],
+				"website": [
+					{
+						"name": "Public Lecture Series - Sam Fox School of Design & Visual Arts — Washington University in St. Louis"
+					}
+				],
+				"metatags": [
+					{
+						"og:image": "https://dvsp0hlm0xrn3.cloudfront.net/assets/default_og_image-44e73dee4b9d1e2c6a6295901371270c8ec5899eaed48ee8167a9b12f1b0f8b3.jpg",
+						"og:type": "website",
+						"og:site_name": "Sam Fox School of Design & Visual Arts — Washington University in St. Louis",
+						"viewport": "width=device-width, initial-scale=1.0",
+						"og:title": "Public Lecture Series - Sam Fox School of Design & Visual Arts — Washington University in St. Louis",
+						"csrf-token": "jBQsfZGY3RH8NVs0-KVDBYB-2N2kib4UYZHYdrShfTdLkvzfSvGeOaMrRKTRdYBPRKzdcGIuP7zwm9etqX_uvg",
+						"csrf-param": "authenticity_token",
+						"og:description": "The Sam Fox School's Spring 2024 Public Lecture Series highlights design and art as catalysts for change. Renowned speakers will delve into themes like social equity, resilient cities, and the impact of emerging technologies on contemporary life. Speakers include artists, architects, designers, and critics of the highest caliber, widely recognized for their research-based practices and multidisciplinary approaches to their fields."
+					}
+				],
+				"cse_image": [
+					{
+						"src": "https://dvsp0hlm0xrn3.cloudfront.net/assets/default_og_image-44e73dee4b9d1e2c6a6295901371270c8ec5899eaed48ee8167a9b12f1b0f8b3.jpg"
+					}
+				]
+			}
+		}
+	]
+}

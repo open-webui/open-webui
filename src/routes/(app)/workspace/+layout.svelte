@@ -39,10 +39,10 @@
 			class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-xl bg-transparent/10 p-1"
 		>
 			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/modelfiles')
+				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/models')
 					? 'bg-gray-50 dark:bg-gray-850'
 					: ''} transition"
-				href="/workspace/modelfiles">{$i18n.t('Modelfiles')}</a
+				href="/workspace/models">{$i18n.t('Models')}</a
 			>
 
 			<a

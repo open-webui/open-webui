@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
-	import { user } from '$lib/stores';
+	import { user, settings } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
@@ -99,16 +99,14 @@
 	};
 
 	onMount(async () => {
-		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+		conversationMode = $settings.conversationMode ?? false;
+		speechAutoSend = $settings.speechAutoSend ?? false;
+		responseAutoPlayback = $settings.responseAutoPlayback ?? false;
 
-		conversationMode = settings.conversationMode ?? false;
-		speechAutoSend = settings.speechAutoSend ?? false;
-		responseAutoPlayback = settings.responseAutoPlayback ?? false;
-
-		STTEngine = settings?.audio?.STTEngine ?? '';
-		TTSEngine = settings?.audio?.TTSEngine ?? '';
-		speaker = settings?.audio?.speaker ?? '';
-		model = settings?.audio?.model ?? '';
+		STTEngine = $settings?.audio?.STTEngine ?? '';
+		TTSEngine = $settings?.audio?.TTSEngine ?? '';
+		speaker = $settings?.audio?.speaker ?? '';
+		model = $settings?.audio?.model ?? '';
 
 		if (TTSEngine === 'openai') {
 			getOpenAIVoices();

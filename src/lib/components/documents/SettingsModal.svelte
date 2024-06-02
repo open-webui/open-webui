@@ -1,11 +1,13 @@
 <script>
-	import { getContext } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import Modal from '../common/Modal.svelte';
 	import General from './Settings/General.svelte';
 	import ChunkParams from './Settings/ChunkParams.svelte';
 	import QueryParams from './Settings/QueryParams.svelte';
 	import WebParams from './Settings/WebParams.svelte';
 	import { toast } from 'svelte-sonner';
+	import { config } from '$lib/stores';
+	import { getBackendConfig } from '$lib/apis';
 
 	const i18n = getContext('i18n');
 
@@ -171,8 +173,11 @@
 					/>
 				{:else if selectedTab === 'web'}
 					<WebParams
-						saveHandler={() => {
+						saveHandler={async () => {
 							toast.success($i18n.t('Settings saved successfully!'));
+
+							await tick();
+							await config.set(await getBackendConfig());
 						}}
 					/>
 				{/if}
