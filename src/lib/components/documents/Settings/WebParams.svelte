@@ -58,7 +58,7 @@
 							{$i18n.t('Enable Web Search')}
 						</div>
 
-						<Switch bind:state={webConfig.search.enable} />
+						<Switch bind:state={webConfig.search.enabled} />
 					</div>
 				</div>
 
@@ -189,6 +189,36 @@
 								</div>
 							</div>
 						{/if}
+					</div>
+				{/if}
+
+				{#if webConfig.search.enabled}
+					<div class="mt-2 flex gap-2 mb-1">
+						<div class="w-full">
+							<div class=" self-center text-xs font-medium mb-1">
+								{$i18n.t('Search Result Count')}
+							</div>
+
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder={$i18n.t('Search Result Count')}
+								bind:value={webConfig.search.result_count}
+								required
+							/>
+						</div>
+
+						<div class="w-full">
+							<div class=" self-center text-xs font-medium mb-1">
+								{$i18n.t('Concurrent Requests')}
+							</div>
+
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder={$i18n.t('Concurrent Requests')}
+								bind:value={webConfig.search.concurrent_requests}
+								required
+							/>
+						</div>
 					</div>
 				{/if}
 			</div>

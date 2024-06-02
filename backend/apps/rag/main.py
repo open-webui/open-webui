@@ -370,7 +370,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
         "web": {
             "ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "search": {
-                "enable": app.state.config.ENABLE_RAG_WEB_SEARCH,
+                "enabled": app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": app.state.config.RAG_WEB_SEARCH_ENGINE,
                 "searxng_query_url": app.state.config.SEARXNG_QUERY_URL,
                 "google_pse_api_key": app.state.config.GOOGLE_PSE_API_KEY,
@@ -397,7 +397,7 @@ class YoutubeLoaderConfig(BaseModel):
 
 
 class WebSearchConfig(BaseModel):
-    enable: bool
+    enabled: bool
     engine: Optional[str] = None
     searxng_query_url: Optional[str] = None
     google_pse_api_key: Optional[str] = None
@@ -443,7 +443,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             form_data.web.web_loader_ssl_verification
         )
 
-        app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enable
+        app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enabled
         app.state.config.RAG_WEB_SEARCH_ENGINE = form_data.web.search.engine
         app.state.config.SEARXNG_QUERY_URL = form_data.web.search.searxng_query_url
         app.state.config.GOOGLE_PSE_API_KEY = form_data.web.search.google_pse_api_key
@@ -475,7 +475,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         "web": {
             "ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "search": {
-                "enable": app.state.config.ENABLE_RAG_WEB_SEARCH,
+                "enabled": app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": app.state.config.RAG_WEB_SEARCH_ENGINE,
                 "searxng_query_url": app.state.config.SEARXNG_QUERY_URL,
                 "google_pse_api_key": app.state.config.GOOGLE_PSE_API_KEY,
