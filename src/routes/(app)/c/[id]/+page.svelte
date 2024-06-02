@@ -105,16 +105,18 @@
 		currentId: null
 	};
 
-	$: if (history.currentId !== null) {
+	$: if (!!history.currentId) {
 		let _messages = [];
 
 		let currentMessage = history.messages[history.currentId];
-		while (currentMessage !== null) {
-			_messages.unshift({ ...currentMessage });
-			currentMessage =
-				currentMessage.parentId !== null ? history.messages[currentMessage.parentId] : null;
+		if (!!currentMessage) {
+			while (!!currentMessage) {
+				_messages.unshift({ ...currentMessage });
+				currentMessage =
+					currentMessage.parentId !== null ? history.messages[currentMessage.parentId] : null;
+			}
+			messages = _messages;
 		}
-		messages = _messages;
 	} else {
 		messages = [];
 	}
@@ -197,6 +199,39 @@
 		}
 	};
 
+	const addNotFoundResponseMessage = async (userMessageId: string) => {
+		let responseMessageId = uuidv4();
+		let responseMessage = {
+			parentId: userMessageId,
+			id: responseMessageId,
+			childrenIds: [],
+			role: 'assistant',
+			content: 'Không có dữ liệu nào liên quan câu hỏi này.',
+			model: selectedModels[0],
+			userContext: null,
+			done: true,
+			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+		};
+
+		// Add message to history and Set currentId to messageId
+		history.messages[responseMessageId] = responseMessage;
+		history.currentId = responseMessageId;
+
+		// Append messageId to childrenIds of parent message
+		if (userMessageId !== null) {
+			history.messages[userMessageId].childrenIds = [
+				...history.messages[userMessageId].childrenIds,
+				responseMessageId
+			];
+		}
+		if ($settings.saveChatHistory ?? true) {
+			chat = await updateChatById(localStorage.token, $chatId, {
+				messages: messages,
+				history: history
+			});
+		}
+	}
+
 	//////////////////////////
 	// Ollama functions
 	//////////////////////////
@@ -277,36 +312,7 @@
 			if ($chatType === 'chat_embedding') {
 				const chunks = await queryRankedChunk($selectedChatEmbeddingIndex, userPrompt)
 				if (!chunks || chunks.length === 0) {
-					let responseMessageId = uuidv4();
-					let responseMessage = {
-						parentId: userMessageId,
-						id: responseMessageId,
-						childrenIds: [],
-						role: 'assistant',
-						content: 'Không có dữ liệu nào liên quan câu hỏi này.',
-						model: selectedModels[0],
-						userContext: null,
-						done: true,
-						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-					};
-
-					// Add message to history and Set currentId to messageId
-					history.messages[responseMessageId] = responseMessage;
-					history.currentId = responseMessageId;
-
-					// Append messageId to childrenIds of parent message
-					if (userMessageId !== null) {
-						history.messages[userMessageId].childrenIds = [
-							...history.messages[userMessageId].childrenIds,
-							responseMessageId
-						];
-					}
-					if ($settings.saveChatHistory ?? true) {
-						chat = await updateChatById(localStorage.token, $chatId, {
-							messages: messages,
-							history: history
-						});
-					}
+					await addNotFoundResponseMessage(userMessageId)
 					return
 				}
 
@@ -323,6 +329,10 @@
 					const prompt = getAbstractPrompt(chunk.text, userPrompt)
 					return sendPrompt(prompt, userMessageId, null, citations);
 				}))
+
+				if (!history.messages[userMessageId].childrenIds?.length) {
+					await addNotFoundResponseMessage(userMessageId)
+				}
 			} else {
 				// Send prompt
 				await sendPrompt(userPrompt, userMessageId);
@@ -726,6 +736,7 @@
 							delete history.messages[responseMessageId];
 							if (responseMessage.parentId !== null) {
 								history.messages[responseMessage.parentId].childrenIds = history.messages[responseMessage.parentId].childrenIds.filter(_id => _id !== responseMessageId);
+								history.currentId = history.messages[responseMessage.parentId].childrenIds[history.messages[responseMessage.parentId].childrenIds.length - 1]
 							}
 							messages = messages;
 							break
