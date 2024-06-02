@@ -1219,7 +1219,7 @@
 			{initNewChat}
 		/>
 
-		{#if $banners.length > 0 && !$chatId && selectedModels.length <= 1}
+		{#if $banners.length > 0 && messages.length === 0 && !$chatId && selectedModels.length <= 1}
 			<div
 				class="absolute top-[4.25rem] w-full {$showSidebar ? 'md:max-w-[calc(100%-260px)]' : ''}"
 			>
