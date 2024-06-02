@@ -473,9 +473,34 @@
 		};
 		messages = messages;
 
-		const results = await runWebSearch(localStorage.token, searchQuery);
-		if (results === undefined) {
-			toast.warning($i18n.t('No search results found'));
+		const results = await runWebSearch(localStorage.token, searchQuery).catch((error) => {
+			console.log(error);
+			toast.error(error);
+
+			return null;
+		});
+
+		if (results) {
+			responseMessage.status = {
+				...responseMessage.status,
+				done: true,
+				description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
+				urls: results.filenames
+			};
+
+			if (responseMessage?.files ?? undefined === undefined) {
+				responseMessage.files = [];
+			}
+
+			responseMessage.files.push({
+				collection_name: results.collection_name,
+				name: searchQuery,
+				type: 'web_search_results',
+				urls: results.filenames
+			});
+
+			messages = messages;
+		} else {
 			responseMessage.status = {
 				...responseMessage.status,
 				done: true,
@@ -483,28 +508,7 @@
 				description: 'No search results found'
 			};
 			messages = messages;
-			return;
 		}
-
-		responseMessage.status = {
-			...responseMessage.status,
-			done: true,
-			description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
-			urls: results.filenames
-		};
-
-		if (responseMessage?.files ?? undefined === undefined) {
-			responseMessage.files = [];
-		}
-
-		responseMessage.files.push({
-			collection_name: results.collection_name,
-			name: searchQuery,
-			type: 'web_search_results',
-			urls: results.filenames
-		});
-
-		messages = messages;
 	};
 
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {

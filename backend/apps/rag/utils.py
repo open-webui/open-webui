@@ -20,12 +20,7 @@ from langchain.retrievers import (
 
 from typing import Optional
 
-from apps.rag.search.brave import search_brave
-from apps.rag.search.google_pse import search_google_pse
-from apps.rag.search.main import SearchResult
-from apps.rag.search.searxng import search_searxng
-from apps.rag.search.serper import search_serper
-from apps.rag.search.serpstack import search_serpstack
+
 from config import (
     SRC_LOG_LEVELS,
     CHROMA_CLIENT,
@@ -536,50 +531,3 @@ class RerankCompressor(BaseDocumentCompressor):
             )
             final_results.append(doc)
         return final_results
-
-
-def search_web(engine: str, query: str) -> list[SearchResult]:
-    """Search the web using a search engine and return the results as a list of SearchResult objects.
-    Will look for a search engine API key in environment variables in the following order:
-    - SEARXNG_QUERY_URL
-    - GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID
-    - BRAVE_SEARCH_API_KEY
-    - SERPSTACK_API_KEY
-    - SERPER_API_KEY
-
-    Args:
-        query (str): The query to search for
-    """
-
-    # TODO: add playwright to search the web
-    if engine == "searxng":
-        if SEARXNG_QUERY_URL:
-            return search_searxng(SEARXNG_QUERY_URL, query)
-        else:
-            raise Exception("No SEARXNG_QUERY_URL found in environment variables")
-    elif engine == "google_pse":
-        if GOOGLE_PSE_API_KEY and GOOGLE_PSE_ENGINE_ID:
-            return search_google_pse(GOOGLE_PSE_API_KEY, GOOGLE_PSE_ENGINE_ID, query)
-        else:
-            raise Exception(
-                "No GOOGLE_PSE_API_KEY or GOOGLE_PSE_ENGINE_ID found in environment variables"
-            )
-    elif engine == "brave":
-        if BRAVE_SEARCH_API_KEY:
-            return search_brave(BRAVE_SEARCH_API_KEY, query)
-        else:
-            raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
-    elif engine == "serpstack":
-        if SERPSTACK_API_KEY:
-            return search_serpstack(
-                SERPSTACK_API_KEY, query, https_enabled=SERPSTACK_HTTPS
-            )
-        else:
-            raise Exception("No SERPSTACK_API_KEY found in environment variables")
-    elif engine == "serper":
-        if SERPER_API_KEY:
-            return search_serper(SERPER_API_KEY, query)
-        else:
-            raise Exception("No SERPER_API_KEY found in environment variables")
-    else:
-        raise Exception("No search engine API key found in environment variables")

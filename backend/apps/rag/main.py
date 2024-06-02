@@ -59,8 +59,15 @@ from apps.rag.utils import (
     query_doc_with_hybrid_search,
     query_collection,
     query_collection_with_hybrid_search,
-    search_web,
 )
+
+from apps.rag.search.brave import search_brave
+from apps.rag.search.google_pse import search_google_pse
+from apps.rag.search.main import SearchResult
+from apps.rag.search.searxng import search_searxng
+from apps.rag.search.serper import search_serper
+from apps.rag.search.serpstack import search_serpstack
+
 
 from utils.misc import (
     calculate_sha256,
@@ -716,19 +723,78 @@ def resolve_hostname(hostname):
     return ipv4_addresses, ipv6_addresses
 
 
+def search_web(engine: str, query: str) -> list[SearchResult]:
+    """Search the web using a search engine and return the results as a list of SearchResult objects.
+    Will look for a search engine API key in environment variables in the following order:
+    - SEARXNG_QUERY_URL
+    - GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID
+    - BRAVE_SEARCH_API_KEY
+    - SERPSTACK_API_KEY
+    - SERPER_API_KEY
+
+    Args:
+        query (str): The query to search for
+    """
+
+    # TODO: add playwright to search the web
+    if engine == "searxng":
+        if app.state.config.SEARXNG_QUERY_URL:
+            return search_searxng(app.state.config.SEARXNG_QUERY_URL, query)
+        else:
+            raise Exception("No SEARXNG_QUERY_URL found in environment variables")
+    elif engine == "google_pse":
+        if (
+            app.state.config.GOOGLE_PSE_API_KEY
+            and app.state.config.GOOGLE_PSE_ENGINE_ID
+        ):
+            return search_google_pse(
+                app.state.config.GOOGLE_PSE_API_KEY,
+                app.state.config.GOOGLE_PSE_ENGINE_ID,
+                query,
+            )
+        else:
+            raise Exception(
+                "No GOOGLE_PSE_API_KEY or GOOGLE_PSE_ENGINE_ID found in environment variables"
+            )
+    elif engine == "brave":
+        if app.state.config.BRAVE_SEARCH_API_KEY:
+            return search_brave(app.state.config.BRAVE_SEARCH_API_KEY, query)
+        else:
+            raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
+    elif engine == "serpstack":
+        if app.state.config.SERPSTACK_API_KEY:
+            return search_serpstack(
+                app.state.config.SERPSTACK_API_KEY,
+                query,
+                https_enabled=app.state.config.SERPSTACK_HTTPS,
+            )
+        else:
+            raise Exception("No SERPSTACK_API_KEY found in environment variables")
+    elif engine == "serper":
+        if app.state.config.SERPER_API_KEY:
+            return search_serper(app.state.config.SERPER_API_KEY, query)
+        else:
+            raise Exception("No SERPER_API_KEY found in environment variables")
+    else:
+        raise Exception("No search engine API key found in environment variables")
+
+
 @app.post("/web/search")
 def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
     try:
-        try:
-            web_results = search_web(
-                app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query
-            )
-        except Exception as e:
-            log.exception(e)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.WEB_SEARCH_ERROR,
-            )
+        web_results = search_web(
+            app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query
+        )
+    except Exception as e:
+        log.exception(e)
+
+        print(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
+        )
+
+    try:
         urls = [result.link for result in web_results]
         loader = get_web_loader(urls)
         data = loader.load()

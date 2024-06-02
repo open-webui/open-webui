@@ -82,5 +82,5 @@ class ERROR_MESSAGES(str, Enum):
     )
 
     WEB_SEARCH_ERROR = (
-        "Oops! Something went wrong while searching the web. Please try again later."
+        lambda err="": f"{err if err else 'Oops! Something went wrong while searching the web.'}"
     )
