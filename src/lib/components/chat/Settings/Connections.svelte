@@ -54,6 +54,8 @@
 				pipelineUrls[OPENAI_API_BASE_URLS[idx]] = true;
 			}
 		}
+
+		await models.set(await getModels());
 	};
 
 	const verifyOllamaHandler = async (idx) => {
@@ -67,6 +69,8 @@
 		if (res) {
 			toast.success($i18n.t('Server connection verified'));
 		}
+
+		await models.set(await getModels());
 	};
 
 	const updateOpenAIHandler = async () => {
