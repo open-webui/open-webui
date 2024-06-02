@@ -739,7 +739,11 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
     # TODO: add playwright to search the web
     if engine == "searxng":
         if app.state.config.SEARXNG_QUERY_URL:
-            return search_searxng(app.state.config.SEARXNG_QUERY_URL, query)
+            return search_searxng(
+                app.state.config.SEARXNG_QUERY_URL,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
     elif engine == "google_pse":
@@ -751,6 +755,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.GOOGLE_PSE_API_KEY,
                 app.state.config.GOOGLE_PSE_ENGINE_ID,
                 query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
             )
         else:
             raise Exception(
@@ -758,7 +763,11 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             )
     elif engine == "brave":
         if app.state.config.BRAVE_SEARCH_API_KEY:
-            return search_brave(app.state.config.BRAVE_SEARCH_API_KEY, query)
+            return search_brave(
+                app.state.config.BRAVE_SEARCH_API_KEY,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
     elif engine == "serpstack":
@@ -766,13 +775,18 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             return search_serpstack(
                 app.state.config.SERPSTACK_API_KEY,
                 query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 https_enabled=app.state.config.SERPSTACK_HTTPS,
             )
         else:
             raise Exception("No SERPSTACK_API_KEY found in environment variables")
     elif engine == "serper":
         if app.state.config.SERPER_API_KEY:
-            return search_serper(app.state.config.SERPER_API_KEY, query)
+            return search_serper(
+                app.state.config.SERPER_API_KEY,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            )
         else:
             raise Exception("No SERPER_API_KEY found in environment variables")
     else:

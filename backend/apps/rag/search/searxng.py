@@ -3,13 +3,13 @@ import logging
 import requests
 
 from apps.rag.search.main import SearchResult
-from config import SRC_LOG_LEVELS, RAG_WEB_SEARCH_RESULT_COUNT
+from config import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def search_searxng(query_url: str, query: str) -> list[SearchResult]:
+def search_searxng(query_url: str, query: str, count: int) -> list[SearchResult]:
     """Search a SearXNG instance for a query and return the results as a list of SearchResult objects.
 
     Args:
@@ -40,5 +40,5 @@ def search_searxng(query_url: str, query: str) -> list[SearchResult]:
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("content")
         )
-        for result in sorted_results[:RAG_WEB_SEARCH_RESULT_COUNT]
+        for result in sorted_results[:count]
     ]

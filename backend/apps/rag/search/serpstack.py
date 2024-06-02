@@ -4,14 +4,14 @@ import logging
 import requests
 
 from apps.rag.search.main import SearchResult
-from config import SRC_LOG_LEVELS, RAG_WEB_SEARCH_RESULT_COUNT
+from config import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_serpstack(
-    api_key: str, query: str, https_enabled: bool = True
+    api_key: str, query: str, count: int, https_enabled: bool = True
 ) -> list[SearchResult]:
     """Search using serpstack.com's and return the results as a list of SearchResult objects.
 
@@ -39,5 +39,5 @@ def search_serpstack(
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("snippet")
         )
-        for result in results[:RAG_WEB_SEARCH_RESULT_COUNT]
+        for result in results[:count]
     ]
