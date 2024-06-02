@@ -20,6 +20,9 @@
 		tfs_z: '',
 		num_ctx: '',
 		max_tokens: '',
+		use_mmap: null,
+		use_mlock: null,
+		num_thread: null,
 		template: null
 	};
 
@@ -559,6 +562,7 @@
 			</div>
 		{/if}
 	</div>
+
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">{$i18n.t('Max Tokens (num_predict)')}</div>
@@ -604,6 +608,93 @@
 			</div>
 		{/if}
 	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<div class="flex w-full justify-between">
+			<div class=" self-center text-xs font-medium">{$i18n.t('use_mmap (Ollama)')}</div>
+
+			<button
+				class="p-1 px-3 text-xs flex rounded transition"
+				type="button"
+				on:click={() => {
+					params.use_mmap = (params?.use_mmap ?? null) === null ? true : null;
+				}}
+			>
+				{#if (params?.use_mmap ?? null) === null}
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+				{:else}
+					<span class="ml-2 self-center">{$i18n.t('On')}</span>
+				{/if}
+			</button>
+		</div>
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<div class="flex w-full justify-between">
+			<div class=" self-center text-xs font-medium">{$i18n.t('use_mlock (Ollama)')}</div>
+
+			<button
+				class="p-1 px-3 text-xs flex rounded transition"
+				type="button"
+				on:click={() => {
+					params.use_mlock = (params?.use_mlock ?? null) === null ? true : null;
+				}}
+			>
+				{#if (params?.use_mlock ?? null) === null}
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+				{:else}
+					<span class="ml-2 self-center">{$i18n.t('On')}</span>
+				{/if}
+			</button>
+		</div>
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<div class="flex w-full justify-between">
+			<div class=" self-center text-xs font-medium">{$i18n.t('num_thread (Ollama)')}</div>
+
+			<button
+				class="p-1 px-3 text-xs flex rounded transition"
+				type="button"
+				on:click={() => {
+					params.num_thread = (params?.num_thread ?? null) === null ? 2 : null;
+				}}
+			>
+				{#if (params?.num_thread ?? null) === null}
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+				{:else}
+					<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+				{/if}
+			</button>
+		</div>
+
+		{#if (params?.num_thread ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="1"
+						max="256"
+						step="1"
+						bind:value={params.num_thread}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div class="">
+					<input
+						bind:value={params.num_thread}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="1"
+						max="256"
+						step="1"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
 	<div class=" py-0.5 w-full justify-between">
 		<div class="flex w-full justify-between">
 			<div class=" self-center text-xs font-medium">{$i18n.t('Template')}</div>
