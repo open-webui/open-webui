@@ -443,7 +443,10 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     try:
         session = aiohttp.ClientSession()
         r = await session.request(
-            method=request.method, url=target_url, data=payload, headers=headers
+            method=request.method,
+            url=target_url,
+            data=payload if payload else body,
+            headers=headers,
         )
 
         r.raise_for_status()
