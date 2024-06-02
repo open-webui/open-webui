@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2024-06-01
+
+### Added
+
+- **🔧 Pipelines Support**: Open WebUI now includes a plugin framework for enhanced customization and functionality. (https://github.com/open-webui/pipelines). Easily add custom logic and integrate Python libraries, from AI agents to home automation APIs.
+- **🔗 Function Calling via Pipelines**: Integrate function calling seamlessly through Pipelines.
+- **⚖️ User Rate Limiting via Pipelines**: Implement user-specific rate limits to manage API usage efficiently.
+- **📊 Usage Monitoring with Langfuse**: Track and analyze usage statistics with Langfuse integration through Pipelines.
+- **🕒 Conversation Turn Limits**: Set limits on conversation turns to manage interactions better through Pipelines.
+- **🛡️ Toxic Message Filtering**: Automatically filter out toxic messages to maintain a safe environment using pipelines.
+- **🔍 Web Search Support**: Enhance functionality with built-in web search capabilities.
+- **🗂️ Models Workspace**: Create and manage model presets for both Ollama/OpenAI API. Note: The old Modelfiles workspace is deprecated.
+- **🛠️ Model Builder Feature**: Build and edit all models with persistent builder mode.
+- **🏷️ Model Tagging Support**: Organize models with tagging features in the models workspace.
+- **📋 Model Ordering Support**: Easily arrange models within the models workspace.
+- **📈 OpenAI Generation Stats**: Access detailed generation statistics for OpenAI models.
+- **📅 System Prompt Variables**: New variables added: '{{CURRENT_DATE}}' and '{{USER_NAME}}' for dynamic prompts.
+- **📢 Global Banner Support**: Manage global banners from admin settings > banners.
+- **🗃️ Enhanced Archived Chats Modal**: Search and export archived chats easily.
+- **📂 Archive All Button**: Quickly archive all chats from settings > chats.
+- **🌐 Improved Translations**: Added and improved translations for French, Croatian, Cebuano, and Vietnamese.
+
+### Fixed
+
+- **🔍 Archived Chats Visibility**: Resolved issue with archived chats not showing in the admin panel.
+- **💬 Message Styling**: Fixed styling issues affecting message appearance.
+- **🔗 Shared Chat Responses**: Corrected the issue where shared chat response messages were not readonly.
+
+### Changed
+
+- **💾 User Settings Storage**: User settings are now saved on the backend, ensuring consistency across all devices.
+- **📡 Unified API Requests**: The API request for getting models is now unified to '/api/models' for easier usage.
+- **🔄 Versioning Update**: Our versioning will now follow the format 0.x for major updates and 0.x.y for patches.
+
+### Removed
+
+- **🚫 Bundled LiteLLM Support Deprecated**: Migrate your LiteLLM config.yaml to a self-hosted LiteLLM instance. LiteLLM can still be added via OpenAI Connections. Download the LiteLLM config.yaml from admin settings > database > export LiteLLM config.yaml.
+
 ## [0.1.125] - 2024-05-19
 
 ### Added
