@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **📊 Usage Monitoring with Langfuse**: Track and analyze usage statistics with Langfuse integration through Pipelines.
 - **🕒 Conversation Turn Limits**: Set limits on conversation turns to manage interactions better through Pipelines.
 - **🛡️ Toxic Message Filtering**: Automatically filter out toxic messages to maintain a safe environment using Pipelines.
-- **🔍 Web Search Support**: Introducing built-in web search capabilities via RAG API, allowing users to search using SearXNG, Google Programmatic Search Engine, Brave Search, serpstack, and serper. Customize search result crawling with RAG_WEB_SEARCH_RESULT_COUNT and control concurrent requests with RAG_WEB_SEARCH_CONCURRENT_REQUESTS.
+- **🔍 Web Search Support**: Introducing built-in web search capabilities via RAG API, allowing users to search using SearXNG, Google Programmatic Search Engine, Brave Search, serpstack, and serper. Activate it effortlessly by adding necessary variables from Document settings > Web Params.
 - **🗂️ Models Workspace**: Create and manage model presets for both Ollama/OpenAI API. Note: The old Modelfiles workspace is deprecated.
 - **🛠️ Model Builder Feature**: Build and edit all models with persistent builder mode.
 - **🏷️ Model Tagging Support**: Organize models with tagging features in the models workspace.
