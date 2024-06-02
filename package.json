@@ -5,9 +5,10 @@
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
 		"build": "npm run pyodide:fetch && vite build",
+		"build:watch": "npm run build -- --watch",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"check:watch": "npm run check -- --watch",
 		"lint": "npm run lint:frontend ; npm run lint:types ; npm run lint:backend",
 		"lint:frontend": "eslint . --fix",
 		"lint:types": "npm run check",
