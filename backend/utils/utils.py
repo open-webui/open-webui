@@ -1,7 +1,7 @@
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import HTTPException, status, Depends
 
-from apps.web.models.users import Users
+from apps.webui.models.users import Users
 
 from pydantic import BaseModel
 from typing import Union, Optional

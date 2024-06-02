@@ -22,7 +22,8 @@
 		getChatListByTagName,
 		updateChatById,
 		getAllChatTags,
-		archiveChatById
+		archiveChatById,
+		cloneChatById
 	} from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	import { fade, slide } from 'svelte/transition';
@@ -33,6 +34,7 @@
 	import ArchiveBox from '../icons/ArchiveBox.svelte';
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
+	import { updateUserSettings } from '$lib/apis/users';
 
 	const BREAKPOINT = 768;
 
@@ -181,9 +183,21 @@
 		}
 	};
 
+	const cloneChatHandler = async (id) => {
+		const res = await cloneChatById(localStorage.token, id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			goto(`/c/${res.id}`);
+			await chats.set(await getChatList(localStorage.token));
+		}
+	};
+
 	const saveSettings = async (updated) => {
 		await settings.set({ ...$settings, ...updated });
-		localStorage.setItem('settings', JSON.stringify($settings));
+		await updateUserSettings(localStorage.token, { ui: $settings });
 		location.href = '/';
 	};
 
@@ -600,6 +614,9 @@
 								<div class="flex self-center space-x-1 z-10">
 									<ChatMenu
 										chatId={chat.id}
+										cloneChatHandler={() => {
+											cloneChatHandler(chat.id);
+										}}
 										shareHandler={() => {
 											shareChatId = selectedChatId;
 											showShareChatModal = true;

@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os, shutil, logging, re
 
 from pathlib import Path
-from typing import List
+from typing import List, Union, Sequence
 
 from chromadb.utils.batch_utils import create_batches
 
@@ -46,7 +46,7 @@ import json
 
 import sentence_transformers
 
-from apps.web.models.documents import (
+from apps.webui.models.documents import (
     Documents,
     DocumentForm,
     DocumentResponse,
@@ -60,6 +60,14 @@ from apps.rag.utils import (
     query_collection,
     query_collection_with_hybrid_search,
 )
+
+from apps.rag.search.brave import search_brave
+from apps.rag.search.google_pse import search_google_pse
+from apps.rag.search.main import SearchResult
+from apps.rag.search.searxng import search_searxng
+from apps.rag.search.serper import search_serper
+from apps.rag.search.serpstack import search_serpstack
+
 
 from utils.misc import (
     calculate_sha256,
@@ -95,6 +103,17 @@ from config import (
     RAG_TEMPLATE,
     ENABLE_RAG_LOCAL_WEB_FETCH,
     YOUTUBE_LOADER_LANGUAGE,
+    ENABLE_RAG_WEB_SEARCH,
+    RAG_WEB_SEARCH_ENGINE,
+    SEARXNG_QUERY_URL,
+    GOOGLE_PSE_API_KEY,
+    GOOGLE_PSE_ENGINE_ID,
+    BRAVE_SEARCH_API_KEY,
+    SERPSTACK_API_KEY,
+    SERPSTACK_HTTPS,
+    SERPER_API_KEY,
+    RAG_WEB_SEARCH_RESULT_COUNT,
+    RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     AppConfig,
 )
 
@@ -132,6 +151,20 @@ app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
 
 app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
 app.state.YOUTUBE_LOADER_TRANSLATION = None
+
+
+app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
+app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
+
+app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
+app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
+app.state.config.GOOGLE_PSE_ENGINE_ID = GOOGLE_PSE_ENGINE_ID
+app.state.config.BRAVE_SEARCH_API_KEY = BRAVE_SEARCH_API_KEY
+app.state.config.SERPSTACK_API_KEY = SERPSTACK_API_KEY
+app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
+app.state.config.SERPER_API_KEY = SERPER_API_KEY
+app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
+app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 
 
 def update_embedding_model(
@@ -199,6 +232,10 @@ class CollectionNameForm(BaseModel):
 
 class UrlForm(CollectionNameForm):
     url: str
+
+
+class SearchForm(CollectionNameForm):
+    query: str
 
 
 @app.get("/")
@@ -326,10 +363,25 @@ async def get_rag_config(user=Depends(get_admin_user)):
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
         },
-        "web_loader_ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
         "youtube": {
             "language": app.state.config.YOUTUBE_LOADER_LANGUAGE,
             "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
+        },
+        "web": {
+            "ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "search": {
+                "enabled": app.state.config.ENABLE_RAG_WEB_SEARCH,
+                "engine": app.state.config.RAG_WEB_SEARCH_ENGINE,
+                "searxng_query_url": app.state.config.SEARXNG_QUERY_URL,
+                "google_pse_api_key": app.state.config.GOOGLE_PSE_API_KEY,
+                "google_pse_engine_id": app.state.config.GOOGLE_PSE_ENGINE_ID,
+                "brave_search_api_key": app.state.config.BRAVE_SEARCH_API_KEY,
+                "serpstack_api_key": app.state.config.SERPSTACK_API_KEY,
+                "serpstack_https": app.state.config.SERPSTACK_HTTPS,
+                "serper_api_key": app.state.config.SERPER_API_KEY,
+                "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+            },
         },
     }
 
@@ -344,11 +396,30 @@ class YoutubeLoaderConfig(BaseModel):
     translation: Optional[str] = None
 
 
+class WebSearchConfig(BaseModel):
+    enabled: bool
+    engine: Optional[str] = None
+    searxng_query_url: Optional[str] = None
+    google_pse_api_key: Optional[str] = None
+    google_pse_engine_id: Optional[str] = None
+    brave_search_api_key: Optional[str] = None
+    serpstack_api_key: Optional[str] = None
+    serpstack_https: Optional[bool] = None
+    serper_api_key: Optional[str] = None
+    result_count: Optional[int] = None
+    concurrent_requests: Optional[int] = None
+
+
+class WebConfig(BaseModel):
+    search: WebSearchConfig
+    web_loader_ssl_verification: Optional[bool] = None
+
+
 class ConfigUpdateForm(BaseModel):
     pdf_extract_images: Optional[bool] = None
     chunk: Optional[ChunkParamUpdateForm] = None
-    web_loader_ssl_verification: Optional[bool] = None
     youtube: Optional[YoutubeLoaderConfig] = None
+    web: Optional[WebConfig] = None
 
 
 @app.post("/config/update")
@@ -359,35 +430,36 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         else app.state.config.PDF_EXTRACT_IMAGES
     )
 
-    app.state.config.CHUNK_SIZE = (
-        form_data.chunk.chunk_size
-        if form_data.chunk is not None
-        else app.state.config.CHUNK_SIZE
-    )
+    if form_data.chunk is not None:
+        app.state.config.CHUNK_SIZE = form_data.chunk.chunk_size
+        app.state.config.CHUNK_OVERLAP = form_data.chunk.chunk_overlap
 
-    app.state.config.CHUNK_OVERLAP = (
-        form_data.chunk.chunk_overlap
-        if form_data.chunk is not None
-        else app.state.config.CHUNK_OVERLAP
-    )
+    if form_data.youtube is not None:
+        app.state.config.YOUTUBE_LOADER_LANGUAGE = form_data.youtube.language
+        app.state.YOUTUBE_LOADER_TRANSLATION = form_data.youtube.translation
 
-    app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
-        form_data.web_loader_ssl_verification
-        if form_data.web_loader_ssl_verification != None
-        else app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
-    )
+    if form_data.web is not None:
+        app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+            form_data.web.web_loader_ssl_verification
+        )
 
-    app.state.config.YOUTUBE_LOADER_LANGUAGE = (
-        form_data.youtube.language
-        if form_data.youtube is not None
-        else app.state.config.YOUTUBE_LOADER_LANGUAGE
-    )
-
-    app.state.YOUTUBE_LOADER_TRANSLATION = (
-        form_data.youtube.translation
-        if form_data.youtube is not None
-        else app.state.YOUTUBE_LOADER_TRANSLATION
-    )
+        app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enabled
+        app.state.config.RAG_WEB_SEARCH_ENGINE = form_data.web.search.engine
+        app.state.config.SEARXNG_QUERY_URL = form_data.web.search.searxng_query_url
+        app.state.config.GOOGLE_PSE_API_KEY = form_data.web.search.google_pse_api_key
+        app.state.config.GOOGLE_PSE_ENGINE_ID = (
+            form_data.web.search.google_pse_engine_id
+        )
+        app.state.config.BRAVE_SEARCH_API_KEY = (
+            form_data.web.search.brave_search_api_key
+        )
+        app.state.config.SERPSTACK_API_KEY = form_data.web.search.serpstack_api_key
+        app.state.config.SERPSTACK_HTTPS = form_data.web.search.serpstack_https
+        app.state.config.SERPER_API_KEY = form_data.web.search.serper_api_key
+        app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = form_data.web.search.result_count
+        app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
+            form_data.web.search.concurrent_requests
+        )
 
     return {
         "status": True,
@@ -396,10 +468,25 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
         },
-        "web_loader_ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
         "youtube": {
             "language": app.state.config.YOUTUBE_LOADER_LANGUAGE,
             "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
+        },
+        "web": {
+            "ssl_verification": app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+            "search": {
+                "enabled": app.state.config.ENABLE_RAG_WEB_SEARCH,
+                "engine": app.state.config.RAG_WEB_SEARCH_ENGINE,
+                "searxng_query_url": app.state.config.SEARXNG_QUERY_URL,
+                "google_pse_api_key": app.state.config.GOOGLE_PSE_API_KEY,
+                "google_pse_engine_id": app.state.config.GOOGLE_PSE_ENGINE_ID,
+                "brave_search_api_key": app.state.config.BRAVE_SEARCH_API_KEY,
+                "serpstack_api_key": app.state.config.SERPSTACK_API_KEY,
+                "serpstack_https": app.state.config.SERPSTACK_HTTPS,
+                "serper_api_key": app.state.config.SERPER_API_KEY,
+                "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+            },
         },
     }
 
@@ -589,24 +676,40 @@ def store_web(form_data: UrlForm, user=Depends(get_current_user)):
         )
 
 
-def get_web_loader(url: str, verify_ssl: bool = True):
+def get_web_loader(url: Union[str, Sequence[str]], verify_ssl: bool = True):
     # Check if the URL is valid
-    if isinstance(validators.url(url), validators.ValidationError):
+    if not validate_url(url):
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
-    if not ENABLE_RAG_LOCAL_WEB_FETCH:
-        # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
-        parsed_url = urllib.parse.urlparse(url)
-        # Get IPv4 and IPv6 addresses
-        ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
-        # Check if any of the resolved addresses are private
-        # This is technically still vulnerable to DNS rebinding attacks, as we don't control WebBaseLoader
-        for ip in ipv4_addresses:
-            if validators.ipv4(ip, private=True):
-                raise ValueError(ERROR_MESSAGES.INVALID_URL)
-        for ip in ipv6_addresses:
-            if validators.ipv6(ip, private=True):
-                raise ValueError(ERROR_MESSAGES.INVALID_URL)
-    return WebBaseLoader(url, verify_ssl=verify_ssl)
+    return WebBaseLoader(
+        url,
+        verify_ssl=verify_ssl,
+        requests_per_second=RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+        continue_on_failure=True,
+    )
+
+
+def validate_url(url: Union[str, Sequence[str]]):
+    if isinstance(url, str):
+        if isinstance(validators.url(url), validators.ValidationError):
+            raise ValueError(ERROR_MESSAGES.INVALID_URL)
+        if not ENABLE_RAG_LOCAL_WEB_FETCH:
+            # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
+            parsed_url = urllib.parse.urlparse(url)
+            # Get IPv4 and IPv6 addresses
+            ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
+            # Check if any of the resolved addresses are private
+            # This is technically still vulnerable to DNS rebinding attacks, as we don't control WebBaseLoader
+            for ip in ipv4_addresses:
+                if validators.ipv4(ip, private=True):
+                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
+            for ip in ipv6_addresses:
+                if validators.ipv6(ip, private=True):
+                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
+        return True
+    elif isinstance(url, Sequence):
+        return all(validate_url(u) for u in url)
+    else:
+        return False
 
 
 def resolve_hostname(hostname):
@@ -618,6 +721,114 @@ def resolve_hostname(hostname):
     ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
 
     return ipv4_addresses, ipv6_addresses
+
+
+def search_web(engine: str, query: str) -> list[SearchResult]:
+    """Search the web using a search engine and return the results as a list of SearchResult objects.
+    Will look for a search engine API key in environment variables in the following order:
+    - SEARXNG_QUERY_URL
+    - GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID
+    - BRAVE_SEARCH_API_KEY
+    - SERPSTACK_API_KEY
+    - SERPER_API_KEY
+
+    Args:
+        query (str): The query to search for
+    """
+
+    # TODO: add playwright to search the web
+    if engine == "searxng":
+        if app.state.config.SEARXNG_QUERY_URL:
+            return search_searxng(
+                app.state.config.SEARXNG_QUERY_URL,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            )
+        else:
+            raise Exception("No SEARXNG_QUERY_URL found in environment variables")
+    elif engine == "google_pse":
+        if (
+            app.state.config.GOOGLE_PSE_API_KEY
+            and app.state.config.GOOGLE_PSE_ENGINE_ID
+        ):
+            return search_google_pse(
+                app.state.config.GOOGLE_PSE_API_KEY,
+                app.state.config.GOOGLE_PSE_ENGINE_ID,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            )
+        else:
+            raise Exception(
+                "No GOOGLE_PSE_API_KEY or GOOGLE_PSE_ENGINE_ID found in environment variables"
+            )
+    elif engine == "brave":
+        if app.state.config.BRAVE_SEARCH_API_KEY:
+            return search_brave(
+                app.state.config.BRAVE_SEARCH_API_KEY,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            )
+        else:
+            raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
+    elif engine == "serpstack":
+        if app.state.config.SERPSTACK_API_KEY:
+            return search_serpstack(
+                app.state.config.SERPSTACK_API_KEY,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                https_enabled=app.state.config.SERPSTACK_HTTPS,
+            )
+        else:
+            raise Exception("No SERPSTACK_API_KEY found in environment variables")
+    elif engine == "serper":
+        if app.state.config.SERPER_API_KEY:
+            return search_serper(
+                app.state.config.SERPER_API_KEY,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            )
+        else:
+            raise Exception("No SERPER_API_KEY found in environment variables")
+    else:
+        raise Exception("No search engine API key found in environment variables")
+
+
+@app.post("/web/search")
+def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
+    try:
+        web_results = search_web(
+            app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query
+        )
+    except Exception as e:
+        log.exception(e)
+
+        print(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
+        )
+
+    try:
+        urls = [result.link for result in web_results]
+        loader = get_web_loader(urls)
+        data = loader.load()
+
+        collection_name = form_data.collection_name
+        if collection_name == "":
+            collection_name = calculate_sha256_string(form_data.query)[:63]
+
+        store_data_in_vector_db(data, collection_name, overwrite=True)
+        return {
+            "status": True,
+            "collection_name": collection_name,
+            "filenames": urls,
+        }
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
 
 
 def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> bool:

@@ -1,11 +1,15 @@
 import os
 import sys
 import logging
+import importlib.metadata
+import pkgutil
 import chromadb
 from chromadb import Settings
 from base64 import b64encode
 from bs4 import BeautifulSoup
 from typing import TypeVar, Generic, Union
+from pydantic import BaseModel
+from typing import Optional
 
 from pathlib import Path
 import json
@@ -22,10 +26,15 @@ from constants import ERROR_MESSAGES
 # Load .env file
 ####################################
 
+BACKEND_DIR = Path(__file__).parent  # the path containing this file
+BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
+
+print(BASE_DIR)
+
 try:
     from dotenv import load_dotenv, find_dotenv
 
-    load_dotenv(find_dotenv("../.env"))
+    load_dotenv(find_dotenv(str(BASE_DIR / ".env")))
 except ImportError:
     print("dotenv not installed, skipping...")
 
@@ -51,7 +60,6 @@ log_sources = [
     "CONFIG",
     "DB",
     "IMAGES",
-    "LITELLM",
     "MAIN",
     "MODELS",
     "OLLAMA",
@@ -87,10 +95,12 @@ WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 ENV = os.environ.get("ENV", "dev")
 
 try:
-    with open(f"../package.json", "r") as f:
-        PACKAGE_DATA = json.load(f)
+    PACKAGE_DATA = json.loads((BASE_DIR / "package.json").read_text())
 except:
-    PACKAGE_DATA = {"version": "0.0.0"}
+    try:
+        PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
+    except importlib.metadata.PackageNotFoundError:
+        PACKAGE_DATA = {"version": "0.0.0"}
 
 VERSION = PACKAGE_DATA["version"]
 
@@ -115,10 +125,13 @@ def parse_section(section):
 
 
 try:
-    with open("../CHANGELOG.md", "r") as file:
+    changelog_path = BASE_DIR / "CHANGELOG.md"
+    with open(str(changelog_path.absolute()), "r", encoding="utf8") as file:
         changelog_content = file.read()
+
 except:
-    changelog_content = ""
+    changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
+
 
 # Convert markdown content to HTML
 html_content = markdown.markdown(changelog_content)
@@ -155,21 +168,20 @@ CHANGELOG = changelog_json
 
 
 ####################################
-# WEBUI_VERSION
+# WEBUI_BUILD_HASH
 ####################################
 
-WEBUI_VERSION = os.environ.get("WEBUI_VERSION", "v1.0.0-alpha.100")
+WEBUI_BUILD_HASH = os.environ.get("WEBUI_BUILD_HASH", "dev-build")
 
 ####################################
 # DATA/FRONTEND BUILD DIR
 ####################################
 
-DATA_DIR = str(Path(os.getenv("DATA_DIR", "./data")).resolve())
-FRONTEND_BUILD_DIR = str(Path(os.getenv("FRONTEND_BUILD_DIR", "../build")))
+DATA_DIR = Path(os.getenv("DATA_DIR", BACKEND_DIR / "data")).resolve()
+FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
 
 try:
-    with open(f"{DATA_DIR}/config.json", "r") as f:
-        CONFIG_DATA = json.load(f)
+    CONFIG_DATA = json.loads((DATA_DIR / "config.json").read_text())
 except:
     CONFIG_DATA = {}
 
@@ -279,11 +291,11 @@ JWT_EXPIRES_IN = PersistentConfig(
 # Static DIR
 ####################################
 
-STATIC_DIR = str(Path(os.getenv("STATIC_DIR", "./static")).resolve())
+STATIC_DIR = Path(os.getenv("STATIC_DIR", BACKEND_DIR / "static")).resolve()
 
-frontend_favicon = f"{FRONTEND_BUILD_DIR}/favicon.png"
-if os.path.exists(frontend_favicon):
-    shutil.copyfile(frontend_favicon, f"{STATIC_DIR}/favicon.png")
+frontend_favicon = FRONTEND_BUILD_DIR / "favicon.png"
+if frontend_favicon.exists():
+    shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon.png")
 else:
     logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
@@ -368,15 +380,22 @@ def create_config_file(file_path):
 
 LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
 
-if not os.path.exists(LITELLM_CONFIG_PATH):
-    log.info("Config file doesn't exist. Creating...")
-    create_config_file(LITELLM_CONFIG_PATH)
-    log.info("Config file created successfully.")
+# if not os.path.exists(LITELLM_CONFIG_PATH):
+#     log.info("Config file doesn't exist. Creating...")
+#     create_config_file(LITELLM_CONFIG_PATH)
+#     log.info("Config file created successfully.")
 
 
 ####################################
 # OLLAMA_BASE_URL
 ####################################
+
+
+ENABLE_OLLAMA_API = PersistentConfig(
+    "ENABLE_OLLAMA_API",
+    "ollama.enable",
+    os.environ.get("ENABLE_OLLAMA_API", "True").lower() == "true",
+)
 
 OLLAMA_API_BASE_URL = os.environ.get(
     "OLLAMA_API_BASE_URL", "http://localhost:11434/api"
@@ -548,6 +567,28 @@ WEBHOOK_URL = PersistentConfig(
 )
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
+
+ENABLE_COMMUNITY_SHARING = PersistentConfig(
+    "ENABLE_COMMUNITY_SHARING",
+    "ui.enable_community_sharing",
+    os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
+)
+
+
+class BannerModel(BaseModel):
+    id: str
+    type: str
+    title: Optional[str] = None
+    content: str
+    dismissible: bool
+    timestamp: int
+
+
+WEBUI_BANNERS = PersistentConfig(
+    "WEBUI_BANNERS",
+    "ui.banners",
+    [BannerModel(**banner) for banner in json.loads("[]")],
+)
 
 ####################################
 # WEBUI_SECRET_KEY
@@ -725,6 +766,75 @@ YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(","),
 )
 
+
+ENABLE_RAG_WEB_SEARCH = PersistentConfig(
+    "ENABLE_RAG_WEB_SEARCH",
+    "rag.web.search.enable",
+    os.getenv("ENABLE_RAG_WEB_SEARCH", "False").lower() == "true",
+)
+
+RAG_WEB_SEARCH_ENGINE = PersistentConfig(
+    "RAG_WEB_SEARCH_ENGINE",
+    "rag.web.search.engine",
+    os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
+)
+
+SEARXNG_QUERY_URL = PersistentConfig(
+    "SEARXNG_QUERY_URL",
+    "rag.web.search.searxng_query_url",
+    os.getenv("SEARXNG_QUERY_URL", ""),
+)
+
+GOOGLE_PSE_API_KEY = PersistentConfig(
+    "GOOGLE_PSE_API_KEY",
+    "rag.web.search.google_pse_api_key",
+    os.getenv("GOOGLE_PSE_API_KEY", ""),
+)
+
+GOOGLE_PSE_ENGINE_ID = PersistentConfig(
+    "GOOGLE_PSE_ENGINE_ID",
+    "rag.web.search.google_pse_engine_id",
+    os.getenv("GOOGLE_PSE_ENGINE_ID", ""),
+)
+
+BRAVE_SEARCH_API_KEY = PersistentConfig(
+    "BRAVE_SEARCH_API_KEY",
+    "rag.web.search.brave_search_api_key",
+    os.getenv("BRAVE_SEARCH_API_KEY", ""),
+)
+
+SERPSTACK_API_KEY = PersistentConfig(
+    "SERPSTACK_API_KEY",
+    "rag.web.search.serpstack_api_key",
+    os.getenv("SERPSTACK_API_KEY", ""),
+)
+
+SERPSTACK_HTTPS = PersistentConfig(
+    "SERPSTACK_HTTPS",
+    "rag.web.search.serpstack_https",
+    os.getenv("SERPSTACK_HTTPS", "True").lower() == "true",
+)
+
+SERPER_API_KEY = PersistentConfig(
+    "SERPER_API_KEY",
+    "rag.web.search.serper_api_key",
+    os.getenv("SERPER_API_KEY", ""),
+)
+
+
+RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
+    "RAG_WEB_SEARCH_RESULT_COUNT",
+    "rag.web.search.result_count",
+    int(os.getenv("RAG_WEB_SEARCH_RESULT_COUNT", "3")),
+)
+
+RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
+    "RAG_WEB_SEARCH_CONCURRENT_REQUESTS",
+    "rag.web.search.concurrent_requests",
+    int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
+)
+
+
 ####################################
 # Transcribe
 ####################################
@@ -812,18 +922,6 @@ AUDIO_OPENAI_API_VOICE = PersistentConfig(
     "audio.openai.api_voice",
     os.getenv("AUDIO_OPENAI_API_VOICE", "alloy"),
 )
-
-####################################
-# LiteLLM
-####################################
-
-
-ENABLE_LITELLM = os.environ.get("ENABLE_LITELLM", "True").lower() == "true"
-
-LITELLM_PROXY_PORT = int(os.getenv("LITELLM_PROXY_PORT", "14365"))
-if LITELLM_PROXY_PORT < 0 or LITELLM_PROXY_PORT > 65535:
-    raise ValueError("Invalid port number for LITELLM_PROXY_PORT")
-LITELLM_PROXY_HOST = os.getenv("LITELLM_PROXY_HOST", "127.0.0.1")
 
 
 ####################################

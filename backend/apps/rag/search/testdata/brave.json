@@ -1,0 +1,998 @@
+{
+	"query": {
+		"original": "python",
+		"show_strict_warning": false,
+		"is_navigational": true,
+		"is_news_breaking": false,
+		"spellcheck_off": true,
+		"country": "us",
+		"bad_results": false,
+		"should_fallback": false,
+		"postal_code": "",
+		"city": "",
+		"header_country": "",
+		"more_results_available": true,
+		"state": ""
+	},
+	"mixed": {
+		"type": "mixed",
+		"main": [
+			{
+				"type": "web",
+				"index": 0,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 1,
+				"all": false
+			},
+			{
+				"type": "news",
+				"all": true
+			},
+			{
+				"type": "web",
+				"index": 2,
+				"all": false
+			},
+			{
+				"type": "videos",
+				"all": true
+			},
+			{
+				"type": "web",
+				"index": 3,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 4,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 5,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 6,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 7,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 8,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 9,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 10,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 11,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 12,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 13,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 14,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 15,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 16,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 17,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 18,
+				"all": false
+			},
+			{
+				"type": "web",
+				"index": 19,
+				"all": false
+			}
+		],
+		"top": [],
+		"side": []
+	},
+	"news": {
+		"type": "news",
+		"results": [
+			{
+				"title": "Google lays off staff from Flutter, Dart and Python teams weeks before its developer conference | TechCrunch",
+				"url": "https://techcrunch.com/2024/05/01/google-lays-off-staff-from-flutter-dart-python-weeks-before-its-developer-conference/",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "Google told TechCrunch that Flutter will have new updates to share at I/O this year.",
+				"page_age": "2024-05-02T17:40:05",
+				"family_friendly": true,
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "techcrunch.com",
+					"hostname": "techcrunch.com",
+					"favicon": "https://imgs.search.brave.com/N6VSEVahheQOb7lqfb47dhUOB4XD-6sfQOP94sCe3Oo/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvZGI5Njk0Yzlk/YWM3ZWMwZjg1MTM1/NmIyMWEyNzBjZDZj/ZDQyNmFlNGU0NDRi/MDgyYjQwOGU0Y2Qy/ZWMwNWQ2ZC90ZWNo/Y3J1bmNoLmNvbS8",
+					"path": "› 2024  › 05  › 01  › google-lays-off-staff-from-flutter-dart-python-weeks-before-its-developer-conference"
+				},
+				"breaking": false,
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/gCI5UG8muOEOZDAx9vpu6L6r6R00mD7jOF08-biFoyQ/rs:fit:200:200:1/g:ce/aHR0cHM6Ly90ZWNo/Y3J1bmNoLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMjAxOC8x/MS9HZXR0eUltYWdl/cy0xMDAyNDg0NzQ2/LmpwZz9yZXNpemU9/MTIwMCw4MDA"
+				},
+				"age": "3 days ago",
+				"extra_snippets": [
+					"Ahead of Google’s annual I/O developer conference in May, the tech giant has laid off staff across key teams like Flutter, Dart, Python and others, according to reports from affected employees shared on social media. Google confirmed the layoffs to TechCrunch, but not the specific teams, roles or how many people were let go.",
+					"In a separate post on Reddit, another commenter noted the Python team affected by the layoffs were those who managed the internal Python runtimes and toolchains and worked with OSS Python. Included in this group were “multiple current and former core devs and steering council members,” they said.",
+					"Meanwhile, others shared on Y Combinator’s Hacker News, where a Python team member detailed their specific duties on the technical front and noted that, for years, much of the work was done with fewer than 10 people. Another Hacker News commenter said their early years on the Python team were spent paying down internal technical debt accumulated from not having a strong Python strategy.",
+					"CNBC reports that a total of 200 people were let go across Google’s “Core” teams, which included those working on Python, app platforms, and other engineering roles. Some jobs were being shifted to India and Mexico, it said, citing internal documents."
+				]
+			}
+		],
+		"mutated_by_goggles": false
+	},
+	"type": "search",
+	"videos": {
+		"type": "videos",
+		"results": [
+			{
+				"type": "video_result",
+				"url": "https://www.youtube.com/watch?v=b093aqAZiPU",
+				"title": "👩‍💻 Python for Beginners Tutorial - YouTube",
+				"description": "In this step-by-step Python for beginner's tutorial, learn how you can get started programming in Python. In this video, I assume that you are completely new...",
+				"age": "March 25, 2021",
+				"page_age": "2021-03-25T10:00:08",
+				"video": {},
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "youtube.com",
+					"hostname": "www.youtube.com",
+					"favicon": "https://imgs.search.brave.com/Ux4Hee4evZhvjuTKwtapBycOGjGDci2Gvn2pbSzvbC0/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvOTkyZTZiMWU3/YzU3Nzc5YjExYzUy/N2VhZTIxOWNlYjM5/ZGVjN2MyZDY4Nzdh/ZDYzMTYxNmI5N2Rk/Y2Q3N2FkNy93d3cu/eW91dHViZS5jb20v",
+					"path": "› watch"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/tZI4Do4_EYcTCsD_MvE3Jx8FzjIXwIJ5ZuKhwiWTyZs/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9pLnl0/aW1nLmNvbS92aS9i/MDkzYXFBWmlQVS9t/YXhyZXNkZWZhdWx0/LmpwZw"
+				}
+			},
+			{
+				"type": "video_result",
+				"url": "https://www.youtube.com/watch?v=rfscVS0vtbw",
+				"title": "Learn Python - Full Course for Beginners [Tutorial] - YouTube",
+				"description": "This course will give you a full introduction into all of the core concepts in python. Follow along with the videos and you'll be a python programmer in no t...",
+				"age": "July 11, 2018",
+				"page_age": "2018-07-11T18:00:42",
+				"video": {},
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "youtube.com",
+					"hostname": "www.youtube.com",
+					"favicon": "https://imgs.search.brave.com/Ux4Hee4evZhvjuTKwtapBycOGjGDci2Gvn2pbSzvbC0/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvOTkyZTZiMWU3/YzU3Nzc5YjExYzUy/N2VhZTIxOWNlYjM5/ZGVjN2MyZDY4Nzdh/ZDYzMTYxNmI5N2Rk/Y2Q3N2FkNy93d3cu/eW91dHViZS5jb20v",
+					"path": "› watch"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/65zkx_kPU_zJb-4nmvvY-q5-ZZwzceChz-N00V8cqvk/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9pLnl0/aW1nLmNvbS92aS9y/ZnNjVlMwdnRidy9t/YXhyZXNkZWZhdWx0/LmpwZw"
+				}
+			},
+			{
+				"type": "video_result",
+				"url": "https://www.youtube.com/watch?v=_uQrJ0TkZlc",
+				"title": "Python Tutorial - Python Full Course for Beginners - YouTube",
+				"description": "Become a Python pro! 🚀 This comprehensive tutorial takes you from beginner to hero, covering the basics, machine learning, and web development projects.🚀 W...",
+				"age": "February 18, 2019",
+				"page_age": "2019-02-18T15:00:08",
+				"video": {},
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "youtube.com",
+					"hostname": "www.youtube.com",
+					"favicon": "https://imgs.search.brave.com/Ux4Hee4evZhvjuTKwtapBycOGjGDci2Gvn2pbSzvbC0/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvOTkyZTZiMWU3/YzU3Nzc5YjExYzUy/N2VhZTIxOWNlYjM5/ZGVjN2MyZDY4Nzdh/ZDYzMTYxNmI5N2Rk/Y2Q3N2FkNy93d3cu/eW91dHViZS5jb20v",
+					"path": "› watch"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/Djiv1pXLq1ClqBSE_86jQnEYR8bW8UJP6Cs7LrgyQzQ/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9pLnl0/aW1nLmNvbS92aS9f/dVFySjBUa1psYy9t/YXhyZXNkZWZhdWx0/LmpwZw"
+				}
+			},
+			{
+				"type": "video_result",
+				"url": "https://www.youtube.com/watch?v=wRKgzC-MhIc",
+				"title": "[] and {} vs list() and dict(), which is better?",
+				"description": "Enjoy the videos and music you love, upload original content, and share it all with friends, family, and the world on YouTube.",
+				"video": {},
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "youtube.com",
+					"hostname": "www.youtube.com",
+					"favicon": "https://imgs.search.brave.com/Ux4Hee4evZhvjuTKwtapBycOGjGDci2Gvn2pbSzvbC0/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvOTkyZTZiMWU3/YzU3Nzc5YjExYzUy/N2VhZTIxOWNlYjM5/ZGVjN2MyZDY4Nzdh/ZDYzMTYxNmI5N2Rk/Y2Q3N2FkNy93d3cu/eW91dHViZS5jb20v",
+					"path": "› watch"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/Hw9ep2Pio13X1VZjRw_h9R2VH_XvZFOuGlQJVnVkeq0/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9pLnl0/aW1nLmNvbS92aS93/UktnekMtTWhJYy9o/cWRlZmF1bHQuanBn"
+				}
+			},
+			{
+				"type": "video_result",
+				"url": "https://www.youtube.com/watch?v=LWdsF79H1Pg",
+				"title": "print() vs. return in Python Functions - YouTube",
+				"description": "In this video, you will learn the differences between the return statement and the print function when they are used inside Python functions. We will see an ...",
+				"age": "June 11, 2022",
+				"page_age": "2022-06-11T21:33:26",
+				"video": {},
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "youtube.com",
+					"hostname": "www.youtube.com",
+					"favicon": "https://imgs.search.brave.com/Ux4Hee4evZhvjuTKwtapBycOGjGDci2Gvn2pbSzvbC0/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvOTkyZTZiMWU3/YzU3Nzc5YjExYzUy/N2VhZTIxOWNlYjM5/ZGVjN2MyZDY4Nzdh/ZDYzMTYxNmI5N2Rk/Y2Q3N2FkNy93d3cu/eW91dHViZS5jb20v",
+					"path": "› watch"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/ebglnr5_jwHHpvon3WU-5hzt0eHdTZSVGg3Ts6R38xY/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9pLnl0/aW1nLmNvbS92aS9M/V2RzRjc5SDFQZy9t/YXhyZXNkZWZhdWx0/LmpwZw"
+				}
+			},
+			{
+				"type": "video_result",
+				"url": "https://www.youtube.com/watch?v=AovxLr8jUH4",
+				"title": "Python Tutorial for Beginners 5 - Python print() and input() Function ...",
+				"description": "In this Video I am going to show How to use print() Function and input() Function in Python. In python The print() function is used to print the specified ...",
+				"age": "August 28, 2018",
+				"page_age": "2018-08-28T20:11:09",
+				"video": {},
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "youtube.com",
+					"hostname": "www.youtube.com",
+					"favicon": "https://imgs.search.brave.com/Ux4Hee4evZhvjuTKwtapBycOGjGDci2Gvn2pbSzvbC0/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvOTkyZTZiMWU3/YzU3Nzc5YjExYzUy/N2VhZTIxOWNlYjM5/ZGVjN2MyZDY4Nzdh/ZDYzMTYxNmI5N2Rk/Y2Q3N2FkNy93d3cu/eW91dHViZS5jb20v",
+					"path": "› watch"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/nCoLEcWkKtiecprWbS6nufwGCaSbPH7o0-sMeIkFmjI/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9pLnl0/aW1nLmNvbS92aS9B/b3Z4THI4alVINC9o/cWRlZmF1bHQuanBn"
+				}
+			}
+		],
+		"mutated_by_goggles": false
+	},
+	"web": {
+		"type": "search",
+		"results": [
+			{
+				"title": "Welcome to Python.org",
+				"url": "https://www.python.org",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "The official home of the <strong>Python</strong> Programming Language",
+				"page_age": "2023-09-09T15:55:05",
+				"profile": {
+					"name": "Python",
+					"url": "https://www.python.org",
+					"long_name": "python.org",
+					"img": "https://imgs.search.brave.com/vBaRH-v6oPS4csO4cdvuKhZ7-xDVvydin3oe3zXYxAI/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvNTJjMzZjNDBj/MmIzODgwMGUyOTRj/Y2E5MjM3YjRkYTZj/YWI1Yzk1NTlmYTgw/ZDBjNzM0MGMxZjQz/YWFjNTczYy93d3cu/cHl0aG9uLm9yZy8"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "python.org",
+					"hostname": "www.python.org",
+					"favicon": "https://imgs.search.brave.com/vBaRH-v6oPS4csO4cdvuKhZ7-xDVvydin3oe3zXYxAI/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvNTJjMzZjNDBj/MmIzODgwMGUyOTRj/Y2E5MjM3YjRkYTZj/YWI1Yzk1NTlmYTgw/ZDBjNzM0MGMxZjQz/YWFjNTczYy93d3cu/cHl0aG9uLm9yZy8",
+					"path": ""
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/GGfNfe5rxJ8QWEoxXniSLc0-POLU3qPyTIpuqPdbmXk/rs:fit:200:200:1/g:ce/aHR0cHM6Ly93d3cu/cHl0aG9uLm9yZy9z/dGF0aWMvb3Blbmdy/YXBoLWljb24tMjAw/eDIwMC5wbmc",
+					"original": "https://www.python.org/static/opengraph-icon-200x200.png",
+					"logo": false
+				},
+				"age": "September 9, 2023",
+				"cluster_type": "generic",
+				"cluster": [
+					{
+						"title": "Downloads",
+						"url": "https://www.python.org/downloads/",
+						"is_source_local": false,
+						"is_source_both": false,
+						"description": "The official home of the <strong>Python</strong> Programming Language",
+						"family_friendly": true
+					},
+					{
+						"title": "Macos",
+						"url": "https://www.python.org/downloads/macos/",
+						"is_source_local": false,
+						"is_source_both": false,
+						"description": "The official home of the <strong>Python</strong> Programming Language",
+						"family_friendly": true
+					},
+					{
+						"title": "Windows",
+						"url": "https://www.python.org/downloads/windows/",
+						"is_source_local": false,
+						"is_source_both": false,
+						"description": "The official home of the <strong>Python</strong> Programming Language",
+						"family_friendly": true
+					},
+					{
+						"title": "Getting Started",
+						"url": "https://www.python.org/about/gettingstarted/",
+						"is_source_local": false,
+						"is_source_both": false,
+						"description": "The official home of the <strong>Python</strong> Programming Language",
+						"family_friendly": true
+					}
+				],
+				"extra_snippets": [
+					"Calculations are simple with Python, and expression syntax is straightforward: the operators +, -, * and / work as expected; parentheses () can be used for grouping. More about simple math functions in Python 3.",
+					"The core of extensible programming is defining functions. Python allows mandatory and optional arguments, keyword arguments, and even arbitrary argument lists. More about defining functions in Python 3",
+					"Lists (known as arrays in other languages) are one of the compound data types that Python understands. Lists can be indexed, sliced and manipulated with other built-in functions. More about lists in Python 3",
+					"# Python 3: Simple output (with Unicode) >>> print(\"Hello, I'm Python!\") Hello, I'm Python! # Input, assignment >>> name = input('What is your name?\\n') >>> print('Hi, %s.' % name) What is your name? Python Hi, Python."
+				]
+			},
+			{
+				"title": "Python (programming language) - Wikipedia",
+				"url": "https://en.wikipedia.org/wiki/Python_(programming_language)",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "<strong>Python</strong> is a high-level, general-purpose programming language. Its design philosophy emphasizes code readability with the use of significant indentation. <strong>Python</strong> is dynamically typed and garbage-collected. It supports multiple programming paradigms, including structured (particularly procedural), ...",
+				"page_age": "2024-05-01T12:54:03",
+				"profile": {
+					"name": "Wikipedia",
+					"url": "https://en.wikipedia.org/wiki/Python_(programming_language)",
+					"long_name": "en.wikipedia.org",
+					"img": "https://imgs.search.brave.com/0kxnVOiqv-faZvOJc7zpym4Zin1CTs1f1svfNZSzmfU/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvNjQwNGZhZWY0/ZTQ1YWUzYzQ3MDUw/MmMzMGY3NTQ0ZjNj/NDUwMDk5ZTI3MWRk/NWYyNTM4N2UwOTE0/NTI3ZDQzNy9lbi53/aWtpcGVkaWEub3Jn/Lw"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "en.wikipedia.org",
+					"hostname": "en.wikipedia.org",
+					"favicon": "https://imgs.search.brave.com/0kxnVOiqv-faZvOJc7zpym4Zin1CTs1f1svfNZSzmfU/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvNjQwNGZhZWY0/ZTQ1YWUzYzQ3MDUw/MmMzMGY3NTQ0ZjNj/NDUwMDk5ZTI3MWRk/NWYyNTM4N2UwOTE0/NTI3ZDQzNy9lbi53/aWtpcGVkaWEub3Jn/Lw",
+					"path": "› wiki  › Python_(programming_language)"
+				},
+				"age": "4 days ago",
+				"extra_snippets": [
+					"Python is dynamically typed and garbage-collected. It supports multiple programming paradigms, including structured (particularly procedural), object-oriented and functional programming. It is often described as a \"batteries included\" language due to its comprehensive standard library.",
+					"Guido van Rossum began working on Python in the late 1980s as a successor to the ABC programming language and first released it in 1991 as Python 0.9.0. Python 2.0 was released in 2000. Python 3.0, released in 2008, was a major revision not completely backward-compatible with earlier versions. Python 2.7.18, released in 2020, was the last release of Python 2.",
+					"Python was invented in the late 1980s by Guido van Rossum at Centrum Wiskunde & Informatica (CWI) in the Netherlands as a successor to the ABC programming language, which was inspired by SETL, capable of exception handling and interfacing with the Amoeba operating system.",
+					"Python consistently ranks as one of the most popular programming languages, and has gained widespread use in the machine learning community."
+				]
+			},
+			{
+				"title": "Python Tutorial",
+				"url": "https://www.w3schools.com/python/",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "W3Schools offers free online tutorials, references and exercises in all the major languages of the web. Covering popular subjects like HTML, CSS, JavaScript, <strong>Python</strong>, SQL, Java, and many, many more.",
+				"page_age": "2017-12-07T00:00:00",
+				"profile": {
+					"name": "W3Schools",
+					"url": "https://www.w3schools.com/python/",
+					"long_name": "w3schools.com",
+					"img": "https://imgs.search.brave.com/JwO5r7z3HTBkU29vgNH_4rrSWLf2M4-8FMWNvbxrKX8/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYjVlMGVkZDVj/ZGMyZWRmMzAwODRi/ZDAwZGE4NWI3NmU4/MjRhNjEzOGFhZWY3/ZGViMjY1OWY2ZDYw/YTZiOGUyZS93d3cu/dzNzY2hvb2xzLmNv/bS8"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "w3schools.com",
+					"hostname": "www.w3schools.com",
+					"favicon": "https://imgs.search.brave.com/JwO5r7z3HTBkU29vgNH_4rrSWLf2M4-8FMWNvbxrKX8/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYjVlMGVkZDVj/ZGMyZWRmMzAwODRi/ZDAwZGE4NWI3NmU4/MjRhNjEzOGFhZWY3/ZGViMjY1OWY2ZDYw/YTZiOGUyZS93d3cu/dzNzY2hvb2xzLmNv/bS8",
+					"path": "› python"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/EMfp8dodbJehmj0yCJh8317RHuaumsddnHI4bujvFcg/rs:fit:200:200:1/g:ce/aHR0cHM6Ly93d3cu/dzNzY2hvb2xzLmNv/bS9pbWFnZXMvdzNz/Y2hvb2xzX2xvZ29f/NDM2XzIucG5n",
+					"original": "https://www.w3schools.com/images/w3schools_logo_436_2.png",
+					"logo": true
+				},
+				"age": "December 7, 2017",
+				"extra_snippets": [
+					"Well organized and easy to understand Web building tutorials with lots of examples of how to use HTML, CSS, JavaScript, SQL, Python, PHP, Bootstrap, Java, XML and more.",
+					"HTML CSS JAVASCRIPT SQL PYTHON JAVA PHP HOW TO W3.CSS C C++ C# BOOTSTRAP REACT MYSQL JQUERY EXCEL XML DJANGO NUMPY PANDAS NODEJS R TYPESCRIPT ANGULAR GIT POSTGRESQL MONGODB ASP AI GO KOTLIN SASS VUE DSA GEN AI SCIPY AWS CYBERSECURITY DATA SCIENCE",
+					"Python Variables Variable Names Assign Multiple Values Output Variables Global Variables Variable Exercises Python Data Types Python Numbers Python Casting Python Strings",
+					"Python Strings Slicing Strings Modify Strings Concatenate Strings Format Strings Escape Characters String Methods String Exercises Python Booleans Python Operators Python Lists"
+				]
+			},
+			{
+				"title": "Online Python - IDE, Editor, Compiler, Interpreter",
+				"url": "https://www.online-python.com/",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "Build and Run your <strong>Python</strong> code instantly. Online-<strong>Python</strong> is a quick and easy tool that helps you to build, compile, test your <strong>python</strong> programs.",
+				"profile": {
+					"name": "Online-python",
+					"url": "https://www.online-python.com/",
+					"long_name": "online-python.com",
+					"img": "https://imgs.search.brave.com/kfaEvapwHxSsRObO52-I-otYFPHpG1h7UXJyUqDM2Ec/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvZGYxODdjNWQ0/NjZjZTNiMjk5NDY1/MWI5MTgyYjU3Y2Q3/MTI3NGM5MjUzY2Fi/OGQ3MTQ4MmIxMTQx/ZTcxNWFhMC93d3cu/b25saW5lLXB5dGhv/bi5jb20v"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "online-python.com",
+					"hostname": "www.online-python.com",
+					"favicon": "https://imgs.search.brave.com/kfaEvapwHxSsRObO52-I-otYFPHpG1h7UXJyUqDM2Ec/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvZGYxODdjNWQ0/NjZjZTNiMjk5NDY1/MWI5MTgyYjU3Y2Q3/MTI3NGM5MjUzY2Fi/OGQ3MTQ4MmIxMTQx/ZTcxNWFhMC93d3cu/b25saW5lLXB5dGhv/bi5jb20v",
+					"path": ""
+				},
+				"extra_snippets": [
+					"Build, run, and share Python code online for free with the help of online-integrated python's development environment (IDE). It is one of the most efficient, dependable, and potent online compilers for the Python programming language. It is not necessary for you to bother about establishing a Python environment in your local.",
+					"It is one of the most efficient, dependable, and potent online compilers for the Python programming language. It is not necessary for you to bother about establishing a Python environment in your local. Now You can immediately execute the Python code in the web browser of your choice.",
+					"It is not necessary for you to bother about establishing a Python environment in your local. Now You can immediately execute the Python code in the web browser of your choice. Using this Python editor is simple and quick to get up and running with. Simply type in the programme, and then press the RUN button!",
+					"Now You can immediately execute the Python code in the web browser of your choice. Using this Python editor is simple and quick to get up and running with. Simply type in the programme, and then press the RUN button! The code can be saved online by choosing the SHARE option, which also gives you the ability to access your code from any location providing you have internet access."
+				]
+			},
+			{
+				"title": "Python · GitHub",
+				"url": "https://github.com/python",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "Repositories related to the <strong>Python</strong> Programming language - <strong>Python</strong>",
+				"page_age": "2023-03-06T00:00:00",
+				"profile": {
+					"name": "GitHub",
+					"url": "https://github.com/python",
+					"long_name": "github.com",
+					"img": "https://imgs.search.brave.com/v8685zI4XInM0zxlNI2s7oE_2Sb-EL7lAy81WXbkQD8/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYWQyNWM1NjA5/ZjZmZjNlYzI2MDNk/N2VkNmJhYjE2MzZl/MDY5ZTMxMDUzZmY1/NmU3NWIzNWVmMjk0/NTBjMjJjZi9naXRo/dWIuY29tLw"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "github.com",
+					"hostname": "github.com",
+					"favicon": "https://imgs.search.brave.com/v8685zI4XInM0zxlNI2s7oE_2Sb-EL7lAy81WXbkQD8/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYWQyNWM1NjA5/ZjZmZjNlYzI2MDNk/N2VkNmJhYjE2MzZl/MDY5ZTMxMDUzZmY1/NmU3NWIzNWVmMjk0/NTBjMjJjZi9naXRo/dWIuY29tLw",
+					"path": "› python"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/POoaRfu_7gfp-D_O3qMNJrwDqJNbiDu1HuBpNJ_MpVQ/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9hdmF0/YXJzLmdpdGh1YnVz/ZXJjb250ZW50LmNv/bS91LzE1MjU5ODE_/cz0yMDAmYW1wO3Y9/NA",
+					"original": "https://avatars.githubusercontent.com/u/1525981?s=200&amp;v=4",
+					"logo": false
+				},
+				"age": "March 6, 2023",
+				"extra_snippets": ["Configuration for Python planets (e.g. http://planetpython.org)"]
+			},
+			{
+				"title": "Online Python Compiler (Interpreter)",
+				"url": "https://www.programiz.com/python-programming/online-compiler/",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "Write and run <strong>Python</strong> code using our online compiler (interpreter). You can use <strong>Python</strong> Shell like IDLE, and take inputs from the user in our <strong>Python</strong> compiler.",
+				"page_age": "2020-06-02T00:00:00",
+				"profile": {
+					"name": "Programiz",
+					"url": "https://www.programiz.com/python-programming/online-compiler/",
+					"long_name": "programiz.com",
+					"img": "https://imgs.search.brave.com/ozj4JFayZ3Fs5c9eTp7M5g12azQ_Hblgu4dpTuHRz6U/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvMGJlN2U1YjVi/Y2M3ZDU5OGMwMWNi/M2Q3YjhjOTM1ZTFk/Y2NkZjE4NGQwOGIx/MTQ4NjI2YmNhODVj/MzFkMmJhYy93d3cu/cHJvZ3JhbWl6LmNv/bS8"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "programiz.com",
+					"hostname": "www.programiz.com",
+					"favicon": "https://imgs.search.brave.com/ozj4JFayZ3Fs5c9eTp7M5g12azQ_Hblgu4dpTuHRz6U/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvMGJlN2U1YjVi/Y2M3ZDU5OGMwMWNi/M2Q3YjhjOTM1ZTFk/Y2NkZjE4NGQwOGIx/MTQ4NjI2YmNhODVj/MzFkMmJhYy93d3cu/cHJvZ3JhbWl6LmNv/bS8",
+					"path": "› python-programming  › online-compiler"
+				},
+				"age": "June 2, 2020",
+				"extra_snippets": [
+					"Python Online Compiler Online R Compiler SQL Online Editor Online HTML/CSS Editor Online Java Compiler C Online Compiler C++ Online Compiler C# Online Compiler JavaScript Online Compiler Online GoLang Compiler Online PHP Compiler Online Swift Compiler Online Rust Compiler",
+					"# Online Python compiler (interpreter) to run Python online. # Write Python 3 code in this online editor and run it. print(\"Try programiz.pro\")"
+				]
+			},
+			{
+				"title": "Python Developer",
+				"url": "https://twitter.com/Python_Dv/status/1786763460992544791",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "<strong>Python</strong> Developer",
+				"page_age": "2024-05-04T14:30:03",
+				"profile": {
+					"name": "X",
+					"url": "https://twitter.com/Python_Dv/status/1786763460992544791",
+					"long_name": "twitter.com",
+					"img": "https://imgs.search.brave.com/Zq483bGX0GnSgym-1P7iyOyEDX3PkDZSNT8m56F862A/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvN2MxOTUxNzhj/OTY1ZTQ3N2I0MjJk/MTY5NGM0MTRlYWVi/MjU1YWE2NDUwYmQ2/YTA2MDFhMDlkZDEx/NTAzZGNiNi90d2l0/dGVyLmNvbS8"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "twitter.com",
+					"hostname": "twitter.com",
+					"favicon": "https://imgs.search.brave.com/Zq483bGX0GnSgym-1P7iyOyEDX3PkDZSNT8m56F862A/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvN2MxOTUxNzhj/OTY1ZTQ3N2I0MjJk/MTY5NGM0MTRlYWVi/MjU1YWE2NDUwYmQ2/YTA2MDFhMDlkZDEx/NTAzZGNiNi90d2l0/dGVyLmNvbS8",
+					"path": "› Python_Dv  › status  › 1786763460992544791"
+				},
+				"age": "20 hours ago"
+			},
+			{
+				"title": "input table name? - python script - KNIME Extensions - KNIME Community Forum",
+				"url": "https://forum.knime.com/t/input-table-name-python-script/78978",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "Hi, when running a <strong>python</strong> script node, I get the error seen on the screenshot Same happens with this code too: The script input is output from the csv reader node. How can I get the right name for that table? Best wishes, Dario",
+				"page_age": "2024-05-04T09:20:44",
+				"profile": {
+					"name": "Knime",
+					"url": "https://forum.knime.com/t/input-table-name-python-script/78978",
+					"long_name": "forum.knime.com",
+					"img": "https://imgs.search.brave.com/WQoOhAD5i6uEhJ-qXvlWMJwbGA52f2Ycc_ns36EK698/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvOTAxNzMxNjFl/MzJjNzU5NzRkOTMz/Mjg4NDU2OWUxM2Rj/YzVkOGM3MzIwNzI2/YTY1NzYxNzA1MDE5/NzQzOWU3NC9mb3J1/bS5rbmltZS5jb20v"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "article",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "forum.knime.com",
+					"hostname": "forum.knime.com",
+					"favicon": "https://imgs.search.brave.com/WQoOhAD5i6uEhJ-qXvlWMJwbGA52f2Ycc_ns36EK698/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvOTAxNzMxNjFl/MzJjNzU5NzRkOTMz/Mjg4NDU2OWUxM2Rj/YzVkOGM3MzIwNzI2/YTY1NzYxNzA1MDE5/NzQzOWU3NC9mb3J1/bS5rbmltZS5jb20v",
+					"path": "  › knime extensions"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/DtEl38dcvuM1kGfhN0T5HfOrsMJcztWNyriLvtDJmKI/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9mb3J1/bS1jZG4ua25pbWUu/Y29tL3VwbG9hZHMv/ZGVmYXVsdC9vcmln/aW5hbC8zWC9lLzYv/ZTY0M2M2NzFlNzAz/MDg2MjkwMWY2YzJh/OWFjOWI5ZmEwM2M3/ZjMwZi5wbmc",
+					"original": "https://forum-cdn.knime.com/uploads/default/original/3X/e/6/e643c671e7030862901f6c2a9ac9b9fa03c7f30f.png",
+					"logo": false
+				},
+				"age": "1 day ago",
+				"extra_snippets": [
+					"Hi, when running a python script node, I get the error seen on the screenshot Same happens with this code too: The script input is output from the csv reader node. How can I get the right name for that table? …"
+				]
+			},
+			{
+				"title": "What does the Double Star operator mean in Python? - GeeksforGeeks",
+				"url": "https://www.geeksforgeeks.org/what-does-the-double-star-operator-mean-in-python/",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "A Computer Science portal for geeks. It contains well written, well thought and well explained computer science and programming articles, quizzes and practice/competitive programming/company interview Questions.",
+				"page_age": "2023-03-14T17:15:04",
+				"profile": {
+					"name": "GeeksforGeeks",
+					"url": "https://www.geeksforgeeks.org/what-does-the-double-star-operator-mean-in-python/",
+					"long_name": "geeksforgeeks.org",
+					"img": "https://imgs.search.brave.com/fhzcfv5xltx6-YBvJI9RZgS7xZo0dPNaASsrB8YOsCs/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYjBhOGQ3MmNi/ZWE5N2EwMmZjYzA1/ZTI0ZTFhMGUyMTE0/MGM0ZTBmMWZlM2Y2/Yzk2ODMxZTRhYTBi/NDdjYTE0OS93d3cu/Z2Vla3Nmb3JnZWVr/cy5vcmcv"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "article",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "geeksforgeeks.org",
+					"hostname": "www.geeksforgeeks.org",
+					"favicon": "https://imgs.search.brave.com/fhzcfv5xltx6-YBvJI9RZgS7xZo0dPNaASsrB8YOsCs/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYjBhOGQ3MmNi/ZWE5N2EwMmZjYzA1/ZTI0ZTFhMGUyMTE0/MGM0ZTBmMWZlM2Y2/Yzk2ODMxZTRhYTBi/NDdjYTE0OS93d3cu/Z2Vla3Nmb3JnZWVr/cy5vcmcv",
+					"path": "› what-does-the-double-star-operator-mean-in-python"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/GcR-j_dLbyHkbHEI3ffLMi6xpXGhF_2Z8POIoqtokhM/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9tZWRp/YS5nZWVrc2Zvcmdl/ZWtzLm9yZy93cC1j/b250ZW50L3VwbG9h/ZHMvZ2ZnXzIwMFgy/MDAtMTAweDEwMC5w/bmc",
+					"original": "https://media.geeksforgeeks.org/wp-content/uploads/gfg_200X200-100x100.png",
+					"logo": false
+				},
+				"age": "March 14, 2023",
+				"extra_snippets": [
+					"Difference between / vs. // operator in Python",
+					"Double Star or (**) is one of the Arithmetic Operator (Like +, -, *, **, /, //, %) in Python Language. It is also known as Power Operator.",
+					"The time complexity of the given Python program is O(n), where n is the number of key-value pairs in the input dictionary.",
+					"Inplace Operators in Python | Set 2 (ixor(), iand(), ipow(),…)"
+				]
+			},
+			{
+				"title": "r/Python",
+				"url": "https://www.reddit.com/r/Python/",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "The official <strong>Python</strong> community for Reddit! Stay up to date with the latest news, packages, and meta information relating to the <strong>Python</strong> programming language. --- If you have questions or are new to <strong>Python</strong> use r/LearnPython",
+				"page_age": "2022-12-30T16:25:02",
+				"profile": {
+					"name": "Reddit",
+					"url": "https://www.reddit.com/r/Python/",
+					"long_name": "reddit.com",
+					"img": "https://imgs.search.brave.com/mAZYEK9Wi13WLDUge7XZ8YuDTwm6DP6gBjvz1GdYZVY/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvN2ZiNTU0M2Nj/MTFhZjRiYWViZDlk/MjJiMjBjMzFjMDRk/Y2IzYWI0MGI0MjVk/OGY5NzQzOGQ5NzQ5/NWJhMWI0NC93d3cu/cmVkZGl0LmNvbS8"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "reddit.com",
+					"hostname": "www.reddit.com",
+					"favicon": "https://imgs.search.brave.com/mAZYEK9Wi13WLDUge7XZ8YuDTwm6DP6gBjvz1GdYZVY/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvN2ZiNTU0M2Nj/MTFhZjRiYWViZDlk/MjJiMjBjMzFjMDRk/Y2IzYWI0MGI0MjVk/OGY5NzQzOGQ5NzQ5/NWJhMWI0NC93d3cu/cmVkZGl0LmNvbS8",
+					"path": "› r  › Python"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/zWd10t3zg34ciHiAB-K5WWK3h_H4LedeDot9BVX7Ydo/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9zdHls/ZXMucmVkZGl0bWVk/aWEuY29tL3Q1XzJx/aDB5L3N0eWxlcy9j/b21tdW5pdHlJY29u/X2NpZmVobDR4dDdu/YzEucG5n",
+					"original": "https://styles.redditmedia.com/t5_2qh0y/styles/communityIcon_cifehl4xt7nc1.png",
+					"logo": false
+				},
+				"age": "December 30, 2022",
+				"extra_snippets": [
+					"r/Python: The official Python community for Reddit! Stay up to date with the latest news, packages, and meta information relating to the Python…",
+					"By default, Python allows you to import and use anything, anywhere. Over time, this results in modules that were intended to be separate getting tightly coupled together, and domain boundaries breaking down. We experienced this first-hand at a unicorn startup, where the eng team paused development for over a year in an attempt to split up packages into independent services.",
+					"Hello r/Python! It's time to share what you've been working on! Whether it's a work-in-progress, a completed masterpiece, or just a rough idea, let us know what you're up to!",
+					"Whether it's your job, your hobby, or your passion project, all Python-related work is welcome here."
+				]
+			},
+			{
+				"title": "GitHub - python/cpython: The Python programming language",
+				"url": "https://github.com/python/cpython",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "The <strong>Python</strong> programming language. Contribute to <strong>python</strong>/cpython development by creating an account on GitHub.",
+				"page_age": "2022-10-29T00:00:00",
+				"profile": {
+					"name": "GitHub",
+					"url": "https://github.com/python/cpython",
+					"long_name": "github.com",
+					"img": "https://imgs.search.brave.com/v8685zI4XInM0zxlNI2s7oE_2Sb-EL7lAy81WXbkQD8/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYWQyNWM1NjA5/ZjZmZjNlYzI2MDNk/N2VkNmJhYjE2MzZl/MDY5ZTMxMDUzZmY1/NmU3NWIzNWVmMjk0/NTBjMjJjZi9naXRo/dWIuY29tLw"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "software",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "github.com",
+					"hostname": "github.com",
+					"favicon": "https://imgs.search.brave.com/v8685zI4XInM0zxlNI2s7oE_2Sb-EL7lAy81WXbkQD8/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYWQyNWM1NjA5/ZjZmZjNlYzI2MDNk/N2VkNmJhYjE2MzZl/MDY5ZTMxMDUzZmY1/NmU3NWIzNWVmMjk0/NTBjMjJjZi9naXRo/dWIuY29tLw",
+					"path": "› python  › cpython"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/BJbWFRUqgP-tKIyGK9ByXjuYjHO2mtYigUOEFNz_gXk/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9vcGVu/Z3JhcGguZ2l0aHVi/YXNzZXRzLmNvbS82/MTY5YmJkNTQ0YzAy/NDg0MGU4NDdjYTU1/YTU3ZGZmMDA2ZDAw/YWQ1NDIzOTFmYTQ3/YmJjODg3OWM0NWYw/MTZhL3B5dGhvbi9j/cHl0aG9u",
+					"original": "https://opengraph.githubassets.com/6169bbd544c024840e847ca55a57dff006d00ad542391fa47bbc8879c45f016a/python/cpython",
+					"logo": false
+				},
+				"age": "October 29, 2022",
+				"extra_snippets": [
+					"You can pass many options to the configure script; run ./configure --help to find out more. On macOS case-insensitive file systems and on Cygwin, the executable is called python.exe; elsewhere it's just python.",
+					"Building a complete Python installation requires the use of various additional third-party libraries, depending on your build platform and configure options. Not all standard library modules are buildable or useable on all platforms. Refer to the Install dependencies section of the Developer Guide for current detailed information on dependencies for various Linux distributions and macOS.",
+					"To get an optimized build of Python, configure --enable-optimizations before you run make. This sets the default make targets up to enable Profile Guided Optimization (PGO) and may be used to auto-enable Link Time Optimization (LTO) on some platforms. For more details, see the sections below.",
+					"Copyright © 2001-2024 Python Software Foundation. All rights reserved."
+				]
+			},
+			{
+				"title": "5. Data Structures — Python 3.12.3 documentation",
+				"url": "https://docs.python.org/3/tutorial/datastructures.html",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "This chapter describes some things you’ve learned about already in more detail, and adds some new things as well. More on Lists: The list data type has some more methods. Here are all of the method...",
+				"page_age": "2023-07-04T00:00:00",
+				"profile": {
+					"name": "Python documentation",
+					"url": "https://docs.python.org/3/tutorial/datastructures.html",
+					"long_name": "docs.python.org",
+					"img": "https://imgs.search.brave.com/F5Ym7eSElhGdGUFKLRxDj9Z_tc180ldpeMvQ2Q6ARbA/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvMTUzOTFjOGVi/YTcyOTVmODA3ODIy/YjE2NzFjY2ViMjhl/NzRlY2JhYTc5YjNm/ZjhmODAyZWI2OGUw/ZjU4NDVlNy9kb2Nz/LnB5dGhvbi5vcmcv"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "docs.python.org",
+					"hostname": "docs.python.org",
+					"favicon": "https://imgs.search.brave.com/F5Ym7eSElhGdGUFKLRxDj9Z_tc180ldpeMvQ2Q6ARbA/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvMTUzOTFjOGVi/YTcyOTVmODA3ODIy/YjE2NzFjY2ViMjhl/NzRlY2JhYTc5YjNm/ZjhmODAyZWI2OGUw/ZjU4NDVlNy9kb2Nz/LnB5dGhvbi5vcmcv",
+					"path": "› 3  › tutorial  › datastructures.html"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/Y7GrMRF8WorDIMLuOl97XC8ltYpoOCqNwWF2pQIIKls/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9kb2Nz/LnB5dGhvbi5vcmcv/My9fc3RhdGljL29n/LWltYWdlLnBuZw",
+					"original": "https://docs.python.org/3/_static/og-image.png",
+					"logo": false
+				},
+				"age": "July 4, 2023",
+				"extra_snippets": [
+					"You might have noticed that methods like insert, remove or sort that only modify the list have no return value printed – they return the default None. [1] This is a design principle for all mutable data structures in Python.",
+					"We saw that lists and strings have many common properties, such as indexing and slicing operations. They are two examples of sequence data types (see Sequence Types — list, tuple, range). Since Python is an evolving language, other sequence data types may be added. There is also another standard sequence data type: the tuple.",
+					"Python also includes a data type for sets. A set is an unordered collection with no duplicate elements. Basic uses include membership testing and eliminating duplicate entries. Set objects also support mathematical operations like union, intersection, difference, and symmetric difference.",
+					"Another useful data type built into Python is the dictionary (see Mapping Types — dict). Dictionaries are sometimes found in other languages as “associative memories” or “associative arrays”. Unlike sequences, which are indexed by a range of numbers, dictionaries are indexed by keys, which can be any immutable type; strings and numbers can always be keys."
+				]
+			},
+			{
+				"title": "Something wrong with python packages / AUR Issues, Discussion & PKGBUILD Requests / Arch Linux Forums",
+				"url": "https://bbs.archlinux.org/viewtopic.php?id=295466",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "Big <strong>Python</strong> updates require <strong>Python</strong> packages to be rebuild. For some reason they didn&#x27;t think a bump that made it necessary to rebuild half the official repo was a news post.",
+				"page_age": "2024-05-04T08:30:02",
+				"profile": {
+					"name": "Archlinux",
+					"url": "https://bbs.archlinux.org/viewtopic.php?id=295466",
+					"long_name": "bbs.archlinux.org",
+					"img": "https://imgs.search.brave.com/3au9oqkzSri_aLEec3jo-0bFgLuICkydrWfjFcC8lkI/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvNWNkODM1MWJl/ZmJhMzkzNzYzMDkz/NmEyMWMxNjI5MjNk/NGJmZjFhNTBlZDNl/Mzk5MzJjOGZkYjZl/MjNmY2IzNS9iYnMu/YXJjaGxpbnV4Lm9y/Zy8"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "bbs.archlinux.org",
+					"hostname": "bbs.archlinux.org",
+					"favicon": "https://imgs.search.brave.com/3au9oqkzSri_aLEec3jo-0bFgLuICkydrWfjFcC8lkI/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvNWNkODM1MWJl/ZmJhMzkzNzYzMDkz/NmEyMWMxNjI5MjNk/NGJmZjFhNTBlZDNl/Mzk5MzJjOGZkYjZl/MjNmY2IzNS9iYnMu/YXJjaGxpbnV4Lm9y/Zy8",
+					"path": "› viewtopic.php"
+				},
+				"age": "1 day ago",
+				"extra_snippets": [
+					"Traceback (most recent call last): File \"/usr/lib/python3.12/importlib/metadata/__init__.py\", line 397, in from_name return next(cls.discover(name=name)) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ StopIteration During handling of the above exception, another exception occurred: Traceback (most recent call last): File \"/usr/bin/informant\", line 33, in <module> sys.exit(load_entry_point('informant==0.5.0', 'console_scripts', 'informant')()) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ File \"/usr/bin/informant\", line 22, in importlib_load_entry_point for entry_point in distribution(dis"
+				]
+			},
+			{
+				"title": "Introduction to Python",
+				"url": "https://www.w3schools.com/python/python_intro.asp",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "W3Schools offers free online tutorials, references and exercises in all the major languages of the web. Covering popular subjects like HTML, CSS, JavaScript, <strong>Python</strong>, SQL, Java, and many, many more.",
+				"profile": {
+					"name": "W3Schools",
+					"url": "https://www.w3schools.com/python/python_intro.asp",
+					"long_name": "w3schools.com",
+					"img": "https://imgs.search.brave.com/JwO5r7z3HTBkU29vgNH_4rrSWLf2M4-8FMWNvbxrKX8/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYjVlMGVkZDVj/ZGMyZWRmMzAwODRi/ZDAwZGE4NWI3NmU4/MjRhNjEzOGFhZWY3/ZGViMjY1OWY2ZDYw/YTZiOGUyZS93d3cu/dzNzY2hvb2xzLmNv/bS8"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "w3schools.com",
+					"hostname": "www.w3schools.com",
+					"favicon": "https://imgs.search.brave.com/JwO5r7z3HTBkU29vgNH_4rrSWLf2M4-8FMWNvbxrKX8/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYjVlMGVkZDVj/ZGMyZWRmMzAwODRi/ZDAwZGE4NWI3NmU4/MjRhNjEzOGFhZWY3/ZGViMjY1OWY2ZDYw/YTZiOGUyZS93d3cu/dzNzY2hvb2xzLmNv/bS8",
+					"path": "› python  › python_intro.asp"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/EMfp8dodbJehmj0yCJh8317RHuaumsddnHI4bujvFcg/rs:fit:200:200:1/g:ce/aHR0cHM6Ly93d3cu/dzNzY2hvb2xzLmNv/bS9pbWFnZXMvdzNz/Y2hvb2xzX2xvZ29f/NDM2XzIucG5n",
+					"original": "https://www.w3schools.com/images/w3schools_logo_436_2.png",
+					"logo": true
+				},
+				"extra_snippets": [
+					"Well organized and easy to understand Web building tutorials with lots of examples of how to use HTML, CSS, JavaScript, SQL, Python, PHP, Bootstrap, Java, XML and more.",
+					"HTML CSS JAVASCRIPT SQL PYTHON JAVA PHP HOW TO W3.CSS C C++ C# BOOTSTRAP REACT MYSQL JQUERY EXCEL XML DJANGO NUMPY PANDAS NODEJS R TYPESCRIPT ANGULAR GIT POSTGRESQL MONGODB ASP AI GO KOTLIN SASS VUE DSA GEN AI SCIPY AWS CYBERSECURITY DATA SCIENCE",
+					"Python Variables Variable Names Assign Multiple Values Output Variables Global Variables Variable Exercises Python Data Types Python Numbers Python Casting Python Strings",
+					"Python Strings Slicing Strings Modify Strings Concatenate Strings Format Strings Escape Characters String Methods String Exercises Python Booleans Python Operators Python Lists"
+				]
+			},
+			{
+				"title": "bug: AUR package wants to use python but does not find any preset version · Issue #1740 · asdf-vm/asdf",
+				"url": "https://github.com/asdf-vm/asdf/issues/1740",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "Describe the Bug I am not sure why this is happening, I am trying to install tlpui from AUR and it fails, here are some logs to help: ==&gt; Making package: tlpui 2:1.6.5-1 (Mi 10 apr 2024 23:19:15 +0...",
+				"page_age": "2024-05-04T06:45:04",
+				"profile": {
+					"name": "GitHub",
+					"url": "https://github.com/asdf-vm/asdf/issues/1740",
+					"long_name": "github.com",
+					"img": "https://imgs.search.brave.com/v8685zI4XInM0zxlNI2s7oE_2Sb-EL7lAy81WXbkQD8/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYWQyNWM1NjA5/ZjZmZjNlYzI2MDNk/N2VkNmJhYjE2MzZl/MDY5ZTMxMDUzZmY1/NmU3NWIzNWVmMjk0/NTBjMjJjZi9naXRo/dWIuY29tLw"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "software",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "github.com",
+					"hostname": "github.com",
+					"favicon": "https://imgs.search.brave.com/v8685zI4XInM0zxlNI2s7oE_2Sb-EL7lAy81WXbkQD8/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYWQyNWM1NjA5/ZjZmZjNlYzI2MDNk/N2VkNmJhYjE2MzZl/MDY5ZTMxMDUzZmY1/NmU3NWIzNWVmMjk0/NTBjMjJjZi9naXRo/dWIuY29tLw",
+					"path": "› asdf-vm  › asdf  › issues  › 1740"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/KrLW5s_2n4jyP8XLbc3ZPVBaLD963tQgWzG9EWPZlQs/rs:fit:200:200:1/g:ce/aHR0cHM6Ly9vcGVu/Z3JhcGguZ2l0aHVi/YXNzZXRzLmNvbS81/MTE0ZTdkOGIwODM2/YmQ2MTY3NzQ1ZGI4/MmZjMGE3OGUyMjcw/MGFlY2ZjMWZkODBl/MDYzZTNiN2ZjOWNj/NzYyL2FzZGYtdm0v/YXNkZi9pc3N1ZXMv/MTc0MA",
+					"original": "https://opengraph.githubassets.com/5114e7d8b0836bd6167745db82fc0a78e22700aecfc1fd80e063e3b7fc9cc762/asdf-vm/asdf/issues/1740",
+					"logo": false
+				},
+				"age": "1 day ago",
+				"extra_snippets": [
+					"==> Starting build()... No preset version installed for command python Please install a version by running one of the following: asdf install python 3.8 or add one of the following versions in your config file at /home/ferret/.tool-versions python 3.11.0 python 3.12.1 python 3.12.3 ==> ERROR: A failure occurred in build(). Aborting...",
+					"-> error making: tlpui-exit status 4 -> Failed to install the following packages. Manual intervention is required: tlpui - exit status 4 ferret@FX505DT in ~ $ cat /home/ferret/.tool-versions nodejs 21.6.0 python 3.12.3 ferret@FX505DT in ~ $ python -V Python 3.12.3 ferret@FX505DT in ~ $ which python /home/ferret/.asdf/shims/python",
+					"Describe the Bug I am not sure why this is happening, I am trying to install tlpui from AUR and it fails, here are some logs to help: ==> Making package: tlpui 2:1.6.5-1 (Mi 10 apr 2024 23:19:15 +0300) ==> Retrieving sources... -> Found ..."
+				]
+			},
+			{
+				"title": "What are python.exe and python3.exe, and why do they appear to point to App Installer? | Windows 11 Forum",
+				"url": "https://www.elevenforum.com/t/what-are-python-exe-and-python3-exe-and-why-do-they-appear-to-point-to-app-installer.24886/",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "I was looking at App execution aliases (Settings &gt; Apps &gt; Advanced app settings &gt; App execution aliases) on my new computer -- my first Windows 11 computer. Why are <strong>python</strong>.exe and python3.exe listed as App Installer? I assume that App Installer refers to installation of Microsoft Store / UWP...",
+				"page_age": "2024-05-03T17:30:04",
+				"profile": {
+					"name": "Windows 11 Forum",
+					"url": "https://www.elevenforum.com/t/what-are-python-exe-and-python3-exe-and-why-do-they-appear-to-point-to-app-installer.24886/",
+					"long_name": "elevenforum.com",
+					"img": "https://imgs.search.brave.com/XVRAYMEj6Im8i7jV5RxeTwpiRPtY9IWg4wRIuh-WhEw/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvZjk5MDZkMDIw/M2U1OWIwNjM5Y2U1/M2U2NzNiNzVkNTA5/NzA5OTI1ZTFmOTc4/MzU3OTlhYzU5OTVi/ZGNjNTY4MS93d3cu/ZWxldmVuZm9ydW0u/Y29tLw"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "elevenforum.com",
+					"hostname": "www.elevenforum.com",
+					"favicon": "https://imgs.search.brave.com/XVRAYMEj6Im8i7jV5RxeTwpiRPtY9IWg4wRIuh-WhEw/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvZjk5MDZkMDIw/M2U1OWIwNjM5Y2U1/M2U2NzNiNzVkNTA5/NzA5OTI1ZTFmOTc4/MzU3OTlhYzU5OTVi/ZGNjNTY4MS93d3cu/ZWxldmVuZm9ydW0u/Y29tLw",
+					"path": "  › windows support forums  › apps and software"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/DVoFcE6d_-lx3BVGNS-RZK_lZzxQ8VhwZVf3AVqEJFA/rs:fit:200:200:1/g:ce/aHR0cHM6Ly93d3cu/ZWxldmVuZm9ydW0u/Y29tL2RhdGEvYXNz/ZXRzL2xvZ28vbWV0/YTEtMjAxLnBuZw",
+					"original": "https://www.elevenforum.com/data/assets/logo/meta1-201.png",
+					"logo": true
+				},
+				"age": "2 days ago",
+				"extra_snippets": [
+					"Why are python.exe and python3.exe listed as App Installer? I assume that App Installer refers to installation of Microsoft Store / UWP apps, but if that's the case, then why are they called python.exe and python3.exe? Or are python.exe and python3.exe simply serving as aliases / pointers pointing to App Installer, which is itself a Microsoft Store App?",
+					"Or are python.exe and python3.exe simply serving as aliases / pointers pointing to App Installer, which is itself a Microsoft Store App? I wish to soon install Python, along with an integrated development editor (IDE), on my machine, so that I can code in Python.",
+					"I wish to soon install Python, along with an integrated development editor (IDE), on my machine, so that I can code in Python. But is a Python interpreter already on my computer as suggested, if obliquely, by the presence of python.exe and python3.exe? I kind of doubt it."
+				]
+			},
+			{
+				"title": "How to Watermark Your Images Using Python OpenCV in ...",
+				"url": "https://medium.com/@daily_data_prep/how-to-watermark-your-images-using-python-opencv-in-bulk-e472085389a1",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "Medium is an open platform where readers find dynamic thinking, and where expert and undiscovered voices can share their writing on any topic.",
+				"page_age": "2024-05-03T14:05:06",
+				"profile": {
+					"name": "Medium",
+					"url": "https://medium.com/@daily_data_prep/how-to-watermark-your-images-using-python-opencv-in-bulk-e472085389a1",
+					"long_name": "medium.com",
+					"img": "https://imgs.search.brave.com/qvE2kIQCiAsnPv2C6P9xM5J2VVWdm55g-A-2Q_yIJ0g/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvOTZhYmQ1N2Q4/NDg4ZDcyODIyMDZi/MzFmOWNhNjE3Y2E4/Y2YzMThjNjljNDIx/ZjllZmNhYTcwODhl/YTcwNDEzYy9tZWRp/dW0uY29tLw"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "medium.com",
+					"hostname": "medium.com",
+					"favicon": "https://imgs.search.brave.com/qvE2kIQCiAsnPv2C6P9xM5J2VVWdm55g-A-2Q_yIJ0g/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvOTZhYmQ1N2Q4/NDg4ZDcyODIyMDZi/MzFmOWNhNjE3Y2E4/Y2YzMThjNjljNDIx/ZjllZmNhYTcwODhl/YTcwNDEzYy9tZWRp/dW0uY29tLw",
+					"path": "› @daily_data_prep  › how-to-watermark-your-images-using-python-opencv-in-bulk-e472085389a1"
+				},
+				"age": "2 days ago"
+			},
+			{
+				"title": "Increment and Decrement Operators in Python?",
+				"url": "https://www.tutorialspoint.com/increment-and-decrement-operators-in-python",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "Increment and Decrement Operators in <strong>Python</strong> - <strong>Python</strong> does not have unary increment/decrement operator (++/--). Instead to increment a value, usea += 1to decrement a value, use −a -= 1Example&gt;&gt;&gt; a = 0 &gt;&gt;&gt; &gt;&gt;&gt; #Increment &gt;&gt;&gt; a +=1 &gt;&gt;&gt; &gt;&gt;&gt; #Decrement &gt;&gt;&gt; a -= 1 &gt;&gt;&gt; &gt;&gt;&gt; #value of a &gt;&gt;&gt; a 0Python ...",
+				"page_age": "2023-08-23T00:00:00",
+				"profile": {
+					"name": "Tutorialspoint",
+					"url": "https://www.tutorialspoint.com/increment-and-decrement-operators-in-python",
+					"long_name": "tutorialspoint.com",
+					"img": "https://imgs.search.brave.com/Wt8BSkivPlFwcU5yBtf7YzuvTuRExyd_502cdABCS5c/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYjcyYjAzYmVl/ODU4MzZiMjJiYTFh/MjJhZDNmNWE4YzA5/MDgyYTZhMDg3NTYw/M2NiY2NiZTUxN2I5/MjU1MWFmMS93d3cu/dHV0b3JpYWxzcG9p/bnQuY29tLw"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "tutorialspoint.com",
+					"hostname": "www.tutorialspoint.com",
+					"favicon": "https://imgs.search.brave.com/Wt8BSkivPlFwcU5yBtf7YzuvTuRExyd_502cdABCS5c/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYjcyYjAzYmVl/ODU4MzZiMjJiYTFh/MjJhZDNmNWE4YzA5/MDgyYTZhMDg3NTYw/M2NiY2NiZTUxN2I5/MjU1MWFmMS93d3cu/dHV0b3JpYWxzcG9p/bnQuY29tLw",
+					"path": "› increment-and-decrement-operators-in-python"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/ddG5vyZGLVudvecEbQJPeG8tGuaZ7g3Xz6Gyjdl5WA8/rs:fit:200:200:1/g:ce/aHR0cHM6Ly93d3cu/dHV0b3JpYWxzcG9p/bnQuY29tL2ltYWdl/cy90cF9sb2dvXzQz/Ni5wbmc",
+					"original": "https://www.tutorialspoint.com/images/tp_logo_436.png",
+					"logo": true
+				},
+				"age": "August 23, 2023",
+				"extra_snippets": [
+					"Increment and Decrement Operators in Python - Python does not have unary increment/decrement operator (++/--). Instead to increment a value, usea += 1to decrement a value, use −a -= 1Example>>> a = 0 >>> >>> #Increment >>> a +=1 >>> >>> #Decrement >>> a -= 1 >>> >>> #value of a >>> a 0Python does not provide multiple ways to do the same thing",
+					"So what above statement means in python is: create an object of type int having value 1 and give the name a to it. The object is an instance of int having value 1 and the name a refers to it. The assigned name a and the object to which it refers are distinct.",
+					"Python does not provide multiple ways to do the same thing .",
+					"However, be careful if you are coming from a language like C, Python doesn’t have \"variables\" in the sense that C does, instead python uses names and objects and in python integers (int’s) are immutable."
+				]
+			},
+			{
+				"title": "Gumroad – How not to suck at Python / SideFX Houdini | CG Persia",
+				"url": "https://cgpersia.com/2024/05/gumroad-how-not-to-suck-at-python-sidefx-houdini-195370.html",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "Info: This course is made for artists or TD (technical director) willing to learn <strong>Python</strong> to improve their workflows inside SideFX Houdini, get faster in production and develop all the tools you always wished you had.",
+				"page_age": "2024-05-03T08:35:03",
+				"profile": {
+					"name": "Cgpersia",
+					"url": "https://cgpersia.com/2024/05/gumroad-how-not-to-suck-at-python-sidefx-houdini-195370.html",
+					"long_name": "cgpersia.com",
+					"img": "https://imgs.search.brave.com/VjyaopAm-M9sWvM7n-KnGZ3T5swIOwwE80iF5QVqQPg/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYmE0MzQ4NmI2/NjFhMTA1ZDBiN2Iw/ZWNiNDUxNjUwYjdh/MGE5ZjQ0ZjIxNzll/NmVkZDE2YzYyMDBh/NDNiMDgwMy9jZ3Bl/cnNpYS5jb20v"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "cgpersia.com",
+					"hostname": "cgpersia.com",
+					"favicon": "https://imgs.search.brave.com/VjyaopAm-M9sWvM7n-KnGZ3T5swIOwwE80iF5QVqQPg/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvYmE0MzQ4NmI2/NjFhMTA1ZDBiN2Iw/ZWNiNDUxNjUwYjdh/MGE5ZjQ0ZjIxNzll/NmVkZDE2YzYyMDBh/NDNiMDgwMy9jZ3Bl/cnNpYS5jb20v",
+					"path": "› 2024  › 05  › gumroad-how-not-to-suck-at-python-sidefx-houdini-195370.html"
+				},
+				"age": "2 days ago",
+				"extra_snippets": [
+					"Posted in: 2D, CG Releases, Downloads, Learning, Tutorials, Videos. Tagged: Gumroad, Python, Sidefx. Leave a Comment",
+					"01 – Python – Fundamentals Get the Fundamentals of python before starting the fun stuff ! 02 – Python Construction Part02 digging further into python concepts 03 – Houdini – Python Basics Applying some basic python in Houdini and starting to make tools !",
+					"02 – Python Construction Part02 digging further into python concepts 03 – Houdini – Python Basics Applying some basic python in Houdini and starting to make tools ! 04 – Houdini – Python Intermediate Applying some more advanced python in Houdini to make tools ! 05 – Houdini – Python Expert Using QtDesigner in combinaison with Houdini Python/Pyside to create advanced tools."
+				]
+			},
+			{
+				"title": "How to install Python: The complete Python programmer’s guide",
+				"url": "https://www.pluralsight.com/resources/blog/software-development/python-installation-guide",
+				"is_source_local": false,
+				"is_source_both": false,
+				"description": "An easy guide on how set up your operating system so you can program in <strong>Python</strong>, and how to update or uninstall it. For Linux, Windows, and macOS.",
+				"page_age": "2024-05-02T07:30:02",
+				"profile": {
+					"name": "Pluralsight",
+					"url": "https://www.pluralsight.com/resources/blog/software-development/python-installation-guide",
+					"long_name": "pluralsight.com",
+					"img": "https://imgs.search.brave.com/zvwQNSVu9-jR2CRlNcsTzxjaXKPlXNuh-Jo9-0yA1OE/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvMTNkNWQyNjk3/M2Q0NzYyMmUyNDc3/ZjYwMWFlZDI5YTI4/ODhmYzc2MDkzMjAy/MjNkMWY1MDE3NTQw/MzI5NWVkZS93d3cu/cGx1cmFsc2lnaHQu/Y29tLw"
+				},
+				"language": "en",
+				"family_friendly": true,
+				"type": "search_result",
+				"subtype": "generic",
+				"meta_url": {
+					"scheme": "https",
+					"netloc": "pluralsight.com",
+					"hostname": "www.pluralsight.com",
+					"favicon": "https://imgs.search.brave.com/zvwQNSVu9-jR2CRlNcsTzxjaXKPlXNuh-Jo9-0yA1OE/rs:fit:32:32:1/g:ce/aHR0cDovL2Zhdmlj/b25zLnNlYXJjaC5i/cmF2ZS5jb20vaWNv/bnMvMTNkNWQyNjk3/M2Q0NzYyMmUyNDc3/ZjYwMWFlZDI5YTI4/ODhmYzc2MDkzMjAy/MjNkMWY1MDE3NTQw/MzI5NWVkZS93d3cu/cGx1cmFsc2lnaHQu/Y29tLw",
+					"path": "  › blog  › blog"
+				},
+				"thumbnail": {
+					"src": "https://imgs.search.brave.com/xrv5PHH2Bzmq2rcIYzk__8h5RqCj6kS3I6SGCNw5dZM/rs:fit:200:200:1/g:ce/aHR0cHM6Ly93d3cu/cGx1cmFsc2lnaHQu/Y29tL2NvbnRlbnQv/ZGFtL3BzL2ltYWdl/cy9yZXNvdXJjZS1j/ZW50ZXIvYmxvZy9o/ZWFkZXItaGVyby1p/bWFnZXMvUHl0aG9u/LndlYnA",
+					"original": "https://www.pluralsight.com/content/dam/ps/images/resource-center/blog/header-hero-images/Python.webp",
+					"logo": false
+				},
+				"age": "3 days ago",
+				"extra_snippets": [
+					"Whether it’s your first time programming or you’re a seasoned programmer, you’ll have to install or update Python every now and then --- or if necessary, uninstall it. In this article, you'll learn how to do just that.",
+					"Some systems come with Python, so to start off, we’ll first check to see if it’s installed on your system before we proceed. To do that, we’ll need to open a terminal. Since you might be new to programming, let’s go over how to open a terminal for Linux, Windows, and macOS.",
+					"Before we dive into setting up your system so you can program in Python, let’s talk terminal basics and benefits.",
+					"However, let’s focus on why we need it for working with Python. We use a terminal, or command line, to:"
+				]
+			}
+		],
+		"family_friendly": true
+	}
+}

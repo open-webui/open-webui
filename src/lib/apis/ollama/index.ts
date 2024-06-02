@@ -1,5 +1,72 @@
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
-import { promptTemplate } from '$lib/utils';
+import { titleGenerationTemplate } from '$lib/utils';
+
+export const getOllamaConfig = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/config`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateOllamaConfig = async (token: string = '', enable_ollama_api: boolean) => {
+	let error = null;
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/config/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			enable_ollama_api: enable_ollama_api
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
 
 export const getOllamaUrls = async (token: string = '') => {
 	let error = null;
@@ -68,10 +135,10 @@ export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 	return res.OLLAMA_BASE_URLS;
 };
 
-export const getOllamaVersion = async (token: string = '') => {
+export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/version`, {
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/version${urlIdx ? `/${urlIdx}` : ''}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -97,7 +164,7 @@ export const getOllamaVersion = async (token: string = '') => {
 		throw error;
 	}
 
-	return res?.version ?? '';
+	return res?.version ?? false;
 };
 
 export const getOllamaModels = async (token: string = '') => {
@@ -145,7 +212,7 @@ export const generateTitle = async (
 ) => {
 	let error = null;
 
-	template = promptTemplate(template, prompt);
+	template = titleGenerationTemplate(template, prompt);
 
 	console.log(template);
 

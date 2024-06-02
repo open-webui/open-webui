@@ -7,9 +7,8 @@
 
 	import { goto } from '$app/navigation';
 
-	import { getModels as _getModels } from '$lib/utils';
+	import { getModels as _getModels } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { getModelfiles } from '$lib/apis/modelfiles';
 	import { getPrompts } from '$lib/apis/prompts';
 
 	import { getDocs } from '$lib/apis/documents';
@@ -20,10 +19,10 @@
 		showSettings,
 		settings,
 		models,
-		modelfiles,
 		prompts,
 		documents,
 		tags,
+		banners,
 		showChangelog,
 		config
 	} from '$lib/stores';
@@ -35,6 +34,8 @@
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { getBanners } from '$lib/apis/configs';
+	import { getUserSettings } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
@@ -48,21 +49,6 @@
 
 	const getModels = async () => {
 		return _getModels(localStorage.token);
-	};
-
-	const setOllamaVersion = async (version: string = '') => {
-		if (version === '') {
-			version = await getOllamaVersion(localStorage.token).catch((error) => {
-				return '';
-			});
-		}
-
-		ollamaVersion = version;
-
-		console.log(ollamaVersion);
-		if (compareVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion)) {
-			toast.error(`Ollama Version: ${ollamaVersion !== '' ? ollamaVersion : 'Not Detected'}`);
-		}
 	};
 
 	onMount(async () => {
@@ -87,18 +73,31 @@
 				// IndexedDB Not Found
 			}
 
-			await models.set(await getModels());
-			await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+			const userSettings = await getUserSettings(localStorage.token);
 
-			await modelfiles.set(await getModelfiles(localStorage.token));
-			await prompts.set(await getPrompts(localStorage.token));
-			await documents.set(await getDocs(localStorage.token));
-			await tags.set(await getAllChatTags(localStorage.token));
+			if (userSettings) {
+				await settings.set(userSettings.ui);
+			} else {
+				await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+			}
 
-			modelfiles.subscribe(async () => {
-				// should fetch models
-				await models.set(await getModels());
-			});
+			await Promise.all([
+				(async () => {
+					models.set(await getModels());
+				})(),
+				(async () => {
+					prompts.set(await getPrompts(localStorage.token));
+				})(),
+				(async () => {
+					documents.set(await getDocs(localStorage.token));
+				})(),
+				(async () => {
+					banners.set(await getBanners(localStorage.token));
+				})(),
+				(async () => {
+					tags.set(await getAllChatTags(localStorage.token));
+				})()
+			]);
 
 			document.addEventListener('keydown', function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
@@ -176,12 +175,12 @@
 	});
 </script>
 
-<div class=" hidden lg:flex fixed bottom-0 right-0 px-3 py-3 z-10">
+<div class=" hidden lg:flex fixed bottom-0 right-0 px-2 py-2 z-10">
 	<Tooltip content={$i18n.t('Help')} placement="left">
 		<button
 			id="show-shortcuts-button"
 			bind:this={showShortcutsButtonElement}
-			class="text-gray-600 dark:text-gray-300 bg-gray-300/20 w-6 h-6 flex items-center justify-center text-xs rounded-full"
+			class="text-gray-600 dark:text-gray-300 bg-gray-300/20 size-5 flex items-center justify-center text-[0.7rem] rounded-full"
 			on:click={() => {
 				showShortcuts = !showShortcuts;
 			}}

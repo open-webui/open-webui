@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { user } from '$lib/stores';
+	import { config, user, models as _models } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	import { blur, fade } from 'svelte/transition';
@@ -9,22 +9,19 @@
 
 	const i18n = getContext('i18n');
 
+	export let modelIds = [];
 	export let models = [];
-	export let modelfiles = [];
 
 	export let submitPrompt;
-	export let suggestionPrompts;
 
 	let mounted = false;
-	let modelfile = null;
 	let selectedModelIdx = 0;
 
-	$: modelfile =
-		models[selectedModelIdx] in modelfiles ? modelfiles[models[selectedModelIdx]] : null;
-
-	$: if (models.length > 0) {
+	$: if (modelIds.length > 0) {
 		selectedModelIdx = models.length - 1;
 	}
+
+	$: models = modelIds.map((id) => $_models.find((m) => m.id === id));
 
 	onMount(() => {
 		mounted = true;
@@ -41,25 +38,14 @@
 							selectedModelIdx = modelIdx;
 						}}
 					>
-						{#if model in modelfiles}
-							<img
-								crossorigin="anonymous"
-								src={modelfiles[model]?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`}
-								alt="modelfile"
-								class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
-								draggable="false"
-							/>
-						{:else}
-							<img
-								crossorigin="anonymous"
-								src={$i18n.language === 'dg-DG'
-									? `/doge.png`
-									: `${WEBUI_BASE_URL}/static/favicon.png`}
-								class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
-								alt="logo"
-								draggable="false"
-							/>
-						{/if}
+						<img
+							crossorigin="anonymous"
+							src={model?.info?.meta?.profile_image_url ??
+								($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+							class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
+							alt="logo"
+							draggable="false"
+						/>
 					</button>
 				{/each}
 			</div>
@@ -70,23 +56,32 @@
 		>
 			<div>
 				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
-					{#if modelfile}
-						{modelfile.title}
+					{#if models[selectedModelIdx]?.info}
+						{models[selectedModelIdx]?.info?.name}
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user.name })}
 					{/if}
 				</div>
 
 				<div in:fade={{ duration: 200, delay: 200 }}>
-					{#if modelfile}
-						<div class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400">
-							{modelfile.desc}
+					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
+						<div class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3">
+							{models[selectedModelIdx]?.info?.meta?.description}
 						</div>
-						{#if modelfile.user}
+						{#if models[selectedModelIdx]?.info?.meta?.user}
 							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
-								By <a href="https://openwebui.com/m/{modelfile.user.username}"
-									>{modelfile.user.name ? modelfile.user.name : `@${modelfile.user.username}`}</a
-								>
+								By
+								{#if models[selectedModelIdx]?.info?.meta?.user.community}
+									<a
+										href="https://openwebui.com/m/{models[selectedModelIdx]?.info?.meta?.user
+											.username}"
+										>{models[selectedModelIdx]?.info?.meta?.user.name
+											? models[selectedModelIdx]?.info?.meta?.user.name
+											: `@${models[selectedModelIdx]?.info?.meta?.user.username}`}</a
+									>
+								{:else}
+									{models[selectedModelIdx]?.info?.meta?.user.name}
+								{/if}
 							</div>
 						{/if}
 					{:else}
@@ -99,7 +94,11 @@
 		</div>
 
 		<div class=" w-full" in:fade={{ duration: 200, delay: 300 }}>
-			<Suggestions {suggestionPrompts} {submitPrompt} />
+			<Suggestions
+				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+					$config.default_prompt_suggestions}
+				{submitPrompt}
+			/>
 		</div>
 	</div>
 {/key}
