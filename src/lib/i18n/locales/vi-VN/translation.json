@@ -169,6 +169,7 @@
 	"Edit Doc": "Thay đổi tài liệu",
 	"Edit User": "Thay đổi thông tin người sử dụng",
 	"Email": "Email",
+	"Embedding Batch Size": "",
 	"Embedding Model": "Mô hình embedding",
 	"Embedding Model Engine": "Trình xử lý embedding",
 	"Embedding model set to \"{{embedding_model}}\"": "Mô hình embedding đã được thiết lập thành \"{{embedding_model}}\"",

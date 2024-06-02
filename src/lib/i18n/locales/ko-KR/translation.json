@@ -169,6 +169,7 @@
 	"Edit Doc": "문서 편집",
 	"Edit User": "사용자 편집",
 	"Email": "이메일",
+	"Embedding Batch Size": "",
 	"Embedding Model": "임베딩 모델",
 	"Embedding Model Engine": "임베딩 모델 엔진",
 	"Embedding model set to \"{{embedding_model}}\"": "임베딩 모델을 \"{{embedding_model}}\"로 설정됨",

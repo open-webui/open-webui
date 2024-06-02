@@ -169,6 +169,7 @@
 	"Edit Doc": "編輯文件",
 	"Edit User": "編輯使用者",
 	"Email": "電子郵件",
+	"Embedding Batch Size": "",
 	"Embedding Model": "嵌入模型",
 	"Embedding Model Engine": "嵌入模型引擎",
 	"Embedding model set to \"{{embedding_model}}\"": "嵌入模型已設定為 \"{{embedding_model}}\"",

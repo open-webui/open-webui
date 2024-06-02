@@ -169,6 +169,7 @@
 	"Edit Doc": "Edita Document",
 	"Edit User": "Edita Usuari",
 	"Email": "Correu electrònic",
+	"Embedding Batch Size": "",
 	"Embedding Model": "Model d'embutiment",
 	"Embedding Model Engine": "Motor de model d'embutiment",
 	"Embedding model set to \"{{embedding_model}}\"": "Model d'embutiment configurat a \"{{embedding_model}}\"",

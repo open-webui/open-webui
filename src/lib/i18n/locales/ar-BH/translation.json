@@ -169,6 +169,7 @@
 	"Edit Doc": "تعديل الملف",
 	"Edit User": "تعديل المستخدم",
 	"Email": "البريد",
+	"Embedding Batch Size": "",
 	"Embedding Model": "نموذج التضمين",
 	"Embedding Model Engine": "تضمين محرك النموذج",
 	"Embedding model set to \"{{embedding_model}}\"": "تم تعيين نموذج التضمين على \"{{embedding_model}}\"",

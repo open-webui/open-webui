@@ -169,6 +169,7 @@
 	"Edit Doc": "დოკუმენტის ედიტირება",
 	"Edit User": "მომხმარებლის ედიტირება",
 	"Email": "ელ-ფოსტა",
+	"Embedding Batch Size": "",
 	"Embedding Model": "ჩასმის ძირითადი პროგრამა",
 	"Embedding Model Engine": "ჩასმის ძირითადი პროგრამა",
 	"Embedding model set to \"{{embedding_model}}\"": "ჩასმის ძირითადი პროგრამა ჩართულია \"{{embedding_model}}\"",

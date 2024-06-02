@@ -169,6 +169,7 @@
 	"Edit Doc": "Wijzig Doc",
 	"Edit User": "Wijzig Gebruiker",
 	"Email": "Email",
+	"Embedding Batch Size": "",
 	"Embedding Model": "Embedding Model",
 	"Embedding Model Engine": "Embedding Model Engine",
 	"Embedding model set to \"{{embedding_model}}\"": "Embedding model ingesteld op \"{{embedding_model}}\"",

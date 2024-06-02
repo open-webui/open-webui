@@ -169,6 +169,7 @@
 	"Edit Doc": "दस्तावेज़ संपादित करें",
 	"Edit User": "यूजर को संपादित करो",
 	"Email": "ईमेल",
+	"Embedding Batch Size": "",
 	"Embedding Model": "मॉडेल अनुकूलन",
 	"Embedding Model Engine": "एंबेडिंग मॉडल इंजन",
 	"Embedding model set to \"{{embedding_model}}\"": "एम्बेडिंग मॉडल को \"{{embedding_model}}\" पर सेट किया गया",

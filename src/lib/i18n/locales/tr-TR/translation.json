@@ -169,6 +169,7 @@
 	"Edit Doc": "Belgeyi Düzenle",
 	"Edit User": "Kullanıcıyı Düzenle",
 	"Email": "E-posta",
+	"Embedding Batch Size": "",
 	"Embedding Model": "Gömme Modeli",
 	"Embedding Model Engine": "Gömme Modeli Motoru",
 	"Embedding model set to \"{{embedding_model}}\"": "Gömme modeli \"{{embedding_model}}\" olarak ayarlandı",

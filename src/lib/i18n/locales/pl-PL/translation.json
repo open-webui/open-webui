@@ -169,6 +169,7 @@
 	"Edit Doc": "Edytuj dokument",
 	"Edit User": "Edytuj użytkownika",
 	"Email": "Email",
+	"Embedding Batch Size": "",
 	"Embedding Model": "Model osadzania",
 	"Embedding Model Engine": "Silnik modelu osadzania",
 	"Embedding model set to \"{{embedding_model}}\"": "Model osadzania ustawiono na \"{{embedding_model}}\"",

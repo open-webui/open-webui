@@ -169,6 +169,7 @@
 	"Edit Doc": "ערוך מסמך",
 	"Edit User": "ערוך משתמש",
 	"Email": "דוא\"ל",
+	"Embedding Batch Size": "",
 	"Embedding Model": "מודל הטמעה",
 	"Embedding Model Engine": "מנוע מודל הטמעה",
 	"Embedding model set to \"{{embedding_model}}\"": "מודל ההטמעה הוגדר ל-\"{{embedding_model}}\"",

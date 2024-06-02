@@ -169,6 +169,7 @@
 	"Edit Doc": "ドキュメントを編集",
 	"Edit User": "ユーザーを編集",
 	"Email": "メールアドレス",
+	"Embedding Batch Size": "",
 	"Embedding Model": "埋め込みモデル",
 	"Embedding Model Engine": "埋め込みモデルエンジン",
 	"Embedding model set to \"{{embedding_model}}\"": "埋め込みモデルを\"{{embedding_model}}\"に設定しました",
