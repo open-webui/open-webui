@@ -1269,18 +1269,17 @@
 					/>
 				</div>
 			</div>
+			<MessageInput
+				bind:files
+				bind:prompt
+				bind:autoScroll
+				bind:webSearchEnabled
+				bind:atSelectedModel
+				{selectedModels}
+				{messages}
+				{submitPrompt}
+				{stopResponse}
+			/>
 		</div>
 	</div>
-
-	<MessageInput
-		bind:files
-		bind:prompt
-		bind:autoScroll
-		bind:webSearchEnabled
-		bind:atSelectedModel
-		{selectedModels}
-		{messages}
-		{submitPrompt}
-		{stopResponse}
-	/>
 {/if}

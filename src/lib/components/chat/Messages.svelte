@@ -242,7 +242,7 @@
 	};
 </script>
 
-<div class="h-full flex mb-16">
+<div class="h-full flex mb-6">
 	{#if messages.length == 0}
 		<Placeholder
 			modelIds={selectedModels}
@@ -285,7 +285,7 @@
 		<div class="w-full pt-2">
 			{#key chatId}
 				{#each messages as message, messageIdx}
-					<div class=" w-full {messageIdx === messages.length - 1 ? 'pb-28' : ''}">
+					<div class=" w-full {messageIdx === messages.length - 1 ? ' pb-12' : ''}">
 						<div
 							class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
 								? 'max-w-full'
