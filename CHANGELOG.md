@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🗂️ Models Workspace**: Create and manage model presets for both Ollama/OpenAI API. Note: The old Modelfiles workspace is deprecated.
 - **🛠️ Model Builder Feature**: Build and edit all models with persistent builder mode.
 - **🏷️ Model Tagging Support**: Organize models with tagging features in the models workspace.
-- **📋 Model Ordering Support**: Easily arrange models within the models workspace.
+- **📋 Model Ordering Support**: Effortlessly organize models by dragging and dropping them into the desired positions within the models workspace.
 - **📈 OpenAI Generation Stats**: Access detailed generation statistics for OpenAI models.
 - **📅 System Prompt Variables**: New variables added: '{{CURRENT_DATE}}' and '{{USER_NAME}}' for dynamic prompts.
 - **📢 Global Banner Support**: Manage global banners from admin settings > banners.
