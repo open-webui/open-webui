@@ -134,7 +134,7 @@
 		} else if ($config?.default_models) {
 			selectedModels = $config?.default_models.split(',');
 		} else {
-			selectedModels = [$models[$config.chat_type_model_map?.[$chatType] || 0].id];
+			selectedModels = [$models[$config.chat_type_model_map?.[$chatType] || 0]?.id];
 		}
 		sessionConfig = {
 			system: getSystemPrompt($chatType),
