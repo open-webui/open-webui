@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **💾 User Settings Storage**: User settings are now saved on the backend, ensuring consistency across all devices.
 - **📡 Unified API Requests**: The API request for getting models is now unified to '/api/models' for easier usage.
 - **🔄 Versioning Update**: Our versioning will now follow the format 0.x for major updates and 0.x.y for patches.
+- **📦 Export All Chats (All Users)**: Moved this functionality to the Admin Panel settings for better organization and accessibility.
 
 ### Removed
 
