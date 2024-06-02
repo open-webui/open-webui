@@ -500,6 +500,8 @@ if ALLTALK_API_BASE_URL == "":
 
 ALLTALK_API_MODEL = ''
 ALLTALK_API_VOICE = ''
+ALLTALK_API_DEEPSPEED = False
+ALLTALK_API_LOW_VRAM = False
 
 ####################################
 # WEBUI
@@ -910,6 +912,18 @@ AUDIO_ALLTALK_API_VOICE = PersistentConfig(
     "AUDIO_ALLTALK_API_VOICE",
     "audio.alltalk.api_voice",
     os.getenv("AUDIO_ALLTALK_API_VOICE", ""),
+)
+
+AUDIO_ALLTALK_API_DEEPSPEED = PersistentConfig(
+    "AUDIO_ALLTALK_API_DEEPSPEED",
+    "audio.alltalk.api_deepspeed",
+    os.getenv("AUDIO_ALLTALK_API_DEEPSPEED", "False").lower() == "true",
+)
+
+AUDIO_ALLTALK_API_LOW_VRAM = PersistentConfig(
+    "AUDIO_ALLTALK_API_LOW_VRAM",
+    "audio.alltalk.api_low_vram",
+    os.getenv("AUDIO_ALLTALK_API_LOW_VRAM", "False").lower() == "true",
 )
 
 ####################################

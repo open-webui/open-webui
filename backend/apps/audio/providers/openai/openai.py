@@ -1,19 +1,14 @@
 from fastapi import (APIRouter, Request, HTTPException, Depends)
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
 import requests
 import hashlib
 import json
 
 from apps.audio.settings import get_config, SPEECH_CACHE_DIR, log
+from apps.audio.providers.openai.openaiModel import OpenAIConfigUpdateForm
+from apps.audio.providers.openai.openaiService import get_openai_config
 from utils.utils import (get_verified_user, get_admin_user)
 from constants import ERROR_MESSAGES
-
-class OpenAIConfigUpdateForm(BaseModel):
-    url: str
-    key: str
-    model: str
-    speaker: str
 
 
 router = APIRouter(
@@ -33,13 +28,7 @@ async def update_openai_config(
     config.OPENAI_API_MODEL = form_data.model
     config.OPENAI_API_VOICE = form_data.speaker
 
-    return {
-        "status": True,
-        "OPENAI_API_BASE_URL": config.OPENAI_API_BASE_URL,
-        "OPENAI_API_KEY": config.OPENAI_API_KEY,
-        "OPENAI_API_MODEL": config.OPENAI_API_MODEL,
-        "OPENAI_API_VOICE": config.OPENAI_API_VOICE,
-    }
+    return get_openai_config()
 
 
 @router.post("/speech")

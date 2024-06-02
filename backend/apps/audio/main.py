@@ -8,7 +8,10 @@ from fastapi import (
 )
 from apps.audio.settings import app, log
 from apps.audio.providers.alltalk.alltalkController import app as alltalk_app
+from apps.audio.providers.alltalk.alltalkService import get_alltalk_config
 from apps.audio.providers.openai.openai import router as openai_app
+from apps.audio.providers.openai.openaiService import get_openai_config
+
 
 from faster_whisper import WhisperModel
 
@@ -33,17 +36,8 @@ log.info(f"whisper_device_type: {whisper_device_type}")
 @app.get("/config")
 async def get_audio_config(user=Depends(get_admin_user)):
     return {
-        "openai":{
-            "OPENAI_API_BASE_URL": app.state.config.OPENAI_API_BASE_URL,
-            "OPENAI_API_KEY": app.state.config.OPENAI_API_KEY,
-            "OPENAI_API_MODEL": app.state.config.OPENAI_API_MODEL,
-            "OPENAI_API_VOICE": app.state.config.OPENAI_API_VOICE,
-        },
-        "alltalk":{
-            "ALLTALK_API_BASE_URL": app.state.config.ALLTALK_API_BASE_URL,
-            "ALLTALK_API_MODEL": app.state.config.ALLTALK_API_MODEL,
-            "ALLTALK_API_VOICE": app.state.config.ALLTALK_API_VOICE,
-        }
+        "openai": get_openai_config(),
+        "alltalk": get_alltalk_config()
     }
 
 

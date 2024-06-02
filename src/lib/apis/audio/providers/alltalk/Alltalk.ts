@@ -1,126 +1,92 @@
-import { AUDIO_API_BASE_URL } from '$lib/constants';
+import { AlltalkApi } from './AlltalkApi';
+import type { CurrentSettings } from './alltalkApiModel';
+
+interface PreviewVoicePayload {
+    lastVoice: string; // last voice used for previewing.
+    lastUrl: string; // last URL recieved from previewing.
+}
 
 export class Alltalk {
     isReady: boolean = false;
-    provider: string = 'alltalk';
     baseUrl: string = '';
     voicesList: string[] = [];
+    modelList: string[] = [];
     currentVoice: string = '';
-
+    currentModel: string = '';
+    currentsSettings!: CurrentSettings;
+    lastPreviewVoicePayload: PreviewVoicePayload = { lastVoice: '', lastUrl: '' };
+    api: AlltalkApi;
+    useDeepSpeed: boolean = false;
+    useLowVRAM: boolean = false;
 
     constructor(baseUrl: string = '', voicesList: string[] = []) {
         this.baseUrl = baseUrl;
         this.voicesList = voicesList;
+        this.api = new AlltalkApi();
     }
 
     async setup() {
-        this.isReady = await this.getReady();
-        await this.getVoices();
-    }
-
-
-    async getReady(): Promise<boolean> {
-        const result = await fetch(`${this.baseUrl}/api/ready`, {
-            method: 'GET'
-        }).then((res) => res.text());
-
-        return result === "Ready";
-    }
-
-    async getVoices(forceReload: boolean = false) {
-        if (this.voicesList.length > 0 && !forceReload ) {
-            return this.voicesList;
+        console.log("Setting up Alltalk");
+        console.log("baseUrl: ", this.baseUrl);
+        if (!this.baseUrl) {
+            return;
         }
-        const res = await fetch(`${this.baseUrl}/api/voices`, {
-            method: 'GET'
-        }).then((res) => res.json());
-
-        this.voicesList = res.voices;
-
+        this.voicesList = await this.getVoices();
         if (this.voicesList.length > 0 && !this.currentVoice) {
             this.currentVoice = this.voicesList[0];
         }
-
-        return this.voicesList;
+        this.currentsSettings = await this.getCurrentSettings();
+        this.modelList = await this.getModels();
     }
 
-    async currentSettings() {
-        return await fetch(`${this.baseUrl}/api/currentsettings`, {
-            method: 'GET'
-        }).then((res) => res.json());
+    async getVoices(): Promise<string[]> {
+        let result = null;
+        const res = await this.api.voices();
+        result = res.voices || [];
+        return result;
     }
 
-    async previewVoice(voice: string) {
-        const res = await this.getPreviewVoice(voice);
-        if (res.status === 'generate-success') {
-            const audio = new Audio(res.output_file_url);
-            audio.play();
+    async getModels(): Promise<string[]>{
+        let result = null;
+        if (!this.currentsSettings) {
+            await this.getCurrentSettings();
         }
+        result = this.currentsSettings.models_available.map((model) => model.model_name);
+        console.log("modelList: ", result);
+
+        return result;
     }
 
-    async getPreviewVoice(voice: string) {
+    async getCurrentSettings(): Promise<CurrentSettings> {
+        console.log("getCurrentSettings !!!!");
+        const res = await this.api.currentSettings();
+        this.currentModel = res.current_model_loaded;
+        this.useDeepSpeed = res.deepspeed_status;
+        this.useLowVRAM = res.low_vram_status;
+        return res;
+    }
+
+    async getPreviewVoice(voice: string, forceReload: boolean = false) {
         voice = voice || this.currentVoice;
 
-        return await fetch(`${AUDIO_API_BASE_URL}/${this.provider}/previewvoice`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ voice: voice })
-        }).then((res) => res.json());
+        let result = null;
+        if (this.lastPreviewVoicePayload.lastVoice === voice && !forceReload) {
+            result = this.lastPreviewVoicePayload.lastUrl;
+        }
+        const res = await this.api.previewVoice(voice);
+        if(res && res.status === 'generate-success'){
+            result = res.output_file_url;
 
+            this.lastPreviewVoicePayload = {
+                lastVoice: voice,
+                lastUrl: result
+            };
+
+            const audio = new Audio(result);
+            audio.play();
+        }
+        return result;
     }
 
-    async reload(tts_method: string) {
-        return await fetch(`${this.baseUrl}/api/reload?tts_method=${tts_method}`, {
-            method: 'POST',
-            body: JSON.stringify({ tts_method: tts_method })
-        }).then((res) => res.json());
-    }
 
-    async deepspeed(new_deepspeed_value: boolean) {
-        return await fetch(`${this.baseUrl}/api/deepspeed?new_deepspeed_value=${new_deepspeed_value}`, {
-            method: 'POST'
-        }).then((res) => res.json());
-    }
-
-    async lowVramSetting(new_low_vram_value: boolean) {
-        return await fetch(`${this.baseUrl}/api/lowvramsetting?new_low_vram_value=${new_low_vram_value}`, {
-            method: 'POST'
-        }).then((res) => res.json());
-    }
-
-    async ttsGenerate(payload: {
-        text_input: string;
-        text_filtering: string;
-        character_voice_gen: string;
-        narrator_enabled: boolean;
-        narrator_voice_gen: string;
-        text_not_inside: string;
-        language: string;
-        output_file_name: string;
-        output_file_timestamp: boolean;
-        autoplay: boolean;
-        autoplay_volume: number;
-    }) {
-        return await fetch(`${this.baseUrl}/api/tts-generate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams(payload).toString()
-        }).then((res) => res.json());
-    }
-
-    async ttsGenerateStreaming(payload: {
-        text: string;
-        voice: string;
-        language: string;
-        output_file: string;
-    }) {
-        const { text, voice, language, output_file } = payload;
-        const encodedText = encodeURIComponent(text);
-        const streamingUrl = `${this.baseUrl}/api/tts-generate-streaming?text=${encodedText}&voice=${voice}&language=${language}&output_file=${output_file}`;
-        return new Audio(streamingUrl).play();
-    }
 }

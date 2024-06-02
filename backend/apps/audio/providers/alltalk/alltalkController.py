@@ -3,19 +3,13 @@ from constants import ERROR_MESSAGES
 
 from utils.utils import get_admin_user
 from apps.audio.settings import get_config
-from apps.audio.providers.alltalk.alltalkApi import AllTalkTTSAPI
 from apps.audio.providers.alltalk.alltalkModel import AllTalkConfigForm
-from apps.audio.providers.alltalk.alltalkService import get_alltalk_config
+from apps.audio.providers.alltalk.alltalkService import get_alltalk_config, update_alltalk_base_url, tts
 
 app = APIRouter(
      prefix="/alltalk",
      dependencies=[Depends(get_config)]
 )
-
-baseUrl = get_config().ALLTALK_API_BASE_URL
-print("baseUrl: " + baseUrl)
-# Initialize AllTalk TTS API instance
-tts = AllTalkTTSAPI(baseUrl)
 
 @app.get("/ready")
 async def check_ready():
@@ -30,6 +24,7 @@ async def get_voices():
 @app.get("/currentsettings")
 async def get_current_settings():
     response = tts.get_current_settings()
+    print(response)
     return response
 
 @app.post("/previewvoice")
@@ -98,8 +93,23 @@ async def update_provider_config(
     if form_data.url == "":
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_URL_NOT_FOUND)
 
+    update_alltalk_base_url(form_data.url)
+
+    # Update the config to the TTS server if the values have changed
+    if (config.ALLTALK_API_MODEL != form_data.model):
+        await switch_model(form_data.model)
+
+    if (config.ALLTALK_API_DEEPSPEED != form_data.deepspeed):
+        await switch_deepspeed(form_data.deepspeed)
+
+    if (config.ALLTALK_API_LOW_VRAM != form_data.low_vram):
+        await switch_low_vram(form_data.low_vram)
+
+
     config.ALLTALK_API_BASE_URL = form_data.url
     config.ALLTALK_API_MODEL = form_data.model
     config.ALLTALK_API_VOICE = form_data.speaker
+    config.ALLTALK_API_DEEPSPEED = form_data.deepspeed
+    config.ALLTALK_API_LOW_VRAM = form_data.low_vram
 
     return get_alltalk_config()

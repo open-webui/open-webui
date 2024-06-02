@@ -31,6 +31,8 @@ type AllTalkConfigForm = {
 	url: string;
 	model: string;
 	speaker: string;
+	deepspeed: boolean;
+	low_vram: boolean;
 };
 
 type OpenAIConfigForm = {

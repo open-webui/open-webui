@@ -105,13 +105,16 @@
 			console.log("alltalk config: ", config);
 			alltalk.baseUrl = config.ALLTALK_API_BASE_URL;
 			alltalk.currentVoice = config.ALLTALK_API_VOICE;
+			alltalk.currentModel = config.ALLTALK_API_MODEL;
+			alltalk.useDeepSpeed = config.ALLTALK_API_DEEPSPEED;
+			alltalk.useLowVRAM = config.ALLTALK_API_LOW_VRAM;
 			alltalk.setup();
 		}
 	};
 
 	const updateConfigHandler = async () => {
 		if (TTSEngine === 'openai') {
-			const res = await updateOpenAIAudioConfig(localStorage.token, {
+			const res = await updateAudioConfig(TTSEngine, localStorage.token, {
 				url: OpenAIUrl,
 				key: OpenAIKey,
 				model: model,
@@ -125,7 +128,9 @@
 			const res = await updateAudioConfig(TTSEngine, localStorage.token, {
 				url: alltalk.baseUrl,
 				model: model,
-				speaker: alltalk.currentVoice
+				speaker: alltalk.currentVoice,
+				deepspeed: alltalk.useDeepSpeed,
+				low_vram: alltalk.useLowVRAM
 			});
 			assignConfig(res, 'alltalk');
 			console.log("updating alltalk config: ", res);
@@ -146,7 +151,8 @@
 			TTSEngineConfig[TTSEngine].getVoices();
 			TTSEngineConfig[TTSEngine].getModels();
 		} else if(TTSEngine === 'alltalk'){
-			alltalk.getVoices();
+			await alltalk.setup();
+			model = alltalk.currentModel;
 		} else {
 			TTSEngineConfig.webapi.getVoices();
 		}
@@ -265,6 +271,8 @@
 								model = 'tts-1';
 							} else if(TTSEngine === 'alltalk'){
 								alltalk.getVoices();
+								speaker = alltalk.currentVoice;
+								model = alltalk.getModels();
 							} else {
 								TTSEngineConfig.webapi.getVoices();
 								speaker = '';
@@ -387,30 +395,29 @@
 					</div>
 				</div>
 			</div>
-			{:else if TTSEngine === 'alltalk'}
-				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
-					<div class="flex w-full">
-						<div class="flex-1">
-							<input
-								list="voice-list"
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-								bind:value={alltalk.currentVoice}
-								placeholder="Select a voice"
-							/>
+		{:else if TTSEngine === 'alltalk'}
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+				<div class="flex w-full">
+					<div class="flex-1">
+						<input
+							list="voice-list"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							bind:value={alltalk.currentVoice}
+							placeholder="Select a voice"
+						/>
 
-							<datalist id="voice-list">
-								{#each alltalk?.voicesList as voice}
-									<option value={voice} />
-								{/each}
-							</datalist>
-						</div>
+						<datalist id="voice-list">
+							{#each alltalk?.voicesList as voice}
+								<option value={voice} />
+							{/each}
+						</datalist>
 					</div>
 					<button
 						class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 						type="button"
 						on:click={() => {
-							alltalk.previewVoice();
+							alltalk.getPreviewVoice(alltalk.currentVoice);
 						}}
 					>
 						<svg
@@ -427,6 +434,64 @@
 						</svg>
 					</button>
 				</div>
+			</div>
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Model')}</div>
+				<div class="flex w-full">
+					<div class="flex-1">
+						<input
+							list="model-list"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							bind:value={alltalk.currentModel}
+							placeholder="Select a model"
+						/>
+
+						<datalist id="model-list">
+							{#each alltalk?.modelList as model}
+								<option value={model} />
+							{/each}
+						</datalist>
+					</div>
+				</div>
+			</div>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('deepspeed status')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						alltalk.useDeepSpeed = !alltalk.useDeepSpeed;
+					}}
+					type="button"
+				>
+					{#if alltalk.useDeepSpeed === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{/if}
+				</button>
+			</div>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('use low vram mode')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						alltalk.useLowVRAM = !alltalk.useLowVRAM;
+					}}
+					type="button"
+				>
+					{#if alltalk.useLowVRAM === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{/if}
+				</button>
+			</div>
 		{/if}
 	</div>
 
