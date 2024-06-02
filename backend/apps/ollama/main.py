@@ -993,7 +993,7 @@ async def generate_chat_completion(
 
             def stream_content():
                 try:
-                    if payload.get("stream", None):
+                    if payload.get("stream", True):
                         yield json.dumps({"id": request_id, "done": False}) + "\n"
 
                     for chunk in r.iter_content(chunk_size=8192):
@@ -1522,7 +1522,7 @@ async def deprecated_proxy(
                     if path == "generate":
                         data = json.loads(body.decode("utf-8"))
 
-                        if not ("stream" in data and data["stream"] == False):
+                        if data.get("stream", True):
                             yield json.dumps({"id": request_id, "done": False}) + "\n"
 
                     elif path == "chat":
