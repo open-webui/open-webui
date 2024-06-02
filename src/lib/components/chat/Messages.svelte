@@ -242,7 +242,7 @@
 	};
 </script>
 
-<div class="h-full flex mb-6">
+<div class="h-full flex">
 	{#if messages.length == 0}
 		<Placeholder
 			modelIds={selectedModels}
