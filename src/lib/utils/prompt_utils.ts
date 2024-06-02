@@ -230,7 +230,7 @@ export const getDefaultParams = (chatType: string) => {
   switch (chatType) {
     case 'chat':
       return {
-        temperature: 0.8,
+        temperature: 0.0,
         top_p: 0.95,
         top_k: 20,
         repetition_penalty: 1.1,
@@ -290,7 +290,7 @@ export const getDefaultParams = (chatType: string) => {
     case 'long_faq_create_example':
     case 'long_faq_create_verdict_scenario':
       return {
-        temperature: 0.2,
+        temperature: 0.0,
         top_p: 0.95,
         top_k: 10,
         repetition_penalty: 1.1,
