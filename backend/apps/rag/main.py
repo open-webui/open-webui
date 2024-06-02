@@ -96,6 +96,14 @@ from config import (
     RAG_TEMPLATE,
     ENABLE_RAG_LOCAL_WEB_FETCH,
     YOUTUBE_LOADER_LANGUAGE,
+    ENABLE_RAG_WEB_SEARCH,
+    SEARXNG_QUERY_URL,
+    GOOGLE_PSE_API_KEY,
+    GOOGLE_PSE_ENGINE_ID,
+    SERPSTACK_API_KEY,
+    SERPSTACK_HTTPS,
+    SERPER_API_KEY,
+    RAG_WEB_SEARCH_RESULT_COUNT,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     AppConfig,
 )
@@ -134,6 +142,17 @@ app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
 
 app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
 app.state.YOUTUBE_LOADER_TRANSLATION = None
+
+
+app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
+app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
+app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
+app.state.config.GOOGLE_PSE_ENGINE_ID = GOOGLE_PSE_ENGINE_ID
+app.state.config.SERPSTACK_API_KEY = SERPSTACK_API_KEY
+app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
+app.state.config.SERPER_API_KEY = SERPER_API_KEY
+app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
+app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 
 
 def update_embedding_model(
@@ -337,6 +356,19 @@ async def get_rag_config(user=Depends(get_admin_user)):
             "language": app.state.config.YOUTUBE_LOADER_LANGUAGE,
             "translation": app.state.YOUTUBE_LOADER_TRANSLATION,
         },
+        "web": {
+            "search": {
+                "enable": app.state.config.ENABLE_RAG_WEB_SEARCH,
+                "searxng_query_url": app.state.config.SEARXNG_QUERY_URL,
+                "google_pse_api_key": app.state.config.GOOGLE_PSE_API_KEY,
+                "google_pse_engine_id": app.state.config.GOOGLE_PSE_ENGINE_ID,
+                "serpstack_api_key": app.state.config.SERPSTACK_API_KEY,
+                "serpstack_https": app.state.config.SERPSTACK_HTTPS,
+                "serper_api_key": app.state.config.SERPER_API_KEY,
+                "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+            }
+        },
     }
 
 
@@ -348,6 +380,18 @@ class ChunkParamUpdateForm(BaseModel):
 class YoutubeLoaderConfig(BaseModel):
     language: List[str]
     translation: Optional[str] = None
+
+
+class WebSearchConfig(BaseModel):
+    enable: bool
+    searxng_query_url: Optional[str] = None
+    google_pse_api_key: Optional[str] = None
+    google_pse_engine_id: Optional[str] = None
+    serpstack_api_key: Optional[str] = None
+    serpstack_https: Optional[bool] = None
+    serper_api_key: Optional[str] = None
+    result_count: Optional[int] = None
+    concurrent_requests: Optional[int] = None
 
 
 class ConfigUpdateForm(BaseModel):
