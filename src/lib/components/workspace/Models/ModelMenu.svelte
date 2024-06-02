@@ -11,6 +11,7 @@
 	import Share from '$lib/components/icons/Share.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
+	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -18,6 +19,8 @@
 
 	export let shareHandler: Function;
 	export let cloneHandler: Function;
+	export let exportHandler: Function;
+
 	export let hideHandler: Function;
 	export let deleteHandler: Function;
 	export let onClose: Function;
@@ -64,6 +67,17 @@
 				<DocumentDuplicate />
 
 				<div class="flex items-center">{$i18n.t('Clone')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => {
+					exportHandler();
+				}}
+			>
+				<ArrowDownTray />
+
+				<div class="flex items-center">{$i18n.t('Export')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item

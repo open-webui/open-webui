@@ -126,6 +126,13 @@
 		saveAs(blob, `models-export-${Date.now()}.json`);
 	};
 
+	const exportModelHandler = async (model) => {
+		let blob = new Blob([JSON.stringify([model])], {
+			type: 'application/json'
+		});
+		saveAs(blob, `${model.id}-${Date.now()}.json`);
+	};
+
 	const positionChangeHanlder = async () => {
 		// Get the new order of the models
 		const modelIds = Array.from(document.getElementById('model-list').children).map((child) =>
@@ -321,6 +328,9 @@
 					}}
 					cloneHandler={() => {
 						cloneModelHandler(model);
+					}}
+					exportHandler={() => {
+						exportModelHandler(model);
 					}}
 					hideHandler={() => {
 						hideModelHandler(model);

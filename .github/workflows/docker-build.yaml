@@ -70,6 +70,7 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
           flavor: |
             prefix=cache-${{ matrix.platform }}-
 
