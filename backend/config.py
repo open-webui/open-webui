@@ -773,6 +773,11 @@ ENABLE_RAG_WEB_SEARCH = PersistentConfig(
     os.getenv("ENABLE_RAG_WEB_SEARCH", "False").lower() == "true",
 )
 
+RAG_WEB_SEARCH_ENGINE = PersistentConfig(
+    "RAG_WEB_SEARCH_ENGINE",
+    "rag.web.search.engine",
+    os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
+)
 
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",
