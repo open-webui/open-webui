@@ -205,6 +205,10 @@
 		await archiveChatById(localStorage.token, id);
 		await chats.set(await getChatList(localStorage.token));
 	};
+
+	const focusEdit = async (node: HTMLInputElement) => {
+		node.focus();
+	};
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={shareChatId} />
@@ -489,7 +493,11 @@
 									? 'bg-gray-100 dark:bg-gray-950'
 									: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 							>
-								<input bind:value={chatTitle} class=" bg-transparent w-full outline-none mr-10" />
+								<input
+									use:focusEdit
+									bind:value={chatTitle}
+									class=" bg-transparent w-full outline-none mr-10"
+								/>
 							</div>
 						{:else}
 							<a
