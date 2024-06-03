@@ -113,7 +113,11 @@
 				}
 
 				params = { ...params, ...model?.info?.params };
-				params.stop = params?.stop ? (params?.stop ?? []).join(',') : null;
+				params.stop = params?.stop
+					? (typeof params.stop === 'string' ? params.stop.split(',') : params?.stop ?? []).join(
+							','
+					  )
+					: null;
 
 				if (model?.owned_by === 'openai') {
 					capabilities.usage = false;
