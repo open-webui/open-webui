@@ -123,11 +123,25 @@ def parse_ollama_modelfile(model_text):
         "repeat_penalty": float,
         "temperature": float,
         "seed": int,
-        "stop": str,
         "tfs_z": float,
         "num_predict": int,
         "top_k": int,
         "top_p": float,
+        "num_keep": int,
+        "typical_p": float,
+        "presence_penalty": float,
+        "frequency_penalty": float,
+        "penalize_newline": bool,
+        "numa": bool,
+        "num_batch": int,
+        "num_gpu": int,
+        "main_gpu": int,
+        "low_vram": bool,
+        "f16_kv": bool,
+        "vocab_only": bool,
+        "use_mmap": bool,
+        "use_mlock": bool,
+        "num_thread": int,
     }
 
     data = {"base_model_id": None, "params": {}}
@@ -156,10 +170,18 @@ def parse_ollama_modelfile(model_text):
         param_match = re.search(rf"PARAMETER {param} (.+)", model_text, re.IGNORECASE)
         if param_match:
             value = param_match.group(1)
-            if param_type == int:
-                value = int(value)
-            elif param_type == float:
-                value = float(value)
+
+            try:
+                if param_type == int:
+                    value = int(value)
+                elif param_type == float:
+                    value = float(value)
+                elif param_type == bool:
+                    value = value.lower() == "true"
+            except Exception as e:
+                print(e)
+                continue
+
             data["params"][param] = value
 
     # Parse adapter
