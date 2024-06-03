@@ -507,6 +507,10 @@
 										showSidebar.set(false);
 									}
 								}}
+								on:dblclick={() => {
+									chatTitle = chat.title;
+									chatTitleEditId = chat.id;
+								}}
 								draggable="false"
 							>
 								<div class=" flex self-center flex-1 w-full">
