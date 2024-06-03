@@ -247,13 +247,13 @@
 		}
 	};
 
-	const chatCompletedHandler = async (model, messages) => {
+	const chatCompletedHandler = async (modelId, messages) => {
 		await mermaid.run({
 			querySelector: '.mermaid'
 		});
 
 		const res = await chatCompleted(localStorage.token, {
-			model: model.id,
+			model: modelId,
 			messages: messages.map((m) => ({
 				id: m.id,
 				role: m.role,
@@ -902,7 +902,7 @@
 						} else {
 							const messages = createMessagesList(responseMessageId);
 
-							await chatCompletedHandler(model, messages);
+							await chatCompletedHandler(model.id, messages);
 						}
 
 						break;
