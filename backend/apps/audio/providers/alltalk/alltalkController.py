@@ -3,7 +3,7 @@ from constants import ERROR_MESSAGES
 
 from utils.utils import get_admin_user
 from apps.audio.settings import get_config
-from apps.audio.providers.alltalk.alltalkModel import AllTalkConfigForm
+from apps.audio.providers.alltalk.alltalkModel import AllTalkConfigForm, TTSGenerationPayload, TTSStreamingPayload
 from apps.audio.providers.alltalk.alltalkService import get_alltalk_config, update_alltalk_base_url, tts
 
 app = APIRouter(
@@ -24,12 +24,10 @@ async def get_voices():
 @app.get("/currentsettings")
 async def get_current_settings():
     response = tts.get_current_settings()
-    print(response)
     return response
 
 @app.post("/previewvoice")
 async def preview_voice(voice: str = Body(..., embed=True)):
-    print("preview_voice for "+ voice)
     response = tts.preview_voice(voice)
     return response
 
@@ -49,40 +47,13 @@ async def switch_low_vram(new_low_vram_value: bool):
     return response
 
 @app.post("/tts-generate")
-async def generate_tts(
-    text_input: str,
-    character_voice_gen: str,
-    narrator_enabled: bool,
-    narrator_voice_gen: str,
-    text_not_inside: str,
-    language: str,
-    output_file_name: str,
-    output_file_timestamp: bool,
-    autoplay: bool,
-    autoplay_volume: float
-):
-    response = tts.generate_tts(
-        text_input=text_input,
-        character_voice_gen=character_voice_gen,
-        narrator_enabled=narrator_enabled,
-        narrator_voice_gen=narrator_voice_gen,
-        text_not_inside=text_not_inside,
-        language=language,
-        output_file_name=output_file_name,
-        output_file_timestamp=output_file_timestamp,
-        autoplay=autoplay,
-        autoplay_volume=autoplay_volume
-    )
+async def generate_tts(payload: TTSGenerationPayload):
+    response = tts.generate_tts(payload)
     return response
 
 @app.post("/tts-generate-streaming")
-async def generate_tts_streaming(
-    text: str,
-    voice: str,
-    language: str,
-    output_file: str
-):
-    streaming_url = tts.generate_tts_streaming(text, voice, language, output_file)
+async def generate_tts_streaming(payload: TTSStreamingPayload):
+    streaming_url = tts.generate_tts_streaming(payload)
     return {"streaming_url": streaming_url}
 
 
@@ -95,9 +66,6 @@ async def update_provider_config(
 
     update_alltalk_base_url(form_data.url)
 
-    print("form_data.model: " + form_data.model)
-    print("config.ALLTALK_API_MODEL: " + config.ALLTALK_API_MODEL)
-
     # Update the config to the TTS server if the values have changed
     if (config.ALLTALK_API_MODEL != form_data.model):
         await switch_model(form_data.model)
@@ -105,14 +73,17 @@ async def update_provider_config(
     if (config.ALLTALK_API_DEEPSPEED != form_data.deepspeed):
         await switch_deepspeed(form_data.deepspeed)
 
-    if (config.ALLTALK_API_LOW_VRAM != form_data.low_vram):
-        await switch_low_vram(form_data.low_vram)
+    if (config.ALLTALK_API_LOW_VRAM != form_data.lowVram):
+        await switch_low_vram(form_data.lowVram)
 
 
     config.ALLTALK_API_BASE_URL = form_data.url
     config.ALLTALK_API_MODEL = form_data.model
     config.ALLTALK_API_VOICE = form_data.speaker
     config.ALLTALK_API_DEEPSPEED = form_data.deepspeed
-    config.ALLTALK_API_LOW_VRAM = form_data.low_vram
+    config.ALLTALK_API_LOW_VRAM = form_data.lowVram
+    config.ALLTALK_API_USE_STREAMING = form_data.useStreaming
+    config.ALLTALK_API_USE_NARRATOR = form_data.useNarrator
+    config.ALLTALK_API_NARRATOR_VOICE = form_data.narratorVoice
 
     return get_alltalk_config()

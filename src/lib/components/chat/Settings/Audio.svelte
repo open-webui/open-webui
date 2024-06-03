@@ -2,7 +2,9 @@
 	import { _alltalk, getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
 	import { user, settings } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { toast } from 'svelte-sonner';
+	import { AllTalkConfigForm } from '$lib/apis/audio/providers/alltalk/Alltalk';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -108,6 +110,9 @@
 			_alltalk.currentModel = config.ALLTALK_API_MODEL;
 			_alltalk.useDeepSpeed = config.ALLTALK_API_DEEPSPEED;
 			_alltalk.useLowVRAM = config.ALLTALK_API_LOW_VRAM;
+			_alltalk.useStreamingMode = config.ALLTALK_API_USE_STREAMING;
+			_alltalk.useNarrator = config.ALLTALK_API_USE_NARRATOR;
+			_alltalk.narratorVoice = config.ALLTALK_API_NARRATOR_VOICE;
 			_alltalk.setup();
 		}
 	};
@@ -125,13 +130,18 @@
 				assignConfig(res, 'openai');
 			}
 		}else if(TTSEngine === 'alltalk'){
-			const res = await updateAudioConfig(TTSEngine, localStorage.token, {
-				url: _alltalk.baseUrl,
-				model: _alltalk.currentModel,
-				speaker: _alltalk.currentVoice,
-				deepspeed: _alltalk.useDeepSpeed,
-				low_vram: _alltalk.useLowVRAM
-			});
+			const res = await updateAudioConfig(TTSEngine, localStorage.token,
+				new AllTalkConfigForm(
+					_alltalk.baseUrl,
+					_alltalk.currentModel,
+					_alltalk.currentVoice,
+					_alltalk.useDeepSpeed,
+					_alltalk.useLowVRAM,
+					_alltalk.useStreamingMode,
+					_alltalk.useNarrator,
+					_alltalk.narratorVoice
+				)
+			);
 			assignConfig(res, 'alltalk');
 			console.log("updating alltalk config: ", res);
 		}
@@ -306,13 +316,42 @@
 						/>
 					</div>
 				{:else if TTSEngine === 'alltalk'}
-					<div class="mt-1 flex gap-2 mb-1">
-						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t('API Base URL')}
-							bind:value={_alltalk.baseUrl}
-							required
-						/>
+					<div class="flex w-full gap-2">
+						<div class="w-full gap-2">
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={_alltalk.baseUrl}
+								required
+							/>
+						</div>
+						<Tooltip content="Verify connection" className="self-start mt-0.5">
+							<button
+								class="self-center p-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+								on:click={async () => {
+									const isReady = await _alltalk.isReadyCheck();
+									if (isReady) {
+										toast.success($i18n.t('Server connection verified'));
+									} else {
+										toast.error($i18n.t('Server connection failed'));
+									}
+								}}
+								type="button"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						</Tooltip>
 					</div>
 				{/if}
 			{/if}
@@ -399,8 +438,8 @@
 		{:else if TTSEngine === 'alltalk'}
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
-				<div class="flex w-full">
-					<div class="flex-1">
+				<div class="flex w-full gap-2">
+					<div class="w-full gap-2">
 						<input
 							list="voice-list"
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
@@ -414,26 +453,34 @@
 							{/each}
 						</datalist>
 					</div>
-					<button
-						class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-						type="button"
-						on:click={() => {
-							_alltalk.getPreviewVoice(_alltalk.currentVoice);
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
+					<Tooltip content="Preview voice" className="self-start mt-0.5">
+						<button
+							class="self-center p-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+							on:click={() => {
+								_alltalk.getPreviewVoice(_alltalk.currentVoice);
+							}}
 						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
-							/>
-						</svg>
-					</button>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2.3"
+								stroke="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+								/>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z"
+								/>
+							</svg>
+						</button>
+					</Tooltip>
 				</div>
 			</div>
 			<div>
@@ -457,7 +504,7 @@
 			</div>
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{$i18n.t('deepspeed status')}
+					{$i18n.t('Deepspeed status')}
 				</div>
 
 				<button
@@ -476,7 +523,7 @@
 			</div>
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{$i18n.t('use low vram mode')}
+					{$i18n.t('Use low vram mode')}
 				</div>
 
 				<button
@@ -493,6 +540,65 @@
 					{/if}
 				</button>
 			</div>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Use streaming mode')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						_alltalk.useStreamingMode = !_alltalk.useStreamingMode;
+					}}
+					type="button"
+				>
+					{#if _alltalk.useStreamingMode === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{/if}
+				</button>
+			</div>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Enable Narrator')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={() => {
+						_alltalk.useNarrator = !_alltalk.useNarrator;
+					}}
+					type="button"
+				>
+					{#if _alltalk.useNarrator === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{/if}
+				</button>
+			</div>
+			{#if _alltalk.useNarrator === true}
+				<div>
+					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Narrator Voice')}</div>
+					<div class="flex w-full gap-2">
+						<div class="w-full gap-2">
+							<input
+								list="voice-list"
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								bind:value={_alltalk.narratorVoice}
+								placeholder="Select a voice"
+							/>
+
+							<datalist id="voice-list">
+								{#each _alltalk?.voicesList as voice}
+									<option value={voice} />
+								{/each}
+							</datalist>
+						</div>
+					</div>
+				</div>
+			{/if}
 		{/if}
 	</div>
 

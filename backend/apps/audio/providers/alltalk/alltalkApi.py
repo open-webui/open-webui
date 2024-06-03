@@ -1,5 +1,7 @@
 import requests
 
+from apps.audio.providers.alltalk.alltalkModel import TTSGenerationPayload, TTSStreamingPayload
+
 class AllTalkTTSAPI:
     def __init__(self, base_url='http://127.0.0.1:7851/api'):
         self.base_url = base_url
@@ -42,33 +44,31 @@ class AllTalkTTSAPI:
         response = requests.post(url, params=params)
         return response
 
-    def generate_tts(self, text_input, character_voice_gen, narrator_enabled, narrator_voice_gen,
-                     text_not_inside, language, output_file_name, output_file_timestamp,
-                     autoplay, autoplay_volume):
+    def generate_tts(self, payload: TTSGenerationPayload):
         url = f"{self.base_url}/api/tts-generate"
         data = {
-            'text_input': text_input,
-            'text_filtering': 'standard',
-            'character_voice_gen': character_voice_gen,
-            'narrator_enabled': narrator_enabled,
-            'narrator_voice_gen': narrator_voice_gen,
-            'text_not_inside': text_not_inside,
-            'language': language,
-            'output_file_name': output_file_name,
-            'output_file_timestamp': output_file_timestamp,
-            'autoplay': autoplay,
-            'autoplay_volume': autoplay_volume,
+            'text_input': payload.text_input,
+            'text_filtering': payload.text_filtering,
+            'character_voice_gen': payload.character_voice_gen,
+            'narrator_enabled': payload.narrator_enabled,
+            'narrator_voice_gen': payload.narrator_voice_gen,
+            'text_not_inside': payload.text_not_inside,
+            'language': payload.language,
+            'output_file_name': payload.output_file_name,
+            'output_file_timestamp': payload.output_file_timestamp,
+            'autoplay': payload.autoplay,
+            'autoplay_volume': payload.autoplay_volume,
         }
         response = requests.post(url, data=data)
         return response.json()
 
-    def generate_tts_streaming(self, text, voice, language, output_file):
+    def generate_tts_streaming(self, payload: TTSStreamingPayload):
         url = f"{self.base_url}/api/tts-generate-streaming"
         params = {
-            'text': text,
-            'voice': voice,
-            'language': language,
-            'output_file': output_file
+            'text': payload.text,
+            'voice': payload.voice,
+            'language': payload.language,
+            'output_file': payload.output_file
         }
-        response = requests.post(url, params=params)
+        response = requests.post(url, params=payload)
         return response.url

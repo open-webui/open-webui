@@ -1,7 +1,7 @@
 {
 	"version": 0,
 	"ui": {
-		"default_locale": "en-US",
+		"default_locale": "fr-FR",
 		"prompt_suggestions": [
 			{
 				"title": [
@@ -57,10 +57,27 @@
 	"audio": {
 		"alltalk": {
 			"api_base_url": "http://192.168.1.32:7851",
-			"api_model": "API Local",
-			"api_voice": "David_Attenborough CC3.wav",
+			"api_model": "XTTSv2 Local",
+			"api_voice": "female_04.wav",
 			"api_deepspeed": false,
-			"api_low_vram": false
+			"api_low_vram": false,
+			"api_use_streaming": false,
+			"api_use_narrator": true,
+			"api_narrator_voice": "female_07.wav"
 		}
+	},
+	"openai": {
+		"enable": false,
+		"api_base_urls": [
+			"https://api.openai.com/v1"
+		],
+		"api_keys": [
+			""
+		]
+	},
+	"ollama": {
+		"base_urls": [
+			"http://localhost:11434"
+		]
 	}
 }

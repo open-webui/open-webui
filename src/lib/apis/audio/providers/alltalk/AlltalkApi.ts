@@ -1,9 +1,20 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
-import type { CurrentSettings, PreviewVoice, VoicesList } from './alltalkApiModel';
+import type { CurrentSettings, PreviewVoice, TTSGenerationPayload, TTSGenerationStreaming, VoicesList } from './alltalkApiModel';
 
 export class AlltalkApi {
     provider: string = 'alltalk';
     constructor() { }
+
+    async ready() {
+        return await fetch(`${AUDIO_API_BASE_URL}/${this.provider}/ready`, {
+            method: 'GET'
+        })
+        .then((res) => res.json())
+        .catch((err) => {
+            console.error(err);
+            return null;
+        });
+    }
 
     async voices(): Promise<VoicesList> {
         return await fetch(`${AUDIO_API_BASE_URL}/${this.provider}/voices`, {
@@ -46,37 +57,19 @@ export class AlltalkApi {
         }).then((res) => res.json());
     }
 
-    async ttsGenerate(payload: {
-        text_input: string;
-        text_filtering: string;
-        character_voice_gen: string;
-        narrator_enabled: boolean;
-        narrator_voice_gen: string;
-        text_not_inside: string;
-        language: string;
-        output_file_name: string;
-        output_file_timestamp: boolean;
-        autoplay: boolean;
-        autoplay_volume: number;
-    }) {
+    async ttsGenerate(payload: TTSGenerationPayload) {
         return await fetch(`${AUDIO_API_BASE_URL}/${this.provider}/tts-generate`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams(payload).toString()
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         }).then((res) => res.json());
     }
 
-    async ttsGenerateStreaming(payload: {
-        text: string;
-        voice: string;
-        language: string;
-        output_file: string;
-    }) {
-        const { text, voice, language, output_file } = payload;
-        const encodedText = encodeURIComponent(text);
-        const streamingUrl = `${AUDIO_API_BASE_URL}/${this.provider}/tts-generate-streaming?text=${encodedText}&voice=${voice}&language=${language}&output_file=${output_file}`;
-        return new Audio(streamingUrl).play();
+    async ttsGenerateStreaming(payload: TTSGenerationStreaming) {
+        return await fetch(`${AUDIO_API_BASE_URL}/${this.provider}/tts-generate-streaming`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then((res) => res.json());
     }
 }

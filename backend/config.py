@@ -502,6 +502,9 @@ ALLTALK_API_MODEL = ''
 ALLTALK_API_VOICE = ''
 ALLTALK_API_DEEPSPEED = False
 ALLTALK_API_LOW_VRAM = False
+ALLTALK_API_USE_STREAMING = False
+ALLTALK_API_USE_NARRATOR = False
+ALLTALK_API_NARRATOR_VOICE = ''
 
 ####################################
 # WEBUI
@@ -925,6 +928,25 @@ AUDIO_ALLTALK_API_LOW_VRAM = PersistentConfig(
     "audio.alltalk.api_low_vram",
     os.getenv("AUDIO_ALLTALK_API_LOW_VRAM", "False").lower() == "true",
 )
+
+AUDIO_ALLTALK_API_USE_STREAMING = PersistentConfig(
+    "AUDIO_ALLTALK_API_USE_STREAMING",
+    "audio.alltalk.api_use_streaming",
+    os.getenv("AUDIO_ALLTALK_API_USE_STREAMING", "False").lower() == "true",
+)
+
+AUDIO_ALLTALK_API_USE_NARRATOR = PersistentConfig(
+    "AUDIO_ALLTALK_API_USE_NARRATOR",
+    "audio.alltalk.api_use_narrator",
+    os.getenv("AUDIO_ALLTALK_API_USE_NARRATOR", "False").lower() == "true",
+)
+
+AUDIO_ALLTALK_API_NARRATOR_VOICE = PersistentConfig(
+    "AUDIO_ALLTALK_API_NARRATOR_VOICE",
+    "audio.alltalk.api_narrator_voice",
+    os.getenv("AUDIO_ALLTALK_API_NARRATOR_VOICE", ""),
+)
+
 
 ####################################
 # Database

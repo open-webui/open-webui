@@ -49,6 +49,8 @@ export const updateOpenAIAudioConfig = async (token: string, payload: OpenAIConf
 export const updateAudioConfig = async (provider: string, token: string, payload: object) => {
 	let error = null;
 
+	console.log("updateAudioConfig: ", provider, token, payload);
+
 	const res = await fetch(`${AUDIO_API_BASE_URL}/${provider}/config/update`, {
 		method: 'POST',
 		headers: {
