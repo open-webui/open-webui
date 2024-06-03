@@ -828,13 +828,19 @@
 										e.preventDefault();
 									}
 
-									if (e.key === 'Enter' && !e.shiftKey && prompt !== '') {
-										submitPrompt(prompt, user);
-										return;
-									}
+									const commandOptionButton = [
+										...document.getElementsByClassName('selected-command-option-button')
+									]?.at(-1);
 
-									if (e.key === 'Enter' && e.shiftKey && prompt !== '') {
-										return;
+									if (!commandOptionButton) {
+										if (e.key === 'Enter' && !e.shiftKey && prompt !== '' && selected) {
+											submitPrompt(prompt, user);
+											return;
+										}
+
+										if (e.key === 'Enter' && e.shiftKey && prompt !== '') {
+											return;
+										}
 									}
 								}
 
