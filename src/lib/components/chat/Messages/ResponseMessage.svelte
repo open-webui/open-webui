@@ -341,6 +341,17 @@
 		generatingImage = false;
 	};
 
+	$: if (!edit) {
+		(async () => {
+			await tick();
+			renderStyling();
+
+			await mermaid.run({
+				querySelector: '.mermaid'
+			});
+		})();
+	}
+
 	onMount(async () => {
 		await tick();
 		renderStyling();
