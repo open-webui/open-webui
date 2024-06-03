@@ -1,5 +1,7 @@
 from enum import Enum
 
+GOOGLE_SHEET_CREDENTIALS = "Json file path"
+
 
 class MESSAGES(str, Enum):
     DEFAULT = lambda msg="": f"{msg if msg else ''}"

@@ -8,7 +8,11 @@ from pydantic import BaseModel
 import re
 import uuid
 import csv
-
+import gspread
+from cachetools import cached, TTLCache
+from typing import Any
+from datetime import timedelta
+from typing import List
 
 from apps.web.models.auths import (
     SigninForm,
@@ -32,15 +36,15 @@ from utils.utils import (
 )
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
-from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES, GOOGLE_SHEET_CREDENTIALS
 from config import WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 
 router = APIRouter()
+SA = gspread.service_account(filename=GOOGLE_SHEET_CREDENTIALS)
 
 ############################
 # GetSessionUser
 ############################
-
 
 @router.get("/", response_model=UserResponse)
 async def get_session_user(user=Depends(get_current_user)):
@@ -97,7 +101,18 @@ async def update_password(
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
+############################
+# Allowed Users
+############################
 
+@cached(TTLCache(maxsize=1024, ttl=300))
+
+def get_allowed_users() -> List[str]:
+    sheet = SA.open("AMLLM Access Control")
+    wk = sheet.worksheet("Sheet1")
+
+    allowed_users = [row["Emails"] for row in wk.get_all_records()]
+    return allowed_users
 ############################
 # SignIn
 ############################
@@ -105,6 +120,7 @@ async def update_password(
 
 @router.post("/signin", response_model=SigninResponse)
 async def signin(request: Request, form_data: SigninForm):
+
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
@@ -163,6 +179,10 @@ async def signin(request: Request, form_data: SigninForm):
 
 @router.post("/signup", response_model=SigninResponse)
 async def signup(request: Request, form_data: SignupForm):
+    email = form_data.email.lower()
+    allowed_users = get_allowed_users()
+    if email not in allowed_users:
+        raise HTTPException(403, detail="Signup not allowed for this email")
     if not request.app.state.config.ENABLE_SIGNUP and WEBUI_AUTH:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
