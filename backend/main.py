@@ -498,10 +498,12 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
     ]
     sorted_filters = sorted(filters, key=lambda x: x["pipeline"]["priority"])
 
-    model = app.state.MODELS[model_id]
+    print(model_id)
 
-    if "pipeline" in model:
-        sorted_filters = [model] + sorted_filters
+    if model_id in app.state.MODELS:
+        model = app.state.MODELS[model_id]
+        if "pipeline" in model:
+            sorted_filters = [model] + sorted_filters
 
     for filter in sorted_filters:
         r = None
@@ -550,7 +552,11 @@ async def get_pipelines_list(user=Depends(get_admin_user)):
     responses = await get_openai_models(raw=True)
 
     print(responses)
-    urlIdxs = [idx for idx, response in enumerate(responses) if "pipelines" in response]
+    urlIdxs = [
+        idx
+        for idx, response in enumerate(responses)
+        if response != None and "pipelines" in response
+    ]
 
     return {
         "data": [
