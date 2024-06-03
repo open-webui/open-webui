@@ -8,7 +8,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 
-	import { cancelOllamaRequest, deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
+	import { deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 
 	import { user, MODEL_DOWNLOAD_POOL, models, mobile } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
@@ -72,16 +72,28 @@
 			return;
 		}
 
-		const res = await pullModel(localStorage.token, sanitizedModelTag, '0').catch((error) => {
-			toast.error(error);
-			return null;
-		});
+		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, '0').catch(
+			(error) => {
+				toast.error(error);
+				return null;
+			}
+		);
 
 		if (res) {
 			const reader = res.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))
 				.getReader();
+
+			MODEL_DOWNLOAD_POOL.set({
+				...$MODEL_DOWNLOAD_POOL,
+				[sanitizedModelTag]: {
+					...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
+					abortController: controller,
+					reader,
+					done: false
+				}
+			});
 
 			while (true) {
 				try {
@@ -99,19 +111,6 @@
 							}
 							if (data.detail) {
 								throw data.detail;
-							}
-
-							if (data.id) {
-								MODEL_DOWNLOAD_POOL.set({
-									...$MODEL_DOWNLOAD_POOL,
-									[sanitizedModelTag]: {
-										...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
-										requestId: data.id,
-										reader,
-										done: false
-									}
-								});
-								console.log(data);
 							}
 
 							if (data.status) {
@@ -181,11 +180,12 @@
 	});
 
 	const cancelModelPullHandler = async (model: string) => {
-		const { reader, requestId } = $MODEL_DOWNLOAD_POOL[model];
+		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];
+		if (abortController) {
+			abortController.abort();
+		}
 		if (reader) {
 			await reader.cancel();
-
-			await cancelOllamaRequest(localStorage.token, requestId);
 			delete $MODEL_DOWNLOAD_POOL[model];
 			MODEL_DOWNLOAD_POOL.set({
 				...$MODEL_DOWNLOAD_POOL

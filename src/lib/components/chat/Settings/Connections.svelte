@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { models, user } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import {
@@ -74,23 +74,48 @@
 	};
 
 	const updateOpenAIHandler = async () => {
+		// Check if API KEYS length is same than API URLS length
+		if (OPENAI_API_KEYS.length !== OPENAI_API_BASE_URLS.length) {
+			// if there are more keys than urls, remove the extra keys
+			if (OPENAI_API_KEYS.length > OPENAI_API_BASE_URLS.length) {
+				OPENAI_API_KEYS = OPENAI_API_KEYS.slice(0, OPENAI_API_BASE_URLS.length);
+			}
+
+			// if there are more urls than keys, add empty keys
+			if (OPENAI_API_KEYS.length < OPENAI_API_BASE_URLS.length) {
+				const diff = OPENAI_API_BASE_URLS.length - OPENAI_API_KEYS.length;
+				for (let i = 0; i < diff; i++) {
+					OPENAI_API_KEYS.push('');
+				}
+			}
+		}
+
 		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
 		OPENAI_API_KEYS = await updateOpenAIKeys(localStorage.token, OPENAI_API_KEYS);
-
 		await models.set(await getModels());
 	};
 
 	const updateOllamaUrlsHandler = async () => {
-		OLLAMA_BASE_URLS = await updateOllamaUrls(localStorage.token, OLLAMA_BASE_URLS);
+		OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url) => url !== '');
+		console.log(OLLAMA_BASE_URLS);
 
-		const ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
-			toast.error(error);
-			return null;
-		});
+		if (OLLAMA_BASE_URLS.length === 0) {
+			ENABLE_OLLAMA_API = false;
+			await updateOllamaConfig(localStorage.token, ENABLE_OLLAMA_API);
 
-		if (ollamaVersion) {
-			toast.success($i18n.t('Server connection verified'));
-			await models.set(await getModels());
+			toast.info($i18n.t('Ollama API disabled'));
+		} else {
+			OLLAMA_BASE_URLS = await updateOllamaUrls(localStorage.token, OLLAMA_BASE_URLS);
+
+			const ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
+				toast.error(error);
+				return null;
+			});
+
+			if (ollamaVersion) {
+				toast.success($i18n.t('Server connection verified'));
+				await models.set(await getModels());
+			}
 		}
 	};
 
@@ -286,6 +311,10 @@
 							bind:state={ENABLE_OLLAMA_API}
 							on:change={async () => {
 								updateOllamaConfig(localStorage.token, ENABLE_OLLAMA_API);
+
+								if (OLLAMA_BASE_URLS.length === 0) {
+									OLLAMA_BASE_URLS = [''];
+								}
 							}}
 						/>
 					</div>

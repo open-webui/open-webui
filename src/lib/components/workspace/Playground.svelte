@@ -8,7 +8,7 @@
 	import { OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
-	import { cancelOllamaRequest, generateChatCompletion } from '$lib/apis/ollama';
+	import { generateChatCompletion } from '$lib/apis/ollama';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
@@ -24,7 +24,6 @@
 	let selectedModelId = '';
 
 	let loading = false;
-	let currentRequestId = null;
 	let stopResponseFlag = false;
 
 	let messagesContainerElement: HTMLDivElement;
@@ -45,14 +44,6 @@
 			element.scrollTop = element?.scrollHeight;
 		}
 	};
-
-	// const cancelHandler = async () => {
-	// 	if (currentRequestId) {
-	// 		const res = await cancelOllamaRequest(localStorage.token, currentRequestId);
-	// 		currentRequestId = null;
-	// 		loading = false;
-	// 	}
-	// };
 
 	const stopResponse = () => {
 		stopResponseFlag = true;
@@ -171,8 +162,6 @@
 					if (stopResponseFlag) {
 						controller.abort('User: Stop Response');
 					}
-
-					currentRequestId = null;
 					break;
 				}
 
@@ -229,7 +218,6 @@
 
 			loading = false;
 			stopResponseFlag = false;
-			currentRequestId = null;
 		}
 	};
 
