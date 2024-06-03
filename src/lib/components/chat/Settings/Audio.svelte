@@ -14,6 +14,7 @@
 
 	let OpenAIUrl = '';
 	let OpenAIKey = '';
+	let OpenAISpeaker = '';
 
 	let STTEngines = ['', 'openai'];
 	let STTEngine = '';
@@ -88,14 +89,14 @@
 				url: OpenAIUrl,
 				key: OpenAIKey,
 				model: model,
-				speaker: speaker
+				speaker: OpenAISpeaker
 			});
 
 			if (res) {
 				OpenAIUrl = res.OPENAI_API_BASE_URL;
 				OpenAIKey = res.OPENAI_API_KEY;
 				model = res.OPENAI_API_MODEL;
-				speaker = res.OPENAI_API_VOICE;
+				OpenAISpeaker = res.OPENAI_API_VOICE;
 			}
 		}
 	};
@@ -125,7 +126,10 @@
 				OpenAIUrl = res.OPENAI_API_BASE_URL;
 				OpenAIKey = res.OPENAI_API_KEY;
 				model = res.OPENAI_API_MODEL;
-				speaker = res.OPENAI_API_VOICE;
+				OpenAISpeaker = res.OPENAI_API_VOICE;
+				if (TTSEngine === 'openai') {
+					speaker = OpenAISpeaker;
+				}
 			}
 		}
 	});
@@ -141,7 +145,12 @@
 			audio: {
 				STTEngine: STTEngine !== '' ? STTEngine : undefined,
 				TTSEngine: TTSEngine !== '' ? TTSEngine : undefined,
-				speaker: speaker !== '' ? speaker : undefined,
+				speaker:
+					(TTSEngine === 'openai' ? OpenAISpeaker : speaker) !== ''
+						? TTSEngine === 'openai'
+							? OpenAISpeaker
+							: speaker
+						: undefined,
 				model: model !== '' ? model : undefined,
 				nonLocalVoices: nonLocalVoices
 			}
@@ -231,7 +240,7 @@
 						on:change={(e) => {
 							if (e.target.value === 'openai') {
 								getOpenAIVoices();
-								speaker = 'alloy';
+								OpenAISpeaker = 'alloy';
 								model = 'tts-1';
 							} else {
 								getWebAPIVoices();
@@ -324,7 +333,7 @@
 						<input
 							list="voice-list"
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={speaker}
+							bind:value={OpenAISpeaker}
 							placeholder="Select a voice"
 						/>
 
