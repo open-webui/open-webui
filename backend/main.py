@@ -1255,7 +1255,7 @@ async def get_pipelines(urlIdx: Optional[int] = None, user=Depends(get_admin_use
 async def get_pipeline_valves(
     urlIdx: Optional[int], pipeline_id: str, user=Depends(get_admin_user)
 ):
-    models = await get_all_models()
+    models = await get_all_models()  # noqa: F841  # TODO: is this required? `models` is not used.
     r = None
     try:
         url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
@@ -1292,7 +1292,7 @@ async def get_pipeline_valves(
 async def get_pipeline_valves_spec(
     urlIdx: Optional[int], pipeline_id: str, user=Depends(get_admin_user)
 ):
-    models = await get_all_models()
+    models = await get_all_models()  # noqa: F841  # TODO: is this required? `models` is not used.
 
     r = None
     try:
@@ -1332,7 +1332,7 @@ async def update_pipeline_valves(
     form_data: dict,
     user=Depends(get_admin_user),
 ):
-    models = await get_all_models()
+    models = await get_all_models()  # noqa: F841  # TODO: is this required? `models` is not used.
 
     r = None
     try:
