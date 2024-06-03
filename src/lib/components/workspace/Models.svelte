@@ -384,6 +384,7 @@
 					}
 
 					await models.set(await getModels(localStorage.token));
+					_models = $models;
 				};
 
 				reader.readAsText(importFiles[0]);
