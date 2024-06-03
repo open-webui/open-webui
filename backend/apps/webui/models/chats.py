@@ -298,6 +298,15 @@ class ChatTable:
             # .limit(limit).offset(skip)
         ]
 
+    def get_archived_chats_by_user_id(self, user_id: str) -> List[ChatModel]:
+        return [
+            ChatModel(**model_to_dict(chat))
+            for chat in Chat.select()
+            .where(Chat.archived == True)
+            .where(Chat.user_id == user_id)
+            .order_by(Chat.updated_at.desc())
+        ]
+
     def delete_chat_by_id(self, id: str) -> bool:
         try:
             query = Chat.delete().where((Chat.id == id))

@@ -810,10 +810,7 @@
 								? $i18n.t('Listening...')
 								: $i18n.t('Send a Message')}
 							bind:value={prompt}
-							on:keypress={(e) => {}}
-							on:keydown={async (e) => {
-								// Check if the device is not a mobile device or if it is a mobile device, check if it is not a touch device
-								// This is to prevent the Enter key from submitting the prompt on mobile devices
+							on:keypress={(e) => {
 								if (
 									!$mobile ||
 									!(
@@ -822,22 +819,18 @@
 										navigator.msMaxTouchPoints > 0
 									)
 								) {
-									// Check if Enter is pressed
-									// Check if Shift key is not pressed
+									// Prevent Enter key from creating a new line
 									if (e.key === 'Enter' && !e.shiftKey) {
 										e.preventDefault();
 									}
 
-									if (e.key === 'Enter' && !e.shiftKey && prompt !== '') {
+									// Submit the prompt when Enter key is pressed
+									if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
 										submitPrompt(prompt, user);
-										return;
-									}
-
-									if (e.key === 'Enter' && e.shiftKey && prompt !== '') {
-										return;
 									}
 								}
-
+							}}
+							on:keydown={async (e) => {
 								const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
 								// Check if Ctrl + R is pressed
@@ -898,7 +891,9 @@
 										...document.getElementsByClassName('selected-command-option-button')
 									]?.at(-1);
 
-									if (commandOptionButton) {
+									if (e.shiftKey) {
+										prompt = `${prompt}\n`;
+									} else if (commandOptionButton) {
 										commandOptionButton?.click();
 									} else {
 										document.getElementById('send-message-button')?.click();

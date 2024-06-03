@@ -369,27 +369,6 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 	return [res, controller];
 };
 
-export const cancelOllamaRequest = async (token: string = '', requestId: string) => {
-	let error = null;
-
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/cancel/${requestId}`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'text/event-stream',
-			Authorization: `Bearer ${token}`
-		}
-	}).catch((err) => {
-		error = err;
-		return null;
-	});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
 export const createModel = async (token: string, tagName: string, content: string) => {
 	let error = null;
 
@@ -461,8 +440,10 @@ export const deleteModel = async (token: string, tagName: string, urlIdx: string
 
 export const pullModel = async (token: string, tagName: string, urlIdx: string | null = null) => {
 	let error = null;
+	const controller = new AbortController();
 
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/pull${urlIdx !== null ? `/${urlIdx}` : ''}`, {
+		signal: controller.signal,
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -485,7 +466,7 @@ export const pullModel = async (token: string, tagName: string, urlIdx: string |
 	if (error) {
 		throw error;
 	}
-	return res;
+	return [res, controller];
 };
 
 export const downloadModel = async (
