@@ -406,6 +406,7 @@
 	"Set embedding model (e.g. {{model}})": "",
 	"Set Image Size": "",
 	"Set Model": "",
+	"Set Narrator Voice": "",
 	"Set reranking model (e.g. {{model}})": "",
 	"Set Steps": "",
 	"Set Task Model": "",

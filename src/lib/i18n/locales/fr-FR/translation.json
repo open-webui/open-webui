@@ -407,6 +407,7 @@
 	"Set embedding model (e.g. {{model}})": "Définir le modèle d'embedding (p. ex. {{model}})",
 	"Set Image Size": "Définir la Taille de l'Image",
 	"Set Model": "Définir le Modèle",
+	"Set Narrator Voice": "Définir la Voix du Narrateur",
 	"Set reranking model (e.g. {{model}})": "Définir le modèle de reclassement (p. ex. {{model}})",
 	"Set Steps": "Définir les Étapes",
 	"Set Task Model": "",
