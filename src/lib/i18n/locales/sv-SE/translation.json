@@ -170,6 +170,7 @@
 	"Edit Doc": "Redigera dokument",
 	"Edit User": "Redigera användare",
 	"Email": "E-post",
+	"Embedding Batch Size": "",
 	"Embedding Model": "Embeddingsmodell",
 	"Embedding Model Engine": "Embeddingsmodellmotor",
 	"Embedding model set to \"{{embedding_model}}\"": "Embeddingsmodell inställd på \"{{embedding_model}}\"",

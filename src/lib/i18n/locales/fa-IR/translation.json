@@ -170,6 +170,7 @@
 	"Edit Doc": "ویرایش سند",
 	"Edit User": "ویرایش کاربر",
 	"Email": "ایمیل",
+	"Embedding Batch Size": "",
 	"Embedding Model": "مدل پیدائش",
 	"Embedding Model Engine": "محرک مدل پیدائش",
 	"Embedding model set to \"{{embedding_model}}\"": "مدل پیدائش را به \"{{embedding_model}}\" تنظیم کنید",

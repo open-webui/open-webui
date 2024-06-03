@@ -170,6 +170,7 @@
 	"Edit Doc": "Uredi dokument",
 	"Edit User": "Uredi korisnika",
 	"Email": "Email",
+	"Embedding Batch Size": "",
 	"Embedding Model": "Embedding model",
 	"Embedding Model Engine": "Embedding model pogon",
 	"Embedding model set to \"{{embedding_model}}\"": "Embedding model postavljen na \"{{embedding_model}}\"",

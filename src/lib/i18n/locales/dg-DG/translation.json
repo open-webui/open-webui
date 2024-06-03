@@ -170,6 +170,7 @@
 	"Edit Doc": "Edit Doge",
 	"Edit User": "Edit Wowser",
 	"Email": "Email",
+	"Embedding Batch Size": "",
 	"Embedding Model": "",
 	"Embedding Model Engine": "",
 	"Embedding model set to \"{{embedding_model}}\"": "",

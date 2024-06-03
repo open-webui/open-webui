@@ -170,6 +170,7 @@
 	"Edit Doc": "Muokkaa asiakirjaa",
 	"Edit User": "Muokkaa käyttäjää",
 	"Email": "Sähköposti",
+	"Embedding Batch Size": "",
 	"Embedding Model": "Upotusmalli",
 	"Embedding Model Engine": "Upotusmallin moottori",
 	"Embedding model set to \"{{embedding_model}}\"": "\"{{embedding_model}}\" valittu upotusmalliksi",
