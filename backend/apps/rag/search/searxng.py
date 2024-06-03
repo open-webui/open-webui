@@ -1,6 +1,7 @@
 import logging
-
 import requests
+
+from typing import List
 
 from apps.rag.search.main import SearchResult
 from config import SRC_LOG_LEVELS
@@ -9,20 +10,52 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def search_searxng(query_url: str, query: str, count: int) -> list[SearchResult]:
-    """Search a SearXNG instance for a query and return the results as a list of SearchResult objects.
+def search_searxng(query_url: str, query: str, count: int, **kwargs) -> List[SearchResult]:
+    """
+    Search a SearXNG instance for a given query and return the results as a list of SearchResult objects.
+    
+    The function allows passing additional parameters such as language or time_range to tailor the search result.
 
     Args:
-        query_url (str): The URL of the SearXNG instance to search. Must contain "<query>" as a placeholder
-        query (str): The query to search for
+        query_url (str): The base URL of the SearXNG server with a placeholder for the query "<query>".
+        query (str): The search term or question to find in the SearXNG database.
+        count (int): The maximum number of results to retrieve from the search.
+        
+    Keyword Args:
+        language (str): Language filter for the search results; e.g., "en-US". Defaults to an empty string.
+        time_range (str): Time range for filtering results by date; e.g., "2023-04-05..today" or "all-time". Defaults to ''.
+        categories: (Optional[List[str]]): Specific categories within which the search should be performed, defaulting to an empty string if not provided.
+    
+    Returns:
+        List[SearchResult]: A list of SearchResults sorted by relevance score in descending order.
+        
+    Raise:
+        requests.exceptions.RequestException: If a request error occurs during the search process.
     """
-    url = query_url.replace("<query>", query)
-    if "&format=json" not in url:
-        url += "&format=json"
-    log.debug(f"searching {url}")
+    
+    # Default values for optional parameters are provided as empty strings or None when not specified.
+    language = kwargs.get('language', 'en-US')
+    time_range = kwargs.get('time_range', '')
+    categories = ''.join(kwargs.get('categories', []))
 
-    r = requests.get(
-        url,
+    params = {
+        "q": query,
+        "format": "json",
+        "pageno": 1,
+        "results_per_page": count,
+        'language': language,
+        'time_range': time_range,
+        'engines': '',
+        'categories': categories,
+        'theme': 'simple',
+        'image_proxy': 0
+
+    }
+
+    log.debug(f"searching {query_url}")
+
+    response = requests.get(
+        query_url,
         headers={
             "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) RAG Bot",
             "Accept": "text/html",
@@ -30,15 +63,17 @@ def search_searxng(query_url: str, query: str, count: int) -> list[SearchResult]
             "Accept-Language": "en-US,en;q=0.5",
             "Connection": "keep-alive",
         },
+        params=params,
     )
-    r.raise_for_status()
 
-    json_response = r.json()
+    response.raise_for_status()  # Raise an exception for HTTP errors.
+
+    json_response = response.json()
     results = json_response.get("results", [])
     sorted_results = sorted(results, key=lambda x: x.get("score", 0), reverse=True)
     return [
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("content")
         )
-        for result in sorted_results[:count]
+        for result in sorted_results
     ]
