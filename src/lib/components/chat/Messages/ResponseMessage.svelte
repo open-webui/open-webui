@@ -5,6 +5,7 @@
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
+	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
@@ -343,6 +344,10 @@
 	onMount(async () => {
 		await tick();
 		renderStyling();
+
+		await mermaid.run({
+			querySelector: '.mermaid'
+		});
 	});
 </script>
 
@@ -458,11 +463,15 @@
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								{#each tokens as token, tokenIdx}
 									{#if token.type === 'code'}
-										<CodeBlock
-											id={`${message.id}-${tokenIdx}`}
-											lang={token?.lang ?? ''}
-											code={revertSanitizedResponseContent(token?.text ?? '')}
-										/>
+										{#if token.lang === 'mermaid'}
+											<pre class="mermaid">{revertSanitizedResponseContent(token.text)}</pre>
+										{:else}
+											<CodeBlock
+												id={`${message.id}-${tokenIdx}`}
+												lang={token?.lang ?? ''}
+												code={revertSanitizedResponseContent(token?.text ?? '')}
+											/>
+										{/if}
 									{:else}
 										{@html marked.parse(token.raw, {
 											...defaults,

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
+	import mermaid from 'mermaid';
 
 	import { getContext, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -243,6 +244,39 @@
 			return [...createMessagesList(message.parentId), message];
 		} else {
 			return [message];
+		}
+	};
+
+	const chatCompletedHandler = async (model, messages) => {
+		await mermaid.run({
+			querySelector: '.mermaid'
+		});
+
+		const res = await chatCompleted(localStorage.token, {
+			model: model.id,
+			messages: messages.map((m) => ({
+				id: m.id,
+				role: m.role,
+				content: m.content,
+				timestamp: m.timestamp
+			})),
+			chat_id: $chatId
+		}).catch((error) => {
+			console.error(error);
+			return null;
+		});
+
+		if (res !== null) {
+			// Update chat history with the new messages
+			for (const message of res.messages) {
+				history.messages[message.id] = {
+					...history.messages[message.id],
+					...(history.messages[message.id].content !== message.content
+						? { originalContent: history.messages[message.id].content }
+						: {}),
+					...message
+				};
+			}
 		}
 	};
 
@@ -613,32 +647,7 @@
 						controller.abort('User: Stop Response');
 					} else {
 						const messages = createMessagesList(responseMessageId);
-						const res = await chatCompleted(localStorage.token, {
-							model: model,
-							messages: messages.map((m) => ({
-								id: m.id,
-								role: m.role,
-								content: m.content,
-								timestamp: m.timestamp
-							})),
-							chat_id: $chatId
-						}).catch((error) => {
-							console.error(error);
-							return null;
-						});
-
-						if (res !== null) {
-							// Update chat history with the new messages
-							for (const message of res.messages) {
-								history.messages[message.id] = {
-									...history.messages[message.id],
-									...(history.messages[message.id].content !== message.content
-										? { originalContent: history.messages[message.id].content }
-										: {}),
-									...message
-								};
-							}
-						}
+						await chatCompletedHandler(model, messages);
 					}
 
 					break;
@@ -893,32 +902,7 @@
 						} else {
 							const messages = createMessagesList(responseMessageId);
 
-							const res = await chatCompleted(localStorage.token, {
-								model: model.id,
-								messages: messages.map((m) => ({
-									id: m.id,
-									role: m.role,
-									content: m.content,
-									timestamp: m.timestamp
-								})),
-								chat_id: $chatId
-							}).catch((error) => {
-								console.error(error);
-								return null;
-							});
-
-							if (res !== null) {
-								// Update chat history with the new messages
-								for (const message of res.messages) {
-									history.messages[message.id] = {
-										...history.messages[message.id],
-										...(history.messages[message.id].content !== message.content
-											? { originalContent: history.messages[message.id].content }
-											: {}),
-										...message
-									};
-								}
-							}
+							await chatCompletedHandler(model, messages);
 						}
 
 						break;

@@ -498,6 +498,8 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
     ]
     sorted_filters = sorted(filters, key=lambda x: x["pipeline"]["priority"])
 
+    print(model_id)
+
     if model_id in app.state.MODELS:
         model = app.state.MODELS[model_id]
         if "pipeline" in model:
