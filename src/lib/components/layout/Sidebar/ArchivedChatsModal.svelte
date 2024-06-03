@@ -8,7 +8,12 @@
 	const dispatch = createEventDispatcher();
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { archiveChatById, deleteChatById, getArchivedChatList } from '$lib/apis/chats';
+	import {
+		archiveChatById,
+		deleteChatById,
+		getAllArchivedChats,
+		getArchivedChatList
+	} from '$lib/apis/chats';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -38,6 +43,7 @@
 	};
 
 	const exportChatsHandler = async () => {
+		const chats = await getAllArchivedChats(localStorage.token);
 		let blob = new Blob([JSON.stringify(chats)], {
 			type: 'application/json'
 		});
