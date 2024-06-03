@@ -833,7 +833,7 @@
 									]?.at(-1);
 
 									if (!commandOptionButton) {
-										if (e.key === 'Enter' && !e.shiftKey && prompt !== '' && selected) {
+										if (e.key === 'Enter' && !e.shiftKey && prompt !== '') {
 											submitPrompt(prompt, user);
 											return;
 										}
