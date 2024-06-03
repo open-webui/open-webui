@@ -683,6 +683,12 @@ RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
 
+RAG_EMBEDDING_OPENAI_BATCH_SIZE = PersistentConfig(
+    "RAG_EMBEDDING_OPENAI_BATCH_SIZE",
+    "rag.embedding_openai_batch_size",
+    os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", 1),
+)
+
 RAG_RERANKING_MODEL = PersistentConfig(
     "RAG_RERANKING_MODEL",
     "rag.reranking_model",

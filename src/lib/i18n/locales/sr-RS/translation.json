@@ -170,6 +170,7 @@
 	"Edit Doc": "Уреди документ",
 	"Edit User": "Уреди корисника",
 	"Email": "Е-пошта",
+	"Embedding Batch Size": "",
 	"Embedding Model": "Модел уградње",
 	"Embedding Model Engine": "Мотор модела уградње",
 	"Embedding model set to \"{{embedding_model}}\"": "Модел уградње подешен на \"{{embedding_model}}\"",

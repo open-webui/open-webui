@@ -170,6 +170,7 @@
 	"Edit Doc": "ਡਾਕੂਮੈਂਟ ਸੰਪਾਦਨ ਕਰੋ",
 	"Edit User": "ਉਪਭੋਗਤਾ ਸੰਪਾਦਨ ਕਰੋ",
 	"Email": "ਈਮੇਲ",
+	"Embedding Batch Size": "",
 	"Embedding Model": "ਐਮਬੈੱਡਿੰਗ ਮਾਡਲ",
 	"Embedding Model Engine": "ਐਮਬੈੱਡਿੰਗ ਮਾਡਲ ਇੰਜਣ",
 	"Embedding model set to \"{{embedding_model}}\"": "ਐਮਬੈੱਡਿੰਗ ਮਾਡਲ ਨੂੰ \"{{embedding_model}}\" 'ਤੇ ਸੈੱਟ ਕੀਤਾ ਗਿਆ",

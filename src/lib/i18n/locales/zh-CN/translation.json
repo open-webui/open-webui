@@ -170,6 +170,7 @@
 	"Edit Doc": "编辑文档",
 	"Edit User": "编辑用户",
 	"Email": "邮箱地址",
+  "Embedding Batch Size": "",
 	"Embedding Model": "语义向量模型",
 	"Embedding Model Engine": "语义向量模型引擎",
 	"Embedding model set to \"{{embedding_model}}\"": "语义向量模型设置为 \"{{embedding_model}}\"",

@@ -170,6 +170,7 @@
 	"Edit Doc": "Редактировать документ",
 	"Edit User": "Редактировать пользователя",
 	"Email": "Электронная почта",
+	"Embedding Batch Size": "",
 	"Embedding Model": "Модель эмбеддинга",
 	"Embedding Model Engine": "Модель эмбеддинга",
 	"Embedding model set to \"{{embedding_model}}\"": "Эмбеддинг-модель установлена в \"{{embedding_model}}\"",

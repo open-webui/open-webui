@@ -170,6 +170,7 @@
 	"Edit Doc": "Editar Documento",
 	"Edit User": "Editar Usuário",
 	"Email": "E-mail",
+	"Embedding Batch Size": "",
 	"Embedding Model": "Modelo de Embedding",
 	"Embedding Model Engine": "Motor de Modelo de Embedding",
 	"Embedding model set to \"{{embedding_model}}\"": "Modelo de Embedding definido como \"{{embedding_model}}\"",

@@ -170,6 +170,7 @@
 	"Edit Doc": "ডকুমেন্ট এডিট করুন",
 	"Edit User": "ইউজার এডিট করুন",
 	"Email": "ইমেইল",
+	"Embedding Batch Size": "",
 	"Embedding Model": "ইমেজ ইমেবডিং মডেল",
 	"Embedding Model Engine": "ইমেজ ইমেবডিং মডেল ইঞ্জিন",
 	"Embedding model set to \"{{embedding_model}}\"": "ইমেজ ইমেবডিং মডেল সেট করা হয়েছে - \"{{embedding_model}}\"",
