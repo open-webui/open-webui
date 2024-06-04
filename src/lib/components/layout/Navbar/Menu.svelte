@@ -117,27 +117,29 @@
 				<div class="flex items-center">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item> -->
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				id="chat-share-button"
-				on:click={() => {
-					shareHandler();
-				}}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 24 24"
-					fill="currentColor"
-					class="size-4"
+			{#if chat && chat.id}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					id="chat-share-button"
+					on:click={() => {
+						shareHandler();
+					}}
 				>
-					<path
-						fill-rule="evenodd"
-						d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-				<div class="flex items-center">{$i18n.t('Share')}</div>
-			</DropdownMenu.Item>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 24 24"
+						fill="currentColor"
+						class="size-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<div class="flex items-center">{$i18n.t('Share')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			<!-- <DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer"
@@ -199,11 +201,13 @@
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
 
-			<hr class="border-gray-100 dark:border-gray-800 mt-2.5 mb-1.5" />
+			{#if chat && chat.id}
+				<hr class="border-gray-100 dark:border-gray-800 mt-2.5 mb-1.5" />
 
-			<div class="flex p-1">
-				<Tags chatId={chat.id} />
-			</div>
+				<div class="flex p-1">
+					<Tags chatId={chat.id} />
+				</div>
+			{/if}
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
