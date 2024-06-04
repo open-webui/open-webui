@@ -16,7 +16,7 @@
 	let responseAutoCopy = false;
 	let titleAutoGenerateModel = '';
 	let titleAutoGenerateModelExternal = '';
-	let fullScreenMode = false;
+	let widescreenMode = false;
 	let titleGenerationPrompt = '';
 	let splitLargeChunks = false;
 
@@ -31,9 +31,9 @@
 		saveSettings({ splitLargeChunks: splitLargeChunks });
 	};
 
-	const toggleFullScreenMode = async () => {
-		fullScreenMode = !fullScreenMode;
-		saveSettings({ fullScreenMode: fullScreenMode });
+	const togglewidescreenMode = async () => {
+		widescreenMode = !widescreenMode;
+		saveSettings({ widescreenMode: widescreenMode });
 	};
 
 	const toggleChatBubble = async () => {
@@ -114,7 +114,7 @@
 		responseAutoCopy = $settings.responseAutoCopy ?? false;
 		showUsername = $settings.showUsername ?? false;
 		chatBubble = $settings.chatBubble ?? true;
-		fullScreenMode = $settings.fullScreenMode ?? false;
+		widescreenMode = $settings.widescreenMode ?? false;
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
 		chatDirection = $settings.chatDirection ?? 'LTR';
 	});
@@ -195,16 +195,16 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Full Screen Mode')}</div>
+					<div class=" self-center text-xs font-medium">{$i18n.t('Widescreen Mode')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
-							toggleFullScreenMode();
+							togglewidescreenMode();
 						}}
 						type="button"
 					>
-						{#if fullScreenMode === true}
+						{#if widescreenMode === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>

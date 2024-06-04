@@ -20,6 +20,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import StreamingResponse, Response
 
+
+from apps.socket.main import app as socket_app
 from apps.ollama.main import app as ollama_app, get_all_models as get_ollama_models
 from apps.openai.main import app as openai_app, get_all_models as get_openai_models
 
@@ -60,7 +62,6 @@ from config import (
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
-    RAG_WEB_SEARCH_ENABLED,
     AppConfig,
     WEBUI_BUILD_HASH,
 )
@@ -271,6 +272,11 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                 except:
                     pass
 
+            model = app.state.MODELS[model_id]
+
+            if "pipeline" in model:
+                sorted_filters.append(model)
+
             for filter in sorted_filters:
                 r = None
                 try:
@@ -310,8 +316,12 @@ class PipelineMiddleware(BaseHTTPMiddleware):
                     else:
                         pass
 
-            if "chat_id" in data:
-                del data["chat_id"]
+            if "pipeline" not in app.state.MODELS[model_id]:
+                if "chat_id" in data:
+                    del data["chat_id"]
+
+                if "title" in data:
+                    del data["title"]
 
             modified_body_bytes = json.dumps(data).encode("utf-8")
             # Replace the request body with the modified one
@@ -366,6 +376,9 @@ async def update_embedding_function(request: Request, call_next):
     if "/embedding/update" in request.url.path:
         webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
     return response
+
+
+app.mount("/ws", socket_app)
 
 
 app.mount("/ollama", ollama_app)
@@ -490,6 +503,13 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
     ]
     sorted_filters = sorted(filters, key=lambda x: x["pipeline"]["priority"])
 
+    print(model_id)
+
+    if model_id in app.state.MODELS:
+        model = app.state.MODELS[model_id]
+        if "pipeline" in model:
+            sorted_filters = [model] + sorted_filters
+
     for filter in sorted_filters:
         r = None
         try:
@@ -537,7 +557,11 @@ async def get_pipelines_list(user=Depends(get_admin_user)):
     responses = await get_openai_models(raw=True)
 
     print(responses)
-    urlIdxs = [idx for idx, response in enumerate(responses) if "pipelines" in response]
+    urlIdxs = [
+        idx
+        for idx, response in enumerate(responses)
+        if response != None and "pipelines" in response
+    ]
 
     return {
         "data": [
@@ -811,7 +835,7 @@ async def get_app_config():
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
-            "enable_web_search": RAG_WEB_SEARCH_ENABLED,
+            "enable_web_search": rag_app.state.config.ENABLE_RAG_WEB_SEARCH,
             "enable_image_generation": images_app.state.config.ENABLED,
             "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
             "enable_admin_export": ENABLE_ADMIN_EXPORT,
@@ -860,23 +884,7 @@ class UrlForm(BaseModel):
 async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
     app.state.config.WEBHOOK_URL = form_data.url
     webui_app.state.WEBHOOK_URL = app.state.config.WEBHOOK_URL
-
-    return {
-        "url": app.state.config.WEBHOOK_URL,
-    }
-
-
-@app.get("/api/community_sharing", response_model=bool)
-async def get_community_sharing_status(request: Request, user=Depends(get_admin_user)):
-    return webui_app.state.config.ENABLE_COMMUNITY_SHARING
-
-
-@app.get("/api/community_sharing/toggle", response_model=bool)
-async def toggle_community_sharing(request: Request, user=Depends(get_admin_user)):
-    webui_app.state.config.ENABLE_COMMUNITY_SHARING = (
-        not webui_app.state.config.ENABLE_COMMUNITY_SHARING
-    )
-    return webui_app.state.config.ENABLE_COMMUNITY_SHARING
+    return {"url": app.state.config.WEBHOOK_URL}
 
 
 @app.get("/api/version")

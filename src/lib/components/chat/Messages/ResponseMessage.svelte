@@ -5,6 +5,7 @@
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
+	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
@@ -432,9 +433,24 @@
 		generatingImage = false;
 	};
 
+	$: if (!edit) {
+		(async () => {
+			await tick();
+			renderStyling();
+
+			await mermaid.run({
+				querySelector: '.mermaid'
+			});
+		})();
+	}
+
 	onMount(async () => {
 		await tick();
 		renderStyling();
+
+		await mermaid.run({
+			querySelector: '.mermaid'
+		});
 	});
 </script>
 
@@ -543,7 +559,34 @@
 						</div>
 					{:else}
 						<div class="w-full">
-							{#if message?.error === true}
+							{#if message.content === '' && !message.error}
+								<Skeleton />
+							{:else if message.content && message.error !== true}
+								<!-- always show message contents even if there's an error -->
+								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
+								{#each tokens as token, tokenIdx}
+									{#if token.type === 'code'}
+										{#if token.lang === 'mermaid'}
+											<pre class="mermaid">{revertSanitizedResponseContent(token.text)}</pre>
+										{:else}
+											<CodeBlock
+												id={`${message.id}-${tokenIdx}`}
+												lang={token?.lang ?? ''}
+												code={revertSanitizedResponseContent(token?.text ?? '')}
+											/>
+										{/if}
+									{:else}
+										{@html marked.parse(token.raw, {
+											...defaults,
+											gfm: true,
+											breaks: true,
+											renderer
+										})}
+									{/if}
+								{/each}
+							{/if}
+
+							{#if message.error}
 								<div
 									class="flex mt-2 mb-4 space-x-2 border px-4 py-3 border-red-800 bg-red-800/30 font-medium rounded-lg"
 								>
@@ -563,28 +606,9 @@
 									</svg>
 
 									<div class=" self-center">
-										{message.content}
+										{message?.error?.content ?? message.content}
 									</div>
 								</div>
-							{:else if message.content === ''}
-								<Skeleton />
-							{:else}
-								{#each tokens as token, tokenIdx}
-									{#if token.type === 'code'}
-										<CodeBlock
-											id={`${message.id}-${tokenIdx}`}
-											lang={token?.lang ?? ''}
-											code={revertSanitizedResponseContent(token?.text ?? '')}
-										/>
-									{:else}
-										{@html marked.parse(token.raw, {
-											...defaults,
-											gfm: true,
-											breaks: true,
-											renderer
-										})}
-									{/if}
-								{/each}
 							{/if}
 
 							{#if message.citations}

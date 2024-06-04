@@ -21,6 +21,10 @@
 				touch: touch
 			});
 		}
+	} else if (tooltipInstance && content === '') {
+		if (tooltipInstance) {
+			tooltipInstance.destroy();
+		}
 	}
 
 	onDestroy(() => {

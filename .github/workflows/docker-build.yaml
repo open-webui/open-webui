@@ -70,8 +70,10 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
             prefix=cache-${{ matrix.platform }}-
+            latest=false
 
       - name: Build Docker image (latest)
         uses: docker/build-push-action@v5
@@ -158,8 +160,10 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
             prefix=cache-cuda-${{ matrix.platform }}-
+            latest=false
 
       - name: Build Docker image (cuda)
         uses: docker/build-push-action@v5
@@ -247,8 +251,10 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
             prefix=cache-ollama-${{ matrix.platform }}-
+            latest=false
 
       - name: Build Docker image (ollama)
         uses: docker/build-push-action@v5

@@ -4,6 +4,7 @@
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { toast } from 'svelte-sonner';
+	import Switch from '$lib/components/common/Switch.svelte';
 	import { AllTalkConfigForm } from '$lib/apis/audio/providers/alltalk/Alltalk';
 	const dispatch = createEventDispatcher();
 
@@ -15,6 +16,7 @@
 
 	let OpenAIUrl = '';
 	let OpenAIKey = '';
+	let OpenAISpeaker = '';
 
 	let STTEngines = ['', 'openai'];
 	let STTEngine = '';
@@ -22,6 +24,7 @@
 	let conversationMode = false;
 	let speechAutoSend = false;
 	let responseAutoPlayback = false;
+	let nonLocalVoices = false;
 
 	let TTSEngines = ['', 'openai', 'alltalk'];
 	let TTSEngine = '';
@@ -123,7 +126,7 @@
 				url: OpenAIUrl,
 				key: OpenAIKey,
 				model: model,
-				speaker: speaker
+				speaker: OpenAISpeaker
 			});
 
 			if (res) {
@@ -154,6 +157,7 @@
 
 		STTEngine = $settings?.audio?.STTEngine ?? '';
 		TTSEngine = $settings?.audio?.TTSEngine ?? '';
+		nonLocalVoices = $settings.audio?.nonLocalVoices ?? false;
 		speaker = $settings?.audio?.speaker ?? '';
 		model = $settings?.audio?.model ?? '';
 
@@ -189,8 +193,14 @@
 			audio: {
 				STTEngine: STTEngine !== '' ? STTEngine : undefined,
 				TTSEngine: TTSEngine !== '' ? TTSEngine : undefined,
-				speaker: speaker !== '' ? speaker : undefined,
-				model: model !== '' ? model : undefined
+				speaker:
+					(TTSEngine === 'openai' ? OpenAISpeaker : speaker) !== ''
+						? TTSEngine === 'openai'
+							? OpenAISpeaker
+							: speaker
+						: undefined,
+				model: model !== '' ? model : undefined,
+				nonLocalVoices: nonLocalVoices
 			}
 		});
 		dispatch('save');
@@ -278,7 +288,7 @@
 						on:change={async (e) => {
 							if (e.target.value === 'openai') {
 								TTSEngineConfig.openai.getVoices();
-								speaker = 'alloy';
+								OpenAISpeaker = 'alloy';
 								model = 'tts-1';
 							} else if(TTSEngine === 'alltalk'){
 								await _alltalk.getVoices();
@@ -385,14 +395,25 @@
 						<select
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={speaker}
-							placeholder="Select a voice"
 						>
-							<option value="" selected>{$i18n.t('Default')}</option>
-							{#each voices.filter((v) => v.localService === true) as voice}
-								<option value={voice.name} class="bg-gray-100 dark:bg-gray-700">{voice.name}</option
+							<option value="" selected={speaker !== ''}>{$i18n.t('Default')}</option>
+							{#each voices.filter((v) => nonLocalVoices || v.localService === true) as voice}
+								<option
+									value={voice.name}
+									class="bg-gray-100 dark:bg-gray-700"
+									selected={speaker === voice.name}>{voice.name}</option
 								>
 							{/each}
 						</select>
+					</div>
+				</div>
+				<div class="flex items-center justify-between mb-1">
+					<div class="text-sm">
+						{$i18n.t('Allow non-local voices')}
+					</div>
+
+					<div class="mt-1">
+						<Switch bind:state={nonLocalVoices} />
 					</div>
 				</div>
 			</div>
@@ -404,7 +425,7 @@
 						<input
 							list="voice-list"
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={speaker}
+							bind:value={OpenAISpeaker}
 							placeholder="Select a voice"
 						/>
 

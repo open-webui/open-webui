@@ -13,6 +13,8 @@
 
 	export let parentMessage;
 
+	export let readOnly = false;
+
 	export let updateChatMessages: Function;
 	export let confirmEditResponseMessage: Function;
 	export let rateMessage: Function;
@@ -134,6 +136,7 @@
 						{confirmEditResponseMessage}
 						showPreviousMessage={() => showPreviousMessage(model)}
 						showNextMessage={() => showNextMessage(model)}
+						{readOnly}
 						{rateMessage}
 						{copyToClipboard}
 						{continueGeneration}

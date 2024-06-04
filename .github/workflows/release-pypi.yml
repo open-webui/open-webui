@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main # or whatever branch you want to use
-      - dev
 
 jobs:
   release:

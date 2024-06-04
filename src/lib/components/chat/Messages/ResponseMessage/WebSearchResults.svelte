@@ -35,7 +35,9 @@
 					? ''
 					: 'border-b border-gray-300/30 dark:border-gray-700/50'} group/item justify-between font-normal text-gray-800 dark:text-gray-300"
 			>
-				{url}
+				<div class=" line-clamp-1">
+					{url}
+				</div>
 
 				<div
 					class=" ml-1 text-white dark:text-gray-900 group-hover/item:text-gray-600 dark:group-hover/item:text-white transition"
