@@ -2,7 +2,16 @@
 	import { io } from 'socket.io-client';
 
 	import { onMount, tick, setContext } from 'svelte';
-	import { config, user, theme, WEBUI_NAME, mobile, socket, activeUserCount } from '$lib/stores';
+	import {
+		config,
+		user,
+		theme,
+		WEBUI_NAME,
+		mobile,
+		socket,
+		activeUserCount,
+		USAGE_POOL
+	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { Toaster, toast } from 'svelte-sonner';
 
@@ -74,6 +83,11 @@
 				_socket.on('user-count', (data) => {
 					console.log('user-count', data);
 					activeUserCount.set(data.count);
+				});
+
+				_socket.on('usage', (data) => {
+					console.log('usage', data);
+					USAGE_POOL.set(data['models']);
 				});
 
 				if (localStorage.token) {
