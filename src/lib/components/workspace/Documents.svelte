@@ -190,7 +190,8 @@
 		<div class=" text-lg font-semibold self-center">{$i18n.t('Documents')}</div>
 
 		<div>
-			<button aria-label="{$i18n.t('Document Settings')}"
+			<button
+				aria-label={$i18n.t('Document Settings')}
 				class="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
 				type="button"
 				on:click={() => {
@@ -245,7 +246,7 @@
 	<div>
 		<button
 			class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
-			aria-label="{$i18n.t('Add Docs')}"
+			aria-label={$i18n.t('Add Docs')}
 			on:click={() => {
 				showAddDocModal = true;
 			}}

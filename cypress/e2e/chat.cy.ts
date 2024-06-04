@@ -114,18 +114,21 @@ describe('Chat', () => {
 			// Create a document
 			cy.readFile('cypress/data/example-doc.txt').then((text) => {
 				// select file
-				cy.get('#upload-doc-input').selectFile( {
-					contents: Cypress.Buffer.from(text + Date.now()),
-					fileName: documentFileName,
-					mimeType: "text/plain",
-					lastModified: Date.now()
-				}, {
-					force: true
-				});
+				cy.get('#upload-doc-input').selectFile(
+					{
+						contents: Cypress.Buffer.from(text + Date.now()),
+						fileName: documentFileName,
+						mimeType: 'text/plain',
+						lastModified: Date.now()
+					},
+					{
+						force: true
+					}
+				);
 				// open tag input
-				cy.get("#add-tag-button").click();
-				cy.get("input[placeholder='Add a tag']").type("cypress-test");
-				cy.get("#save-tag-button").click();
+				cy.get('#add-tag-button').click();
+				cy.get("input[placeholder='Add a tag']").type('cypress-test');
+				cy.get('#save-tag-button').click();
 
 				// submit to upload
 				cy.get("button[type='submit']").click();
@@ -138,7 +141,7 @@ describe('Chat', () => {
 			cy.get('.document-entry').should('exist');
 
 			// go to home
-			cy.visit("/");
+			cy.visit('/');
 			// Click on the model selector
 			cy.get('button[aria-label="Select a model"]').click();
 			// Select the first model
@@ -150,7 +153,7 @@ describe('Chat', () => {
 				force: true
 			});
 			// select file
-			cy.get("button").contains(documentTitle).click();
+			cy.get('button').contains(documentTitle).click();
 			// type question
 			cy.get('#chat-textarea').type(`How many times does the word Lorem occur?`, {
 				force: true
@@ -163,9 +166,10 @@ describe('Chat', () => {
 			cy.get('.chat-assistant', { timeout: 120_000 }) // .chat-assistant is created after the first token is received
 				.find('div[aria-label="Edit"]', { timeout: 120_000 }) // Generation Info is not always created after the stop token is received. Use edit instead
 				.should('exist');
-			cy.location("pathname")
-				.should("match", /\/c\/.*/)
-				.then(url => url).as("chatUrl");
+			cy.location('pathname')
+				.should('match', /\/c\/.*/)
+				.then((url) => url)
+				.as('chatUrl');
 
 			// go back to documents
 			cy.visit('/workspace/documents');
@@ -193,14 +197,16 @@ describe('Chat', () => {
 			cy.get('.chat-assistant', { timeout: 120_000 }) // .chat-assistant is created after the first token is received
 				.find('div[aria-label="Edit"]', { timeout: 120_000 }) // Generation Info is not always created after the stop token is received. Use edit instead
 				.should('exist');
-			cy.location("pathname")
-				.should("match", /\/c\/.*/)
-				.then(url => url).as("chatUrl");
-
+			cy.location('pathname')
+				.should('match', /\/c\/.*/)
+				.then((url) => url)
+				.as('chatUrl');
 
 			// check if alert is visible
-			cy.get("span[role=alert]").should("contain.text",
-				"At least one file in your conversation does not exist any more. The following answer may be incomplete.");
+			cy.get('span[role=alert]').should(
+				'contain.text',
+				'At least one file in your conversation does not exist any more. The following answer may be incomplete.'
+			);
 		});
 	});
 });

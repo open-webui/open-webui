@@ -433,7 +433,10 @@
 					{#if message.missingChecksums && message.missingChecksums.length > 0}
 						<span class="text-red-700/50 dark:text-red-300/50 py-3 relative" role="alert">
 							<strong class="font-bold">{$i18n.t('Warning:')}</strong>
-							<span class="block sm:inline">{$i18n.t('At least one file in your conversation does not exist any more.')} {$i18n.t('The following answer may be incomplete.')}</span>
+							<span class="block sm:inline"
+								>{$i18n.t('At least one file in your conversation does not exist any more.')}
+								{$i18n.t('The following answer may be incomplete.')}</span
+							>
 						</span>
 					{/if}
 
