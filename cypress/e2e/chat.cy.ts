@@ -2,7 +2,7 @@
 /// <reference path="../support/index.d.ts" />
 
 // These tests run through the chat flow.
-describe('Settings', () => {
+describe('Chat', () => {
 	// Wait for 2 seconds after all tests to fix an issue with Cypress's video recording missing the last few frames
 	after(() => {
 		// eslint-disable-next-line cypress/no-unnecessary-waiting
@@ -39,7 +39,7 @@ describe('Settings', () => {
 			cy.get('.chat-user').should('exist');
 			// Wait for the response
 			cy.get('.chat-assistant', { timeout: 120_000 }) // .chat-assistant is created after the first token is received
-				.find('div[aria-label="Generation Info"]', { timeout: 120_000 }) // Generation Info is created after the stop token is received
+				.find('div[aria-label="Edit"]', { timeout: 120_000 }) // Edit is created after the stop token is received
 				.should('exist');
 		});
 
@@ -58,7 +58,7 @@ describe('Settings', () => {
 			cy.get('.chat-user').should('exist');
 			// Wait for the response
 			cy.get('.chat-assistant', { timeout: 120_000 }) // .chat-assistant is created after the first token is received
-				.find('div[aria-label="Generation Info"]', { timeout: 120_000 }) // Generation Info is created after the stop token is received
+				.find('div[aria-label="Edit"]', { timeout: 120_000 }) // Edit is created after the stop token is received
 				.should('exist');
 			// spy on requests
 			const spy = cy.spy();
@@ -90,7 +90,7 @@ describe('Settings', () => {
 			cy.get('.chat-user').should('exist');
 			// Wait for the response
 			cy.get('.chat-assistant', { timeout: 120_000 }) // .chat-assistant is created after the first token is received
-				.find('div[aria-label="Generation Info"]', { timeout: 120_000 }) // Generation Info is created after the stop token is received
+				.find('div[aria-label="Edit"]', { timeout: 120_000 }) // Edit is created after the stop token is received
 				.should('exist');
 			// Click on the generate image button
 			cy.get('[aria-label="Generate Image"]').click();
