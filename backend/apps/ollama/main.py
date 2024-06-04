@@ -1216,6 +1216,7 @@ def upload_model(file: UploadFile = File(...), url_idx: Optional[int] = None):
 async def deprecated_proxy(
     path: str, request: Request, user=Depends(get_verified_user)
 ):
+    REQUEST_POOL = []
     url = app.state.config.OLLAMA_BASE_URLS[0]
     target_url = f"{url}/{path}"
 

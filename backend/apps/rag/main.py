@@ -8,7 +8,9 @@ from fastapi import (
     Form,
 )
 from fastapi.middleware.cors import CORSMiddleware
-import os, shutil, logging
+import os
+import shutil
+import logging
 
 from pathlib import Path
 from typing import List, Union, Sequence
