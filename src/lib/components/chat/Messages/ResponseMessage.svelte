@@ -297,10 +297,23 @@
 				}
 			} else if($settings?.audio?.TTSEngine === 'alltalk') {
 				const texts = extractSentences(message.content);
-				const sentences = mergeTexts(texts);
+				let sentences = mergeTexts(texts);
 
 				console.log(texts);
 				console.log(sentences);
+
+				sentences = sentences.map((text: string) => {
+					const occurences = (text.split("\"").length - 1)
+					// If the number of occurences of " is even, then it is a normal sentence
+					// If the number of occurences of " is odd, then it is a sentence that needs to be closed with a quote
+					if(occurences % 2 === 0){
+						return text;
+					} else {
+						return text + "\"";
+					}
+				});
+
+				console.log("after: " + sentences);
 
 				sentencesAudio = sentences.reduce((a, e, i, arr) => {
 					a[i] = null;

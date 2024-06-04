@@ -42,21 +42,41 @@ export type TTSGeneration = {
 
 export class TTSGenerationPayload {
     text_input: string;
-    text_filtering: string = "standard";
+    text_filtering: string;
     character_voice_gen: string;
-    narrator_enabled: boolean = false;
+    narrator_enabled: boolean;
     narrator_voice_gen: string;
-    text_not_inside: string = "character";
-    language: string = "en";
-    output_file_name: string = "output";
-    output_file_timestamp: boolean = true;
-    autoplay: boolean = false;
-    autoplay_volume: number = 0.1;
+    text_not_inside: string;
+    language: string;
+    output_file_name: string;
+    output_file_timestamp: boolean;
+    autoplay: boolean;
+    autoplay_volume: number;
 
-    constructor(text_input: string, character_voice_gen: string, narrator_voice_gen: string) {
+    constructor(
+        text_input: string,
+        text_filtering: string = "standard",
+        character_voice_gen: string,
+        narrator_enabled: boolean = false,
+        narrator_voice_gen: string,
+        text_not_inside: string = "character",
+        language: string = "en",
+        output_file_name: string = "output",
+        output_file_timestamp: boolean = true,
+        autoplay: boolean = false,
+        autoplay_volume: number = 0.1
+    ) {
         this.text_input = text_input;
+        this.text_filtering = text_filtering;
         this.character_voice_gen = character_voice_gen;
+        this.narrator_enabled = narrator_enabled;
         this.narrator_voice_gen = narrator_voice_gen;
+        this.text_not_inside = text_not_inside;
+        this.language = language;
+        this.output_file_name = output_file_name;
+        this.output_file_timestamp = output_file_timestamp;
+        this.autoplay = autoplay;
+        this.autoplay_volume = autoplay_volume;
     }
 }
 

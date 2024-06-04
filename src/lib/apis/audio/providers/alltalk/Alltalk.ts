@@ -43,7 +43,7 @@ export class Alltalk {
     useStreamingMode: boolean = false;
     useNarrator: boolean = false;
     narratorVoice: string = '';
-    textNotInsideSpeaker: string = 'character';
+    textNotInsideSpeaker: string = 'narrator';
 
     constructor(baseUrl: string = '', voicesList: string[] = []) {
         this.baseUrl = baseUrl;
@@ -136,7 +136,16 @@ export class Alltalk {
                 result =  res.output_file_path;
             }
         }else{
-            const genPayload: TTSGenerationPayload = new TTSGenerationPayload(message, this.currentVoice, this.currentVoice);
+            const genPayload: TTSGenerationPayload = new TTSGenerationPayload(
+                message,
+                undefined,
+                this.currentVoice,
+                this.useNarrator,
+                this.narratorVoice,
+                this.textNotInsideSpeaker,
+                undefined, undefined, undefined,
+                undefined, undefined
+            );
             const res = await this.api.ttsGenerate(genPayload);
             if(res && res.status === 'generate-success'){
                 result =  res.output_file_url;

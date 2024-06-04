@@ -58,8 +58,8 @@
 		"alltalk": {
 			"api_base_url": "http://192.168.1.32:7851",
 			"api_model": "XTTSv2 Local",
-			"api_voice": "female_04.wav",
-			"api_deepspeed": false,
+			"api_voice": "James_Earl_Jones CC3.wav",
+			"api_deepspeed": true,
 			"api_low_vram": false,
 			"api_use_streaming": false,
 			"api_use_narrator": true,

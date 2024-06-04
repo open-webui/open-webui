@@ -59,6 +59,7 @@ class AllTalkTTSAPI:
             'autoplay': payload.autoplay,
             'autoplay_volume': payload.autoplay_volume,
         }
+        print(payload.text_input)
         response = requests.post(url, data=data)
         return response.json()
 
