@@ -186,7 +186,7 @@ async def fetch_url(url, key):
     timeout = aiohttp.ClientTimeout(total=5)
     try:
         headers = {"Authorization": f"Bearer {key}"}
-        async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(url, headers=headers) as response:
                 return await response.json()
     except Exception as e:
@@ -462,7 +462,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     streaming = False
 
     try:
-        session = aiohttp.ClientSession()
+        session = aiohttp.ClientSession(trust_env=True)
         r = await session.request(
             method=request.method,
             url=target_url,
