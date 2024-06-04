@@ -413,7 +413,7 @@
 	"Select model": "选择模型",
 	"Selected model(s) do not support image inputs": "已选择的模型不支持发送图像",
 	"Send": "发送",
-	"Send a Message": "发送消息",
+	"Send a Message": "输入消息",
 	"Send message": "发送消息",
 	"September": "九月",
 	"Serper API Key": "Serper API 密钥",
