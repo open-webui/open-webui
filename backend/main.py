@@ -417,7 +417,7 @@ async def get_all_models():
     custom_models = Models.get_all_models()
 
     for custom_model in custom_models:
-        if custom_model.base_model_id == None:
+        if custom_model.base_model_id is None:
             for model in models:
                 if (
                     custom_model.id == model["id"]
@@ -556,7 +556,7 @@ async def get_pipelines_list(user=Depends(get_admin_user)):
     urlIdxs = [
         idx
         for idx, response in enumerate(responses)
-        if response != None and "pipelines" in response
+        if response is not None and "pipelines" in response
     ]
 
     return {

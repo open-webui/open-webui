@@ -158,7 +158,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 error_detail = f"External: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r != None else 500,
+            status_code=r.status_code if r is not None else 500,
             detail=error_detail,
         )
 

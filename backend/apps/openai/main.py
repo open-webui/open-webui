@@ -293,7 +293,7 @@ async def get_all_models(raw: bool = False):
 @app.get("/models")
 @app.get("/models/{url_idx}")
 async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_user)):
-    if url_idx == None:
+    if url_idx is None:
         models = await get_all_models()
         if app.state.config.ENABLE_MODEL_FILTER:
             if user.role == "user":

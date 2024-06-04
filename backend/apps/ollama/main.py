@@ -224,7 +224,7 @@ async def get_all_models():
 async def get_ollama_tags(
     url_idx: Optional[int] = None, user=Depends(get_verified_user)
 ):
-    if url_idx == None:
+    if url_idx is None:
         models = await get_all_models()
 
         if app.state.config.ENABLE_MODEL_FILTER:
@@ -268,7 +268,7 @@ async def get_ollama_tags(
 @app.get("/api/version/{url_idx}")
 async def get_ollama_versions(url_idx: Optional[int] = None):
 
-    if url_idx == None:
+    if url_idx is None:
 
         # returns lowest version
         tasks = [
@@ -350,7 +350,7 @@ async def push_model(
     url_idx: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
-    if url_idx == None:
+    if url_idx is None:
         if form_data.name in app.state.MODELS:
             url_idx = app.state.MODELS[form_data.name]["urls"][0]
         else:
@@ -400,7 +400,7 @@ async def copy_model(
     url_idx: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
-    if url_idx == None:
+    if url_idx is None:
         if form_data.source in app.state.MODELS:
             url_idx = app.state.MODELS[form_data.source]["urls"][0]
         else:
@@ -447,7 +447,7 @@ async def delete_model(
     url_idx: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
-    if url_idx == None:
+    if url_idx is None:
         if form_data.name in app.state.MODELS:
             url_idx = app.state.MODELS[form_data.name]["urls"][0]
         else:
@@ -539,7 +539,7 @@ async def generate_embeddings(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    if url_idx == None:
+    if url_idx is None:
         model = form_data.model
 
         if ":" not in model:
@@ -589,7 +589,7 @@ def generate_ollama_embeddings(
 
     log.info(f"generate_ollama_embeddings {form_data}")
 
-    if url_idx == None:
+    if url_idx is None:
         model = form_data.model
 
         if ":" not in model:
@@ -658,7 +658,7 @@ async def generate_completion(
     user=Depends(get_verified_user),
 ):
 
-    if url_idx == None:
+    if url_idx is None:
         model = form_data.model
 
         if ":" not in model:
@@ -818,7 +818,7 @@ async def generate_chat_completion(
                         },
                     )
 
-    if url_idx == None:
+    if url_idx is None:
         if ":" not in payload["model"]:
             payload["model"] = f"{payload['model']}:latest"
 
@@ -911,7 +911,7 @@ async def generate_openai_chat_completion(
                         },
                     )
 
-    if url_idx == None:
+    if url_idx is None:
         if ":" not in payload["model"]:
             payload["model"] = f"{payload['model']}:latest"
 
@@ -935,7 +935,7 @@ async def get_openai_models(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    if url_idx == None:
+    if url_idx is None:
         models = await get_all_models()
 
         if app.state.config.ENABLE_MODEL_FILTER:
@@ -1094,7 +1094,7 @@ async def download_model(
             detail="Invalid file_url. Only URLs from allowed hosts are permitted.",
         )
 
-    if url_idx == None:
+    if url_idx is None:
         url_idx = 0
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
 
@@ -1113,7 +1113,7 @@ async def download_model(
 @app.post("/models/upload")
 @app.post("/models/upload/{url_idx}")
 def upload_model(file: UploadFile = File(...), url_idx: Optional[int] = None):
-    if url_idx == None:
+    if url_idx is None:
         url_idx = 0
     ollama_url = app.state.config.OLLAMA_BASE_URLS[url_idx]
 

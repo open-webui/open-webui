@@ -386,7 +386,7 @@ async def delete_shared_chat_by_id(id: str, user=Depends(get_current_user)):
         result = Chats.delete_shared_chat_by_chat_id(id)
         update_result = Chats.update_chat_share_id_by_id(id, None)
 
-        return result and update_result != None
+        return result and update_result is not None
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -403,7 +403,7 @@ async def delete_shared_chat_by_id(id: str, user=Depends(get_current_user)):
 async def get_chat_tags_by_id(id: str, user=Depends(get_current_user)):
     tags = Tags.get_tags_by_chat_id_and_user_id(id, user.id)
 
-    if tags != None:
+    if tags is not None:
         return tags
     else:
         raise HTTPException(

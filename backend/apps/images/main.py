@@ -115,7 +115,7 @@ async def update_engine_url(
     form_data: EngineUrlUpdateForm, user=Depends(get_admin_user)
 ):
 
-    if form_data.AUTOMATIC1111_BASE_URL == None:
+    if form_data.AUTOMATIC1111_BASE_URL is None:
         app.state.config.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
     else:
         url = form_data.AUTOMATIC1111_BASE_URL.strip("/")
@@ -125,7 +125,7 @@ async def update_engine_url(
         except Exception as e:
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
-    if form_data.COMFYUI_BASE_URL == None:
+    if form_data.COMFYUI_BASE_URL is None:
         app.state.config.COMFYUI_BASE_URL = COMFYUI_BASE_URL
     else:
         url = form_data.COMFYUI_BASE_URL.strip("/")
@@ -514,7 +514,7 @@ def generate_image(
     except Exception as e:
         error = e
 
-        if r != None:
+        if r is not None:
             data = r.json()
             if "error" in data:
                 error = data["error"]["message"]

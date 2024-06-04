@@ -80,7 +80,7 @@ def get_current_user(
         return get_current_user_by_api_key(auth_token.credentials)
     # auth by jwt token
     data = decode_token(auth_token.credentials)
-    if data != None and "id" in data:
+    if data is not None and "id" in data:
         user = Users.get_user_by_id(data["id"])
         if user is None:
             raise HTTPException(

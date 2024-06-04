@@ -44,7 +44,7 @@ async def get_documents(user=Depends(get_current_user)):
 @router.post("/create", response_model=Optional[DocumentResponse])
 async def create_new_doc(form_data: DocumentForm, user=Depends(get_admin_user)):
     doc = Documents.get_doc_by_name(form_data.name)
-    if doc == None:
+    if doc is None:
         doc = Documents.insert_new_doc(user.id, form_data)
 
         if doc:
