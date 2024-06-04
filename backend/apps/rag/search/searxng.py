@@ -44,10 +44,8 @@ def search_searxng(
         "q": query,
         "format": "json",
         "pageno": 1,
-        "results_per_page": count,
         "language": language,
         "time_range": time_range,
-        "engines": "",
         "categories": categories,
         "theme": "simple",
         "image_proxy": 0,
@@ -81,5 +79,5 @@ def search_searxng(
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("content")
         )
-        for result in sorted_results
+        for result in sorted_results[:count]
     ]
