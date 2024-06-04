@@ -2,7 +2,7 @@
 	import { io } from 'socket.io-client';
 
 	import { onMount, tick, setContext } from 'svelte';
-	import { config, user, theme, WEBUI_NAME, mobile, socket } from '$lib/stores';
+	import { config, user, theme, WEBUI_NAME, mobile, socket, activeUserCount } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { Toaster, toast } from 'svelte-sonner';
 
@@ -69,7 +69,12 @@
 					console.log('connected');
 				});
 
-				socket.set(_socket);
+				await socket.set(_socket);
+
+				_socket.on('user-count', (data) => {
+					console.log('user-count', data);
+					activeUserCount.set(data.count);
+				});
 
 				if (localStorage.token) {
 					// Get Session User Info
