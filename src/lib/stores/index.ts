@@ -111,6 +111,7 @@ type AudioSettings = {
 	TTSEngine?: string;
 	speaker?: string;
 	model?: string;
+	nonLocalVoices?: boolean;
 };
 
 type TitleSettings = {

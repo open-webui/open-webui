@@ -36,6 +36,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
+	import Help from '$lib/components/layout/Help.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -160,7 +161,7 @@
 				if (isCtrlPressed && event.key === '/') {
 					event.preventDefault();
 					console.log('showShortcuts');
-					showShortcutsButtonElement.click();
+					document.getElementById('show-shortcuts-button')?.click();
 				}
 			});
 
@@ -175,22 +176,7 @@
 	});
 </script>
 
-<div class=" hidden lg:flex fixed bottom-0 right-0 px-2 py-2 z-10">
-	<Tooltip content={$i18n.t('Help')} placement="left">
-		<button
-			id="show-shortcuts-button"
-			bind:this={showShortcutsButtonElement}
-			class="text-gray-600 dark:text-gray-300 bg-gray-300/20 size-5 flex items-center justify-center text-[0.7rem] rounded-full"
-			on:click={() => {
-				showShortcuts = !showShortcuts;
-			}}
-		>
-			?
-		</button>
-	</Tooltip>
-</div>
-
-<ShortcutsModal bind:show={showShortcuts} />
+<Help />
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
 
