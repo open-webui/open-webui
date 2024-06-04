@@ -601,6 +601,20 @@ WEBUI_BANNERS = PersistentConfig(
     [BannerModel(**banner) for banner in json.loads("[]")],
 )
 
+
+SHOW_ADMIN_DETAILS = PersistentConfig(
+    "SHOW_ADMIN_DETAILS",
+    "auth.admin.show",
+    os.environ.get("SHOW_ADMIN_DETAILS", "true").lower() == "true",
+)
+
+ADMIN_EMAIL = PersistentConfig(
+    "ADMIN_EMAIL",
+    "auth.admin.email",
+    os.environ.get("ADMIN_EMAIL", None),
+)
+
+
 ####################################
 # WEBUI_SECRET_KEY
 ####################################
