@@ -1,13 +1,11 @@
 from fastapi import (
     FastAPI,
     Request,
-    Response,
     HTTPException,
     Depends,
     status,
     UploadFile,
     File,
-    BackgroundTasks,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -17,7 +15,6 @@ from pydantic import BaseModel, ConfigDict
 
 import os
 import re
-import copy
 import random
 import requests
 import json
@@ -32,16 +29,12 @@ from typing import Optional, List, Union
 from starlette.background import BackgroundTask
 
 from apps.webui.models.models import Models
-from apps.webui.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
-    decode_token,
-    get_current_user,
     get_verified_user,
     get_admin_user,
 )
 
-from utils.models import get_model_id_from_custom_model_id
 
 
 from config import (

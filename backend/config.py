@@ -5,9 +5,8 @@ import importlib.metadata
 import pkgutil
 import chromadb
 from chromadb import Settings
-from base64 import b64encode
 from bs4 import BeautifulSoup
-from typing import TypeVar, Generic, Union
+from typing import TypeVar, Generic
 from pydantic import BaseModel
 from typing import Optional
 
@@ -19,7 +18,6 @@ import markdown
 import requests
 import shutil
 
-from secrets import token_bytes
 from constants import ERROR_MESSAGES
 
 ####################################

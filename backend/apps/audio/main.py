@@ -1,4 +1,3 @@
-import os
 import logging
 from fastapi import (
     FastAPI,
@@ -8,10 +7,9 @@ from fastapi import (
     status,
     UploadFile,
     File,
-    Form,
 )
 
-from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
+from fastapi.responses import FileResponse
 
 from fastapi.middleware.cors import CORSMiddleware
 from faster_whisper import WhisperModel
@@ -26,12 +24,10 @@ import json
 
 from constants import ERROR_MESSAGES
 from utils.utils import (
-    decode_token,
     get_current_user,
     get_verified_user,
     get_admin_user,
 )
-from utils.misc import calculate_sha256
 
 from config import (
     SRC_LOG_LEVELS,

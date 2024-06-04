@@ -1,12 +1,9 @@
-from fastapi import Response, Request
-from fastapi import Depends, FastAPI, HTTPException, status
-from datetime import datetime, timedelta
-from typing import List, Union, Optional
+from fastapi import Request
+from fastapi import Depends, HTTPException, status
+from typing import List, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel
-import time
-import uuid
 import logging
 
 from apps.webui.models.users import (
@@ -22,7 +19,6 @@ from apps.webui.models.chats import Chats
 from utils.utils import (
     get_verified_user,
     get_password_hash,
-    get_current_user,
     get_admin_user,
 )
 from constants import ERROR_MESSAGES

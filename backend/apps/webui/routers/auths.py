@@ -1,13 +1,11 @@
-import logging
 
-from fastapi import Request, UploadFile, File
+from fastapi import Request
 from fastapi import Depends, HTTPException, status
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 import re
 import uuid
-import csv
 
 
 from apps.webui.models.auths import (

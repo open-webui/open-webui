@@ -1,10 +1,9 @@
 from pydantic import BaseModel
 from peewee import *
 from playhouse.shortcuts import model_to_dict
-from typing import List, Union, Optional
+from typing import List, Optional
 
 from apps.webui.internal.db import DB
-from apps.webui.models.chats import Chats
 
 import time
 import uuid

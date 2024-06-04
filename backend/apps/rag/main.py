@@ -8,7 +8,7 @@ from fastapi import (
     Form,
 )
 from fastapi.middleware.cors import CORSMiddleware
-import os, shutil, logging, re
+import os, shutil, logging
 
 from pathlib import Path
 from typing import List, Union, Sequence
@@ -23,7 +23,6 @@ from langchain_community.document_loaders import (
     BSHTMLLoader,
     Docx2txtLoader,
     UnstructuredEPubLoader,
-    UnstructuredWordDocumentLoader,
     UnstructuredMarkdownLoader,
     UnstructuredXMLLoader,
     UnstructuredRSTLoader,
@@ -49,7 +48,6 @@ import sentence_transformers
 from apps.webui.models.documents import (
     Documents,
     DocumentForm,
-    DocumentResponse,
 )
 
 from apps.rag.utils import (

@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Optional
 
@@ -10,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 
 from apps.webui.internal.db import DB, JSONField
 
-from typing import List, Union, Optional
+from typing import List, Optional
 from config import SRC_LOG_LEVELS
 
 import time

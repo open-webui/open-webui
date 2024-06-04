@@ -1,9 +1,8 @@
 from pydantic import BaseModel
-from typing import List, Union, Optional
+from typing import List, Optional
 from peewee import *
 from playhouse.shortcuts import model_to_dict
 
-import json
 import uuid
 import time
 import logging

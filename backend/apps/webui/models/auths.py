@@ -1,6 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Union, Optional
-import time
+from typing import Optional
 import uuid
 import logging
 from peewee import *

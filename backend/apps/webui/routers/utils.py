@@ -1,7 +1,7 @@
-from fastapi import APIRouter, UploadFile, File, Response
+from fastapi import APIRouter, Response
 from fastapi import Depends, HTTPException, status
 from peewee import SqliteDatabase
-from starlette.responses import StreamingResponse, FileResponse
+from starlette.responses import FileResponse
 from pydantic import BaseModel
 
 
@@ -10,9 +10,9 @@ import markdown
 
 from apps.webui.internal.db import DB
 from utils.utils import get_admin_user
-from utils.misc import calculate_sha256, get_gravatar_url
+from utils.misc import get_gravatar_url
 
-from config import OLLAMA_BASE_URLS, DATA_DIR, UPLOAD_DIR, ENABLE_ADMIN_EXPORT
+from config import DATA_DIR, ENABLE_ADMIN_EXPORT
 from constants import ERROR_MESSAGES
 from typing import List
 

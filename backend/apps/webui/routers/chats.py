@@ -1,17 +1,13 @@
 from fastapi import Depends, Request, HTTPException, status
-from datetime import datetime, timedelta
-from typing import List, Union, Optional
+from typing import List, Optional
 from utils.utils import get_current_user, get_admin_user
 from fastapi import APIRouter
 from pydantic import BaseModel
 import json
 import logging
 
-from apps.webui.models.users import Users
 from apps.webui.models.chats import (
-    ChatModel,
     ChatResponse,
-    ChatTitleForm,
     ChatForm,
     ChatTitleIdResponse,
     Chats,
@@ -22,7 +18,6 @@ from apps.webui.models.tags import (
     TagModel,
     ChatIdTagModel,
     ChatIdTagForm,
-    ChatTagsResponse,
     Tags,
 )
 

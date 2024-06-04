@@ -1,7 +1,6 @@
-from fastapi import Response, Request
-from fastapi import Depends, FastAPI, HTTPException, status
-from datetime import datetime, timedelta
-from typing import List, Union, Optional
+from fastapi import Request
+from fastapi import Depends
+from typing import List, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -10,7 +9,6 @@ import logging
 from apps.webui.models.memories import Memories, MemoryModel
 
 from utils.utils import get_verified_user
-from constants import ERROR_MESSAGES
 
 from config import SRC_LOG_LEVELS, CHROMA_CLIENT
 

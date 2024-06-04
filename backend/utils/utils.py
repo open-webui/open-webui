@@ -3,12 +3,10 @@ from fastapi import HTTPException, status, Depends
 
 from apps.webui.models.users import Users
 
-from pydantic import BaseModel
 from typing import Union, Optional
 from constants import ERROR_MESSAGES
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
-import requests
 import jwt
 import uuid
 import logging

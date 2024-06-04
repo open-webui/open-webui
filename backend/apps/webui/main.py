@@ -1,5 +1,4 @@
-from fastapi import FastAPI, Depends
-from fastapi.routing import APIRoute
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apps.webui.routers import (
     auths,
@@ -13,7 +12,6 @@ from apps.webui.routers import (
     utils,
 )
 from config import (
-    WEBUI_BUILD_HASH,
     SHOW_ADMIN_DETAILS,
     ADMIN_EMAIL,
     WEBUI_AUTH,

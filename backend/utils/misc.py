@@ -1,6 +1,5 @@
 from pathlib import Path
 import hashlib
-import json
 import re
 from datetime import timedelta
 from typing import Optional

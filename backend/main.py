@@ -1,7 +1,5 @@
 from contextlib import asynccontextmanager
-from bs4 import BeautifulSoup
 import json
-import markdown
 import time
 import os
 import sys
@@ -14,7 +12,6 @@ from fastapi import FastAPI, Request, Depends, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException
-from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -30,11 +27,10 @@ from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
 from apps.webui.main import app as webui_app
 
-import asyncio
 from pydantic import BaseModel
 from typing import List, Optional
 
-from apps.webui.models.models import Models, ModelModel
+from apps.webui.models.models import Models
 from utils.utils import (
     get_admin_user,
     get_verified_user,
