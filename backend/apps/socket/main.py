@@ -15,22 +15,20 @@ async def connect(sid, environ, auth):
     print("connect ", sid)
 
     user = None
-    data = decode_token(auth["token"])
+    if auth and "token" in auth:
+        data = decode_token(auth["token"])
 
-    if data is not None and "id" in data:
-        user = Users.get_user_by_id(data["id"])
+        if data is not None and "id" in data:
+            user = Users.get_user_by_id(data["id"])
 
-    if user:
-        USER_POOL[sid] = {
-            "id": user.id,
-            "name": user.name,
-            "email": user.email,
-            "role": user.role,
-        }
-        print(f"user {user.name}({user.id}) connected with session ID {sid}")
-    else:
-        print("Authentication failed. Disconnecting.")
-        await sio.disconnect(sid)
+        if user:
+            USER_POOL[sid] = {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "role": user.role,
+            }
+            print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
 
 @sio.event
