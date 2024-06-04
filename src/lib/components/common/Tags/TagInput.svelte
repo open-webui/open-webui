@@ -42,7 +42,7 @@
 				{/each}
 			</datalist>
 
-			<button type="button" on:click={addTagHandler}>
+			<button id="save-tag-button" type="button" on:click={addTagHandler}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 16 16"
@@ -63,6 +63,7 @@
 	<button
 		class=" cursor-pointer self-center p-0.5 flex h-fit items-center dark:hover:bg-gray-700 rounded-full transition border dark:border-gray-600 border-dashed"
 		type="button"
+		id="add-tag-button"
 		on:click={() => {
 			showTagInput = !showTagInput;
 		}}

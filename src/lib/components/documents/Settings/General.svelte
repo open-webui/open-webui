@@ -635,6 +635,7 @@
 								showResetConfirm = false;
 							}}
 							type="button"
+							aria-label="{$i18n.t('Confirm')}"
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -676,6 +677,7 @@
 						showResetConfirm = true;
 					}}
 					type="button"
+					aria-label="{$i18n.t('Reset Vector Storage')}"
 				>
 					<div class=" self-center mr-3">
 						<svg
