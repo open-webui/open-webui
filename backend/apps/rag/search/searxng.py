@@ -81,5 +81,5 @@ def search_searxng(
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("content")
         )
-        for result in sorted_results
+        for result in sorted_results[:count]
     ]
