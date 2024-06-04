@@ -52,27 +52,30 @@ export class Alltalk {
     }
 
     async isReadyCheck(): Promise<boolean> {
-        const result = await this.api.ready();
-        console.log("isReadyCheck: ", result);
-        this.isReady = result && result.status === 'Ready';
-        if (!this.isReady) {
+        let result: boolean = false;
+        const res = await this.api.ready();
+        console.log("isReadyCheck: ", res);
+        result = res && res.status === 'Ready';
+        if (!result) {
             console.error('Alltalk is not ready.', result);
         }
-        return this.isReady;
+        return result;
     }
 
-    async setup(): Promise<void> {
+    async setup(firstLoad: boolean): Promise<void> {
         console.log("Setting up Alltalk");
         console.log("baseUrl: ", this.baseUrl);
-        if (!this.baseUrl) {
+        if (!this.baseUrl && !firstLoad) {
             return;
         }
+        this.currentsSettings = await this.getCurrentSettings();
+
         this.voicesList = await this.getVoices();
         if (this.voicesList.length > 0 && !this.currentVoice) {
             this.currentVoice = this.voicesList[0];
         }
-        this.currentsSettings = await this.getCurrentSettings();
         this.modelList = await this.getModels();
+        this.isReady = await this.isReadyCheck();
     }
 
     async getVoices(): Promise<string[]> {

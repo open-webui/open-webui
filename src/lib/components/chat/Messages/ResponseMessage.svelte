@@ -218,19 +218,20 @@
 
 
 	const handleAudioRequest = async (message: string, promiseToResolve: Function, callback) => {
-		const sentences = mergeTexts(extractSentences(message));
+		const context = {};
+		context.sentences = mergeTexts(extractSentences(message));
 
-		console.log(sentences);
+		console.log(context.sentences);
 
-		sentencesAudio = sentences.reduce((a, e, i, arr) => {
+		sentencesAudio = context.sentences.reduce((a, e, i, arr) => {
 			a[i] = null;
 			return a;
 		}, {});
 
-		let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+		context.lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
 
-		for (const [idx, sentence] of sentences.entries()) {
-			const res = await promiseToResolve(sentence).catch((error) => {
+		for (const [idx, sentence] of context.sentences.entries()) {
+			const res = await promiseToResolve(context.sentence).catch((error) => {
 				toast.error(error);
 
 				speaking = null;
@@ -323,6 +324,20 @@
 				console.log(sentencesAudio);
 
 				let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+
+				// Load context if necessary
+				if(!_alltalk.isReady){
+					try{
+						await _alltalk.setup(true);
+					}catch(error){
+						toast.error(error);
+						return;
+					}
+					if(!_alltalk.isReady){
+						toast.error("error loading alltalk");
+						return;
+					}
+				}
 
 				for (const [idx, sentence] of sentences.entries()) {
 					const speechUrl = await _alltalk.toggleSpeakMessage(sentence).catch((error) => {
