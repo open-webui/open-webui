@@ -1,6 +1,8 @@
 <script>
+	import { io } from 'socket.io-client';
+
 	import { onMount, tick, setContext } from 'svelte';
-	import { config, user, theme, WEBUI_NAME, mobile } from '$lib/stores';
+	import { config, user, theme, WEBUI_NAME, mobile, socket } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { Toaster, toast } from 'svelte-sonner';
 
@@ -12,7 +14,7 @@
 
 	import 'tippy.js/dist/tippy.css';
 
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import i18n, { initI18n, getLanguages } from '$lib/i18n';
 
 	setContext('i18n', i18n);
@@ -55,10 +57,20 @@
 		if (backendConfig) {
 			// Save Backend Status to Store
 			await config.set(backendConfig);
-
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
+				const _socket = io(`${WEBUI_BASE_URL}`, {
+					path: '/ws/socket.io',
+					auth: { token: localStorage.token }
+				});
+
+				_socket.on('connect', () => {
+					console.log('connected');
+				});
+
+				socket.set(_socket);
+
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
