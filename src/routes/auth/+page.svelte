@@ -188,7 +188,7 @@
 
 						<div class="mt-5">
 							<button
-								class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-semibold text-sm py-3 transition"
+								class=" bg-emerald-700 hover:bg-emerald-800 w-full rounded-2xl text-white font-semibold text-sm py-3 transition"
 								type="submit"
 							>
 								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
