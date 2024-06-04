@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import peewee as pw
 from peewee import *

@@ -116,7 +116,7 @@ async def signin(request: Request, form_data: SigninForm):
                 ),
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
-    elif WEBUI_AUTH == False:
+    elif WEBUI_AUTH is False:
         admin_email = "admin@localhost"
         admin_password = "admin"
 

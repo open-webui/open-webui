@@ -695,7 +695,7 @@ async def get_pipelines(urlIdx: Optional[int] = None, user=Depends(get_admin_use
 async def get_pipeline_valves(
     urlIdx: Optional[int], pipeline_id: str, user=Depends(get_admin_user)
 ):
-    models = await get_all_models()
+    await get_all_models()
     r = None
     try:
 
@@ -733,7 +733,7 @@ async def get_pipeline_valves(
 async def get_pipeline_valves_spec(
     urlIdx: Optional[int], pipeline_id: str, user=Depends(get_admin_user)
 ):
-    models = await get_all_models()
+    await get_all_models()
 
     r = None
     try:
@@ -773,7 +773,7 @@ async def update_pipeline_valves(
     form_data: dict,
     user=Depends(get_admin_user),
 ):
-    models = await get_all_models()
+    await get_all_models()
 
     r = None
     try:
@@ -907,7 +907,7 @@ async def get_app_latest_release_version():
                 latest_version = data["tag_name"]
 
                 return {"current": VERSION, "latest": latest_version[1:]}
-    except aiohttp.ClientError as e:
+    except aiohttp.ClientError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,

@@ -51,7 +51,7 @@ def decode_token(token: str) -> Optional[dict]:
     try:
         decoded = jwt.decode(token, SESSION_SECRET, algorithms=[ALGORITHM])
         return decoded
-    except Exception as e:
+    except Exception:
         return None
 
 

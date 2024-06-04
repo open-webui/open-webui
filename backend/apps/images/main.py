@@ -120,7 +120,7 @@ async def update_engine_url(
     else:
         url = form_data.AUTOMATIC1111_BASE_URL.strip("/")
         try:
-            r = requests.head(url)
+            requests.head(url)
             app.state.config.AUTOMATIC1111_BASE_URL = url
         except Exception as e:
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
@@ -131,7 +131,7 @@ async def update_engine_url(
         url = form_data.COMFYUI_BASE_URL.strip("/")
 
         try:
-            r = requests.head(url)
+            requests.head(url)
             app.state.config.COMFYUI_BASE_URL = url
         except Exception as e:
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
