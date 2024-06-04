@@ -134,7 +134,7 @@ async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin
 async def fetch_url(url):
     timeout = aiohttp.ClientTimeout(total=5)
     try:
-        async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(url) as response:
                 return await response.json()
     except Exception as e:
@@ -156,7 +156,7 @@ async def cleanup_response(
 async def post_streaming_url(url: str, payload: str):
     r = None
     try:
-        session = aiohttp.ClientSession()
+        session = aiohttp.ClientSession(trust_env=True)
         r = await session.post(url, data=payload)
         r.raise_for_status()
 
@@ -1045,7 +1045,7 @@ async def download_file_stream(
 
     timeout = aiohttp.ClientTimeout(total=600)  # Set the timeout
 
-    async with aiohttp.ClientSession(timeout=timeout) as session:
+    async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
         async with session.get(file_url, headers=headers) as response:
             total_size = int(response.headers.get("content-length", 0)) + current_size
 

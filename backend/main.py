@@ -879,23 +879,7 @@ class UrlForm(BaseModel):
 async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
     app.state.config.WEBHOOK_URL = form_data.url
     webui_app.state.WEBHOOK_URL = app.state.config.WEBHOOK_URL
-
-    return {
-        "url": app.state.config.WEBHOOK_URL,
-    }
-
-
-@app.get("/api/community_sharing", response_model=bool)
-async def get_community_sharing_status(request: Request, user=Depends(get_admin_user)):
-    return webui_app.state.config.ENABLE_COMMUNITY_SHARING
-
-
-@app.get("/api/community_sharing/toggle", response_model=bool)
-async def toggle_community_sharing(request: Request, user=Depends(get_admin_user)):
-    webui_app.state.config.ENABLE_COMMUNITY_SHARING = (
-        not webui_app.state.config.ENABLE_COMMUNITY_SHARING
-    )
-    return webui_app.state.config.ENABLE_COMMUNITY_SHARING
+    return {"url": app.state.config.WEBHOOK_URL}
 
 
 @app.get("/api/version")

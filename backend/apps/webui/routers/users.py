@@ -19,7 +19,12 @@ from apps.webui.models.users import (
 from apps.webui.models.auths import Auths
 from apps.webui.models.chats import Chats
 
-from utils.utils import get_verified_user, get_password_hash, get_admin_user
+from utils.utils import (
+    get_verified_user,
+    get_password_hash,
+    get_current_user,
+    get_admin_user,
+)
 from constants import ERROR_MESSAGES
 
 from config import SRC_LOG_LEVELS
