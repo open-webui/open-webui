@@ -34,6 +34,7 @@ async def connect(sid, environ, auth):
 
             print(len(set(USER_POOL)))
             await sio.emit("user-count", {"count": len(set(USER_POOL))})
+            await sio.emit("usage", {"models": get_models_in_use()})
 
 
 @sio.on("user-join")
@@ -64,10 +65,9 @@ async def user_count(sid):
 
 def get_models_in_use():
     # Aggregate all models in use
-
     models_in_use = []
-    for sid, data in USAGE_POOL.items():
-        models_in_use.extend(data["models"])
+    for model_id, data in USAGE_POOL.items():
+        models_in_use.append(model_id)
     print(f"Models in use: {models_in_use}")
 
     return models_in_use
@@ -77,46 +77,45 @@ def get_models_in_use():
 async def usage(sid, data):
     print(f'Received "usage" event from {sid}: {data}')
 
-    # Cancel previous task if there is one
-    if sid in USAGE_POOL:
-        USAGE_POOL[sid]["task"].cancel()
-
-    # Store the new usage data and task
     model_id = data["model"]
 
-    if sid in USAGE_POOL and "models" in USAGE_POOL[sid]:
+    # Cancel previous callback if there is one
+    if model_id in USAGE_POOL:
+        USAGE_POOL[model_id]["callback"].cancel()
 
-        print(USAGE_POOL[sid])
+    # Store the new usage data and task
 
-        models = USAGE_POOL[sid]["models"]
-        if model_id not in models:
-            models.append(model_id)
-            USAGE_POOL[sid] = {"models": models}
+    if model_id in USAGE_POOL:
+        USAGE_POOL[model_id]["sids"].append(sid)
+        USAGE_POOL[model_id]["sids"] = list(set(USAGE_POOL[model_id]["sids"]))
 
     else:
-        USAGE_POOL[sid] = {"models": [model_id]}
+        USAGE_POOL[model_id] = {"sids": [sid]}
 
     # Schedule a task to remove the usage data after TIMEOUT_DURATION
-    USAGE_POOL[sid]["task"] = asyncio.create_task(remove_after_timeout(sid, model_id))
+    USAGE_POOL[model_id]["callback"] = asyncio.create_task(
+        remove_after_timeout(sid, model_id)
+    )
 
-    models_in_use = get_models_in_use()
     # Broadcast the usage data to all clients
-    await sio.emit("usage", {"models": models_in_use})
+    await sio.emit("usage", {"models": get_models_in_use()})
 
 
 async def remove_after_timeout(sid, model_id):
     try:
+        print("remove_after_timeout", sid, model_id)
         await asyncio.sleep(TIMEOUT_DURATION)
-        if sid in USAGE_POOL:
-            if model_id in USAGE_POOL[sid]["models"]:
-                USAGE_POOL[sid]["models"].remove(model_id)
-            if len(USAGE_POOL[sid]["models"]) == 0:
-                del USAGE_POOL[sid]
-            print(f"Removed usage data for {sid} due to timeout")
+        if model_id in USAGE_POOL:
+            print(USAGE_POOL[model_id]["sids"])
+            USAGE_POOL[model_id]["sids"].remove(sid)
+            USAGE_POOL[model_id]["sids"] = list(set(USAGE_POOL[model_id]["sids"]))
 
-            models_in_use = get_models_in_use()
+            if len(USAGE_POOL[model_id]["sids"]) == 0:
+                del USAGE_POOL[model_id]
+
+            print(f"Removed usage data for {model_id} due to timeout")
             # Broadcast the usage data to all clients
-            await sio.emit("usage", {"models": models_in_use})
+            await sio.emit("usage", {"models": get_models_in_use()})
     except asyncio.CancelledError:
         # Task was cancelled due to new 'usage' event
         pass

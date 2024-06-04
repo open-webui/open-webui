@@ -145,7 +145,7 @@
 
 				<Tooltip
 					content={$USAGE_POOL && $USAGE_POOL.length > 0
-						? `Running: ${$USAGE_POOL.join(',')} ✨`
+						? `Running: ${$USAGE_POOL.join(', ')} ✨`
 						: ''}
 				>
 					<div class="flex rounded-md py-1.5 px-3 text-xs gap-2.5 items-center">
