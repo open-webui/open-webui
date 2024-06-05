@@ -14,7 +14,8 @@
 		getModels,
 		getPipelinesList,
 		downloadPipeline,
-		deletePipeline
+		deletePipeline,
+		uploadPipeline
 	} from '$lib/apis';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -24,6 +25,9 @@
 	export let saveHandler: Function;
 
 	let downloading = false;
+	let uploading = false;
+
+	let pipelineFiles;
 
 	let PIPELINES_LIST = null;
 	let selectedPipelinesUrlIdx = '';
@@ -126,6 +130,41 @@
 		downloading = false;
 	};
 
+	const uploadPipelineHandler = async () => {
+		uploading = true;
+
+		if (pipelineFiles && pipelineFiles.length !== 0) {
+			const file = pipelineFiles[0];
+
+			console.log(file);
+
+			const res = await uploadPipeline(localStorage.token, file, selectedPipelinesUrlIdx).catch(
+				(error) => {
+					console.log(error);
+					toast.error('Something went wrong :/');
+					return null;
+				}
+			);
+
+			if (res) {
+				toast.success('Pipeline downloaded successfully');
+				setPipelines();
+				models.set(await getModels(localStorage.token));
+			}
+		} else {
+			toast.error('No file selected');
+		}
+
+		pipelineFiles = null;
+		const pipelineUploadInputElement = document.getElementById('pipeline-upload-input');
+
+		if (pipelineUploadInputElement) {
+			pipelineUploadInputElement.value = null;
+		}
+
+		uploading = false;
+	};
+
 	const deletePipelineHandler = async () => {
 		const res = await deletePipeline(
 			localStorage.token,
@@ -193,6 +232,91 @@
 								{/each}
 							</select>
 						</div>
+					</div>
+				</div>
+
+				<div class=" my-2">
+					<div class=" mb-2 text-sm font-medium">
+						{$i18n.t('Upload Pipeline')}
+					</div>
+					<div class="flex w-full">
+						<div class="flex-1 mr-2">
+							<input
+								id="pipelines-upload-input"
+								bind:files={pipelineFiles}
+								type="file"
+								accept=".py"
+								hidden
+							/>
+
+							<button
+								class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-800 dark:hover:bg-gray-850 text-center rounded-xl"
+								type="button"
+								on:click={() => {
+									document.getElementById('pipelines-upload-input')?.click();
+								}}
+							>
+								{#if pipelineFiles}
+									{pipelineFiles.length > 0 ? `${pipelineFiles.length}` : ''} pipeline(s) selected.
+								{:else}
+									{$i18n.t('Click here to select a py file.')}
+								{/if}
+							</button>
+						</div>
+						<button
+							class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+							on:click={() => {
+								uploadPipelineHandler();
+							}}
+							disabled={uploading}
+							type="button"
+						>
+							{#if uploading}
+								<div class="self-center">
+									<svg
+										class=" w-4 h-4"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										xmlns="http://www.w3.org/2000/svg"
+									>
+										<style>
+											.spinner_ajPY {
+												transform-origin: center;
+												animation: spinner_AtaB 0.75s infinite linear;
+											}
+
+											@keyframes spinner_AtaB {
+												100% {
+													transform: rotate(360deg);
+												}
+											}
+										</style>
+										<path
+											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+											opacity=".25"
+										/>
+										<path
+											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+											class="spinner_ajPY"
+										/>
+									</svg>
+								</div>
+							{:else}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="size-4"
+								>
+									<path
+										d="M7.25 10.25a.75.75 0 0 0 1.5 0V4.56l2.22 2.22a.75.75 0 1 0 1.06-1.06l-3.5-3.5a.75.75 0 0 0-1.06 0l-3.5 3.5a.75.75 0 0 0 1.06 1.06l2.22-2.22v5.69Z"
+									/>
+									<path
+										d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
+									/>
+								</svg>
+							{/if}
+						</button>
 					</div>
 				</div>
 

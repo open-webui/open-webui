@@ -133,6 +133,43 @@ export const getPipelinesList = async (token: string = '') => {
 	return pipelines;
 };
 
+export const uploadPipeline = async (token: string, file: File, urlIdx: string) => {
+	let error = null;
+
+	// Create a new FormData object to handle the file upload
+	const formData = new FormData();
+	formData.append('file', file);
+	formData.append('urlIdx', urlIdx);
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/pipelines/upload`, {
+		method: 'POST',
+		headers: {
+			...(token && { authorization: `Bearer ${token}` })
+			// 'Content-Type': 'multipart/form-data' is not needed as Fetch API will set it automatically
+		},
+		body: formData
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const downloadPipeline = async (token: string, url: string, urlIdx: string) => {
 	let error = null;
 
