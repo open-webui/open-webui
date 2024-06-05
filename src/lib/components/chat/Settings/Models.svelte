@@ -547,7 +547,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-[24rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[27rem]">
 		{#if ollamaEnabled}
 			{#if ollamaVersion !== null}
 				<div class="space-y-2 pr-1.5">
