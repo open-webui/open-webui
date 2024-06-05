@@ -14,6 +14,8 @@ from apps.webui.routers import (
 )
 from config import (
     WEBUI_BUILD_HASH,
+    SHOW_ADMIN_DETAILS,
+    ADMIN_EMAIL,
     WEBUI_AUTH,
     DEFAULT_MODELS,
     DEFAULT_PROMPT_SUGGESTIONS,
@@ -36,6 +38,11 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
 app.state.config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
+
+
+app.state.config.SHOW_ADMIN_DETAILS = SHOW_ADMIN_DETAILS
+app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
+
 
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
