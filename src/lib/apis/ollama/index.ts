@@ -369,21 +369,29 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 	return [res, controller];
 };
 
-export const createModel = async (token: string, tagName: string, content: string) => {
+export const createModel = async (
+	token: string,
+	tagName: string,
+	content: string,
+	urlIdx: string | null = null
+) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/create`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			name: tagName,
-			modelfile: content
-		})
-	}).catch((err) => {
+	const res = await fetch(
+		`${OLLAMA_API_BASE_URL}/api/create${urlIdx !== null ? `/${urlIdx}` : ''}`,
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({
+				name: tagName,
+				modelfile: content
+			})
+		}
+	).catch((err) => {
 		error = err;
 		return null;
 	});

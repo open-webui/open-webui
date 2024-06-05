@@ -43,6 +43,13 @@
 
 	let modelTransferring = false;
 	let modelTag = '';
+
+	let createModelLoading = false;
+	let createModelTag = '';
+	let createModelContent = '';
+	let createModelDigest = '';
+	let createModelPullProgress = null;
+
 	let digest = '';
 	let pullProgress = null;
 
@@ -434,6 +441,83 @@
 		}
 	};
 
+	const createModelHandler = async () => {
+		createModelLoading = true;
+		const res = await createModel(
+			localStorage.token,
+			createModelTag,
+			createModelContent,
+			selectedOllamaUrlIdx
+		).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res && res.ok) {
+			const reader = res.body
+				.pipeThrough(new TextDecoderStream())
+				.pipeThrough(splitStream('\n'))
+				.getReader();
+
+			while (true) {
+				const { value, done } = await reader.read();
+				if (done) break;
+
+				try {
+					let lines = value.split('\n');
+
+					for (const line of lines) {
+						if (line !== '') {
+							console.log(line);
+							let data = JSON.parse(line);
+							console.log(data);
+
+							if (data.error) {
+								throw data.error;
+							}
+							if (data.detail) {
+								throw data.detail;
+							}
+
+							if (data.status) {
+								if (
+									!data.digest &&
+									!data.status.includes('writing') &&
+									!data.status.includes('sha256')
+								) {
+									toast.success(data.status);
+								} else {
+									if (data.digest) {
+										createModelDigest = data.digest;
+
+										if (data.completed) {
+											createModelPullProgress =
+												Math.round((data.completed / data.total) * 1000) / 10;
+										} else {
+											createModelPullProgress = 100;
+										}
+									}
+								}
+							}
+						}
+					}
+				} catch (error) {
+					console.log(error);
+					toast.error(error);
+				}
+			}
+		}
+
+		models.set(await getModels());
+
+		createModelLoading = false;
+
+		createModelTag = '';
+		createModelContent = '';
+		createModelDigest = '';
+		createModelPullProgress = null;
+	};
+
 	onMount(async () => {
 		const ollamaConfig = await getOllamaConfig(localStorage.token);
 
@@ -693,6 +777,77 @@
 									</svg>
 								</button>
 							</div>
+						</div>
+
+						<div>
+							<div class=" mb-2 text-sm font-medium">{$i18n.t('Create a model')}</div>
+							<div class="flex w-full">
+								<div class="flex-1 mr-2 flex flex-col gap-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										placeholder={$i18n.t('Enter model tag (e.g. {{modelTag}})', {
+											modelTag: 'my-modelfile'
+										})}
+										bind:value={createModelTag}
+										disabled={createModelLoading}
+									/>
+
+									<textarea
+										bind:value={createModelContent}
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-100 dark:text-gray-100 dark:bg-gray-850 outline-none resize-none scrollbar-hidden"
+										rows="6"
+										placeholder={`TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`}
+										disabled={createModelLoading}
+									/>
+								</div>
+
+								<div class="flex self-start">
+									<button
+										class="px-2.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition disabled:cursor-not-allowed"
+										on:click={() => {
+											createModelHandler();
+										}}
+										disabled={createModelLoading}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="size-4"
+										>
+											<path
+												d="M7.25 10.25a.75.75 0 0 0 1.5 0V4.56l2.22 2.22a.75.75 0 1 0 1.06-1.06l-3.5-3.5a.75.75 0 0 0-1.06 0l-3.5 3.5a.75.75 0 0 0 1.06 1.06l2.22-2.22v5.69Z"
+											/>
+											<path
+												d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
+											/>
+										</svg>
+									</button>
+								</div>
+							</div>
+
+							{#if createModelDigest !== ''}
+								<div class="flex flex-col mt-1">
+									<div class="font-medium mb-1">{createModelTag}</div>
+									<div class="">
+										<div class="flex flex-row justify-between space-x-4 pr-2">
+											<div class=" flex-1">
+												<div
+													class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full"
+													style="width: {Math.max(15, createModelPullProgress ?? 0)}%"
+												>
+													{createModelPullProgress ?? 0}%
+												</div>
+											</div>
+										</div>
+										{#if createModelDigest}
+											<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
+												{createModelDigest}
+											</div>
+										{/if}
+									</div>
+								</div>
+							{/if}
 						</div>
 
 						<div class="pt-1">
