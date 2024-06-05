@@ -73,6 +73,7 @@ from config import (
     ENABLE_OAUTH_SIGNUP,
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
     WEBUI_SECRET_KEY,
+    WEBUI_SESSION_COOKIE_SAME_SITE,
 )
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from utils.webhook import post_webhook
@@ -507,7 +508,10 @@ for provider_name, provider_config in OAUTH_PROVIDERS.items():
 # SessionMiddleware is used by authlib for oauth
 if len(OAUTH_PROVIDERS) > 0:
     app.add_middleware(
-        SessionMiddleware, secret_key=WEBUI_SECRET_KEY, session_cookie="oui-session"
+        SessionMiddleware,
+        secret_key=WEBUI_SECRET_KEY,
+        session_cookie="oui-session",
+        same_site=WEBUI_SESSION_COOKIE_SAME_SITE,
     )
 
 
@@ -524,7 +528,11 @@ async def oauth_callback(provider: str, request: Request):
     if provider not in OAUTH_PROVIDERS:
         raise HTTPException(404)
     client = oauth.create_client(provider)
-    token = await client.authorize_access_token(request)
+    try:
+        token = await client.authorize_access_token(request)
+    except Exception as e:
+        log.error(f"OAuth callback error: {e}")
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
     user_data: UserInfo = token["userinfo"]
 
     sub = user_data.get("sub")
