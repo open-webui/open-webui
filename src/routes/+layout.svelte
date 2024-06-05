@@ -1,6 +1,17 @@
 <script>
+	import { io } from 'socket.io-client';
+
 	import { onMount, tick, setContext } from 'svelte';
-	import { config, user, theme, WEBUI_NAME, mobile } from '$lib/stores';
+	import {
+		config,
+		user,
+		theme,
+		WEBUI_NAME,
+		mobile,
+		socket,
+		activeUserCount,
+		USAGE_POOL
+	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
@@ -13,7 +24,7 @@
 
 	import 'tippy.js/dist/tippy.css';
 
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import i18n, { initI18n, getLanguages } from '$lib/i18n';
 
 	setContext('i18n', i18n);
@@ -56,10 +67,30 @@
 		if (backendConfig) {
 			// Save Backend Status to Store
 			await config.set(backendConfig);
-
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
+				const _socket = io(`${WEBUI_BASE_URL}`, {
+					path: '/ws/socket.io',
+					auth: { token: localStorage.token }
+				});
+
+				_socket.on('connect', () => {
+					console.log('connected');
+				});
+
+				await socket.set(_socket);
+
+				_socket.on('user-count', (data) => {
+					console.log('user-count', data);
+					activeUserCount.set(data.count);
+				});
+
+				_socket.on('usage', (data) => {
+					console.log('usage', data);
+					USAGE_POOL.set(data['models']);
+				});
+
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {

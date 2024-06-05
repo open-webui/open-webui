@@ -64,7 +64,7 @@
 				</div>
 
 				<div in:fade={{ duration: 200, delay: 200 }}>
-					{#if models[selectedModelIdx]?.info}
+					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 						<div class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3">
 							{models[selectedModelIdx]?.info?.meta?.description}
 						</div>

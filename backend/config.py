@@ -180,6 +180,17 @@ WEBUI_BUILD_HASH = os.environ.get("WEBUI_BUILD_HASH", "dev-build")
 DATA_DIR = Path(os.getenv("DATA_DIR", BACKEND_DIR / "data")).resolve()
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
 
+RESET_CONFIG_ON_START = (
+    os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
+)
+if RESET_CONFIG_ON_START:
+    try:
+        os.remove(f"{DATA_DIR}/config.json")
+        with open(f"{DATA_DIR}/config.json", "w") as f:
+            f.write("{}")
+    except:
+        pass
+
 try:
     CONFIG_DATA = json.loads((DATA_DIR / "config.json").read_text())
 except:
@@ -703,6 +714,7 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
 )
 
+
 class BannerModel(BaseModel):
     id: str
     type: str
@@ -717,6 +729,20 @@ WEBUI_BANNERS = PersistentConfig(
     "ui.banners",
     [BannerModel(**banner) for banner in json.loads("[]")],
 )
+
+
+SHOW_ADMIN_DETAILS = PersistentConfig(
+    "SHOW_ADMIN_DETAILS",
+    "auth.admin.show",
+    os.environ.get("SHOW_ADMIN_DETAILS", "true").lower() == "true",
+)
+
+ADMIN_EMAIL = PersistentConfig(
+    "ADMIN_EMAIL",
+    "auth.admin.email",
+    os.environ.get("ADMIN_EMAIL", None),
+)
+
 
 ####################################
 # WEBUI_SECRET_KEY
@@ -803,6 +829,12 @@ RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
 
 RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
+)
+
+RAG_EMBEDDING_OPENAI_BATCH_SIZE = PersistentConfig(
+    "RAG_EMBEDDING_OPENAI_BATCH_SIZE",
+    "rag.embedding_openai_batch_size",
+    os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", 1),
 )
 
 RAG_RERANKING_MODEL = PersistentConfig(
@@ -898,6 +930,75 @@ YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     "rag.youtube_loader_language",
     os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(","),
 )
+
+
+ENABLE_RAG_WEB_SEARCH = PersistentConfig(
+    "ENABLE_RAG_WEB_SEARCH",
+    "rag.web.search.enable",
+    os.getenv("ENABLE_RAG_WEB_SEARCH", "False").lower() == "true",
+)
+
+RAG_WEB_SEARCH_ENGINE = PersistentConfig(
+    "RAG_WEB_SEARCH_ENGINE",
+    "rag.web.search.engine",
+    os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
+)
+
+SEARXNG_QUERY_URL = PersistentConfig(
+    "SEARXNG_QUERY_URL",
+    "rag.web.search.searxng_query_url",
+    os.getenv("SEARXNG_QUERY_URL", ""),
+)
+
+GOOGLE_PSE_API_KEY = PersistentConfig(
+    "GOOGLE_PSE_API_KEY",
+    "rag.web.search.google_pse_api_key",
+    os.getenv("GOOGLE_PSE_API_KEY", ""),
+)
+
+GOOGLE_PSE_ENGINE_ID = PersistentConfig(
+    "GOOGLE_PSE_ENGINE_ID",
+    "rag.web.search.google_pse_engine_id",
+    os.getenv("GOOGLE_PSE_ENGINE_ID", ""),
+)
+
+BRAVE_SEARCH_API_KEY = PersistentConfig(
+    "BRAVE_SEARCH_API_KEY",
+    "rag.web.search.brave_search_api_key",
+    os.getenv("BRAVE_SEARCH_API_KEY", ""),
+)
+
+SERPSTACK_API_KEY = PersistentConfig(
+    "SERPSTACK_API_KEY",
+    "rag.web.search.serpstack_api_key",
+    os.getenv("SERPSTACK_API_KEY", ""),
+)
+
+SERPSTACK_HTTPS = PersistentConfig(
+    "SERPSTACK_HTTPS",
+    "rag.web.search.serpstack_https",
+    os.getenv("SERPSTACK_HTTPS", "True").lower() == "true",
+)
+
+SERPER_API_KEY = PersistentConfig(
+    "SERPER_API_KEY",
+    "rag.web.search.serper_api_key",
+    os.getenv("SERPER_API_KEY", ""),
+)
+
+
+RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
+    "RAG_WEB_SEARCH_RESULT_COUNT",
+    "rag.web.search.result_count",
+    int(os.getenv("RAG_WEB_SEARCH_RESULT_COUNT", "3")),
+)
+
+RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
+    "RAG_WEB_SEARCH_CONCURRENT_REQUESTS",
+    "rag.web.search.concurrent_requests",
+    int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
+)
+
 
 ####################################
 # Transcribe

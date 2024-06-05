@@ -215,7 +215,7 @@ __builtins__.input = input`);
 		<div class="p-1">{@html lang}</div>
 
 		<div class="flex items-center">
-			{#if lang === 'python' || (lang === '' && checkPythonCode(code))}
+			{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
 				{#if executing}
 					<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
 				{:else}

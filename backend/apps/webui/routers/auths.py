@@ -272,72 +272,87 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
 
 
 ############################
+# GetAdminDetails
+############################
+
+
+@router.get("/admin/details")
+async def get_admin_details(request: Request, user=Depends(get_current_user)):
+    if request.app.state.config.SHOW_ADMIN_DETAILS:
+        admin_email = request.app.state.config.ADMIN_EMAIL
+        admin_name = None
+
+        print(admin_email, admin_name)
+
+        if admin_email:
+            admin = Users.get_user_by_email(admin_email)
+            if admin:
+                admin_name = admin.name
+        else:
+            admin = Users.get_first_user()
+            if admin:
+                admin_email = admin.email
+                admin_name = admin.name
+
+        return {
+            "name": admin_name,
+            "email": admin_email,
+        }
+    else:
+        raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+
+
+############################
 # ToggleSignUp
 ############################
 
 
-@router.get("/signup/enabled", response_model=bool)
-async def get_sign_up_status(request: Request, user=Depends(get_admin_user)):
-    return request.app.state.config.ENABLE_SIGNUP
+@router.get("/admin/config")
+async def get_admin_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
+        "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
+        "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
+        "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
+        "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
+    }
 
 
-@router.get("/signup/enabled/toggle", response_model=bool)
-async def toggle_sign_up(request: Request, user=Depends(get_admin_user)):
-    request.app.state.config.ENABLE_SIGNUP = not request.app.state.config.ENABLE_SIGNUP
-    return request.app.state.config.ENABLE_SIGNUP
+class AdminConfig(BaseModel):
+    SHOW_ADMIN_DETAILS: bool
+    ENABLE_SIGNUP: bool
+    DEFAULT_USER_ROLE: str
+    JWT_EXPIRES_IN: str
+    ENABLE_COMMUNITY_SHARING: bool
 
 
-############################
-# Default User Role
-############################
-
-
-@router.get("/signup/user/role")
-async def get_default_user_role(request: Request, user=Depends(get_admin_user)):
-    return request.app.state.config.DEFAULT_USER_ROLE
-
-
-class UpdateRoleForm(BaseModel):
-    role: str
-
-
-@router.post("/signup/user/role")
-async def update_default_user_role(
-    request: Request, form_data: UpdateRoleForm, user=Depends(get_admin_user)
+@router.post("/admin/config")
+async def update_admin_config(
+    request: Request, form_data: AdminConfig, user=Depends(get_admin_user)
 ):
-    if form_data.role in ["pending", "user", "admin"]:
-        request.app.state.config.DEFAULT_USER_ROLE = form_data.role
-    return request.app.state.config.DEFAULT_USER_ROLE
+    request.app.state.config.SHOW_ADMIN_DETAILS = form_data.SHOW_ADMIN_DETAILS
+    request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP
 
+    if form_data.DEFAULT_USER_ROLE in ["pending", "user", "admin"]:
+        request.app.state.config.DEFAULT_USER_ROLE = form_data.DEFAULT_USER_ROLE
 
-############################
-# JWT Expiration
-############################
-
-
-@router.get("/token/expires")
-async def get_token_expires_duration(request: Request, user=Depends(get_admin_user)):
-    return request.app.state.config.JWT_EXPIRES_IN
-
-
-class UpdateJWTExpiresDurationForm(BaseModel):
-    duration: str
-
-
-@router.post("/token/expires/update")
-async def update_token_expires_duration(
-    request: Request,
-    form_data: UpdateJWTExpiresDurationForm,
-    user=Depends(get_admin_user),
-):
     pattern = r"^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$"
 
     # Check if the input string matches the pattern
-    if re.match(pattern, form_data.duration):
-        request.app.state.config.JWT_EXPIRES_IN = form_data.duration
-        return request.app.state.config.JWT_EXPIRES_IN
-    else:
-        return request.app.state.config.JWT_EXPIRES_IN
+    if re.match(pattern, form_data.JWT_EXPIRES_IN):
+        request.app.state.config.JWT_EXPIRES_IN = form_data.JWT_EXPIRES_IN
+
+    request.app.state.config.ENABLE_COMMUNITY_SHARING = (
+        form_data.ENABLE_COMMUNITY_SHARING
+    )
+
+    return {
+        "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
+        "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
+        "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
+        "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
+        "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
+    }
 
 
 ############################

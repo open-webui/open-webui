@@ -5,6 +5,7 @@
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
+	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
@@ -33,6 +34,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
 	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 
 	export let message;
 	export let siblings;
@@ -106,8 +109,13 @@
 		renderLatex();
 
 		if (message.info) {
-			tooltipInstance = tippy(`#info-${message.id}`, {
-				content: `<span class="text-xs" id="tooltip-${message.id}">response_token/s: ${
+			let tooltipContent = '';
+			if (message.info.openai) {
+				tooltipContent = `prompt_tokens: ${message.info.prompt_tokens ?? 'N/A'}<br/>
+													completion_tokens: ${message.info.completion_tokens ?? 'N/A'}<br/>
+													total_tokens: ${message.info.total_tokens ?? 'N/A'}`;
+			} else {
+				tooltipContent = `response_token/s: ${
 					`${
 						Math.round(
 							((message.info.eval_count ?? 0) / (message.info.eval_duration / 1000000000)) * 100
@@ -137,9 +145,10 @@
                     eval_duration: ${
 											Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
 										}ms<br/>
-                    approximate_total: ${approximateToHumanReadable(
-											message.info.total_duration
-										)}</span>`,
+                    approximate_total: ${approximateToHumanReadable(message.info.total_duration)}`;
+			}
+			tooltipInstance = tippy(`#info-${message.id}`, {
+				content: `<span class="text-xs" id="tooltip-${message.id}">${tooltipContent}</span>`,
 				allowHTML: true
 			});
 		}
@@ -332,9 +341,24 @@
 		generatingImage = false;
 	};
 
+	$: if (!edit) {
+		(async () => {
+			await tick();
+			renderStyling();
+
+			await mermaid.run({
+				querySelector: '.mermaid'
+			});
+		})();
+	}
+
 	onMount(async () => {
 		await tick();
 		renderStyling();
+
+		await mermaid.run({
+			querySelector: '.mermaid'
+		});
 	});
 </script>
 
@@ -364,7 +388,7 @@
 				{/if}
 			</Name>
 
-			{#if message.files}
+			{#if (message?.files ?? []).filter((f) => f.type === 'image').length > 0}
 				<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
 					{#each message.files as file}
 						<div>
@@ -377,9 +401,35 @@
 			{/if}
 
 			<div
-				class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
+				class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-headings:-mb-4 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
 			>
 				<div>
+					{#if message?.status}
+						<div class="flex items-center gap-2 pt-1 pb-1">
+							{#if message?.status?.done === false}
+								<div class="">
+									<Spinner className="size-4" />
+								</div>
+							{/if}
+
+							{#if message?.status?.action === 'web_search' && message?.status?.urls}
+								<WebSearchResults urls={message?.status?.urls}>
+									<div class="flex flex-col justify-center -space-y-0.5">
+										<div class="text-base line-clamp-1 text-wrap">
+											{message.status.description}
+										</div>
+									</div>
+								</WebSearchResults>
+							{:else}
+								<div class="flex flex-col justify-center -space-y-0.5">
+									<div class=" text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
+										{message.status.description}
+									</div>
+								</div>
+							{/if}
+						</div>
+					{/if}
+
 					{#if edit === true}
 						<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
 							<textarea
@@ -417,7 +467,34 @@
 						</div>
 					{:else}
 						<div class="w-full">
-							{#if message?.error === true}
+							{#if message.content === '' && !message.error}
+								<Skeleton />
+							{:else if message.content && message.error !== true}
+								<!-- always show message contents even if there's an error -->
+								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
+								{#each tokens as token, tokenIdx}
+									{#if token.type === 'code'}
+										{#if token.lang === 'mermaid'}
+											<pre class="mermaid">{revertSanitizedResponseContent(token.text)}</pre>
+										{:else}
+											<CodeBlock
+												id={`${message.id}-${tokenIdx}`}
+												lang={token?.lang ?? ''}
+												code={revertSanitizedResponseContent(token?.text ?? '')}
+											/>
+										{/if}
+									{:else}
+										{@html marked.parse(token.raw, {
+											...defaults,
+											gfm: true,
+											breaks: true,
+											renderer
+										})}
+									{/if}
+								{/each}
+							{/if}
+
+							{#if message.error}
 								<div
 									class="flex mt-2 mb-4 space-x-2 border px-4 py-3 border-red-800 bg-red-800/30 font-medium rounded-lg"
 								>
@@ -437,36 +514,22 @@
 									</svg>
 
 									<div class=" self-center">
-										{message.content}
+										{message?.error?.content ?? message.content}
 									</div>
 								</div>
-							{:else if message.content === ''}
-								<Skeleton />
-							{:else}
-								{#each tokens as token, tokenIdx}
-									{#if token.type === 'code'}
-										<CodeBlock
-											id={`${message.id}-${tokenIdx}`}
-											lang={token?.lang ?? ''}
-											code={revertSanitizedResponseContent(token?.text ?? '')}
-										/>
-									{:else}
-										{@html marked.parse(token.raw, {
-											...defaults,
-											gfm: true,
-											breaks: true,
-											renderer
-										})}
-									{/if}
-								{/each}
 							{/if}
 
 							{#if message.citations}
-								<div class="mt-1 mb-2 w-full flex gap-1 items-center">
+								<div class="mt-1 mb-2 w-full flex gap-1 items-center flex-wrap">
 									{#each message.citations.reduce((acc, citation) => {
 										citation.document.forEach((document, index) => {
 											const metadata = citation.metadata?.[index];
 											const id = metadata?.source ?? 'N/A';
+											let source = citation?.source;
+											// Check if ID looks like a URL
+											if (id.startsWith('http://') || id.startsWith('https://')) {
+												source = { name: id };
+											}
 
 											const existingSource = acc.find((item) => item.id === id);
 
@@ -474,7 +537,7 @@
 												existingSource.document.push(document);
 												existingSource.metadata.push(metadata);
 											} else {
-												acc.push( { id: id, source: citation?.source, document: [document], metadata: metadata ? [metadata] : [] } );
+												acc.push( { id: id, source: source, document: [document], metadata: metadata ? [metadata] : [] } );
 											}
 										});
 										return acc;

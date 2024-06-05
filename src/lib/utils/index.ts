@@ -450,6 +450,42 @@ export const blobToFile = (blob, fileName) => {
 };
 
 /**
+ * @param {string} template - The template string containing placeholders.
+ * @returns {string} The template string with the placeholders replaced by the prompt.
+ */
+export const promptTemplate = (
+	template: string,
+	user_name?: string,
+	current_location?: string
+): string => {
+	// Get the current date
+	const currentDate = new Date();
+
+	// Format the date to YYYY-MM-DD
+	const formattedDate =
+		currentDate.getFullYear() +
+		'-' +
+		String(currentDate.getMonth() + 1).padStart(2, '0') +
+		'-' +
+		String(currentDate.getDate()).padStart(2, '0');
+
+	// Replace {{CURRENT_DATE}} in the template with the formatted date
+	template = template.replace('{{CURRENT_DATE}}', formattedDate);
+
+	if (user_name) {
+		// Replace {{USER_NAME}} in the template with the user's name
+		template = template.replace('{{USER_NAME}}', user_name);
+	}
+
+	if (current_location) {
+		// Replace {{CURRENT_LOCATION}} in the template with the current location
+		template = template.replace('{{CURRENT_LOCATION}}', current_location);
+	}
+
+	return template;
+};
+
+/**
  * This function is used to replace placeholders in a template string with the provided prompt.
  * The placeholders can be in the following formats:
  * - `{{prompt}}`: This will be replaced with the entire prompt.
@@ -461,8 +497,8 @@ export const blobToFile = (blob, fileName) => {
  * @param {string} prompt - The string to replace the placeholders with.
  * @returns {string} The template string with the placeholders replaced by the prompt.
  */
-export const promptTemplate = (template: string, prompt: string): string => {
-	return template.replace(
+export const titleGenerationTemplate = (template: string, prompt: string): string => {
+	template = template.replace(
 		/{{prompt}}|{{prompt:start:(\d+)}}|{{prompt:end:(\d+)}}|{{prompt:middletruncate:(\d+)}}/g,
 		(match, startLength, endLength, middleLength) => {
 			if (match === '{{prompt}}') {
@@ -482,6 +518,10 @@ export const promptTemplate = (template: string, prompt: string): string => {
 			return '';
 		}
 	);
+
+	template = promptTemplate(template);
+
+	return template;
 };
 
 export const approximateToHumanReadable = (nanoseconds: number) => {

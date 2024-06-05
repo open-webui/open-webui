@@ -1,17 +1,22 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import Sortable from 'sortablejs';
+
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, tick } from 'svelte';
 
-	import { WEBUI_NAME, modelfiles, models, settings, user } from '$lib/stores';
-	import { addNewModel, deleteModelById, getModelInfos } from '$lib/apis/models';
+	import { WEBUI_NAME, mobile, models, settings, user } from '$lib/stores';
+	import { addNewModel, deleteModelById, getModelInfos, updateModelById } from '$lib/apis/models';
 
 	import { deleteModel } from '$lib/apis/ollama';
 	import { goto } from '$app/navigation';
 
 	import { getModels } from '$lib/apis';
+
+	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import ModelMenu from './Models/ModelMenu.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -20,6 +25,9 @@
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
 
+	let _models = [];
+
+	let sortable = null;
 	let searchValue = '';
 
 	const deleteModelHandler = async (model) => {
@@ -40,6 +48,7 @@
 		}
 
 		await models.set(await getModels(localStorage.token));
+		_models = $models;
 	};
 
 	const cloneModelHandler = async (model) => {
@@ -74,6 +83,42 @@
 		);
 	};
 
+	const hideModelHandler = async (model) => {
+		let info = model.info;
+
+		if (!info) {
+			info = {
+				id: model.id,
+				name: model.name,
+				meta: {
+					suggestion_prompts: null
+				},
+				params: {}
+			};
+		}
+
+		info.meta = {
+			...info.meta,
+			hidden: !(info?.meta?.hidden ?? false)
+		};
+
+		console.log(info);
+
+		const res = await updateModelById(localStorage.token, info.id, info);
+
+		if (res) {
+			toast.success(
+				$i18n.t(`Model {{name}} is now {{status}}`, {
+					name: info.id,
+					status: info.meta.hidden ? 'hidden' : 'visible'
+				})
+			);
+		}
+
+		await models.set(await getModels(localStorage.token));
+		_models = $models;
+	};
+
 	const downloadModels = async (models) => {
 		let blob = new Blob([JSON.stringify(models)], {
 			type: 'application/json'
@@ -81,12 +126,66 @@
 		saveAs(blob, `models-export-${Date.now()}.json`);
 	};
 
-	onMount(() => {
+	const exportModelHandler = async (model) => {
+		let blob = new Blob([JSON.stringify([model])], {
+			type: 'application/json'
+		});
+		saveAs(blob, `${model.id}-${Date.now()}.json`);
+	};
+
+	const positionChangeHanlder = async () => {
+		// Get the new order of the models
+		const modelIds = Array.from(document.getElementById('model-list').children).map((child) =>
+			child.id.replace('model-item-', '')
+		);
+
+		// Update the position of the models
+		for (const [index, id] of modelIds.entries()) {
+			const model = $models.find((m) => m.id === id);
+			if (model) {
+				let info = model.info;
+
+				if (!info) {
+					info = {
+						id: model.id,
+						name: model.name,
+						meta: {
+							position: index
+						},
+						params: {}
+					};
+				}
+
+				info.meta = {
+					...info.meta,
+					position: index
+				};
+				await updateModelById(localStorage.token, info.id, info);
+			}
+		}
+
+		await tick();
+		await models.set(await getModels(localStorage.token));
+	};
+
+	onMount(async () => {
 		// Legacy code to sync localModelfiles with models
+		_models = $models;
 		localModelfiles = JSON.parse(localStorage.getItem('modelfiles') ?? '[]');
 
 		if (localModelfiles) {
 			console.log(localModelfiles);
+		}
+
+		if (!$mobile) {
+			// SortableJS
+			sortable = new Sortable(document.getElementById('model-list'), {
+				animation: 150,
+				onUpdate: async (event) => {
+					console.log(event);
+					positionChangeHanlder();
+				}
+			});
 		}
 	});
 </script>
@@ -165,19 +264,24 @@
 
 <hr class=" dark:border-gray-850" />
 
-<div class=" my-2 mb-5">
-	{#each $models.filter((m) => searchValue === '' || m.name
+<div class=" my-2 mb-5" id="model-list">
+	{#each _models.filter((m) => searchValue === '' || m.name
 				.toLowerCase()
 				.includes(searchValue.toLowerCase())) as model}
 		<div
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
+			id="model-item-{model.id}"
 		>
 			<a
-				class=" flex flex-1 space-x-4 cursor-pointer w-full"
+				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
 				href={`/?models=${encodeURIComponent(model.id)}`}
 			>
-				<div class=" self-center w-10">
-					<div class=" rounded-full bg-stone-700">
+				<div class=" self-start w-8 pt-0.5">
+					<div
+						class=" rounded-full bg-stone-700 {model?.info?.meta?.hidden ?? false
+							? 'brightness-90 dark:brightness-50'
+							: ''} "
+					>
 						<img
 							src={model?.info?.meta?.profile_image_url ?? '/favicon.png'}
 							alt="modelfile profile"
@@ -186,14 +290,16 @@
 					</div>
 				</div>
 
-				<div class=" flex-1 self-center">
-					<div class=" font-bold line-clamp-1">{model.name}</div>
-					<div class=" text-sm overflow-hidden text-ellipsis line-clamp-1">
+				<div
+					class=" flex-1 self-center {model?.info?.meta?.hidden ?? false ? 'text-gray-500' : ''}"
+				>
+					<div class="  font-bold line-clamp-1">{model.name}</div>
+					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 						{!!model?.info?.meta?.description ? model?.info?.meta?.description : model.id}
 					</div>
 				</div>
 			</a>
-			<div class="flex flex-row space-x-1 self-center">
+			<div class="flex flex-row gap-0.5 self-center">
 				<a
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
@@ -215,74 +321,32 @@
 					</svg>
 				</a>
 
-				<button
-					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-					type="button"
-					on:click={() => {
-						cloneModelHandler(model);
-					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="1.5"
-						stroke="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
-						/>
-					</svg>
-				</button>
-
-				<button
-					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-					type="button"
-					on:click={() => {
+				<ModelMenu
+					{model}
+					shareHandler={() => {
 						shareModelHandler(model);
 					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="1.5"
-						stroke="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"
-						/>
-					</svg>
-				</button>
-
-				<button
-					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-					type="button"
-					on:click={() => {
+					cloneHandler={() => {
+						cloneModelHandler(model);
+					}}
+					exportHandler={() => {
+						exportModelHandler(model);
+					}}
+					hideHandler={() => {
+						hideModelHandler(model);
+					}}
+					deleteHandler={() => {
 						deleteModelHandler(model);
 					}}
+					onClose={() => {}}
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="1.5"
-						stroke="currentColor"
-						class="w-4 h-4"
+					<button
+						class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+						type="button"
 					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-						/>
-					</svg>
-				</button>
+						<EllipsisHorizontal className="size-5" />
+					</button>
+				</ModelMenu>
 			</div>
 		</div>
 	{/each}
@@ -307,13 +371,20 @@
 
 					for (const model of savedModels) {
 						if (model?.info ?? false) {
-							await addNewModel(localStorage.token, model.info).catch((error) => {
-								return null;
-							});
+							if ($models.find((m) => m.id === model.id)) {
+								await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
+									return null;
+								});
+							} else {
+								await addNewModel(localStorage.token, model.info).catch((error) => {
+									return null;
+								});
+							}
 						}
 					}
 
 					await models.set(await getModels(localStorage.token));
+					_models = $models;
 				};
 
 				reader.readAsText(importFiles[0]);

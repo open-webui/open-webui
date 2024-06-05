@@ -8,6 +8,7 @@
 
 	import Banners from '$lib/components/admin/Settings/Banners.svelte';
 	import { toast } from 'svelte-sonner';
+	import Pipelines from './Settings/Pipelines.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -149,33 +150,65 @@
 					</div>
 					<div class=" self-center">{$i18n.t('Banners')}</div>
 				</button>
+
+				<button
+					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+					'pipelines'
+						? 'bg-gray-200 dark:bg-gray-700'
+						: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+					on:click={() => {
+						selectedTab = 'pipelines';
+					}}
+				>
+					<div class=" self-center mr-2">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							class="size-4"
+						>
+							<path
+								d="M11.644 1.59a.75.75 0 0 1 .712 0l9.75 5.25a.75.75 0 0 1 0 1.32l-9.75 5.25a.75.75 0 0 1-.712 0l-9.75-5.25a.75.75 0 0 1 0-1.32l9.75-5.25Z"
+							/>
+							<path
+								d="m3.265 10.602 7.668 4.129a2.25 2.25 0 0 0 2.134 0l7.668-4.13 1.37.739a.75.75 0 0 1 0 1.32l-9.75 5.25a.75.75 0 0 1-.71 0l-9.75-5.25a.75.75 0 0 1 0-1.32l1.37-.738Z"
+							/>
+							<path
+								d="m10.933 19.231-7.668-4.13-1.37.739a.75.75 0 0 0 0 1.32l9.75 5.25c.221.12.489.12.71 0l9.75-5.25a.75.75 0 0 0 0-1.32l-1.37-.738-7.668 4.13a2.25 2.25 0 0 1-2.134-.001Z"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center">{$i18n.t('Pipelines')}</div>
+				</button>
 			</div>
 			<div class="flex-1 md:min-h-[380px]">
 				{#if selectedTab === 'general'}
 					<General
 						saveHandler={() => {
-							show = false;
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'users'}
 					<Users
 						saveHandler={() => {
-							show = false;
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'db'}
 					<Database
 						saveHandler={() => {
-							show = false;
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
 				{:else if selectedTab === 'banners'}
 					<Banners
 						saveHandler={() => {
-							show = false;
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{:else if selectedTab === 'pipelines'}
+					<Pipelines
+						saveHandler={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
