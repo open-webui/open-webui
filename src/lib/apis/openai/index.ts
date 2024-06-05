@@ -223,14 +223,14 @@ export const getOpenAIModel = async (token: string) => {
 		})
 		.catch((err) => {
 			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
-			return [];
+			return '';
 		});
 
 	if (error) {
-		throw error;
+		return '';
 	}
 
-	return res?.data?.id ?? '';
+	return res?.id ?? '';
 }
 
 export const getOpenAIModels = async (token: string, urlIdx?: number) => {
