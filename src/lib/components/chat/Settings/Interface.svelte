@@ -21,6 +21,7 @@
 	let splitLargeChunks = false;
 
 	// Interface
+	let defaultModelId = '';
 	let promptSuggestions = [];
 	let showUsername = false;
 	let chatBubble = true;
@@ -96,7 +97,8 @@
 				modelExternal:
 					titleAutoGenerateModelExternal !== '' ? titleAutoGenerateModelExternal : undefined,
 				prompt: titleGenerationPrompt ? titleGenerationPrompt : undefined
-			}
+			},
+			models: [defaultModelId]
 		});
 	};
 
@@ -117,6 +119,8 @@
 		widescreenMode = $settings.widescreenMode ?? false;
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
 		chatDirection = $settings.chatDirection ?? 'LTR';
+
+		defaultModelId = ($settings?.models ?? ['']).at(0);
 	});
 </script>
 
@@ -278,7 +282,30 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700" />
+		<hr class=" dark:border-gray-850" />
+
+		<div class=" space-y-1 mb-3">
+			<div class="mb-2">
+				<div class="flex justify-between items-center text-xs">
+					<div class=" text-xs font-medium">{$i18n.t('Default Model')}</div>
+				</div>
+			</div>
+
+			<div class="flex-1 mr-2">
+				<select
+					class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+					bind:value={defaultModelId}
+					placeholder="Select a model"
+				>
+					<option value="" disabled selected>{$i18n.t('Select a model')}</option>
+					{#each $models.filter((model) => model.id) as model}
+						<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option>
+					{/each}
+				</select>
+			</div>
+		</div>
+
+		<hr class=" dark:border-gray-850" />
 
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex">
