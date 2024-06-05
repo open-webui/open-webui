@@ -315,8 +315,8 @@
 						</select>
 					</div>
 				</div>
-				<div class="flex items-center justify-between mb-1">
-					<div class="text-sm">
+				<div class="flex items-center justify-between my-1.5">
+					<div class="text-xs">
 						{$i18n.t('Allow non-local voices')}
 					</div>
 

@@ -20,6 +20,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import StreamingResponse, Response
 
+
+from apps.socket.main import app as socket_app
 from apps.ollama.main import app as ollama_app, get_all_models as get_ollama_models
 from apps.openai.main import app as openai_app, get_all_models as get_openai_models
 
@@ -374,6 +376,9 @@ async def update_embedding_function(request: Request, call_next):
     if "/embedding/update" in request.url.path:
         webui_app.state.EMBEDDING_FUNCTION = rag_app.state.EMBEDDING_FUNCTION
     return response
+
+
+app.mount("/ws", socket_app)
 
 
 app.mount("/ollama", ollama_app)

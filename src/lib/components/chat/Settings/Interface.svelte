@@ -16,11 +16,12 @@
 	let responseAutoCopy = false;
 	let titleAutoGenerateModel = '';
 	let titleAutoGenerateModelExternal = '';
-	let fullScreenMode = false;
+	let widescreenMode = false;
 	let titleGenerationPrompt = '';
 	let splitLargeChunks = false;
 
 	// Interface
+	let defaultModelId = '';
 	let promptSuggestions = [];
 	let showUsername = false;
 	let chatBubble = true;
@@ -31,9 +32,9 @@
 		saveSettings({ splitLargeChunks: splitLargeChunks });
 	};
 
-	const toggleFullScreenMode = async () => {
-		fullScreenMode = !fullScreenMode;
-		saveSettings({ fullScreenMode: fullScreenMode });
+	const togglewidescreenMode = async () => {
+		widescreenMode = !widescreenMode;
+		saveSettings({ widescreenMode: widescreenMode });
 	};
 
 	const toggleChatBubble = async () => {
@@ -96,7 +97,8 @@
 				modelExternal:
 					titleAutoGenerateModelExternal !== '' ? titleAutoGenerateModelExternal : undefined,
 				prompt: titleGenerationPrompt ? titleGenerationPrompt : undefined
-			}
+			},
+			models: [defaultModelId]
 		});
 	};
 
@@ -114,9 +116,11 @@
 		responseAutoCopy = $settings.responseAutoCopy ?? false;
 		showUsername = $settings.showUsername ?? false;
 		chatBubble = $settings.chatBubble ?? true;
-		fullScreenMode = $settings.fullScreenMode ?? false;
+		widescreenMode = $settings.widescreenMode ?? false;
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
 		chatDirection = $settings.chatDirection ?? 'LTR';
+
+		defaultModelId = ($settings?.models ?? ['']).at(0);
 	});
 </script>
 
@@ -195,16 +199,16 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Full Screen Mode')}</div>
+					<div class=" self-center text-xs font-medium">{$i18n.t('Widescreen Mode')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
-							toggleFullScreenMode();
+							togglewidescreenMode();
 						}}
 						type="button"
 					>
-						{#if fullScreenMode === true}
+						{#if widescreenMode === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
@@ -278,7 +282,30 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700" />
+		<hr class=" dark:border-gray-850" />
+
+		<div class=" space-y-1 mb-3">
+			<div class="mb-2">
+				<div class="flex justify-between items-center text-xs">
+					<div class=" text-xs font-medium">{$i18n.t('Default Model')}</div>
+				</div>
+			</div>
+
+			<div class="flex-1 mr-2">
+				<select
+					class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+					bind:value={defaultModelId}
+					placeholder="Select a model"
+				>
+					<option value="" disabled selected>{$i18n.t('Select a model')}</option>
+					{#each $models.filter((model) => model.id) as model}
+						<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option>
+					{/each}
+				</select>
+			</div>
+		</div>
+
+		<hr class=" dark:border-gray-850" />
 
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex">
