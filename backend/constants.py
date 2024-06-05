@@ -84,3 +84,7 @@ class ERROR_MESSAGES(str, Enum):
     WEB_SEARCH_ERROR = (
         lambda err="": f"{err if err else 'Oops! Something went wrong while searching the web.'}"
     )
+
+    OLLAMA_API_DISABLED = (
+        "The Ollama API is disabled. Please enable it to use this feature."
+    )
