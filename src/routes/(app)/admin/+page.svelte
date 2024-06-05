@@ -118,7 +118,7 @@
 			/>
 
 			<div class="flex gap-0.5">
-				<Tooltip content="Add User">
+				<Tooltip content={$i18n.t('Add User')}>
 					<button
 						class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition font-medium text-sm flex items-center space-x-1"
 						on:click={() => {
