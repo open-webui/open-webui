@@ -164,11 +164,14 @@ async def update_doc_by_name(
 
 @router.delete("/name/{name}/delete", response_model=bool)
 async def delete_doc_by_name(name: str, user=Depends(get_admin_user)):
+    doc = Documents.get_doc_by_name(name)
+    if doc:
+        collection_name = doc.collection_name
+        log.debug(f"Deleting vector data of the collection {collection_name} of the document {name}")
+        result = CHROMA_CLIENT.delete_collection(name=collection_name)
+    
     log.debug(f"Deleting file and metadata of the document {name}")
     result = Documents.delete_doc_by_name(name)
     if result:
         log.info(f"Deleted source file and metadata of the document {name} successfully")
-    collection_name = Documents.get_doc_by_name(name).collection_name
-    log.debug(f"Deleting vector data of the collection {collection_name} of the document {name}")
-    result = CHROMA_CLIENT.delete_collection(name=collection_name)
     return result
