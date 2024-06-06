@@ -1,5 +1,8 @@
 import { APP_NAME } from '$lib/constants';
 import { type Writable, writable } from 'svelte/store';
+import type { GlobalModelConfig, ModelConfig } from '$lib/apis';
+import type { Banner } from '$lib/types';
+import type { Socket } from 'socket.io-client';
 
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
@@ -8,6 +11,12 @@ export const user: Writable<SessionUser | undefined> = writable(undefined);
 
 // Frontend
 export const MODEL_DOWNLOAD_POOL = writable({});
+
+export const mobile = writable(false);
+
+export const socket: Writable<null | Socket> = writable(null);
+export const activeUserCount: Writable<null | number> = writable(null);
+export const USAGE_POOL: Writable<null | string[]> = writable(null);
 
 export const theme = writable('system');
 export const chatId = writable('');
@@ -33,33 +42,36 @@ export const documents = writable([
 	}
 ]);
 
+export const banners: Writable<Banner[]> = writable([]);
+
 export const settings: Writable<Settings> = writable({});
 
 export const showSidebar = writable(false);
 export const showSettings = writable(false);
+export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 
-type Model = OpenAIModel | OllamaModel;
+export type Model = OpenAIModel | OllamaModel;
 
-type OpenAIModel = {
+type BaseModel = {
 	id: string;
 	name: string;
-	external: boolean;
-	source?: string;
+	info?: ModelConfig;
 };
 
-type OllamaModel = {
-	id: string;
-	name: string;
+export interface OpenAIModel extends BaseModel {
+	external: boolean;
+	source?: string;
+}
 
-	// Ollama specific fields
+export interface OllamaModel extends BaseModel {
 	details: OllamaModelDetails;
 	size: number;
 	description: string;
 	model: string;
 	modified_at: string;
 	digest: string;
-};
+}
 
 type OllamaModelDetails = {
 	parent_model: string;
@@ -81,6 +93,7 @@ type Settings = {
 	notificationEnabled?: boolean;
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
+	chatDirection: 'LTR' | 'RTL';
 
 	system?: string;
 	requestFormat?: string;
@@ -103,6 +116,7 @@ type AudioSettings = {
 	TTSEngine?: string;
 	speaker?: string;
 	model?: string;
+	nonLocalVoices?: boolean;
 };
 
 type TitleSettings = {
@@ -121,14 +135,21 @@ type Prompt = {
 };
 
 type Config = {
-	status?: boolean;
-	name?: string;
-	version?: string;
-	default_locale?: string;
-	images?: boolean;
-	default_models?: string[];
-	default_prompt_suggestions?: PromptSuggestion[];
-	trusted_header_auth?: boolean;
+	status: boolean;
+	name: string;
+	version: string;
+	default_locale: string;
+	default_models: string[];
+	default_prompt_suggestions: PromptSuggestion[];
+	features: {
+		auth: boolean;
+		auth_trusted_header: boolean;
+		enable_signup: boolean;
+		enable_web_search?: boolean;
+		enable_image_generation: boolean;
+		enable_admin_export: boolean;
+		enable_community_sharing: boolean;
+	};
 };
 
 type PromptSuggestion = {

@@ -15,12 +15,8 @@ describe('Settings', () => {
 		cy.loginAdmin();
 		// Visit the home page
 		cy.visit('/');
-		// Open the sidebar if it is not already open
-		cy.get('[aria-label="Open sidebar"]').then(() => {
-			cy.get('button[id="sidebar-toggle-button"]').click();
-		});
-		// Click on the profile link
-		cy.get('button').contains(adminUser.name).click();
+		// Click on the user menu
+		cy.get('button[aria-label="User Menu"]').click();
 		// Click on the settings link
 		cy.get('button').contains('Settings').click();
 	});

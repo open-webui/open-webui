@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-
-	import { chats, config, modelfiles, settings, user } from '$lib/stores';
-	import { tick, getContext } from 'svelte';
+	import { chats, config, settings, user as _user, mobile } from '$lib/stores';
+	import { tick, getContext, onMount } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
@@ -13,6 +12,8 @@
 	import Spinner from '../common/Spinner.svelte';
 	import { imageGenerations } from '$lib/apis/images';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
+	import CompareMessages from './Messages/CompareMessages.svelte';
+	import { stringify } from 'postcss';
 
 	const i18n = getContext('i18n');
 
@@ -22,16 +23,15 @@
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
 
+	export let user = $_user;
 	export let prompt;
-	export let suggestionPrompts;
 	export let processing = '';
 	export let bottomPadding = false;
 	export let autoScroll;
-	export let selectedModels;
 	export let history = {};
 	export let messages = [];
 
-	export let selectedModelfiles = [];
+	export let selectedModels;
 
 	$: if (autoScroll && bottomPadding) {
 		(async () => {
@@ -62,7 +62,8 @@
 			childrenIds: [],
 			role: 'user',
 			content: userPrompt,
-			...(history.messages[messageId].files && { files: history.messages[messageId].files })
+			...(history.messages[messageId].files && { files: history.messages[messageId].files }),
+			models: selectedModels.filter((m, mIdx) => selectedModels.indexOf(m) === mIdx)
 		};
 
 		let messageParentId = history.messages[messageId].parentId;
@@ -78,7 +79,7 @@
 		history.currentId = userMessageId;
 
 		await tick();
-		await sendPrompt(userPrompt, userMessageId, chatId);
+		await sendPrompt(userPrompt, userMessageId);
 	};
 
 	const updateChatMessages = async () => {
@@ -240,12 +241,10 @@
 	};
 </script>
 
-<div class="h-full flex mb-16">
+<div class="h-full flex">
 	{#if messages.length == 0}
 		<Placeholder
-			models={selectedModels}
-			modelfiles={selectedModelfiles}
-			{suggestionPrompts}
+			modelIds={selectedModels}
 			submitPrompt={async (p) => {
 				let text = p;
 
@@ -285,16 +284,16 @@
 		<div class="w-full pt-2">
 			{#key chatId}
 				{#each messages as message, messageIdx}
-					<div class=" w-full {messageIdx === messages.length - 1 ? 'pb-28' : ''}">
+					<div class=" w-full {messageIdx === messages.length - 1 ? ' pb-12' : ''}">
 						<div
-							class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
+							class="flex flex-col justify-between px-5 mb-3 {$settings?.widescreenMode ?? null
 								? 'max-w-full'
 								: 'max-w-5xl'} mx-auto rounded-lg group"
 						>
 							{#if message.role === 'user'}
 								<UserMessage
 									on:delete={() => messageDeleteHandler(message.id)}
-									user={$user}
+									{user}
 									{readOnly}
 									{message}
 									isFirstMessage={messageIdx === 0}
@@ -308,32 +307,65 @@
 									{showNextMessage}
 									copyToClipboard={copyToClipboardWithToast}
 								/>
-							{:else}
-								<ResponseMessage
-									{message}
-									modelfiles={selectedModelfiles}
-									siblings={history.messages[message.parentId]?.childrenIds ?? []}
-									isLastMessage={messageIdx + 1 === messages.length}
-									{readOnly}
-									{updateChatMessages}
-									{confirmEditResponseMessage}
-									{showPreviousMessage}
-									{showNextMessage}
-									{rateMessage}
-									copyToClipboard={copyToClipboardWithToast}
-									{continueGeneration}
-									{regenerateResponse}
-									on:save={async (e) => {
-										console.log('save', e);
+							{:else if $mobile || (history.messages[message.parentId]?.models?.length ?? 1) === 1}
+								{#key message.id}
+									<ResponseMessage
+										{message}
+										siblings={history.messages[message.parentId]?.childrenIds ?? []}
+										isLastMessage={messageIdx + 1 === messages.length}
+										{readOnly}
+										{updateChatMessages}
+										{confirmEditResponseMessage}
+										{showPreviousMessage}
+										{showNextMessage}
+										{rateMessage}
+										copyToClipboard={copyToClipboardWithToast}
+										{continueGeneration}
+										{regenerateResponse}
+										on:save={async (e) => {
+											console.log('save', e);
 
-										const message = e.detail;
-										history.messages[message.id] = message;
-										await updateChatById(localStorage.token, chatId, {
-											messages: messages,
-											history: history
-										});
-									}}
-								/>
+											const message = e.detail;
+											history.messages[message.id] = message;
+											await updateChatById(localStorage.token, chatId, {
+												messages: messages,
+												history: history
+											});
+										}}
+									/>
+								{/key}
+							{:else}
+								{#key message.parentId}
+									<CompareMessages
+										bind:history
+										{messages}
+										{readOnly}
+										{chatId}
+										parentMessage={history.messages[message.parentId]}
+										{messageIdx}
+										{updateChatMessages}
+										{confirmEditResponseMessage}
+										{rateMessage}
+										copyToClipboard={copyToClipboardWithToast}
+										{continueGeneration}
+										{regenerateResponse}
+										on:change={async () => {
+											await updateChatById(localStorage.token, chatId, {
+												messages: messages,
+												history: history
+											});
+
+											if (autoScroll) {
+												const element = document.getElementById('messages-container');
+												autoScroll =
+													element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+												setTimeout(() => {
+													scrollToBottom();
+												}, 100);
+											}
+										}}
+									/>
+								{/key}
 							{/if}
 						</div>
 					</div>

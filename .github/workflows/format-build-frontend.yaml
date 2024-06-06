@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20' # Or specify any other version you want to use
 
@@ -37,3 +37,21 @@ jobs:
 
       - name: Build Frontend
         run: npm run build
+
+  test-frontend:
+    name: 'Frontend Unit Tests'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run vitest
+        run: npm run test:frontend

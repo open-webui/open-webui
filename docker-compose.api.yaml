@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ollama:
     # Expose Ollama API outside the container stack

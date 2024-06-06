@@ -5,6 +5,134 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2024-06-05
+
+### Added
+
+- **👥 Active Users Indicator**: Now you can see how many people are currently active and what they are running. This helps you gauge when performance might slow down due to a high number of users.
+- **🗂️ Create Ollama Modelfile**: The option to create a modelfile for Ollama has been reintroduced in the Settings > Models section, making it easier to manage your models.
+- **⚙️ Default Model Setting**: Added an option to set the default model from Settings > Interface. This feature is now easily accessible, especially convenient for mobile users as it was previously hidden.
+- **🌐 Enhanced Translations**: We've improved the Chinese translations and added support for Turkmen and Norwegian languages to make the interface more accessible globally.
+
+### Fixed
+
+- **📱 Mobile View Improvements**: The UI now uses dvh (dynamic viewport height) instead of vh (viewport height), providing a better and more responsive experience for mobile users.
+
+## [0.2.4] - 2024-06-03
+
+### Added
+
+- **👤 Improved Account Pending Page**: The account pending page now displays admin details by default to avoid confusion. You can disable this feature in the admin settings if needed.
+- **🌐 HTTP Proxy Support**: We have enabled the use of the 'http_proxy' environment variable in OpenAI and Ollama API calls, making it easier to configure network settings.
+- **❓ Quick Access to Documentation**: You can now easily access Open WebUI documents via a question mark button located at the bottom right corner of the screen (available on larger screens like PCs).
+- **🌍 Enhanced Translation**: Improvements have been made to translations.
+
+### Fixed
+
+- **🔍 SearxNG Web Search**: Fixed the issue where the SearxNG web search functionality was not working properly.
+
+## [0.2.3] - 2024-06-03
+
+### Added
+
+- **📁 Export Chat as JSON**: You can now export individual chats as JSON files from the navbar menu by navigating to 'Download > Export Chat'. This makes sharing specific conversations easier.
+- **✏️ Edit Titles with Double Click**: Double-click on titles to rename them quickly and efficiently.
+- **🧩 Batch Multiple Embeddings**: Introduced 'RAG_EMBEDDING_OPENAI_BATCH_SIZE' to process multiple embeddings in a batch, enhancing performance for large datasets.
+- **🌍 Improved Translations**: Enhanced the translation quality across various languages for a better user experience.
+
+### Fixed
+
+- **🛠️ Modelfile Migration Script**: Fixed an issue where the modelfile migration script would fail if an invalid modelfile was encountered.
+- **💬 Zhuyin Input Method on Mac**: Resolved an issue where using the Zhuyin input method in the Web UI on a Mac caused text to send immediately upon pressing the enter key, leading to incorrect input.
+- **🔊 Local TTS Voice Selection**: Fixed the issue where the selected local Text-to-Speech (TTS) voice was not being displayed in settings.
+
+## [0.2.2] - 2024-06-02
+
+### Added
+
+- **🌊 Mermaid Rendering Support**: We've included support for Mermaid rendering. This allows you to create beautiful diagrams and flowcharts directly within Open WebUI.
+- **🔄 New Environment Variable 'RESET_CONFIG_ON_START'**: Introducing a new environment variable: 'RESET_CONFIG_ON_START'. Set this variable to reset your configuration settings upon starting the application, making it easier to revert to default settings.
+
+### Fixed
+
+- **🔧 Pipelines Filter Issue**: We've addressed an issue with the pipelines where filters were not functioning as expected.
+
+## [0.2.1] - 2024-06-02
+
+### Added
+
+- **🖱️ Single Model Export Button**: Easily export models with just one click using the new single model export button.
+- **🖥️ Advanced Parameters Support**: Added support for 'num_thread', 'use_mmap', and 'use_mlock' parameters for Ollama.
+- **🌐 Improved Vietnamese Translation**: Enhanced Vietnamese language support for a better user experience for our Vietnamese-speaking community.
+
+### Fixed
+
+- **🔧 OpenAI URL API Save Issue**: Corrected a problem preventing the saving of OpenAI URL API settings.
+- **🚫 Display Issue with Disabled Ollama API**: Fixed the display bug causing models to appear in settings when the Ollama API was disabled.
+
+### Changed
+
+- **💡 Versioning Update**: As a reminder from our previous update, version 0.2.y will focus primarily on bug fixes, while major updates will be designated as 0.x from now on for better version tracking.
+
+## [0.2.0] - 2024-06-01
+
+### Added
+
+- **🔧 Pipelines Support**: Open WebUI now includes a plugin framework for enhanced customization and functionality (https://github.com/open-webui/pipelines). Easily add custom logic and integrate Python libraries, from AI agents to home automation APIs.
+- **🔗 Function Calling via Pipelines**: Integrate function calling seamlessly through Pipelines.
+- **⚖️ User Rate Limiting via Pipelines**: Implement user-specific rate limits to manage API usage efficiently.
+- **📊 Usage Monitoring with Langfuse**: Track and analyze usage statistics with Langfuse integration through Pipelines.
+- **🕒 Conversation Turn Limits**: Set limits on conversation turns to manage interactions better through Pipelines.
+- **🛡️ Toxic Message Filtering**: Automatically filter out toxic messages to maintain a safe environment using Pipelines.
+- **🔍 Web Search Support**: Introducing built-in web search capabilities via RAG API, allowing users to search using SearXNG, Google Programmatic Search Engine, Brave Search, serpstack, and serper. Activate it effortlessly by adding necessary variables from Document settings > Web Params.
+- **🗂️ Models Workspace**: Create and manage model presets for both Ollama/OpenAI API. Note: The old Modelfiles workspace is deprecated.
+- **🛠️ Model Builder Feature**: Build and edit all models with persistent builder mode.
+- **🏷️ Model Tagging Support**: Organize models with tagging features in the models workspace.
+- **📋 Model Ordering Support**: Effortlessly organize models by dragging and dropping them into the desired positions within the models workspace.
+- **📈 OpenAI Generation Stats**: Access detailed generation statistics for OpenAI models.
+- **📅 System Prompt Variables**: New variables added: '{{CURRENT_DATE}}' and '{{USER_NAME}}' for dynamic prompts.
+- **📢 Global Banner Support**: Manage global banners from admin settings > banners.
+- **🗃️ Enhanced Archived Chats Modal**: Search and export archived chats easily.
+- **📂 Archive All Button**: Quickly archive all chats from settings > chats.
+- **🌐 Improved Translations**: Added and improved translations for French, Croatian, Cebuano, and Vietnamese.
+
+### Fixed
+
+- **🔍 Archived Chats Visibility**: Resolved issue with archived chats not showing in the admin panel.
+- **💬 Message Styling**: Fixed styling issues affecting message appearance.
+- **🔗 Shared Chat Responses**: Corrected the issue where shared chat response messages were not readonly.
+- **🖥️ UI Enhancement**: Fixed the scrollbar overlapping issue with the message box in the user interface.
+
+### Changed
+
+- **💾 User Settings Storage**: User settings are now saved on the backend, ensuring consistency across all devices.
+- **📡 Unified API Requests**: The API request for getting models is now unified to '/api/models' for easier usage.
+- **🔄 Versioning Update**: Our versioning will now follow the format 0.x for major updates and 0.x.y for patches.
+- **📦 Export All Chats (All Users)**: Moved this functionality to the Admin Panel settings for better organization and accessibility.
+
+### Removed
+
+- **🚫 Bundled LiteLLM Support Deprecated**: Migrate your LiteLLM config.yaml to a self-hosted LiteLLM instance. LiteLLM can still be added via OpenAI Connections. Download the LiteLLM config.yaml from admin settings > database > export LiteLLM config.yaml.
+
+## [0.1.125] - 2024-05-19
+
+### Added
+
+- **🔄 Updated UI**: Chat interface revamped with chat bubbles. Easily switch back to the old style via settings > interface > chat bubble UI.
+- **📂 Enhanced Sidebar UI**: Model files, documents, prompts, and playground merged into Workspace for streamlined access.
+- **🚀 Improved Many Model Interaction**: All responses now displayed simultaneously for a smoother experience.
+- **🐍 Python Code Execution**: Execute Python code locally in the browser with libraries like 'requests', 'beautifulsoup4', 'numpy', 'pandas', 'seaborn', 'matplotlib', 'scikit-learn', 'scipy', 'regex'.
+- **🧠 Experimental Memory Feature**: Manually input personal information you want LLMs to remember via settings > personalization > memory.
+- **💾 Persistent Settings**: Settings now saved as config.json for convenience.
+- **🩺 Health Check Endpoint**: Added for Docker deployment.
+- **↕️ RTL Support**: Toggle chat direction via settings > interface > chat direction.
+- **🖥️ PowerPoint Support**: RAG pipeline now supports PowerPoint documents.
+- **🌐 Language Updates**: Ukrainian, Turkish, Arabic, Chinese, Serbian, Vietnamese updated; Punjabi added.
+
+### Changed
+
+- **👤 Shared Chat Update**: Shared chat now includes creator user information.
+
 ## [0.1.124] - 2024-05-08
 
 ### Added

@@ -2,7 +2,16 @@
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		chatId,
+		mobile,
+		settings,
+		showArchivedChats,
+		showSettings,
+		showSidebar,
+		user
+	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -10,6 +19,8 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Menu from './Navbar/Menu.svelte';
 	import { page } from '$app/stores';
+	import UserMenu from './Sidebar/UserMenu.svelte';
+	import MenuLines from '../icons/MenuLines.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -28,48 +39,35 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
-	<div class=" flex max-w-full w-full mx-auto px-5 pt-0.5 md:px-[1.3rem]">
+	<div class=" flex max-w-full w-full mx-auto px-5 pt-0.5 md:px-[1rem]">
 		<div class="flex items-center w-full max-w-full">
+			<div
+				class="{$showSidebar
+					? 'md:hidden'
+					: ''} mr-3 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
+			>
+				<button
+					id="sidebar-toggle-button"
+					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+					on:click={() => {
+						showSidebar.set(!$showSidebar);
+					}}
+				>
+					<div class=" m-auto self-center">
+						<MenuLines />
+					</div>
+				</button>
+			</div>
 			<div class="flex-1 overflow-hidden max-w-full">
 				{#if showModelSelector}
 					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 				{/if}
 			</div>
 
-			<div class="self-start flex flex-none items-center">
-				<div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" />
+			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
+				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 
-				{#if !shareEnabled}
-					<Tooltip content={$i18n.t('Settings')}>
-						<button
-							class="cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
-							id="open-settings-button"
-							on:click={async () => {
-								await showSettings.set(!$showSettings);
-							}}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								class="w-5 h-5"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
-								/>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-								/>
-							</svg>
-						</button>
-					</Tooltip>
-				{:else}
+				{#if shareEnabled && chat && chat.id}
 					<Menu
 						{chat}
 						{shareEnabled}
@@ -81,7 +79,8 @@
 						}}
 					>
 						<button
-							class="cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
+							class="hidden md:flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							id="chat-context-menu-button"
 						>
 							<div class=" m-auto self-center">
 								<svg
@@ -105,7 +104,9 @@
 				<Tooltip content={$i18n.t('New Chat')}>
 					<button
 						id="new-chat-button"
-						class=" cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
+						class=" flex {$showSidebar
+							? 'md:hidden'
+							: ''} cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 						on:click={() => {
 							initNewChat();
 						}}
@@ -127,6 +128,32 @@
 						</div>
 					</button>
 				</Tooltip>
+
+				{#if $user !== undefined}
+					<UserMenu
+						className="max-w-[200px]"
+						role={$user.role}
+						on:show={(e) => {
+							if (e.detail === 'archived-chat') {
+								showArchivedChats.set(true);
+							}
+						}}
+					>
+						<button
+							class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							aria-label="User Menu"
+						>
+							<div class=" self-center">
+								<img
+									src={$user.profile_image_url}
+									class="size-6 object-cover rounded-full"
+									alt="User profile"
+									draggable="false"
+								/>
+							</div>
+						</button>
+					</UserMenu>
+				{/if}
 			</div>
 		</div>
 	</div>
