@@ -1,0 +1,57 @@
+services:
+  ollama:
+    volumes:
+      - ollama:/root/.ollama
+    container_name: ollama
+    pull_policy: always
+    tty: true
+    restart: unless-stopped
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+
+  pipelines:
+    build:
+      context: pipelines
+      dockerfile: Dockerfile
+    volumes:
+      - ./pipelines/mount:/app/pipelines 
+    depends_on:
+      - ollama
+    container_name: pipelines
+    tty: true
+    restart: unless-stopped
+    #image: ghcr.io/open-webui/pipelines:main
+    environment:
+      - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'GITHUB_TOKEN='
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - 9099:9099
+
+  open-webui:
+    #build:
+    #  context: .
+    #  args:
+    #    OLLAMA_BASE_URL: '/ollama'
+    #  dockerfile: Dockerfile
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    container_name: open-webui
+    volumes:
+      - open-webui:/app/backend/data
+    depends_on:
+      - ollama
+    ports:
+      - ${OPEN_WEBUI_PORT-3000}:8080
+    environment:
+      - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'WEBUI_SECRET_KEY='
+      - 'OPENAI_API_BASE_URL=http://pipelines:9099'
+      - 'OPENAI_API_KEY=0p3n-w3bu!'
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+
+volumes:
+  ollama: {}
+  open-webui: {}
+  pipelines: {}

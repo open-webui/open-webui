@@ -157,7 +157,7 @@ if [[ $kill_compose == true ]]; then
     echo -e "${GREEN}${BOLD}Compose project dropped successfully.${NC}"
     exit
 else
-    DEFAULT_COMPOSE_COMMAND="docker compose -f docker-compose.yaml"
+    DEFAULT_COMPOSE_COMMAND="docker compose -f docker-compose.pipelines.yaml"
     if [[ $enable_gpu == true ]]; then
         # Validate and process command-line arguments
         if [[ -n $gpu_count ]]; then
@@ -185,7 +185,7 @@ else
     if [[ -n $webui_port ]]; then
         export OPEN_WEBUI_PORT=$webui_port # Set OPEN_WEBUI_PORT environment variable
     fi
-    DEFAULT_COMPOSE_COMMAND+=" up -d"
+    DEFAULT_COMPOSE_COMMAND+=" up " # -d
     DEFAULT_COMPOSE_COMMAND+=" --remove-orphans"
     DEFAULT_COMPOSE_COMMAND+=" --force-recreate"
     if [[ $build_image == true ]]; then
