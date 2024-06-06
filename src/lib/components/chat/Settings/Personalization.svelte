@@ -35,7 +35,7 @@
 		<div>
 			<div class="flex items-center justify-between mb-1">
 				<Tooltip
-					content="This is an experimental feature, it may not function as expected and is subject to change at any time."
+					content="{$i18n.t('This is an experimental feature, it may not function as expected and is subject to change at any time.')}"
 				>
 					<div class="text-sm font-medium">
 						{$i18n.t('Memory')}
