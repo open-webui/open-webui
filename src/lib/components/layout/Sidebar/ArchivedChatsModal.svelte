@@ -207,7 +207,7 @@
 								class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
 								on:click={() => {
 									exportChatsHandler();
-								}}>Export All Archived Chats</button
+								}}>{$i18n.t('Export All Archived Chats')}</button
 							>
 						</div>
 					</div>
