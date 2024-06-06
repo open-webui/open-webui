@@ -724,7 +724,7 @@ def store_doc(
         data = loader.load()
 
         try:
-            result = store_data_in_vector_db(data, collection_name)
+            result = store_data_in_vector_db(data, collection_name, overwrite = True)
 
             if result:
                 return {
@@ -772,6 +772,7 @@ def store_text(
         form_data.content,
         metadata={"name": form_data.name, "created_by": user.id},
         collection_name=collection_name,
+        overwrite=True
     )
 
     if result:
@@ -802,7 +803,7 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                 data = loader.load()
 
                 try:
-                    result = store_data_in_vector_db(data, collection_name)
+                    result = store_data_in_vector_db(data, collection_name, overwrite = True)
 
                     if result:
                         sanitized_filename = sanitize_filename(filename)

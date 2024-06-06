@@ -14,8 +14,17 @@ from apps.web.models.documents import (
     DocumentResponse,
 )
 
+from config import (
+    CHROMA_CLIENT,
+    SRC_LOG_LEVELS
+)
+
 from utils.utils import get_current_user, get_admin_user
 from constants import ERROR_MESSAGES
+
+import logging
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
@@ -132,6 +141,7 @@ async def tag_doc_by_name(form_data: TagDocumentForm, user=Depends(get_current_u
 async def update_doc_by_name(
     name: str, form_data: DocumentUpdateForm, user=Depends(get_admin_user)
 ):
+    log.info(f"Updating document {name}")
     doc = Documents.update_doc_by_name(name, form_data)
     if doc:
         return DocumentResponse(
@@ -154,5 +164,11 @@ async def update_doc_by_name(
 
 @router.delete("/name/{name}/delete", response_model=bool)
 async def delete_doc_by_name(name: str, user=Depends(get_admin_user)):
+    log.debug(f"Deleting file and metadata of the document {name}")
     result = Documents.delete_doc_by_name(name)
+    if result:
+        log.info(f"Deleted source file and metadata of the document {name} successfully")
+    collection_name = Documents.get_doc_by_name(name).collection_name
+    log.debug(f"Deleting vector data of the collection {collection_name} of the document {name}")
+    result = CHROMA_CLIENT.delete_collection(name=collection_name)
     return result
