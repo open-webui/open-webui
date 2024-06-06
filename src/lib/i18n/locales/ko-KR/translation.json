@@ -544,7 +544,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "[주제 또는 키워드]에 대한 50단어 요약문 작성.",
 	"Yesterday": "어제",
 	"You": "당신",
-	"You can personalize your interactions with LLMs by adding memories through the \"Manage\" button below, making them more helpful and tailored to you.": "",
+	"You can personalize your interactions with LLMs by adding memories through the Manage button below, making them more helpful and tailored to you.": "",
 	"You cannot clone a base model": "기본 모델은 복제할 수 없습니다",
 	"You have no archived conversations.": "채팅을 아카이브한 적이 없습니다.",
 	"You have shared this chat": "이 채팅을 공유했습니다.",

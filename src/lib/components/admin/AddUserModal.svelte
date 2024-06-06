@@ -153,7 +153,9 @@
 							type="button"
 							on:click={() => {
 								tab = '';
-							}}>{$i18n.t('Form')}</button
+							}}>
+								{$i18n.t('Form')}
+							</button
 						>
 
 						<button
@@ -161,7 +163,9 @@
 							type="button"
 							on:click={() => {
 								tab = 'import';
-							}}>{$i18n.t('CSV Import')}</button
+							}}>
+								{$i18n.t('CSV Import')}
+							</button
 						>
 					</div>
 					<div class="px-1">
@@ -262,7 +266,9 @@
 										class="underline dark:text-gray-200"
 										href="{WEBUI_BASE_URL}/static/user-import.csv"
 									>
-										{$i18n.t('Click here to download user import template file.')}
+										{$i18n.t(
+											'Click here to download user import template file.'
+										)}
 									</a>
 								</div>
 							</div>
