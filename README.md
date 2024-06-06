@@ -75,7 +75,7 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
   ```bash
   ./run-compose.sh --enable-gpu[count=all]
   ```
-  - there are 3 pipelines: wikipedia search, simple chat (for testing connecting to the ollama container), trip planning pipeline (crewai agents)
+  - there are 3 pipelines: wikipedia search, simple chat (for testing connecting to the ollama container), trip planning pipeline (crewai agents, -> copy the pipelines/mount/.env.example to pipelines/mount/.env and adjust the SERPER_API token accordingly)
   
 
 - **If Ollama is on your computer**, use this command:
