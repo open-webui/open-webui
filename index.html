@@ -28,13 +28,126 @@ loadMarkdown("active.md", "activeDiv", "_parent");
   }
 </style>
 
+    
+<script>
+// Create GitHub cmds for downloading missing local repos.
+document.addEventListener("DOMContentLoaded", function() {
+  waitForElm('#activeDivLoaded').then((elm) => {
+    const website = location.host;
+    const projectsDiv = document.getElementById("activeDiv");
+    const missingReposFound = document.getElementById("missingReposFound");
+    const localsiteView = document.getElementById("localsiteView");
+    const links = projectsDiv.getElementsByTagName("a");
+
+    const repoArray = [];
+    const repoCount = {};
+    const missingRepos = [];
+    const missingRepoCount = {};
+
+    // Build repoArray and repoCount
+    for (let link of links) {
+      if (link.href.includes(location.host)) { // Get links pointed at current domain (typically localhost:8887)
+          const path = new URL(link.href).pathname.split('/');
+          const folder = path[1];  // Top level parent folder
+          
+          if (folder && !repoArray.includes(folder)) {
+              repoArray.push(folder);
+          }
+
+          repoCount[folder] = (repoCount[folder] || 0) + 1;
+      }
+    }
+
+    // Check for missing repos and build missingRepoCount
+    const checkRepos = async () => {
+        for (let i = 0; i < repoArray.length; i++) {
+            const folder = repoArray[i];
+            if (folder !== 'localsite') {
+                try {
+                    const response = await fetch(`http://${website}/${folder}/`);
+                    if (!response.ok) {
+                        throw new Error('Not Found');
+                    }
+                } catch (error) {
+                    missingRepos.push(folder);
+                    missingRepoCount[folder] = repoCount[folder];
+                }
+            }
+        }
+        if (missingRepos.length > 0) {
+          missingReposFound.style.display = 'block';
+          displayMissingRepos();
+          buildCloneCommands();
+        } else {
+          allReposPresent.style.display = 'block';
+        }
+        if (location.host.includes("localhost")) {
+          localsiteView .style.display = 'block';
+        }
+    };
+
+    // Display missing repos
+    const displayMissingRepos = () => {
+        const missingReposDiv = document.getElementById("missingRepos");
+        let html = '<ul>';
+        for (let folder of missingRepos) {
+            html += `<li><a href="https://github.com/modelearth/${folder}">https://github.com/modelearth/${folder}</a> (Links: ${missingRepoCount[folder]})</li>`;
+        }
+        html += '</ul>';
+        missingReposDiv.innerHTML = html;
+    };
+
+    // Build and display clone commands
+    const buildCloneCommands = () => {
+        let githubCloneCmds = '';
+        for (let folder of missingRepos) {
+            githubCloneCmds += `git clone https://github.com/modelearth/${folder} ${folder} && `;
+        }
+        githubCloneCmds = githubCloneCmds.slice(0, -4);  // Remove the trailing " &&"
+        
+        const cloneMissingReposTextbox = document.getElementById("cloneMissingRepos");
+        cloneMissingReposTextbox.value = githubCloneCmds;
+        
+        const boldTitle = document.createElement('div');
+        boldTitle.className = 'bold-title';
+        boldTitle.textContent = 'You can run in your webroot to clone additional repos featured above.';
+        cloneMissingReposTextbox.insertAdjacentElement('beforebegin', boldTitle);
+    };
+
+    // Start the checking process
+    checkRepos();
+  });
+});
+</script>
+
 </head>
 
 <body>
 
 <div class="content contentpadding">
   <div id="activeDiv" class="mTable"></div>
+
+  <div id="missingReposFound" style="display:none">
+    <h2>Additional Repos</h2>
+    <div id="missingRepos"></div>
+    <textarea id="cloneMissingRepos" rows="4" cols="50" style="width:100%;max-width:550px;"></textarea><br>
+    
+  </div>
+
+
+  <div id="allReposPresent" style="display:none">
+    <h2>Model.Earth Repos</h2>
+    All repos above are present. Github source files: <a href="https://github.com/ModelEarth?tab=repositories">github.com/modelearth</a></div>
+  <br>
+
+  <div id="localsiteView" style="display:none">
+    <a href="/localsite/start/steps/">Refresh your local repos</a> for the latest updates.<br><br>
+  </div>
+
+  Our Goal: To create online experiences we all enjoy and contribute to well beyond our initial involvement. <a href="/community/projects/">Moonshots</a>
+
 </div>
+
 
 </body>
 </html>
