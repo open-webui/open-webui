@@ -11,7 +11,7 @@
 - [ ] **Dependencies:** Are there any new dependencies? Have you updated the dependency versions in the documentation?
 - [ ] **Testing:** Have you written and run sufficient tests for validating the changes?
 - [ ] **Code review:** Have you performed a self-review of your code, addressing any coding standard issues and ensuring adherence to the project's coding standards?
-- [ ] **Label:** To cleary categorize this pull request, assign a relevant label to the pull request title, using one of the following:
+- [ ] **Prefix:** To cleary categorize this pull request, prefix the pull request title, using one of the following:
   - **BREAKING CHANGE**: Significant changes that may affect compatibility
   - **build**: Changes that affect the build system or external dependencies
   - **ci**: Changes to our continuous integration processes or workflows

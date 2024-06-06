@@ -4,7 +4,7 @@
 	import { tick, createEventDispatcher, getContext } from 'svelte';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
-	import { modelfiles, settings } from '$lib/stores';
+	import { models, settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import { user as _user } from '$lib/stores';
@@ -60,8 +60,7 @@
 	{#if !($settings?.chatBubble ?? true)}
 		<ProfileImage
 			src={message.user
-				? $modelfiles.find((modelfile) => modelfile.tagName === message.user)?.imageUrl ??
-				  '/user.png'
+				? $models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ?? '/user.png'
 				: user?.profile_image_url ?? '/user.png'}
 		/>
 	{/if}
@@ -70,12 +69,8 @@
 			<div>
 				<Name>
 					{#if message.user}
-						{#if $modelfiles.map((modelfile) => modelfile.tagName).includes(message.user)}
-							{$modelfiles.find((modelfile) => modelfile.tagName === message.user)?.title}
-						{:else}
-							{$i18n.t('You')}
-							<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
-						{/if}
+						{$i18n.t('You')}
+						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
 					{:else if $settings.showUsername || $_user.name !== user.name}
 						{user.name}
 					{:else}
@@ -201,7 +196,7 @@
 					<div class=" mt-2 mb-1 flex justify-end space-x-1.5 text-sm font-medium">
 						<button
 							id="close-edit-message-button"
-							class=" px-4 py-2 bg-gray-900 hover:bg-gray-850 text-gray-100 transition rounded-3xl"
+							class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
 							on:click={() => {
 								cancelEditMessage();
 							}}
@@ -211,7 +206,7 @@
 
 						<button
 							id="save-edit-message-button"
-							class="px-4 py-2 bg-white hover:bg-gray-100 text-gray-800 transition rounded-3xl"
+							class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 							on:click={() => {
 								editMessageConfirmHandler();
 							}}

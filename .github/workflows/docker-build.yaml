@@ -70,8 +70,10 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
             prefix=cache-${{ matrix.platform }}-
+            latest=false
 
       - name: Build Docker image (latest)
         uses: docker/build-push-action@v5
@@ -84,6 +86,8 @@ jobs:
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
 
       - name: Export digest
         run: |
@@ -156,8 +160,10 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
             prefix=cache-cuda-${{ matrix.platform }}-
+            latest=false
 
       - name: Build Docker image (cuda)
         uses: docker/build-push-action@v5
@@ -170,7 +176,9 @@ jobs:
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
-          build-args: USE_CUDA=true
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+            USE_CUDA=true
 
       - name: Export digest
         run: |
@@ -243,8 +251,10 @@ jobs:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
             prefix=cache-ollama-${{ matrix.platform }}-
+            latest=false
 
       - name: Build Docker image (ollama)
         uses: docker/build-push-action@v5
@@ -257,7 +267,9 @@ jobs:
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
-          build-args: USE_OLLAMA=true
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+            USE_OLLAMA=true
 
       - name: Export digest
         run: |

@@ -1,14 +1,18 @@
 <script lang="ts">
-	import { getModelFilterConfig, updateModelFilterConfig } from '$lib/apis';
+	import { getBackendConfig, getModelFilterConfig, updateModelFilterConfig } from '$lib/apis';
 	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
 	import { getUserPermissions, updateUserPermissions } from '$lib/apis/users';
 
 	import { onMount, getContext } from 'svelte';
-	import { models } from '$lib/stores';
+	import { models, config } from '$lib/stores';
+	import Switch from '$lib/components/common/Switch.svelte';
+	import { setDefaultModels } from '$lib/apis/configs';
 
 	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
+
+	let defaultModelId = '';
 
 	let whitelistEnabled = false;
 	let whitelistModels = [''];
@@ -24,9 +28,10 @@
 		const res = await getModelFilterConfig(localStorage.token);
 		if (res) {
 			whitelistEnabled = res.enabled;
-
 			whitelistModels = res.models.length > 0 ? res.models : [''];
 		}
+
+		defaultModelId = $config.default_models ? $config?.default_models.split(',')[0] : '';
 	});
 </script>
 
@@ -34,10 +39,13 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
 		// console.log('submit');
-		await updateUserPermissions(localStorage.token, permissions);
 
+		await setDefaultModels(localStorage.token, defaultModelId);
+		await updateUserPermissions(localStorage.token, permissions);
 		await updateModelFilterConfig(localStorage.token, whitelistEnabled, whitelistModels);
 		saveHandler();
+
+		await config.set(await getBackendConfig());
 	}}
 >
 	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
@@ -88,26 +96,40 @@
 
 		<hr class=" dark:border-gray-700 my-2" />
 
-		<div class="mt-2 space-y-3 pr-1.5">
+		<div class="mt-2 space-y-3">
 			<div>
 				<div class="mb-2">
 					<div class="flex justify-between items-center text-xs">
 						<div class=" text-sm font-medium">{$i18n.t('Manage Models')}</div>
 					</div>
 				</div>
+				<div class=" space-y-1 mb-3">
+					<div class="mb-2">
+						<div class="flex justify-between items-center text-xs">
+							<div class=" text-xs font-medium">{$i18n.t('Default Model')}</div>
+						</div>
+					</div>
 
-				<div class=" space-y-3">
-					<div>
+					<div class="flex-1 mr-2">
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							bind:value={defaultModelId}
+							placeholder="Select a model"
+						>
+							<option value="" disabled selected>{$i18n.t('Select a model')}</option>
+							{#each $models.filter((model) => model.id) as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+
+				<div class=" space-y-1">
+					<div class="mb-2">
 						<div class="flex justify-between items-center text-xs">
 							<div class=" text-xs font-medium">{$i18n.t('Model Whitelisting')}</div>
 
-							<button
-								class=" text-xs font-medium text-gray-500"
-								type="button"
-								on:click={() => {
-									whitelistEnabled = !whitelistEnabled;
-								}}>{whitelistEnabled ? $i18n.t('On') : $i18n.t('Off')}</button
-							>
+							<Switch bind:state={whitelistEnabled} />
 						</div>
 					</div>
 

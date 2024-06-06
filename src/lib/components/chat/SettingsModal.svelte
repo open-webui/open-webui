@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { models, settings, user } from '$lib/stores';
 
-	import { getModels as _getModels } from '$lib/utils';
+	import { getModels as _getModels } from '$lib/apis';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -17,6 +17,7 @@
 	import Images from './Settings/Images.svelte';
 	import User from '../icons/User.svelte';
 	import Personalization from './Settings/Personalization.svelte';
+	import { updateUserSettings } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
@@ -26,7 +27,7 @@
 		console.log(updated);
 		await settings.set({ ...$settings, ...updated });
 		await models.set(await getModels());
-		localStorage.setItem('settings', JSON.stringify($settings));
+		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
 	const getModels = async () => {

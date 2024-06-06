@@ -1,5 +1,6 @@
 import { OPENAI_API_BASE_URL } from '$lib/constants';
-import { promptTemplate } from '$lib/utils';
+import { titleGenerationTemplate } from '$lib/utils';
+import { type Model, models, settings } from '$lib/stores';
 
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
@@ -202,17 +203,20 @@ export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 	return res.OPENAI_API_KEYS;
 };
 
-export const getOpenAIModels = async (token: string = '') => {
+export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/models`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+	const res = await fetch(
+		`${OPENAI_API_BASE_URL}/models${typeof urlIdx === 'number' ? `/${urlIdx}` : ''}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
 		}
-	})
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -226,15 +230,7 @@ export const getOpenAIModels = async (token: string = '') => {
 		throw error;
 	}
 
-	const models = Array.isArray(res) ? res : res?.data ?? null;
-
-	return models
-		? models
-				.map((model) => ({ id: model.id, name: model.name ?? model.id, external: true }))
-				.sort((a, b) => {
-					return a.name.localeCompare(b.name);
-				})
-		: models;
+	return res;
 };
 
 export const getOpenAIModelsDirect = async (
@@ -340,11 +336,12 @@ export const generateTitle = async (
 	template: string,
 	model: string,
 	prompt: string,
+	chat_id?: string,
 	url: string = OPENAI_API_BASE_URL
 ) => {
 	let error = null;
 
-	template = promptTemplate(template, prompt);
+	template = titleGenerationTemplate(template, prompt);
 
 	console.log(template);
 
@@ -365,7 +362,9 @@ export const generateTitle = async (
 			],
 			stream: false,
 			// Restricting the max tokens to 50 to avoid long titles
-			max_tokens: 50
+			max_tokens: 50,
+			...(chat_id && { chat_id: chat_id }),
+			title: true
 		})
 	})
 		.then(async (res) => {
@@ -385,4 +384,72 @@ export const generateTitle = async (
 	}
 
 	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? 'New Chat';
+};
+
+export const generateSearchQuery = async (
+	token: string = '',
+	model: string,
+	previousMessages: string[],
+	prompt: string,
+	url: string = OPENAI_API_BASE_URL
+): Promise<string | undefined> => {
+	let error = null;
+
+	// TODO: Allow users to specify the prompt
+	// Get the current date in the format "January 20, 2024"
+	const currentDate = new Intl.DateTimeFormat('en-US', {
+		year: 'numeric',
+		month: 'long',
+		day: '2-digit'
+	}).format(new Date());
+
+	const res = await fetch(`${url}/chat/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			// Few shot prompting
+			messages: [
+				{
+					role: 'assistant',
+					content: `You are tasked with generating web search queries. Give me an appropriate query to answer my question for google search. Answer with only the query. Today is ${currentDate}.`
+				},
+				{
+					role: 'user',
+					content: prompt
+				}
+				// {
+				// 	role: 'user',
+				// 	content:
+				// 		(previousMessages.length > 0
+				// 			? `Previous Questions:\n${previousMessages.join('\n')}\n\n`
+				// 			: '') + `Current Question: ${prompt}`
+				// }
+			],
+			stream: false,
+			// Restricting the max tokens to 30 to avoid long search queries
+			max_tokens: 30
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return undefined;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? undefined;
 };

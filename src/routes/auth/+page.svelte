@@ -3,7 +3,7 @@
 	import { userSignIn, userSignUp } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user } from '$lib/stores';
+	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
@@ -22,6 +22,8 @@
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
 			localStorage.token = sessionUser.token;
+
+			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			goto('/');
 		}
@@ -60,7 +62,7 @@
 			await goto('/');
 		}
 		loaded = true;
-		if (($config?.trusted_header_auth ?? false) || $config?.auth === false) {
+		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
 		}
 	});
@@ -102,7 +104,7 @@
 		</div> -->
 
 		<div class="w-full sm:max-w-md px-10 min-h-screen flex flex-col text-center">
-			{#if ($config?.trusted_header_auth ?? false) || $config?.auth === false}
+			{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 				<div class=" my-auto pb-10 w-full">
 					<div
 						class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-bold dark:text-gray-200"
@@ -194,25 +196,27 @@
 								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
 							</button>
 
-							<div class=" mt-4 text-sm text-center">
-								{mode === 'signin'
-									? $i18n.t("Don't have an account?")
-									: $i18n.t('Already have an account?')}
+							{#if $config?.features.enable_signup}
+								<div class=" mt-4 text-sm text-center">
+									{mode === 'signin'
+										? $i18n.t("Don't have an account?")
+										: $i18n.t('Already have an account?')}
 
-								<button
-									class=" font-medium underline"
-									type="button"
-									on:click={() => {
-										if (mode === 'signin') {
-											mode = 'signup';
-										} else {
-											mode = 'signin';
-										}
-									}}
-								>
-									{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
-								</button>
-							</div>
+									<button
+										class=" font-medium underline"
+										type="button"
+										on:click={() => {
+											if (mode === 'signin') {
+												mode = 'signup';
+											} else {
+												mode = 'signin';
+											}
+										}}
+									>
+										{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
+									</button>
+								</div>
+							{/if}
 						</div>
 					</form>
 				</div>
