@@ -9,9 +9,10 @@ import json
 import logging
 
 from pydantic import BaseModel
+from starlette.background import BackgroundTask
 
-
-from apps.web.models.users import Users
+from apps.webui.models.models import Models
+from apps.webui.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
     decode_token,
@@ -52,7 +53,6 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
@@ -185,28 +185,41 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 async def fetch_url(url, key):
     timeout = aiohttp.ClientTimeout(total=5)
     try:
-        if key != "":
-            headers = {"Authorization": f"Bearer {key}"}
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(url, headers=headers) as response:
-                    return await response.json()
-        else:
-            return None
+        headers = {"Authorization": f"Bearer {key}"}
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            async with session.get(url, headers=headers) as response:
+                return await response.json()
     except Exception as e:
         # Handle connection error here
         log.error(f"Connection error: {e}")
         return None
 
 
+async def cleanup_response(
+    response: Optional[aiohttp.ClientResponse],
+    session: Optional[aiohttp.ClientSession],
+):
+    if response:
+        response.close()
+    if session:
+        await session.close()
+
+
 def merge_models_lists(model_lists):
-    log.info(f"merge_models_lists {model_lists}")
+    log.debug(f"merge_models_lists {model_lists}")
     merged_list = []
 
     for idx, models in enumerate(model_lists):
         if models is not None and "error" not in models:
             merged_list.extend(
                 [
-                    {**model, "urlIdx": idx}
+                    {
+                        **model,
+                        "name": model.get("name", model["id"]),
+                        "owned_by": "openai",
+                        "openai": model,
+                        "urlIdx": idx,
+                    }
                     for model in models
                     if "api.openai.com"
                     not in app.state.config.OPENAI_API_BASE_URLS[idx]
@@ -217,7 +230,7 @@ def merge_models_lists(model_lists):
     return merged_list
 
 
-async def get_all_models():
+async def get_all_models(raw: bool = False):
     log.info("get_all_models()")
 
     if (
@@ -226,13 +239,37 @@ async def get_all_models():
     ) or not app.state.config.ENABLE_OPENAI_API:
         models = {"data": []}
     else:
+        # Check if API KEYS length is same than API URLS length
+        if len(app.state.config.OPENAI_API_KEYS) != len(
+            app.state.config.OPENAI_API_BASE_URLS
+        ):
+            # if there are more keys than urls, remove the extra keys
+            if len(app.state.config.OPENAI_API_KEYS) > len(
+                app.state.config.OPENAI_API_BASE_URLS
+            ):
+                app.state.config.OPENAI_API_KEYS = app.state.config.OPENAI_API_KEYS[
+                    : len(app.state.config.OPENAI_API_BASE_URLS)
+                ]
+            # if there are more urls than keys, add empty keys
+            else:
+                app.state.config.OPENAI_API_KEYS += [
+                    ""
+                    for _ in range(
+                        len(app.state.config.OPENAI_API_BASE_URLS)
+                        - len(app.state.config.OPENAI_API_KEYS)
+                    )
+                ]
+
         tasks = [
             fetch_url(f"{url}/models", app.state.config.OPENAI_API_KEYS[idx])
             for idx, url in enumerate(app.state.config.OPENAI_API_BASE_URLS)
         ]
 
         responses = await asyncio.gather(*tasks)
-        log.info(f"get_all_models:responses() {responses}")
+        log.debug(f"get_all_models:responses() {responses}")
+
+        if raw:
+            return responses
 
         models = {
             "data": merge_models_lists(
@@ -249,10 +286,10 @@ async def get_all_models():
             )
         }
 
-        log.info(f"models: {models}")
+        log.debug(f"models: {models}")
         app.state.MODELS = {model["id"]: model for model in models["data"]}
 
-        return models
+    return models
 
 
 @app.get("/models")
@@ -272,11 +309,16 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_use
         return models
     else:
         url = app.state.config.OPENAI_API_BASE_URLS[url_idx]
+        key = app.state.config.OPENAI_API_KEYS[url_idx]
+
+        headers = {}
+        headers["Authorization"] = f"Bearer {key}"
+        headers["Content-Type"] = "application/json"
 
         r = None
 
         try:
-            r = requests.request(method="GET", url=f"{url}/models")
+            r = requests.request(method="GET", url=f"{url}/models", headers=headers)
             r.raise_for_status()
 
             response_data = r.json()
@@ -310,77 +352,154 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     body = await request.body()
     # TODO: Remove below after gpt-4-vision fix from Open AI
     # Try to decode the body of the request from bytes to a UTF-8 string (Require add max_token to fix gpt-4-vision)
+
+    payload = None
+
     try:
-        body = body.decode("utf-8")
-        body = json.loads(body)
+        if "chat/completions" in path:
+            body = body.decode("utf-8")
+            body = json.loads(body)
 
-        idx = app.state.MODELS[body.get("model")]["urlIdx"]
+            payload = {**body}
 
-        # Check if the model is "gpt-4-vision-preview" and set "max_tokens" to 4000
-        # This is a workaround until OpenAI fixes the issue with this model
-        if body.get("model") == "gpt-4-vision-preview":
-            if "max_tokens" not in body:
-                body["max_tokens"] = 4000
-            log.debug("Modified body_dict:", body)
+            model_id = body.get("model")
+            model_info = Models.get_model_by_id(model_id)
 
-        # Fix for ChatGPT calls failing because the num_ctx key is in body
-        if "num_ctx" in body:
-            # If 'num_ctx' is in the dictionary, delete it
-            # Leaving it there generates an error with the
-            # OpenAI API (Feb 2024)
-            del body["num_ctx"]
+            if model_info:
+                print(model_info)
+                if model_info.base_model_id:
+                    payload["model"] = model_info.base_model_id
 
-        # Convert the modified body back to JSON
-        body = json.dumps(body)
+                model_info.params = model_info.params.model_dump()
+
+                if model_info.params:
+                    if model_info.params.get("temperature", None):
+                        payload["temperature"] = int(
+                            model_info.params.get("temperature")
+                        )
+
+                    if model_info.params.get("top_p", None):
+                        payload["top_p"] = int(model_info.params.get("top_p", None))
+
+                    if model_info.params.get("max_tokens", None):
+                        payload["max_tokens"] = int(
+                            model_info.params.get("max_tokens", None)
+                        )
+
+                    if model_info.params.get("frequency_penalty", None):
+                        payload["frequency_penalty"] = int(
+                            model_info.params.get("frequency_penalty", None)
+                        )
+
+                    if model_info.params.get("seed", None):
+                        payload["seed"] = model_info.params.get("seed", None)
+
+                    if model_info.params.get("stop", None):
+                        payload["stop"] = (
+                            [
+                                bytes(stop, "utf-8").decode("unicode_escape")
+                                for stop in model_info.params["stop"]
+                            ]
+                            if model_info.params.get("stop", None)
+                            else None
+                        )
+
+                if model_info.params.get("system", None):
+                    # Check if the payload already has a system message
+                    # If not, add a system message to the payload
+                    if payload.get("messages"):
+                        for message in payload["messages"]:
+                            if message.get("role") == "system":
+                                message["content"] = (
+                                    model_info.params.get("system", None)
+                                    + message["content"]
+                                )
+                                break
+                        else:
+                            payload["messages"].insert(
+                                0,
+                                {
+                                    "role": "system",
+                                    "content": model_info.params.get("system", None),
+                                },
+                            )
+            else:
+                pass
+
+            model = app.state.MODELS[payload.get("model")]
+
+            idx = model["urlIdx"]
+
+            if "pipeline" in model and model.get("pipeline"):
+                payload["user"] = {"name": user.name, "id": user.id}
+
+            # Check if the model is "gpt-4-vision-preview" and set "max_tokens" to 4000
+            # This is a workaround until OpenAI fixes the issue with this model
+            if payload.get("model") == "gpt-4-vision-preview":
+                if "max_tokens" not in payload:
+                    payload["max_tokens"] = 4000
+                log.debug("Modified payload:", payload)
+
+            # Convert the modified body back to JSON
+            payload = json.dumps(payload)
+
     except json.JSONDecodeError as e:
         log.error("Error loading request body into a dictionary:", e)
+
+    print(payload)
 
     url = app.state.config.OPENAI_API_BASE_URLS[idx]
     key = app.state.config.OPENAI_API_KEYS[idx]
 
     target_url = f"{url}/{path}"
 
-    if key == "":
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
-
     headers = {}
     headers["Authorization"] = f"Bearer {key}"
     headers["Content-Type"] = "application/json"
 
     r = None
+    session = None
+    streaming = False
 
     try:
-        r = requests.request(
+        session = aiohttp.ClientSession(trust_env=True)
+        r = await session.request(
             method=request.method,
             url=target_url,
-            data=body,
+            data=payload if payload else body,
             headers=headers,
-            stream=True,
         )
 
         r.raise_for_status()
 
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
+            streaming = True
             return StreamingResponse(
-                r.iter_content(chunk_size=8192),
-                status_code=r.status_code,
+                r.content,
+                status_code=r.status,
                 headers=dict(r.headers),
+                background=BackgroundTask(
+                    cleanup_response, response=r, session=session
+                ),
             )
         else:
-            response_data = r.json()
+            response_data = await r.json()
             return response_data
     except Exception as e:
         log.exception(e)
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
-                res = r.json()
+                res = await r.json()
+                print(res)
                 if "error" in res:
                     error_detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
             except:
                 error_detail = f"External: {e}"
-
-        raise HTTPException(
-            status_code=r.status_code if r else 500, detail=error_detail
-        )
+        raise HTTPException(status_code=r.status if r else 500, detail=error_detail)
+    finally:
+        if not streaming and session:
+            if r:
+                r.close()
+            await session.close()

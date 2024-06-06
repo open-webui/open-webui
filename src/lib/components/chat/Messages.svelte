@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-
-	import { chats, config, modelfiles, settings, user as _user, mobile } from '$lib/stores';
-	import { tick, getContext } from 'svelte';
+	import { chats, config, settings, user as _user, mobile } from '$lib/stores';
+	import { tick, getContext, onMount } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
@@ -26,7 +25,6 @@
 
 	export let user = $_user;
 	export let prompt;
-	export let suggestionPrompts = [];
 	export let processing = '';
 	export let bottomPadding = false;
 	export let autoScroll;
@@ -34,7 +32,6 @@
 	export let messages = [];
 
 	export let selectedModels;
-	export let selectedModelfiles = [];
 
 	$: if (autoScroll && bottomPadding) {
 		(async () => {
@@ -244,12 +241,10 @@
 	};
 </script>
 
-<div class="h-full flex mb-16">
+<div class="h-full flex">
 	{#if messages.length == 0}
 		<Placeholder
-			models={selectedModels}
-			modelfiles={selectedModelfiles}
-			{suggestionPrompts}
+			modelIds={selectedModels}
 			submitPrompt={async (p) => {
 				let text = p;
 
@@ -289,9 +284,9 @@
 		<div class="w-full pt-2">
 			{#key chatId}
 				{#each messages as message, messageIdx}
-					<div class=" w-full {messageIdx === messages.length - 1 ? 'pb-28' : ''}">
+					<div class=" w-full {messageIdx === messages.length - 1 ? ' pb-12' : ''}">
 						<div
-							class="flex flex-col justify-between px-5 mb-3 {$settings?.fullScreenMode ?? null
+							class="flex flex-col justify-between px-5 mb-3 {$settings?.widescreenMode ?? null
 								? 'max-w-full'
 								: 'max-w-5xl'} mx-auto rounded-lg group"
 						>
@@ -316,7 +311,6 @@
 								{#key message.id}
 									<ResponseMessage
 										{message}
-										modelfiles={selectedModelfiles}
 										siblings={history.messages[message.parentId]?.childrenIds ?? []}
 										isLastMessage={messageIdx + 1 === messages.length}
 										{readOnly}
@@ -345,10 +339,10 @@
 									<CompareMessages
 										bind:history
 										{messages}
+										{readOnly}
 										{chatId}
 										parentMessage={history.messages[message.parentId]}
 										{messageIdx}
-										{selectedModelfiles}
 										{updateChatMessages}
 										{confirmEditResponseMessage}
 										{rateMessage}

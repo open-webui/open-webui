@@ -8,11 +8,13 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 
-	import { cancelOllamaRequest, deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
+	import { deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 
 	import { user, MODEL_DOWNLOAD_POOL, models, mobile } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
-	import { capitalizeFirstLetter, getModels, splitStream } from '$lib/utils';
+	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
+	import { getModels } from '$lib/apis';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -23,7 +25,12 @@
 	export let searchEnabled = true;
 	export let searchPlaceholder = $i18n.t('Search a model');
 
-	export let items = [{ value: 'mango', label: 'Mango' }];
+	export let items: {
+		label: string;
+		value: string;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		[key: string]: any;
+	} = [];
 
 	export let className = 'w-[30rem]';
 
@@ -35,9 +42,16 @@
 	let searchValue = '';
 	let ollamaVersion = null;
 
-	$: filteredItems = searchValue
-		? items.filter((item) => item.value.toLowerCase().includes(searchValue.toLowerCase()))
-		: items;
+	$: filteredItems = items.filter(
+		(item) =>
+			(searchValue
+				? item.value.toLowerCase().includes(searchValue.toLowerCase()) ||
+				  item.label.toLowerCase().includes(searchValue.toLowerCase()) ||
+				  (item.model?.info?.meta?.tags ?? []).some((tag) =>
+						tag.name.toLowerCase().includes(searchValue.toLowerCase())
+				  )
+				: true) && !(item.model?.info?.meta?.hidden ?? false)
+	);
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
@@ -58,16 +72,28 @@
 			return;
 		}
 
-		const res = await pullModel(localStorage.token, sanitizedModelTag, '0').catch((error) => {
-			toast.error(error);
-			return null;
-		});
+		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, '0').catch(
+			(error) => {
+				toast.error(error);
+				return null;
+			}
+		);
 
 		if (res) {
 			const reader = res.body
 				.pipeThrough(new TextDecoderStream())
 				.pipeThrough(splitStream('\n'))
 				.getReader();
+
+			MODEL_DOWNLOAD_POOL.set({
+				...$MODEL_DOWNLOAD_POOL,
+				[sanitizedModelTag]: {
+					...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
+					abortController: controller,
+					reader,
+					done: false
+				}
+			});
 
 			while (true) {
 				try {
@@ -85,19 +111,6 @@
 							}
 							if (data.detail) {
 								throw data.detail;
-							}
-
-							if (data.id) {
-								MODEL_DOWNLOAD_POOL.set({
-									...$MODEL_DOWNLOAD_POOL,
-									[sanitizedModelTag]: {
-										...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
-										requestId: data.id,
-										reader,
-										done: false
-									}
-								});
-								console.log(data);
 							}
 
 							if (data.status) {
@@ -167,11 +180,12 @@
 	});
 
 	const cancelModelPullHandler = async (model: string) => {
-		const { reader, requestId } = $MODEL_DOWNLOAD_POOL[model];
+		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];
+		if (abortController) {
+			abortController.abort();
+		}
 		if (reader) {
 			await reader.cancel();
-
-			await cancelOllamaRequest(localStorage.token, requestId);
 			delete $MODEL_DOWNLOAD_POOL[model];
 			MODEL_DOWNLOAD_POOL.set({
 				...$MODEL_DOWNLOAD_POOL
@@ -238,69 +252,113 @@
 							show = false;
 						}}
 					>
-						<div class="flex items-center gap-2">
-							<div class="line-clamp-1">
-								{item.label}
-
-								<span class=" text-xs font-medium text-gray-600 dark:text-gray-400"
-									>{item.info?.details?.parameter_size ?? ''}</span
-								>
-							</div>
-
-							<!-- {JSON.stringify(item.info)} -->
-
-							{#if item.info.external}
-								<Tooltip content={item.info?.source ?? 'External'}>
-									<div class=" mr-2">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="size-3"
+						<div class="flex flex-col">
+							{#if $mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+								<div class="flex gap-0.5 self-start h-full mb-0.5 -translate-x-1">
+									{#each item.model?.info?.meta.tags as tag}
+										<div
+											class=" text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
-											<path
-												fill-rule="evenodd"
-												d="M8.914 6.025a.75.75 0 0 1 1.06 0 3.5 3.5 0 0 1 0 4.95l-2 2a3.5 3.5 0 0 1-5.396-4.402.75.75 0 0 1 1.251.827 2 2 0 0 0 3.085 2.514l2-2a2 2 0 0 0 0-2.828.75.75 0 0 1 0-1.06Z"
-												clip-rule="evenodd"
-											/>
-											<path
-												fill-rule="evenodd"
-												d="M7.086 9.975a.75.75 0 0 1-1.06 0 3.5 3.5 0 0 1 0-4.95l2-2a3.5 3.5 0 0 1 5.396 4.402.75.75 0 0 1-1.251-.827 2 2 0 0 0-3.085-2.514l-2 2a2 2 0 0 0 0 2.828.75.75 0 0 1 0 1.06Z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</div>
-								</Tooltip>
-							{:else}
-								<Tooltip
-									content={`${
-										item.info?.details?.quantization_level
-											? item.info?.details?.quantization_level + ' '
-											: ''
-									}${item.info.size ? `(${(item.info.size / 1024 ** 3).toFixed(1)}GB)` : ''}`}
-								>
-									<div class=" mr-2">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="1.5"
-											stroke="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-											/>
-										</svg>
-									</div>
-								</Tooltip>
+											{tag.name}
+										</div>
+									{/each}
+								</div>
 							{/if}
+							<div class="flex items-center gap-2">
+								<div class="flex items-center">
+									<div class="line-clamp-1">
+										{item.label}
+									</div>
+									{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
+										<div class="flex ml-1 items-center translate-y-[0.5px]">
+											<Tooltip
+												content={`${
+													item.model.ollama?.details?.quantization_level
+														? item.model.ollama?.details?.quantization_level + ' '
+														: ''
+												}${
+													item.model.ollama?.size
+														? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
+														: ''
+												}`}
+												className="self-end"
+											>
+												<span
+													class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
+													>{item.model.ollama?.details?.parameter_size ?? ''}</span
+												>
+											</Tooltip>
+										</div>
+									{/if}
+								</div>
+
+								{#if !$mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+									<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
+										{#each item.model?.info?.meta.tags as tag}
+											<div
+												class=" text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+											>
+												{tag.name}
+											</div>
+										{/each}
+									</div>
+								{/if}
+
+								<!-- {JSON.stringify(item.info)} -->
+
+								{#if item.model.owned_by === 'openai'}
+									<Tooltip content={`${'External'}`}>
+										<div class="">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="size-3"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M8.914 6.025a.75.75 0 0 1 1.06 0 3.5 3.5 0 0 1 0 4.95l-2 2a3.5 3.5 0 0 1-5.396-4.402.75.75 0 0 1 1.251.827 2 2 0 0 0 3.085 2.514l2-2a2 2 0 0 0 0-2.828.75.75 0 0 1 0-1.06Z"
+													clip-rule="evenodd"
+												/>
+												<path
+													fill-rule="evenodd"
+													d="M7.086 9.975a.75.75 0 0 1-1.06 0 3.5 3.5 0 0 1 0-4.95l2-2a3.5 3.5 0 0 1 5.396 4.402.75.75 0 0 1-1.251-.827 2 2 0 0 0-3.085-2.514l-2 2a2 2 0 0 0 0 2.828.75.75 0 0 1 0 1.06Z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										</div>
+									</Tooltip>
+								{/if}
+
+								{#if item.model?.info?.meta?.description}
+									<Tooltip
+										content={`${sanitizeResponseContent(
+											item.model?.info?.meta?.description
+										).replaceAll('\n', '<br>')}`}
+									>
+										<div class="">
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="1.5"
+												stroke="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+												/>
+											</svg>
+										</div>
+									</Tooltip>
+								{/if}
+							</div>
 						</div>
 
 						{#if value === item.value}
-							<div class="ml-auto">
+							<div class="ml-auto pl-2">
 								<Check />
 							</div>
 						{/if}

@@ -9,35 +9,39 @@
 	},
 	{
 		"code": "ar-BH",
-		"title": "العربية (AR)"
-	},
-	{
-		"code": "bg-BG",
-		"title": "Bulgarian (BG)"
+		"title": "Arabic (عربي)"
 	},
 	{
 		"code": "bn-BD",
-		"title": "Bangla (বাংলা)"
+		"title": "Bengali (বাংলা)"
+	},
+	{
+		"code": "bg-BG",
+		"title": "Bulgarian (български)"
 	},
 	{
 		"code": "ca-ES",
-		"title": "Catalan"
+		"title": "Catalan (català)"
+	},
+	{
+		"code": "ceb-PH",
+		"title": "Cebuano (Filipino)"
 	},
 	{
 		"code": "de-DE",
-		"title": "Deutsch"
+		"title": "German (Deutsch)"
 	},
 	{
 		"code": "es-ES",
-		"title": "Spanish"
+		"title": "Spanish (Español)"
 	},
 	{
 		"code": "fa-IR",
-		"title": "فارسی (Farsi)"
+		"title": "Persian (فارسی)"
 	},
 	{
 		"code": "fi-FI",
-		"title": "Finnish"
+		"title": "Finnish (Suomalainen)"
 	},
 	{
 		"code": "fr-CA",
@@ -49,7 +53,7 @@
 	},
 	{
 		"code": "he-IL",
-		"title": "עברית (Hebrew)"
+		"title": "Hebrew (עברית)"
 	},
 	{
 		"code": "hi-IN",
@@ -57,23 +61,31 @@
 	},
 	{
 		"code": "hr-HR",
-		"title": "Croatian"
+		"title": "Croatian (Hrvatski)"
 	},
 	{
 		"code": "it-IT",
-		"title": "Italian"
+		"title": "Italian (Italiano)"
 	},
 	{
 		"code": "ja-JP",
-		"title": "Japanese"
+		"title": "Japanese (日本語)"
 	},
 	{
 		"code": "ka-GE",
-		"title": "Georgian"
+		"title": "Georgian (ქართული)"
 	},
 	{
 		"code": "ko-KR",
-		"title": "Korean"
+		"title": "Korean (한국어)"
+	},
+	{
+		"code": "lt-LT",
+		"title": "Lithuanian (Lietuvių)"
+	},
+	{
+		"code": "nb-NO",
+		"title": "Norwegian Bokmål (Norway)"
 	},
 	{
 		"code": "nl-NL",
@@ -85,7 +97,7 @@
 	},
 	{
 		"code": "pl-PL",
-		"title": "Polish"
+		"title": "Polish (Polski)"
 	},
 	{
 		"code": "pt-BR",
@@ -101,7 +113,7 @@
 	},
 	{
 		"code": "sv-SE",
-		"title": "Swedish"
+		"title": "Swedish (Svenska)"
 	},
 	{
 		"code": "sr-RS",
@@ -109,26 +121,30 @@
 	},
 	{
 		"code": "tr-TR",
-		"title": "Turkish"
+		"title": "Turkish (Türkçe)"
+	},
+	{
+		"code": "tk-TW",
+		"title": "Turkmen (Türkmençe)"
 	},
 	{
 		"code": "uk-UA",
-		"title": "Ukrainian"
+		"title": "Ukrainian (Українська)"
 	},
 	{
 		"code": "vi-VN",
-		"title": "Tiếng Việt"
+		"title": "Vietnamese (Tiếng Việt)"
 	},
 	{
 		"code": "zh-CN",
-		"title": "Chinese (Simplified)"
+		"title": "Chinese (简体中文)"
 	},
 	{
 		"code": "zh-TW",
-		"title": "Chinese (Traditional)"
+		"title": "Chinese (繁體中文)"
 	},
 	{
 		"code": "dg-DG",
-		"title": "Doge 🐶"
+		"title": "Doge (🐶)"
 	}
 ]

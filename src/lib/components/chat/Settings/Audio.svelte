@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
-	import { user } from '$lib/stores';
+	import { user, settings } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import Switch from '$lib/components/common/Switch.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -13,6 +14,7 @@
 
 	let OpenAIUrl = '';
 	let OpenAIKey = '';
+	let OpenAISpeaker = '';
 
 	let STTEngines = ['', 'openai'];
 	let STTEngine = '';
@@ -20,6 +22,7 @@
 	let conversationMode = false;
 	let speechAutoSend = false;
 	let responseAutoPlayback = false;
+	let nonLocalVoices = false;
 
 	let TTSEngines = ['', 'openai'];
 	let TTSEngine = '';
@@ -86,29 +89,28 @@
 				url: OpenAIUrl,
 				key: OpenAIKey,
 				model: model,
-				speaker: speaker
+				speaker: OpenAISpeaker
 			});
 
 			if (res) {
 				OpenAIUrl = res.OPENAI_API_BASE_URL;
 				OpenAIKey = res.OPENAI_API_KEY;
 				model = res.OPENAI_API_MODEL;
-				speaker = res.OPENAI_API_VOICE;
+				OpenAISpeaker = res.OPENAI_API_VOICE;
 			}
 		}
 	};
 
 	onMount(async () => {
-		let settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+		conversationMode = $settings.conversationMode ?? false;
+		speechAutoSend = $settings.speechAutoSend ?? false;
+		responseAutoPlayback = $settings.responseAutoPlayback ?? false;
 
-		conversationMode = settings.conversationMode ?? false;
-		speechAutoSend = settings.speechAutoSend ?? false;
-		responseAutoPlayback = settings.responseAutoPlayback ?? false;
-
-		STTEngine = settings?.audio?.STTEngine ?? '';
-		TTSEngine = settings?.audio?.TTSEngine ?? '';
-		speaker = settings?.audio?.speaker ?? '';
-		model = settings?.audio?.model ?? '';
+		STTEngine = $settings?.audio?.STTEngine ?? '';
+		TTSEngine = $settings?.audio?.TTSEngine ?? '';
+		nonLocalVoices = $settings.audio?.nonLocalVoices ?? false;
+		speaker = $settings?.audio?.speaker ?? '';
+		model = $settings?.audio?.model ?? '';
 
 		if (TTSEngine === 'openai') {
 			getOpenAIVoices();
@@ -124,7 +126,10 @@
 				OpenAIUrl = res.OPENAI_API_BASE_URL;
 				OpenAIKey = res.OPENAI_API_KEY;
 				model = res.OPENAI_API_MODEL;
-				speaker = res.OPENAI_API_VOICE;
+				OpenAISpeaker = res.OPENAI_API_VOICE;
+				if (TTSEngine === 'openai') {
+					speaker = OpenAISpeaker;
+				}
 			}
 		}
 	});
@@ -140,8 +145,14 @@
 			audio: {
 				STTEngine: STTEngine !== '' ? STTEngine : undefined,
 				TTSEngine: TTSEngine !== '' ? TTSEngine : undefined,
-				speaker: speaker !== '' ? speaker : undefined,
-				model: model !== '' ? model : undefined
+				speaker:
+					(TTSEngine === 'openai' ? OpenAISpeaker : speaker) !== ''
+						? TTSEngine === 'openai'
+							? OpenAISpeaker
+							: speaker
+						: undefined,
+				model: model !== '' ? model : undefined,
+				nonLocalVoices: nonLocalVoices
 			}
 		});
 		dispatch('save');
@@ -229,7 +240,7 @@
 						on:change={(e) => {
 							if (e.target.value === 'openai') {
 								getOpenAIVoices();
-								speaker = 'alloy';
+								OpenAISpeaker = 'alloy';
 								model = 'tts-1';
 							} else {
 								getWebAPIVoices();
@@ -292,14 +303,25 @@
 						<select
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={speaker}
-							placeholder="Select a voice"
 						>
-							<option value="" selected>{$i18n.t('Default')}</option>
-							{#each voices.filter((v) => v.localService === true) as voice}
-								<option value={voice.name} class="bg-gray-100 dark:bg-gray-700">{voice.name}</option
+							<option value="" selected={speaker !== ''}>{$i18n.t('Default')}</option>
+							{#each voices.filter((v) => nonLocalVoices || v.localService === true) as voice}
+								<option
+									value={voice.name}
+									class="bg-gray-100 dark:bg-gray-700"
+									selected={speaker === voice.name}>{voice.name}</option
 								>
 							{/each}
 						</select>
+					</div>
+				</div>
+				<div class="flex items-center justify-between my-1.5">
+					<div class="text-xs">
+						{$i18n.t('Allow non-local voices')}
+					</div>
+
+					<div class="mt-1">
+						<Switch bind:state={nonLocalVoices} />
 					</div>
 				</div>
 			</div>
@@ -311,7 +333,7 @@
 						<input
 							list="voice-list"
 							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={speaker}
+							bind:value={OpenAISpeaker}
 							placeholder="Select a voice"
 						/>
 
