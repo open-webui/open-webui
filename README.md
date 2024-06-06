@@ -68,6 +68,16 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 
 ### Installation with Default Configuration
 
+- **docker compose with pipelines**:
+
+  the run-compose script has been adjusted to also build and start the pipelines container.
+
+  ```bash
+  ./run-compose.sh --enable-gpu[count=all]
+  ```
+  - there are 3 pipelines: wikipedia search, simple chat (for testing connecting to the ollama container), trip planning pipeline (crewai agents)
+  
+
 - **If Ollama is on your computer**, use this command:
 
   ```bash
