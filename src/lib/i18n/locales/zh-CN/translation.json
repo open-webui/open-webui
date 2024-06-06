@@ -544,5 +544,10 @@
 	"You're a helpful assistant.": "你是一个有帮助的助手。",
 	"You're now logged in.": "已登录。",
 	"Youtube": "YouTube",
-	"Youtube Loader Settings": "YouTube 爬取设置"
+	"Youtube Loader Settings": "YouTube 爬取设置",
+	"Account Activation Pending": "账号待激活",
+	"Contact Admin for WebUI Access": "请联系管理员以获取访问权限",
+	"Your account status is currently pending activation.": "您的账号当前状态为待激活。",
+	"To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.": "请联系管理员以访问。管理员可以在后台管理面板中管理用户状态。",
+	"Admin": "管理员联系方式"
 }
