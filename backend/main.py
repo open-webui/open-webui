@@ -902,7 +902,7 @@ async def get_app_changelog():
 @app.get("/api/version/updates")
 async def get_app_latest_release_version():
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.get(
                 "https://api.github.com/repos/open-webui/open-webui/releases/latest"
             ) as response:
