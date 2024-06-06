@@ -71,7 +71,7 @@
 							placeholder="Select a engine"
 							required
 						>
-							<option disabled selected value="">Select a engine</option>
+							<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 							{#each webSearchEngines as engine}
 								<option value={engine}>{engine}</option>
 							{/each}

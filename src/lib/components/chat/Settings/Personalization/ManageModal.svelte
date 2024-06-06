@@ -81,7 +81,7 @@
 											</td>
 											<td class="px-3 py-1">
 												<div class="flex justify-end w-full">
-													<Tooltip content="Delete">
+													<Tooltip content="{$i18n.t('Delete')}">
 														<button
 															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 															on:click={async () => {
@@ -94,7 +94,7 @@
 																});
 
 																if (res) {
-																	toast.success('Memory deleted successfully');
+																	toast.success($i18n.t('Memory deleted successfully'));
 																	memories = await getMemories(localStorage.token);
 																}
 															}}
@@ -147,7 +147,7 @@
 						});
 
 						if (res) {
-							toast.success('Memory cleared successfully');
+							toast.success($i18n.t('Memory cleared successfully'));
 							memories = [];
 						}
 					}}>{$i18n.t('Clear memory')}</button

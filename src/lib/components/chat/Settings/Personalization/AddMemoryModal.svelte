@@ -25,7 +25,7 @@
 
 		if (res) {
 			console.log(res);
-			toast.success('Memory added successfully');
+			toast.success($i18n.t('Memory added successfully'));
 			content = '';
 			show = false;
 			dispatch('save');
@@ -75,7 +75,9 @@
 						/>
 
 						<div class="text-xs text-gray-500">
-							ⓘ Refer to yourself as "User" (e.g., "User is learning Spanish")
+							ⓘ {$i18n.t(
+								'Refer to yourself as "User" (e.g., "User is learning Spanish")'
+							)}
 						</div>
 					</div>
 
