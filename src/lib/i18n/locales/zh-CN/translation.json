@@ -550,6 +550,7 @@
 	"Refer to yourself as \"User\" (e.g., \"User is learning Spanish\")": "使用\"User\" (用户) 来指代自己（例如：“User 正在学习西班牙语”）",
 	"Local Models": "本地模型",
 	"External Models": "外部模型",
+	"Generate Image": "生成图像",
 	"Account Activation Pending": "账号待激活",
 	"Contact Admin for WebUI Access": "请联系管理员以获取访问权限",
 	"Your account status is currently pending activation.": "您的账号当前状态为待激活。",

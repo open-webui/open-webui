@@ -757,7 +757,7 @@
 										</Tooltip>
 
 										{#if $config?.features.enable_image_generation && !readOnly}
-											<Tooltip content="Generate Image" placement="bottom">
+											<Tooltip content="{$i18n.t('Generate Image')}" placement="bottom">
 												<button
 													class="{isLastMessage
 														? 'visible'
