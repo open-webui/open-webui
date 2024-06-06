@@ -678,10 +678,10 @@
 		files = [
 			...files,
 			...(lastUserMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+				['doc', 'file', 'collection', 'web_search_results', 'tag', 'all_documents'].includes(item.type)
 			) ?? []),
 			...(responseMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+				['doc', 'file', 'collection', 'web_search_results', 'tag', 'all_documents'].includes(item.type)
 			) ?? [])
 		].filter(
 			// Remove duplicates
@@ -923,10 +923,10 @@
 		files = [
 			...files,
 			...(lastUserMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+				['doc', 'file', 'collection', 'web_search_results', 'tag', 'all_documents'].includes(item.type)
 			) ?? []),
 			...(responseMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+				['doc', 'file', 'collection', 'web_search_results', 'tag', 'all_documents'].includes(item.type)
 			) ?? [])
 		].filter(
 			// Remove duplicates

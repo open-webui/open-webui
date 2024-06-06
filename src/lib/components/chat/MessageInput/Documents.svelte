@@ -22,10 +22,8 @@
 		...($documents.length > 0
 			? [
 					{
-						name: 'All Documents',
-						type: 'collection',
-						title: $i18n.t('All Documents'),
-						collection_names: $documents.map((doc) => doc.collection_name)
+						name: $i18n.t('All Documents'),
+						type: 'all_documents'
 					}
 			  ]
 			: []),
@@ -34,11 +32,8 @@
 				return [...new Set([...a, ...(e?.content?.tags ?? []).map((tag) => tag.name)])];
 			}, [])
 			.map((tag) => ({
-				name: tag,
-				type: 'collection',
-				collection_names: $documents
-					.filter((doc) => (doc?.content?.tags ?? []).map((tag) => tag.name).includes(tag))
-					.map((doc) => doc.collection_name)
+				type: 'tag',
+				name: tag
 			}))
 	];
 
@@ -136,13 +131,21 @@
 							}}
 							on:focus={() => {}}
 						>
-							{#if doc.type === 'collection'}
+							{#if doc.type === 'all_documents'}
 								<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
 									{doc?.title ?? `#${doc.name}`}
 								</div>
 
 								<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
 									{$i18n.t('Collection')}
+								</div>
+							{:else if doc.type === 'tag'}
+								<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
+									#{doc.name}
+								</div>
+
+								<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
+									{$i18n.t('Tag')}
 								</div>
 							{:else}
 								<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
