@@ -10,6 +10,7 @@ Our weekly meetups are [Thursdays at NOON EDT](/io/coders/) and [Sundays at 10 P
 **SQL, Vite, Supabase, AI Chat**
 - [Open Footprint Data in SQL](/useeio.js/footprint) 
 - [Feed Player](../feed/) - for Video, Images, JSON, YAML, CSS, RSS news feeds and our [Feed Viewer](../feed/view/#feed=nasa)  
+- [datausa.io](https://datausa.io) - For embeddable visualizations
 - [Restack.io](https://www.restack.io/docs/supabase-knowledge-supabase-rust-sdk-guide) - for Supabase with Rust and Streamlit
 - [Open WebUI](src) with [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/) like Pinecone
 - [Earthscape for Chatbot AI - Supabase and NextJS Hosting](/earthscape/app/)
