@@ -333,7 +333,7 @@
 			</div>
 			<div class="flex w-full gap-2 pr-2">
 				<div class="flex-1">
-					<div class=" text-xs mb-1">Local Models</div>
+					<div class=" text-xs mb-1">{$i18n.t('Local Models')}</div>
 					<select
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						bind:value={titleAutoGenerateModel}
@@ -349,7 +349,7 @@
 				</div>
 
 				<div class="flex-1">
-					<div class=" text-xs mb-1">External Models</div>
+					<div class=" text-xs mb-1">{$i18n.t('External Models')}</div>
 					<select
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						bind:value={titleAutoGenerateModelExternal}
