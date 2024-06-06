@@ -7,9 +7,8 @@
 
 	import { goto } from '$app/navigation';
 
-	import { getModels as _getModels } from '$lib/utils';
+	import { getModels as _getModels } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { getModelfiles } from '$lib/apis/modelfiles';
 	import { getPrompts } from '$lib/apis/prompts';
 
 	import { getDocs } from '$lib/apis/documents';
@@ -20,10 +19,10 @@
 		showSettings,
 		settings,
 		models,
-		modelfiles,
 		prompts,
 		documents,
 		tags,
+		banners,
 		showChangelog,
 		config
 	} from '$lib/stores';
@@ -35,6 +34,11 @@
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { getBanners } from '$lib/apis/configs';
+	import { getUserSettings } from '$lib/apis/users';
+	import Help from '$lib/components/layout/Help.svelte';
+	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
+	import { error } from '@sveltejs/kit';
 
 	const i18n = getContext('i18n');
 
@@ -48,21 +52,6 @@
 
 	const getModels = async () => {
 		return _getModels(localStorage.token);
-	};
-
-	const setOllamaVersion = async (version: string = '') => {
-		if (version === '') {
-			version = await getOllamaVersion(localStorage.token).catch((error) => {
-				return '';
-			});
-		}
-
-		ollamaVersion = version;
-
-		console.log(ollamaVersion);
-		if (compareVersion(REQUIRED_OLLAMA_VERSION, ollamaVersion)) {
-			toast.error(`Ollama Version: ${ollamaVersion !== '' ? ollamaVersion : 'Not Detected'}`);
-		}
 	};
 
 	onMount(async () => {
@@ -87,18 +76,34 @@
 				// IndexedDB Not Found
 			}
 
-			await models.set(await getModels());
-			await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
-
-			await modelfiles.set(await getModelfiles(localStorage.token));
-			await prompts.set(await getPrompts(localStorage.token));
-			await documents.set(await getDocs(localStorage.token));
-			await tags.set(await getAllChatTags(localStorage.token));
-
-			modelfiles.subscribe(async () => {
-				// should fetch models
-				await models.set(await getModels());
+			const userSettings = await getUserSettings(localStorage.token).catch((error) => {
+				console.error(error);
+				return null;
 			});
+
+			if (userSettings) {
+				await settings.set(userSettings.ui);
+			} else {
+				await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+			}
+
+			await Promise.all([
+				(async () => {
+					models.set(await getModels());
+				})(),
+				(async () => {
+					prompts.set(await getPrompts(localStorage.token));
+				})(),
+				(async () => {
+					documents.set(await getDocs(localStorage.token));
+				})(),
+				(async () => {
+					banners.set(await getBanners(localStorage.token));
+				})(),
+				(async () => {
+					tags.set(await getAllChatTags(localStorage.token));
+				})()
+			]);
 
 			document.addEventListener('keydown', function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
@@ -161,7 +166,7 @@
 				if (isCtrlPressed && event.key === '/') {
 					event.preventDefault();
 					console.log('showShortcuts');
-					showShortcutsButtonElement.click();
+					document.getElementById('show-shortcuts-button')?.click();
 				}
 			});
 
@@ -176,69 +181,17 @@
 	});
 </script>
 
-<div class=" hidden lg:flex fixed bottom-0 right-0 px-3 py-3 z-10">
-	<Tooltip content={$i18n.t('Help')} placement="left">
-		<button
-			id="show-shortcuts-button"
-			bind:this={showShortcutsButtonElement}
-			class="text-gray-600 dark:text-gray-300 bg-gray-300/20 w-6 h-6 flex items-center justify-center text-xs rounded-full"
-			on:click={() => {
-				showShortcuts = !showShortcuts;
-			}}
-		>
-			?
-		</button>
-	</Tooltip>
-</div>
-
-<ShortcutsModal bind:show={showShortcuts} />
+<Help />
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
 
 <div class="app relative">
 	<div
-		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 min-h-screen overflow-auto flex flex-row"
+		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row"
 	>
 		{#if loaded}
 			{#if !['user', 'admin'].includes($user.role)}
-				<div class="fixed w-full h-full flex z-[999]">
-					<div
-						class="absolute w-full h-full backdrop-blur-lg bg-white/10 dark:bg-gray-900/50 flex justify-center"
-					>
-						<div class="m-auto pb-10 flex flex-col justify-center">
-							<div class="max-w-md">
-								<div class="text-center dark:text-white text-2xl font-medium z-50">
-									Account Activation Pending<br /> Contact Admin for WebUI Access
-								</div>
-
-								<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">
-									Your account status is currently pending activation. To access the WebUI, please
-									reach out to the administrator. Admins can manage user statuses from the Admin
-									Panel.
-								</div>
-
-								<div class=" mt-6 mx-auto relative group w-fit">
-									<button
-										class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 text-gray-700 transition font-medium text-sm"
-										on:click={async () => {
-											location.href = '/';
-										}}
-									>
-										{$i18n.t('Check Again')}
-									</button>
-
-									<button
-										class="text-xs text-center w-full mt-2 text-gray-400 underline"
-										on:click={async () => {
-											localStorage.removeItem('token');
-											location.href = '/auth';
-										}}>{$i18n.t('Sign Out')}</button
-									>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
+				<AccountPending />
 			{:else if localDBChats.length > 0}
 				<div class="fixed w-full h-full flex z-50">
 					<div

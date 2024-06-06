@@ -11,12 +11,14 @@ ARG USE_CUDA_VER=cu121
 # IMPORTANT: If you change the embedding model (sentence-transformers/all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
 ARG USE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ARG USE_RERANKING_MODEL=""
+ARG BUILD_HASH=dev-build
 # Override at your own risk - non-root configurations are untested
 ARG UID=0
 ARG GID=0
 
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:21-alpine3.19 as build
+ARG BUILD_HASH
 
 WORKDIR /app
 
@@ -24,6 +26,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
 ######## WebUI backend ########
@@ -59,11 +62,6 @@ ENV OPENAI_API_KEY="" \
     DO_NOT_TRACK=true \
     ANONYMIZED_TELEMETRY=false
 
-# Use locally bundled version of the LiteLLM cost map json
-# to avoid repetitive startup connections
-ENV LITELLM_LOCAL_MODEL_COST_MAP="True"
-
-
 #### Other models #########################################################
 ## whisper TTS model settings ##
 ENV WHISPER_MODEL="base" \
@@ -83,10 +81,10 @@ WORKDIR /app/backend
 ENV HOME /root
 # Create user and group if not root
 RUN if [ $UID -ne 0 ]; then \
-      if [ $GID -ne 0 ]; then \
-        addgroup --gid $GID app; \
-      fi; \
-      adduser --uid $UID --gid $GID --home $HOME --disabled-password --no-create-home app; \
+    if [ $GID -ne 0 ]; then \
+    addgroup --gid $GID app; \
+    fi; \
+    adduser --uid $UID --gid $GID --home $HOME --disabled-password --no-create-home app; \
     fi
 
 RUN mkdir -p $HOME/.cache/chroma
@@ -132,7 +130,8 @@ RUN pip3 install uv && \
     uv pip install --system -r requirements.txt --no-cache-dir && \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
     python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
-    fi
+    fi; \
+    chown -R $UID:$GID /app/backend/data/
 
 
 
@@ -153,5 +152,8 @@ EXPOSE 8080
 HEALTHCHECK CMD curl --silent --fail http://localhost:8080/health | jq -e '.status == true' || exit 1
 
 USER $UID:$GID
+
+ARG BUILD_HASH
+ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
 
 CMD [ "bash", "start.sh"]

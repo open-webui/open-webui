@@ -32,6 +32,8 @@ class ERROR_MESSAGES(str, Enum):
     COMMAND_TAKEN = "Uh-oh! This command is already registered. Please choose another command string."
     FILE_EXISTS = "Uh-oh! This file is already registered. Please choose another file."
 
+    MODEL_ID_TAKEN = "Uh-oh! This model id is already registered. Please choose another model id string."
+
     NAME_TAG_TAKEN = "Uh-oh! This name tag is already registered. Please choose another name tag string."
     INVALID_TOKEN = (
         "Your session has expired or the token is invalid. Please sign in again."
@@ -77,4 +79,12 @@ class ERROR_MESSAGES(str, Enum):
 
     INVALID_URL = (
         "Oops! The URL you provided is invalid. Please double-check and try again."
+    )
+
+    WEB_SEARCH_ERROR = (
+        lambda err="": f"{err if err else 'Oops! Something went wrong while searching the web.'}"
+    )
+
+    OLLAMA_API_DISABLED = (
+        "The Ollama API is disabled. Please enable it to use this feature."
     )

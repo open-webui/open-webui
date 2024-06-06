@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Collapsible } from 'bits-ui';
-
-	import { setDefaultModels } from '$lib/apis/configs';
 	import { models, showSettings, settings, user, mobile } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+
+	import { setDefaultModels } from '$lib/apis/configs';
+	import { updateUserSettings } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
@@ -22,12 +22,8 @@
 			return;
 		}
 		settings.set({ ...$settings, models: selectedModels });
-		localStorage.setItem('settings', JSON.stringify($settings));
+		await updateUserSettings(localStorage.token, { ui: $settings });
 
-		if ($user.role === 'admin') {
-			console.log('setting default models globally');
-			await setDefaultModels(localStorage.token, selectedModels.join(','));
-		}
 		toast.success($i18n.t('Default model updated'));
 	};
 
@@ -45,13 +41,11 @@
 				<div class="mr-1 max-w-full">
 					<Selector
 						placeholder={$i18n.t('Select a model')}
-						items={$models
-							.filter((model) => model.name !== 'hr')
-							.map((model) => ({
-								value: model.id,
-								label: model.name,
-								info: model
-							}))}
+						items={$models.map((model) => ({
+							value: model.id,
+							label: model.name,
+							model: model
+						}))}
 						bind:value={selectedModel}
 					/>
 				</div>
