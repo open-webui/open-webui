@@ -96,7 +96,7 @@
 							/>
 
 							<div class="relative top-1.5 -left-2">
-								<Tooltip content="Dismissible" className="flex h-fit items-center">
+								<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
 									<Switch bind:state={banner.dismissible} />
 								</Tooltip>
 							</div>

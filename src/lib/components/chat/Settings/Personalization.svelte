@@ -57,7 +57,9 @@
 
 		<div class="text-xs text-gray-600 dark:text-gray-400">
 			<div>
-				{$i18n.t('You can personalize your interactions with LLMs by adding memories through the "Manage" button below, making them more helpful and tailored to you.')}
+				{$i18n.t(
+					"You can personalize your interactions with LLMs by adding memories through the 'Manage' button below, making them more helpful and tailored to you."
+				)}
 			</div>
 
 			<!-- <div class="mt-3">
