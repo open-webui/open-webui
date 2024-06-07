@@ -145,15 +145,24 @@
 			assistantAudio[assistantAudioIdx].pause();
 			assistantAudio[assistantAudioIdx].currentTime = 0;
 		}
+
+		const audioElement = document.getElementById('audioElement');
+		audioElement.pause();
+		audioElement.currentTime = 0;
+
 		assistantSpeaking = false;
 	};
 
 	const playAudio = (idx) => {
 		return new Promise((res) => {
 			assistantAudioIdx = idx;
+			const audioElement = document.getElementById('audioElement');
 			const audio = assistantAudio[idx];
-			audio.play();
-			audio.onended = async (e) => {
+
+			audioElement.src = audio.src; // Assume `assistantAudio` has objects with a `src` property
+			audioElement.play();
+
+			audioElement.onended = async (e) => {
 				await new Promise((r) => setTimeout(r, 300));
 
 				if (Object.keys(assistantAudio).length - 1 === idx) {
@@ -314,6 +323,7 @@
 </script>
 
 {#if $showCallOverlay}
+	<audio id="audioElement" src="" style="display: none;" />
 	<div class=" absolute w-full h-full flex z-[999]">
 		<div
 			class="absolute w-full h-full bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
