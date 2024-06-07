@@ -10,7 +10,7 @@ Our weekly meetups are [Thursdays at NOON EDT](/io/coders/) and [Sundays at 10 P
 **SQL, Vite, Supabase, AI Chat**
 - [Open Footprint Data in SQL](/useeio.js/footprint) 
 - [Feed Player](../feed/) - for Video, Images, JSON, YAML, CSS, RSS news feeds and our [Feed Viewer](../feed/view/#feed=nasa)  
-- [datausa.io](https://datausa.io) - For embeddable visualizations
+- [Datausa.io](https://datausa.io) - For embeddable visualizations
 - [Restack.io](https://www.restack.io/docs/supabase-knowledge-supabase-rust-sdk-guide) - for Supabase with Rust and Streamlit
 - [Open WebUI](src) with [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/) like Pinecone
 - [Earthscape for Chatbot AI - Supabase and NextJS Hosting](/earthscape/app/)
@@ -73,7 +73,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 **React, Tabulator, Industry Timelines**
 - [React Team - Impact Side Navigation](/io/charts/inflow-outflow/#set=prosperity&indicators=VADD,JOBS) - Ziyao
-- [React Team - Mosic column checkboxes](/io/charts) - Fanyi
+- [React Team - Mosaic column checkboxes](/io/charts) - Fanyi
 - [React Team - Commodity Totals](/localsite/info/data/totals/) in [Jobs Reports](/localsite/info/#indicators=JOBS)
 - [Tabulator - Merge in industry year rows using Javascript (1-3)](/data-pipeline/timelines/tabulator/) - Rupesh<!--Vadlamudi-->
 - [Tabulator - Merge in titles using Javascript (4)](/data-pipeline/timelines/tabulator/) - Dinesh, Fanyi, Rupesh
