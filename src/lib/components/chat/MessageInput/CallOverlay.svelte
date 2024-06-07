@@ -8,6 +8,7 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
+	import { get } from 'svelte/store';
 
 	const i18n = getContext('i18n');
 
@@ -364,8 +365,11 @@
 				});
 			}
 
-			video.srcObject = cameraStream;
-			await video.play();
+			if (cameraStream) {
+				await getVideoInputDevices();
+				video.srcObject = cameraStream;
+				await video.play();
+			}
 		}
 	};
 
