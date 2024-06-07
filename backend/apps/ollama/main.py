@@ -158,7 +158,7 @@ def build_headers(url):
             if len(app.state.config.OLLAMA_AUTH_KEYS) <= i:
                 break
 
-            if app.state.config.OLLAMA_BASE_URLS[i] == url:
+            if app.state.config.OLLAMA_BASE_URLS[i] in url:
                 token = app.state.config.OLLAMA_AUTH_KEYS[i]
                 break
 
