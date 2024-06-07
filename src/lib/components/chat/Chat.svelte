@@ -1214,7 +1214,7 @@
 	</title>
 </svelte:head>
 
-<CallOverlay {submitPrompt} />
+<CallOverlay {submitPrompt} bind:files />
 
 {#if !chatIdProp || (loaded && chatIdProp)}
 	<div

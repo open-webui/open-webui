@@ -10,9 +10,13 @@
 	const i18n = getContext('i18n');
 
 	export let submitPrompt: Function;
+	export let files;
 
 	let loading = false;
 	let confirmed = false;
+
+	let camera = false;
+	let cameraStream = null;
 
 	let assistantSpeaking = false;
 	let assistantAudio = {};
@@ -280,6 +284,18 @@
 			if (confirmed) {
 				loading = true;
 
+				if (cameraStream) {
+					const imageUrl = takeScreenshot();
+
+					files = [
+						...files,
+						{
+							type: 'image',
+							url: imageUrl
+						}
+					];
+				}
+
 				const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
 				await transcribeHandler(audioBlob);
 
@@ -317,8 +333,62 @@
 		mediaRecorder.start();
 	};
 
+	const startCamera = async () => {
+		if (cameraStream === null) {
+			camera = true;
+			await tick();
+			try {
+				const video = document.getElementById('camera-feed');
+				if (video) {
+					cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+					video.srcObject = cameraStream;
+					await video.play();
+				}
+			} catch (err) {
+				console.error('Error accessing webcam: ', err);
+			}
+		}
+	};
+
+	const takeScreenshot = () => {
+		const video = document.getElementById('camera-feed');
+		const canvas = document.getElementById('camera-canvas');
+
+		if (!canvas) {
+			return;
+		}
+
+		const context = canvas.getContext('2d');
+		// Make the canvas match the video dimensions
+		canvas.width = video.videoWidth;
+		canvas.height = video.videoHeight;
+		// Draw the flipped image from the video onto the canvas
+		context.save();
+		context.scale(-1, 1); // Flip horizontally
+		context.drawImage(video, 0, 0, video.videoWidth * -1, video.videoHeight);
+		context.restore();
+
+		// Convert the canvas to a data base64 URL and console log it
+		const dataURL = canvas.toDataURL('image/png');
+		console.log(dataURL);
+
+		return dataURL;
+	};
+
+	const stopCamera = () => {
+		if (cameraStream) {
+			const tracks = cameraStream.getTracks();
+			tracks.forEach((track) => track.stop());
+		}
+
+		cameraStream = null;
+		camera = false;
+	};
+
 	$: if ($showCallOverlay) {
 		startRecording();
+	} else {
+		stopCamera();
 	}
 </script>
 
@@ -329,65 +399,154 @@
 			class="absolute w-full h-full bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
 		>
 			<div class="max-w-lg w-full h-screen max-h-[100dvh] flex flex-col justify-between p-6">
-				<div>
-					<!-- navbar -->
-				</div>
+				{#if camera}
+					<div class="flex justify-center items-center pt-2 w-full h-20">
+						{#if loading}
+							<svg
+								class="size-12 text-gray-900 dark:text-gray-400"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								xmlns="http://www.w3.org/2000/svg"
+								><style>
+									.spinner_qM83 {
+										animation: spinner_8HQG 1.05s infinite;
+									}
+									.spinner_oXPr {
+										animation-delay: 0.1s;
+									}
+									.spinner_ZTLf {
+										animation-delay: 0.2s;
+									}
+									@keyframes spinner_8HQG {
+										0%,
+										57.14% {
+											animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
+											transform: translate(0);
+										}
+										28.57% {
+											animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
+											transform: translateY(-6px);
+										}
+										100% {
+											transform: translate(0);
+										}
+									}
+								</style><circle class="spinner_qM83" cx="4" cy="12" r="3" /><circle
+									class="spinner_qM83 spinner_oXPr"
+									cx="12"
+									cy="12"
+									r="3"
+								/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
+							>
+						{:else}
+							<div
+								class=" {rmsLevel * 100 > 4
+									? ' size-[4.5rem]'
+									: rmsLevel * 100 > 2
+									? ' size-16'
+									: rmsLevel * 100 > 1
+									? 'size-14'
+									: 'size-12'}  transition-all bg-black dark:bg-white rounded-full"
+							/>
+						{/if}
+						<!-- navbar -->
+					</div>
+				{/if}
 
-				<div class="flex justify-center items-center w-ull">
-					{#if loading}
-						<svg
-							class="size-44 text-gray-900 dark:text-gray-400"
-							viewBox="0 0 24 24"
-							fill="currentColor"
-							xmlns="http://www.w3.org/2000/svg"
-							><style>
-								.spinner_qM83 {
-									animation: spinner_8HQG 1.05s infinite;
-								}
-								.spinner_oXPr {
-									animation-delay: 0.1s;
-								}
-								.spinner_ZTLf {
-									animation-delay: 0.2s;
-								}
-								@keyframes spinner_8HQG {
-									0%,
-									57.14% {
-										animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-										transform: translate(0);
+				<div class="flex justify-center items-center w-full flex-1">
+					{#if !camera}
+						{#if loading}
+							<svg
+								class="size-44 text-gray-900 dark:text-gray-400"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								xmlns="http://www.w3.org/2000/svg"
+								><style>
+									.spinner_qM83 {
+										animation: spinner_8HQG 1.05s infinite;
 									}
-									28.57% {
-										animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-										transform: translateY(-6px);
+									.spinner_oXPr {
+										animation-delay: 0.1s;
 									}
-									100% {
-										transform: translate(0);
+									.spinner_ZTLf {
+										animation-delay: 0.2s;
 									}
-								}
-							</style><circle class="spinner_qM83" cx="4" cy="12" r="3" /><circle
-								class="spinner_qM83 spinner_oXPr"
-								cx="12"
-								cy="12"
-								r="3"
-							/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
-						>
+									@keyframes spinner_8HQG {
+										0%,
+										57.14% {
+											animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
+											transform: translate(0);
+										}
+										28.57% {
+											animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
+											transform: translateY(-6px);
+										}
+										100% {
+											transform: translate(0);
+										}
+									}
+								</style><circle class="spinner_qM83" cx="4" cy="12" r="3" /><circle
+									class="spinner_qM83 spinner_oXPr"
+									cx="12"
+									cy="12"
+									r="3"
+								/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
+							>
+						{:else}
+							<div
+								class=" {rmsLevel * 100 > 4
+									? ' size-52'
+									: rmsLevel * 100 > 2
+									? 'size-48'
+									: rmsLevel * 100 > 1
+									? 'size-[11.5rem]'
+									: 'size-44'}  transition-all bg-black dark:bg-white rounded-full"
+							/>
+						{/if}
 					{:else}
-						<div
-							class=" {rmsLevel * 100 > 4
-								? ' size-52'
-								: rmsLevel * 100 > 2
-								? 'size-48'
-								: rmsLevel * 100 > 1
-								? 'size-[11.5rem]'
-								: 'size-44'}  transition-all bg-black dark:bg-white rounded-full"
-						/>
+						<div class="relative video-container w-full h-full py-6 px-2">
+							<video
+								id="camera-feed"
+								autoplay
+								class="w-full h-full object-cover object-center rounded-2xl"
+							/>
+
+							<canvas id="camera-canvas" style="display:none;" />
+
+							<div class=" absolute top-8 left-4">
+								<button
+									type="button"
+									class="p-1.5 text-white cursor-pointer backdrop-blur-xl bg-black/10 rounded-full"
+									on:click={() => {
+										stopCamera();
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-6"
+									>
+										<path
+											d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+										/>
+									</svg>
+								</button>
+							</div>
+						</div>
 					{/if}
 				</div>
 
 				<div class="flex justify-between items-center pb-2 w-full">
 					<div>
-						<Tooltip content="WIP 🚧">
-							<button class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900">
+						<Tooltip content="Camera">
+							<button
+								class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
+								type="button"
+								on:click={() => {
+									startCamera();
+								}}
+							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									fill="none"
