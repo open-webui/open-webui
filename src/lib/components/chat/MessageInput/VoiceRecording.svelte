@@ -80,12 +80,17 @@
 		audioStreamSource.connect(analyser);
 
 		const bufferLength = analyser.frequencyBinCount;
+
+		const domainData = new Uint8Array(bufferLength);
 		const timeDomainData = new Uint8Array(analyser.fftSize);
+
+		let lastSoundTime = Date.now();
 
 		const detectSound = () => {
 			const processFrame = () => {
 				if (recording && !loading) {
 					analyser.getByteTimeDomainData(timeDomainData);
+					analyser.getByteFrequencyData(domainData);
 
 					// Calculate RMS level from time domain data
 					const rmsLevel = calculateRMS(timeDomainData);
@@ -98,6 +103,16 @@
 					}
 
 					visualizerData = visualizerData;
+
+					if (domainData.some((value) => value > 0)) {
+						lastSoundTime = Date.now();
+					}
+
+					if (recording && Date.now() - lastSoundTime > 3000) {
+						if ($settings?.speechAutoSend ?? false) {
+							confirmRecording();
+						}
+					}
 				}
 
 				window.requestAnimationFrame(processFrame);
@@ -203,6 +218,7 @@
              rounded-full"
 			on:click={async () => {
 				dispatch('cancel');
+				stopRecording();
 			}}
 		>
 			<svg
