@@ -266,7 +266,6 @@
 					const imageUrl = takeScreenshot();
 
 					files = [
-						...files,
 						{
 							type: 'image',
 							url: imageUrl
@@ -318,16 +317,17 @@
 		const devices = await navigator.mediaDevices.enumerateDevices();
 		videoInputDevices = devices.filter((device) => device.kind === 'videoinput');
 
-		videoInputDevices = [
-			...videoInputDevices,
-			{
-				deviceId: 'screen',
-				label: 'Screen Share'
-			}
-		];
+		if (!!navigator.mediaDevices.getDisplayMedia) {
+			videoInputDevices = [
+				...videoInputDevices,
+				{
+					deviceId: 'screen',
+					label: 'Screen Share'
+				}
+			];
+		}
 
 		console.log(videoInputDevices);
-
 		if (selectedVideoInputDeviceId === null && videoInputDevices.length > 0) {
 			selectedVideoInputDeviceId = videoInputDevices[0].deviceId;
 		}
