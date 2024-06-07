@@ -87,7 +87,13 @@
 
 		const detectSound = () => {
 			const processFrame = () => {
-				if (!mediaRecorder || !$showCallOverlay) return;
+				if (!mediaRecorder || !$showCallOverlay) {
+					if (mediaRecorder) {
+						mediaRecorder.stop();
+					}
+
+					return;
+				}
 				analyser.getByteTimeDomainData(timeDomainData);
 				analyser.getByteFrequencyData(domainData);
 
@@ -137,7 +143,7 @@
 		}
 	};
 
-	const stopRecordingHandler = async () => {
+	const stopRecordingCallback = async () => {
 		if ($showCallOverlay) {
 			if (confirmed) {
 				loading = true;
@@ -152,6 +158,9 @@
 			mediaRecorder = false;
 
 			startRecording();
+		} else {
+			audioChunks = [];
+			mediaRecorder = false;
 		}
 	};
 
@@ -171,7 +180,7 @@
 		mediaRecorder.onstop = async () => {
 			console.log('Recording stopped');
 
-			await stopRecordingHandler();
+			await stopRecordingCallback();
 		};
 		mediaRecorder.start();
 	};
