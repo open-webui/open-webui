@@ -273,18 +273,18 @@
 					</div>
 				</a>
 			</div>
-			<div class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-				<a
-						href="/?type=faq_create_exam"
-						on:click={async () => {
-						await handleCreateNewChat('faq_create_exam')
-					}}
-				>
-					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">{$i18n.t('Tạo đề thi')}</div>
-					</div>
-				</a>
-			</div>
+<!--			<div class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">-->
+<!--				<a-->
+<!--						href="/?type=faq_create_exam"-->
+<!--						on:click={async () => {-->
+<!--						await handleCreateNewChat('faq_create_exam')-->
+<!--					}}-->
+<!--				>-->
+<!--					<div class="flex self-center">-->
+<!--						<div class=" self-center font-medium text-sm">{$i18n.t('Tạo đề thi')}</div>-->
+<!--					</div>-->
+<!--				</a>-->
+<!--			</div>-->
 			<div class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
 				<a
 						href="/?type=faq_create_verdict_scenario"
@@ -422,18 +422,18 @@
 					</div>
 				</a>
 			</div>
-			<div class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-				<a
-						href="/?type=long_faq_create_exam"
-						on:click={async () => {
-						await handleCreateNewChat('long_faq_create_exam')
-					}}
-				>
-					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm">{$i18n.t('Tạo đề thi')}</div>
-					</div>
-				</a>
-			</div>
+<!--			<div class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">-->
+<!--				<a-->
+<!--						href="/?type=long_faq_create_exam"-->
+<!--						on:click={async () => {-->
+<!--						await handleCreateNewChat('long_faq_create_exam')-->
+<!--					}}-->
+<!--				>-->
+<!--					<div class="flex self-center">-->
+<!--						<div class=" self-center font-medium text-sm">{$i18n.t('Tạo đề thi')}</div>-->
+<!--					</div>-->
+<!--				</a>-->
+<!--			</div>-->
 			<div class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
 				<a
 						href="/?type=long_faq_create_verdict_scenario"
