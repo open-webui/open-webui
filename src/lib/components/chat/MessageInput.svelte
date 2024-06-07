@@ -896,11 +896,20 @@
 											<button
 												class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-2 self-center"
 												type="button"
-												on:click={() => {
+												on:click={async () => {
 													if (selectedModels.length > 1) {
 														toast.error($i18n.t('Select only one model to call'));
-													} else {
+
+														return;
+													}
+													// check if user has access to getUserMedia
+													try {
+														await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+														// If the user grants the permission, proceed to show the call overlay
 														showCallOverlay.set(true);
+													} catch (err) {
+														// If the user denies the permission or an error occurs, show an error message
+														toast.error($i18n.t('Permission denied when accessing media devices'));
 													}
 												}}
 											>
