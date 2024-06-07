@@ -535,6 +535,7 @@
 								id="camera-feed"
 								autoplay
 								class="w-full h-full object-cover object-center rounded-2xl"
+								playsinline
 							/>
 
 							<canvas id="camera-canvas" style="display:none;" />
