@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, tick, getContext } from 'svelte';
-	import { type Model, mobile, settings, showSidebar, models, config } from '$lib/stores';
+	import {
+		type Model,
+		mobile,
+		settings,
+		showSidebar,
+		models,
+		config,
+		showCallOverlay
+	} from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
@@ -889,7 +897,7 @@
 												class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-2 self-center"
 												type="button"
 												on:click={() => {
-													console.log('call');
+													showCallOverlay.set(true);
 												}}
 											>
 												<Headphone className="size-6" />
