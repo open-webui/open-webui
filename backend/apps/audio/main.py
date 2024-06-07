@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from faster_whisper import WhisperModel
 from pydantic import BaseModel
 
-
+import uuid
 import requests
 import hashlib
 from pathlib import Path
@@ -181,8 +181,15 @@ def transcribe(
         )
 
     try:
-        filename = file.filename
-        file_path = f"{UPLOAD_DIR}/{filename}"
+        ext = file.filename.split(".")[-1]
+
+        id = uuid.uuid4()
+        filename = f"{id}.{ext}"
+
+        file_dir = f"{CACHE_DIR}/audio/transcriptions"
+        os.makedirs(file_dir, exist_ok=True)
+        file_path = f"{file_dir}/{filename}"
+
         contents = file.file.read()
         with open(file_path, "wb") as f:
             f.write(contents)
@@ -214,6 +221,11 @@ def transcribe(
         )
 
         transcript = "".join([segment.text for segment in list(segments)])
+
+        # save the transcript to a json file
+        transcript_file = f"{file_dir}/{id}.json"
+        with open(transcript_file, "w") as f:
+            json.dump({"transcript": transcript}, f)
 
         return {"text": transcript.strip()}
 
