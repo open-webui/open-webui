@@ -12,6 +12,7 @@
 	let confirmed = false;
 
 	let rmsLevel = 0;
+	let hasStartedSpeaking = false;
 
 	let audioContext;
 	let analyser;
@@ -82,7 +83,7 @@
 		const timeDomainData = new Uint8Array(analyser.fftSize);
 
 		let lastSoundTime = Date.now();
-		let hasStartedSpeaking = false;
+		hasStartedSpeaking = false;
 
 		const detectSound = () => {
 			const processFrame = () => {
@@ -162,7 +163,11 @@
 			audioChunks = [];
 			analyseAudio(stream);
 		};
-		mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+		mediaRecorder.ondataavailable = (event) => {
+			if (hasStartedSpeaking) {
+				audioChunks.push(event.data);
+			}
+		};
 		mediaRecorder.onstop = async () => {
 			console.log('Recording stopped');
 
@@ -227,12 +232,12 @@
 					{:else}
 						<div
 							class=" {rmsLevel * 100 > 4
-								? 'size-48'
+								? ' size-52'
 								: rmsLevel * 100 > 2
-								? 'size-[11.5rem]'
+								? 'size-48'
 								: rmsLevel * 100 > 1
-								? 'size-44'
-								: 'size-[10.5rem]'}  transition-all bg-black dark:bg-white rounded-full"
+								? 'size-[11.5rem]'
+								: 'size-44'}  transition-all bg-black dark:bg-white rounded-full"
 						/>
 					{/if}
 				</div>
