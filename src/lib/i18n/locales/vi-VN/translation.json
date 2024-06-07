@@ -538,5 +538,8 @@
 	"Embedding name": "Tên chỉ mục",
 	"Create new index": "Tạo chỉ mục mới",
 	"Embedding Index": "Dữ liệu chỉ mục",
-	"Embedded Documents": "Văn bản đã đánh chỉ mục"
+	"Embedded Documents": "Văn bản đã đánh chỉ mục",
+	"Account Activation Pending": "Đang chờ kích hoạt tài khoản",
+	"Contact Admin for WebUI Access": "Liên hệ với quản trị viên để truy cập LànhGPT",
+	"Your account status is currently pending activation. To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.": "Trạng thái tài khoản của bạn hiện đang chờ kích hoạt. Để truy cập LànhGPT, vui lòng liên hệ với quản trị viên hoặc gửi email đến <a class=\"text-blue-500\" href=\"mailto:support@lanhgpt.ai\">support@lanhgpt.ai</a>"
 }

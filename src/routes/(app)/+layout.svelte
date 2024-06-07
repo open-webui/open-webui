@@ -37,6 +37,7 @@
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import WelcomeModal from "$lib/components/WelcomeModal.svelte";
+	import Logo from '$lib/components/icons/Logo.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -213,15 +214,16 @@
 						class="absolute w-full h-full backdrop-blur-lg bg-white/10 dark:bg-gray-900/50 flex justify-center"
 					>
 						<div class="m-auto pb-10 flex flex-col justify-center">
+							<div class="flex justify-center mb-8">
+								<Logo size={64} />
+							</div>
 							<div class="max-w-md">
 								<div class="text-center dark:text-white text-2xl font-medium z-50">
-									Account Activation Pending<br /> Contact Admin for WebUI Access
+									{$i18n.t('Account Activation Pending')}<br /> {$i18n.t('Contact Admin for WebUI Access')}
 								</div>
 
 								<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">
-									Your account status is currently pending activation. To access the WebUI, please
-									reach out to the administrator. Admins can manage user statuses from the Admin
-									Panel.
+									{@html $i18n.t('Your account status is currently pending activation. To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.')}
 								</div>
 
 								<div class=" mt-6 mx-auto relative group w-fit">
