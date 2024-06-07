@@ -11,8 +11,6 @@
 	} from '$lib/apis/rag';
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS, WEBUI_BASE_URL } from '$lib/constants';
 
-	import { transcribeAudio } from '$lib/apis/audio';
-
 	import Prompts from './MessageInput/PromptCommands.svelte';
 	import Suggestions from './MessageInput/Suggestions.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
@@ -21,7 +19,8 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
-	import { t } from 'i18next';
+	import Headphone from '../icons/Headphone.svelte';
+	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -32,6 +31,8 @@
 
 	export let atSelectedModel: Model | undefined;
 	export let selectedModels: [''];
+
+	let recording = false;
 
 	let chatTextAreaElement: HTMLTextAreaElement;
 	let filesInputElement;
@@ -48,13 +49,10 @@
 
 	export let files = [];
 
-	export let speechRecognitionEnabled = true;
 	export let webSearchEnabled = false;
 
 	export let prompt = '';
 	export let messages = [];
-
-	let speechRecognition;
 
 	let visionCapableModels = [];
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
@@ -68,174 +66,9 @@
 		}
 	}
 
-	let mediaRecorder;
-	let audioChunks = [];
-	let isRecording = false;
-	const MIN_DECIBELS = -45;
-
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
 		element.scrollTop = element.scrollHeight;
-	};
-
-	const startRecording = async () => {
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		mediaRecorder = new MediaRecorder(stream);
-		mediaRecorder.onstart = () => {
-			isRecording = true;
-			console.log('Recording started');
-		};
-		mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
-		mediaRecorder.onstop = async () => {
-			isRecording = false;
-			console.log('Recording stopped');
-
-			// Create a blob from the audio chunks
-			const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-
-			const file = blobToFile(audioBlob, 'recording.wav');
-
-			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-				toast.error(error);
-				return null;
-			});
-
-			if (res) {
-				prompt = res.text;
-				await tick();
-				chatTextAreaElement?.focus();
-
-				if (prompt !== '' && $settings?.speechAutoSend === true) {
-					submitPrompt(prompt, user);
-				}
-			}
-
-			// saveRecording(audioBlob);
-			audioChunks = [];
-		};
-
-		// Start recording
-		mediaRecorder.start();
-
-		// Monitor silence
-		monitorSilence(stream);
-	};
-
-	const monitorSilence = (stream) => {
-		const audioContext = new AudioContext();
-		const audioStreamSource = audioContext.createMediaStreamSource(stream);
-		const analyser = audioContext.createAnalyser();
-		analyser.minDecibels = MIN_DECIBELS;
-		audioStreamSource.connect(analyser);
-
-		const bufferLength = analyser.frequencyBinCount;
-		const domainData = new Uint8Array(bufferLength);
-
-		let lastSoundTime = Date.now();
-
-		const detectSound = () => {
-			analyser.getByteFrequencyData(domainData);
-
-			if (domainData.some((value) => value > 0)) {
-				lastSoundTime = Date.now();
-			}
-
-			if (isRecording && Date.now() - lastSoundTime > 3000) {
-				mediaRecorder.stop();
-				audioContext.close();
-				return;
-			}
-
-			window.requestAnimationFrame(detectSound);
-		};
-
-		window.requestAnimationFrame(detectSound);
-	};
-
-	const saveRecording = (blob) => {
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		document.body.appendChild(a);
-		a.style = 'display: none';
-		a.href = url;
-		a.download = 'recording.wav';
-		a.click();
-		window.URL.revokeObjectURL(url);
-	};
-
-	const speechRecognitionHandler = () => {
-		// Check if SpeechRecognition is supported
-
-		if (isRecording) {
-			if (speechRecognition) {
-				speechRecognition.stop();
-			}
-
-			if (mediaRecorder) {
-				mediaRecorder.stop();
-			}
-		} else {
-			isRecording = true;
-
-			if ($settings?.audio?.STTEngine ?? '' !== '') {
-				startRecording();
-			} else {
-				if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-					// Create a SpeechRecognition object
-					speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-
-					// Set continuous to true for continuous recognition
-					speechRecognition.continuous = true;
-
-					// Set the timeout for turning off the recognition after inactivity (in milliseconds)
-					const inactivityTimeout = 3000; // 3 seconds
-
-					let timeoutId;
-					// Start recognition
-					speechRecognition.start();
-
-					// Event triggered when speech is recognized
-					speechRecognition.onresult = async (event) => {
-						// Clear the inactivity timeout
-						clearTimeout(timeoutId);
-
-						// Handle recognized speech
-						console.log(event);
-						const transcript = event.results[Object.keys(event.results).length - 1][0].transcript;
-
-						prompt = `${prompt}${transcript}`;
-
-						await tick();
-						chatTextAreaElement?.focus();
-
-						// Restart the inactivity timeout
-						timeoutId = setTimeout(() => {
-							console.log('Speech recognition turned off due to inactivity.');
-							speechRecognition.stop();
-						}, inactivityTimeout);
-					};
-
-					// Event triggered when recognition is ended
-					speechRecognition.onend = function () {
-						// Restart recognition after it ends
-						console.log('recognition ended');
-						isRecording = false;
-						if (prompt !== '' && $settings?.speechAutoSend === true) {
-							submitPrompt(prompt, user);
-						}
-					};
-
-					// Event triggered when an error occurs
-					speechRecognition.onerror = function (event) {
-						console.log(event);
-						toast.error($i18n.t(`Speech recognition error: {{error}}`, { error: event.error }));
-						isRecording = false;
-					};
-				} else {
-					toast.error($i18n.t('SpeechRecognition API is not supported in this browser.'));
-				}
-			}
-		}
 	};
 
 	const uploadDoc = async (file) => {
@@ -601,431 +434,418 @@
 						}
 					}}
 				/>
-				<form
-					dir={$settings?.chatDirection ?? 'LTR'}
-					class=" flex flex-col relative w-full rounded-3xl px-1.5 bg-gray-50 dark:bg-gray-850 dark:text-gray-100"
-					on:submit|preventDefault={() => {
-						// check if selectedModels support image input
-						submitPrompt(prompt, user);
-					}}
-				>
-					{#if files.length > 0}
-						<div class="mx-2 mt-2 mb-1 flex flex-wrap gap-2">
-							{#each files as file, fileIdx}
-								<div class=" relative group">
-									{#if file.type === 'image'}
-										<div class="relative">
-											<img src={file.url} alt="input" class=" h-16 w-16 rounded-xl object-cover" />
-											{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
-												<Tooltip
-													className=" absolute top-1 left-1"
-													content={$i18n.t('{{ models }}', {
-														models: [...(atSelectedModel ? [atSelectedModel] : selectedModels)]
-															.filter((id) => !visionCapableModels.includes(id))
-															.join(', ')
-													})}
+
+				{#if recording}
+					<VoiceRecording
+						bind:recording
+						on:cancel={async () => {
+							recording = false;
+
+							await tick();
+							document.getElementById('chat-textarea')?.focus();
+						}}
+						on:confirm={async (e) => {
+							const response = e.detail;
+							prompt = `${prompt}${response} `;
+
+							recording = false;
+
+							await tick();
+							document.getElementById('chat-textarea')?.focus();
+						}}
+					/>
+				{:else}
+					<form
+						class="w-full flex gap-1.5"
+						on:submit|preventDefault={() => {
+							// check if selectedModels support image input
+							submitPrompt(prompt, user);
+						}}
+					>
+						<div
+							class="flex-1 flex flex-col relative w-full rounded-3xl px-1.5 bg-gray-50 dark:bg-gray-850 dark:text-gray-100"
+							dir={$settings?.chatDirection ?? 'LTR'}
+						>
+							{#if files.length > 0}
+								<div class="mx-2 mt-2 mb-1 flex flex-wrap gap-2">
+									{#each files as file, fileIdx}
+										<div class=" relative group">
+											{#if file.type === 'image'}
+												<div class="relative">
+													<img
+														src={file.url}
+														alt="input"
+														class=" h-16 w-16 rounded-xl object-cover"
+													/>
+													{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
+														<Tooltip
+															className=" absolute top-1 left-1"
+															content={$i18n.t('{{ models }}', {
+																models: [...(atSelectedModel ? [atSelectedModel] : selectedModels)]
+																	.filter((id) => !visionCapableModels.includes(id))
+																	.join(', ')
+															})}
+														>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 24 24"
+																fill="currentColor"
+																class="size-4 fill-yellow-300"
+															>
+																<path
+																	fill-rule="evenodd"
+																	d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+																	clip-rule="evenodd"
+																/>
+															</svg>
+														</Tooltip>
+													{/if}
+												</div>
+											{:else if file.type === 'doc'}
+												<div
+													class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
 												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 24 24"
-														fill="currentColor"
-														class="size-4 fill-yellow-300"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</Tooltip>
+													<div class="p-2.5 bg-red-400 text-white rounded-lg">
+														{#if file.upload_status}
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 24 24"
+																fill="currentColor"
+																class="w-6 h-6"
+															>
+																<path
+																	fill-rule="evenodd"
+																	d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75 2.25a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z"
+																	clip-rule="evenodd"
+																/>
+																<path
+																	d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z"
+																/>
+															</svg>
+														{:else}
+															<svg
+																class=" w-6 h-6 translate-y-[0.5px]"
+																fill="currentColor"
+																viewBox="0 0 24 24"
+																xmlns="http://www.w3.org/2000/svg"
+																><style>
+																	.spinner_qM83 {
+																		animation: spinner_8HQG 1.05s infinite;
+																	}
+																	.spinner_oXPr {
+																		animation-delay: 0.1s;
+																	}
+																	.spinner_ZTLf {
+																		animation-delay: 0.2s;
+																	}
+																	@keyframes spinner_8HQG {
+																		0%,
+																		57.14% {
+																			animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
+																			transform: translate(0);
+																		}
+																		28.57% {
+																			animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
+																			transform: translateY(-6px);
+																		}
+																		100% {
+																			transform: translate(0);
+																		}
+																	}
+																</style><circle
+																	class="spinner_qM83"
+																	cx="4"
+																	cy="12"
+																	r="2.5"
+																/><circle
+																	class="spinner_qM83 spinner_oXPr"
+																	cx="12"
+																	cy="12"
+																	r="2.5"
+																/><circle
+																	class="spinner_qM83 spinner_ZTLf"
+																	cx="20"
+																	cy="12"
+																	r="2.5"
+																/></svg
+															>
+														{/if}
+													</div>
+
+													<div class="flex flex-col justify-center -space-y-0.5">
+														<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
+															{file.name}
+														</div>
+
+														<div class=" text-gray-500 text-sm">{$i18n.t('Document')}</div>
+													</div>
+												</div>
+											{:else if file.type === 'collection'}
+												<div
+													class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
+												>
+													<div class="p-2.5 bg-red-400 text-white rounded-lg">
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 24 24"
+															fill="currentColor"
+															class="w-6 h-6"
+														>
+															<path
+																d="M7.5 3.375c0-1.036.84-1.875 1.875-1.875h.375a3.75 3.75 0 0 1 3.75 3.75v1.875C13.5 8.161 14.34 9 15.375 9h1.875A3.75 3.75 0 0 1 21 12.75v3.375C21 17.16 20.16 18 19.125 18h-9.75A1.875 1.875 0 0 1 7.5 16.125V3.375Z"
+															/>
+															<path
+																d="M15 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 17.25 7.5h-1.875A.375.375 0 0 1 15 7.125V5.25ZM4.875 6H6v10.125A3.375 3.375 0 0 0 9.375 19.5H16.5v1.125c0 1.035-.84 1.875-1.875 1.875h-9.75A1.875 1.875 0 0 1 3 20.625V7.875C3 6.839 3.84 6 4.875 6Z"
+															/>
+														</svg>
+													</div>
+
+													<div class="flex flex-col justify-center -space-y-0.5">
+														<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
+															{file?.title ?? `#${file.name}`}
+														</div>
+
+														<div class=" text-gray-500 text-sm">{$i18n.t('Collection')}</div>
+													</div>
+												</div>
 											{/if}
-										</div>
-									{:else if file.type === 'doc'}
-										<div
-											class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
-										>
-											<div class="p-2.5 bg-red-400 text-white rounded-lg">
-												{#if file.upload_status}
+
+											<div class=" absolute -top-1 -right-1">
+												<button
+													class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
+													type="button"
+													on:click={() => {
+														files.splice(fileIdx, 1);
+														files = files;
+													}}
+												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 24 24"
+														viewBox="0 0 20 20"
 														fill="currentColor"
-														class="w-6 h-6"
+														class="w-4 h-4"
 													>
 														<path
-															fill-rule="evenodd"
-															d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75 2.25a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z"
-															clip-rule="evenodd"
-														/>
-														<path
-															d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z"
+															d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
 														/>
 													</svg>
-												{:else}
-													<svg
-														class=" w-6 h-6 translate-y-[0.5px]"
-														fill="currentColor"
-														viewBox="0 0 24 24"
-														xmlns="http://www.w3.org/2000/svg"
-														><style>
-															.spinner_qM83 {
-																animation: spinner_8HQG 1.05s infinite;
-															}
-															.spinner_oXPr {
-																animation-delay: 0.1s;
-															}
-															.spinner_ZTLf {
-																animation-delay: 0.2s;
-															}
-															@keyframes spinner_8HQG {
-																0%,
-																57.14% {
-																	animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-																	transform: translate(0);
-																}
-																28.57% {
-																	animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-																	transform: translateY(-6px);
-																}
-																100% {
-																	transform: translate(0);
-																}
-															}
-														</style><circle class="spinner_qM83" cx="4" cy="12" r="2.5" /><circle
-															class="spinner_qM83 spinner_oXPr"
-															cx="12"
-															cy="12"
-															r="2.5"
-														/><circle
-															class="spinner_qM83 spinner_ZTLf"
-															cx="20"
-															cy="12"
-															r="2.5"
-														/></svg
-													>
-												{/if}
-											</div>
-
-											<div class="flex flex-col justify-center -space-y-0.5">
-												<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
-													{file.name}
-												</div>
-
-												<div class=" text-gray-500 text-sm">{$i18n.t('Document')}</div>
+												</button>
 											</div>
 										</div>
-									{:else if file.type === 'collection'}
-										<div
-											class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
-										>
-											<div class="p-2.5 bg-red-400 text-white rounded-lg">
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 24 24"
-													fill="currentColor"
-													class="w-6 h-6"
-												>
-													<path
-														d="M7.5 3.375c0-1.036.84-1.875 1.875-1.875h.375a3.75 3.75 0 0 1 3.75 3.75v1.875C13.5 8.161 14.34 9 15.375 9h1.875A3.75 3.75 0 0 1 21 12.75v3.375C21 17.16 20.16 18 19.125 18h-9.75A1.875 1.875 0 0 1 7.5 16.125V3.375Z"
-													/>
-													<path
-														d="M15 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 17.25 7.5h-1.875A.375.375 0 0 1 15 7.125V5.25ZM4.875 6H6v10.125A3.375 3.375 0 0 0 9.375 19.5H16.5v1.125c0 1.035-.84 1.875-1.875 1.875h-9.75A1.875 1.875 0 0 1 3 20.625V7.875C3 6.839 3.84 6 4.875 6Z"
-													/>
-												</svg>
-											</div>
+									{/each}
+								</div>
+							{/if}
 
-											<div class="flex flex-col justify-center -space-y-0.5">
-												<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
-													{file?.title ?? `#${file.name}`}
-												</div>
-
-												<div class=" text-gray-500 text-sm">{$i18n.t('Collection')}</div>
-											</div>
-										</div>
-									{/if}
-
-									<div class=" absolute -top-1 -right-1">
+							<div class=" flex">
+								<div class=" ml-0.5 self-end mb-1.5 flex space-x-1">
+									<InputMenu
+										bind:webSearchEnabled
+										uploadFilesHandler={() => {
+											filesInputElement.click();
+										}}
+										onClose={async () => {
+											await tick();
+											chatTextAreaElement?.focus();
+										}}
+									>
 										<button
-											class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
+											class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
 											type="button"
-											on:click={() => {
-												files.splice(fileIdx, 1);
-												files = files;
-											}}
 										>
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
+												viewBox="0 0 16 16"
 												fill="currentColor"
-												class="w-4 h-4"
+												class="size-5"
 											>
 												<path
-													d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+													d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
 												/>
 											</svg>
 										</button>
-									</div>
+									</InputMenu>
 								</div>
-							{/each}
-						</div>
-					{/if}
 
-					<div class=" flex">
-						<div class=" ml-1 self-end mb-2 flex space-x-1">
-							<InputMenu
-								bind:webSearchEnabled
-								uploadFilesHandler={() => {
-									filesInputElement.click();
-								}}
-								onClose={async () => {
-									await tick();
-									chatTextAreaElement?.focus();
-								}}
-							>
-								<button
-									class="bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-none focus:outline-none"
-									type="button"
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="size-5"
-									>
-										<path
-											d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-										/>
-									</svg>
-								</button>
-							</InputMenu>
-						</div>
+								<textarea
+									id="chat-textarea"
+									bind:this={chatTextAreaElement}
+									class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-2 rounded-xl resize-none h-[48px]"
+									placeholder={chatInputPlaceholder !== ''
+										? chatInputPlaceholder
+										: $i18n.t('Send a Message')}
+									bind:value={prompt}
+									on:keypress={(e) => {
+										if (
+											!$mobile ||
+											!(
+												'ontouchstart' in window ||
+												navigator.maxTouchPoints > 0 ||
+												navigator.msMaxTouchPoints > 0
+											)
+										) {
+											// Prevent Enter key from creating a new line
+											if (e.key === 'Enter' && !e.shiftKey) {
+												e.preventDefault();
+											}
 
-						<textarea
-							id="chat-textarea"
-							bind:this={chatTextAreaElement}
-							class="scrollbar-hidden bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-none w-full py-3 px-3 rounded-xl resize-none h-[48px]"
-							placeholder={chatInputPlaceholder !== ''
-								? chatInputPlaceholder
-								: isRecording
-								? $i18n.t('Listening...')
-								: $i18n.t('Send a Message')}
-							bind:value={prompt}
-							on:keypress={(e) => {
-								if (
-									!$mobile ||
-									!(
-										'ontouchstart' in window ||
-										navigator.maxTouchPoints > 0 ||
-										navigator.msMaxTouchPoints > 0
-									)
-								) {
-									// Prevent Enter key from creating a new line
-									if (e.key === 'Enter' && !e.shiftKey) {
-										e.preventDefault();
-									}
-
-									// Submit the prompt when Enter key is pressed
-									if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
-										submitPrompt(prompt, user);
-									}
-								}
-							}}
-							on:keydown={async (e) => {
-								const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
-
-								// Check if Ctrl + R is pressed
-								if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
-									e.preventDefault();
-									console.log('regenerate');
-
-									const regenerateButton = [
-										...document.getElementsByClassName('regenerate-response-button')
-									]?.at(-1);
-
-									regenerateButton?.click();
-								}
-
-								if (prompt === '' && e.key == 'ArrowUp') {
-									e.preventDefault();
-
-									const userMessageElement = [
-										...document.getElementsByClassName('user-message')
-									]?.at(-1);
-
-									const editButton = [
-										...document.getElementsByClassName('edit-user-message-button')
-									]?.at(-1);
-
-									console.log(userMessageElement);
-
-									userMessageElement.scrollIntoView({ block: 'center' });
-									editButton?.click();
-								}
-
-								if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'ArrowUp') {
-									e.preventDefault();
-
-									(promptsElement || documentsElement || modelsElement).selectUp();
-
-									const commandOptionButton = [
-										...document.getElementsByClassName('selected-command-option-button')
-									]?.at(-1);
-									commandOptionButton.scrollIntoView({ block: 'center' });
-								}
-
-								if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'ArrowDown') {
-									e.preventDefault();
-
-									(promptsElement || documentsElement || modelsElement).selectDown();
-
-									const commandOptionButton = [
-										...document.getElementsByClassName('selected-command-option-button')
-									]?.at(-1);
-									commandOptionButton.scrollIntoView({ block: 'center' });
-								}
-
-								if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'Enter') {
-									e.preventDefault();
-
-									const commandOptionButton = [
-										...document.getElementsByClassName('selected-command-option-button')
-									]?.at(-1);
-
-									if (e.shiftKey) {
-										prompt = `${prompt}\n`;
-									} else if (commandOptionButton) {
-										commandOptionButton?.click();
-									} else {
-										document.getElementById('send-message-button')?.click();
-									}
-								}
-
-								if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'Tab') {
-									e.preventDefault();
-
-									const commandOptionButton = [
-										...document.getElementsByClassName('selected-command-option-button')
-									]?.at(-1);
-
-									commandOptionButton?.click();
-								} else if (e.key === 'Tab') {
-									const words = findWordIndices(prompt);
-
-									if (words.length > 0) {
-										const word = words.at(0);
-										const fullPrompt = prompt;
-
-										prompt = prompt.substring(0, word?.endIndex + 1);
-										await tick();
-
-										e.target.scrollTop = e.target.scrollHeight;
-										prompt = fullPrompt;
-										await tick();
-
-										e.preventDefault();
-										e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
-									}
-
-									e.target.style.height = '';
-									e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-								}
-
-								if (e.key === 'Escape') {
-									console.log('Escape');
-									atSelectedModel = undefined;
-								}
-							}}
-							rows="1"
-							on:input={(e) => {
-								e.target.style.height = '';
-								e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-								user = null;
-							}}
-							on:focus={(e) => {
-								e.target.style.height = '';
-								e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-							}}
-							on:paste={(e) => {
-								const clipboardData = e.clipboardData || window.clipboardData;
-
-								if (clipboardData && clipboardData.items) {
-									for (const item of clipboardData.items) {
-										if (item.type.indexOf('image') !== -1) {
-											const blob = item.getAsFile();
-											const reader = new FileReader();
-
-											reader.onload = function (e) {
-												files = [
-													...files,
-													{
-														type: 'image',
-														url: `${e.target.result}`
-													}
-												];
-											};
-
-											reader.readAsDataURL(blob);
+											// Submit the prompt when Enter key is pressed
+											if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
+												submitPrompt(prompt, user);
+											}
 										}
-									}
-								}
-							}}
-						/>
+									}}
+									on:keydown={async (e) => {
+										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
-						<div class="self-end mb-2 flex space-x-1 mr-1">
-							{#if messages.length == 0 || messages.at(-1).done == true}
-								<Tooltip content={$i18n.t('Record voice')}>
-									{#if speechRecognitionEnabled}
-										<button
-											id="voice-input-button"
-											class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-1.5 mr-0.5 self-center"
-											type="button"
-											on:click={() => {
-												speechRecognitionHandler();
-											}}
-										>
-											{#if isRecording}
-												<svg
-													class=" w-5 h-5 translate-y-[0.5px]"
-													fill="currentColor"
-													viewBox="0 0 24 24"
-													xmlns="http://www.w3.org/2000/svg"
-													><style>
-														.spinner_qM83 {
-															animation: spinner_8HQG 1.05s infinite;
-														}
-														.spinner_oXPr {
-															animation-delay: 0.1s;
-														}
-														.spinner_ZTLf {
-															animation-delay: 0.2s;
-														}
-														@keyframes spinner_8HQG {
-															0%,
-															57.14% {
-																animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-																transform: translate(0);
+										// Check if Ctrl + R is pressed
+										if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
+											e.preventDefault();
+											console.log('regenerate');
+
+											const regenerateButton = [
+												...document.getElementsByClassName('regenerate-response-button')
+											]?.at(-1);
+
+											regenerateButton?.click();
+										}
+
+										if (prompt === '' && e.key == 'ArrowUp') {
+											e.preventDefault();
+
+											const userMessageElement = [
+												...document.getElementsByClassName('user-message')
+											]?.at(-1);
+
+											const editButton = [
+												...document.getElementsByClassName('edit-user-message-button')
+											]?.at(-1);
+
+											console.log(userMessageElement);
+
+											userMessageElement.scrollIntoView({ block: 'center' });
+											editButton?.click();
+										}
+
+										if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'ArrowUp') {
+											e.preventDefault();
+
+											(promptsElement || documentsElement || modelsElement).selectUp();
+
+											const commandOptionButton = [
+												...document.getElementsByClassName('selected-command-option-button')
+											]?.at(-1);
+											commandOptionButton.scrollIntoView({ block: 'center' });
+										}
+
+										if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'ArrowDown') {
+											e.preventDefault();
+
+											(promptsElement || documentsElement || modelsElement).selectDown();
+
+											const commandOptionButton = [
+												...document.getElementsByClassName('selected-command-option-button')
+											]?.at(-1);
+											commandOptionButton.scrollIntoView({ block: 'center' });
+										}
+
+										if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'Enter') {
+											e.preventDefault();
+
+											const commandOptionButton = [
+												...document.getElementsByClassName('selected-command-option-button')
+											]?.at(-1);
+
+											if (e.shiftKey) {
+												prompt = `${prompt}\n`;
+											} else if (commandOptionButton) {
+												commandOptionButton?.click();
+											} else {
+												document.getElementById('send-message-button')?.click();
+											}
+										}
+
+										if (['/', '#', '@'].includes(prompt.charAt(0)) && e.key === 'Tab') {
+											e.preventDefault();
+
+											const commandOptionButton = [
+												...document.getElementsByClassName('selected-command-option-button')
+											]?.at(-1);
+
+											commandOptionButton?.click();
+										} else if (e.key === 'Tab') {
+											const words = findWordIndices(prompt);
+
+											if (words.length > 0) {
+												const word = words.at(0);
+												const fullPrompt = prompt;
+
+												prompt = prompt.substring(0, word?.endIndex + 1);
+												await tick();
+
+												e.target.scrollTop = e.target.scrollHeight;
+												prompt = fullPrompt;
+												await tick();
+
+												e.preventDefault();
+												e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
+											}
+
+											e.target.style.height = '';
+											e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+										}
+
+										if (e.key === 'Escape') {
+											console.log('Escape');
+											atSelectedModel = undefined;
+										}
+									}}
+									rows="1"
+									on:input={(e) => {
+										e.target.style.height = '';
+										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+										user = null;
+									}}
+									on:focus={(e) => {
+										e.target.style.height = '';
+										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+									}}
+									on:paste={(e) => {
+										const clipboardData = e.clipboardData || window.clipboardData;
+
+										if (clipboardData && clipboardData.items) {
+											for (const item of clipboardData.items) {
+												if (item.type.indexOf('image') !== -1) {
+													const blob = item.getAsFile();
+													const reader = new FileReader();
+
+													reader.onload = function (e) {
+														files = [
+															...files,
+															{
+																type: 'image',
+																url: `${e.target.result}`
 															}
-															28.57% {
-																animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-																transform: translateY(-6px);
-															}
-															100% {
-																transform: translate(0);
-															}
-														}
-													</style><circle class="spinner_qM83" cx="4" cy="12" r="2.5" /><circle
-														class="spinner_qM83 spinner_oXPr"
-														cx="12"
-														cy="12"
-														r="2.5"
-													/><circle
-														class="spinner_qM83 spinner_ZTLf"
-														cx="20"
-														cy="12"
-														r="2.5"
-													/></svg
-												>
-											{:else}
+														];
+													};
+
+													reader.readAsDataURL(blob);
+												}
+											}
+										}
+									}}
+								/>
+
+								<div class="self-end mb-2 flex space-x-1 mr-1">
+									{#if messages.length == 0 || messages.at(-1).done == true}
+										<Tooltip content={$i18n.t('Record voice')}>
+											<button
+												id="voice-input-button"
+												class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-1.5 mr-0.5 self-center"
+												type="button"
+												on:click={() => {
+													recording = true;
+												}}
+											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
@@ -1037,58 +857,79 @@
 														d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
 													/>
 												</svg>
-											{/if}
-										</button>
+											</button>
+										</Tooltip>
 									{/if}
-								</Tooltip>
-
-								<Tooltip content={$i18n.t('Send message')}>
+								</div>
+							</div>
+						</div>
+						<div class="flex items-end w-10">
+							{#if messages.length == 0 || messages.at(-1).done == true}
+								{#if prompt === ''}
+									<div class=" flex items-center mb-1">
+										<Tooltip content={$i18n.t('Call')}>
+											<button
+												class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-2 self-center"
+											>
+												<Headphone className="size-6" />
+											</button>
+										</Tooltip>
+									</div>
+								{:else}
+									<div class=" flex items-center mb-1">
+										<Tooltip content={$i18n.t('Send message')}>
+											<button
+												id="send-message-button"
+												class="{prompt !== ''
+													? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+													: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 m-0.5 self-center"
+												type="submit"
+												disabled={prompt === ''}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 16 16"
+													fill="currentColor"
+													class="size-6"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
+									</div>
+								{/if}
+							{:else}
+								<div class=" flex items-center mb-1.5">
 									<button
-										id="send-message-button"
-										class="{prompt !== ''
-											? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-											: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
-										type="submit"
-										disabled={prompt === ''}
+										class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+										on:click={() => {
+											stopResponse();
+										}}
 									>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
+											viewBox="0 0 24 24"
 											fill="currentColor"
-											class="w-5 h-5"
+											class="size-6"
 										>
 											<path
 												fill-rule="evenodd"
-												d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+												d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
 												clip-rule="evenodd"
 											/>
 										</svg>
 									</button>
-								</Tooltip>
-							{:else}
-								<button
-									class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-									on:click={stopResponse}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										class="w-5 h-5"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</button>
+								</div>
 							{/if}
 						</div>
-					</div>
-				</form>
+					</form>
+				{/if}
 
-				<div class="mt-1.5 text-xs text-gray-500 text-center">
+				<div class="mt-1.5 text-xs text-gray-500 text-center line-clamp-1">
 					{$i18n.t('LLMs can make mistakes. Verify important information.')}
 				</div>
 			</div>
