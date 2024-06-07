@@ -164,7 +164,10 @@
 		return new Promise((res) => {
 			speakingIdx = idx;
 			const audio = sentencesAudio[idx];
-			audio.play();
+			audio.play().catch(e => {
+				console.log(e)
+				res()
+			});
 			audio.onended = async (e) => {
 				await new Promise((r) => setTimeout(r, 300));
 
@@ -178,7 +181,7 @@
 
 				res(e);
 			};
-		});
+		}).catch((error) => console.log(error));
 	};
 
 	const toggleSpeakMessage = async () => {
