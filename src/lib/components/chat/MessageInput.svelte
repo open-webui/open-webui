@@ -842,8 +842,21 @@
 												id="voice-input-button"
 												class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-1.5 mr-0.5 self-center"
 												type="button"
-												on:click={() => {
-													recording = true;
+												on:click={async () => {
+													const res = await navigator.mediaDevices
+														.getUserMedia({ audio: true })
+														.catch(function (err) {
+															toast.error(
+																$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
+																	error: err
+																})
+															);
+															return null;
+														});
+
+													if (res) {
+														recording = true;
+													}
 												}}
 											>
 												<svg

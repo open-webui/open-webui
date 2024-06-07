@@ -168,7 +168,7 @@
 					<select
 						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 						bind:value={STTEngine}
-						placeholder="Select a mode"
+						placeholder="Select an engine"
 						on:change={(e) => {
 							if (e.target.value !== '') {
 								navigator.mediaDevices.getUserMedia({ audio: true }).catch(function (err) {
@@ -182,28 +182,10 @@
 							}
 						}}
 					>
-						<option value="">{$i18n.t('Default (Web API)')}</option>
-						<option value="whisper-local">{$i18n.t('Whisper (Local)')}</option>
+						<option value="">{$i18n.t('Default (Whisper)')}</option>
+						<option value="web">{$i18n.t('Web API')}</option>
 					</select>
 				</div>
-			</div>
-
-			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Conversation Mode')}</div>
-
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					on:click={() => {
-						toggleConversationMode();
-					}}
-					type="button"
-				>
-					{#if conversationMode === true}
-						<span class="ml-2 self-center">{$i18n.t('On')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-					{/if}
-				</button>
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
