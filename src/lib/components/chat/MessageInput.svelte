@@ -452,6 +452,10 @@
 
 							await tick();
 							document.getElementById('chat-textarea')?.focus();
+
+							if ($settings?.speechAutoSend ?? false) {
+								submitPrompt(prompt, user);
+							}
 						}}
 					/>
 				{:else}

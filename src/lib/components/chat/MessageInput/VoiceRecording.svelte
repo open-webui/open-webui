@@ -18,6 +18,8 @@
 	let durationSeconds = 0;
 	let durationCounter = null;
 
+	let transcription = '';
+
 	const startDurationCounter = () => {
 		durationCounter = setInterval(() => {
 			durationSeconds++;
@@ -104,15 +106,15 @@
 
 					visualizerData = visualizerData;
 
-					if (domainData.some((value) => value > 0)) {
-						lastSoundTime = Date.now();
-					}
+					// if (domainData.some((value) => value > 0)) {
+					// 	lastSoundTime = Date.now();
+					// }
 
-					if (recording && Date.now() - lastSoundTime > 3000) {
-						if ($settings?.speechAutoSend ?? false) {
-							confirmRecording();
-						}
-					}
+					// if (recording && Date.now() - lastSoundTime > 3000) {
+					// 	if ($settings?.speechAutoSend ?? false) {
+					// 		confirmRecording();
+					// 	}
+					// }
 				}
 
 				window.requestAnimationFrame(processFrame);
@@ -165,20 +167,81 @@
 		mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
 		mediaRecorder.onstop = async () => {
 			console.log('Recording stopped');
+			if (($settings?.audio?.STTEngine ?? '') === 'web') {
+				audioChunks = [];
+			} else {
+				if (confirmed) {
+					const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
 
-			if (confirmed) {
-				const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+					await transcribeHandler(audioBlob);
 
-				await transcribeHandler(audioBlob);
-
-				confirmed = false;
-				loading = false;
+					confirmed = false;
+					loading = false;
+				}
+				audioChunks = [];
+				recording = false;
 			}
-
-			audioChunks = [];
-			recording = false;
 		};
 		mediaRecorder.start();
+
+		if (($settings?.audio?.STTEngine ?? '') === 'web') {
+			if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+				// Create a SpeechRecognition object
+				speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+				// Set continuous to true for continuous recognition
+				speechRecognition.continuous = true;
+
+				// Set the timeout for turning off the recognition after inactivity (in milliseconds)
+				const inactivityTimeout = 3000; // 3 seconds
+
+				let timeoutId;
+				// Start recognition
+				speechRecognition.start();
+
+				// Event triggered when speech is recognized
+				speechRecognition.onresult = async (event) => {
+					// Clear the inactivity timeout
+					clearTimeout(timeoutId);
+
+					// Handle recognized speech
+					console.log(event);
+					const transcript = event.results[Object.keys(event.results).length - 1][0].transcript;
+
+					transcription = `${transcription}${transcript}`;
+
+					await tick();
+					document.getElementById('chat-textarea')?.focus();
+
+					// Restart the inactivity timeout
+					timeoutId = setTimeout(() => {
+						console.log('Speech recognition turned off due to inactivity.');
+						speechRecognition.stop();
+					}, inactivityTimeout);
+				};
+
+				// Event triggered when recognition is ended
+				speechRecognition.onend = function () {
+					// Restart recognition after it ends
+					console.log('recognition ended');
+
+					confirmRecording();
+					dispatch('confirm', transcription);
+
+					confirmed = false;
+					loading = false;
+				};
+
+				// Event triggered when an error occurs
+				speechRecognition.onerror = function (event) {
+					console.log(event);
+					toast.error($i18n.t(`Speech recognition error: {{error}}`, { error: event.error }));
+					dispatch('cancel');
+
+					stopRecording();
+				};
+			}
+		}
 	};
 
 	const stopRecording = async () => {
