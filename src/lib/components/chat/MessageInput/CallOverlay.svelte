@@ -372,6 +372,7 @@
 		}
 
 		cameraStream = null;
+		selectedVideoInputDeviceId = null;
 	};
 
 	const takeScreenshot = () => {
