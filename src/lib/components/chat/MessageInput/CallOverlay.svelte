@@ -5,7 +5,9 @@
 	import { blobToFile, calculateSHA256, extractSentences, findWordIndices } from '$lib/utils';
 	import { synthesizeOpenAISpeech, transcribeAudio } from '$lib/apis/audio';
 	import { toast } from 'svelte-sonner';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -25,13 +27,6 @@
 	let rmsLevel = 0;
 	let hasStartedSpeaking = false;
 
-	let audioContext;
-	let analyser;
-	let dataArray;
-	let audioElement;
-	let animationFrameId;
-
-	let speechRecognition;
 	let currentUtterance = null;
 
 	let mediaRecorder;
@@ -39,28 +34,6 @@
 
 	const MIN_DECIBELS = -45;
 	const VISUALIZER_BUFFER_LENGTH = 300;
-
-	let visualizerData = Array(VISUALIZER_BUFFER_LENGTH).fill(0);
-
-	const startAudio = () => {
-		audioContext = new (window.AudioContext || window.webkitAudioContext)();
-		analyser = audioContext.createAnalyser();
-		const source = audioContext.createMediaElementSource(audioElement);
-		source.connect(analyser);
-		analyser.connect(audioContext.destination);
-		analyser.fftSize = 32; // Adjust the fftSize
-		dataArray = new Uint8Array(analyser.frequencyBinCount);
-		visualize();
-	};
-
-	const visualize = () => {
-		analyser.getByteFrequencyData(dataArray);
-		div1Height = dataArray[1] / 2;
-		div2Height = dataArray[3] / 2;
-		div3Height = dataArray[5] / 2;
-		div4Height = dataArray[7] / 2;
-		animationFrameId = requestAnimationFrame(visualize);
-	};
 
 	// Function to calculate the RMS level from time domain data
 	const calculateRMS = (data: Uint8Array) => {
@@ -333,21 +306,72 @@
 		mediaRecorder.start();
 	};
 
+	let videoInputDevices = [];
+	let selectedVideoInputDeviceId = null;
+
+	const getVideoInputDevices = async () => {
+		const devices = await navigator.mediaDevices.enumerateDevices();
+		videoInputDevices = devices.filter((device) => device.kind === 'videoinput');
+
+		videoInputDevices = [
+			...videoInputDevices,
+			{
+				deviceId: 'screen',
+				label: 'Screen Share'
+			}
+		];
+
+		console.log(videoInputDevices);
+
+		if (selectedVideoInputDeviceId === null && videoInputDevices.length > 0) {
+			selectedVideoInputDeviceId = videoInputDevices[0].deviceId;
+		}
+	};
+
 	const startCamera = async () => {
+		await getVideoInputDevices();
+
 		if (cameraStream === null) {
 			camera = true;
 			await tick();
 			try {
-				const video = document.getElementById('camera-feed');
-				if (video) {
-					cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-					video.srcObject = cameraStream;
-					await video.play();
-				}
+				await startVideoStream();
 			} catch (err) {
 				console.error('Error accessing webcam: ', err);
 			}
 		}
+	};
+
+	const startVideoStream = async () => {
+		const video = document.getElementById('camera-feed');
+		if (video) {
+			if (selectedVideoInputDeviceId === 'screen') {
+				cameraStream = await navigator.mediaDevices.getDisplayMedia({
+					video: {
+						cursor: 'always'
+					},
+					audio: false
+				});
+			} else {
+				cameraStream = await navigator.mediaDevices.getUserMedia({
+					video: {
+						deviceId: selectedVideoInputDeviceId ? { exact: selectedVideoInputDeviceId } : undefined
+					}
+				});
+			}
+
+			video.srcObject = cameraStream;
+			await video.play();
+		}
+	};
+
+	const stopVideoStream = async () => {
+		if (cameraStream) {
+			const tracks = cameraStream.getTracks();
+			tracks.forEach((track) => track.stop());
+		}
+
+		cameraStream = null;
 	};
 
 	const takeScreenshot = () => {
@@ -359,14 +383,13 @@
 		}
 
 		const context = canvas.getContext('2d');
+
 		// Make the canvas match the video dimensions
 		canvas.width = video.videoWidth;
 		canvas.height = video.videoHeight;
-		// Draw the flipped image from the video onto the canvas
-		context.save();
-		context.scale(-1, 1); // Flip horizontally
-		context.drawImage(video, 0, 0, video.videoWidth * -1, video.videoHeight);
-		context.restore();
+
+		// Draw the image from the video onto the canvas
+		context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
 
 		// Convert the canvas to a data base64 URL and console log it
 		const dataURL = canvas.toDataURL('image/png');
@@ -375,13 +398,8 @@
 		return dataURL;
 	};
 
-	const stopCamera = () => {
-		if (cameraStream) {
-			const tracks = cameraStream.getTracks();
-			tracks.forEach((track) => track.stop());
-		}
-
-		cameraStream = null;
+	const stopCamera = async () => {
+		await stopVideoStream();
 		camera = false;
 	};
 
@@ -539,35 +557,62 @@
 
 				<div class="flex justify-between items-center pb-2 w-full">
 					<div>
-						<Tooltip content="Camera">
-							<button
-								class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
-								type="button"
-								on:click={() => {
-									startCamera();
+						{#if camera}
+							<VideoInputMenu
+								devices={videoInputDevices}
+								on:change={async (e) => {
+									console.log(e.detail);
+									selectedVideoInputDeviceId = e.detail;
+									await stopVideoStream();
+									await startVideoStream();
 								}}
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="1.5"
-									stroke="currentColor"
-									class="size-5"
+								<button class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900" type="button">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="size-5"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</button>
+							</VideoInputMenu>
+						{:else}
+							<Tooltip content="Camera">
+								<button
+									class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
+									type="button"
+									on:click={() => {
+										startCamera();
+									}}
 								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
-									/>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
-									/>
-								</svg>
-							</button>
-						</Tooltip>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="size-5"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"
+										/>
+									</svg>
+								</button>
+							</Tooltip>
+						{/if}
 					</div>
 
 					<div>
