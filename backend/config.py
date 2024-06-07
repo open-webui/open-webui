@@ -760,6 +760,11 @@ WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get(
     os.environ.get("WEBUI_SESSION_COOKIE_SAME_SITE", "lax"),
 )
 
+WEBUI_SESSION_COOKIE_SECURE = os.environ.get(
+    "WEBUI_SESSION_COOKIE_SECURE",
+    os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false").lower() == "true",
+)
+
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 

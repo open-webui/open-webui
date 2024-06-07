@@ -79,6 +79,7 @@ from config import (
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
     WEBUI_SECRET_KEY,
     WEBUI_SESSION_COOKIE_SAME_SITE,
+    WEBUI_SESSION_COOKIE_SECURE,
 )
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from utils.webhook import post_webhook
@@ -964,6 +965,7 @@ if len(OAUTH_PROVIDERS) > 0:
         secret_key=WEBUI_SECRET_KEY,
         session_cookie="oui-session",
         same_site=WEBUI_SESSION_COOKIE_SAME_SITE,
+        https_only=WEBUI_SESSION_COOKIE_SECURE,
     )
 
 
