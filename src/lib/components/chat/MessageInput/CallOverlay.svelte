@@ -199,13 +199,15 @@
 		if (res) {
 			console.log(res.text);
 
-			const _responses = await submitPrompt(res.text);
-			console.log(_responses);
+			if (res.text !== '') {
+				const _responses = await submitPrompt(res.text);
+				console.log(_responses);
 
-			if (_responses.at(0)) {
-				const content = _responses[0];
-				if (content) {
-					assistantSpeakingHandler(content);
+				if (_responses.at(0)) {
+					const content = _responses[0];
+					if (content) {
+						assistantSpeakingHandler(content);
+					}
 				}
 			}
 		}
