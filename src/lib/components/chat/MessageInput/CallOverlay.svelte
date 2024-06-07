@@ -131,24 +131,28 @@
 	};
 
 	const playAudio = (idx) => {
-		return new Promise((res) => {
-			assistantAudioIdx = idx;
-			const audioElement = document.getElementById('audioElement');
-			const audio = assistantAudio[idx];
+		if ($showCallOverlay) {
+			return new Promise((res) => {
+				assistantAudioIdx = idx;
+				const audioElement = document.getElementById('audioElement');
+				const audio = assistantAudio[idx];
 
-			audioElement.src = audio.src; // Assume `assistantAudio` has objects with a `src` property
-			audioElement.play();
+				audioElement.src = audio.src; // Assume `assistantAudio` has objects with a `src` property
+				audioElement.play();
 
-			audioElement.onended = async (e) => {
-				await new Promise((r) => setTimeout(r, 300));
+				audioElement.onended = async (e) => {
+					await new Promise((r) => setTimeout(r, 300));
 
-				if (Object.keys(assistantAudio).length - 1 === idx) {
-					assistantSpeaking = false;
-				}
+					if (Object.keys(assistantAudio).length - 1 === idx) {
+						assistantSpeaking = false;
+					}
 
-				res(e);
-			};
-		});
+					res(e);
+				};
+			});
+		} else {
+			return Promise.resolve();
+		}
 	};
 
 	const getOpenAISpeech = async (text) => {
