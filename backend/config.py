@@ -31,6 +31,19 @@ else:
     GLOBAL_LOG_LEVEL = "INFO"
 
 log = logging.getLogger(__name__)
+
+# Create a custom formatter with timestamp
+formatter = logging.Formatter(
+    fmt="[%(asctime)s] %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
+
+# Get the logger's handlers (it might have multiple)
+handlers = log.handlers
+
+# Set the formatter for all handlers
+for handler in handlers:
+    handler.setFormatter(formatter)
+
 log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
 
 log_sources = [
