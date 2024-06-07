@@ -23,10 +23,9 @@ export const getUserPrompt = (chatType: string | null, content: string, options:
     case 'summary_emphasis':
     case 'long_summary_emphasis':
       return `${content}\n
-Dựa vào bài viết này, hãy thực hiện 3 nhiệm vụ sau. Không được bỏ sót nhiệm vụ nào. Thực hiện bằng tiếng Việt.
-1. Tóm tắt dài và sâu sắc bài viết.
-2. Liệt kê các điểm nhấn quan trọng trong bài viết.
-3. Phân tích các lý lẽ sâu sắc có trong bài và các câu hỏi lớn đặt ra trong bài.\n\n
+Bạn là chuyên gia phân tích thông tin rất giỏi. Dựa vào bài viết này, hãy thực hiện các nhiệm vụ sau. 
+Hãy tóm tắt dài với các lý luận sâu sắc. Liệt kê thật chi tiết các điểm nhấn chính trong bài viết cùng các lý lẽ được sử dụng nhiều trong bài. Cuối cùng hãy tạo 5 FAQ lớn đọng lại trong bài.\n
+Không được bỏ sót nhiệm vụ nào. Thực hiện bằng tiếng Việt.
 `
     case 'faq':
     case 'long_faq':
@@ -116,7 +115,7 @@ Dự đoán phán quyết của Toà án cùng các điều khoản Luật áp d
 ** Các điều khoản Luật áp dụng: "điều...của Luật...năm... (tiêu đề của điều Luật này...)"
 `
     case 'translate':
-      return `Dịch đoạn văn sang tiếng ${options.translate_lang || 'Việt'}. Không tóm tắt, không lược dịch và không được bỏ sót từ nào.\n
+      return `Dịch đoạn văn sang tiếng ${options.translate_lang || 'Việt'}.\n
 ${content}`
     case 'translate_coding':
       return `Bạn là AI dịch các bài viết lập trình đa ngôn ngữ và công thức toán lý hoá chuyên nghiệp, hãy dịch đoạn văn dưới đây sang tiếng ${options.translate_lang || 'Việt'}, bao gồm cả các câu ghi chú hoặc câu trong cú pháp in trong đoạn lập trình nếu có. Bảo lưu đầy đủ cú pháp lập trình, mã lệnh SQL và các cú pháp Latex hoặc ký hiệu toán nếu có nếu có. Không tóm tắt, không lược dịch và không được bỏ sót từ nào.\n

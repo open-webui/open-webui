@@ -54,6 +54,7 @@
 	import ChatSessionSettingModal from "$lib/components/chat/ChatSessionSettingModal.svelte";
 	import {queryRankedChunk} from "$lib/apis/embedding";
 	import {highlightText} from "$lib/apis/documents";
+	import { chunkText } from '$lib/apis/tools';
 
 	const i18n = getContext('i18n');
 
@@ -685,126 +686,137 @@
 
 		scrollToBottom();
 
-		try {
-			const {apiMessages, citations} = await createChatCompletionApiMessages($chatType, sessionConfig.system, userPrompt, $selectedChatEmbeddingIndex, messages, $promptOptions)
-			if (citations) {
-				responseMessage.citations = citations
-			}
-
-			const [res, controller] = await generateOpenAIChatCompletion(
-				localStorage.token,
-				{
-					model: model.id,
-					stream: true,
-					messages: apiMessages,
-					seed: sessionConfig?.model_params?.seed ?? undefined,
-					stop:
-						$settings?.options?.stop ?? undefined
-							? $settings.options.stop.map((str) =>
-									decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-							  )
-							: undefined,
-					temperature: sessionConfig?.model_params?.temperature ?? undefined,
-					top_p: sessionConfig?.model_params?.top_p ?? undefined,
-					num_ctx: sessionConfig?.model_params?.num_ctx ?? undefined,
-					frequency_penalty: sessionConfig?.model_params?.repetition_penalty ?? undefined,
-					max_tokens: sessionConfig?.model_params?.num_predict ?? undefined,
-					docs: docs.length > 0 ? docs : undefined,
-					citations: docs.length > 0
-				},
-				model?.source?.toLowerCase() === 'litellm'
-					? `${LITELLM_API_BASE_URL}/v1`
-					: `${OPENAI_API_BASE_URL}`
-			);
-
-			// Wait until history/message have been updated
-			await tick();
-
-			scrollToBottom();
-
-			if (res && res.ok && res.body) {
-				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
-
-				for await (const update of textStream) {
-					const { value, done, citations, error } = update;
-					if (error) {
-						await handleOpenAIError(error, null, model, responseMessage);
-						break;
-					}
-					if (done || stopResponseFlag || _chatId !== $chatId) {
-						if ($chatType === 'chat_embedding' && responseMessage.content.includes('Đoạn văn này không có nội dung bạn muốn tìm')) {
-							delete history.messages[responseMessageId];
-							if (responseMessage.parentId !== null) {
-								history.messages[responseMessage.parentId].childrenIds = history.messages[responseMessage.parentId].childrenIds.filter(_id => _id !== responseMessageId);
-								history.currentId = history.messages[responseMessage.parentId].childrenIds[history.messages[responseMessage.parentId].childrenIds.length - 1]
-							}
-							messages = messages;
-							break
-						}
-
-						responseMessage.done = true;
-						messages = messages;
-
-						if (stopResponseFlag) {
-							controller.abort('User: Stop Response');
-						}
-
-						if ($chatType === 'chat_embedding' && responseMessage.citations) {
-							const highlightedContent = await highlightText(responseMessage.citations[0].document[0], responseMessage.content)
-							responseMessage.citations[0].document[0] = highlightedContent
-						}
-
-						break;
-					}
-
-					if (citations) {
-						responseMessage.citations = citations;
-						continue;
-					}
-
-					if (responseMessage.content == '' && value == '\n') {
-						continue;
-					} else {
-						responseMessage.content += value;
-						messages = messages;
-					}
-
-					if ($settings.notificationEnabled && !document.hasFocus()) {
-						const notification = new Notification(`OpenAI ${model}`, {
-							body: responseMessage.content,
-							icon: `${WEBUI_BASE_URL}/static/favicon.png`
-						});
-					}
-
-					if ($settings.responseAutoCopy) {
-						copyToClipboard(responseMessage.content);
-					}
-
-					if ($settings.responseAutoPlayback) {
-						await tick();
-						document.getElementById(`speak-button-${responseMessage.id}`)?.click();
-					}
-
-					if (autoScroll) {
-						scrollToBottom();
-					}
-				}
-
-				if ($chatId == _chatId) {
-					if ($settings.saveChatHistory ?? true) {
-						chat = await updateChatById(localStorage.token, _chatId, {
-							messages: messages,
-							history: history
-						});
-						await chats.set(await getChatList(localStorage.token));
-					}
-				}
-			} else {
-				await handleOpenAIError(null, res, model, responseMessage);
-			}
-		} catch (error) {
-			await handleOpenAIError(error, null, model, responseMessage);
+		let prompts = [userPrompt]
+		if ($chatType.startsWith('translate')) {
+			prompts = await chunkText(selectedModels[0], userPrompt, 100)
 		}
+
+		for (let subPrompt of prompts) {
+			try {
+				const {apiMessages, citations} = await createChatCompletionApiMessages($chatType, sessionConfig.system, subPrompt, $selectedChatEmbeddingIndex, messages, $promptOptions)
+				if (citations) {
+					responseMessage.citations = citations
+				}
+
+				const [res, controller] = await generateOpenAIChatCompletion(
+					localStorage.token,
+					{
+						model: model.id,
+						stream: true,
+						messages: apiMessages,
+						seed: sessionConfig?.model_params?.seed ?? undefined,
+						stop:
+							$settings?.options?.stop ?? undefined
+								? $settings.options.stop.map((str) =>
+									decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+								)
+								: undefined,
+						temperature: sessionConfig?.model_params?.temperature ?? undefined,
+						top_p: sessionConfig?.model_params?.top_p ?? undefined,
+						num_ctx: sessionConfig?.model_params?.num_ctx ?? undefined,
+						frequency_penalty: sessionConfig?.model_params?.repetition_penalty ?? undefined,
+						max_tokens: sessionConfig?.model_params?.num_predict ?? undefined,
+						docs: docs.length > 0 ? docs : undefined,
+						citations: docs.length > 0
+					},
+					model?.source?.toLowerCase() === 'litellm'
+						? `${LITELLM_API_BASE_URL}/v1`
+						: `${OPENAI_API_BASE_URL}`
+				);
+
+				// Wait until history/message have been updated
+				await tick();
+
+				scrollToBottom();
+
+				if (res && res.ok && res.body) {
+					const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
+
+					for await (const update of textStream) {
+						const { value, done, citations, error } = update;
+						if (error) {
+							await handleOpenAIError(error, null, model, responseMessage);
+							break;
+						}
+						if (done || stopResponseFlag || _chatId !== $chatId) {
+							if ($chatType === 'chat_embedding' && responseMessage.content.includes('Đoạn văn này không có nội dung bạn muốn tìm')) {
+								delete history.messages[responseMessageId];
+								if (responseMessage.parentId !== null) {
+									history.messages[responseMessage.parentId].childrenIds = history.messages[responseMessage.parentId].childrenIds.filter(_id => _id !== responseMessageId);
+									history.currentId = history.messages[responseMessage.parentId].childrenIds[history.messages[responseMessage.parentId].childrenIds.length - 1]
+								}
+								messages = messages;
+								break
+							}
+
+							// responseMessage.done = true;
+							// messages = messages;
+
+							if (stopResponseFlag) {
+								controller.abort('User: Stop Response');
+							}
+
+							if ($chatType === 'chat_embedding' && responseMessage.citations) {
+								const highlightedContent = await highlightText(responseMessage.citations[0].document[0], responseMessage.content)
+								responseMessage.citations[0].document[0] = highlightedContent
+							}
+
+							break;
+						}
+
+						if (citations) {
+							responseMessage.citations = citations;
+							continue;
+						}
+
+						if (responseMessage.content == '' && value == '\n') {
+							continue;
+						} else {
+							responseMessage.content += value;
+							messages = messages;
+						}
+					}
+				} else {
+					await handleOpenAIError(null, res, model, responseMessage);
+				}
+			} catch (error) {
+				await handleOpenAIError(error, null, model, responseMessage);
+			}
+		}
+
+		responseMessage.done = true;
+		messages = messages;
+
+		if ($settings.notificationEnabled && !document.hasFocus()) {
+			const notification = new Notification(`OpenAI ${model}`, {
+				body: responseMessage.content,
+				icon: `${WEBUI_BASE_URL}/static/favicon.png`
+			});
+		}
+
+		if ($settings.responseAutoCopy) {
+			await copyToClipboard(responseMessage.content);
+		}
+
+		if ($settings.responseAutoPlayback) {
+			await tick();
+			document.getElementById(`speak-button-${responseMessage.id}`)?.click();
+		}
+
+		if (autoScroll) {
+			await scrollToBottom();
+		}
+
+		if ($chatId == _chatId) {
+			if ($settings.saveChatHistory ?? true) {
+				chat = await updateChatById(localStorage.token, _chatId, {
+					messages: messages,
+					history: history
+				});
+				await chats.set(await getChatList(localStorage.token));
+			}
+		}
+
 		messages = messages;
 
 		stopResponseFlag = false;
