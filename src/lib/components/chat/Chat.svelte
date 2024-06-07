@@ -19,7 +19,8 @@
 		WEBUI_NAME,
 		banners,
 		user,
-		socket
+		socket,
+		showCallOverlay
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -57,6 +58,7 @@
 	import Banner from '../common/Banner.svelte';
 	import { getUserSettings } from '$lib/apis/users';
 	import { chatCompleted } from '$lib/apis';
+	import CallOverlay from './MessageInput/CallOverlay.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -1192,6 +1194,8 @@
 			: `${$WEBUI_NAME}`}
 	</title>
 </svelte:head>
+
+<CallOverlay />
 
 {#if !chatIdProp || (loaded && chatIdProp)}
 	<div

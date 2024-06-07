@@ -90,6 +90,8 @@
 
 		const detectSound = () => {
 			const processFrame = () => {
+				if (!recording || loading) return;
+
 				if (recording && !loading) {
 					analyser.getByteTimeDomainData(timeDomainData);
 					analyser.getByteFrequencyData(domainData);
