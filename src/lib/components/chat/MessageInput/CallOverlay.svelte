@@ -420,13 +420,13 @@
 
 {#if $showCallOverlay}
 	<audio id="audioElement" src="" style="display: none;" />
-	<div class=" absolute w-full h-full flex z-[999]">
+	<div class=" absolute w-full h-screen max-h-[100dvh] flex z-[999] overflow-hidden">
 		<div
-			class="absolute w-full h-full bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
+			class="absolute w-full h-screen max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
 		>
-			<div class="max-w-lg w-full h-screen max-h-[100dvh] flex flex-col justify-between p-6">
+			<div class="max-w-lg w-full h-screen max-h-[100dvh] flex flex-col justify-between p-3 md:p-6">
 				{#if camera}
-					<div class="flex justify-center items-center pt-2 w-full h-20">
+					<div class="flex justify-center items-center w-full min-h-20">
 						{#if loading}
 							<svg
 								class="size-12 text-gray-900 dark:text-gray-400"
@@ -479,7 +479,7 @@
 					</div>
 				{/if}
 
-				<div class="flex justify-center items-center w-full flex-1">
+				<div class="flex justify-center items-center flex-1 h-full w-full max-h-full">
 					{#if !camera}
 						{#if loading}
 							<svg
@@ -530,17 +530,19 @@
 							/>
 						{/if}
 					{:else}
-						<div class="relative video-container w-full h-full py-6 px-2">
+						<div
+							class="relative flex video-container w-full max-h-full pt-2 pb-4 md:py-6 px-2 h-full"
+						>
 							<video
 								id="camera-feed"
 								autoplay
-								class="w-full h-full object-cover object-center rounded-2xl"
+								class="rounded-2xl h-full min-w-full object-cover object-center"
 								playsinline
 							/>
 
 							<canvas id="camera-canvas" style="display:none;" />
 
-							<div class=" absolute top-8 left-4">
+							<div class=" absolute top-4 md:top-8 left-4">
 								<button
 									type="button"
 									class="p-1.5 text-white cursor-pointer backdrop-blur-xl bg-black/10 rounded-full"
