@@ -328,7 +328,7 @@
 		<div
 			class="absolute w-full h-full bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
 		>
-			<div class="max-w-lg w-full h-screen flex flex-col justify-between p-6">
+			<div class="max-w-lg w-full h-screen max-h-[100dvh] flex flex-col justify-between p-6">
 				<div>
 					<!-- navbar -->
 				</div>
