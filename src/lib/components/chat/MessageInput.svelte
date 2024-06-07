@@ -897,7 +897,11 @@
 												class=" text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-full p-2 self-center"
 												type="button"
 												on:click={() => {
-													showCallOverlay.set(true);
+													if (selectedModels.length > 1) {
+														toast.error($i18n.t('Select only one model to call'));
+													} else {
+														showCallOverlay.set(true);
+													}
 												}}
 											>
 												<Headphone className="size-6" />

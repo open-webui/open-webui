@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { showCallOverlay } from '$lib/stores';
+	import { settings, showCallOverlay } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
@@ -8,8 +8,13 @@
 
 	const i18n = getContext('i18n');
 
+	export let submitPrompt: Function;
+
 	let loading = false;
 	let confirmed = false;
+
+	let assistantSpeaking = false;
+	let assistantAudio = null;
 
 	let rmsLevel = 0;
 	let hasStartedSpeaking = false;
@@ -103,6 +108,14 @@
 				// Check if initial speech/noise has started
 				const hasSound = domainData.some((value) => value > 0);
 				if (hasSound) {
+					if (assistantSpeaking) {
+						speechSynthesis.cancel();
+
+						if (assistantAudio) {
+							assistantAudio.pause();
+							assistantAudio.currentTime = 0;
+						}
+					}
 					hasStartedSpeaking = true;
 					lastSoundTime = Date.now();
 				}
@@ -140,6 +153,22 @@
 
 		if (res) {
 			toast.success(res.text);
+
+			const _responses = await submitPrompt(res.text);
+			console.log(_responses);
+
+			if (_responses.at(0)) {
+				const response = _responses[0];
+				if (response) {
+					assistantSpeaking = true;
+
+					if ($settings?.audio?.TTSEngine ?? '') {
+						speechSynthesis.speak(new SpeechSynthesisUtterance(response));
+					} else {
+						console.log('openai');
+					}
+				}
+			}
 		}
 	};
 
@@ -277,12 +306,7 @@
 					</div>
 
 					<div>
-						<button
-							on:click={() => {
-								loading = !loading;
-							}}
-							type="button"
-						>
+						<button type="button">
 							<div class=" line-clamp-1 text-sm font-medium">
 								{#if loading}
 									Thinking...
