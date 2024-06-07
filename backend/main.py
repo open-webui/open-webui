@@ -353,6 +353,17 @@ async def get_function_call_response(
     return None, None, False
 
 
+def _pipeline_handles_docs(data):
+    model = data.get("model", None)
+    if model:
+        model_definition = app.state.MODELS.get(model, None)
+        if model_definition:
+            pipeline = model_definition.get("pipeline", None)
+            if pipeline:
+                return pipeline.get("rag_replacement", False)
+    return False
+
+
 class ChatCompletionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         data_items = []
@@ -376,10 +387,12 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 get_http_authorization_cred(request.headers.get("Authorization")),
             )
             # Flag to skip RAG completions if file_handler is present in tools/functions
-            skip_files = False
-            if data.get("citations"):
-                show_citations = True
-                del data["citations"]
+            skip_files = _pipeline_handles_docs(data)
+            forward_files = skip_files
+            if not forward_files:
+                if data.get("citations"):
+                    show_citations = True
+                    del data["citations"]
 
             model_id = data["model"]
             if model_id not in app.state.MODELS:
@@ -553,7 +566,8 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     if rag_citations:
                         citations.extend(rag_citations)
 
-                del data["files"]
+                if not forward_files:
+                    del data["files"]
 
             if show_citations and len(citations) > 0:
                 data_items.append({"citations": citations})
