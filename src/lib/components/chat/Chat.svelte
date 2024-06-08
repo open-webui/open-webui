@@ -751,7 +751,7 @@
 									copyToClipboard(responseMessage.content);
 								}
 
-								if ($settings.responseAutoPlayback) {
+								if ($settings.responseAutoPlayback && !$showCallOverlay) {
 									await tick();
 									document.getElementById(`speak-button-${responseMessage.id}`)?.click();
 								}
@@ -977,8 +977,9 @@
 					copyToClipboard(responseMessage.content);
 				}
 
-				if ($settings.responseAutoPlayback) {
+				if ($settings.responseAutoPlayback && !$showCallOverlay) {
 					await tick();
+
 					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
 				}
 
