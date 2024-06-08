@@ -221,11 +221,12 @@
 							)
 							?.at(0) ?? undefined;
 
-					console.log($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice);
-					console.log(voices);
-
 					currentUtterance = new SpeechSynthesisUtterance(content);
-					currentUtterance.voice = voice;
+
+					if (voice) {
+						currentUtterance.voice = voice;
+					}
+
 					speechSynthesis.speak(currentUtterance);
 				}
 			}, 100);

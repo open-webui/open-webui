@@ -913,7 +913,14 @@
 													try {
 														await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
 														// If the user grants the permission, proceed to show the call overlay
-														showCallOverlay.set(true);
+
+														if ($config.audio.stt.engine !== 'web') {
+															showCallOverlay.set(true);
+														} else {
+															toast.error(
+																$i18n.t('Call feature is not supported when using Web STT engine')
+															);
+														}
 													} catch (err) {
 														// If the user denies the permission or an error occurs, show an error message
 														toast.error($i18n.t('Permission denied when accessing media devices'));

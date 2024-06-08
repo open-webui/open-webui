@@ -234,7 +234,7 @@
 								bind:value={TTS_VOICE}
 							>
 								<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
-								{#each voices.filter((v) => nonLocalVoices || v.localService === true) as voice}
+								{#each voices as voice}
 									<option
 										value={voice.voiceURI}
 										class="bg-gray-100 dark:bg-gray-700"
@@ -242,15 +242,6 @@
 									>
 								{/each}
 							</select>
-						</div>
-					</div>
-					<div class="flex items-center justify-between my-1.5">
-						<div class="text-xs">
-							{$i18n.t('Allow non-local voices')}
-						</div>
-
-						<div class="mt-1">
-							<Switch bind:state={nonLocalVoices} />
 						</div>
 					</div>
 				</div>

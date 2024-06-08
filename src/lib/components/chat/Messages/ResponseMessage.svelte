@@ -279,7 +279,11 @@
 								)
 								?.at(0) ?? undefined;
 
+						console.log(voice);
+
 						const speak = new SpeechSynthesisUtterance(message.content);
+
+						console.log(speak);
 
 						speak.onend = () => {
 							speaking = null;
@@ -287,7 +291,11 @@
 								document.getElementById('voice-input-button')?.click();
 							}
 						};
-						speak.voice = voice;
+
+						if (voice) {
+							speak.voice = voice;
+						}
+
 						speechSynthesis.speak(speak);
 					}
 				}, 100);
