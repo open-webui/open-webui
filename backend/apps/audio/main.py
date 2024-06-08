@@ -23,7 +23,6 @@ import hashlib
 from pathlib import Path
 import json
 
-
 from constants import ERROR_MESSAGES
 from utils.utils import (
     decode_token,
@@ -104,6 +103,33 @@ class STTConfigForm(BaseModel):
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
     stt: STTConfigForm
+
+
+from pydub import AudioSegment
+from pydub.utils import mediainfo
+
+
+def is_mp4_audio(file_path):
+    """Check if the given file is an MP4 audio file."""
+    if not os.path.isfile(file_path):
+        print(f"File not found: {file_path}")
+        return False
+
+    info = mediainfo(file_path)
+    if (
+        info.get("codec_name") == "aac"
+        and info.get("codec_type") == "audio"
+        and info.get("codec_tag_string") == "mp4a"
+    ):
+        return True
+    return False
+
+
+def convert_mp4_to_wav(file_path, output_path):
+    """Convert MP4 audio file to WAV format."""
+    audio = AudioSegment.from_file(file_path, format="mp4")
+    audio.export(output_path, format="wav")
+    print(f"Converted {file_path} to {output_path}")
 
 
 @app.get("/config")
@@ -235,6 +261,8 @@ def transcribe(
         os.makedirs(file_dir, exist_ok=True)
         file_path = f"{file_dir}/{filename}"
 
+        print(filename)
+
         contents = file.file.read()
         with open(file_path, "wb") as f:
             f.write(contents)
@@ -268,22 +296,30 @@ def transcribe(
 
             transcript = "".join([segment.text for segment in list(segments)])
 
+            data = {"text": transcript.strip()}
+
             # save the transcript to a json file
             transcript_file = f"{file_dir}/{id}.json"
             with open(transcript_file, "w") as f:
-                json.dump({"transcript": transcript}, f)
-
-            data = {"text": transcript.strip()}
+                json.dump(data, f)
 
             print(data)
 
             return data
 
         elif app.state.config.STT_ENGINE == "openai":
+            if is_mp4_audio(file_path):
+                print("is_mp4_audio")
+                os.rename(file_path, file_path.replace(".wav", ".mp4"))
+                # Convert MP4 audio file to WAV format
+                convert_mp4_to_wav(file_path.replace(".wav", ".mp4"), file_path)
+
             headers = {"Authorization": f"Bearer {app.state.config.STT_OPENAI_API_KEY}"}
 
             files = {"file": (filename, open(file_path, "rb"))}
             data = {"model": "whisper-1"}
+
+            print(files, data)
 
             r = None
             try:
@@ -297,6 +333,12 @@ def transcribe(
                 r.raise_for_status()
 
                 data = r.json()
+
+                # save the transcript to a json file
+                transcript_file = f"{file_dir}/{id}.json"
+                with open(transcript_file, "w") as f:
+                    json.dump(data, f)
+
                 print(data)
                 return data
             except Exception as e:
