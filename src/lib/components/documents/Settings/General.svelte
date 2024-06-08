@@ -350,10 +350,8 @@
 							{#if !embeddingModel}
 								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 							{/if}
-							{#each $models.filter((m) => m.id && !m.external) as model}
-								<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
-									>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
-								>
+							{#each $models.filter((m) => m.id && m.ollama && !(m?.preset ?? false)) as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option>
 							{/each}
 						</select>
 					</div>
