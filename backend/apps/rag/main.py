@@ -974,7 +974,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         "swift",
         "vue",
         "svelte",
-        "msg"
+        "msg",
     ]
 
     if file_ext == "pdf":
