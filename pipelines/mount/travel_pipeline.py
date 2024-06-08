@@ -7,10 +7,8 @@ from textwrap import dedent
 #from travel_utils.agents import TravelAgents
 #from travel_utils.tasks import TravelTasks
 
-from langchain.tools import tool
-
-
 from dotenv import load_dotenv
+
 load_dotenv()
 import json
 import os
@@ -22,7 +20,7 @@ from crewai import Agent
 from textwrap import dedent
 from langchain_openai import ChatOpenAI
 
-#from search_tools import SearchTools
+from crewai_tools.search_tools import SearchTools
 #from tools.calculator_tools import CalculatorTools
 
 from crewai import Task
@@ -158,7 +156,7 @@ class TravelAgents:
         )
 
 
-
+'''
 class SearchTools():
 
     @tool("Search the internet")
@@ -189,7 +187,7 @@ class SearchTools():
                     next
 
             return '\n'.join(string)
-
+'''
 
 class CalculatorTools():
 
