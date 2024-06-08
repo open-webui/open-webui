@@ -306,7 +306,10 @@ STATIC_DIR = Path(os.getenv("STATIC_DIR", BACKEND_DIR / "static")).resolve()
 
 frontend_favicon = FRONTEND_BUILD_DIR / "favicon.png"
 if frontend_favicon.exists():
-    shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon.png")
+    try:
+        shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon.png")
+    except PermissionError:
+        logging.error(f"No write permission to {STATIC_DIR / 'favicon.png'}")
 else:
     logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
