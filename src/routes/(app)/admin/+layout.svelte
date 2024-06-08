@@ -39,7 +39,7 @@
 			class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-xl bg-transparent/10 p-1"
 		>
 			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname === '/admin'
+				class="min-w-fit rounded-lg p-1.5 px-3 {['/admin', '/admin/'].includes($page.url.pathname)
 					? 'bg-gray-50 dark:bg-gray-850'
 					: ''} transition"
 				href="/admin">{$i18n.t('Dashboard')}</a
