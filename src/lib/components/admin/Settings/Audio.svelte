@@ -267,7 +267,7 @@
 						</div>
 					</div>
 					<div class="w-full">
-						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('TTS Model')}</div>
+						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Model')}</div>
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
