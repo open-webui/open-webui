@@ -909,18 +909,20 @@
 
 														return;
 													}
+
+													if ($config.audio.stt.engine === 'web') {
+														toast.error(
+															$i18n.t('Call feature is not supported when using Web STT engine')
+														);
+
+														return;
+													}
 													// check if user has access to getUserMedia
 													try {
 														await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
 														// If the user grants the permission, proceed to show the call overlay
 
-														if ($config.audio.stt.engine !== 'web') {
-															showCallOverlay.set(true);
-														} else {
-															toast.error(
-																$i18n.t('Call feature is not supported when using Web STT engine')
-															);
-														}
+														showCallOverlay.set(true);
 													} catch (err) {
 														// If the user denies the permission or an error occurs, show an error message
 														toast.error($i18n.t('Permission denied when accessing media devices'));

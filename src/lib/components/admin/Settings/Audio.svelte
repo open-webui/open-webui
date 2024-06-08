@@ -125,7 +125,7 @@
 						bind:value={STT_ENGINE}
 						placeholder="Select an engine"
 					>
-						<option value="">{$i18n.t('Local Whisper')}</option>
+						<option value="">{$i18n.t('Whisper (Local)')}</option>
 						<option value="openai">OpenAI</option>
 						<option value="web">{$i18n.t('Web API')}</option>
 					</select>
