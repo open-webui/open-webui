@@ -139,7 +139,17 @@
 				const audio = assistantAudio[idx];
 
 				audioElement.src = audio.src; // Assume `assistantAudio` has objects with a `src` property
-				audioElement.play();
+
+				audioElement.muted = true;
+
+				audioElement
+					.play()
+					.then(() => {
+						audioElement.muted = false;
+					})
+					.catch((error) => {
+						toast.error(error);
+					});
 
 				audioElement.onended = async (e) => {
 					await new Promise((r) => setTimeout(r, 300));
