@@ -98,7 +98,7 @@ export const synthesizeOpenAISpeech = async (
 	token: string = '',
 	speaker: string = 'alloy',
 	text: string = '',
-	model: string = 'tts-1'
+	model?: string
 ) => {
 	let error = null;
 
@@ -109,9 +109,9 @@ export const synthesizeOpenAISpeech = async (
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({
-			model: model,
 			input: text,
-			voice: speaker
+			voice: speaker,
+			...(model && { model })
 		})
 	})
 		.then(async (res) => {

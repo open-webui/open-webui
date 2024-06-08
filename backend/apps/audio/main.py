@@ -199,6 +199,14 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     headers["Authorization"] = f"Bearer {app.state.config.TTS_OPENAI_API_KEY}"
     headers["Content-Type"] = "application/json"
 
+    try:
+        body = body.decode("utf-8")
+        body = json.loads(body)
+        body["model"] = app.state.config.TTS_MODEL
+        body = json.dumps(body).encode("utf-8")
+    except Exception as e:
+        pass
+
     r = None
     try:
         r = requests.post(
