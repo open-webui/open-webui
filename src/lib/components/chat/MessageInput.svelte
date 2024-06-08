@@ -313,7 +313,7 @@
 
 			<div class="w-full relative">
 				{#if prompt.charAt(0) === '/'}
-					<Prompts bind:this={promptsElement} bind:prompt />
+					<Prompts bind:this={promptsElement} bind:prompt bind:files />
 				{:else if prompt.charAt(0) === '#'}
 					<Documents
 						bind:this={documentsElement}

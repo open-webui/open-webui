@@ -6,6 +6,7 @@
 
 	const i18n = getContext('i18n');
 
+	export let files;
 	export let prompt = '';
 	let selectedCommandIdx = 0;
 	let filteredPromptCommands = [];
@@ -34,6 +35,32 @@
 				toast.error($i18n.t('Failed to read clipboard contents'));
 				return '{{CLIPBOARD}}';
 			});
+
+			console.log(clipboardText);
+
+			const clipboardItems = await navigator.clipboard.read();
+
+			let imageUrl = null;
+			for (const item of clipboardItems) {
+				// Check for known image types
+				for (const type of item.types) {
+					if (type.startsWith('image/')) {
+						const blob = await item.getType(type);
+						imageUrl = URL.createObjectURL(blob);
+						console.log(`Image URL (${type}): ${imageUrl}`);
+					}
+				}
+			}
+
+			if (imageUrl) {
+				files = [
+					...files,
+					{
+						type: 'image',
+						url: imageUrl
+					}
+				];
+			}
 
 			text = command.content.replaceAll('{{CLIPBOARD}}', clipboardText);
 		}
