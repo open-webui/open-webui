@@ -134,13 +134,17 @@ async def remove_after_timeout(sid, model_id):
 
 @sio.event
 async def disconnect(sid):
-    if sid in USER_POOL:
-        disconnected_user = SESSION_POOL.pop(sid)
-        USER_POOL[disconnected_user].remove(sid)
-        if len(USER_POOL[disconnected_user]) == 0:
-            del USER_POOL[disconnected_user]
+    if sid in SESSION_POOL:
+        user_id = SESSION_POOL[sid]
+        del SESSION_POOL[sid]
 
-        print(f"user {disconnected_user} disconnected with session ID {sid}")
+        USER_POOL[user_id].remove(sid)
+
+        if len(USER_POOL[user_id]) == 0:
+            del USER_POOL[user_id]
+
+        print(f"user {user_id} disconnected with session ID {sid}")
+        print(USER_POOL)
 
         await sio.emit("user-count", {"count": len(USER_POOL)})
     else:
