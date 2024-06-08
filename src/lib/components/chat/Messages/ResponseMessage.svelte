@@ -304,19 +304,6 @@
 				console.log(texts);
 				console.log(sentences);
 
-				sentences = sentences.map((text: string) => {
-					const occurences = (text.split("\"").length - 1)
-					// If the number of occurences of " is even, then it is a normal sentence
-					// If the number of occurences of " is odd, then it is a sentence that needs to be closed with a quote
-					if(occurences % 2 === 0){
-						return text;
-					} else {
-						return text + "\"";
-					}
-				});
-
-				console.log("after: " + sentences);
-
 				sentencesAudio = sentences.reduce((a, e, i, arr) => {
 					a[i] = null;
 					return a;
@@ -341,7 +328,16 @@
 				}
 
 				for (const [idx, sentence] of sentences.entries()) {
-					const speechUrl = await _alltalk.toggleSpeakMessage(sentence).catch((error) => {
+					let text = sentence;
+					const occurences = (sentence.split("\"").length - 1)
+					// If the number of occurences of " is even, then it is a normal sentence
+					// If the number of occurences of " is odd, then it is a sentence that needs to be closed with a quote
+					if(occurences % 2 !== 0){
+						text = text + "\"";
+					}
+					console.log("text: ", text);
+					console.log("sentences: ", sentences);
+					const speechUrl = await _alltalk.toggleSpeakMessage(text).catch((error) => {
 						toast.error(error);
 
 						speaking = null;
