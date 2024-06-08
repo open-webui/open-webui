@@ -78,7 +78,7 @@
 					engine: STTEngine !== '' ? STTEngine : undefined
 				},
 				tts: {
-					voice: $config.audio.tts.engine === 'openai' ? voice : voice !== '' ? voice : undefined,
+					voice: voice !== '' ? voice : undefined,
 					nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
 				}
 			}
