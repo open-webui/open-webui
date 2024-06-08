@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { settings, showCallOverlay } from '$lib/stores';
+	import { config, settings, showCallOverlay } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 
 	import { blobToFile, calculateSHA256, extractSentences, findWordIndices } from '$lib/utils';
@@ -159,9 +159,9 @@
 	const getOpenAISpeech = async (text) => {
 		const res = await synthesizeOpenAISpeech(
 			localStorage.token,
-			$settings?.audio?.speaker ?? 'alloy',
+			$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
 			text,
-			$settings?.audio?.model ?? 'tts-1'
+			$settings?.audio?.tts?.model ?? $config?.audio?.tts?.model
 		).catch((error) => {
 			toast.error(error);
 			assistantSpeaking = false;
@@ -207,10 +207,29 @@
 	const assistantSpeakingHandler = async (content) => {
 		assistantSpeaking = true;
 
-		if (($settings?.audio?.TTSEngine ?? '') == '') {
-			currentUtterance = new SpeechSynthesisUtterance(content);
-			speechSynthesis.speak(currentUtterance);
-		} else if ($settings?.audio?.TTSEngine === 'openai') {
+		if (($config.audio.tts.engine ?? '') == '') {
+			let voices = [];
+			const getVoicesLoop = setInterval(async () => {
+				voices = await speechSynthesis.getVoices();
+				if (voices.length > 0) {
+					clearInterval(getVoicesLoop);
+
+					const voice =
+						voices
+							?.filter(
+								(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+							)
+							?.at(0) ?? undefined;
+
+					console.log($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice);
+					console.log(voices);
+
+					currentUtterance = new SpeechSynthesisUtterance(content);
+					currentUtterance.voice = voice;
+					speechSynthesis.speak(currentUtterance);
+				}
+			}, 100);
+		} else if ($config.audio.tts.engine === 'openai') {
 			console.log('openai');
 
 			const sentences = extractSentences(content).reduce((mergedTexts, currentText) => {
@@ -236,9 +255,9 @@
 			for (const [idx, sentence] of sentences.entries()) {
 				const res = await synthesizeOpenAISpeech(
 					localStorage.token,
-					$settings?.audio?.speaker,
+					$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
 					sentence,
-					$settings?.audio?.model
+					$settings?.audio?.tts?.model ?? $config?.audio?.tts?.model
 				).catch((error) => {
 					toast.error(error);
 

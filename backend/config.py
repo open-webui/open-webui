@@ -933,25 +933,59 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
 # Audio
 ####################################
 
-AUDIO_OPENAI_API_BASE_URL = PersistentConfig(
-    "AUDIO_OPENAI_API_BASE_URL",
-    "audio.openai.api_base_url",
-    os.getenv("AUDIO_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
+    "AUDIO_STT_OPENAI_API_BASE_URL",
+    "audio.stt.openai.api_base_url",
+    os.getenv("AUDIO_STT_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
 )
-AUDIO_OPENAI_API_KEY = PersistentConfig(
-    "AUDIO_OPENAI_API_KEY",
-    "audio.openai.api_key",
-    os.getenv("AUDIO_OPENAI_API_KEY", OPENAI_API_KEY),
+
+AUDIO_STT_OPENAI_API_KEY = PersistentConfig(
+    "AUDIO_STT_OPENAI_API_KEY",
+    "audio.stt.openai.api_key",
+    os.getenv("AUDIO_STT_OPENAI_API_KEY", OPENAI_API_KEY),
 )
-AUDIO_OPENAI_API_MODEL = PersistentConfig(
-    "AUDIO_OPENAI_API_MODEL",
-    "audio.openai.api_model",
-    os.getenv("AUDIO_OPENAI_API_MODEL", "tts-1"),
+
+AUDIO_STT_ENGINE = PersistentConfig(
+    "AUDIO_STT_ENGINE",
+    "audio.stt.engine",
+    os.getenv("AUDIO_STT_ENGINE", ""),
 )
-AUDIO_OPENAI_API_VOICE = PersistentConfig(
-    "AUDIO_OPENAI_API_VOICE",
-    "audio.openai.api_voice",
-    os.getenv("AUDIO_OPENAI_API_VOICE", "alloy"),
+
+AUDIO_STT_MODEL = PersistentConfig(
+    "AUDIO_STT_MODEL",
+    "audio.stt.model",
+    os.getenv("AUDIO_STT_MODEL", "whisper-1"),
+)
+
+AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
+    "AUDIO_TTS_OPENAI_API_BASE_URL",
+    "audio.tts.openai.api_base_url",
+    os.getenv("AUDIO_TTS_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+)
+AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
+    "AUDIO_TTS_OPENAI_API_KEY",
+    "audio.tts.openai.api_key",
+    os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
+)
+
+
+AUDIO_TTS_ENGINE = PersistentConfig(
+    "AUDIO_TTS_ENGINE",
+    "audio.tts.engine",
+    os.getenv("AUDIO_TTS_ENGINE", ""),
+)
+
+
+AUDIO_TTS_MODEL = PersistentConfig(
+    "AUDIO_TTS_MODEL",
+    "audio.tts.model",
+    os.getenv("AUDIO_TTS_MODEL", "tts-1"),
+)
+
+AUDIO_TTS_VOICE = PersistentConfig(
+    "AUDIO_TTS_VOICE",
+    "audio.tts.voice",
+    os.getenv("AUDIO_TTS_VOICE", "alloy"),
 )
 
 

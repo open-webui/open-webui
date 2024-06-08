@@ -41,10 +41,15 @@ from config import (
     WHISPER_MODEL_DIR,
     WHISPER_MODEL_AUTO_UPDATE,
     DEVICE_TYPE,
-    AUDIO_OPENAI_API_BASE_URL,
-    AUDIO_OPENAI_API_KEY,
-    AUDIO_OPENAI_API_MODEL,
-    AUDIO_OPENAI_API_VOICE,
+    AUDIO_STT_OPENAI_API_BASE_URL,
+    AUDIO_STT_OPENAI_API_KEY,
+    AUDIO_TTS_OPENAI_API_BASE_URL,
+    AUDIO_TTS_OPENAI_API_KEY,
+    AUDIO_STT_ENGINE,
+    AUDIO_STT_MODEL,
+    AUDIO_TTS_ENGINE,
+    AUDIO_TTS_MODEL,
+    AUDIO_TTS_VOICE,
     AppConfig,
 )
 
@@ -61,10 +66,17 @@ app.add_middleware(
 )
 
 app.state.config = AppConfig()
-app.state.config.OPENAI_API_BASE_URL = AUDIO_OPENAI_API_BASE_URL
-app.state.config.OPENAI_API_KEY = AUDIO_OPENAI_API_KEY
-app.state.config.OPENAI_API_MODEL = AUDIO_OPENAI_API_MODEL
-app.state.config.OPENAI_API_VOICE = AUDIO_OPENAI_API_VOICE
+
+app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
+app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
+app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
+app.state.config.STT_MODEL = AUDIO_STT_MODEL
+
+app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
+app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
+app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
+app.state.config.TTS_MODEL = AUDIO_TTS_MODEL
+app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
 
 # setting device type for whisper model
 whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
@@ -74,41 +86,74 @@ SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-class OpenAIConfigUpdateForm(BaseModel):
-    url: str
-    key: str
-    model: str
-    speaker: str
+class TTSConfigForm(BaseModel):
+    OPENAI_API_BASE_URL: str
+    OPENAI_API_KEY: str
+    ENGINE: str
+    MODEL: str
+    VOICE: str
+
+
+class STTConfigForm(BaseModel):
+    OPENAI_API_BASE_URL: str
+    OPENAI_API_KEY: str
+    ENGINE: str
+    MODEL: str
+
+
+class AudioConfigUpdateForm(BaseModel):
+    tts: TTSConfigForm
+    stt: STTConfigForm
 
 
 @app.get("/config")
-async def get_openai_config(user=Depends(get_admin_user)):
+async def get_audio_config(user=Depends(get_admin_user)):
     return {
-        "OPENAI_API_BASE_URL": app.state.config.OPENAI_API_BASE_URL,
-        "OPENAI_API_KEY": app.state.config.OPENAI_API_KEY,
-        "OPENAI_API_MODEL": app.state.config.OPENAI_API_MODEL,
-        "OPENAI_API_VOICE": app.state.config.OPENAI_API_VOICE,
+        "tts": {
+            "OPENAI_API_BASE_URL": app.state.config.TTS_OPENAI_API_BASE_URL,
+            "OPENAI_API_KEY": app.state.config.TTS_OPENAI_API_KEY,
+            "ENGINE": app.state.config.TTS_ENGINE,
+            "MODEL": app.state.config.TTS_MODEL,
+            "VOICE": app.state.config.TTS_VOICE,
+        },
+        "stt": {
+            "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,
+            "OPENAI_API_KEY": app.state.config.STT_OPENAI_API_KEY,
+            "ENGINE": app.state.config.STT_ENGINE,
+            "MODEL": app.state.config.STT_MODEL,
+        },
     }
 
 
 @app.post("/config/update")
-async def update_openai_config(
-    form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user)
+async def update_audio_config(
+    form_data: AudioConfigUpdateForm, user=Depends(get_admin_user)
 ):
-    if form_data.key == "":
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+    app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
+    app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
+    app.state.config.TTS_ENGINE = form_data.tts.ENGINE
+    app.state.config.TTS_MODEL = form_data.tts.MODEL
+    app.state.config.TTS_VOICE = form_data.tts.VOICE
 
-    app.state.config.OPENAI_API_BASE_URL = form_data.url
-    app.state.config.OPENAI_API_KEY = form_data.key
-    app.state.config.OPENAI_API_MODEL = form_data.model
-    app.state.config.OPENAI_API_VOICE = form_data.speaker
+    app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
+    app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
+    app.state.config.STT_ENGINE = form_data.stt.ENGINE
+    app.state.config.STT_MODEL = form_data.stt.MODEL
 
     return {
-        "status": True,
-        "OPENAI_API_BASE_URL": app.state.config.OPENAI_API_BASE_URL,
-        "OPENAI_API_KEY": app.state.config.OPENAI_API_KEY,
-        "OPENAI_API_MODEL": app.state.config.OPENAI_API_MODEL,
-        "OPENAI_API_VOICE": app.state.config.OPENAI_API_VOICE,
+        "tts": {
+            "OPENAI_API_BASE_URL": app.state.config.TTS_OPENAI_API_BASE_URL,
+            "OPENAI_API_KEY": app.state.config.TTS_OPENAI_API_KEY,
+            "ENGINE": app.state.config.TTS_ENGINE,
+            "MODEL": app.state.config.TTS_MODEL,
+            "VOICE": app.state.config.TTS_VOICE,
+        },
+        "stt": {
+            "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,
+            "OPENAI_API_KEY": app.state.config.STT_OPENAI_API_KEY,
+            "ENGINE": app.state.config.STT_ENGINE,
+            "MODEL": app.state.config.STT_MODEL,
+        },
     }
 
 
@@ -125,13 +170,13 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         return FileResponse(file_path)
 
     headers = {}
-    headers["Authorization"] = f"Bearer {app.state.config.OPENAI_API_KEY}"
+    headers["Authorization"] = f"Bearer {app.state.config.TTS_OPENAI_API_KEY}"
     headers["Content-Type"] = "application/json"
 
     r = None
     try:
         r = requests.post(
-            url=f"{app.state.config.OPENAI_API_BASE_URL}/audio/speech",
+            url=f"{app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
             data=body,
             headers=headers,
             stream=True,

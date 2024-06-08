@@ -169,7 +169,7 @@
 		mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
 		mediaRecorder.onstop = async () => {
 			console.log('Recording stopped');
-			if (($settings?.audio?.STTEngine ?? '') === 'web') {
+			if (($settings?.audio?.stt?.engine ?? '') === 'web') {
 				audioChunks = [];
 			} else {
 				if (confirmed) {
@@ -186,7 +186,7 @@
 		};
 		mediaRecorder.start();
 
-		if (($settings?.audio?.STTEngine ?? '') === 'web') {
+		if (($settings?.audio?.stt?.engine ?? '') === 'web') {
 			if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
 				// Create a SpeechRecognition object
 				speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();

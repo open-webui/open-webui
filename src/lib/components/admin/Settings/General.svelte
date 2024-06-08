@@ -56,7 +56,7 @@
 		saveHandler();
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[22rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-full">
 		{#if adminConfig !== null}
 			<div>
 				<div class=" mb-3 text-sm font-medium">{$i18n.t('General Settings')}</div>

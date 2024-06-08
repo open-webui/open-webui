@@ -183,7 +183,6 @@
 	});
 </script>
 
-<Help />
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
 

@@ -900,6 +900,15 @@ async def get_app_config():
             "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
             "enable_admin_export": ENABLE_ADMIN_EXPORT,
         },
+        "audio": {
+            "tts": {
+                "engine": audio_app.state.config.TTS_ENGINE,
+                "voice": audio_app.state.config.TTS_VOICE,
+            },
+            "stt": {
+                "engine": audio_app.state.config.STT_ENGINE,
+            },
+        },
     }
 
 
