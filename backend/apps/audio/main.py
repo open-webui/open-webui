@@ -273,7 +273,11 @@ def transcribe(
             with open(transcript_file, "w") as f:
                 json.dump({"transcript": transcript}, f)
 
-            return {"text": transcript.strip()}
+            data = {"text": transcript.strip()}
+
+            print(data)
+
+            return data
 
         elif app.state.config.STT_ENGINE == "openai":
             headers = {"Authorization": f"Bearer {app.state.config.STT_OPENAI_API_KEY}"}
@@ -291,7 +295,10 @@ def transcribe(
                 )
 
                 r.raise_for_status()
-                return r.json()
+
+                data = r.json()
+                print(data)
+                return data
             except Exception as e:
                 log.exception(e)
                 error_detail = "Open WebUI: Server Connection Error"
