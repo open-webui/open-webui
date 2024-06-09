@@ -23,12 +23,12 @@
 	let selectedTab = 'general';
 </script>
 
-<div class="flex flex-col md:flex-row w-full h-full py-2 md:space-x-4">
+<div class="flex flex-col lg:flex-row w-full h-full py-2 lg:space-x-4">
 	<div
-		class="tabs flex flex-row overflow-x-auto space-x-1 md:space-x-0 md:space-y-1 md:flex-col md:flex-none md:w-44 dark:text-gray-200 text-xs text-left scrollbar-none"
+		class="tabs flex flex-row overflow-x-auto space-x-1 max-w-full lg:space-x-0 lg:space-y-1 lg:flex-col lg:flex-none lg:w-44 dark:text-gray-200 text-xs text-left scrollbar-none"
 	>
 		<button
-			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 			'general'
 				? 'bg-gray-200 dark:bg-gray-800'
 				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
@@ -319,7 +319,7 @@
 		</button>
 	</div>
 
-	<div class="flex-1 mt-3 md:mt-0 overflow-y-scroll">
+	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll">
 		{#if selectedTab === 'general'}
 			<General
 				saveHandler={() => {
