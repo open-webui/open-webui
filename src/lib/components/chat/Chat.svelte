@@ -294,10 +294,14 @@
 	};
 
 	//////////////////////////
-	// Ollama functions
+	// Chat functions
 	//////////////////////////
 
 	const submitPrompt = async (userPrompt, _user = null) => {
+		// Reset chat input textarea
+		prompt = '';
+		document.getElementById('chat-textarea').style.height = '';
+
 		let _responses = [];
 		console.log('submitPrompt', $chatId);
 
@@ -374,9 +378,6 @@
 				await tick();
 			}
 
-			// Reset chat input textarea
-			prompt = '';
-			document.getElementById('chat-textarea').style.height = '';
 			files = [];
 
 			// Send prompt
