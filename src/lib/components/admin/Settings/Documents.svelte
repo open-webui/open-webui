@@ -587,11 +587,10 @@
 		<div class=" ">
 			<div class=" text-sm font-medium">{$i18n.t('Chunk Params')}</div>
 
-			<div class=" flex">
-				<div class="  flex w-full justify-between">
-					<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('Chunk Size')}</div>
-
-					<div class="self-center p-3">
+			<div class=" my-2 flex gap-1.5">
+				<div class="  w-full justify-between">
+					<div class="self-center text-xs font-medium min-w-fit mb-1">{$i18n.t('Chunk Size')}</div>
+					<div class="self-center">
 						<input
 							class=" w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="number"
@@ -603,12 +602,12 @@
 					</div>
 				</div>
 
-				<div class="flex w-full">
-					<div class=" self-center text-xs font-medium min-w-fit">
+				<div class="w-full">
+					<div class=" self-center text-xs font-medium min-w-fit mb-1">
 						{$i18n.t('Chunk Overlap')}
 					</div>
 
-					<div class="self-center p-3">
+					<div class="self-center">
 						<input
 							class="w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="number"
@@ -621,7 +620,7 @@
 				</div>
 			</div>
 
-			<div class="pr-2">
+			<div class="my-3">
 				<div class="flex justify-between items-center text-xs">
 					<div class=" text-xs font-medium">{$i18n.t('PDF Extract Images (OCR)')}</div>
 
