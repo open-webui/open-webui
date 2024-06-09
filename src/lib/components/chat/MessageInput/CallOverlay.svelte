@@ -622,7 +622,7 @@
 								</button>
 							</VideoInputMenu>
 						{:else}
-							<Tooltip content="Camera">
+							<Tooltip content="{$i18n.t('Camera')}">
 								<button
 									class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
 									type="button"
@@ -658,9 +658,9 @@
 						<button type="button">
 							<div class=" line-clamp-1 text-sm font-medium">
 								{#if loading}
-									Thinking...
+									{$i18n.t('Thinking...')}
 								{:else}
-									Listening...
+									{$i18n.t('Listening...')}
 								{/if}
 							</div>
 						</button>
