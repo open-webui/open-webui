@@ -218,7 +218,7 @@
 		saveHandler();
 	}}
 >
-	<div class=" space-y-2.5 pr-1.5 overflow-y-scroll h-full">
+	<div class=" space-y-2.5 pr-1.5 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-0.5">
 			<div class=" mb-0.5 text-sm font-medium">{$i18n.t('General Settings')}</div>
 
