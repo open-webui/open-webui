@@ -849,9 +849,14 @@ async def generate_chat_completion(
 
 
 # TODO: we should update this part once Ollama supports other types
+class OpenAIChatMessageContent(BaseModel):
+    type: str
+    model_config = ConfigDict(extra="allow")
+
+
 class OpenAIChatMessage(BaseModel):
     role: str
-    content: str
+    content: Union[str, OpenAIChatMessageContent]
 
     model_config = ConfigDict(extra="allow")
 

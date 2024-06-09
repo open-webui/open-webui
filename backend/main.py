@@ -25,8 +25,17 @@ from starlette.responses import StreamingResponse, Response
 
 
 from apps.socket.main import app as socket_app
-from apps.ollama.main import app as ollama_app, get_all_models as get_ollama_models
-from apps.openai.main import app as openai_app, get_all_models as get_openai_models
+from apps.ollama.main import (
+    app as ollama_app,
+    OpenAIChatCompletionForm,
+    get_all_models as get_ollama_models,
+    generate_openai_chat_completion as generate_ollama_chat_completion,
+)
+from apps.openai.main import (
+    app as openai_app,
+    get_all_models as get_openai_models,
+    generate_chat_completion as generate_openai_chat_completion,
+)
 
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
@@ -483,6 +492,27 @@ async def get_models(user=Depends(get_verified_user)):
             return {"data": models}
 
     return {"data": models}
+
+
+@app.post("/api/chat/completions")
+async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user)):
+    model_id = form_data["model"]
+    if model_id not in app.state.MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+
+    model = app.state.MODELS[model_id]
+
+    print(model)
+
+    if model["owned_by"] == "ollama":
+        return await generate_ollama_chat_completion(
+            OpenAIChatCompletionForm(**form_data), user=user
+        )
+    else:
+        return await generate_openai_chat_completion(form_data, user=user)
 
 
 @app.post("/api/chat/completed")
