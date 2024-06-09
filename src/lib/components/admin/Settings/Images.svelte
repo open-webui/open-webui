@@ -169,7 +169,7 @@
 		loading = false;
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[24rem]">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll scrollbar-hidden">
 		<div>
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
 

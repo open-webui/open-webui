@@ -550,7 +550,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-full">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll scrollbar-hidden h-full">
 		{#if ollamaEnabled}
 			{#if ollamaVersion !== null}
 				<div class="space-y-2 pr-1.5">

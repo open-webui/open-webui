@@ -22,13 +22,13 @@
 
 <div class="flex flex-col md:flex-row w-full h-full py-3 md:space-x-4">
 	<div
-		class="tabs flex flex-row overflow-x-auto space-x-1 md:space-x-0 md:space-y-1 md:flex-col md:flex-none md:w-40 dark:text-gray-200 text-xs text-left scrollbar-hidden"
+		class="tabs flex flex-row overflow-x-auto space-x-1 md:space-x-0 md:space-y-1 md:flex-col md:flex-none md:w-44 dark:text-gray-200 text-xs text-left scrollbar-hidden"
 	>
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'general'
-				? 'bg-gray-200 dark:bg-gray-700'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+				? 'bg-gray-200 dark:bg-gray-800'
+				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'general';
 			}}
@@ -53,8 +53,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'connections'
-				? 'bg-gray-200 dark:bg-gray-700'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+				? 'bg-gray-200 dark:bg-gray-800'
+				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'connections';
 			}}
@@ -77,8 +77,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'models'
-				? 'bg-gray-200 dark:bg-gray-700'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+				? 'bg-gray-200 dark:bg-gray-800'
+				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'models';
 			}}
@@ -103,8 +103,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'users'
-				? 'bg-gray-200 dark:bg-gray-700'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+				? 'bg-gray-200 dark:bg-gray-800'
+				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'users';
 			}}
@@ -127,8 +127,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'interface'
-				? 'bg-gray-200 dark:bg-gray-700'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+				? 'bg-gray-200 dark:bg-gray-800'
+				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'interface';
 			}}
@@ -153,8 +153,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'audio'
-				? 'bg-gray-200 dark:bg-gray-700'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+				? 'bg-gray-200 dark:bg-gray-800'
+				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'audio';
 			}}
@@ -180,8 +180,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'images'
-				? 'bg-gray-200 dark:bg-gray-700'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+				? 'bg-gray-200 dark:bg-gray-800'
+				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'images';
 			}}
@@ -206,8 +206,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'banners'
-				? 'bg-gray-200 dark:bg-gray-700'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+				? 'bg-gray-200 dark:bg-gray-800'
+				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'banners';
 			}}
@@ -235,8 +235,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'pipelines'
-				? 'bg-gray-200 dark:bg-gray-700'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+				? 'bg-gray-200 dark:bg-gray-800'
+				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'pipelines';
 			}}
@@ -265,8 +265,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'db'
-				? 'bg-gray-200 dark:bg-gray-700'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+				? 'bg-gray-200 dark:bg-gray-800'
+				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'db';
 			}}

@@ -200,7 +200,7 @@
 		updateHandler();
 	}}
 >
-	<div class="  pr-1.5 overflow-y-scroll h-full">
+	<div class="  pr-1.5 overflow-y-scroll scrollbar-hidden h-full">
 		{#if PIPELINES_LIST !== null}
 			<div class="flex w-full justify-between mb-2">
 				<div class=" self-center text-sm font-semibold">

@@ -162,7 +162,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="space-y-3 pr-1.5 overflow-y-scroll h-full">
+	<div class="space-y-3 pr-1.5 overflow-y-scroll scrollbar-hidden h-full">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null}
 			<div class=" space-y-3">
 				<div class="mt-2 space-y-2 pr-1.5">
