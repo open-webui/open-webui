@@ -137,33 +137,33 @@
 						</svg>
 					</button>
 				</div>
-				<div class="flex flex-col space-y-1">
+				<div class="flex flex-col gap-1.5">
 					{#each promptSuggestions as prompt, promptIdx}
-						<div class=" flex border dark:border-gray-600 rounded-lg">
-							<div class="flex flex-col flex-1">
-								<div class="flex border-b dark:border-gray-600 w-full">
+						<div class=" flex dark:bg-gray-850 rounded-xl py-1.5">
+							<div class="flex flex-col flex-1 pl-1">
+								<div class="flex border-b dark:border-gray-800 w-full">
 									<input
-										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-600"
+										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-800"
 										placeholder={$i18n.t('Title (e.g. Tell me a fun fact)')}
 										bind:value={prompt.title[0]}
 									/>
 
 									<input
-										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-600"
+										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-800"
 										placeholder={$i18n.t('Subtitle (e.g. about the Roman Empire)')}
 										bind:value={prompt.title[1]}
 									/>
 								</div>
 
 								<input
-									class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-600"
+									class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-800"
 									placeholder={$i18n.t('Prompt (e.g. Tell me a fun fact about the Roman Empire)')}
 									bind:value={prompt.content}
 								/>
 							</div>
 
 							<button
-								class="px-2"
+								class="px-3"
 								type="button"
 								on:click={() => {
 									promptSuggestions.splice(promptIdx, 1);
