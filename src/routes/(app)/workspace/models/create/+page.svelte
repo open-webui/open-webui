@@ -127,12 +127,16 @@
 		if (model.info.base_model_id) {
 			const base_model = $models
 				.filter((m) => !m?.preset)
-				.find((m) => m.id === model.info.base_model_id);
+				.find((m) =>
+					[model.info.base_model_id, `${model.info.base_model_id}:latest`].includes(m.id)
+				);
 
 			console.log('base_model', base_model);
 
 			if (!base_model) {
 				model.info.base_model_id = null;
+			} else if ($models.find((m) => m.id === `${model.info.base_model_id}:latest`)) {
+				model.info.base_model_id = `${model.info.base_model_id}:latest`;
 			}
 		}
 

@@ -265,7 +265,7 @@
 								</div>
 							{/if}
 							<div class="flex items-center gap-2">
-								<div class="flex items-center">
+								<div class="flex items-center min-w-fit">
 									<div class="line-clamp-1">
 										{item.label}
 									</div>
