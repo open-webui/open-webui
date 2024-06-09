@@ -41,8 +41,6 @@ from utils.utils import (
     get_admin_user,
 )
 
-from utils.models import get_model_id_from_custom_model_id
-
 
 from config import (
     SRC_LOG_LEVELS,

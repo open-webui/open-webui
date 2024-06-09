@@ -7,6 +7,10 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	import { OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+
 	import {
 		chatId,
 		chats,
@@ -40,24 +44,17 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import {
-		generateOpenAIChatCompletion,
-		generateSearchQuery,
-		generateTitle
-	} from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion, generateSearchQuery } from '$lib/apis/openai';
+	import { runWebSearch } from '$lib/apis/rag';
+	import { createOpenAITextStream } from '$lib/apis/streaming';
+	import { queryMemory } from '$lib/apis/memories';
+	import { getUserSettings } from '$lib/apis/users';
+	import { chatCompleted, generateTitle } from '$lib/apis';
 
+	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
-	import { OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { createOpenAITextStream } from '$lib/apis/streaming';
-	import { queryMemory } from '$lib/apis/memories';
-	import type { Writable } from 'svelte/store';
-	import type { i18n as i18nType } from 'i18next';
-	import { runWebSearch } from '$lib/apis/rag';
-	import Banner from '../common/Banner.svelte';
-	import { getUserSettings } from '$lib/apis/users';
-	import { chatCompleted } from '$lib/apis';
 	import CallOverlay from './MessageInput/CallOverlay.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
@@ -1116,26 +1113,15 @@
 
 	const generateChatTitle = async (userPrompt) => {
 		if ($settings?.title?.auto ?? true) {
-			const model = $models.find((model) => model.id === selectedModels[0]);
-
-			const titleModelId =
-				model?.owned_by === 'openai' ?? false
-					? $settings?.title?.modelExternal ?? selectedModels[0]
-					: $settings?.title?.model ?? selectedModels[0];
-			const titleModel = $models.find((model) => model.id === titleModelId);
-
-			console.log(titleModel);
 			const title = await generateTitle(
 				localStorage.token,
-				$settings?.title?.prompt ??
-					$i18n.t(
-						"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
-					) + ' {{prompt}}',
-				titleModelId,
+				selectedModels[0],
 				userPrompt,
-				$chatId,
-				`${WEBUI_BASE_URL}/api`
-			);
+				$chatId
+			).catch((error) => {
+				console.error(error);
+				return 'New Chat';
+			});
 
 			return title;
 		} else {
