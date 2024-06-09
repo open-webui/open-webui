@@ -297,8 +297,10 @@
 
 	const submitPrompt = async (userPrompt, _user = null) => {
 		// Reset chat input textarea
-		prompt = '';
+		document.getElementById('chat-textarea').value = '';
 		document.getElementById('chat-textarea').style.height = '';
+
+		prompt = '';
 
 		let _responses = [];
 		console.log('submitPrompt', $chatId);
