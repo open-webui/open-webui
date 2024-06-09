@@ -1145,28 +1145,6 @@
 			return [];
 		});
 	};
-
-	const addTag = async (tagName) => {
-		const res = await addTagById(localStorage.token, $chatId, tagName);
-		tags = await getTags();
-
-		chat = await updateChatById(localStorage.token, $chatId, {
-			tags: tags
-		});
-
-		_tags.set(await getAllChatTags(localStorage.token));
-	};
-
-	const deleteTag = async (tagName) => {
-		const res = await deleteTagById(localStorage.token, $chatId, tagName);
-		tags = await getTags();
-
-		chat = await updateChatById(localStorage.token, $chatId, {
-			tags: tags
-		});
-
-		_tags.set(await getAllChatTags(localStorage.token));
-	};
 </script>
 
 <svelte:head>

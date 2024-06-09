@@ -359,7 +359,6 @@ async def generate_chat_completion(
     model_info = Models.get_model_by_id(model_id)
 
     if model_info:
-        print(model_info)
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
 
