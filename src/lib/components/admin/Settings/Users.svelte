@@ -48,7 +48,7 @@
 		await config.set(await getBackendConfig());
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-full">
+	<div class=" space-y-3 overflow-y-scroll max-h-full">
 		<div>
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('User Permissions')}</div>
 

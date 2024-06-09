@@ -45,7 +45,7 @@
 		saveHandler();
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll scrollbar-hidden h-full">
+	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		{#if webConfig}
 			<div>
 				<div class=" mb-1 text-sm font-medium">
