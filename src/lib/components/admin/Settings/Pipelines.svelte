@@ -508,6 +508,8 @@
 						</div>
 					</div>
 				{/if}
+			{:else}
+				<div>Pipelines Not Detected</div>
 			{/if}
 		{:else}
 			<div class="flex justify-center h-full">

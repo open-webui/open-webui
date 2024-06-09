@@ -8,15 +8,14 @@
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
 	import About from './Settings/About.svelte';
-	import Models from './Settings/Models.svelte';
 	import General from './Settings/General.svelte';
 	import Interface from './Settings/Interface.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import Chats from './Settings/Chats.svelte';
-	import Connections from './Settings/Connections.svelte';
 	import User from '../icons/User.svelte';
 	import Personalization from './Settings/Personalization.svelte';
 	import { updateUserSettings } from '$lib/apis/users';
+	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
 
@@ -88,32 +87,6 @@
 					</div>
 					<div class=" self-center">{$i18n.t('General')}</div>
 				</button>
-
-				{#if $user?.role === 'admin'}
-					<button
-						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-						'connections'
-							? 'bg-gray-200 dark:bg-gray-700'
-							: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
-						on:click={() => {
-							selectedTab = 'connections';
-						}}
-					>
-						<div class=" self-center mr-2">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-4 h-4"
-							>
-								<path
-									d="M1 9.5A3.5 3.5 0 0 0 4.5 13H12a3 3 0 0 0 .917-5.857 2.503 2.503 0 0 0-3.198-3.019 3.5 3.5 0 0 0-6.628 2.171A3.5 3.5 0 0 0 1 9.5Z"
-								/>
-							</svg>
-						</div>
-						<div class=" self-center">{$i18n.t('Connections')}</div>
-					</button>
-				{/if}
 
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
@@ -235,6 +208,35 @@
 					<div class=" self-center">{$i18n.t('Account')}</div>
 				</button>
 
+				{#if $user.role === 'admin'}
+					<button
+						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+						'admin'
+							? 'bg-gray-200 dark:bg-gray-700'
+							: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+						on:click={async () => {
+							await goto('/admin/settings');
+							show = false;
+						}}
+					>
+						<div class=" self-center mr-2">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								class="size-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-15Zm4.125 3a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm-3.873 8.703a4.126 4.126 0 0 1 7.746 0 .75.75 0 0 1-.351.92 7.47 7.47 0 0 1-3.522.877 7.47 7.47 0 0 1-3.522-.877.75.75 0 0 1-.351-.92ZM15 8.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15ZM14.25 12a.75.75 0 0 1 .75-.75h3.75a.75.75 0 0 1 0 1.5H15a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</div>
+						<div class=" self-center">{$i18n.t('Admin Settings')}</div>
+					</button>
+				{/if}
+
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 					'about'
@@ -266,13 +268,6 @@
 					<General
 						{getModels}
 						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'connections'}
-					<Connections
-						{getModels}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}

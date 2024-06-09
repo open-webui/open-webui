@@ -13,6 +13,7 @@
 	import Images from './Settings/Images.svelte';
 	import Interface from './Settings/Interface.svelte';
 	import Models from './Settings/Models.svelte';
+	import Connections from './Settings/Connections.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -21,7 +22,7 @@
 
 <div class="flex flex-col md:flex-row w-full h-full py-3 md:space-x-4">
 	<div
-		class="tabs flex flex-row overflow-x-auto space-x-1 md:space-x-0 md:space-y-1 md:flex-col md:flex-none md:w-40 dark:text-gray-200 text-xs text-left mb-3 md:mb-0 scrollbar-hidden"
+		class="tabs flex flex-row overflow-x-auto space-x-1 md:space-x-0 md:space-y-1 md:flex-col md:flex-none md:w-40 dark:text-gray-200 text-xs text-left scrollbar-hidden"
 	>
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
@@ -47,6 +48,30 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('General')}</div>
+		</button>
+
+		<button
+			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			'connections'
+				? 'bg-gray-200 dark:bg-gray-700'
+				: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+			on:click={() => {
+				selectedTab = 'connections';
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 16 16"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path
+						d="M1 9.5A3.5 3.5 0 0 0 4.5 13H12a3 3 0 0 0 .917-5.857 2.503 2.503 0 0 0-3.198-3.019 3.5 3.5 0 0 0-6.628 2.171A3.5 3.5 0 0 0 1 9.5Z"
+					/>
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Connections')}</div>
 		</button>
 
 		<button
@@ -266,10 +291,16 @@
 		</button>
 	</div>
 
-	<div class="flex-1">
+	<div class="flex-1 mt-3 md:mt-0">
 		{#if selectedTab === 'general'}
 			<General
 				saveHandler={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'connections'}
+			<Connections
+				on:save={() => {
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}
 			/>

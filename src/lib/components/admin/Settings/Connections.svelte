@@ -23,10 +23,14 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { getModels as _getModels } from '$lib/apis';
 
 	const i18n = getContext('i18n');
 
-	export let getModels: Function;
+	const getModels = async () => {
+		const models = await _getModels(localStorage.token);
+		return models;
+	};
 
 	// External
 	let OLLAMA_BASE_URLS = [''];
@@ -158,7 +162,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="space-y-3 pr-1.5 overflow-y-scroll h-[24rem] max-h-[25rem]">
+	<div class="space-y-3 pr-1.5 overflow-y-scroll h-full">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null}
 			<div class=" space-y-3">
 				<div class="mt-2 space-y-2 pr-1.5">
