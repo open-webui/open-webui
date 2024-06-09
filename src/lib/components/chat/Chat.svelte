@@ -506,20 +506,18 @@
 		messages = messages;
 
 		const prompt = history.messages[parentId].content;
-		let searchQuery = prompt;
-		if (prompt.length > 100) {
-			searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt);
-			if (!searchQuery) {
-				toast.warning($i18n.t('No search query generated'));
-				responseMessage.status = {
-					...responseMessage.status,
-					done: true,
-					error: true,
-					description: 'No search query generated'
-				};
-				messages = messages;
-				return;
-			}
+		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt);
+		if (!searchQuery) {
+			toast.warning($i18n.t('No search query generated'));
+			responseMessage.status = {
+				...responseMessage.status,
+				done: true,
+				error: true,
+				description: 'No search query generated'
+			};
+			messages = messages;
+
+			searchQuery = prompt;
 		}
 
 		responseMessage.status = {
