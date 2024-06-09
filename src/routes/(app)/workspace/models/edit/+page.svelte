@@ -14,6 +14,7 @@
 	import { getModels } from '$lib/apis';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
+	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -54,10 +55,11 @@
 	};
 
 	let params = {};
-
 	let capabilities = {
 		vision: true
 	};
+
+	let knowledge = [];
 
 	const updateHandler = async () => {
 		loading = true;
@@ -65,8 +67,16 @@
 		info.id = id;
 		info.name = name;
 		info.meta.capabilities = capabilities;
-		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 
+		if (knowledge.length > 0) {
+			info.meta.knowledge = knowledge;
+		} else {
+			if (info.meta.knowledge) {
+				delete info.meta.knowledge;
+			}
+		}
+
+		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
 				delete info.params[key];
@@ -119,6 +129,10 @@
 					  )
 					: null;
 
+				if (model?.info?.meta?.knowledge) {
+					knowledge = [...model?.info?.meta?.knowledge];
+				}
+
 				if (model?.owned_by === 'openai') {
 					capabilities.usage = false;
 				}
@@ -126,6 +140,7 @@
 				if (model?.info?.meta?.capabilities) {
 					capabilities = { ...capabilities, ...model?.info?.meta?.capabilities };
 				}
+
 				console.log(model);
 			} else {
 				goto('/workspace/models');
@@ -405,7 +420,7 @@
 
 			<hr class=" dark:border-gray-850 my-1" />
 
-			<div class="my-1">
+			<div class="my-2">
 				<div class="flex w-full justify-between items-center">
 					<div class="flex w-full justify-between items-center">
 						<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt suggestions')}</div>
@@ -495,7 +510,11 @@
 				{/if}
 			</div>
 
-			<div class="my-1">
+			<div class="my-2">
+				<Knowledge bind:knowledge />
+			</div>
+
+			<div class="my-2">
 				<div class="flex w-full justify-between mb-1">
 					<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
 				</div>
