@@ -32,9 +32,7 @@ async def update_openai_config(
 
 
 @router.post("/speech")
-async def speech(
-    request: Request, user=Depends(get_verified_user), config=Depends(get_config)
-):
+async def speech(request: Request, user=Depends(get_verified_user)):
     body = await request.body()
     name = hashlib.sha256(body).hexdigest()
 
@@ -46,13 +44,21 @@ async def speech(
         return FileResponse(file_path)
 
     headers = {}
-    headers["Authorization"] = f"Bearer {config.OPENAI_API_KEY}"
+    headers["Authorization"] = f"Bearer {app.state.config.TTS_OPENAI_API_KEY}"
     headers["Content-Type"] = "application/json"
+
+    try:
+        body = body.decode("utf-8")
+        body = json.loads(body)
+        body["model"] = app.state.config.TTS_MODEL
+        body = json.dumps(body).encode("utf-8")
+    except Exception as e:
+        pass
 
     r = None
     try:
         r = requests.post(
-            url=f"{config.OPENAI_API_BASE_URL}/audio/speech",
+            url=f"{app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
             data=body,
             headers=headers,
             stream=True,

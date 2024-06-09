@@ -6,7 +6,7 @@ from fastapi import (
     UploadFile,
     File
 )
-from apps.audio.settings import app, log
+from apps.audio.settings import app, log, SPEECH_CACHE_DIR
 from apps.audio.providers.alltalk.alltalkController import app as alltalk_app
 from apps.audio.providers.alltalk.alltalkService import get_alltalk_config
 from apps.audio.providers.openai.openai import router as openai_app
@@ -24,59 +24,20 @@ import json
 
 from constants import ERROR_MESSAGES
 from utils.utils import (get_current_user, get_admin_user)
+
+
+from pydub import AudioSegment
+from pydub.utils import mediainfo
+
 from config import (
-    UPLOAD_DIR,
+    CACHE_DIR,
     WHISPER_MODEL,
     WHISPER_MODEL_DIR,
     WHISPER_MODEL_AUTO_UPDATE,
-    DEVICE_TYPE,
-    AUDIO_STT_OPENAI_API_BASE_URL,
-    AUDIO_STT_OPENAI_API_KEY,
-    AUDIO_TTS_OPENAI_API_BASE_URL,
-    AUDIO_TTS_OPENAI_API_KEY,
-    AUDIO_STT_ENGINE,
-    AUDIO_STT_MODEL,
-    AUDIO_TTS_ENGINE,
-    AUDIO_TTS_MODEL,
-    AUDIO_TTS_VOICE,
-    AppConfig,
 )
-
-log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["AUDIO"])
-
-app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.state.config = AppConfig()
-
-app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
-app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
-app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
-app.state.config.STT_MODEL = AUDIO_STT_MODEL
-
-app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
-app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
-app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
-app.state.config.TTS_MODEL = AUDIO_TTS_MODEL
-app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
 
 app.include_router(alltalk_app)
 app.include_router(openai_app)
-
-# setting device type for whisper model
-whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
-log.info(f"whisper_device_type: {whisper_device_type}")
-
-SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
-SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
 
 class TTSConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
@@ -92,14 +53,9 @@ class STTConfigForm(BaseModel):
     ENGINE: str
     MODEL: str
 
-
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
     stt: STTConfigForm
-
-
-from pydub import AudioSegment
-from pydub.utils import mediainfo
 
 
 def is_mp4_audio(file_path):
@@ -272,7 +228,7 @@ def transcribe(
         if app.state.config.STT_ENGINE == "":
             whisper_kwargs = {
                 "model_size_or_path": WHISPER_MODEL,
-                "device": whisper_device_type,
+                "device": WHISPER_DEVICE_TYPE,
                 "compute_type": "int8",
                 "download_root": WHISPER_MODEL_DIR,
                 "local_files_only": not WHISPER_MODEL_AUTO_UPDATE,
