@@ -249,7 +249,7 @@
 						</svg>
 					</button>
 				</div>
-				<div class="flex flex-col gap-1.5">
+				<div class="grid lg:grid-cols-2 flex-col gap-1.5">
 					{#each promptSuggestions as prompt, promptIdx}
 						<div class=" flex dark:bg-gray-850 rounded-xl py-1.5">
 							<div class="flex flex-col flex-1 pl-1">
