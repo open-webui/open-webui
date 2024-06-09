@@ -57,7 +57,7 @@
 		dispatch('save');
 	}}
 >
-	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
+	<div class="  overflow-y-scroll scrollbar-hidden h-full">
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex">
 				<div class=" mr-1">{$i18n.t('Set Task Model')}</div>
@@ -82,7 +82,7 @@
 					</svg>
 				</Tooltip>
 			</div>
-			<div class="flex w-full gap-2 pr-2">
+			<div class="flex w-full gap-2">
 				<div class="flex-1">
 					<div class=" text-xs mb-1">{$i18n.t('Local Models')}</div>
 					<select
@@ -116,7 +116,7 @@
 				</div>
 			</div>
 
-			<div class="mt-3 mr-2">
+			<div class="mt-3">
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Title Generation Prompt')}</div>
 				<textarea
 					bind:value={titleGenerationPrompt}
@@ -126,10 +126,10 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" dark:border-gray-850 my-3" />
 
-		<div class=" space-y-3 pr-1.5">
-			<div class="flex w-full justify-between mb-2">
+		<div class=" space-y-3 {banners.length > 0 ? ' mb-3' : ''}">
+			<div class="flex w-full justify-between">
 				<div class=" self-center text-sm font-semibold">
 					{$i18n.t('Banners')}
 				</div>
@@ -222,7 +222,7 @@
 		</div>
 
 		{#if $user.role === 'admin'}
-			<div class=" space-y-3 pr-1.5">
+			<div class=" space-y-3">
 				<div class="flex w-full justify-between mb-2">
 					<div class=" self-center text-sm font-semibold">
 						{$i18n.t('Default Prompt Suggestions')}
