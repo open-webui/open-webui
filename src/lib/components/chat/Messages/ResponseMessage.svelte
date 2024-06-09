@@ -259,7 +259,7 @@
 		} else {
 			speaking = true;
 
-			if ($settings?.audio?.TTSEngine === 'openai') {
+			if ($config.audio.tts.engine === 'openai') {
 				loadingSpeech = true;
 
 				const sentences = mergeTexts(extractSentences(message.content));
@@ -276,9 +276,8 @@
 				for (const [idx, sentence] of sentences.entries()) {
 					const res = await synthesizeOpenAISpeech(
 						localStorage.token,
-						$settings?.audio?.speaker,
-						sentence,
-						$settings?.audio?.model
+						$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
+						sentence
 					).catch((error) => {
 						toast.error(error);
 
@@ -361,9 +360,17 @@
 						clearInterval(getVoicesLoop);
 
 						const voice =
-							voices?.filter((v) => v.name === $settings?.audio?.speaker)?.at(0) ?? undefined;
+							voices
+								?.filter(
+									(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+								)
+								?.at(0) ?? undefined;
+
+						console.log(voice);
 
 						const speak = new SpeechSynthesisUtterance(message.content);
+
+						console.log(speak);
 
 						speak.onend = () => {
 							speaking = null;
@@ -371,7 +378,11 @@
 								document.getElementById('voice-input-button')?.click();
 							}
 						};
-						speak.voice = voice;
+
+						if (voice) {
+							speak.voice = voice;
+						}
+
 						speechSynthesis.speak(speak);
 					}
 				}, 100);
@@ -845,7 +856,7 @@
 										</Tooltip>
 
 										{#if $config?.features.enable_image_generation && !readOnly}
-											<Tooltip content="Generate Image" placement="bottom">
+											<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
 												<button
 													class="{isLastMessage
 														? 'visible'

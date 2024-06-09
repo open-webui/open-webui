@@ -193,8 +193,14 @@ def parse_ollama_modelfile(model_text):
     system_desc_match = re.search(
         r'SYSTEM\s+"""(.+?)"""', model_text, re.DOTALL | re.IGNORECASE
     )
+    system_desc_match_single = re.search(
+        r"SYSTEM\s+([^\n]+)", model_text, re.IGNORECASE
+    )
+
     if system_desc_match:
         data["params"]["system"] = system_desc_match.group(1).strip()
+    elif system_desc_match_single:
+        data["params"]["system"] = system_desc_match_single.group(1).strip()
 
     # Parse messages
     messages = []

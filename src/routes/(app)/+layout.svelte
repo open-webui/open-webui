@@ -24,7 +24,8 @@
 		tags,
 		banners,
 		showChangelog,
-		config
+		config,
+		showCallOverlay
 	} from '$lib/stores';
 	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -39,6 +40,7 @@
 	import Help from '$lib/components/layout/Help.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import { error } from '@sveltejs/kit';
+	import CallOverlay from '$lib/components/chat/MessageInput/CallOverlay.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -181,13 +183,12 @@
 	});
 </script>
 
-<Help />
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
 
 <div class="app relative">
 	<div
-		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 min-h-screen overflow-auto flex flex-row"
+		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row"
 	>
 		{#if loaded}
 			{#if !['user', 'admin'].includes($user.role)}

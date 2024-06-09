@@ -33,7 +33,7 @@
 		saveHandler();
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80 h-full">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll h-full">
 		<div class=" space-y-3 pr-1.5">
 			<div class="flex w-full justify-between mb-2">
 				<div class=" self-center text-sm font-semibold">
@@ -96,7 +96,7 @@
 							/>
 
 							<div class="relative top-1.5 -left-2">
-								<Tooltip content="Dismissible" className="flex h-fit items-center">
+								<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
 									<Switch bind:state={banner.dismissible} />
 								</Tooltip>
 							</div>
