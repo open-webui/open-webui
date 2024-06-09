@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { user, settings, config } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { toast } from 'svelte-sonner';
 	import Switch from '$lib/components/common/Switch.svelte';
-	import { AllTalkConfigForm } from '$lib/apis/audio/providers/alltalk/Alltalk';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -37,36 +35,11 @@
 		const getVoicesLoop = setInterval(async () => {
 			voices = await speechSynthesis.getVoices();
 
-					// do your loop
-					if (voices.length > 0) {
-						clearInterval(getVoicesLoop);
-					}
-				}, 100);
+			// do your loop
+			if (voices.length > 0) {
+				clearInterval(getVoicesLoop);
 			}
-		},
-		openai: {
-			label: 'Open AI',
-			voices: [
-				{ name: 'alloy' },
-				{ name: 'echo' },
-				{ name: 'fable' },
-				{ name: 'onyx' },
-				{ name: 'nova' },
-				{ name: 'shimmer' }
-			],
-			models: [{ name: 'tts-1' }, { name: 'tts-1-hd' }],
-			url: '',
-			key: '',
-			getVoices: async () => {
-				voices = TTSEngineConfig.openai.voices;
-			},
-			getModels: async () => {
-				models = TTSEngineConfig.openai.models;
-			}
-		},
-		alltalk: {
-			label: 'All Talk TTS'
-		}
+		}, 100);
 	};
 
 	const toggleResponseAutoPlayback = async () => {
@@ -91,7 +64,7 @@
 		if ($config.audio.tts.engine === 'openai') {
 			getOpenAIVoices();
 		} else {
-			TTSEngineConfig.webapi.getVoices();
+			getWebAPIVoices();
 		}
 	});
 </script>
