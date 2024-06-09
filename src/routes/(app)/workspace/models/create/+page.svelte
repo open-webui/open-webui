@@ -251,7 +251,7 @@
 	<button
 		class="flex space-x-1"
 		on:click={() => {
-			history.back();
+			goto('/workspace/models');
 		}}
 	>
 		<div class=" self-center">
