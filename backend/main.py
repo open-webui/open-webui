@@ -514,6 +514,7 @@ async def get_task_config(user=Depends(get_verified_user)):
         "TASK_MODEL_EXTERNAL": app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
         "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
+        "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD": app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD,
     }
 
 
@@ -522,6 +523,7 @@ class TaskConfigForm(BaseModel):
     TASK_MODEL_EXTERNAL: Optional[str]
     TITLE_GENERATION_PROMPT_TEMPLATE: str
     SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: str
+    SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD: int
 
 
 @app.post("/api/task/config/update")
@@ -534,12 +536,16 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
     app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = (
         form_data.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
     )
+    app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD = (
+        form_data.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD
+    )
 
     return {
         "TASK_MODEL": app.state.config.TASK_MODEL,
         "TASK_MODEL_EXTERNAL": app.state.config.TASK_MODEL_EXTERNAL,
         "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
         "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
+        "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD": app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD,
     }
 
 

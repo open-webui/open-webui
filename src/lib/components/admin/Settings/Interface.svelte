@@ -23,7 +23,8 @@
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
-		SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: ''
+		SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: '',
+		SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD: 0
 	};
 
 	let promptSuggestions = [];
@@ -121,7 +122,7 @@
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Title Generation Prompt')}</div>
 				<textarea
 					bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
-					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					class="w-full rounded-lg py-3 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
 					rows="6"
 				/>
 			</div>
@@ -130,8 +131,19 @@
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Search Query Generation Prompt')}</div>
 				<textarea
 					bind:value={taskConfig.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE}
-					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					class="w-full rounded-lg py-3 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
 					rows="6"
+				/>
+			</div>
+
+			<div class="mt-3">
+				<div class=" mb-2.5 text-sm font-medium">
+					{$i18n.t('Search Query Generation Prompt Length Threshold')}
+				</div>
+				<input
+					bind:value={taskConfig.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD}
+					class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					type="number"
 				/>
 			</div>
 		</div>
