@@ -332,7 +332,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700 my-1" />
+		<hr class=" dark:border-gray-850 my-1" />
 
 		<div class="space-y-2" />
 		<div>

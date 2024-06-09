@@ -94,7 +94,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700 my-2" />
+		<hr class=" dark:border-gray-850 my-2" />
 
 		<div class="mt-2 space-y-3">
 			<div>

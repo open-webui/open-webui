@@ -226,7 +226,7 @@
 				</div>
 			</div>
 		</div>
-		<hr class=" dark:border-gray-700" />
+		<hr class=" dark:border-gray-850" />
 
 		{#if imageGenerationEngine === ''}
 			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('AUTOMATIC1111 Base URL')}</div>
@@ -324,7 +324,7 @@
 		{/if}
 
 		{#if enableImageGeneration}
-			<hr class=" dark:border-gray-700" />
+			<hr class=" dark:border-gray-850" />
 
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Default Model')}</div>

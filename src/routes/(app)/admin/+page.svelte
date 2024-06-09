@@ -161,7 +161,7 @@
 						}
 					})
 					.slice((page - 1) * 20, page * 20) as user}
-					<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-700 text-xs">
+					<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-850 text-xs">
 						<td class="px-3 py-2 min-w-[7rem] w-28">
 							<button
 								class=" flex items-center gap-2 text-xs px-3 py-0.5 rounded-lg {user.role ===

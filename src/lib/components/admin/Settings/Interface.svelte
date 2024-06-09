@@ -108,7 +108,7 @@
 		</div>
 
 		{#if $user.role === 'admin'}
-			<hr class=" dark:border-gray-700" />
+			<hr class=" dark:border-gray-850" />
 
 			<div class=" space-y-3 pr-1.5">
 				<div class="flex w-full justify-between mb-2">

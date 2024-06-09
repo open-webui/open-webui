@@ -149,7 +149,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700" />
+		<hr class=" dark:border-gray-850" />
 
 		{#if $config.audio.tts.engine === ''}
 			<div>

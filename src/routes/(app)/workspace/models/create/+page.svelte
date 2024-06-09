@@ -270,7 +270,7 @@
 		</div>
 		<div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
 	</button>
-	<!-- <hr class="my-3 dark:border-gray-700" /> -->
+	<!-- <hr class="my-3 dark:border-gray-850" /> -->
 
 	<form
 		class="flex flex-col max-w-2xl mx-auto mt-4 mb-10"
