@@ -494,7 +494,7 @@ async def get_models(user=Depends(get_verified_user)):
     return {"data": models}
 
 
-@app.post("/api/title/completions")
+@app.post("/api/task/title/completions")
 async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     print("generate_title")
     model_id = form_data["model"]

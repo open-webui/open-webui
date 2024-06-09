@@ -112,7 +112,7 @@ export const generateTitle = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/title/completions`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/task/title/completions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
