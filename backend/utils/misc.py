@@ -3,7 +3,48 @@ import hashlib
 import json
 import re
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, List
+
+
+def get_last_user_message(messages: List[dict]) -> str:
+    for message in reversed(messages):
+        if message["role"] == "user":
+            if isinstance(message["content"], list):
+                for item in message["content"]:
+                    if item["type"] == "text":
+                        return item["text"]
+            return message["content"]
+    return None
+
+
+def get_last_assistant_message(messages: List[dict]) -> str:
+    for message in reversed(messages):
+        if message["role"] == "assistant":
+            if isinstance(message["content"], list):
+                for item in message["content"]:
+                    if item["type"] == "text":
+                        return item["text"]
+            return message["content"]
+    return None
+
+
+def add_or_update_system_message(content: str, messages: List[dict]):
+    """
+    Adds a new system message at the beginning of the messages list
+    or updates the existing system message at the beginning.
+
+    :param msg: The message to be added or appended.
+    :param messages: The list of message dictionaries.
+    :return: The updated list of message dictionaries.
+    """
+
+    if messages and messages[0].get("role") == "system":
+        messages[0]["content"] += f"{content}\n{messages[0]['content']}"
+    else:
+        # Insert at the beginning
+        messages.insert(0, {"role": "system", "content": content})
+
+    return messages
 
 
 def get_gravatar_url(email):

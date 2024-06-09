@@ -23,7 +23,7 @@
 	let selectedTab = 'general';
 </script>
 
-<div class="flex flex-col md:flex-row w-full h-full py-3 md:space-x-4">
+<div class="flex flex-col md:flex-row w-full h-full py-2 md:space-x-4">
 	<div
 		class="tabs flex flex-row overflow-x-auto space-x-1 md:space-x-0 md:space-y-1 md:flex-col md:flex-none md:w-44 dark:text-gray-200 text-xs text-left scrollbar-none"
 	>
