@@ -44,12 +44,12 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { generateOpenAIChatCompletion, generateSearchQuery } from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { runWebSearch } from '$lib/apis/rag';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import { getUserSettings } from '$lib/apis/users';
-	import { chatCompleted, generateTitle } from '$lib/apis';
+	import { chatCompleted, generateTitle, generateSearchQuery } from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -508,7 +508,7 @@
 		const prompt = history.messages[parentId].content;
 		let searchQuery = prompt;
 		if (prompt.length > 100) {
-			searchQuery = await generateChatSearchQuery(model, prompt);
+			searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt);
 			if (!searchQuery) {
 				toast.warning($i18n.t('No search query generated'));
 				responseMessage.status = {
@@ -1127,29 +1127,6 @@
 		} else {
 			return `${userPrompt}`;
 		}
-	};
-
-	const generateChatSearchQuery = async (modelId: string, prompt: string) => {
-		const model = $models.find((model) => model.id === modelId);
-		const taskModelId =
-			model?.owned_by === 'openai' ?? false
-				? $settings?.title?.modelExternal ?? modelId
-				: $settings?.title?.model ?? modelId;
-		const taskModel = $models.find((model) => model.id === taskModelId);
-
-		const previousMessages = messages
-			.filter((message) => message.role === 'user')
-			.map((message) => message.content);
-
-		return await generateSearchQuery(
-			localStorage.token,
-			taskModelId,
-			previousMessages,
-			prompt,
-			taskModel?.owned_by === 'openai' ?? false
-				? `${OPENAI_API_BASE_URL}`
-				: `${OLLAMA_API_BASE_URL}/v1`
-		);
 	};
 
 	const setChatTitle = async (_chatId, _title) => {
