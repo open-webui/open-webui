@@ -373,8 +373,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                 model_info.params = model_info.params.model_dump()
 
                 if model_info.params:
-                    if model_info.params.get("temperature", None):
-                        payload["temperature"] = int(
+                    if model_info.params.get("temperature", None) is not None:
+                        payload["temperature"] = float(
                             model_info.params.get("temperature")
                         )
 
