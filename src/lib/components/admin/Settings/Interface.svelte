@@ -38,7 +38,7 @@
 		dispatch('save');
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll scrollbar-hidden">
+	<div class=" space-y-3 pr-1.5 overflow-y-scroll scrollbar-hidden h-full">
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex">
 				<div class=" mr-1">{$i18n.t('Set Task Model')}</div>
