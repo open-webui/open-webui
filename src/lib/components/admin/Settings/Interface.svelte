@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
-	import { getBackendConfig } from '$lib/apis';
+	import { getBackendConfig, getTaskConfig, updateTaskConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
@@ -19,26 +19,27 @@
 
 	const i18n = getContext('i18n');
 
-	let taskModel = '';
-	let taskModelExternal = '';
-
-	let titleGenerationPrompt = '';
+	let taskConfig = {
+		TASK_MODEL: '',
+		TASK_MODEL_EXTERNAL: '',
+		TITLE_GENERATION_PROMPT_TEMPLATE: '',
+		SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: ''
+	};
 
 	let promptSuggestions = [];
 	let banners: Banner[] = [];
 
 	const updateInterfaceHandler = async () => {
+		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
+
 		promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
 		await updateBanners();
+
 		await config.set(await getBackendConfig());
 	};
 
 	onMount(async () => {
-		taskModel = $settings?.title?.model ?? '';
-		taskModelExternal = $settings?.title?.modelExternal ?? '';
-		titleGenerationPrompt =
-			$settings?.title?.prompt ??
-			`Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title': {{prompt}}`;
+		taskConfig = await getTaskConfig(localStorage.token);
 
 		promptSuggestions = $config?.default_prompt_suggestions;
 
@@ -57,7 +58,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="  overflow-y-scroll scrollbar-hidden h-full">
+	<div class="  overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex">
 				<div class=" mr-1">{$i18n.t('Set Task Model')}</div>
@@ -87,7 +88,7 @@
 					<div class=" text-xs mb-1">{$i18n.t('Local Models')}</div>
 					<select
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						bind:value={taskModel}
+						bind:value={taskConfig.TASK_MODEL}
 						placeholder={$i18n.t('Select a model')}
 					>
 						<option value="" selected>{$i18n.t('Current Model')}</option>
@@ -103,7 +104,7 @@
 					<div class=" text-xs mb-1">{$i18n.t('External Models')}</div>
 					<select
 						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						bind:value={taskModelExternal}
+						bind:value={taskConfig.TASK_MODEL_EXTERNAL}
 						placeholder={$i18n.t('Select a model')}
 					>
 						<option value="" selected>{$i18n.t('Current Model')}</option>
@@ -119,9 +120,18 @@
 			<div class="mt-3">
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Title Generation Prompt')}</div>
 				<textarea
-					bind:value={titleGenerationPrompt}
+					bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
 					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-					rows="3"
+					rows="6"
+				/>
+			</div>
+
+			<div class="mt-3">
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Search Query Generation Prompt')}</div>
+				<textarea
+					bind:value={taskConfig.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE}
+					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					rows="6"
 				/>
 			</div>
 		</div>
