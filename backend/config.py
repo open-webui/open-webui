@@ -618,6 +618,11 @@ ADMIN_EMAIL = PersistentConfig(
 )
 
 
+####################################
+# TASKS
+####################################
+
+
 TASK_MODEL = PersistentConfig(
     "TASK_MODEL",
     "task.model.default",
@@ -663,6 +668,15 @@ Question:
     ),
 )
 
+
+SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD = PersistentConfig(
+    "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD",
+    "task.search.prompt_length_threshold",
+    os.environ.get(
+        "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD",
+        100,
+    ),
+)
 
 ####################################
 # WEBUI_SECRET_KEY

@@ -56,6 +56,7 @@
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import CallOverlay from './MessageInput/CallOverlay.svelte';
+	import { error } from '@sveltejs/kit';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -506,7 +507,13 @@
 		messages = messages;
 
 		const prompt = history.messages[parentId].content;
-		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt);
+		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt).catch(
+			(error) => {
+				console.log(error);
+				return prompt;
+			}
+		);
+
 		if (!searchQuery) {
 			toast.warning($i18n.t('No search query generated'));
 			responseMessage.status = {
@@ -516,8 +523,6 @@
 				description: 'No search query generated'
 			};
 			messages = messages;
-
-			searchQuery = prompt;
 		}
 
 		responseMessage.status = {
