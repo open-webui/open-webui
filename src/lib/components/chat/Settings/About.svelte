@@ -92,7 +92,7 @@
 		</div>
 
 		{#if ollamaVersion}
-			<hr class=" dark:border-gray-700" />
+			<hr class=" dark:border-gray-850" />
 
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Ollama Version')}</div>
@@ -104,7 +104,7 @@
 			</div>
 		{/if}
 
-		<hr class=" dark:border-gray-700" />
+		<hr class=" dark:border-gray-850" />
 
 		<div class="flex space-x-1">
 			<a href="https://discord.gg/5rJgQTnV4s" target="_blank">

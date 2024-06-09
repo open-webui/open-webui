@@ -764,7 +764,7 @@ async def generate_chat_completion(
                     "frequency_penalty", None
                 )
 
-            if model_info.params.get("temperature", None):
+            if model_info.params.get("temperature", None) is not None:
                 payload["options"]["temperature"] = model_info.params.get(
                     "temperature", None
                 )

@@ -203,7 +203,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700 my-3" />
+		<hr class=" dark:border-gray-850 my-3" />
 
 		<div>
 			<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
@@ -228,7 +228,7 @@
 
 			{#if showAdvanced}
 				<AdvancedParams bind:params />
-				<hr class=" dark:border-gray-700" />
+				<hr class=" dark:border-gray-850" />
 
 				<div class=" py-1 w-full justify-between">
 					<div class="flex w-full justify-between">
