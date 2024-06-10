@@ -13,7 +13,7 @@
 	</div>
 
 	<div class=" text-xs dark:text-gray-500">
-		To add documents here, upload them to the "Documents" workspace first.
+		{$i18n.t('To add documents here, upload them to the "Documents" workspace first.')}
 	</div>
 
 	<div class="flex flex-col">
@@ -97,7 +97,7 @@
 			<Selector bind:knowledge>
 				<button
 					class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
-					type="button">Select Documents</button
+					type="button">{$i18n.t('Select Documents')}</button
 				>
 			</Selector>
 		</div>
