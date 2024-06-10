@@ -29,6 +29,7 @@
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import Headphone from '../icons/Headphone.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
+	import { transcribeAudio } from '$lib/apis/audio';
 
 	const i18n = getContext('i18n');
 
