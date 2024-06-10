@@ -1,5 +1,5 @@
 <script>
-	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
+	import Tools from '$lib/components/workspace/Tools.svelte';
 </script>
 
-<CodeEditor />
+<Tools />

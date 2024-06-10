@@ -11,6 +11,7 @@
 
 	import { onMount } from 'svelte';
 
+	export let boilerplate = '';
 	export let value = '';
 
 	let codeEditor;
@@ -38,7 +39,7 @@
 		// python code editor, highlight python code
 		codeEditor = new EditorView({
 			state: EditorState.create({
-				doc: '',
+				doc: boilerplate,
 				extensions: extensions
 			}),
 			parent: document.getElementById('code-textarea')
