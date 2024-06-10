@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
+	import { _alltalk, getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
 	import { user, settings, config } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { toast } from 'svelte-sonner';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import { getBackendConfig } from '$lib/apis';
@@ -28,30 +29,46 @@
 	let models = [];
 	let nonLocalVoices = false;
 
-	const getOpenAIVoices = () => {
-		voices = [
-			{ name: 'alloy' },
-			{ name: 'echo' },
-			{ name: 'fable' },
-			{ name: 'onyx' },
-			{ name: 'nova' },
-			{ name: 'shimmer' }
-		];
-	};
 
-	const getOpenAIModels = () => {
-		models = [{ name: 'tts-1' }, { name: 'tts-1-hd' }];
-	};
+	const TTSEngineConfig = {
+		webapi: {
+			label: 'Web API',
+			voices: [],
+			url: '',
+			getVoices: async () => {
+				const getVoicesLoop = setInterval(async () => {
+					voices = await speechSynthesis.getVoices();
 
-	const getWebAPIVoices = () => {
-		const getVoicesLoop = setInterval(async () => {
-			voices = await speechSynthesis.getVoices();
-
-			// do your loop
-			if (voices.length > 0) {
-				clearInterval(getVoicesLoop);
+					// do your loop
+					if (voices.length > 0) {
+						clearInterval(getVoicesLoop);
+					}
+				}, 100);
 			}
-		}, 100);
+		},
+		openai: {
+			label: 'Open AI',
+			voices: [
+				{ name: 'alloy' },
+				{ name: 'echo' },
+				{ name: 'fable' },
+				{ name: 'onyx' },
+				{ name: 'nova' },
+				{ name: 'shimmer' }
+			],
+			models: [{ name: 'tts-1' }, { name: 'tts-1-hd' }],
+			url: '',
+			key: '',
+			getVoices: async () => {
+				voices = TTSEngineConfig.openai.voices;
+			},
+			getModels: async () => {
+				models = TTSEngineConfig.openai.models;
+			}
+		},
+		alltalk: {
+			label: 'All Talk TTS'
+		}
 	};
 
 	const updateConfigHandler = async () => {
@@ -102,10 +119,14 @@
 		}
 
 		if (TTS_ENGINE === 'openai') {
-			getOpenAIVoices();
-			getOpenAIModels();
+			TTSEngineConfig[TTS_ENGINE].getVoices();
+			TTSEngineConfig[TTS_ENGINE].getModels();
+		} else if(TTS_ENGINE === 'alltalk'){
+			await _alltalk.setup();
+			model = _alltalk.currentModel;
+			console.log("alltalk model: ", model);
 		} else {
-			getWebAPIVoices();
+			TTSEngineConfig.webapi.getVoices();
 		}
 	});
 </script>
@@ -190,19 +211,30 @@
 							class=" dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 							bind:value={TTS_ENGINE}
 							placeholder="Select a mode"
-							on:change={(e) => {
+							on:change={async (e) => {
+								console.log("e.target.value: " + e.target.value);
+								console.log("TTS_ENGINE: " + TTS_ENGINE);
+
 								if (e.target.value === 'openai') {
-									getOpenAIVoices();
+									console.log("e.target.value: " + e.target.value);
+									console.log("TTS_ENGINE: " + TTS_ENGINE);
+									TTSEngineConfig.openai.getVoices();
 									TTS_VOICE = 'alloy';
 									TTS_MODEL = 'tts-1';
-								} else {
-									getWebAPIVoices();
+								} else if(TTSEngine === 'alltalk'){
+									await _alltalk.getVoices();
+									TTS_VOICE = _alltalk.currentVoice;
+									await _alltalk.getModels();
+									console.log("alltalk model 2: ", _alltalk.currentModel);
+								}  else {
+									TTSEngineConfig.webapi.getVoices();
 									TTS_VOICE = '';
 								}
 							}}
 						>
-							<option value="">{$i18n.t('Web API')}</option>
-							<option value="openai">{$i18n.t('Open AI')}</option>
+							{#each Object.keys(TTSEngineConfig) as engineName}
+								<option value="{engineName}">{$i18n.t(TTSEngineConfig[engineName].label)}</option>
+							{/each}
 						</select>
 					</div>
 				</div>
@@ -224,6 +256,44 @@
 								required
 							/>
 						</div>
+					</div>
+				{:else if TTS_ENGINE === 'alltalk'}
+					<div class="flex w-full gap-2">
+						<div class="w-full gap-2">
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={_alltalk.baseUrl}
+								required
+							/>
+						</div>
+						<Tooltip content="Verify connection" className="self-start mt-0.5">
+							<button
+								class="self-center p-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+								on:click={async () => {
+									const isReady = await _alltalk.isReadyCheck();
+									if (isReady) {
+										toast.success($i18n.t('Server connection verified'));
+									} else {
+										toast.error($i18n.t('Server connection failed'));
+									}
+								}}
+								type="button"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						</Tooltip>
 					</div>
 				{/if}
 
@@ -291,6 +361,170 @@
 							</div>
 						</div>
 					</div>
+				{:else if TTSEngine === 'alltalk'}
+					<div>
+						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+						<div class="flex w-full gap-2">
+							<div class="w-full gap-2">
+								<input
+									list="voice-list"
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									bind:value={_alltalk.currentVoice}
+									placeholder="Select a voice"
+								/>
+
+								<datalist id="voice-list">
+									{#each _alltalk?.voicesList as voice}
+										<option value={voice} />
+									{/each}
+								</datalist>
+							</div>
+							<Tooltip content="Preview voice" className="self-start mt-0.5">
+								<button
+									class="self-center p-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+									on:click={() => {
+										_alltalk.getPreviewVoice(_alltalk.currentVoice);
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="2.3"
+										stroke="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z"
+										/>
+									</svg>
+								</button>
+							</Tooltip>
+						</div>
+					</div>
+					<div>
+						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Model')}</div>
+						<div class="flex w-full">
+							<div class="flex-1">
+								<input
+									list="model-list"
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									bind:value={_alltalk.currentModel}
+									placeholder="Select a model"
+								/>
+
+								<datalist id="model-list">
+									{#each _alltalk?.modelList as model}
+										<option value={model} />
+									{/each}
+								</datalist>
+							</div>
+						</div>
+					</div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Deepspeed status')}
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								_alltalk.useDeepSpeed = !_alltalk.useDeepSpeed;
+							}}
+							type="button"
+						>
+							{#if _alltalk.useDeepSpeed === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Use low vram mode')}
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								_alltalk.useLowVRAM = !_alltalk.useLowVRAM;
+							}}
+							type="button"
+						>
+							{#if _alltalk.useLowVRAM === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Use streaming mode')}
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								_alltalk.useStreamingMode = !_alltalk.useStreamingMode;
+							}}
+							type="button"
+						>
+							{#if _alltalk.useStreamingMode === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Enable Narrator')}
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								_alltalk.useNarrator = !_alltalk.useNarrator;
+							}}
+							type="button"
+						>
+							{#if _alltalk.useNarrator === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
+					{#if _alltalk.useNarrator === true}
+						<div>
+							<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Narrator Voice')}</div>
+							<div class="flex w-full gap-2">
+								<div class="w-full gap-2">
+									<input
+										list="voice-list"
+										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										bind:value={_alltalk.narratorVoice}
+										placeholder="Select a voice"
+									/>
+
+									<datalist id="voice-list">
+										{#each _alltalk?.voicesList as voice}
+											<option value={voice} />
+										{/each}
+									</datalist>
+								</div>
+							</div>
+						</div>
+					{/if}
 				{/if}
 			</div>
 		</div>
