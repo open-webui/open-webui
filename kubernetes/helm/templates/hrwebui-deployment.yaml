@@ -41,7 +41,11 @@ spec:
           mountPath: /app/backend/data
         env:
         - name: OLLAMA_BASE_URL
+          {{- if .Values.ollama.externalHost}}
+          value: {{ .Values.ollama.externalHost}}
+          {{- else}}
           value: http://192.168.100.14:31774
+          {{- end}}
           # value: {{ include "ollama.url" . | quote }}
         tty: true
       imagePullSecrets:
