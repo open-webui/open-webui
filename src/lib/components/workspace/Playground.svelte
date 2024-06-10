@@ -80,8 +80,6 @@
 					if (stopResponseFlag) {
 						controller.abort('User: Stop Response');
 					}
-
-					currentRequestId = null;
 					break;
 				}
 
@@ -97,11 +95,7 @@
 								let data = JSON.parse(line.replace(/^data: /, ''));
 								console.log(data);
 
-								if ('request_id' in data) {
-									currentRequestId = data.request_id;
-								} else {
-									text += data.choices[0].delta.content ?? '';
-								}
+								text += data.choices[0].delta.content ?? '';
 							}
 						}
 					}
@@ -178,21 +172,17 @@
 								let data = JSON.parse(line.replace(/^data: /, ''));
 								console.log(data);
 
-								if ('request_id' in data) {
-									currentRequestId = data.request_id;
+								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
+									continue;
 								} else {
-									if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
-										continue;
-									} else {
-										textareaElement.style.height = textareaElement.scrollHeight + 'px';
+									textareaElement.style.height = textareaElement.scrollHeight + 'px';
 
-										responseMessage.content += data.choices[0].delta.content ?? '';
-										messages = messages;
+									responseMessage.content += data.choices[0].delta.content ?? '';
+									messages = messages;
 
-										textareaElement.style.height = textareaElement.scrollHeight + 'px';
+									textareaElement.style.height = textareaElement.scrollHeight + 'px';
 
-										await tick();
-									}
+									await tick();
 								}
 							}
 						}
