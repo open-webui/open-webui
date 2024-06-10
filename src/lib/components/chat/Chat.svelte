@@ -575,8 +575,6 @@
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
 		let _response = null;
 
-		model = model.id;
-
 		const responseMessage = history.messages[responseMessageId];
 
 		// Wait until history/message have been updated
@@ -634,17 +632,29 @@
 			}
 		});
 
-		const docs = messages
-			.filter((message) => message?.files ?? null)
-			.map((message) =>
-				message.files.filter((item) =>
-					['doc', 'collection', 'web_search_results'].includes(item.type)
+		let docs = [];
+
+		if (model.info.meta.knowledge) {
+			docs = model.info.meta.knowledge;
+		}
+
+		docs = [
+			...docs,
+			...messages
+				.filter((message) => message?.files ?? null)
+				.map((message) =>
+					message.files.filter((item) =>
+						['doc', 'collection', 'web_search_results'].includes(item.type)
+					)
 				)
-			)
-			.flat(1);
+				.flat(1)
+		].filter(
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+		);
 
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
-			model: model,
+			model: model.id,
 			messages: messagesBody,
 			options: {
 				...($settings.params ?? {}),
@@ -682,7 +692,7 @@
 						controller.abort('User: Stop Response');
 					} else {
 						const messages = createMessagesList(responseMessageId);
-						await chatCompletedHandler(model, messages);
+						await chatCompletedHandler(model.id, messages);
 					}
 
 					_response = responseMessage.content;
@@ -743,7 +753,7 @@
 													selectedModelfile.title.charAt(0).toUpperCase() +
 													selectedModelfile.title.slice(1)
 											  }`
-											: `${model}`,
+											: `${model.id}`,
 										{
 											body: responseMessage.content,
 											icon: selectedModelfile?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`
@@ -830,16 +840,26 @@
 		let _response = null;
 		const responseMessage = history.messages[responseMessageId];
 
-		const docs = messages
-			.filter((message) => message?.files ?? null)
-			.map((message) =>
-				message.files.filter((item) =>
-					['doc', 'collection', 'web_search_results'].includes(item.type)
-				)
-			)
-			.flat(1);
+		let docs = [];
 
-		console.log(docs);
+		if (model.info.meta.knowledge) {
+			docs = model.info.meta.knowledge;
+		}
+
+		docs = [
+			...docs,
+			...messages
+				.filter((message) => message?.files ?? null)
+				.map((message) =>
+					message.files.filter((item) =>
+						['doc', 'collection', 'web_search_results'].includes(item.type)
+					)
+				)
+				.flat(1)
+		].filter(
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+		);
 
 		scrollToBottom();
 
@@ -971,7 +991,7 @@
 				}
 
 				if ($settings.notificationEnabled && !document.hasFocus()) {
-					const notification = new Notification(`OpenAI ${model}`, {
+					const notification = new Notification(`${model.id}`, {
 						body: responseMessage.content,
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});

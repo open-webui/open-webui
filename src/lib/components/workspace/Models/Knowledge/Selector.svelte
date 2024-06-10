@@ -67,7 +67,13 @@
 						class="flex gap-2.5 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							if (!knowledge.find((k) => k.name === item.name)) {
-								knowledge = [...knowledge, item];
+								knowledge = [
+									...knowledge,
+									{
+										...item,
+										type: item?.type ?? 'doc'
+									}
+								];
 							}
 						}}
 					>
