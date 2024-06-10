@@ -24,6 +24,15 @@ math {
 	margin-top: 1rem;
 }
 
+.cm-editor {
+	height: 100%;
+	width: 100%;
+}
+
+.cm-editor.cm-focused {
+	outline: none;
+}
+
 .hljs {
 	@apply rounded-lg;
 }
