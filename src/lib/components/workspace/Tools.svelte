@@ -16,7 +16,7 @@
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">
 		<div class=" flex flex-col max-h-[100dvh] h-full">
-			<div class="mb-2.5 flex-1 overflow-auto h-0">
+			<div class="mb-2.5 flex-1 overflow-auto h-0 rounded-lg">
 				<CodeEditor />
 			</div>
 			<div class="pb-3">
