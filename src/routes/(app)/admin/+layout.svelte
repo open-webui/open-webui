@@ -14,7 +14,11 @@
 	</title>
 </svelte:head>
 
-<div class=" flex flex-col w-full min-h-screen max-h-screen">
+<div
+	class=" flex flex-col w-full min-h-screen max-h-screen {$showSidebar
+		? 'md:max-w-[calc(100%-260px)]'
+		: ''}"
+>
 	<div class=" px-4 pt-3 mt-0.5 mb-1">
 		<div class=" flex items-center gap-1">
 			<div class="{$showSidebar ? 'md:hidden' : ''} mr-1 self-start flex flex-none items-center">

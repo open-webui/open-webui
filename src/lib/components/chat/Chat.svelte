@@ -7,6 +7,10 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	import { OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+
 	import {
 		chatId,
 		chats,
@@ -40,25 +44,19 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import {
-		generateOpenAIChatCompletion,
-		generateSearchQuery,
-		generateTitle
-	} from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { runWebSearch } from '$lib/apis/rag';
+	import { createOpenAITextStream } from '$lib/apis/streaming';
+	import { queryMemory } from '$lib/apis/memories';
+	import { getUserSettings } from '$lib/apis/users';
+	import { chatCompleted, generateTitle, generateSearchQuery } from '$lib/apis';
 
+	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/layout/Navbar.svelte';
-	import { OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { createOpenAITextStream } from '$lib/apis/streaming';
-	import { queryMemory } from '$lib/apis/memories';
-	import type { Writable } from 'svelte/store';
-	import type { i18n as i18nType } from 'i18next';
-	import { runWebSearch } from '$lib/apis/rag';
-	import Banner from '../common/Banner.svelte';
-	import { getUserSettings } from '$lib/apis/users';
-	import { chatCompleted } from '$lib/apis';
 	import CallOverlay from './MessageInput/CallOverlay.svelte';
+	import { error } from '@sveltejs/kit';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -298,10 +296,6 @@
 	//////////////////////////
 
 	const submitPrompt = async (userPrompt, _user = null) => {
-		// Reset chat input textarea
-		prompt = '';
-		document.getElementById('chat-textarea').style.height = '';
-
 		let _responses = [];
 		console.log('submitPrompt', $chatId);
 
@@ -325,8 +319,15 @@
 				)
 			);
 		} else {
-			// Reset chat message textarea height
-			document.getElementById('chat-textarea').style.height = '';
+			// Reset chat input textarea
+			const chatTextAreaElement = document.getElementById('chat-textarea');
+
+			if (chatTextAreaElement) {
+				chatTextAreaElement.value = '';
+				chatTextAreaElement.style.height = '';
+			}
+
+			prompt = '';
 
 			// Create user message
 			let userMessageId = uuidv4();
@@ -509,20 +510,22 @@
 		messages = messages;
 
 		const prompt = history.messages[parentId].content;
-		let searchQuery = prompt;
-		if (prompt.length > 100) {
-			searchQuery = await generateChatSearchQuery(model, prompt);
-			if (!searchQuery) {
-				toast.warning($i18n.t('No search query generated'));
-				responseMessage.status = {
-					...responseMessage.status,
-					done: true,
-					error: true,
-					description: 'No search query generated'
-				};
-				messages = messages;
-				return;
+		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt).catch(
+			(error) => {
+				console.log(error);
+				return prompt;
 			}
+		);
+
+		if (!searchQuery) {
+			toast.warning($i18n.t('No search query generated'));
+			responseMessage.status = {
+				...responseMessage.status,
+				done: true,
+				error: true,
+				description: 'No search query generated'
+			};
+			messages = messages;
 		}
 
 		responseMessage.status = {
@@ -571,8 +574,6 @@
 
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
 		let _response = null;
-
-		model = model.id;
 
 		const responseMessage = history.messages[responseMessageId];
 
@@ -631,17 +632,29 @@
 			}
 		});
 
-		const docs = messages
-			.filter((message) => message?.files ?? null)
-			.map((message) =>
-				message.files.filter((item) =>
-					['doc', 'collection', 'web_search_results'].includes(item.type)
+		let docs = [];
+
+		if (model.info.meta.knowledge) {
+			docs = model.info.meta.knowledge;
+		}
+
+		docs = [
+			...docs,
+			...messages
+				.filter((message) => message?.files ?? null)
+				.map((message) =>
+					message.files.filter((item) =>
+						['doc', 'collection', 'web_search_results'].includes(item.type)
+					)
 				)
-			)
-			.flat(1);
+				.flat(1)
+		].filter(
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+		);
 
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
-			model: model,
+			model: model.id,
 			messages: messagesBody,
 			options: {
 				...($settings.params ?? {}),
@@ -679,7 +692,7 @@
 						controller.abort('User: Stop Response');
 					} else {
 						const messages = createMessagesList(responseMessageId);
-						await chatCompletedHandler(model, messages);
+						await chatCompletedHandler(model.id, messages);
 					}
 
 					_response = responseMessage.content;
@@ -740,7 +753,7 @@
 													selectedModelfile.title.charAt(0).toUpperCase() +
 													selectedModelfile.title.slice(1)
 											  }`
-											: `${model}`,
+											: `${model.id}`,
 										{
 											body: responseMessage.content,
 											icon: selectedModelfile?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`
@@ -827,16 +840,26 @@
 		let _response = null;
 		const responseMessage = history.messages[responseMessageId];
 
-		const docs = messages
-			.filter((message) => message?.files ?? null)
-			.map((message) =>
-				message.files.filter((item) =>
-					['doc', 'collection', 'web_search_results'].includes(item.type)
-				)
-			)
-			.flat(1);
+		let docs = [];
 
-		console.log(docs);
+		if (model.info.meta.knowledge) {
+			docs = model.info.meta.knowledge;
+		}
+
+		docs = [
+			...docs,
+			...messages
+				.filter((message) => message?.files ?? null)
+				.map((message) =>
+					message.files.filter((item) =>
+						['doc', 'collection', 'web_search_results'].includes(item.type)
+					)
+				)
+				.flat(1)
+		].filter(
+			(item, index, array) =>
+				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+		);
 
 		scrollToBottom();
 
@@ -968,7 +991,7 @@
 				}
 
 				if ($settings.notificationEnabled && !document.hasFocus()) {
-					const notification = new Notification(`OpenAI ${model}`, {
+					const notification = new Notification(`${model.id}`, {
 						body: responseMessage.content,
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
@@ -1116,56 +1139,20 @@
 
 	const generateChatTitle = async (userPrompt) => {
 		if ($settings?.title?.auto ?? true) {
-			const model = $models.find((model) => model.id === selectedModels[0]);
-
-			const titleModelId =
-				model?.owned_by === 'openai' ?? false
-					? $settings?.title?.modelExternal ?? selectedModels[0]
-					: $settings?.title?.model ?? selectedModels[0];
-			const titleModel = $models.find((model) => model.id === titleModelId);
-
-			console.log(titleModel);
 			const title = await generateTitle(
 				localStorage.token,
-				$settings?.title?.prompt ??
-					$i18n.t(
-						"Create a concise, 3-5 word phrase as a header for the following query, strictly adhering to the 3-5 word limit and avoiding the use of the word 'title':"
-					) + ' {{prompt}}',
-				titleModelId,
+				selectedModels[0],
 				userPrompt,
-				$chatId,
-				titleModel?.owned_by === 'openai' ?? false
-					? `${OPENAI_API_BASE_URL}`
-					: `${OLLAMA_API_BASE_URL}/v1`
-			);
+				$chatId
+			).catch((error) => {
+				console.error(error);
+				return 'New Chat';
+			});
 
 			return title;
 		} else {
 			return `${userPrompt}`;
 		}
-	};
-
-	const generateChatSearchQuery = async (modelId: string, prompt: string) => {
-		const model = $models.find((model) => model.id === modelId);
-		const taskModelId =
-			model?.owned_by === 'openai' ?? false
-				? $settings?.title?.modelExternal ?? modelId
-				: $settings?.title?.model ?? modelId;
-		const taskModel = $models.find((model) => model.id === taskModelId);
-
-		const previousMessages = messages
-			.filter((message) => message.role === 'user')
-			.map((message) => message.content);
-
-		return await generateSearchQuery(
-			localStorage.token,
-			taskModelId,
-			previousMessages,
-			prompt,
-			taskModel?.owned_by === 'openai' ?? false
-				? `${OPENAI_API_BASE_URL}`
-				: `${OLLAMA_API_BASE_URL}/v1`
-		);
 	};
 
 	const setChatTitle = async (_chatId, _title) => {
@@ -1183,28 +1170,6 @@
 		return await getTagsById(localStorage.token, $chatId).catch(async (error) => {
 			return [];
 		});
-	};
-
-	const addTag = async (tagName) => {
-		const res = await addTagById(localStorage.token, $chatId, tagName);
-		tags = await getTags();
-
-		chat = await updateChatById(localStorage.token, $chatId, {
-			tags: tags
-		});
-
-		_tags.set(await getAllChatTags(localStorage.token));
-	};
-
-	const deleteTag = async (tagName) => {
-		const res = await deleteTagById(localStorage.token, $chatId, tagName);
-		tags = await getTags();
-
-		chat = await updateChatById(localStorage.token, $chatId, {
-			tags: tags
-		});
-
-		_tags.set(await getAllChatTags(localStorage.token));
 	};
 </script>
 

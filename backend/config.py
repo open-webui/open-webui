@@ -642,6 +642,66 @@ ADMIN_EMAIL = PersistentConfig(
 
 
 ####################################
+# TASKS
+####################################
+
+
+TASK_MODEL = PersistentConfig(
+    "TASK_MODEL",
+    "task.model.default",
+    os.environ.get("TASK_MODEL", ""),
+)
+
+TASK_MODEL_EXTERNAL = PersistentConfig(
+    "TASK_MODEL_EXTERNAL",
+    "task.model.external",
+    os.environ.get("TASK_MODEL_EXTERNAL", ""),
+)
+
+TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "TITLE_GENERATION_PROMPT_TEMPLATE",
+    "task.title.prompt_template",
+    os.environ.get(
+        "TITLE_GENERATION_PROMPT_TEMPLATE",
+        """Here is the query:
+{{prompt:middletruncate:8000}}
+
+Create a concise, 3-5 word phrase with an emoji as a title for the previous query. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
+
+Examples of titles:
+📉 Stock Market Trends
+🍪 Perfect Chocolate Chip Recipe
+Evolution of Music Streaming
+Remote Work Productivity Tips
+Artificial Intelligence in Healthcare
+🎮 Video Game Development Insights""",
+    ),
+)
+
+
+SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
+    "task.search.prompt_template",
+    os.environ.get(
+        "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
+        """You are tasked with generating web search queries. Give me an appropriate query to answer my question for google search. Answer with only the query. Today is {{CURRENT_DATE}}.
+        
+Question:
+{{prompt:end:4000}}""",
+    ),
+)
+
+
+SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD = PersistentConfig(
+    "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD",
+    "task.search.prompt_length_threshold",
+    os.environ.get(
+        "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD",
+        100,
+    ),
+)
+
+####################################
 # WEBUI_SECRET_KEY
 ####################################
 
