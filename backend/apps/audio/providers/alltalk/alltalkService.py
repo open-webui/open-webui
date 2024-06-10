@@ -7,12 +7,11 @@ baseUrl = config.TTS_ALLTALK_API_BASE_URL
 # Initialize AllTalk TTS API instance
 tts = AllTalkTTSAPI(baseUrl)
 
-def update_alltalk_base_url(base_url: str):
+def update_alltalk_tts_base_url(base_url: str):
     tts.base_url = base_url
 
-def get_alltalk_config():
+def get_alltalk_tts_config():
     return {
-        "status": True,
         "ALLTALK_API_BASE_URL": config.TTS_ALLTALK_API_BASE_URL,
         "ALLTALK_API_MODEL": config.TTS_ALLTALK_API_MODEL,
         "ALLTALK_API_VOICE": config.TTS_ALLTALK_API_VOICE,

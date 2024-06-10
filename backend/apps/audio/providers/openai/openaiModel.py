@@ -1,7 +1,5 @@
 from pydantic import BaseModel
 
 class OpenAIConfigUpdateForm(BaseModel):
-    url: str
-    key: str
-    model: str
-    speaker: str
+    OPENAI_API_BASE_URL: str
+    OPENAI_API_KEY: str

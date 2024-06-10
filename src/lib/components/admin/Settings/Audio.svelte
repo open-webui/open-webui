@@ -57,15 +57,19 @@
 	const updateConfigHandler = async () => {
 		const res = await updateAudioConfig(localStorage.token, {
 			tts: {
-				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
-				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+				openai: {
+					API_BASE_URL: TTS_OPENAI_API_BASE_URL,
+					API_KEY: TTS_OPENAI_API_KEY
+				},
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
 				VOICE: TTS_VOICE
 			},
 			stt: {
-				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
-				OPENAI_API_KEY: STT_OPENAI_API_KEY,
+				openai: {
+					API_BASE_URL: STT_OPENAI_API_BASE_URL,
+					API_KEY: STT_OPENAI_API_KEY
+				},
 				ENGINE: STT_ENGINE,
 				MODEL: STT_MODEL
 			}

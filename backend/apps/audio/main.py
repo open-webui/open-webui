@@ -1,62 +1,35 @@
 import os
-from fastapi import (
-    Depends,
-    HTTPException,
-    status,
-    UploadFile,
-    File
-)
-from apps.audio.settings import app, log, SPEECH_CACHE_DIR
-from apps.audio.providers.alltalk.alltalkController import app as alltalk_app
-from apps.audio.providers.alltalk.alltalkService import get_alltalk_config
-from apps.audio.providers.openai.openai import router as openai_app
-from apps.audio.providers.openai.openaiService import get_openai_config
-
-
+from fastapi import (Depends, HTTPException, status, UploadFile, File)
 from faster_whisper import WhisperModel
 from pydantic import BaseModel
-
+from pydub import AudioSegment
+from pydub.utils import mediainfo
 import uuid
 import requests
-import hashlib
-from pathlib import Path
 import json
+
+from apps.audio.settings import app, log, WHISPER_DEVICE_TYPE
+from apps.audio.model import AudioConfigUpdateForm
+
+from apps.audio.providers.alltalk.alltalkController import app as alltalk_app
+from apps.audio.providers.alltalk.alltalkModel import AllTalkConfigForm
+from apps.audio.providers.alltalk.alltalkService import get_alltalk_tts_config
+from apps.audio.providers.openai.openaiController import router as openai_app
+from apps.audio.providers.openai.openaiModel import OpenAIConfigUpdateForm
+from apps.audio.providers.openai.openaiService import get_openai_tts_config, get_openai_stt_config
 
 from constants import ERROR_MESSAGES
 from utils.utils import (get_current_user, get_admin_user)
-
-
-from pydub import AudioSegment
-from pydub.utils import mediainfo
 
 from config import (
     CACHE_DIR,
     WHISPER_MODEL,
     WHISPER_MODEL_DIR,
-    WHISPER_MODEL_AUTO_UPDATE,
+    WHISPER_MODEL_AUTO_UPDATE
 )
 
 app.include_router(alltalk_app)
 app.include_router(openai_app)
-
-class TTSConfigForm(BaseModel):
-    OPENAI_API_BASE_URL: str
-    OPENAI_API_KEY: str
-    ENGINE: str
-    MODEL: str
-    VOICE: str
-
-
-class STTConfigForm(BaseModel):
-    OPENAI_API_BASE_URL: str
-    OPENAI_API_KEY: str
-    ENGINE: str
-    MODEL: str
-
-class AudioConfigUpdateForm(BaseModel):
-    tts: TTSConfigForm
-    stt: STTConfigForm
-
 
 def is_mp4_audio(file_path):
     """Check if the given file is an MP4 audio file."""
@@ -82,21 +55,24 @@ def convert_mp4_to_wav(file_path, output_path):
 
 
 @app.get("/config")
-async def get_audio_config(user=Depends(get_admin_user)):
+async def get_audio_config(user=Depends(get_admin_user)) -> AudioConfigUpdateForm:
     return {
         "tts": {
-            "OPENAI_API_BASE_URL": app.state.config.TTS_OPENAI_API_BASE_URL,
-            "OPENAI_API_KEY": app.state.config.TTS_OPENAI_API_KEY,
-            "ENGINE": app.state.config.TTS_ENGINE,
-            "MODEL": app.state.config.TTS_MODEL,
-            "VOICE": app.state.config.TTS_VOICE,
+            "openai": get_openai_tts_config(),
+            "alltalk": get_alltalk_tts_config(),
+            "general": {
+                "ENGINE": app.state.config.TTS_ENGINE,
+                "MODEL": app.state.config.TTS_MODEL,
+                "VOICE": app.state.config.TTS_VOICE
+            }
         },
         "stt": {
-            "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,
-            "OPENAI_API_KEY": app.state.config.STT_OPENAI_API_KEY,
-            "ENGINE": app.state.config.STT_ENGINE,
-            "MODEL": app.state.config.STT_MODEL,
-        },
+            "openai": get_openai_stt_config(),
+            "general": {
+                "ENGINE": app.state.config.STT_ENGINE,
+                "MODEL": app.state.config.STT_MODEL
+            }
+        }
     }
 
 
@@ -117,83 +93,22 @@ async def update_audio_config(
 
     return {
         "tts": {
-            "OPENAI_API_BASE_URL": app.state.config.TTS_OPENAI_API_BASE_URL,
-            "OPENAI_API_KEY": app.state.config.TTS_OPENAI_API_KEY,
-            "ENGINE": app.state.config.TTS_ENGINE,
-            "MODEL": app.state.config.TTS_MODEL,
-            "VOICE": app.state.config.TTS_VOICE,
+            "openai": get_openai_tts_config(),
+            "alltalk": get_alltalk_tts_config(),
+            "general": {
+                "ENGINE": app.state.config.TTS_ENGINE,
+                "MODEL": app.state.config.TTS_MODEL,
+                "VOICE": app.state.config.TTS_VOICE
+            }
         },
         "stt": {
-            "OPENAI_API_BASE_URL": app.state.config.STT_OPENAI_API_BASE_URL,
-            "OPENAI_API_KEY": app.state.config.STT_OPENAI_API_KEY,
-            "ENGINE": app.state.config.STT_ENGINE,
-            "MODEL": app.state.config.STT_MODEL,
-        },
+            "openai": get_openai_stt_config(),
+            "general": {
+                "ENGINE": app.state.config.STT_ENGINE,
+                "MODEL": app.state.config.STT_MODEL
+            }
+        }
     }
-
-
-@app.post("/speech")
-async def speech(request: Request, user=Depends(get_verified_user)):
-    body = await request.body()
-    name = hashlib.sha256(body).hexdigest()
-
-    file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
-    file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
-
-    # Check if the file already exists in the cache
-    if file_path.is_file():
-        return FileResponse(file_path)
-
-    headers = {}
-    headers["Authorization"] = f"Bearer {app.state.config.TTS_OPENAI_API_KEY}"
-    headers["Content-Type"] = "application/json"
-
-    try:
-        body = body.decode("utf-8")
-        body = json.loads(body)
-        body["model"] = app.state.config.TTS_MODEL
-        body = json.dumps(body).encode("utf-8")
-    except Exception as e:
-        pass
-
-    r = None
-    try:
-        r = requests.post(
-            url=f"{app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
-            data=body,
-            headers=headers,
-            stream=True,
-        )
-
-        r.raise_for_status()
-
-        # Save the streaming content to a file
-        with open(file_path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-
-        with open(file_body_path, "w") as f:
-            json.dump(json.loads(body.decode("utf-8")), f)
-
-        # Return the saved file
-        return FileResponse(file_path)
-
-    except Exception as e:
-        log.exception(e)
-        error_detail = "Open WebUI: Server Connection Error"
-        if r is not None:
-            try:
-                res = r.json()
-                if "error" in res:
-                    error_detail = f"External: {res['error']['message']}"
-            except:
-                error_detail = f"External: {e}"
-
-        raise HTTPException(
-            status_code=r.status_code if r != None else 500,
-            detail=error_detail,
-        )
-
 
 @app.post("/transcriptions")
 def transcribe(

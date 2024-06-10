@@ -4,7 +4,7 @@ from constants import ERROR_MESSAGES
 from utils.utils import get_admin_user
 from apps.audio.settings import get_config
 from apps.audio.providers.alltalk.alltalkModel import AllTalkConfigForm, TTSGenerationPayload, TTSStreamingPayload
-from apps.audio.providers.alltalk.alltalkService import get_alltalk_config, update_alltalk_base_url, tts
+from apps.audio.providers.alltalk.alltalkService import get_alltalk_tts_config, update_alltalk_tts_base_url, tts
 
 app = APIRouter(
      prefix="/alltalk",
@@ -64,7 +64,7 @@ async def update_provider_config(
     if form_data.url == "":
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_URL_NOT_FOUND)
 
-    update_alltalk_base_url(form_data.url)
+    update_alltalk_tts_base_url(form_data.url)
 
     # Update the config to the TTS server if the values have changed
     if (config.ALLTALK_API_MODEL != form_data.model):
@@ -86,4 +86,4 @@ async def update_provider_config(
     config.ALLTALK_API_USE_NARRATOR = form_data.useNarrator
     config.ALLTALK_API_NARRATOR_VOICE = form_data.narratorVoice
 
-    return get_alltalk_config()
+    return get_alltalk_tts_config()
