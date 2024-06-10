@@ -75,7 +75,7 @@
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user.name })}
 					{/if} -->
-					HR Assistant Chatbot
+					MBZUAI ServiceDesk Chatbot
 				</div>
 
 				<!-- <div in:fade={{ duration: 200, delay: 200 }}>

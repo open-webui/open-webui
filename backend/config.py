@@ -72,9 +72,9 @@ try:
 except ImportError:
     log.warning("dotenv not installed, skipping...")
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "HR Assistant Chatbot")
-if WEBUI_NAME != "HR Assistant Chatbot":
-    WEBUI_NAME += " (HR Assistant Chatbot)"
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "MBZUAI ServiceDesk Chatbot")
+if WEBUI_NAME != "MBZUAI ServiceDesk Chatbot":
+    WEBUI_NAME += " (MBZUAI ServiceDesk Chatbot)"
 
 WEBUI_FAVICON_URL = "https://mbzuai.ac.ae/wp-content/uploads/2022/06/favicon.ico"
 

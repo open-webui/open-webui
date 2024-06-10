@@ -350,7 +350,7 @@
 						</span>
 					{/if}
 				{:else}
-					{localStorage.botName ?? 'HR Assistant Chatbot'}
+					{localStorage.botName ?? 'MBZUAI ServiceDesk Chatbot'}
 				{/if}
 			</Name>
 

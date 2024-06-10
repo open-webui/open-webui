@@ -42,7 +42,7 @@
 	// Advanced
 	let requestFormat = '';
 	let keepAlive = null;
-	let botName = 'HR Assistant Chatbot';
+	let botName = 'MBZUAI ServiceDesk Chatbot';
 
 	let options = {
 		// Advanced

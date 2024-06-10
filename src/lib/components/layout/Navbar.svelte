@@ -48,7 +48,7 @@
 			</button>
 
 			<div class="overflow-hidden ml-5 flex-1 text-xl font-semibold text-black dark:text-white">
-				HR Assistant Chatbot
+				MBZUAI ServiceDesk Chatbot
 			</div>
 
 			<div class="self-start flex flex-none items-center">
