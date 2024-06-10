@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 // import { version } from '../../package.json';
 
-export const APP_NAME = 'HR Assistant Chatbot';
+export const APP_NAME = 'MBZUAI ServiceDesk Chatbot';
 // export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
 // temp backend server
 export const WEBUI_BASE_URL = dev ? `http://10.127.110.178:31032` : ``;
