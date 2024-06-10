@@ -211,93 +211,98 @@
 			speaking = null;
 			speakingIdx = null;
 		} else {
-			speaking = true;
+			if ((message?.content ?? '').trim() !== '') {
+				speaking = true;
 
-			if ($config.audio.tts.engine === 'openai') {
-				loadingSpeech = true;
+				if ($config.audio.tts.engine === 'openai') {
+					loadingSpeech = true;
 
-				const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
-					const lastIndex = mergedTexts.length - 1;
-					if (lastIndex >= 0) {
-						const previousText = mergedTexts[lastIndex];
-						const wordCount = previousText.split(/\s+/).length;
-						if (wordCount < 2) {
-							mergedTexts[lastIndex] = previousText + ' ' + currentText;
+					const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
+						const lastIndex = mergedTexts.length - 1;
+						if (lastIndex >= 0) {
+							const previousText = mergedTexts[lastIndex];
+							const wordCount = previousText.split(/\s+/).length;
+							if (wordCount < 2) {
+								mergedTexts[lastIndex] = previousText + ' ' + currentText;
+							} else {
+								mergedTexts.push(currentText);
+							}
 						} else {
 							mergedTexts.push(currentText);
 						}
-					} else {
-						mergedTexts.push(currentText);
+						return mergedTexts;
+					}, []);
+
+					console.log(sentences);
+
+					sentencesAudio = sentences.reduce((a, e, i, arr) => {
+						a[i] = null;
+						return a;
+					}, {});
+
+					let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+
+					for (const [idx, sentence] of sentences.entries()) {
+						const res = await synthesizeOpenAISpeech(
+							localStorage.token,
+							$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
+							sentence
+						).catch((error) => {
+							toast.error(error);
+
+							speaking = null;
+							loadingSpeech = false;
+
+							return null;
+						});
+
+						if (res) {
+							const blob = await res.blob();
+							const blobUrl = URL.createObjectURL(blob);
+							const audio = new Audio(blobUrl);
+							sentencesAudio[idx] = audio;
+							loadingSpeech = false;
+							lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+						}
 					}
-					return mergedTexts;
-				}, []);
+				} else {
+					let voices = [];
+					const getVoicesLoop = setInterval(async () => {
+						voices = await speechSynthesis.getVoices();
+						if (voices.length > 0) {
+							clearInterval(getVoicesLoop);
 
-				console.log(sentences);
+							const voice =
+								voices
+									?.filter(
+										(v) =>
+											v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+									)
+									?.at(0) ?? undefined;
 
-				sentencesAudio = sentences.reduce((a, e, i, arr) => {
-					a[i] = null;
-					return a;
-				}, {});
+							console.log(voice);
 
-				let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+							const speak = new SpeechSynthesisUtterance(message.content);
 
-				for (const [idx, sentence] of sentences.entries()) {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
-						$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
-						sentence
-					).catch((error) => {
-						toast.error(error);
+							console.log(speak);
 
-						speaking = null;
-						loadingSpeech = false;
+							speak.onend = () => {
+								speaking = null;
+								if ($settings.conversationMode) {
+									document.getElementById('voice-input-button')?.click();
+								}
+							};
 
-						return null;
-					});
+							if (voice) {
+								speak.voice = voice;
+							}
 
-					if (res) {
-						const blob = await res.blob();
-						const blobUrl = URL.createObjectURL(blob);
-						const audio = new Audio(blobUrl);
-						sentencesAudio[idx] = audio;
-						loadingSpeech = false;
-						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
-					}
+							speechSynthesis.speak(speak);
+						}
+					}, 100);
 				}
 			} else {
-				let voices = [];
-				const getVoicesLoop = setInterval(async () => {
-					voices = await speechSynthesis.getVoices();
-					if (voices.length > 0) {
-						clearInterval(getVoicesLoop);
-
-						const voice =
-							voices
-								?.filter(
-									(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-								)
-								?.at(0) ?? undefined;
-
-						console.log(voice);
-
-						const speak = new SpeechSynthesisUtterance(message.content);
-
-						console.log(speak);
-
-						speak.onend = () => {
-							speaking = null;
-							if ($settings.conversationMode) {
-								document.getElementById('voice-input-button')?.click();
-							}
-						};
-
-						if (voice) {
-							speak.voice = voice;
-						}
-
-						speechSynthesis.speak(speak);
-					}
-				}, 100);
+				toast.error('No content to speak');
 			}
 		}
 	};
