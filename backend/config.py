@@ -308,8 +308,9 @@ frontend_favicon = FRONTEND_BUILD_DIR / "favicon.png"
 if frontend_favicon.exists():
     try:
         shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon.png")
-    except PermissionError:
-        logging.error(f"No write permission to {STATIC_DIR / 'favicon.png'}")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+
 else:
     logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
