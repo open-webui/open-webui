@@ -1,7 +1,8 @@
 nameOverride: ""
 
 ollama:
-  externalHost: "true"
+  externalHost: "http://192.168.100.14:31774"
+  # externalHost: "http://192.168.100.14:32383"
   annotations: {}
   podAnnotations: {}
   replicaCount: 1
@@ -82,7 +83,7 @@ hrwebui:
   replicaCount: 1
   image:
     repository: ghcr.io/ciai-engineering/open-webui
-    tag: "git-cfefc5d"
+    tag: "git-c03c400"
     pullPolicy: Always
   resources: {}
   imagePullSecrets: 
@@ -115,6 +116,6 @@ hrwebui:
     annotations: {}
     port: 80
     containerPort: 8080
-    nodePort: 31032
+    nodePort: 31031
     labels: {}
     loadBalancerClass: "" 
