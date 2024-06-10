@@ -211,93 +211,98 @@
 			speaking = null;
 			speakingIdx = null;
 		} else {
-			speaking = true;
+			if ((message?.content ?? '').trim() !== '') {
+				speaking = true;
 
-			if ($config.audio.tts.engine === 'openai') {
-				loadingSpeech = true;
+				if ($config.audio.tts.engine === 'openai') {
+					loadingSpeech = true;
 
-				const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
-					const lastIndex = mergedTexts.length - 1;
-					if (lastIndex >= 0) {
-						const previousText = mergedTexts[lastIndex];
-						const wordCount = previousText.split(/\s+/).length;
-						if (wordCount < 2) {
-							mergedTexts[lastIndex] = previousText + ' ' + currentText;
+					const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
+						const lastIndex = mergedTexts.length - 1;
+						if (lastIndex >= 0) {
+							const previousText = mergedTexts[lastIndex];
+							const wordCount = previousText.split(/\s+/).length;
+							if (wordCount < 2) {
+								mergedTexts[lastIndex] = previousText + ' ' + currentText;
+							} else {
+								mergedTexts.push(currentText);
+							}
 						} else {
 							mergedTexts.push(currentText);
 						}
-					} else {
-						mergedTexts.push(currentText);
+						return mergedTexts;
+					}, []);
+
+					console.log(sentences);
+
+					sentencesAudio = sentences.reduce((a, e, i, arr) => {
+						a[i] = null;
+						return a;
+					}, {});
+
+					let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+
+					for (const [idx, sentence] of sentences.entries()) {
+						const res = await synthesizeOpenAISpeech(
+							localStorage.token,
+							$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
+							sentence
+						).catch((error) => {
+							toast.error(error);
+
+							speaking = null;
+							loadingSpeech = false;
+
+							return null;
+						});
+
+						if (res) {
+							const blob = await res.blob();
+							const blobUrl = URL.createObjectURL(blob);
+							const audio = new Audio(blobUrl);
+							sentencesAudio[idx] = audio;
+							loadingSpeech = false;
+							lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+						}
 					}
-					return mergedTexts;
-				}, []);
+				} else {
+					let voices = [];
+					const getVoicesLoop = setInterval(async () => {
+						voices = await speechSynthesis.getVoices();
+						if (voices.length > 0) {
+							clearInterval(getVoicesLoop);
 
-				console.log(sentences);
+							const voice =
+								voices
+									?.filter(
+										(v) =>
+											v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+									)
+									?.at(0) ?? undefined;
 
-				sentencesAudio = sentences.reduce((a, e, i, arr) => {
-					a[i] = null;
-					return a;
-				}, {});
+							console.log(voice);
 
-				let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+							const speak = new SpeechSynthesisUtterance(message.content);
 
-				for (const [idx, sentence] of sentences.entries()) {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
-						$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
-						sentence
-					).catch((error) => {
-						toast.error(error);
+							console.log(speak);
 
-						speaking = null;
-						loadingSpeech = false;
+							speak.onend = () => {
+								speaking = null;
+								if ($settings.conversationMode) {
+									document.getElementById('voice-input-button')?.click();
+								}
+							};
 
-						return null;
-					});
+							if (voice) {
+								speak.voice = voice;
+							}
 
-					if (res) {
-						const blob = await res.blob();
-						const blobUrl = URL.createObjectURL(blob);
-						const audio = new Audio(blobUrl);
-						sentencesAudio[idx] = audio;
-						loadingSpeech = false;
-						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
-					}
+							speechSynthesis.speak(speak);
+						}
+					}, 100);
 				}
 			} else {
-				let voices = [];
-				const getVoicesLoop = setInterval(async () => {
-					voices = await speechSynthesis.getVoices();
-					if (voices.length > 0) {
-						clearInterval(getVoicesLoop);
-
-						const voice =
-							voices
-								?.filter(
-									(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-								)
-								?.at(0) ?? undefined;
-
-						console.log(voice);
-
-						const speak = new SpeechSynthesisUtterance(message.content);
-
-						console.log(speak);
-
-						speak.onend = () => {
-							speaking = null;
-							if ($settings.conversationMode) {
-								document.getElementById('voice-input-button')?.click();
-							}
-						};
-
-						if (voice) {
-							speak.voice = voice;
-						}
-
-						speechSynthesis.speak(speak);
-					}
-				}, 100);
+				toast.error('No content to speak');
 			}
 		}
 	};
@@ -415,26 +420,29 @@
 				class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-headings:-mb-4 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
 			>
 				<div>
-					{#if message?.status}
+					{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
+						{@const status = (
+							message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
+						).at(-1)}
 						<div class="flex items-center gap-2 pt-1 pb-1">
-							{#if message?.status?.done === false}
+							{#if status.done === false}
 								<div class="">
 									<Spinner className="size-4" />
 								</div>
 							{/if}
 
-							{#if message?.status?.action === 'web_search' && message?.status?.urls}
-								<WebSearchResults urls={message?.status?.urls}>
+							{#if status?.action === 'web_search' && status?.urls}
+								<WebSearchResults {status}>
 									<div class="flex flex-col justify-center -space-y-0.5">
 										<div class="text-base line-clamp-1 text-wrap">
-											{message.status.description}
+											{status?.description}
 										</div>
 									</div>
 								</WebSearchResults>
 							{:else}
 								<div class="flex flex-col justify-center -space-y-0.5">
 									<div class=" text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
-										{message.status.description}
+										{status?.description}
 									</div>
 								</div>
 							{/if}

@@ -327,6 +327,9 @@
 				chatTextAreaElement.style.height = '';
 			}
 
+			const _files = JSON.parse(JSON.stringify(files));
+			files = [];
+
 			prompt = '';
 
 			// Create user message
@@ -338,7 +341,7 @@
 				role: 'user',
 				user: _user ?? undefined,
 				content: userPrompt,
-				files: files.length > 0 ? files : undefined,
+				files: _files.length > 0 ? _files : undefined,
 				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
 				models: selectedModels.filter((m, mIdx) => selectedModels.indexOf(m) === mIdx)
 			};
@@ -355,32 +358,6 @@
 			// Wait until history/message have been updated
 			await tick();
 
-			// Create new chat if only one message in messages
-			if (messages.length == 1) {
-				if ($settings.saveChatHistory ?? true) {
-					chat = await createNewChat(localStorage.token, {
-						id: $chatId,
-						title: $i18n.t('New Chat'),
-						models: selectedModels,
-						system: $settings.system ?? undefined,
-						options: {
-							...($settings.params ?? {})
-						},
-						messages: messages,
-						history: history,
-						tags: [],
-						timestamp: Date.now()
-					});
-					await chats.set(await getChatList(localStorage.token));
-					await chatId.set(chat.id);
-				} else {
-					await chatId.set('local');
-				}
-				await tick();
-			}
-
-			files = [];
-
 			// Send prompt
 			_responses = await sendPrompt(userPrompt, userMessageId);
 		}
@@ -390,15 +367,78 @@
 
 	const sendPrompt = async (prompt, parentId, modelId = null) => {
 		let _responses = [];
+
+		// If modelId is provided, use it, else use selected model
+		let selectedModelIds = modelId
+			? [modelId]
+			: atSelectedModel !== undefined
+			? [atSelectedModel.id]
+			: selectedModels;
+
+		// Create response messages for each selected model
+		const responseMessageIds = {};
+		for (const modelId of selectedModelIds) {
+			const model = $models.filter((m) => m.id === modelId).at(0);
+
+			if (model) {
+				let responseMessageId = uuidv4();
+				let responseMessage = {
+					parentId: parentId,
+					id: responseMessageId,
+					childrenIds: [],
+					role: 'assistant',
+					content: '',
+					model: model.id,
+					modelName: model.name ?? model.id,
+					userContext: null,
+					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+				};
+
+				// Add message to history and Set currentId to messageId
+				history.messages[responseMessageId] = responseMessage;
+				history.currentId = responseMessageId;
+
+				// Append messageId to childrenIds of parent message
+				if (parentId !== null) {
+					history.messages[parentId].childrenIds = [
+						...history.messages[parentId].childrenIds,
+						responseMessageId
+					];
+				}
+
+				responseMessageIds[modelId] = responseMessageId;
+			}
+		}
+		await tick();
+
+		// Create new chat if only one message in messages
+		if (messages.length == 2) {
+			if ($settings.saveChatHistory ?? true) {
+				chat = await createNewChat(localStorage.token, {
+					id: $chatId,
+					title: $i18n.t('New Chat'),
+					models: selectedModels,
+					system: $settings.system ?? undefined,
+					options: {
+						...($settings.params ?? {})
+					},
+					messages: messages,
+					history: history,
+					tags: [],
+					timestamp: Date.now()
+				});
+				await chats.set(await getChatList(localStorage.token));
+				await chatId.set(chat.id);
+			} else {
+				await chatId.set('local');
+			}
+			await tick();
+		}
+
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
-			(modelId
-				? [modelId]
-				: atSelectedModel !== undefined
-				? [atSelectedModel.id]
-				: selectedModels
-			).map(async (modelId) => {
+			selectedModelIds.map(async (modelId) => {
 				console.log('modelId', modelId);
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -416,33 +456,8 @@
 						);
 					}
 
-					// Create response message
-					let responseMessageId = uuidv4();
-					let responseMessage = {
-						parentId: parentId,
-						id: responseMessageId,
-						childrenIds: [],
-						role: 'assistant',
-						content: '',
-						model: model.id,
-						modelName: model.name ?? model.id,
-						userContext: null,
-						timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-					};
-
-					// Add message to history and Set currentId to messageId
-					history.messages[responseMessageId] = responseMessage;
-					history.currentId = responseMessageId;
-
-					// Append messageId to childrenIds of parent message
-					if (parentId !== null) {
-						history.messages[parentId].childrenIds = [
-							...history.messages[parentId].childrenIds,
-							responseMessageId
-						];
-					}
-
-					await tick();
+					let responseMessageId = responseMessageIds[modelId];
+					let responseMessage = history.messages[responseMessageId];
 
 					let userContext = null;
 					if ($settings?.memory ?? false) {
@@ -451,7 +466,6 @@
 								toast.error(error);
 								return null;
 							});
-
 							if (res) {
 								if (res.documents[0].length > 0) {
 									userContext = res.documents.reduce((acc, doc, index) => {
@@ -477,7 +491,6 @@
 					}
 
 					let _response = null;
-
 					if (model?.owned_by === 'openai') {
 						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
 					} else if (model) {
@@ -502,11 +515,13 @@
 	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
 		const responseMessage = history.messages[responseId];
 
-		responseMessage.status = {
-			done: false,
-			action: 'web_search',
-			description: $i18n.t('Generating search query')
-		};
+		responseMessage.statusHistory = [
+			{
+				done: false,
+				action: 'web_search',
+				description: $i18n.t('Generating search query')
+			}
+		];
 		messages = messages;
 
 		const prompt = history.messages[parentId].content;
@@ -519,19 +534,21 @@
 
 		if (!searchQuery) {
 			toast.warning($i18n.t('No search query generated'));
-			responseMessage.status = {
-				...responseMessage.status,
+			responseMessage.statusHistory.push({
 				done: true,
 				error: true,
+				action: 'web_search',
 				description: 'No search query generated'
-			};
+			});
+
 			messages = messages;
 		}
 
-		responseMessage.status = {
-			...responseMessage.status,
-			description: $i18n.t("Searching the web for '{{searchQuery}}'", { searchQuery })
-		};
+		responseMessage.statusHistory.push({
+			done: false,
+			action: 'web_search',
+			description: $i18n.t(`Searching "{{searchQuery}}"`, { searchQuery })
+		});
 		messages = messages;
 
 		const results = await runWebSearch(localStorage.token, searchQuery).catch((error) => {
@@ -542,12 +559,13 @@
 		});
 
 		if (results) {
-			responseMessage.status = {
-				...responseMessage.status,
+			responseMessage.statusHistory.push({
 				done: true,
+				action: 'web_search',
 				description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
+				query: searchQuery,
 				urls: results.filenames
-			};
+			});
 
 			if (responseMessage?.files ?? undefined === undefined) {
 				responseMessage.files = [];
@@ -562,12 +580,12 @@
 
 			messages = messages;
 		} else {
-			responseMessage.status = {
-				...responseMessage.status,
+			responseMessage.statusHistory.push({
 				done: true,
 				error: true,
+				action: 'web_search',
 				description: 'No search results found'
-			};
+			});
 			messages = messages;
 		}
 	};

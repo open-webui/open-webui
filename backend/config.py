@@ -308,8 +308,9 @@ frontend_favicon = FRONTEND_BUILD_DIR / "favicon.png"
 if frontend_favicon.exists():
     try:
         shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon.png")
-    except PermissionError:
-        logging.error(f"No write permission to {STATIC_DIR / 'favicon.png'}")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+
 else:
     logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
@@ -913,6 +914,12 @@ SERPER_API_KEY = PersistentConfig(
     "SERPER_API_KEY",
     "rag.web.search.serper_api_key",
     os.getenv("SERPER_API_KEY", ""),
+)
+
+SERPLY_API_KEY = PersistentConfig(
+    "SERPLY_API_KEY",
+    "rag.web.search.serply_api_key",
+    os.getenv("SERPLY_API_KEY", ""),
 )
 
 
