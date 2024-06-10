@@ -68,10 +68,10 @@
 						<select
 							class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 							bind:value={webConfig.search.engine}
-							placeholder="Select a engine"
+							placeholder={$i18n.t('Select a engine')}
 							required
 						>
-							<option disabled selected value="">Select a engine</option>
+							<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 							{#each webSearchEngines as engine}
 								<option value={engine}>{engine}</option>
 							{/each}

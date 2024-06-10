@@ -10,7 +10,7 @@ app = socketio.ASGIApp(sio, socketio_path="/ws/socket.io")
 
 # Dictionary to maintain the user pool
 
-
+SESSION_POOL = {}
 USER_POOL = {}
 USAGE_POOL = {}
 # Timeout duration in seconds
@@ -29,7 +29,12 @@ async def connect(sid, environ, auth):
             user = Users.get_user_by_id(data["id"])
 
         if user:
-            USER_POOL[sid] = user.id
+            SESSION_POOL[sid] = user.id
+            if user.id in USER_POOL:
+                USER_POOL[user.id].append(sid)
+            else:
+                USER_POOL[user.id] = [sid]
+
             print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
             print(len(set(USER_POOL)))
@@ -50,7 +55,13 @@ async def user_join(sid, data):
             user = Users.get_user_by_id(data["id"])
 
         if user:
-            USER_POOL[sid] = user.id
+
+            SESSION_POOL[sid] = user.id
+            if user.id in USER_POOL:
+                USER_POOL[user.id].append(sid)
+            else:
+                USER_POOL[user.id] = [sid]
+
             print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
             print(len(set(USER_POOL)))
@@ -123,9 +134,17 @@ async def remove_after_timeout(sid, model_id):
 
 @sio.event
 async def disconnect(sid):
-    if sid in USER_POOL:
-        disconnected_user = USER_POOL.pop(sid)
-        print(f"user {disconnected_user} disconnected with session ID {sid}")
+    if sid in SESSION_POOL:
+        user_id = SESSION_POOL[sid]
+        del SESSION_POOL[sid]
+
+        USER_POOL[user_id].remove(sid)
+
+        if len(USER_POOL[user_id]) == 0:
+            del USER_POOL[user_id]
+
+        print(f"user {user_id} disconnected with session ID {sid}")
+        print(USER_POOL)
 
         await sio.emit("user-count", {"count": len(USER_POOL)})
     else:

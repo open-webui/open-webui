@@ -161,7 +161,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700" />
+		<hr class=" dark:border-gray-850" />
 
 		<div class="flex flex-col">
 			<input
@@ -218,7 +218,7 @@
 			</button>
 		</div>
 
-		<hr class=" dark:border-gray-700" />
+		<hr class=" dark:border-gray-850" />
 
 		<div class="flex flex-col">
 			{#if showArchiveConfirm}
