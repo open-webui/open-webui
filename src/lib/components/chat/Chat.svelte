@@ -634,7 +634,7 @@
 
 		let docs = [];
 
-		if (model.info.meta.knowledge) {
+		if (model?.info?.meta?.knowledge ?? false) {
 			docs = model.info.meta.knowledge;
 		}
 
@@ -842,7 +842,7 @@
 
 		let docs = [];
 
-		if (model.info.meta.knowledge) {
+		if (model?.info?.meta?.knowledge ?? false) {
 			docs = model.info.meta.knowledge;
 		}
 
