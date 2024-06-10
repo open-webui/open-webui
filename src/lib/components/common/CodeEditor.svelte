@@ -25,7 +25,6 @@
 		placeholder('Enter your code here...'),
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
-				console.log(e);
 				value = e.state.doc.toString();
 			}
 		}),
