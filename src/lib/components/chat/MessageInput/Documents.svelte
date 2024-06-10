@@ -101,7 +101,7 @@
 </script>
 
 {#if filteredItems.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
-	<div class="md:px-2 mb-3 text-left w-full absolute bottom-0 left-0 right-0">
+	<div class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0">
 		<div class="flex w-full px-2">
 			<div class=" bg-gray-100 dark:bg-gray-700 w-10 rounded-l-xl text-center">
 				<div class=" text-lg font-semibold mt-2">#</div>

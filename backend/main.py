@@ -9,8 +9,11 @@ import logging
 import aiohttp
 import requests
 import mimetypes
+import shutil
+import os
+import asyncio
 
-from fastapi import FastAPI, Request, Depends, status
+from fastapi import FastAPI, Request, Depends, status, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException
@@ -22,15 +25,24 @@ from starlette.responses import StreamingResponse, Response
 
 
 from apps.socket.main import app as socket_app
-from apps.ollama.main import app as ollama_app, get_all_models as get_ollama_models
-from apps.openai.main import app as openai_app, get_all_models as get_openai_models
+from apps.ollama.main import (
+    app as ollama_app,
+    OpenAIChatCompletionForm,
+    get_all_models as get_ollama_models,
+    generate_openai_chat_completion as generate_ollama_chat_completion,
+)
+from apps.openai.main import (
+    app as openai_app,
+    get_all_models as get_openai_models,
+    generate_chat_completion as generate_openai_chat_completion,
+)
 
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
 from apps.webui.main import app as webui_app
 
-import asyncio
+
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -41,6 +53,8 @@ from utils.utils import (
     get_current_user,
     get_http_authorization_cred,
 )
+from utils.task import title_generation_template, search_query_generation_template
+
 from apps.rag.utils import rag_messages
 
 from config import (
@@ -62,8 +76,13 @@ from config import (
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
-    AppConfig,
     WEBUI_BUILD_HASH,
+    TASK_MODEL,
+    TASK_MODEL_EXTERNAL,
+    TITLE_GENERATION_PROMPT_TEMPLATE,
+    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
+    SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD,
+    AppConfig,
 )
 from constants import ERROR_MESSAGES
 
@@ -117,9 +136,18 @@ app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
-
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 
+
+app.state.config.TASK_MODEL = TASK_MODEL
+app.state.config.TASK_MODEL_EXTERNAL = TASK_MODEL_EXTERNAL
+app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = TITLE_GENERATION_PROMPT_TEMPLATE
+app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = (
+    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
+)
+app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD = (
+    SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD
+)
 
 app.state.MODELS = {}
 
@@ -228,6 +256,78 @@ class RAGMiddleware(BaseHTTPMiddleware):
 app.add_middleware(RAGMiddleware)
 
 
+def filter_pipeline(payload, user):
+    user = {"id": user.id, "name": user.name, "role": user.role}
+    model_id = payload["model"]
+    filters = [
+        model
+        for model in app.state.MODELS.values()
+        if "pipeline" in model
+        and "type" in model["pipeline"]
+        and model["pipeline"]["type"] == "filter"
+        and (
+            model["pipeline"]["pipelines"] == ["*"]
+            or any(
+                model_id == target_model_id
+                for target_model_id in model["pipeline"]["pipelines"]
+            )
+        )
+    ]
+    sorted_filters = sorted(filters, key=lambda x: x["pipeline"]["priority"])
+
+    model = app.state.MODELS[model_id]
+
+    if "pipeline" in model:
+        sorted_filters.append(model)
+
+    for filter in sorted_filters:
+        r = None
+        try:
+            urlIdx = filter["urlIdx"]
+
+            url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
+            key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
+
+            if key != "":
+                headers = {"Authorization": f"Bearer {key}"}
+                r = requests.post(
+                    f"{url}/{filter['id']}/filter/inlet",
+                    headers=headers,
+                    json={
+                        "user": user,
+                        "body": payload,
+                    },
+                )
+
+                r.raise_for_status()
+                payload = r.json()
+        except Exception as e:
+            # Handle connection error here
+            print(f"Connection error: {e}")
+
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "detail" in res:
+                        return JSONResponse(
+                            status_code=r.status_code,
+                            content=res,
+                        )
+                except:
+                    pass
+
+            else:
+                pass
+
+    if "pipeline" not in app.state.MODELS[model_id]:
+        if "chat_id" in payload:
+            del payload["chat_id"]
+
+        if "title" in payload:
+            del payload["title"]
+    return payload
+
+
 class PipelineMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.method == "POST" and (
@@ -243,85 +343,10 @@ class PipelineMiddleware(BaseHTTPMiddleware):
             # Parse string to JSON
             data = json.loads(body_str) if body_str else {}
 
-            model_id = data["model"]
-            filters = [
-                model
-                for model in app.state.MODELS.values()
-                if "pipeline" in model
-                and "type" in model["pipeline"]
-                and model["pipeline"]["type"] == "filter"
-                and (
-                    model["pipeline"]["pipelines"] == ["*"]
-                    or any(
-                        model_id == target_model_id
-                        for target_model_id in model["pipeline"]["pipelines"]
-                    )
-                )
-            ]
-            sorted_filters = sorted(filters, key=lambda x: x["pipeline"]["priority"])
-
-            user = None
-            if len(sorted_filters) > 0:
-                try:
-                    user = get_current_user(
-                        get_http_authorization_cred(
-                            request.headers.get("Authorization")
-                        )
-                    )
-                    user = {"id": user.id, "name": user.name, "role": user.role}
-                except:
-                    pass
-
-            model = app.state.MODELS[model_id]
-
-            if "pipeline" in model:
-                sorted_filters.append(model)
-
-            for filter in sorted_filters:
-                r = None
-                try:
-                    urlIdx = filter["urlIdx"]
-
-                    url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
-                    key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
-
-                    if key != "":
-                        headers = {"Authorization": f"Bearer {key}"}
-                        r = requests.post(
-                            f"{url}/{filter['id']}/filter/inlet",
-                            headers=headers,
-                            json={
-                                "user": user,
-                                "body": data,
-                            },
-                        )
-
-                        r.raise_for_status()
-                        data = r.json()
-                except Exception as e:
-                    # Handle connection error here
-                    print(f"Connection error: {e}")
-
-                    if r is not None:
-                        try:
-                            res = r.json()
-                            if "detail" in res:
-                                return JSONResponse(
-                                    status_code=r.status_code,
-                                    content=res,
-                                )
-                        except:
-                            pass
-
-                    else:
-                        pass
-
-            if "pipeline" not in app.state.MODELS[model_id]:
-                if "chat_id" in data:
-                    del data["chat_id"]
-
-                if "title" in data:
-                    del data["title"]
+            user = get_current_user(
+                get_http_authorization_cred(request.headers.get("Authorization"))
+            )
+            data = filter_pipeline(data, user)
 
             modified_body_bytes = json.dumps(data).encode("utf-8")
             # Replace the request body with the modified one
@@ -482,6 +507,178 @@ async def get_models(user=Depends(get_verified_user)):
     return {"data": models}
 
 
+@app.get("/api/task/config")
+async def get_task_config(user=Depends(get_verified_user)):
+    return {
+        "TASK_MODEL": app.state.config.TASK_MODEL,
+        "TASK_MODEL_EXTERNAL": app.state.config.TASK_MODEL_EXTERNAL,
+        "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
+        "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
+        "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD": app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD,
+    }
+
+
+class TaskConfigForm(BaseModel):
+    TASK_MODEL: Optional[str]
+    TASK_MODEL_EXTERNAL: Optional[str]
+    TITLE_GENERATION_PROMPT_TEMPLATE: str
+    SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: str
+    SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD: int
+
+
+@app.post("/api/task/config/update")
+async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_user)):
+    app.state.config.TASK_MODEL = form_data.TASK_MODEL
+    app.state.config.TASK_MODEL_EXTERNAL = form_data.TASK_MODEL_EXTERNAL
+    app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE = (
+        form_data.TITLE_GENERATION_PROMPT_TEMPLATE
+    )
+    app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = (
+        form_data.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
+    )
+    app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD = (
+        form_data.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD
+    )
+
+    return {
+        "TASK_MODEL": app.state.config.TASK_MODEL,
+        "TASK_MODEL_EXTERNAL": app.state.config.TASK_MODEL_EXTERNAL,
+        "TITLE_GENERATION_PROMPT_TEMPLATE": app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE,
+        "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
+        "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD": app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD,
+    }
+
+
+@app.post("/api/task/title/completions")
+async def generate_title(form_data: dict, user=Depends(get_verified_user)):
+    print("generate_title")
+
+    model_id = form_data["model"]
+    if model_id not in app.state.MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+
+    # Check if the user has a custom task model
+    # If the user has a custom task model, use that model
+    if app.state.MODELS[model_id]["owned_by"] == "ollama":
+        if app.state.config.TASK_MODEL:
+            task_model_id = app.state.config.TASK_MODEL
+            if task_model_id in app.state.MODELS:
+                model_id = task_model_id
+    else:
+        if app.state.config.TASK_MODEL_EXTERNAL:
+            task_model_id = app.state.config.TASK_MODEL_EXTERNAL
+            if task_model_id in app.state.MODELS:
+                model_id = task_model_id
+
+    print(model_id)
+    model = app.state.MODELS[model_id]
+
+    template = app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
+
+    content = title_generation_template(
+        template, form_data["prompt"], user.model_dump()
+    )
+
+    payload = {
+        "model": model_id,
+        "messages": [{"role": "user", "content": content}],
+        "stream": False,
+        "max_tokens": 50,
+        "chat_id": form_data.get("chat_id", None),
+        "title": True,
+    }
+
+    print(payload)
+    payload = filter_pipeline(payload, user)
+
+    if model["owned_by"] == "ollama":
+        return await generate_ollama_chat_completion(
+            OpenAIChatCompletionForm(**payload), user=user
+        )
+    else:
+        return await generate_openai_chat_completion(payload, user=user)
+
+
+@app.post("/api/task/query/completions")
+async def generate_search_query(form_data: dict, user=Depends(get_verified_user)):
+    print("generate_search_query")
+
+    if len(form_data["prompt"]) < app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Skip search query generation for short prompts (< {app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD} characters)",
+        )
+
+    model_id = form_data["model"]
+    if model_id not in app.state.MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+
+    # Check if the user has a custom task model
+    # If the user has a custom task model, use that model
+    if app.state.MODELS[model_id]["owned_by"] == "ollama":
+        if app.state.config.TASK_MODEL:
+            task_model_id = app.state.config.TASK_MODEL
+            if task_model_id in app.state.MODELS:
+                model_id = task_model_id
+    else:
+        if app.state.config.TASK_MODEL_EXTERNAL:
+            task_model_id = app.state.config.TASK_MODEL_EXTERNAL
+            if task_model_id in app.state.MODELS:
+                model_id = task_model_id
+
+    print(model_id)
+    model = app.state.MODELS[model_id]
+
+    template = app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
+
+    content = search_query_generation_template(
+        template, form_data["prompt"], user.model_dump()
+    )
+
+    payload = {
+        "model": model_id,
+        "messages": [{"role": "user", "content": content}],
+        "stream": False,
+        "max_tokens": 30,
+    }
+
+    print(payload)
+    payload = filter_pipeline(payload, user)
+
+    if model["owned_by"] == "ollama":
+        return await generate_ollama_chat_completion(
+            OpenAIChatCompletionForm(**payload), user=user
+        )
+    else:
+        return await generate_openai_chat_completion(payload, user=user)
+
+
+@app.post("/api/chat/completions")
+async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user)):
+    model_id = form_data["model"]
+    if model_id not in app.state.MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+
+    model = app.state.MODELS[model_id]
+    print(model)
+
+    if model["owned_by"] == "ollama":
+        return await generate_ollama_chat_completion(
+            OpenAIChatCompletionForm(**form_data), user=user
+        )
+    else:
+        return await generate_openai_chat_completion(form_data, user=user)
+
+
 @app.post("/api/chat/completed")
 async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
     data = form_data
@@ -572,6 +769,63 @@ async def get_pipelines_list(user=Depends(get_admin_user)):
             for urlIdx in urlIdxs
         ]
     }
+
+
+@app.post("/api/pipelines/upload")
+async def upload_pipeline(
+    urlIdx: int = Form(...), file: UploadFile = File(...), user=Depends(get_admin_user)
+):
+    print("upload_pipeline", urlIdx, file.filename)
+    # Check if the uploaded file is a python file
+    if not file.filename.endswith(".py"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only Python (.py) files are allowed.",
+        )
+
+    upload_folder = f"{CACHE_DIR}/pipelines"
+    os.makedirs(upload_folder, exist_ok=True)
+    file_path = os.path.join(upload_folder, file.filename)
+
+    try:
+        # Save the uploaded file
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
+        key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
+
+        headers = {"Authorization": f"Bearer {key}"}
+
+        with open(file_path, "rb") as f:
+            files = {"file": f}
+            r = requests.post(f"{url}/pipelines/upload", headers=headers, files=files)
+
+        r.raise_for_status()
+        data = r.json()
+
+        return {**data}
+    except Exception as e:
+        # Handle connection error here
+        print(f"Connection error: {e}")
+
+        detail = "Pipeline not found"
+        if r is not None:
+            try:
+                res = r.json()
+                if "detail" in res:
+                    detail = res["detail"]
+            except:
+                pass
+
+        raise HTTPException(
+            status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
+            detail=detail,
+        )
+    finally:
+        # Ensure the file is deleted after the upload is completed or on failure
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 
 class AddPipelineForm(BaseModel):
@@ -840,6 +1094,15 @@ async def get_app_config():
             "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
             "enable_admin_export": ENABLE_ADMIN_EXPORT,
         },
+        "audio": {
+            "tts": {
+                "engine": audio_app.state.config.TTS_ENGINE,
+                "voice": audio_app.state.config.TTS_VOICE,
+            },
+            "stt": {
+                "engine": audio_app.state.config.STT_ENGINE,
+            },
+        },
     }
 
 
@@ -902,7 +1165,7 @@ async def get_app_changelog():
 @app.get("/api/version/updates")
 async def get_app_latest_release_version():
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             async with session.get(
                 "https://api.github.com/repos/open-webui/open-webui/releases/latest"
             ) as response:

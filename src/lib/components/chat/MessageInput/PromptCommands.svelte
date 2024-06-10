@@ -6,6 +6,7 @@
 
 	const i18n = getContext('i18n');
 
+	export let files;
 	export let prompt = '';
 	let selectedCommandIdx = 0;
 	let filteredPromptCommands = [];
@@ -35,6 +36,32 @@
 				return '{{CLIPBOARD}}';
 			});
 
+			console.log(clipboardText);
+
+			const clipboardItems = await navigator.clipboard.read();
+
+			let imageUrl = null;
+			for (const item of clipboardItems) {
+				// Check for known image types
+				for (const type of item.types) {
+					if (type.startsWith('image/')) {
+						const blob = await item.getType(type);
+						imageUrl = URL.createObjectURL(blob);
+						console.log(`Image URL (${type}): ${imageUrl}`);
+					}
+				}
+			}
+
+			if (imageUrl) {
+				files = [
+					...files,
+					{
+						type: 'image',
+						url: imageUrl
+					}
+				];
+			}
+
 			text = command.content.replaceAll('{{CLIPBOARD}}', clipboardText);
 		}
 
@@ -61,7 +88,7 @@
 </script>
 
 {#if filteredPromptCommands.length > 0}
-	<div class="md:px-2 mb-3 text-left w-full absolute bottom-0 left-0 right-0">
+	<div class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0">
 		<div class="flex w-full px-2">
 			<div class=" bg-gray-100 dark:bg-gray-700 w-10 rounded-l-xl text-center">
 				<div class=" text-lg font-semibold mt-2">/</div>

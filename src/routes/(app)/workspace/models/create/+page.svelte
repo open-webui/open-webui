@@ -11,6 +11,7 @@
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
+	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -30,11 +31,6 @@
 	let id = '';
 	let name = '';
 
-	let params = {};
-	let capabilities = {
-		vision: true
-	};
-
 	let info = {
 		id: '',
 		base_model_id: null,
@@ -52,6 +48,13 @@
 			system: ''
 		}
 	};
+
+	let params = {};
+	let capabilities = {
+		vision: true
+	};
+
+	let knowledge = [];
 
 	$: if (name) {
 		id = name.replace(/\s+/g, '-').toLowerCase();
@@ -77,8 +80,16 @@
 		info.id = id;
 		info.name = name;
 		info.meta.capabilities = capabilities;
-		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 
+		if (knowledge.length > 0) {
+			info.meta.knowledge = knowledge;
+		} else {
+			if (info.meta.knowledge) {
+				delete info.meta.knowledge;
+			}
+		}
+
+		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
 				delete info.params[key];
@@ -124,6 +135,22 @@
 
 		id = model.id;
 
+		if (model.info.base_model_id) {
+			const base_model = $models
+				.filter((m) => !m?.preset)
+				.find((m) =>
+					[model.info.base_model_id, `${model.info.base_model_id}:latest`].includes(m.id)
+				);
+
+			console.log('base_model', base_model);
+
+			if (!base_model) {
+				model.info.base_model_id = null;
+			} else if ($models.find((m) => m.id === `${model.info.base_model_id}:latest`)) {
+				model.info.base_model_id = `${model.info.base_model_id}:latest`;
+			}
+		}
+
 		params = { ...params, ...model?.info?.params };
 		params.stop = params?.stop ? (params?.stop ?? []).join(',') : null;
 
@@ -133,6 +160,8 @@
 			...info,
 			...model.info
 		};
+
+		console.log(info);
 	};
 
 	onMount(async () => {
@@ -233,7 +262,7 @@
 	<button
 		class="flex space-x-1"
 		on:click={() => {
-			history.back();
+			goto('/workspace/models');
 		}}
 	>
 		<div class=" self-center">
@@ -252,7 +281,7 @@
 		</div>
 		<div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
 	</button>
-	<!-- <hr class="my-3 dark:border-gray-700" /> -->
+	<!-- <hr class="my-3 dark:border-gray-850" /> -->
 
 	<form
 		class="flex flex-col max-w-2xl mx-auto mt-4 mb-10"
@@ -516,6 +545,10 @@
 					{/if}
 				</div>
 			{/if}
+		</div>
+
+		<div class="my-2">
+			<Knowledge bind:knowledge />
 		</div>
 
 		<div class="my-1">
