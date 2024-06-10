@@ -1,0 +1,7 @@
+FROM ghcr.io/open-webui/pipelines:main
+
+RUN pip install llama-index llama-index-llms-ollama \
+    llama-index-embeddings-ollama llama-index-readers-github \
+    youtube-transcript-api langchain langchain-community \
+    langchain-openai langchain-text-splitters langsmith huggingface-hub \
+    fastapi chromadb python-dotenv

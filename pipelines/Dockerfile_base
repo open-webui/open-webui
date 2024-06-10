@@ -1,0 +1,4 @@
+FROM ghcr.io/open-webui/pipelines:main
+
+RUN pip install llama-index llama-index-llms-ollama \
+    llama-index-embeddings-ollama llama-index-readers-github

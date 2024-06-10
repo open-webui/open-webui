@@ -8,32 +8,83 @@ services:
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
     environment:
-      - NO_PROXY=${NO_PROXY},ollama,pipelines,open-webui
-      - no_proxy=${no_proxy},ollama,pipelines,open-webui
+      - NO_PROXY=${NO_PROXY},ollama,pipelines-base,pipelines-crewai,pipelines-weblink-youtube,open-webui
+      - NO_PROXY=${NO_PROXY},ollama,pipelines-base,pipelines-crewai,pipelines-weblink-youtube,open-webui
     networks:
       - open-webui
 
-  pipelines:
+  pipelines-base:
     build:
       context: pipelines
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile_base
     volumes:
-      - ./pipelines/mount:/app/pipelines 
+      - ./pipelines/mount/base:/app/pipelines 
+      - ./pipelines/mount/.env:/app/pipelines/.env
     depends_on:
       - ollama
-    container_name: pipelines
+    container_name: pipelines-base
     tty: true
     restart: unless-stopped
     #image: ghcr.io/open-webui/pipelines:main
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - GITHUB_TOKEN=
-      - NO_PROXY=${NO_PROXY},ollama,pipelines,open-webui
-      - no_proxy=${no_proxy},ollama,pipelines,open-webui
+      - NO_PROXY=${NO_PROXY},ollama,pipelines-base,pipelines-crewai,pipelines-weblink-youtube,open-webui
+      - NO_PROXY=${NO_PROXY},ollama,pipelines-base,pipelines-crewai,pipelines-weblink-youtube,open-webui
     #extra_hosts:
     #  - host.docker.internal:host-gateway
-    ports:
-      - 9099:9099
+    #ports:
+    #  - 9099:9099
+    networks:
+      - open-webui
+
+  pipelines-crewai:
+    build:
+      context: pipelines
+      dockerfile: Dockerfile_crewai
+    volumes:
+      - ./pipelines/mount/crewai:/app/pipelines 
+      - ./pipelines/mount/.env:/app/pipelines/.env
+    depends_on:
+      - ollama
+    container_name: pipelines-crewai
+    tty: true
+    restart: unless-stopped
+    #image: ghcr.io/open-webui/pipelines:main
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - GITHUB_TOKEN=
+      - NO_PROXY=${NO_PROXY},ollama,pipelines-base,pipelines-crewai,pipelines-weblink-youtube,open-webui
+      - NO_PROXY=${NO_PROXY},ollama,pipelines-base,pipelines-crewai,pipelines-weblink-youtube,open-webui
+    #extra_hosts:
+    #  - host.docker.internal:host-gateway
+    #ports:
+    #  - 9098:9099
+    networks:
+      - open-webui
+
+  pipelines-weblink-youtube:
+    build:
+      context: pipelines
+      dockerfile: Dockerfile_weblink_youtube
+    volumes:
+      - ./pipelines/mount/weblink_youtube:/app/pipelines 
+      - ./pipelines/mount/.env:/app/pipelines/.env
+    depends_on:
+      - ollama
+    container_name: pipelines-weblink-youtube
+    tty: true
+    restart: unless-stopped
+    #image: ghcr.io/open-webui/pipelines:main
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - GITHUB_TOKEN=
+      - NO_PROXY=${NO_PROXY},ollama,pipelines-base,pipelines-crewai,pipelines-weblink-youtube,open-webui
+      - NO_PROXY=${NO_PROXY},ollama,pipelines-base,pipelines-crewai,pipelines-weblink-youtube,open-webui
+    #extra_hosts:
+    #  - host.docker.internal:host-gateway
+    #ports:
+    #  - 9097:9099
     networks:
       - open-webui
 
@@ -56,8 +107,8 @@ services:
       - 'WEBUI_SECRET_KEY='
       - 'OPENAI_API_BASE_URL=http://pipelines:9099'
       - 'OPENAI_API_KEY=0p3n-w3bu!'
-      - NO_PROXY=${NO_PROXY},ollama,pipelines,open-webui
-      - no_proxy=${no_proxy},ollama,pipelines,open-webui
+      - NO_PROXY=${NO_PROXY},ollama,pipelines-base,pipelines-crewai,pipelines-weblink-youtube,open-webui
+      - NO_PROXY=${NO_PROXY},ollama,pipelines-base,pipelines-crewai,pipelines-weblink-youtube,open-webui
 
     #extra_hosts:
     #  - host.docker.internal:host-gateway
