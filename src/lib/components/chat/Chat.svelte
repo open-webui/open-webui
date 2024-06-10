@@ -296,16 +296,6 @@
 	//////////////////////////
 
 	const submitPrompt = async (userPrompt, _user = null) => {
-		// Reset chat input textarea
-		const chatTextAreaElement = document.getElementById('chat-textarea');
-
-		if (chatTextAreaElement) {
-			chatTextAreaElement.value = '';
-			chatTextAreaElement.style.height = '';
-		}
-
-		prompt = '';
-
 		let _responses = [];
 		console.log('submitPrompt', $chatId);
 
@@ -329,8 +319,15 @@
 				)
 			);
 		} else {
-			// Reset chat message textarea height
-			document.getElementById('chat-textarea').style.height = '';
+			// Reset chat input textarea
+			const chatTextAreaElement = document.getElementById('chat-textarea');
+
+			if (chatTextAreaElement) {
+				chatTextAreaElement.value = '';
+				chatTextAreaElement.style.height = '';
+			}
+
+			prompt = '';
 
 			// Create user message
 			let userMessageId = uuidv4();
