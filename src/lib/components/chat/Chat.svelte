@@ -327,6 +327,9 @@
 				chatTextAreaElement.style.height = '';
 			}
 
+			const _files = JSON.parse(JSON.stringify(files));
+			files = [];
+
 			prompt = '';
 
 			// Create user message
@@ -338,7 +341,7 @@
 				role: 'user',
 				user: _user ?? undefined,
 				content: userPrompt,
-				files: files.length > 0 ? files : undefined,
+				files: _files.length > 0 ? _files : undefined,
 				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
 				models: selectedModels.filter((m, mIdx) => selectedModels.indexOf(m) === mIdx)
 			};
@@ -378,9 +381,6 @@
 				}
 				await tick();
 			}
-
-			files = [];
-
 			// Send prompt
 			_responses = await sendPrompt(userPrompt, userMessageId);
 		}
