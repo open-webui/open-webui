@@ -852,6 +852,12 @@ SERPER_API_KEY = PersistentConfig(
     os.getenv("SERPER_API_KEY", ""),
 )
 
+SERPLY_API_KEY = PersistentConfig(
+    "SERPLY_API_KEY",
+    "rag.web.search.serply_api_key",
+    os.getenv("SERPLY_API_KEY", ""),
+)
+
 
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",
