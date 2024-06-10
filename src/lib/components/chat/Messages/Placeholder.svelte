@@ -34,7 +34,7 @@
 {#key mounted}
 	<div class="m-auto w-full max-w-6xl px-8 lg:px-24 pb-16">
 		<div class="flex justify-center">
-			<img src="/logo-main.svg" alt="logo" />
+			<img src="/logo-main.png" class="w-[7rem]" alt="logo" />
 			<!-- <div class="flex -space-x-4 mb-1" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
 					<button

@@ -36,7 +36,8 @@
 				initNewChat();
 			}}>
 				<img
-					src="/logo-mbzuai.svg"
+					src="/logo-mbzuai.png"
+					class="w-[108px]"
 					alt="logo-mbzuai"
 				/>
 				<img
@@ -46,7 +47,7 @@
 				/>
 			</button>
 
-			<div class="overflow-hidden ml-6 flex-1 text-xl font-semibold text-black dark:text-white">
+			<div class="overflow-hidden ml-5 flex-1 text-xl font-semibold text-black dark:text-white">
 				HR Assistant Chatbot
 			</div>
 
