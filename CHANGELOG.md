@@ -24,11 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🛠️ Playground Issue**: Fixed the playground not functioning properly, ensuring a smoother user experience.
 - **🔥 Temperature Parameter Issue**: Corrected the issue where the temperature value '0' was not being passed correctly.
 - **📝 Prompt Input Clearing**: Resolved prompt input textarea not being cleared right away, ensuring a clean slate for new inputs.
-- **🎨 Various UI Styling Issues**: Fixed numerous user interface styling problems for a more cohesive look.
+- **✨ Various UI Styling Issues**: Fixed numerous user interface styling problems for a more cohesive look.
 - **👥 Active Users Display**: Fixed active users showing active sessions instead of actual users, now reflecting accurate user activity.
 
 ### Changed
 
+- **📝 RAG Implementation**: Updated the RAG (Retrieval-Augmented Generation) implementation to use a system prompt for context, instead of overriding the user's prompt.
 - **🔄 Settings Relocation**: Moved Models, Connections, Audio, and Images settings to the admin settings for better organization.
 - **✍️ Improved Title Generation**: Enhanced the default prompt for title generation, yielding better results.
 - **🔧 Backend Task Management**: Tasks like title generation and search query generation are now managed on the backend side and controlled only by the admin.
