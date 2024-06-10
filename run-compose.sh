@@ -100,6 +100,7 @@ webui_port=3000
 headless=false
 build_image=false
 kill_compose=false
+docker_compose='docker compose'
 
 # Function to extract value from the parameter
 extract_value() {
@@ -135,6 +136,9 @@ while [[ $# -gt 0 ]]; do
         --build)
             build_image=true
             ;;
+        --docker-compose)
+            docker_compose='docker-compose'
+            ;;
         -q|--quiet)
             headless=true
             ;;
@@ -153,11 +157,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ $kill_compose == true ]]; then
-    docker compose down --remove-orphans
+    ${docker_compose} down --remove-orphans
     echo -e "${GREEN}${BOLD}Compose project dropped successfully.${NC}"
     exit
 else
-    DEFAULT_COMPOSE_COMMAND="docker compose -f docker-compose.pipelines.yaml"
+    DEFAULT_COMPOSE_COMMAND="${docker_compose} -f docker-compose.pipelines.yaml"
     if [[ $enable_gpu == true ]]; then
         # Validate and process command-line arguments
         if [[ -n $gpu_count ]]; then
