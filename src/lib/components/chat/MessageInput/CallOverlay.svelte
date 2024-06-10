@@ -622,7 +622,7 @@
 								</button>
 							</VideoInputMenu>
 						{:else}
-							<Tooltip content="{$i18n.t('Camera')}">
+							<Tooltip content={$i18n.t('Camera')}>
 								<button
 									class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
 									type="button"
