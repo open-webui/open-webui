@@ -515,11 +515,13 @@
 	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
 		const responseMessage = history.messages[responseId];
 
-		responseMessage.status = {
-			done: false,
-			action: 'web_search',
-			description: $i18n.t('Generating search query')
-		};
+		responseMessage.statusHistory = [
+			{
+				done: false,
+				action: 'web_search',
+				description: $i18n.t('Generating search query')
+			}
+		];
 		messages = messages;
 
 		const prompt = history.messages[parentId].content;
@@ -532,19 +534,21 @@
 
 		if (!searchQuery) {
 			toast.warning($i18n.t('No search query generated'));
-			responseMessage.status = {
-				...responseMessage.status,
+			responseMessage.statusHistory.push({
 				done: true,
 				error: true,
+				action: 'web_search',
 				description: 'No search query generated'
-			};
+			});
+
 			messages = messages;
 		}
 
-		responseMessage.status = {
-			...responseMessage.status,
-			description: $i18n.t("Searching the web for '{{searchQuery}}'", { searchQuery })
-		};
+		responseMessage.statusHistory.push({
+			done: false,
+			action: 'web_search',
+			description: $i18n.t(`Searching "{{searchQuery}}"`, { searchQuery })
+		});
 		messages = messages;
 
 		const results = await runWebSearch(localStorage.token, searchQuery).catch((error) => {
@@ -555,12 +559,13 @@
 		});
 
 		if (results) {
-			responseMessage.status = {
-				...responseMessage.status,
+			responseMessage.statusHistory.push({
 				done: true,
+				action: 'web_search',
 				description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
+				query: searchQuery,
 				urls: results.filenames
-			};
+			});
 
 			if (responseMessage?.files ?? undefined === undefined) {
 				responseMessage.files = [];
@@ -575,12 +580,12 @@
 
 			messages = messages;
 		} else {
-			responseMessage.status = {
-				...responseMessage.status,
+			responseMessage.statusHistory.push({
 				done: true,
 				error: true,
+				action: 'web_search',
 				description: 'No search results found'
-			};
+			});
 			messages = messages;
 		}
 	};

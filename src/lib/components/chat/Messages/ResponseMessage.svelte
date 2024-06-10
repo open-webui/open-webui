@@ -420,26 +420,29 @@
 				class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-headings:-mb-4 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
 			>
 				<div>
-					{#if message?.status}
+					{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
+						{@const status = (
+							message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
+						).at(-1)}
 						<div class="flex items-center gap-2 pt-1 pb-1">
-							{#if message?.status?.done === false}
+							{#if status.done === false}
 								<div class="">
 									<Spinner className="size-4" />
 								</div>
 							{/if}
 
-							{#if message?.status?.action === 'web_search' && message?.status?.urls}
-								<WebSearchResults urls={message?.status?.urls}>
+							{#if status?.action === 'web_search' && status?.urls}
+								<WebSearchResults {status}>
 									<div class="flex flex-col justify-center -space-y-0.5">
 										<div class="text-base line-clamp-1 text-wrap">
-											{message.status.description}
+											{status?.description}
 										</div>
 									</div>
 								</WebSearchResults>
 							{:else}
 								<div class="flex flex-col justify-center -space-y-0.5">
 									<div class=" text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap">
-										{message.status.description}
+										{status?.description}
 									</div>
 								</div>
 							{/if}
