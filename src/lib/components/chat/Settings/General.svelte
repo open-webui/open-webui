@@ -42,7 +42,7 @@
 	// Advanced
 	let requestFormat = '';
 	let keepAlive = null;
-	let botName = 'Munir - HR Service';
+	let botName = 'HR Assistant Chatbot';
 
 	let options = {
 		// Advanced

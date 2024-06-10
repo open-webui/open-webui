@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 // import { version } from '../../package.json';
 
-export const APP_NAME = 'Munir - MBZUAI HR LLM Service';
+export const APP_NAME = 'HR Assistant Chatbot';
 // export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
 // temp backend server
 export const WEBUI_BASE_URL = dev ? `http://192.168.100.14:31031` : ``;

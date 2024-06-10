@@ -47,7 +47,7 @@
 			</button>
 
 			<div class="overflow-hidden ml-6 flex-1 text-xl font-semibold text-black dark:text-white">
-				Munir - MBZUAI HR LLM Service
+				HR Assistant Chatbot
 			</div>
 
 			<div class="self-start flex flex-none items-center">
