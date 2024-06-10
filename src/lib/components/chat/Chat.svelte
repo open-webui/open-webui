@@ -123,7 +123,7 @@
 			if (!($settings.saveChatHistory ?? true)) {
 				await goto('/');
 			}
-		}
+		}		
 	});
 
 	//////////////////////////
@@ -836,6 +836,29 @@
 		return _response;
 	};
 
+	const getMessagesByStrategy = (messages) => {
+		
+		let dialogRoundsStrategy = $settings.dialogRoundsStrategy?? 'dialog_nolimit';
+		let dialogRoundsN = $settings.dialogRoundsN?? 5;
+		if (messages.length<=dialogRoundsN*2 || dialogRoundsN<1)
+		{
+			return messages;
+		}
+		
+        switch (dialogRoundsStrategy) {
+            case 'dialog_nolimit':
+                return messages;
+            case 'dialog_system_user_latest_n':
+                return [messages[0], ...messages.slice(-dialogRoundsN*2-2)];  //-2 for the user latest input message and a empty message.
+            case 'dialog_latest_n':
+                return messages.slice(-dialogRoundsN*2-2);
+            case 'dialog_first_n_latest_1':
+                return [...messages.slice(0, dialogRoundsN*2), ...messages.slice(-2)];
+            default:
+                return messages;
+        }
+    };
+
 	const sendPromptOpenAI = async (model, userPrompt, responseMessageId, _chatId) => {
 		let _response = null;
 		const responseMessage = history.messages[responseMessageId];
@@ -862,7 +885,7 @@
 		);
 
 		scrollToBottom();
-
+		let selected_messages  = getMessagesByStrategy(messages);
 		try {
 			const [res, controller] = await generateOpenAIChatCompletion(
 				localStorage.token,
@@ -886,7 +909,7 @@
 									}`
 							  }
 							: undefined,
-						...messages
+						...selected_messages
 					]
 						.filter((message) => message?.content?.trim())
 						.map((message, idx, arr) => ({

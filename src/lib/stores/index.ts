@@ -106,6 +106,9 @@ type Settings = {
 	top_p?: string;
 	num_ctx?: string;
 	options?: ModelOptions;
+
+	dialogRoundsStrategy?: string;
+	dialogRoundsN?: number;
 };
 
 type ModelOptions = {

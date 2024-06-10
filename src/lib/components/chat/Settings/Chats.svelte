@@ -29,6 +29,9 @@
 
 	let chatImportInputElement: HTMLInputElement;
 
+	let dialogRoundsStrategy = 'dialog_nolimit'; // default 'dialog_nolimit'
+	let dialogRoundsN = 5;
+
 	$: if (importFiles) {
 		console.log(importFiles);
 
@@ -98,8 +101,15 @@
 		saveSettings({ saveChatHistory: saveChatHistory });
 	};
 
+	const saveSelectedStrategy = async () => {
+    saveSettings({ dialogRoundsStrategy: dialogRoundsStrategy });
+    saveSettings({ dialogRoundsN: dialogRoundsN });
+	};
+
 	onMount(async () => {
 		saveChatHistory = $settings.saveChatHistory ?? true;
+		dialogRoundsStrategy= $settings.dialogRoundsStrategy ?? 'dialog_nolimit';
+		dialogRoundsN=$settings.dialogRoundsN ?? 5;
 	});
 </script>
 
@@ -392,5 +402,60 @@
 				</button>
 			{/if}
 		</div>
+
+
+		<hr class=" dark:border-gray-850" />
+		<div
+			class="flex flex-col justify-between rounded-md items-center py-2 px-3.5 w-full transition"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-sm font-medium">{$i18n.t('Dialog Rounds Strategy')}</div>
+				
+			</div>
+
+			<div class="text-xs text-left w-full font-medium mt-0.5">
+				<select
+					class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+					bind:value={dialogRoundsStrategy}
+					on:change={saveSelectedStrategy}
+					placeholder="pick a dialog rounds strategy"				>
+					<option value="dialog_nolimit" selected>{$i18n.t('No Limit')}</option>
+					<option value="dialog_system_user_latest_n">{$i18n.t('Keep the system prompt , the first user message and latest N Rounds')}</option>
+					<option value="dialog_latest_n">{$i18n.t('Keep the latest N Rounds')}</option>
+					<option value="dialog_first_n_latest_1">{$i18n.t('Keep the first N Rounds and the latest user message')}</option>
+				</select>
+				<div class="self-center mt-2">
+					{#if dialogRoundsStrategy != 'dialog_nolimit'}
+						<div class="flex mt-0.5 space-x-2">
+							<div class=" flex-1">
+								<input
+									id="steps-range"
+									type="range"
+									min="1"
+									max="100"
+									step="1"
+									bind:value={dialogRoundsN}
+									on:change={saveSelectedStrategy}
+									class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+								/>
+							</div>
+							<div>
+								<input
+									bind:value={dialogRoundsN}
+									on:change={saveSelectedStrategy}
+									type="number"
+									class=" bg-transparent text-center w-14"
+									min="1"
+									max="100"
+									step="1"
+								/>
+							</div>
+						</div>						
+					{/if}
+				</div>
+			</div>
+		</div>
+
+		
 	</div>
 </div>
