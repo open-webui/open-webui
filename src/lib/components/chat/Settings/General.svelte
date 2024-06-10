@@ -309,7 +309,7 @@
 						num_ctx: params.num_ctx !== null ? params.num_ctx : undefined,
 						max_tokens: params.max_tokens !== null ? params.max_tokens : undefined,
 						use_mmap: params.use_mmap !== null ? params.use_mmap : undefined,
-						use_mlock: params.use_mlock !== null ? params.use_mlock : undefined
+						use_mlock: params.use_mlock !== null ? params.use_mlock : undefined,
 						num_thread: params.num_thread !== null ? params.num_thread : undefined
 					},
 					keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined
