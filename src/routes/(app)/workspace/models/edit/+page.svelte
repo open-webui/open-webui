@@ -408,6 +408,7 @@
 					{#if showAdvanced}
 						<div class="my-2">
 							<AdvancedParams
+								admin={true}
 								bind:params
 								on:change={(e) => {
 									info.params = { ...info.params, ...params };
