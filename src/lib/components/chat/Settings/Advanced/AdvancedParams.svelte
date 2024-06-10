@@ -145,6 +145,7 @@
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="1"
+						step="any"
 					/>
 				</div>
 			</div>
@@ -236,6 +237,7 @@
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="1"
+						step="any"
 					/>
 				</div>
 			</div>
@@ -281,6 +283,7 @@
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="10"
+						step="any"
 					/>
 				</div>
 			</div>
@@ -326,6 +329,7 @@
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="100"
+						step="any"
 					/>
 				</div>
 			</div>
@@ -371,6 +375,7 @@
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="1"
+						step="any"
 					/>
 				</div>
 			</div>
@@ -416,6 +421,7 @@
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="2"
+						step="any"
 					/>
 				</div>
 			</div>
@@ -507,6 +513,7 @@
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="2"
+						step="any"
 					/>
 				</div>
 			</div>
