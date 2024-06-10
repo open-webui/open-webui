@@ -59,15 +59,7 @@
 
 		<div
 			id="splash-screen"
-			style="
-				position: fixed;
-				z-index: 100;
-				background: #fff;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-			"
+			style="position: fixed; z-index: 100; top: 0; left: 0; width: 100%; height: 100%"
 		>
 			<style type="text/css" nonce="">
 				html {
@@ -93,3 +85,20 @@
 		</div>
 	</body>
 </html>
+
+<style type="text/css" nonce="">
+	html {
+		overflow-y: hidden !important;
+	}
+
+	#splash-screen {
+		background: #fff;
+	}
+	html.dark #splash-screen {
+		background: #000;
+	}
+
+	html.dark #splash-screen img {
+		filter: invert(1);
+	}
+</style>

@@ -9,7 +9,9 @@
 		updateEmbeddingConfig,
 		getRerankingConfig,
 		updateRerankingConfig,
-		resetUploadDir
+		resetUploadDir,
+		getRAGConfig,
+		updateRAGConfig
 	} from '$lib/apis/rag';
 
 	import { documents, models } from '$lib/stores';
@@ -30,6 +32,10 @@
 	let embeddingEngine = '';
 	let embeddingModel = '';
 	let rerankingModel = '';
+
+	let chunkSize = 0;
+	let chunkOverlap = 0;
+	let pdfExtractImages = true;
 
 	let OpenAIKey = '';
 	let OpenAIUrl = '';
@@ -152,6 +158,14 @@
 		if (querySettings.hybrid) {
 			rerankingModelUpdateHandler();
 		}
+
+		const res = await updateRAGConfig(localStorage.token, {
+			pdf_extract_images: pdfExtractImages,
+			chunk: {
+				chunk_overlap: chunkOverlap,
+				chunk_size: chunkSize
+			}
+		});
 	};
 
 	const setEmbeddingConfig = async () => {
@@ -185,6 +199,15 @@
 		await setRerankingConfig();
 
 		querySettings = await getQuerySettings(localStorage.token);
+
+		const res = await getRAGConfig(localStorage.token);
+
+		if (res) {
+			pdfExtractImages = res.pdf_extract_images;
+
+			chunkSize = res.chunk.chunk_size;
+			chunkOverlap = res.chunk.chunk_overlap;
+		}
 	});
 </script>
 
@@ -195,7 +218,7 @@
 		saveHandler();
 	}}
 >
-	<div class=" space-y-2.5 pr-1.5 overflow-y-scroll max-h-[28rem]">
+	<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-0.5">
 			<div class=" mb-0.5 text-sm font-medium">{$i18n.t('General Settings')}</div>
 
@@ -332,7 +355,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700 my-1" />
+		<hr class=" dark:border-gray-850 my-1" />
 
 		<div class="space-y-2" />
 		<div>
@@ -350,10 +373,8 @@
 							{#if !embeddingModel}
 								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 							{/if}
-							{#each $models.filter((m) => m.id && !m.external) as model}
-								<option value={model.name} class="bg-gray-100 dark:bg-gray-700"
-									>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
-								>
+							{#each $models.filter((m) => m.id && m.ollama && !(m?.preset ?? false)) as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option>
 							{/each}
 						</select>
 					</div>
@@ -496,6 +517,122 @@
 					</div>
 				</div>
 			{/if}
+		</div>
+
+		<hr class=" dark:border-gray-850" />
+
+		<div class=" ">
+			<div class=" text-sm font-medium">{$i18n.t('Query Params')}</div>
+
+			<div class=" flex">
+				<div class="  flex w-full justify-between">
+					<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('Top K')}</div>
+
+					<div class="self-center p-3">
+						<input
+							class=" w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="number"
+							placeholder={$i18n.t('Enter Top K')}
+							bind:value={querySettings.k}
+							autocomplete="off"
+							min="0"
+						/>
+					</div>
+				</div>
+
+				{#if querySettings.hybrid === true}
+					<div class="flex w-full">
+						<div class=" self-center text-xs font-medium min-w-fit">
+							{$i18n.t('Minimum Score')}
+						</div>
+
+						<div class="self-center p-3">
+							<input
+								class=" w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								type="number"
+								step="0.01"
+								placeholder={$i18n.t('Enter Score')}
+								bind:value={querySettings.r}
+								autocomplete="off"
+								min="0.0"
+								title={$i18n.t('The score should be a value between 0.0 (0%) and 1.0 (100%).')}
+							/>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			{#if querySettings.hybrid === true}
+				<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+					{$i18n.t(
+						'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
+					)}
+				</div>
+
+				<hr class=" dark:border-gray-850 my-3" />
+			{/if}
+
+			<div>
+				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('RAG Template')}</div>
+				<textarea
+					bind:value={querySettings.template}
+					class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					rows="4"
+				/>
+			</div>
+		</div>
+
+		<hr class=" dark:border-gray-850" />
+
+		<div class=" ">
+			<div class=" text-sm font-medium">{$i18n.t('Chunk Params')}</div>
+
+			<div class=" my-2 flex gap-1.5">
+				<div class="  w-full justify-between">
+					<div class="self-center text-xs font-medium min-w-fit mb-1">{$i18n.t('Chunk Size')}</div>
+					<div class="self-center">
+						<input
+							class=" w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="number"
+							placeholder={$i18n.t('Enter Chunk Size')}
+							bind:value={chunkSize}
+							autocomplete="off"
+							min="0"
+						/>
+					</div>
+				</div>
+
+				<div class="w-full">
+					<div class=" self-center text-xs font-medium min-w-fit mb-1">
+						{$i18n.t('Chunk Overlap')}
+					</div>
+
+					<div class="self-center">
+						<input
+							class="w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="number"
+							placeholder={$i18n.t('Enter Chunk Overlap')}
+							bind:value={chunkOverlap}
+							autocomplete="off"
+							min="0"
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div class="my-3">
+				<div class="flex justify-between items-center text-xs">
+					<div class=" text-xs font-medium">{$i18n.t('PDF Extract Images (OCR)')}</div>
+
+					<button
+						class=" text-xs font-medium text-gray-500"
+						type="button"
+						on:click={() => {
+							pdfExtractImages = !pdfExtractImages;
+						}}>{pdfExtractImages ? $i18n.t('On') : $i18n.t('Off')}</button
+					>
+				</div>
+			</div>
 		</div>
 
 		<hr class=" dark:border-gray-850" />

@@ -41,8 +41,6 @@ from utils.utils import (
     get_admin_user,
 )
 
-from utils.models import get_model_id_from_custom_model_id
-
 
 from config import (
     SRC_LOG_LEVELS,
@@ -728,7 +726,6 @@ async def generate_chat_completion(
     model_info = Models.get_model_by_id(model_id)
 
     if model_info:
-        print(model_info)
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
 
@@ -764,7 +761,7 @@ async def generate_chat_completion(
                     "frequency_penalty", None
                 )
 
-            if model_info.params.get("temperature", None):
+            if model_info.params.get("temperature", None) is not None:
                 payload["options"]["temperature"] = model_info.params.get(
                     "temperature", None
                 )
@@ -849,9 +846,14 @@ async def generate_chat_completion(
 
 
 # TODO: we should update this part once Ollama supports other types
+class OpenAIChatMessageContent(BaseModel):
+    type: str
+    model_config = ConfigDict(extra="allow")
+
+
 class OpenAIChatMessage(BaseModel):
     role: str
-    content: str
+    content: Union[str, OpenAIChatMessageContent]
 
     model_config = ConfigDict(extra="allow")
 
@@ -879,7 +881,6 @@ async def generate_openai_chat_completion(
     model_info = Models.get_model_by_id(model_id)
 
     if model_info:
-        print(model_info)
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
 
