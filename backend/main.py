@@ -205,7 +205,6 @@ async def get_function_call_response(prompt, tool_id, template, task_model_id, u
 
         # Parse the function response
         if content is not None:
-
             print(content)
             result = json.loads(content)
             print(result)
@@ -223,13 +222,13 @@ async def get_function_call_response(prompt, tool_id, template, task_model_id, u
                 try:
                     # Get the signature of the function
                     sig = inspect.signature(function)
-                    # Check if 'user' is a parameter of the function
-                    if "user" in sig.parameters:
-                        # Call the function with the 'user' parameter included
+                    # Check if '__user__' is a parameter of the function
+                    if "__user__" in sig.parameters:
+                        # Call the function with the '__user__' parameter included
                         function_result = function(
                             **{
                                 **result["parameters"],
-                                "user": {
+                                "__user__": {
                                     "id": user.id,
                                     "name": user.name,
                                     "role": user.role,
