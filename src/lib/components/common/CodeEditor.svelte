@@ -113,13 +113,7 @@
 		const handleSave = async (e) => {
 			if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 				e.preventDefault();
-				const res = await formatPythonCodeHandler().catch((error) => {
-					return null;
-				});
-
-				if (res) {
-					dispatch('save');
-				}
+				dispatch('save');
 			}
 		};
 

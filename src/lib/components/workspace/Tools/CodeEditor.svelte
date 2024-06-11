@@ -1,16 +1,15 @@
 <script lang="ts">
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
+	import { createEventDispatcher } from 'svelte';
 
-	export let saveHandler: Function;
+	const dispatch = createEventDispatcher();
+
 	export let value = '';
 
 	let codeEditor;
-
-	let boilerplate = `# Tip: Use Ctrl/Cmd + S to format the code
-
-from datetime import datetime
+	let boilerplate = `from datetime import datetime
 import requests
-
+import os
 
 class Tools:
     def __init__(self):
@@ -19,6 +18,18 @@ class Tools:
     # Add your custom tools using pure Python code here, make sure to add type hints
     # Use Sphinx-style docstrings to document your tools, they will be used for generating tools specifications
     # Please refer to function_calling_filter_pipeline.py file from pipelines project for an example
+
+    def get_environment_variable(self, variable_name: str) -> str:
+        """
+        Get the value of an environment variable.
+        :param variable_name: The name of the environment variable.
+        :return: The value of the environment variable or a message if it doesn't exist.
+        """
+        value = os.getenv(variable_name)
+        if value is not None:
+            return f"The value of the environment variable '{variable_name}' is '{value}'"
+        else:
+            return f"The environment variable '{variable_name}' does not exist."
 
     def get_current_time(self) -> str:
         """
@@ -60,6 +71,6 @@ class Tools:
 	{boilerplate}
 	bind:this={codeEditor}
 	on:save={() => {
-		saveHandler();
+		dispatch('save');
 	}}
 />
