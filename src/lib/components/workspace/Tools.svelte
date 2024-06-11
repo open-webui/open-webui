@@ -81,13 +81,17 @@
 	{#each $tools.filter((t) => query === '' || t.name
 				.toLowerCase()
 				.includes(query.toLowerCase()) || t.id.toLowerCase().includes(query.toLowerCase())) as tool}
-		<div
+		<button
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
+			type="button"
+			on:click={() => {
+				goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
+			}}
 		>
 			<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 				<a
 					href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
-					class="flex items-center"
+					class="flex items-center text-left"
 				>
 					<div class=" flex-1 self-center pl-5">
 						<div class=" font-semibold flex items-center gap-1.5">
@@ -190,7 +194,7 @@
 					</svg>
 				</button>
 			</div>
-		</div>
+		</button>
 	{/each}
 </div>
 
