@@ -60,7 +60,10 @@
 	];
 
 	onMount(() => {
-		value = boilerplate;
+		console.log(value);
+		if (value === '') {
+			value = boilerplate;
+		}
 
 		// Check if html class has dark mode
 		isDarkMode = document.documentElement.classList.contains('dark');
@@ -107,27 +110,24 @@
 			attributeFilter: ['class']
 		});
 
-		// Add a keyboard shortcut to format the code when Ctrl/Cmd + S is pressed
-		// Override the default browser save functionality
-
-		const handleSave = async (e) => {
+		const keydownHandler = async (e) => {
 			if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 				e.preventDefault();
-				const res = await formatPythonCodeHandler().catch((error) => {
-					return null;
-				});
+				dispatch('save');
+			}
 
-				if (res) {
-					dispatch('save');
-				}
+			// Format code when Ctrl + Shift + F is pressed
+			if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'f') {
+				e.preventDefault();
+				await formatPythonCodeHandler();
 			}
 		};
 
-		document.addEventListener('keydown', handleSave);
+		document.addEventListener('keydown', keydownHandler);
 
 		return () => {
 			observer.disconnect();
-			document.removeEventListener('keydown', handleSave);
+			document.removeEventListener('keydown', keydownHandler);
 		};
 	});
 </script>

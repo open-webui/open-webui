@@ -1,22 +1,27 @@
 <script>
-	import { getContext } from 'svelte';
+	import { getContext, createEventDispatcher, onMount } from 'svelte';
 
 	const i18n = getContext('i18n');
 
 	import CodeEditor from './CodeEditor.svelte';
 	import { goto } from '$app/navigation';
 
+	const dispatch = createEventDispatcher();
+
+	let formElement = null;
 	let loading = false;
 
-	let id = '';
-	let name = '';
-	let meta = {
+	export let edit = false;
+	export let clone = false;
+
+	export let id = '';
+	export let name = '';
+	export let meta = {
 		description: ''
 	};
+	export let content = '';
 
-	let code = '';
-
-	$: if (name) {
+	$: if (name && !edit && !clone) {
 		id = name.replace(/\s+/g, '_').toLowerCase();
 	}
 
@@ -24,8 +29,12 @@
 
 	const saveHandler = async () => {
 		loading = true;
-		// Call the API to save the toolkit
-		console.log('saveHandler');
+		dispatch('save', {
+			id,
+			name,
+			meta,
+			content
+		});
 	};
 
 	const submitHandler = async () => {
@@ -42,13 +51,20 @@
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">
-		<div class=" flex flex-col max-h-[100dvh] h-full">
+		<form
+			bind:this={formElement}
+			class=" flex flex-col max-h-[100dvh] h-full"
+			on:submit|preventDefault={() => {
+				submitHandler();
+			}}
+		>
 			<div class="mb-2.5">
 				<button
 					class="flex space-x-1"
 					on:click={() => {
 						goto('/workspace/tools');
 					}}
+					type="button"
 				>
 					<div class=" self-center">
 						<svg
@@ -80,11 +96,12 @@
 						/>
 
 						<input
-							class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
+							class="w-full px-3 py-2 text-sm font-medium disabled:text-gray-300 dark:disabled:text-gray-700 bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 							type="text"
 							placeholder="Toolkit ID (e.g. my_toolkit)"
 							bind:value={id}
 							required
+							disabled={edit}
 						/>
 					</div>
 					<input
@@ -97,20 +114,25 @@
 				</div>
 
 				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
-					<CodeEditor bind:value={code} bind:this={codeEditor} {saveHandler} />
+					<CodeEditor
+						bind:value={content}
+						bind:this={codeEditor}
+						on:save={() => {
+							if (formElement) {
+								formElement.requestSubmit();
+							}
+						}}
+					/>
 				</div>
 
 				<div class="pb-3 flex justify-end">
 					<button
 						class="px-3 py-1.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-gray-50 transition rounded-lg"
-						on:click={() => {
-							submitHandler();
-						}}
 					>
 						{$i18n.t('Save')}
 					</button>
 				</div>
 			</div>
-		</div>
+		</form>
 	</div>
 </div>

@@ -4,22 +4,21 @@
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
-	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Tags from '$lib/components/chat/Tags.svelte';
-	import Share from '$lib/components/icons/Share.svelte';
-	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import DocumentArrowUpSolid from '$lib/components/icons/DocumentArrowUpSolid.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
 	import { config } from '$lib/stores';
+	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let uploadFilesHandler: Function;
+
+	export let selectedToolIds: string[] = [];
 	export let webSearchEnabled: boolean;
 
+	export let tools = {};
 	export let onClose: Function;
 
 	let show = false;
@@ -46,6 +45,32 @@
 			align="start"
 			transition={flyAndScale}
 		>
+			{#if Object.keys(tools).length > 0}
+				{#each Object.keys(tools) as toolId}
+					<div
+						class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+					>
+						<div class="flex-1 flex items-center gap-2">
+							<WrenchSolid />
+
+							<Tooltip content={tools[toolId]?.description ?? ''}>
+								<div class="flex items-center line-clamp-1">{tools[toolId].name}</div>
+							</Tooltip>
+						</div>
+
+						<Switch
+							bind:state={tools[toolId].enabled}
+							on:change={(e) => {
+								selectedToolIds = e.detail
+									? [...selectedToolIds, toolId]
+									: selectedToolIds.filter((id) => id !== toolId);
+							}}
+						/>
+					</div>
+				{/each}
+				<hr class="border-gray-100 dark:border-gray-800 my-1" />
+			{/if}
+
 			{#if $config?.features?.enable_web_search}
 				<div
 					class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"

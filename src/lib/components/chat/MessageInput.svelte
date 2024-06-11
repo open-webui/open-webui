@@ -8,7 +8,8 @@
 		showSidebar,
 		models,
 		config,
-		showCallOverlay
+		showCallOverlay,
+		tools
 	} from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
@@ -58,6 +59,8 @@
 
 	export let files = [];
 
+	export let availableTools = {};
+	export let selectedToolIds = [];
 	export let webSearchEnabled = false;
 
 	export let prompt = '';
@@ -653,6 +656,8 @@
 								<div class=" ml-0.5 self-end mb-1.5 flex space-x-1">
 									<InputMenu
 										bind:webSearchEnabled
+										bind:selectedToolIds
+										tools={availableTools}
 										uploadFilesHandler={() => {
 											filesInputElement.click();
 										}}
