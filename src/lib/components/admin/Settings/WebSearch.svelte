@@ -11,7 +11,15 @@
 	export let saveHandler: Function;
 
 	let webConfig = null;
-	let webSearchEngines = ['searxng', 'google_pse', 'brave', 'serpstack', 'serper', 'serply', 'duckduckgo'];
+	let webSearchEngines = [
+		'searxng',
+		'google_pse',
+		'brave',
+		'serpstack',
+		'serper',
+		'serply',
+		'duckduckgo'
+	];
 
 	let youtubeLanguage = 'en';
 	let youtubeTranslation = null;
