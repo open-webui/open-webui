@@ -8,7 +8,7 @@
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 
 	import { goto } from '$app/navigation';
-	import { deleteToolById, exportTools, getTools } from '$lib/apis/tools';
+	import { createNewTool, deleteToolById, exportTools, getTools } from '$lib/apis/tools';
 
 	const i18n = getContext('i18n');
 
@@ -186,8 +186,18 @@
 
 				const reader = new FileReader();
 				reader.onload = async (event) => {
-					const tools = JSON.parse(event.target.result);
-					console.log(tools);
+					const _tools = JSON.parse(event.target.result);
+					console.log(_tools);
+
+					for (const tool of _tools) {
+						const res = await createNewTool(localStorage.token, tool).catch((error) => {
+							toast.error(error);
+							return null;
+						});
+					}
+
+					toast.success('Tool imported successfully');
+					tools.set(await getTools(localStorage.token));
 				};
 
 				reader.readAsText(importFiles[0]);
