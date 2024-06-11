@@ -7,6 +7,7 @@ from pydantic import BaseModel
 import json
 
 from apps.webui.models.tools import Tools, ToolForm, ToolModel, ToolResponse
+from apps.webui.utils import load_toolkit_module_by_id
 
 from utils.utils import get_current_user, get_admin_user
 from utils.tools import get_tools_specs
@@ -17,31 +18,12 @@ import os
 
 from config import DATA_DIR
 
+
 TOOLS_DIR = f"{DATA_DIR}/tools"
 os.makedirs(TOOLS_DIR, exist_ok=True)
 
 
 router = APIRouter()
-
-
-def load_toolkit_module_from_path(tools_id, tools_path):
-    spec = util.spec_from_file_location(tools_id, tools_path)
-    module = util.module_from_spec(spec)
-
-    try:
-        spec.loader.exec_module(module)
-        print(f"Loaded module: {module.__name__}")
-        if hasattr(module, "Tools"):
-            return module.Tools()
-        else:
-            raise Exception("No Tools class found")
-    except Exception as e:
-        print(f"Error loading module: {tools_id}")
-
-        # Move the file to the error folder
-        os.rename(tools_path, f"{tools_path}.error")
-        raise e
-
 
 ############################
 # GetToolkits
@@ -89,7 +71,7 @@ async def create_new_toolkit(
             with open(toolkit_path, "w") as tool_file:
                 tool_file.write(form_data.content)
 
-            toolkit_module = load_toolkit_module_from_path(form_data.id, toolkit_path)
+            toolkit_module = load_toolkit_module_by_id(form_data.id)
 
             TOOLS = request.app.state.TOOLS
             TOOLS[form_data.id] = toolkit_module
@@ -149,7 +131,7 @@ async def update_toolkit_by_id(
         with open(toolkit_path, "w") as tool_file:
             tool_file.write(form_data.content)
 
-        toolkit_module = load_toolkit_module_from_path(id, toolkit_path)
+        toolkit_module = load_toolkit_module_by_id(id)
 
         TOOLS = request.app.state.TOOLS
         TOOLS[id] = toolkit_module

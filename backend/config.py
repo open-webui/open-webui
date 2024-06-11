@@ -369,6 +369,14 @@ Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
 
 
 ####################################
+# Tools DIR
+####################################
+
+TOOLS_DIR = os.getenv("TOOLS_DIR", f"{DATA_DIR}/tools")
+Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
+
+
+####################################
 # LITELLM_CONFIG
 ####################################
 
@@ -669,7 +677,6 @@ Question:
     ),
 )
 
-
 SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD = PersistentConfig(
     "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD",
     "task.search.prompt_length_threshold",
@@ -678,6 +685,17 @@ SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD = PersistentConfig(
         100,
     ),
 )
+
+TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
+    "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
+    "task.tools.prompt_template",
+    os.environ.get(
+        "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
+        """Tools: {{TOOLS}}
+If a function tool doesn't match the query, return an empty string. Else, pick a function tool, fill in the parameters from the function tool's schema, and return it in the format { "name": \"functionName\", "parameters": { "key": "value" } }. Only pick a function if the user asks.  Only return the object. Do not return any other text.""",
+    ),
+)
+
 
 ####################################
 # WEBUI_SECRET_KEY
