@@ -230,6 +230,7 @@ async def get_function_call_response(prompt, tool_id, template, task_model_id, u
                                 **result["parameters"],
                                 "__user__": {
                                     "id": user.id,
+                                    "email": user.email,
                                     "name": user.name,
                                     "role": user.role,
                                 },

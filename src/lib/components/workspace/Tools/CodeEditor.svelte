@@ -20,9 +20,9 @@ class Tools:
     # Use Sphinx-style docstrings to document your tools, they will be used for generating tools specifications
     # Please refer to function_calling_filter_pipeline.py file from pipelines project for an example
 
-    def get_user_name_and_id(self, __user__: dict = {}) -> str:
+    def get_user_name_and_email_and_id(self, __user__: dict = {}) -> str:
         """
-        Get the user name and ID from the user object.
+        Get the user name, Email and ID from the user object.
         """
 
         # Do not include :param for __user__ in the docstring as it should not be shown in the tool's documentation
@@ -35,6 +35,8 @@ class Tools:
             result += f"User: {__user__['name']}"
         if "id" in __user__:
             result += f" (ID: {__user__['id']})"
+        if "email" in __user__:
+            result += f" (Email: {__user__['email']})"
 
         if result == "":
             result = "User: Unknown"
