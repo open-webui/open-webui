@@ -205,7 +205,7 @@
 
 				if (_responses.at(0)) {
 					const content = _responses[0];
-					if (content) {
+					if ((content ?? '').trim() !== '') {
 						assistantSpeakingHandler(content);
 					}
 				}
