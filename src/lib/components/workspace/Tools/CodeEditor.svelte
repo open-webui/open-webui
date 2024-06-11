@@ -20,19 +20,26 @@ class Tools:
     # Use Sphinx-style docstrings to document your tools, they will be used for generating tools specifications
     # Please refer to function_calling_filter_pipeline.py file from pipelines project for an example
 
-    def get_environment_variable(self, variable_name: str) -> str:
+    def get_user_name_and_id(self, __user__: dict = {}) -> str:
         """
-        Get the value of an environment variable.
-        :param variable_name: The name of the environment variable.
-        :return: The value of the environment variable or a message if it doesn't exist.
+        Get the user name and ID from the user object.
         """
-        value = os.getenv(variable_name)
-        if value is not None:
-            return (
-                f"The value of the environment variable '{variable_name}' is '{value}'"
-            )
-        else:
-            return f"The environment variable '{variable_name}' does not exist."
+
+        # Do not include :param for __user__ in the docstring as it should not be shown in the tool's documentation
+        # The user object will be passed as a parameter when the function is called
+
+        print(__user__)
+        result = ""
+
+        if "name" in __user__:
+            result += f"User: {__user__['name']}"
+        if "id" in __user__:
+            result += f" (ID: {__user__['id']})"
+
+        if result == "":
+            result = "User: Unknown"
+
+        return result
 
     def get_current_time(self) -> str:
         """
