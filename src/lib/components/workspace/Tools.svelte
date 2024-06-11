@@ -77,9 +77,12 @@
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 		>
 			<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-				<a href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}>
+				<a
+					href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
+					class="flex items-center"
+				>
 					<div class=" flex-1 self-center pl-5">
-						<div class=" font-bold flex items-center gap-1.5">
+						<div class=" font-semibold flex items-center gap-1.5">
 							<div>
 								{tool.name}
 							</div>

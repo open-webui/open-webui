@@ -21,7 +21,7 @@
 	};
 	export let content = '';
 
-	$: if (name) {
+	$: if (name && !edit) {
 		id = name.replace(/\s+/g, '_').toLowerCase();
 	}
 
@@ -96,7 +96,7 @@
 						/>
 
 						<input
-							class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
+							class="w-full px-3 py-2 text-sm font-medium disabled:text-gray-300 dark:disabled:text-gray-700 bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 							type="text"
 							placeholder="Toolkit ID (e.g. my_toolkit)"
 							bind:value={id}

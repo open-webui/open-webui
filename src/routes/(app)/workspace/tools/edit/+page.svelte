@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { getToolById, getTools, updateToolById } from '$lib/apis/tools';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
 	import { tools } from '$lib/stores';
 	import { onMount } from 'svelte';
@@ -54,4 +55,10 @@
 			saveHandler(e.detail);
 		}}
 	/>
+{:else}
+	<div class="flex items-center justify-center h-full">
+		<div class=" pb-16">
+			<Spinner />
+		</div>
+	</div>
 {/if}
