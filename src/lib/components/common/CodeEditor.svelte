@@ -40,9 +40,9 @@
 				toast.success('Code formatted successfully');
 				return true;
 			}
-
 			return false;
 		}
+		return false;
 	};
 
 	let extensions = [

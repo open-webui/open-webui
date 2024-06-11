@@ -8,15 +8,29 @@
 	let loading = false;
 
 	let name = '';
+	let id = '';
+
+	$: if (name) {
+		id = name.replace(/\s+/g, '_').toLowerCase();
+	}
 
 	let codeEditor;
 
-	const submitHandler = async () => {
+	const saveHandler = async () => {
 		loading = true;
-		// Call the API to submit the code
+		// Call the API to save the toolkit
 
+		console.log('saveHandler');
+	};
+
+	const submitHandler = async () => {
 		if (codeEditor) {
-			codeEditor.submitHandler();
+			const res = await codeEditor.formatHandler();
+
+			if (res) {
+				console.log('Code formatted successfully');
+				saveHandler();
+			}
 		}
 	};
 </script>
@@ -33,18 +47,27 @@
 			<hr class="  dark:border-gray-850 my-2" />
 
 			<div class="flex flex-col flex-1 overflow-auto h-0 rounded-lg">
-				<div class="w-full mb-2">
+				<div class="w-full flex gap-2 mb-2">
 					<!-- Toolkit Name Input -->
 					<input
-						class="w-full px-3 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
+						class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 						type="text"
-						placeholder="Toolkit Name (e.g. my_toolkit)"
+						placeholder="Toolkit Name (e.g. My ToolKit)"
 						bind:value={name}
+						required
+					/>
+
+					<input
+						class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
+						type="text"
+						placeholder="Toolkit ID (e.g. my_toolkit)"
+						bind:value={id}
+						required
 					/>
 				</div>
 
 				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
-					<CodeEditor bind:this={codeEditor} />
+					<CodeEditor bind:this={codeEditor} {saveHandler} />
 				</div>
 
 				<div class="pb-3 flex justify-end">

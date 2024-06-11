@@ -1,6 +1,7 @@
-<script>
+<script lang="ts">
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 
+	export let saveHandler: Function;
 	export let value = '';
 
 	let codeEditor;
@@ -46,11 +47,19 @@ class Tools:
 
 `;
 
-	export const submitHandler = async () => {
+	export const formatHandler = async () => {
 		if (codeEditor) {
-			codeEditor.formatPythonCodeHandler();
+			return await codeEditor.formatPythonCodeHandler();
 		}
+		return false;
 	};
 </script>
 
-<CodeEditor bind:value {boilerplate} bind:this={codeEditor} />
+<CodeEditor
+	bind:value
+	{boilerplate}
+	bind:this={codeEditor}
+	on:save={() => {
+		saveHandler();
+	}}
+/>
