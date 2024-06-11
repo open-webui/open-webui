@@ -42,7 +42,7 @@ def get_tools_specs(tools) -> List[dict]:
                             **(
                                 {
                                     "enum": (
-                                        param_annotation.__args__
+                                        str(param_annotation.__args__)
                                         if hasattr(param_annotation, "__args__")
                                         else None
                                     )

@@ -92,7 +92,8 @@ class ToolsTable:
                 return tool
             else:
                 return None
-        except:
+        except Exception as e:
+            print(f"Error creating tool: {e}")
             return None
 
     def get_tool_by_id(self, id: str) -> Optional[ToolModel]:
