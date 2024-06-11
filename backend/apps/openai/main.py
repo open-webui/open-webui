@@ -358,32 +358,34 @@ async def generate_chat_completion(
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
+    extra_payload = {}
+
     if model_info:
         if model_info.base_model_id:
-            payload["model"] = model_info.base_model_id
+            extra_payload["model"] = model_info.base_model_id
 
         model_info.params = model_info.params.model_dump()
 
         if model_info.params:
             if model_info.params.get("temperature", None) is not None:
-                payload["temperature"] = float(model_info.params.get("temperature"))
+                extra_payload["temperature"] = float(model_info.params.get("temperature"))
 
             if model_info.params.get("top_p", None):
-                payload["top_p"] = int(model_info.params.get("top_p", None))
+                extra_payload["top_p"] = float(model_info.params.get("top_p", None))
 
             if model_info.params.get("max_tokens", None):
-                payload["max_tokens"] = int(model_info.params.get("max_tokens", None))
+                extra_payload["max_tokens"] = int(model_info.params.get("max_tokens", None))
 
             if model_info.params.get("frequency_penalty", None):
-                payload["frequency_penalty"] = int(
+                extra_payload["frequency_penalty"] = float(
                     model_info.params.get("frequency_penalty", None)
                 )
 
             if model_info.params.get("seed", None):
-                payload["seed"] = model_info.params.get("seed", None)
+                extra_payload["seed"] = model_info.params.get("seed", None)
 
             if model_info.params.get("stop", None):
-                payload["stop"] = (
+                extra_payload["stop"] = (
                     [
                         bytes(stop, "utf-8").decode("unicode_escape")
                         for stop in model_info.params["stop"]
@@ -393,26 +395,61 @@ async def generate_chat_completion(
                 )
 
         if model_info.params.get("system", None):
-            # Check if the payload already has a system message
-            # If not, add a system message to the payload
-            if payload.get("messages"):
-                for message in payload["messages"]:
-                    if message.get("role") == "system":
-                        message["content"] = (
-                            model_info.params.get("system", None) + message["content"]
-                        )
-                        break
-                else:
-                    payload["messages"].insert(
-                        0,
-                        {
-                            "role": "system",
-                            "content": model_info.params.get("system", None),
-                        },
-                    )
+            extra_payload["system"] = model_info.params.get("system", None)
 
     else:
         pass
+
+    user = Users.get_user_by_id(user.id)
+    if user and user.settings:
+        settings = user.settings.ui
+
+        system = settings.get("system")
+        if extra_payload.get("system", None) is None and system:
+            extra_payload["system"] = system
+            
+        params = settings.get("params")
+        if params:
+            new_max_tokens = params.get("max_tokens")
+            if extra_payload.get("max_tokens", None) is None and new_max_tokens is not None:
+                extra_payload["max_tokens"] = int(new_max_tokens)
+
+            new_top_p = params.get("top_p")
+            if extra_payload.get("top_p", None) is None and new_top_p is not None:
+                extra_payload["top_p"] = float(new_top_p)
+
+            new_top_k = params.get("top_k")
+            if extra_payload.get("top_k", None) is None and new_top_k is not None:
+                extra_payload["top_k"] = int(new_top_k)
+
+            new_frequency_penalty = params.get("frequency_penalty")
+            if extra_payload.get("frequency_penalty", None) is None and new_frequency_penalty is not None:
+                extra_payload["frequency_penalty"] = float(new_frequency_penalty)
+
+            new_temperature = params.get("temperature")
+            if extra_payload.get("temperature", None) is None and new_temperature is not None:
+                extra_payload["temperature"] = float(new_temperature)
+
+    system = extra_payload.pop("system", None)
+    if system:
+        # Check if the payload already has a system message
+        # If not, add a system message to the payload
+        if payload.get("messages"):
+            for message in payload["messages"]:
+                if message.get("role") == "system":
+                    message["content"] = (
+                        system + message["content"]
+                    )
+                    break
+            else:
+                payload["messages"].insert(
+                    0,
+                    {
+                        "role": "system",
+                        "content": system,
+                    },
+                )
+    payload.update(extra_payload)
 
     model = app.state.MODELS[payload.get("model")]
     idx = model["urlIdx"]
