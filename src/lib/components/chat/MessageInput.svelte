@@ -659,6 +659,7 @@
 										tools={$tools.reduce((a, e, i, arr) => {
 											a[e.id] = {
 												name: e.name,
+												description: e.meta.description,
 												enabled: false
 											};
 

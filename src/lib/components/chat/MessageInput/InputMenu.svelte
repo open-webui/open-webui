@@ -52,7 +52,10 @@
 					>
 						<div class="flex-1 flex items-center gap-2">
 							<WrenchSolid />
-							<div class="flex items-center">{tools[toolId].name}</div>
+
+							<Tooltip content={tools[toolId]?.description ?? ''}>
+								<div class="flex items-center line-clamp-1">{tools[toolId].name}</div>
+							</Tooltip>
 						</div>
 
 						<Switch
