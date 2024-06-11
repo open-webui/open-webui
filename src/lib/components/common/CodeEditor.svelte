@@ -26,7 +26,6 @@
 
 	export const formatPythonCodeHandler = async () => {
 		if (codeEditor) {
-			console.log('formatPythonCodeHandler');
 			const res = await formatPythonCode(value).catch((error) => {
 				toast.error(error);
 				return null;
@@ -111,11 +110,16 @@
 		// Add a keyboard shortcut to format the code when Ctrl/Cmd + S is pressed
 		// Override the default browser save functionality
 
-		const handleSave = (e) => {
+		const handleSave = async (e) => {
 			if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 				e.preventDefault();
-				formatPythonCodeHandler();
-				dispatch('save');
+				const res = await formatPythonCodeHandler().catch((error) => {
+					return null;
+				});
+
+				if (res) {
+					dispatch('save');
+				}
 			}
 		};
 
