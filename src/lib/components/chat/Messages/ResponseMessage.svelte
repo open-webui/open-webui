@@ -16,7 +16,7 @@
 	const dispatch = createEventDispatcher();
 
 	import { config, models, settings } from '$lib/stores';
-	import { synthesizeOpenAISpeech, _alltalk } from '$lib/apis/audio';
+	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		approximateToHumanReadable,
@@ -198,52 +198,6 @@
 			};
 		});
 	};
-
-	const mergeTexts = (text) => {
-		return text.reduce((mergedTexts, currentText) => {
-			const lastIndex = mergedTexts.length - 1;
-			if (lastIndex >= 0) {
-				const previousText = mergedTexts[lastIndex];
-				const wordCount = previousText.split(/\s+/).length;
-				if (wordCount < 2) {
-					mergedTexts[lastIndex] = previousText + ' ' + currentText;
-				} else {
-					mergedTexts.push(currentText);
-				}
-			} else {
-				mergedTexts.push(currentText);
-			}
-			return mergedTexts;
-		}, []);
-	};
-
-
-	const handleAudioRequest = async (message: string, promiseToResolve: Function, callback) => {
-		const context = {};
-		context.sentences = mergeTexts(extractSentences(message));
-
-		console.log(context.sentences);
-
-		sentencesAudio = context.sentences.reduce((a, e, i, arr) => {
-			a[i] = null;
-			return a;
-		}, {});
-
-		context.lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
-
-		for (const [idx, sentence] of context.sentences.entries()) {
-			const res = await promiseToResolve(context.sentence).catch((error) => {
-				toast.error(error);
-
-				speaking = null;
-				loadingSpeech = false;
-
-				return null;
-			});
-
-			callback(res, idx);
-		}
-	}
 
 	const toggleSpeakMessage = async () => {
 		if (speaking) {
