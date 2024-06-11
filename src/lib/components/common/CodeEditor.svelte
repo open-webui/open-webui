@@ -37,6 +37,8 @@
 				codeEditor.dispatch({
 					changes: [{ from: 0, to: codeEditor.state.doc.length, insert: formattedCode }]
 				});
+
+				toast.success('Code formatted successfully');
 				return true;
 			}
 
@@ -59,13 +61,15 @@
 	];
 
 	onMount(() => {
+		value = boilerplate;
+
 		// Check if html class has dark mode
 		isDarkMode = document.documentElement.classList.contains('dark');
 
 		// python code editor, highlight python code
 		codeEditor = new EditorView({
 			state: EditorState.create({
-				doc: boilerplate,
+				doc: value,
 				extensions: extensions
 			}),
 			parent: document.getElementById('code-textarea')

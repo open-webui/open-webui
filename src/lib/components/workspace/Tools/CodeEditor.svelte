@@ -12,6 +12,7 @@
 from datetime import datetime
 import requests
 
+
 class Tools:
     def __init__(self):
         pass
@@ -40,6 +41,7 @@ class Tools:
         except Exception as e:
             print(e)
             return "Invalid equation"
+
 `;
 </script>
 
