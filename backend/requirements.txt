@@ -60,3 +60,4 @@ pytube==15.0.0
 
 extract_msg
 pydub
+duckduckgo-search~=6.1.5
