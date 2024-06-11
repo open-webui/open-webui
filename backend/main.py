@@ -178,7 +178,7 @@ async def get_function_call_response(messages, tool_id, template, task_model_id,
         "History:\n"
         + "\n".join(
             [
-                f"{message['role']}: {message['content']}"
+                f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
                 for message in messages[::-1][:4]
             ]
         )
@@ -209,17 +209,21 @@ async def get_function_call_response(messages, tool_id, template, task_model_id,
             response = await generate_openai_chat_completion(payload, user=user)
 
         content = None
-        async for chunk in response.body_iterator:
-            data = json.loads(chunk.decode("utf-8"))
-            content = data["choices"][0]["message"]["content"]
 
-        # Cleanup any remaining background tasks if necessary
-        if response.background is not None:
-            await response.background()
+        if hasattr(response, "body_iterator"):
+            async for chunk in response.body_iterator:
+                data = json.loads(chunk.decode("utf-8"))
+                content = data["choices"][0]["message"]["content"]
+
+            # Cleanup any remaining background tasks if necessary
+            if response.background is not None:
+                await response.background()
+        else:
+            content = response["choices"][0]["message"]["content"]
 
         # Parse the function response
         if content is not None:
-            print(content)
+            print(f"content: {content}")
             result = json.loads(content)
             print(result)
 
