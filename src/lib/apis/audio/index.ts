@@ -1,10 +1,48 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
-import { Alltalk } from '$lib/apis/audio/providers/alltalk/Alltalk';
-import type { AllTalkConfigForm } from '$lib/apis/audio/providers/alltalk/Alltalk';
+import { toast } from 'svelte-sonner';
+import { AllTalkConfigForm, Alltalk } from '$lib/apis/audio/providers/alltalk/Alltalk';
 
 export const _alltalk: Alltalk = new Alltalk();
 
-export const getAudioConfig = async (token: string) => {
+type TTSGeneralConfigForm = {
+    ENGINE: string
+    MODEL: string
+    VOICE: string
+}
+
+type STTGeneralConfigForm = {
+    ENGINE: string
+    MODEL: string
+}
+
+type OpenAIConfigForm = {
+	OPENAI_API_BASE_URL: string;
+	OPENAI_API_KEY: string;
+};
+
+type TTSConfigForm = {
+	openai : OpenAIConfigForm,
+	alltalk: AllTalkConfigForm,
+	general: TTSGeneralConfigForm
+}
+
+type STTConfigForm = {
+	openai : OpenAIConfigForm,
+	general: STTGeneralConfigForm
+}
+
+type AudioConfigUpdateForm = {
+	tts: TTSConfigForm,
+	stt: STTConfigForm
+}
+
+export enum ConfigMode {
+	TTS = 'tts',
+	STT = 'stt'
+}
+
+
+export const getAudioConfig  = async (token: string): Promise<AudioConfigUpdateForm> => {
 	let error = null;
 
 	const res = await fetch(`${AUDIO_API_BASE_URL}/config`, {
@@ -31,27 +69,39 @@ export const getAudioConfig = async (token: string) => {
 	return res;
 };
 
-type OpenAIConfigForm = {
-	url: string;
-	key: string;
-	model: string;
-	speaker: string;
+export const updateAlltalkAudioConfig = async (token: string, alltalkInstance: Alltalk) => {
+	const res = updateAudioConfig('alltalk', ConfigMode.TTS, token, alltalkInstance.getConfigPayload());
+	if(!res){
+		const message = 'Alltalk Audio settings update failed';
+		toast.error(message);
+	}
+	return res;
 };
 
-export const updateAlltalkAudioConfig = async (token: string, payload: AllTalkConfigForm) => {
-	return updateAudioConfig('alltalk', token, payload);
+export const updateOpenAIAudioConfig = async (token: string, mode: ConfigMode, payload: OpenAIConfigForm) => {
+	const res = updateAudioConfig('openai', mode, token, payload);
+	if(!res){
+		const message = `Open AI Audio ${mode} settings update failed`;
+		toast.error(message);
+	}
+	return res;
 };
 
-export const updateOpenAIAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
-	return updateAudioConfig('openai', token, payload);
+export const updateGeneralAudioConfig = async (token: string, mode: ConfigMode, payload: TTSGeneralConfigForm | STTGeneralConfigForm) => {
+	const res = updateAudioConfig('general', mode, token, payload);
+	if(!res){
+		const message = `General Audio ${mode} settings update failed`;
+		toast.error(message);
+	}
+	return res;
 };
 
-export const updateAudioConfig = async (provider: string, token: string, payload: object) => {
+export const updateAudioConfig = async (provider: string, mode: ConfigMode, token: string, payload: object) => {
 	let error = null;
 
 	console.log("updateAudioConfig: ", provider, token, payload);
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/${provider}/config/update`, {
+	const res = await fetch(`${AUDIO_API_BASE_URL}/${provider}/${mode}/config/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

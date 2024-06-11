@@ -39,10 +39,10 @@ app.add_middleware(
 app.state.config = AppConfig()
 
 # setting openai api config
-app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
-app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
 app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
 app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
+app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
+app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
 
 # setting alltalk api config
 app.state.config.TTS_ALLTALK_API_BASE_URL = AUDIO_TTS_ALLTALK_API_BASE_URL

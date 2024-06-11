@@ -57,10 +57,10 @@ async def generate_tts_streaming(payload: TTSStreamingPayload):
     return {"streaming_url": streaming_url}
 
 
-@app.post("/config/update")
+@app.post("tts/config/update")
 async def update_provider_config(
     form_data: AllTalkConfigForm, user=Depends(get_admin_user), config=Depends(get_config)
-):
+) -> AllTalkConfigForm:
     if form_data.url == "":
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_URL_NOT_FOUND)
 

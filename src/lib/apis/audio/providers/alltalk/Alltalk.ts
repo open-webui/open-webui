@@ -62,7 +62,7 @@ export class Alltalk {
         return result;
     }
 
-    async setup(firstLoad: boolean): Promise<void> {
+    async setup(firstLoad?: boolean): Promise<void> {
         console.log("Setting up Alltalk");
         console.log("baseUrl: ", this.baseUrl);
         if (!this.baseUrl && !firstLoad) {
@@ -160,4 +160,16 @@ export class Alltalk {
         return result;
     }
 
+    getConfigPayload(): AllTalkConfigForm {
+        return new AllTalkConfigForm(
+            this.baseUrl,
+            this.currentModel,
+            this.currentVoice,
+            this.useDeepSpeed,
+            this.useLowVRAM,
+            this.useStreamingMode,
+            this.useNarrator,
+            this.narratorVoice
+        );
+    }
 }

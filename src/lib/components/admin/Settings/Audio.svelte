@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { _alltalk, getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
-	import { user, settings, config } from '$lib/stores';
+	import { _alltalk, getAudioConfig, updateOpenAIAudioConfig, updateAlltalkAudioConfig, ConfigMode, updateGeneralAudioConfig } from '$lib/apis/audio';
+	import { config } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { toast } from 'svelte-sonner';
@@ -72,29 +72,32 @@
 	};
 
 	const updateConfigHandler = async () => {
-		const res = await updateAudioConfig(localStorage.token, {
-			tts: {
-				openai: {
-					API_BASE_URL: TTS_OPENAI_API_BASE_URL,
-					API_KEY: TTS_OPENAI_API_KEY
-				},
+		let res = null;
+		if(TTS_ENGINE === 'openai'){
+			res = await updateOpenAIAudioConfig(localStorage.token, ConfigMode.TTS, {
+				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
+				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+			});
+			res = await updateOpenAIAudioConfig(localStorage.token, ConfigMode.STT, {
+				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
+				OPENAI_API_KEY: STT_OPENAI_API_KEY,
+			});
+		}else if(TTS_ENGINE === 'alltalk'){
+			res = await updateAlltalkAudioConfig(localStorage.token, _alltalk);
+		}
+
+		const sttRes = await updateGeneralAudioConfig(localStorage.token, ConfigMode.STT, {
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
 				VOICE: TTS_VOICE
-			},
-			stt: {
-				openai: {
-					API_BASE_URL: STT_OPENAI_API_BASE_URL,
-					API_KEY: STT_OPENAI_API_KEY
-				},
+		});
+		const ttsRes = await updateGeneralAudioConfig(localStorage.token, ConfigMode.STT, {
 				ENGINE: STT_ENGINE,
 				MODEL: STT_MODEL
-			}
 		});
 
-		if (res) {
-			toast.success('Audio settings updated successfully');
-
+		if (sttRes && ttsRes) {
+			toast.success('Audio settings have been updated successfully');
 			config.set(await getBackendConfig());
 		}
 	};
@@ -104,18 +107,18 @@
 
 		if (res) {
 			console.log(res);
-			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
-			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
+			TTS_OPENAI_API_BASE_URL = res.tts.openai.OPENAI_API_BASE_URL;
+			TTS_OPENAI_API_KEY = res.tts.openai.OPENAI_API_KEY;
 
-			TTS_ENGINE = res.tts.ENGINE;
-			TTS_MODEL = res.tts.MODEL;
-			TTS_VOICE = res.tts.VOICE;
+			TTS_ENGINE = res.tts.general.ENGINE;
+			TTS_MODEL = res.tts.general.MODEL;
+			TTS_VOICE = res.tts.general.VOICE;
 
-			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
-			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
+			STT_OPENAI_API_BASE_URL = res.stt.openai.OPENAI_API_BASE_URL;
+			STT_OPENAI_API_KEY = res.stt.openai.OPENAI_API_KEY;
 
-			STT_ENGINE = res.stt.ENGINE;
-			STT_MODEL = res.stt.MODEL;
+			STT_ENGINE = res.stt.general.ENGINE;
+			STT_MODEL = res.stt.general.MODEL;
 		}
 
 		if (TTS_ENGINE === 'openai') {
@@ -123,8 +126,8 @@
 			TTSEngineConfig[TTS_ENGINE].getModels();
 		} else if(TTS_ENGINE === 'alltalk'){
 			await _alltalk.setup();
-			model = _alltalk.currentModel;
-			console.log("alltalk model: ", model);
+			//model = _alltalk.currentModel;
+			console.log("alltalk model: ", _alltalk.currentModel);
 		} else {
 			TTSEngineConfig.webapi.getVoices();
 		}
@@ -212,20 +215,16 @@
 							bind:value={TTS_ENGINE}
 							placeholder="Select a mode"
 							on:change={async (e) => {
-								console.log("e.target.value: " + e.target.value);
-								console.log("TTS_ENGINE: " + TTS_ENGINE);
-
-								if (e.target.value === 'openai') {
-									console.log("e.target.value: " + e.target.value);
-									console.log("TTS_ENGINE: " + TTS_ENGINE);
+								if (TTS_ENGINE === 'openai') {
 									TTSEngineConfig.openai.getVoices();
 									TTS_VOICE = 'alloy';
 									TTS_MODEL = 'tts-1';
-								} else if(TTSEngine === 'alltalk'){
+								} else if(TTS_ENGINE === 'alltalk'){
 									await _alltalk.getVoices();
 									TTS_VOICE = _alltalk.currentVoice;
 									await _alltalk.getModels();
 									console.log("alltalk model 2: ", _alltalk.currentModel);
+									TTS_MODEL = _alltalk.currentModel;
 								}  else {
 									TTSEngineConfig.webapi.getVoices();
 									TTS_VOICE = '';
@@ -361,7 +360,7 @@
 							</div>
 						</div>
 					</div>
-				{:else if TTSEngine === 'alltalk'}
+				{:else if TTS_ENGINE === 'alltalk'}
 					<div>
 						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
 						<div class="flex w-full gap-2">

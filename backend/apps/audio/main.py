@@ -9,13 +9,11 @@ import requests
 import json
 
 from apps.audio.settings import app, log, WHISPER_DEVICE_TYPE
-from apps.audio.model import AudioConfigUpdateForm
+from apps.audio.model import AudioConfigUpdateForm, STTGeneralConfigForm, TTSGeneralConfigForm
 
 from apps.audio.providers.alltalk.alltalkController import app as alltalk_app
-from apps.audio.providers.alltalk.alltalkModel import AllTalkConfigForm
 from apps.audio.providers.alltalk.alltalkService import get_alltalk_tts_config
 from apps.audio.providers.openai.openaiController import router as openai_app
-from apps.audio.providers.openai.openaiModel import OpenAIConfigUpdateForm
 from apps.audio.providers.openai.openaiService import get_openai_tts_config, get_openai_stt_config
 
 from constants import ERROR_MESSAGES
@@ -76,38 +74,31 @@ async def get_audio_config(user=Depends(get_admin_user)) -> AudioConfigUpdateFor
     }
 
 
-@app.post("/config/update")
-async def update_audio_config(
-    form_data: AudioConfigUpdateForm, user=Depends(get_admin_user)
-):
-    app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
-    app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
-    app.state.config.TTS_ENGINE = form_data.tts.ENGINE
-    app.state.config.TTS_MODEL = form_data.tts.MODEL
-    app.state.config.TTS_VOICE = form_data.tts.VOICE
-
-    app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
-    app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
-    app.state.config.STT_ENGINE = form_data.stt.ENGINE
-    app.state.config.STT_MODEL = form_data.stt.MODEL
+@app.post("general/tts/config/update")
+async def update_audio_tts_config(
+    form_data: TTSGeneralConfigForm, user=Depends(get_admin_user)
+) -> TTSGeneralConfigForm:
+    app.state.config.TTS_ENGINE = form_data.ENGINE
+    app.state.config.TTS_MODEL = form_data.MODEL
+    app.state.config.TTS_VOICE = form_data.VOICE
 
     return {
-        "tts": {
-            "openai": get_openai_tts_config(),
-            "alltalk": get_alltalk_tts_config(),
-            "general": {
-                "ENGINE": app.state.config.TTS_ENGINE,
-                "MODEL": app.state.config.TTS_MODEL,
-                "VOICE": app.state.config.TTS_VOICE
-            }
-        },
-        "stt": {
-            "openai": get_openai_stt_config(),
-            "general": {
-                "ENGINE": app.state.config.STT_ENGINE,
-                "MODEL": app.state.config.STT_MODEL
-            }
-        }
+        "ENGINE": app.state.config.TTS_ENGINE,
+        "MODEL": app.state.config.TTS_MODEL,
+        "VOICE": app.state.config.TTS_VOICE
+    }
+
+
+@app.post("general/stt/config/update")
+async def update_audio_stt_config(
+    form_data: STTGeneralConfigForm, user=Depends(get_admin_user)
+) -> STTGeneralConfigForm:
+    app.state.config.STT_ENGINE = form_data.ENGINE
+    app.state.config.STT_MODEL = form_data.MODEL
+
+    return {
+        "ENGINE": app.state.config.STT_ENGINE,
+        "MODEL": app.state.config.STT_MODEL
     }
 
 @app.post("/transcriptions")
