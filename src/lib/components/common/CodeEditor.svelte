@@ -6,10 +6,15 @@
 	import { acceptCompletion } from '@codemirror/autocomplete';
 	import { indentWithTab } from '@codemirror/commands';
 
+	import { indentUnit } from '@codemirror/language';
 	import { python } from '@codemirror/lang-python';
 	import { oneDark } from '@codemirror/theme-one-dark';
 
-	import { onMount } from 'svelte';
+	import { onMount, createEventDispatcher } from 'svelte';
+	import { formatPythonCode } from '$lib/apis/utils';
+	import { toast } from 'svelte-sonner';
+
+	const dispatch = createEventDispatcher();
 
 	export let boilerplate = '';
 	export let value = '';
@@ -19,10 +24,31 @@
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
 
+	const formatPythonCodeHandler = async () => {
+		if (codeEditor) {
+			console.log('formatPythonCodeHandler');
+			const res = await formatPythonCode(value).catch((error) => {
+				toast.error(error);
+				return null;
+			});
+
+			if (res && res.code) {
+				const formattedCode = res.code;
+				codeEditor.dispatch({
+					changes: [{ from: 0, to: codeEditor.state.doc.length, insert: formattedCode }]
+				});
+				return true;
+			}
+
+			return false;
+		}
+	};
+
 	let extensions = [
 		basicSetup,
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
 		python(),
+		indentUnit.of('    '),
 		placeholder('Enter your code here...'),
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
@@ -78,8 +104,22 @@
 			attributeFilter: ['class']
 		});
 
+		// Add a keyboard shortcut to format the code when Ctrl/Cmd + S is pressed
+		// Override the default browser save functionality
+
+		const handleSave = (e) => {
+			if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+				e.preventDefault();
+				formatPythonCodeHandler();
+				dispatch('save');
+			}
+		};
+
+		document.addEventListener('keydown', handleSave);
+
 		return () => {
 			observer.disconnect();
+			document.removeEventListener('keydown', handleSave);
 		};
 	});
 </script>

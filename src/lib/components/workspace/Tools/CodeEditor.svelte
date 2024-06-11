@@ -7,6 +7,8 @@
 # Use Sphinx-style docstrings to document your tools, they will be used for generating tools specifications
 # Please refer to function_calling_filter_pipeline.py file from pipelines project for an example
 
+# Tip: Use Ctrl/Cmd + S to format the code
+
 from datetime import datetime
 import requests
 
