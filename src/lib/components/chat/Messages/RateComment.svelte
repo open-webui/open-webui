@@ -47,7 +47,7 @@
 
 	onMount(() => {
 		selectedReason = message?.annotation?.reason ?? '';
-		comment = message?.annotation?.comment;
+		comment = message?.annotation?.comment ?? '';
 		loadReasons();
 	});
 
