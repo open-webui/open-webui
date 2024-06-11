@@ -14,7 +14,7 @@
 		description: ''
 	};
 
-	let code = '';
+	let content = '';
 
 	$: if (name) {
 		id = name.replace(/\s+/g, '_').toLowerCase();
@@ -97,7 +97,7 @@
 				</div>
 
 				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
-					<CodeEditor bind:value={code} bind:this={codeEditor} {saveHandler} />
+					<CodeEditor bind:value={content} bind:this={codeEditor} {saveHandler} />
 				</div>
 
 				<div class="pb-3 flex justify-end">
