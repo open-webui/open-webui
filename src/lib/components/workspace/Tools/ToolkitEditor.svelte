@@ -1,5 +1,5 @@
 <script>
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher, onMount } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -12,6 +12,7 @@
 	let loading = false;
 
 	export let edit = false;
+	export let clone = false;
 
 	export let id = '';
 	export let name = '';
@@ -20,7 +21,7 @@
 	};
 	export let content = '';
 
-	$: if (name && !edit) {
+	$: if (name && !edit && !clone) {
 		id = name.replace(/\s+/g, '_').toLowerCase();
 	}
 

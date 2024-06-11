@@ -6,6 +6,7 @@
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	let clone = false;
 	let tool = null;
 
 	const saveHandler = async (data) => {
@@ -34,6 +35,7 @@
 		if (sessionStorage.tool) {
 			tool = JSON.parse(sessionStorage.tool);
 			sessionStorage.removeItem('tool');
+			clone = true;
 		}
 	});
 </script>
@@ -43,6 +45,7 @@
 	name={tool?.name ?? ''}
 	meta={tool?.meta ?? { description: '' }}
 	content={tool?.content ?? ''}
+	{clone}
 	on:save={(e) => {
 		saveHandler(e.detail);
 	}}
