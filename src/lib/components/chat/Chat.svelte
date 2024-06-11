@@ -24,7 +24,8 @@
 		banners,
 		user,
 		socket,
-		showCallOverlay
+		showCallOverlay,
+		tools
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -1280,6 +1281,17 @@
 				bind:selectedToolIds
 				bind:webSearchEnabled
 				bind:atSelectedModel
+				availableTools={$user.role === 'admin'
+					? $tools.reduce((a, e, i, arr) => {
+							a[e.id] = {
+								name: e.name,
+								description: e.meta.description,
+								enabled: false
+							};
+
+							return a;
+					  }, {})
+					: {}}
 				{selectedModels}
 				{messages}
 				{submitPrompt}

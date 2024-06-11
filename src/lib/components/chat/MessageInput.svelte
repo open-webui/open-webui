@@ -58,8 +58,9 @@
 	let chatInputPlaceholder = '';
 
 	export let files = [];
-	export let selectedToolIds = [];
 
+	export let availableTools = {};
+	export let selectedToolIds = [];
 	export let webSearchEnabled = false;
 
 	export let prompt = '';
@@ -656,15 +657,7 @@
 									<InputMenu
 										bind:webSearchEnabled
 										bind:selectedToolIds
-										tools={$tools.reduce((a, e, i, arr) => {
-											a[e.id] = {
-												name: e.name,
-												description: e.meta.description,
-												enabled: false
-											};
-
-											return a;
-										}, {})}
+										tools={availableTools}
 										uploadFilesHandler={() => {
 											filesInputElement.click();
 										}}
