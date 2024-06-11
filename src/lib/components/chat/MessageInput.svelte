@@ -8,7 +8,8 @@
 		showSidebar,
 		models,
 		config,
-		showCallOverlay
+		showCallOverlay,
+		tools
 	} from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
@@ -57,6 +58,7 @@
 	let chatInputPlaceholder = '';
 
 	export let files = [];
+	export let selectedToolIds = [];
 
 	export let webSearchEnabled = false;
 
@@ -653,6 +655,15 @@
 								<div class=" ml-0.5 self-end mb-1.5 flex space-x-1">
 									<InputMenu
 										bind:webSearchEnabled
+										bind:selectedToolIds
+										tools={$tools.reduce((a, e, i, arr) => {
+											a[e.id] = {
+												name: e.name,
+												enabled: false
+											};
+
+											return a;
+										}, {})}
 										uploadFilesHandler={() => {
 											filesInputElement.click();
 										}}

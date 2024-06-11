@@ -14,6 +14,8 @@
 	const i18n = getContext('i18n');
 
 	export let uploadFilesHandler: Function;
+
+	export let selectedToolIds: string[] = [];
 	export let webSearchEnabled: boolean;
 
 	export let tools = {};
@@ -44,16 +46,23 @@
 			transition={flyAndScale}
 		>
 			{#if Object.keys(tools).length > 0}
-				{#each Object.keys(tools) as tool}
+				{#each Object.keys(tools) as toolId}
 					<div
 						class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
 					>
 						<div class="flex-1 flex items-center gap-2">
 							<WrenchSolid />
-							<div class="flex items-center">{tool}</div>
+							<div class="flex items-center">{tools[toolId].name}</div>
 						</div>
 
-						<Switch bind:state={tools[tool]} />
+						<Switch
+							bind:state={tools[toolId].enabled}
+							on:change={(e) => {
+								selectedToolIds = e.detail
+									? [...selectedToolIds, toolId]
+									: selectedToolIds.filter((id) => id !== toolId);
+							}}
+						/>
 					</div>
 				{/each}
 				<hr class="border-gray-100 dark:border-gray-800 my-1" />
