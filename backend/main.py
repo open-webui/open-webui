@@ -284,6 +284,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 context = ""
 
                 for tool_id in data["tool_ids"]:
+                    print(tool_id)
                     response = await get_function_call_response(
                         prompt=prompt,
                         tool_id=tool_id,
@@ -291,10 +292,9 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                         task_model_id=task_model_id,
                         user=user,
                     )
-                    print(response)
 
                     if response:
-                        context = ("\n" if context != "" else "") + response
+                        context += ("\n" if context != "" else "") + response
 
                 if context != "":
                     system_prompt = rag_template(
@@ -304,7 +304,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     print(system_prompt)
 
                     data["messages"] = add_or_update_system_message(
-                       f"\n{system_prompt}", data["messages"]
+                        f"\n{system_prompt}", data["messages"]
                     )
 
                 del data["tool_ids"]
