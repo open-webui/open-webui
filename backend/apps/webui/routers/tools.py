@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status, Request
 from datetime import datetime, timedelta
 from typing import List, Union, Optional
 
@@ -19,8 +19,6 @@ from config import DATA_DIR
 
 TOOLS_DIR = f"{DATA_DIR}/tools"
 os.makedirs(TOOLS_DIR, exist_ok=True)
-
-TOOLS = {}
 
 
 router = APIRouter()
@@ -73,7 +71,9 @@ async def get_toolkits(user=Depends(get_admin_user)):
 
 
 @router.post("/create", response_model=Optional[ToolResponse])
-async def create_new_toolkit(form_data: ToolForm, user=Depends(get_admin_user)):
+async def create_new_toolkit(
+    request: Request, form_data: ToolForm, user=Depends(get_admin_user)
+):
     if not form_data.id.isidentifier():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -90,6 +90,8 @@ async def create_new_toolkit(form_data: ToolForm, user=Depends(get_admin_user)):
                 tool_file.write(form_data.content)
 
             toolkit_module = load_toolkit_module_from_path(form_data.id, toolkit_path)
+
+            TOOLS = request.app.state.TOOLS
             TOOLS[form_data.id] = toolkit_module
 
             specs = get_tools_specs(TOOLS[form_data.id])
@@ -139,7 +141,7 @@ async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
 
 @router.post("/id/{id}/update", response_model=Optional[ToolModel])
 async def update_toolkit_by_id(
-    id: str, form_data: ToolForm, user=Depends(get_admin_user)
+    request: Request, id: str, form_data: ToolForm, user=Depends(get_admin_user)
 ):
     toolkit_path = os.path.join(TOOLS_DIR, f"{id}.py")
 
@@ -148,6 +150,8 @@ async def update_toolkit_by_id(
             tool_file.write(form_data.content)
 
         toolkit_module = load_toolkit_module_from_path(id, toolkit_path)
+
+        TOOLS = request.app.state.TOOLS
         TOOLS[id] = toolkit_module
 
         specs = get_tools_specs(TOOLS[id])
@@ -181,6 +185,11 @@ async def update_toolkit_by_id(
 
 
 @router.delete("/id/{id}/delete", response_model=bool)
-async def delete_toolkit_by_id(id: str, user=Depends(get_admin_user)):
+async def delete_toolkit_by_id(request: Request, id: str, user=Depends(get_admin_user)):
     result = Tools.delete_tool_by_id(id)
+
+    if result:
+        TOOLS = request.app.state.TOOLS
+        del TOOLS[id]
+
     return result

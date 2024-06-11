@@ -39,6 +39,7 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
 app.state.config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
+app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 
 
 app.state.config.SHOW_ADMIN_DETAILS = SHOW_ADMIN_DETAILS
@@ -55,7 +56,7 @@ app.state.config.BANNERS = WEBUI_BANNERS
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 
 app.state.MODELS = {}
-app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+app.state.TOOLS = {}
 
 
 app.add_middleware(
