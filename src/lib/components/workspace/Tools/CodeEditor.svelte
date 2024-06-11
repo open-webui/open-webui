@@ -3,6 +3,8 @@
 
 	export let value = '';
 
+	let codeEditor;
+
 	let boilerplate = `# Add your custom tools using pure Python code here, make sure to add type hints
 # Use Sphinx-style docstrings to document your tools, they will be used for generating tools specifications
 # Please refer to function_calling_filter_pipeline.py file from pipelines project for an example
@@ -43,6 +45,12 @@ class Tools:
             return "Invalid equation"
 
 `;
+
+	export const submitHandler = async () => {
+		if (codeEditor) {
+			codeEditor.formatPythonCodeHandler();
+		}
+	};
 </script>
 
-<CodeEditor bind:value {boilerplate} />
+<CodeEditor bind:value {boilerplate} bind:this={codeEditor} />

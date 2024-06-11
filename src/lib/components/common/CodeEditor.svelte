@@ -24,7 +24,7 @@
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
 
-	const formatPythonCodeHandler = async () => {
+	export const formatPythonCodeHandler = async () => {
 		if (codeEditor) {
 			console.log('formatPythonCodeHandler');
 			const res = await formatPythonCode(value).catch((error) => {

@@ -7,9 +7,15 @@
 
 	let loading = false;
 
+	let codeEditor;
+
 	const submitHandler = async () => {
 		loading = true;
 		// Call the API to submit the code
+
+		if (codeEditor) {
+			codeEditor.submitHandler();
+		}
 	};
 </script>
 
@@ -17,7 +23,7 @@
 	<div class="mx-auto w-full md:px-0 h-full">
 		<div class=" flex flex-col max-h-[100dvh] h-full">
 			<div class="mb-2.5 flex-1 overflow-auto h-0 rounded-lg">
-				<CodeEditor />
+				<CodeEditor bind:this={codeEditor} />
 			</div>
 			<div class="pb-3">
 				<button
