@@ -12,9 +12,10 @@ import os, shutil, logging, re
 from datetime import datetime
 
 from pathlib import Path
-from typing import List, Union, Sequence
+from typing import List, Union, Sequence, Iterator, Any
 
 from chromadb.utils.batch_utils import create_batches
+from langchain_core.documents import Document
 
 from langchain_community.document_loaders import (
     WebBaseLoader,
@@ -701,7 +702,7 @@ def get_web_loader(url: Union[str, Sequence[str]], verify_ssl: bool = True):
     # Check if the URL is valid
     if not validate_url(url):
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
-    return WebBaseLoader(
+    return SafeWebBaseLoader(
         url,
         verify_ssl=verify_ssl,
         requests_per_second=RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
@@ -1237,7 +1238,29 @@ def reset(user=Depends(get_admin_user)) -> bool:
 
     return True
 
+class SafeWebBaseLoader(WebBaseLoader):
+    """WebBaseLoader with enhanced error handling for URLs."""
+    def lazy_load(self) -> Iterator[Document]:
+        """Lazy load text from the url(s) in web_path with error handling."""
+        for path in self.web_paths:
+            try:
+                soup = self._scrape(path, bs_kwargs=self.bs_kwargs)
+                text = soup.get_text(**self.bs_get_text_kwargs)
 
+                # Build metadata
+                metadata = {"source": path}
+                if title := soup.find("title"):
+                    metadata["title"] = title.get_text()
+                if description := soup.find("meta", attrs={"name": "description"}):
+                    metadata["description"] = description.get("content", "No description found.")
+                if html := soup.find("html"):
+                    metadata["language"] = html.get("lang", "No language found.")
+                
+                yield Document(page_content=text, metadata=metadata)
+            except Exception as e:
+                # Log the error and continue with the next URL
+                log.error(f"Error loading {path}: {e}")
+                
 if ENV == "dev":
 
     @app.get("/ef")
