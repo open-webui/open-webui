@@ -125,7 +125,16 @@
 					/>
 				</div>
 
-				<div class="pb-3 flex justify-end">
+				<div class="pb-3 flex justify-between">
+					<div class="flex-1 pr-3">
+						<div class="text-xs text-gray-500 line-clamp-2">
+							<span class=" font-semibold dark:text-gray-200">Warning:</span> Tools are a function
+							calling system with arbitrary code execution <br />—
+							<span class=" font-medium dark:text-gray-400"
+								>don't install random tools from sources you don't trust.</span
+							>
+						</div>
+					</div>
 					<button
 						class="px-3 py-1.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-gray-50 transition rounded-lg"
 					>
