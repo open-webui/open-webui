@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { settings, user, config, models } from '$lib/stores';
+	import { settings, user, config, models, tools } from '$lib/stores';
 
 	import { onMount, tick, getContext } from 'svelte';
 	import { addNewModel, getModelById, getModelInfos } from '$lib/apis/models';
@@ -12,6 +12,8 @@
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
+	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
+	import { stringify } from 'postcss';
 
 	const i18n = getContext('i18n');
 
@@ -54,6 +56,7 @@
 		vision: true
 	};
 
+	let toolIds = [];
 	let knowledge = [];
 
 	$: if (name) {
@@ -85,6 +88,14 @@
 		} else {
 			if (info.meta.knowledge) {
 				delete info.meta.knowledge;
+			}
+		}
+
+		if (toolIds.length > 0) {
+			info.meta.toolIds = toolIds;
+		} else {
+			if (info.meta.toolIds) {
+				delete info.meta.toolIds;
 			}
 		}
 
@@ -154,6 +165,7 @@
 		params.stop = params?.stop ? (params?.stop ?? []).join(',') : null;
 
 		capabilities = { ...capabilities, ...(model?.info?.meta?.capabilities ?? {}) };
+		toolIds = model?.info?.meta?.toolIds ?? [];
 
 		info = {
 			...info,
@@ -552,6 +564,10 @@
 
 		<div class="my-2">
 			<Knowledge bind:knowledge />
+		</div>
+
+		<div class="my-2">
+			<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
 		</div>
 
 		<div class="my-1">

@@ -9,7 +9,8 @@
 		models,
 		config,
 		showCallOverlay,
-		tools
+		tools,
+		user as _user
 	} from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
@@ -59,7 +60,7 @@
 
 	export let files = [];
 
-	export let availableTools = {};
+	export let availableToolIds = [];
 	export let selectedToolIds = [];
 	export let webSearchEnabled = false;
 
@@ -657,7 +658,16 @@
 									<InputMenu
 										bind:webSearchEnabled
 										bind:selectedToolIds
-										tools={availableTools}
+										tools={$tools.reduce((a, e, i, arr) => {
+											if (availableToolIds.includes(e.id) || ($_user?.role ?? 'user') === 'admin') {
+												a[e.id] = {
+													name: e.name,
+													description: e.meta.description,
+													enabled: false
+												};
+											}
+											return a;
+										}, {})}
 										uploadFilesHandler={() => {
 											filesInputElement.click();
 										}}

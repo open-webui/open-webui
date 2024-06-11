@@ -74,6 +74,9 @@
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 
+	let selectedModelIds = [];
+	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+
 	let selectedToolIds = [];
 	let webSearchEnabled = false;
 
@@ -1281,17 +1284,13 @@
 				bind:selectedToolIds
 				bind:webSearchEnabled
 				bind:atSelectedModel
-				availableTools={$user.role === 'admin'
-					? $tools.reduce((a, e, i, arr) => {
-							a[e.id] = {
-								name: e.name,
-								description: e.meta.description,
-								enabled: false
-							};
-
-							return a;
-					  }, {})
-					: {}}
+				availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
+					const model = $models.find((m) => m.id === e);
+					if (model?.info?.meta?.toolIds ?? false) {
+						return [...new Set([...a, ...model.info.meta.toolIds])];
+					}
+					return a;
+				}, [])}
 				{selectedModels}
 				{messages}
 				{submitPrompt}
