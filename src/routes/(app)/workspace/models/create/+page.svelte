@@ -60,10 +60,9 @@
 		id = name.replace(/\s+/g, '-').toLowerCase();
 	}
 
-	let baseModel = null;
-	$: {
-		baseModel = $models.find((m) => m.id === info.base_model_id);
-		console.log(baseModel);
+	const addUsage = (base_model_id) => {
+		const baseModel = $models.find((m) => m.id === base_model_id);
+
 		if (baseModel) {
 			if (baseModel.owned_by === 'openai') {
 				capabilities.usage = baseModel.info?.meta?.capabilities?.usage ?? false;
@@ -72,7 +71,7 @@
 			}
 			capabilities = capabilities;
 		}
-	}
+	};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -360,6 +359,9 @@
 					class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
 					placeholder="Select a base model (e.g. llama3, gpt-4o)"
 					bind:value={info.base_model_id}
+					on:change={(e) => {
+						addUsage(e.target.value);
+					}}
 					required
 				>
 					<option value={null} class=" text-gray-900">{$i18n.t('Select a base model')}</option>

@@ -299,6 +299,8 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                         context += ("\n" if context != "" else "") + response
                 del data["tool_ids"]
 
+                print(context)
+
             # If docs field is present, generate RAG completions
             if "docs" in data:
                 data = {**data}
