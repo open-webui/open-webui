@@ -26,7 +26,7 @@ class Tools:
         """
 
         # Do not include :param for __user__ in the docstring as it should not be shown in the tool's documentation
-        # The user object will be passed as a parameter when the function is called
+        # The session user object will be passed as a parameter when the function is called
 
         print(__user__)
         result = ""
