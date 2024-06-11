@@ -1122,3 +1122,30 @@ AUDIO_TTS_VOICE = PersistentConfig(
 ####################################
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+
+####################################
+# PIPELINES
+####################################
+
+ENABLE_PIPELINE_EMBEDDING = PersistentConfig(
+    "ENABLE_PIPELINE_EMBEDDING",
+    "rag.pipelines.enable_embedding",
+    os.getenv("ENABLE_PIPELINE_EMBEDDING", "false").lower() == "true",
+)
+
+EMBEDDING_PIPELINE_IDS = os.environ.get("EMBEDDING_PIPELINE_IDS", "")
+EMBEDDING_PIPELINE_IDS = [
+    pipeline_id.strip() if pipeline_id != "" else ""
+    for pipeline_id in EMBEDDING_PIPELINE_IDS.split(";")
+]
+EMBEDDING_PIPELINE_IDS = PersistentConfig(
+    "EMBEDDING_PIPELINE_IDS",
+    "rag.pipelines.embedding_ids",
+    EMBEDDING_PIPELINE_IDS
+)
+
+EMBEDDING_PIPELINE_URL_IDX = PersistentConfig(
+    "EMBEDDING_PIPELINE_URL_IDX",
+    "rag.pipelines.embedding_pipeline_url_idx",
+    int(os.getenv("EMBEDDING_PIPELINE_URL_IDX", "0")),
+)

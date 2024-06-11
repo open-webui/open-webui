@@ -1,3 +1,4 @@
+import requests
 from fastapi import (
     FastAPI,
     Depends,
@@ -128,6 +129,9 @@ from config import (
 
 from constants import ERROR_MESSAGES
 
+from config import ENABLE_PIPELINE_EMBEDDING, EMBEDDING_PIPELINE_URL_IDX, EMBEDDING_PIPELINE_IDS, \
+    OPENAI_API_BASE_URLS, OPENAI_API_KEYS
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -177,6 +181,12 @@ app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
 app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
+
+app.state.config.ENABLE_PIPELINE_EMBEDDING = ENABLE_PIPELINE_EMBEDDING
+app.state.config.EMBEDDING_PIPELINE_URL_IDX = EMBEDDING_PIPELINE_URL_IDX
+app.state.config.EMBEDDING_PIPELINE_IDS = EMBEDDING_PIPELINE_IDS
+app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
+app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 
 
 def update_embedding_model(
@@ -887,6 +897,8 @@ def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
 
 
 def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> bool:
+    if app.state.config.ENABLE_PIPELINE_EMBEDDING:
+        perform_pipeline_embedding(data, collection_name, overwrite)
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.config.CHUNK_SIZE,
@@ -901,6 +913,27 @@ def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> b
         return store_docs_in_vector_db(docs, collection_name, overwrite), None
     else:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+
+
+def perform_pipeline_embedding(data, collection_name, overwrite):
+    idx = app.state.config.EMBEDDING_PIPELINE_URL_IDX
+    key = app.state.config.OPENAI_API_KEYS[idx]
+    url = app.state.config.OPENAI_API_BASE_URLS[idx]
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    for pipeline_id in app.state.config.EMBEDDING_PIPELINE_IDS:
+        log.info(f"POST {url}/{pipeline_id}/embedding")
+        for doc in data:
+            r = requests.post(
+                f"{url}/{pipeline_id}/embedding",
+                headers=headers,
+                json={
+                    "body": {"text": doc.page_content,
+                             "metadata": doc.metadata,
+                             "collection_name": collection_name,
+                             "overwrite": overwrite},
+                },
+            )
+            r.raise_for_status()
 
 
 def store_text_in_vector_db(
@@ -1213,7 +1246,23 @@ def scan_docs_dir(user=Depends(get_admin_user)):
 
 @app.get("/reset/db")
 def reset_vector_db(user=Depends(get_admin_user)):
+    if app.state.config.ENABLE_PIPELINE_EMBEDDING:
+        delete_pipeline_nodes()
     CHROMA_CLIENT.reset()
+
+
+def delete_pipeline_nodes():
+    idx = app.state.config.EMBEDDING_PIPELINE_URL_IDX
+    key = app.state.config.OPENAI_API_KEYS[idx]
+    url = app.state.config.OPENAI_API_BASE_URLS[idx]
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    for pipeline_id in EMBEDDING_PIPELINE_IDS.value:
+        r = requests.delete(
+            f"{url}/{pipeline_id}/nodes",
+            headers=headers,
+            json={"body": {}}
+        )
+        r.raise_for_status()
 
 
 @app.get("/reset/uploads")
