@@ -41,7 +41,7 @@ class ToolModel(BaseModel):
     user_id: str
     name: str
     content: str
-    specs: dict
+    specs: List[dict]
     meta: ToolMeta
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
@@ -74,7 +74,7 @@ class ToolsTable:
         self.db.create_tables([Tool])
 
     def insert_new_tool(
-        self, user_id: str, form_data: ToolForm, specs: dict
+        self, user_id: str, form_data: ToolForm, specs: List[dict]
     ) -> Optional[ToolModel]:
         tool = ToolModel(
             **{

@@ -7,9 +7,10 @@
 	export let value = '';
 
 	let codeEditor;
-	let boilerplate = `from datetime import datetime
+	let boilerplate = `import os
 import requests
-import os
+from datetime import datetime
+
 
 class Tools:
     def __init__(self):
@@ -27,7 +28,9 @@ class Tools:
         """
         value = os.getenv(variable_name)
         if value is not None:
-            return f"The value of the environment variable '{variable_name}' is '{value}'"
+            return (
+                f"The value of the environment variable '{variable_name}' is '{value}'"
+            )
         else:
             return f"The environment variable '{variable_name}' does not exist."
 
@@ -62,38 +65,35 @@ class Tools:
         :param city: The name of the city to get the weather for.
         :return: The current weather information or an error message.
         """
-        api_key = os.getenv('OPENWEATHER_API_KEY')
+        api_key = os.getenv("OPENWEATHER_API_KEY")
         if not api_key:
-            return "API key is not set in the environment variable 'OPENWEATHER_API_KEY'."
+            return (
+                "API key is not set in the environment variable 'OPENWEATHER_API_KEY'."
+            )
 
         base_url = "http://api.openweathermap.org/data/2.5/weather"
         params = {
-            'q': city,
-            'appid': api_key,
-            'units': 'metric'  # Optional: Use 'imperial' for Fahrenheit
+            "q": city,
+            "appid": api_key,
+            "units": "metric",  # Optional: Use 'imperial' for Fahrenheit
         }
 
         try:
             response = requests.get(base_url, params=params)
             response.raise_for_status()  # Raise HTTPError for bad responses (4xx and 5xx)
             data = response.json()
-            
-            if data.get('cod') != 200:
+
+            if data.get("cod") != 200:
                 return f"Error fetching weather data: {data.get('message')}"
-            
-            weather_description = data['weather'][0]['description']
-            temperature = data['main']['temp']
-            humidity = data['main']['humidity']
-            wind_speed = data['wind']['speed']
-            
-            return (f"Weather in {city}:\n"
-                    f"Description: {weather_description}\n"
-                    f"Temperature: {temperature}°C\n"
-                    f"Humidity: {humidity}%\n"
-                    f"Wind Speed: {wind_speed} m/s")
+
+            weather_description = data["weather"][0]["description"]
+            temperature = data["main"]["temp"]
+            humidity = data["main"]["humidity"]
+            wind_speed = data["wind"]["speed"]
+
+            return f"Weather in {city}: {temperature}°C"
         except requests.RequestException as e:
             return f"Error fetching weather data: {str(e)}"
-
 `;
 
 	export const formatHandler = async () => {

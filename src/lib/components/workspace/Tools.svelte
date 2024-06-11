@@ -8,6 +8,7 @@
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 
 	import { goto } from '$app/navigation';
+	import { deleteToolById, getTools } from '$lib/apis/tools';
 
 	const i18n = getContext('i18n');
 
@@ -78,7 +79,12 @@
 			<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 				<a href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}>
 					<div class=" flex-1 self-center pl-5">
-						<div class=" font-bold">{tool.name}</div>
+						<div class=" font-bold flex items-center gap-1.5">
+							<div>
+								{tool.name}
+							</div>
+							<div class=" text-gray-500 text-xs font-medium">{tool.id}</div>
+						</div>
 						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 							{tool.meta.description}
 						</div>
@@ -89,7 +95,7 @@
 				<a
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
-					href={`/workspace/tools/edit?command=${encodeURIComponent(tool.id)}`}
+					href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -134,9 +140,16 @@
 				<button
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
-					on:click={() => {
-						// deletePrompt(prompt.command);
-						// deleteTool
+					on:click={async () => {
+						const res = await deleteToolById(localStorage.token, tool.id).catch((error) => {
+							toast.error(error);
+							return null;
+						});
+
+						if (res) {
+							toast.success('Tool deleted successfully');
+							tools.set(await getTools(localStorage.token));
+						}
 					}}
 				>
 					<svg

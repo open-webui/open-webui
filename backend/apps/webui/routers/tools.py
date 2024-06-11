@@ -52,7 +52,18 @@ def load_toolkit_module_from_path(tools_id, tools_path):
 
 @router.get("/", response_model=List[ToolResponse])
 async def get_toolkits(user=Depends(get_current_user)):
-    toolkits = [ToolResponse(**toolkit) for toolkit in Tools.get_tools()]
+    toolkits = [toolkit for toolkit in Tools.get_tools()]
+    return toolkits
+
+
+############################
+# ExportToolKits
+############################
+
+
+@router.get("/export", response_model=List[ToolModel])
+async def get_toolkits(user=Depends(get_current_user)):
+    toolkits = [toolkit for toolkit in Tools.get_tools()]
     return toolkits
 
 
@@ -77,7 +88,7 @@ async def create_new_toolkit(form_data: ToolForm, user=Depends(get_admin_user)):
             toolkit = Tools.insert_new_tool(user.id, form_data, specs)
 
             if toolkit:
-                return ToolResponse(**toolkit)
+                return toolkit
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -91,7 +102,7 @@ async def create_new_toolkit(form_data: ToolForm, user=Depends(get_admin_user)):
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NAME_TAG_TAKEN,
+            detail=ERROR_MESSAGES.ID_TAKEN,
         )
 
 
@@ -105,7 +116,7 @@ async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
     toolkit = Tools.get_tool_by_id(id)
 
     if toolkit:
-        return ToolResponse(**toolkit)
+        return toolkit
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -137,7 +148,7 @@ async def update_toolkit_by_id(
         )
 
         if toolkit:
-            return ToolResponse(**toolkit)
+            return toolkit
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

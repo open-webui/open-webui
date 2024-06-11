@@ -8,15 +8,18 @@
 
 	const dispatch = createEventDispatcher();
 
+	let formElement = null;
+
 	let loading = false;
 
-	let id = '';
-	let name = '';
-	let meta = {
+	export let edit = false;
+
+	export let id = '';
+	export let name = '';
+	export let meta = {
 		description: ''
 	};
-
-	let content = '';
+	export let content = '';
 
 	$: if (name) {
 		id = name.replace(/\s+/g, '_').toLowerCase();
@@ -49,6 +52,7 @@
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">
 		<form
+			bind:this={formElement}
 			class=" flex flex-col max-h-[100dvh] h-full"
 			on:submit|preventDefault={() => {
 				submitHandler();
@@ -60,6 +64,7 @@
 					on:click={() => {
 						goto('/workspace/tools');
 					}}
+					type="button"
 				>
 					<div class=" self-center">
 						<svg
@@ -96,6 +101,7 @@
 							placeholder="Toolkit ID (e.g. my_toolkit)"
 							bind:value={id}
 							required
+							disabled={edit}
 						/>
 					</div>
 					<input
@@ -112,8 +118,9 @@
 						bind:value={content}
 						bind:this={codeEditor}
 						on:save={() => {
-							// submit form
-							submitHandler();
+							if (formElement) {
+								formElement.requestSubmit();
+							}
 						}}
 					/>
 				</div>
