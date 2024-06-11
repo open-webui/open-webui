@@ -72,7 +72,9 @@
 <hr class=" dark:border-gray-850 my-2.5" />
 
 <div class="my-3 mb-5">
-	{#each $tools.filter((t) => query === '' || t.name.includes(query)) as tool}
+	{#each $tools.filter((t) => query === '' || t.name
+				.toLowerCase()
+				.includes(query.toLowerCase()) || t.id.toLowerCase().includes(query.toLowerCase())) as tool}
 		<div
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 		>
