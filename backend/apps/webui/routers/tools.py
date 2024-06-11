@@ -176,4 +176,8 @@ async def delete_toolkit_by_id(request: Request, id: str, user=Depends(get_admin
         if id in TOOLS:
             del TOOLS[id]
 
+        # delete the toolkit file
+        toolkit_path = os.path.join(TOOLS_DIR, f"{id}.py")
+        os.remove(toolkit_path)
+
     return result
