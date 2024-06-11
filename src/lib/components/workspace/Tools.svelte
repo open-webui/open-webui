@@ -198,6 +198,12 @@
 	{/each}
 </div>
 
+<div class=" text-gray-500 text-xs mt-1 mb-2">
+	ⓘ {$i18n.t(
+		'To enable tool access for users, tools must be assigned individually to the desired model within the models workspace.'
+	)}
+</div>
+
 <div class=" flex justify-end w-full mb-2">
 	<div class="flex space-x-2">
 		<input
