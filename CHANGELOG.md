@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2024-06-10
+
+### Added
+
+- **🔍 Web Search Query Status**: The web search query will now persist in the results section to aid in easier debugging and tracking of search queries.
+- **🌐 New Web Search Provider**: We have added Serply as a new option for web search providers, giving you more choices for your search needs.
+- **🌏 Improved Translations**: We've enhanced translations for Chinese and Portuguese.
+
+### Fixed
+
+- **🎤 Audio File Upload Issue**: The bug that prevented audio files from being uploaded in chat input has been fixed, ensuring smooth communication.
+- **💬 Message Input Handling**: Improved the handling of message inputs by instantly clearing images and text after sending, along with immediate visual indications when a response message is loading, enhancing user feedback.
+- **⚙️ Parameter Registration and Validation**: Fixed the issue where parameters were not registering in certain cases and addressed the problem where users were unable to save due to invalid input errors.
+
+## [0.3.1] - 2024-06-09
+
+### Fixed
+
+- **💬 Chat Functionality**: Resolved the issue where chat functionality was not working for specific models.
+
 ## [0.3.0] - 2024-06-09
 
 ### Added
@@ -24,11 +44,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🛠️ Playground Issue**: Fixed the playground not functioning properly, ensuring a smoother user experience.
 - **🔥 Temperature Parameter Issue**: Corrected the issue where the temperature value '0' was not being passed correctly.
 - **📝 Prompt Input Clearing**: Resolved prompt input textarea not being cleared right away, ensuring a clean slate for new inputs.
-- **🎨 Various UI Styling Issues**: Fixed numerous user interface styling problems for a more cohesive look.
+- **✨ Various UI Styling Issues**: Fixed numerous user interface styling problems for a more cohesive look.
 - **👥 Active Users Display**: Fixed active users showing active sessions instead of actual users, now reflecting accurate user activity.
+- **🌐 Community Platform Compatibility**: The Community Platform is back online and fully compatible with Open WebUI.
 
 ### Changed
 
+- **📝 RAG Implementation**: Updated the RAG (Retrieval-Augmented Generation) implementation to use a system prompt for context, instead of overriding the user's prompt.
 - **🔄 Settings Relocation**: Moved Models, Connections, Audio, and Images settings to the admin settings for better organization.
 - **✍️ Improved Title Generation**: Enhanced the default prompt for title generation, yielding better results.
 - **🔧 Backend Task Management**: Tasks like title generation and search query generation are now managed on the backend side and controlled only by the admin.
