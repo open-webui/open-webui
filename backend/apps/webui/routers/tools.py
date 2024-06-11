@@ -62,7 +62,7 @@ async def get_toolkits(user=Depends(get_current_user)):
 
 
 @router.get("/export", response_model=List[ToolModel])
-async def get_toolkits(user=Depends(get_current_user)):
+async def get_toolkits(user=Depends(get_admin_user)):
     toolkits = [toolkit for toolkit in Tools.get_tools()]
     return toolkits
 

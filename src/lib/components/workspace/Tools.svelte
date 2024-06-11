@@ -8,7 +8,7 @@
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 
 	import { goto } from '$app/navigation';
-	import { deleteToolById, getTools } from '$lib/apis/tools';
+	import { deleteToolById, exportTools, getTools } from '$lib/apis/tools';
 
 	const i18n = getContext('i18n');
 
@@ -221,10 +221,17 @@
 		<button
 			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 			on:click={async () => {
-				let blob = new Blob([JSON.stringify($tools)], {
-					type: 'application/json'
+				const _tools = await exportTools(localStorage.token).catch((error) => {
+					toast.error(error);
+					return null;
 				});
-				saveAs(blob, `tools-export-${Date.now()}.json`);
+
+				if (_tools) {
+					let blob = new Blob([JSON.stringify(_tools)], {
+						type: 'application/json'
+					});
+					saveAs(blob, `tools-export-${Date.now()}.json`);
+				}
 			}}
 		>
 			<div class=" self-center mr-2 font-medium">{$i18n.t('Export Tools')}</div>
