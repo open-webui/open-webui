@@ -6,6 +6,7 @@
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	let mounted = false;
 	let clone = false;
 	let tool = null;
 
@@ -30,23 +31,27 @@
 	};
 
 	onMount(() => {
-		console.log('mounted');
-
 		if (sessionStorage.tool) {
 			tool = JSON.parse(sessionStorage.tool);
 			sessionStorage.removeItem('tool');
+
+			console.log(tool);
 			clone = true;
 		}
+
+		mounted = true;
 	});
 </script>
 
-<ToolkitEditor
-	id={tool?.id ?? ''}
-	name={tool?.name ?? ''}
-	meta={tool?.meta ?? { description: '' }}
-	content={tool?.content ?? ''}
-	{clone}
-	on:save={(e) => {
-		saveHandler(e.detail);
-	}}
-/>
+{#if mounted}
+	<ToolkitEditor
+		id={tool?.id ?? ''}
+		name={tool?.name ?? ''}
+		meta={tool?.meta ?? { description: '' }}
+		content={tool?.content ?? ''}
+		{clone}
+		on:save={(e) => {
+			saveHandler(e.detail);
+		}}
+	/>
+{/if}
