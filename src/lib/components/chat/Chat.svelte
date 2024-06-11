@@ -365,7 +365,7 @@
 		return _responses;
 	};
 
-	const sendPrompt = async (prompt, parentId, modelId = null) => {
+	const sendPrompt = async (prompt, parentId, modelId = null, newChat = true) => {
 		let _responses = [];
 
 		// If modelId is provided, use it, else use selected model
@@ -412,7 +412,7 @@
 		await tick();
 
 		// Create new chat if only one message in messages
-		if (messages.length == 2) {
+		if (newChat && messages.length == 2) {
 			if ($settings.saveChatHistory ?? true) {
 				chat = await createNewChat(localStorage.token, {
 					id: $chatId,
@@ -1116,9 +1116,9 @@
 			let userPrompt = userMessage.content;
 
 			if ((userMessage?.models ?? [...selectedModels]).length == 1) {
-				await sendPrompt(userPrompt, userMessage.id);
+				await sendPrompt(userPrompt, userMessage.id, undefined, false);
 			} else {
-				await sendPrompt(userPrompt, userMessage.id, message.model);
+				await sendPrompt(userPrompt, userMessage.id, message.model, false);
 			}
 		}
 	};
