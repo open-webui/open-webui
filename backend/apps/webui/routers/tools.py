@@ -74,6 +74,12 @@ async def get_toolkits(user=Depends(get_admin_user)):
 
 @router.post("/create", response_model=Optional[ToolResponse])
 async def create_new_toolkit(form_data: ToolForm, user=Depends(get_admin_user)):
+    if not form_data.id.isidentifier():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only alphanumeric characters and underscores are allowed in the id",
+        )
+
     toolkit = Tools.get_tool_by_id(form_data.id)
     if toolkit == None:
         toolkit_path = os.path.join(TOOLS_DIR, f"{form_data.id}.py")
