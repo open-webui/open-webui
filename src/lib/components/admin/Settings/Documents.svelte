@@ -47,6 +47,9 @@
 		k: 4,
 		hybrid: false
 	};
+	let docsDir = '';
+	let docsFileIncludePatterns = '';
+	let docsFileExcludePatterns = '';
 
 	const scanHandler = async () => {
 		scanDirLoading = true;
@@ -159,7 +162,13 @@
 			rerankingModelUpdateHandler();
 		}
 
+        const includePatternsList = docsFileIncludePatterns.split(',').map(pattern => pattern.trim());
+        const excludePatternsList = docsFileExcludePatterns.split(',').map(pattern => pattern.trim());
 		const res = await updateRAGConfig(localStorage.token, {
+			docs: {
+                file_include_filter_list: includePatternsList,
+                file_exclude_filter_list: excludePatternsList,
+			},
 			pdf_extract_images: pdfExtractImages,
 			chunk: {
 				chunk_overlap: chunkOverlap,
@@ -203,6 +212,11 @@
 		const res = await getRAGConfig(localStorage.token);
 
 		if (res) {
+		    docsDir = res.docs.dir;
+	        docsFileIncludePatterns = Array.isArray(res.docs.file_include_filter_list)
+                 ? res.docs.file_include_filter_list.join(', ') : '';
+            docsFileExcludePatterns = Array.isArray(res.docs.file_exclude_filter_list)
+                 ? res.docs.file_exclude_filter_list.join(', ') : '';
 			pdfExtractImages = res.pdf_extract_images;
 
 			chunkSize = res.chunk.chunk_size;
@@ -224,14 +238,15 @@
 
 			<div class="  flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Scan for documents from {{path}}', { path: 'DOCS_DIR (/data/docs)' })}
+					{$i18n.t('Scan for documents from {{path}}', { path: 'DOCS_DIR (' + docsDir + ')' })}
 				</div>
 
 				<button
 					class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg flex flex-row space-x-1 items-center {scanDirLoading
 						? ' cursor-not-allowed'
 						: ''}"
-					on:click={() => {
+					on:click={async () => {
+					    await submitHandler()
 						scanHandler();
 						console.log('check');
 					}}
@@ -269,6 +284,32 @@
 					{/if}
 				</button>
 			</div>
+
+            <div class=" py-0.5 flex w-full justify-between">
+                <div class=" w-20 text-xs font-medium self-center">{$i18n.t('Include Patterns')}</div>
+                <div class=" flex-1 self-center">
+                    <input
+                        class="w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+                        type="text"
+                        placeholder={$i18n.t('Enter file patterns separated by commas (e.g. *.pdf, *.docx)')}
+                        bind:value={docsFileIncludePatterns}
+                        autocomplete="off"
+                    />
+                </div>
+            </div>
+
+            <div class=" py-0.5 flex w-full justify-between">
+                <div class=" w-20 text-xs font-medium self-center">{$i18n.t('Exclude Patterns')}</div>
+                <div class=" flex-1 self-center">
+                    <input
+                        class="w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+                        type="text"
+                        placeholder={$i18n.t('Enter file patterns separated by commas (e.g. *.pdf, *.docx)')}
+                        bind:value={docsFileExcludePatterns}
+                        autocomplete="off"
+                    />
+                </div>
+            </div>
 
 			<div class=" flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Model Engine')}</div>

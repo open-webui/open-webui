@@ -85,6 +85,8 @@ from config import (
     SRC_LOG_LEVELS,
     UPLOAD_DIR,
     DOCS_DIR,
+    DOCS_FILE_INCLUDE_FILTER_LIST,
+    DOCS_FILE_EXCLUDE_FILTER_LIST,
     RAG_TOP_K,
     RAG_RELEVANCE_THRESHOLD,
     RAG_EMBEDDING_ENGINE,
@@ -133,6 +135,8 @@ app.state.config = AppConfig()
 app.state.config.TOP_K = RAG_TOP_K
 app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 
+app.state.config.DOCS_FILE_INCLUDE_FILTER_LIST = DOCS_FILE_INCLUDE_FILTER_LIST
+app.state.config.DOCS_FILE_EXCLUDE_FILTER_LIST = DOCS_FILE_EXCLUDE_FILTER_LIST
 app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
 app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
@@ -375,6 +379,11 @@ async def update_reranking_config(
 async def get_rag_config(user=Depends(get_admin_user)):
     return {
         "status": True,
+        "docs": {
+            "dir": DOCS_DIR,
+            "file_include_filter_list": app.state.config.DOCS_FILE_INCLUDE_FILTER_LIST,
+            "file_exclude_filter_list": app.state.config.DOCS_FILE_EXCLUDE_FILTER_LIST
+        },
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
         "chunk": {
             "chunk_size": app.state.config.CHUNK_SIZE,
@@ -402,6 +411,11 @@ async def get_rag_config(user=Depends(get_admin_user)):
             },
         },
     }
+
+
+class DocsUpdateForm(BaseModel):
+    file_include_filter_list: List[str]
+    file_exclude_filter_list: List[str]
 
 
 class ChunkParamUpdateForm(BaseModel):
@@ -435,6 +449,7 @@ class WebConfig(BaseModel):
 
 
 class ConfigUpdateForm(BaseModel):
+    docs: Optional[DocsUpdateForm] = None
     pdf_extract_images: Optional[bool] = None
     chunk: Optional[ChunkParamUpdateForm] = None
     youtube: Optional[YoutubeLoaderConfig] = None
@@ -443,6 +458,10 @@ class ConfigUpdateForm(BaseModel):
 
 @app.post("/config/update")
 async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_user)):
+    if form_data.docs is not None:
+        app.state.config.DOCS_FILE_INCLUDE_FILTER_LIST = form_data.docs.file_include_filter_list
+        app.state.config.DOCS_FILE_EXCLUDE_FILTER_LIST = form_data.docs.file_exclude_filter_list
+
     app.state.config.PDF_EXTRACT_IMAGES = (
         form_data.pdf_extract_images
         if form_data.pdf_extract_images is not None
@@ -483,6 +502,11 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
 
     return {
         "status": True,
+        "docs": {
+            "dir": DOCS_DIR,
+            "file_include_filter_list": app.state.config.DOCS_FILE_INCLUDE_FILTER_LIST,
+            "file_exclude_filter_list": app.state.config.DOCS_FILE_EXCLUDE_FILTER_LIST
+        },
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
         "chunk": {
             "chunk_size": app.state.config.CHUNK_SIZE,
@@ -1129,7 +1153,28 @@ def store_text(
 
 @app.get("/scan")
 def scan_docs_dir(user=Depends(get_admin_user)):
-    for path in Path(DOCS_DIR).rglob("./**/*"):
+    log.info(f'Scanning {DOCS_DIR}')
+    include_patterns = app.state.config.DOCS_FILE_INCLUDE_FILTER_LIST
+    exclude_patterns = app.state.config.DOCS_FILE_EXCLUDE_FILTER_LIST
+
+    matched_files = set()
+    if include_patterns:
+        for pattern in include_patterns:
+            for filepath in Path(DOCS_DIR).rglob(f'./**/{pattern}'):
+                matched_files.add(filepath)
+    else:
+        matched_files.union(Path(DOCS_DIR).rglob("./**/*"))
+
+    # Remove files matching exclude patterns
+    if exclude_patterns:
+        exclude_files = set()
+        for pattern in exclude_patterns:
+            for filepath in Path(DOCS_DIR).rglob(f'./**/{pattern}'):
+                exclude_files.add(filepath)
+        matched_files.difference_update(exclude_files)
+
+    for path in matched_files:
+        log.info(f'Checking {path}')
         try:
             if path.is_file() and not path.name.startswith("."):
                 tags = extract_folders_after_data_docs(path)
@@ -1143,13 +1188,14 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                 loader, known_type = get_loader(
                     filename, file_content_type[0], str(path)
                 )
+                log.info(f'Loading {path} as {file_content_type[0]}')
                 data = loader.load()
 
                 try:
                     result = store_data_in_vector_db(data, collection_name)
 
                     if result:
-                        sanitized_filename = sanitize_filename(filename)
+                        sanitized_filename = sanitize_filename(path.as_posix())
                         doc = Documents.get_doc_by_name(sanitized_filename)
 
                         if doc == None:
@@ -1178,6 +1224,8 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                                     }
                                 ),
                             )
+                    else:
+                        log.info(f"Failed to store {filename} in vector db")
                 except Exception as e:
                     log.exception(e)
                     pass

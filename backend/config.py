@@ -366,7 +366,12 @@ Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
 DOCS_DIR = os.getenv("DOCS_DIR", f"{DATA_DIR}/docs")
 Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
-
+DOCS_FILE_INCLUDE_FILTER_LIST = PersistentConfig(
+    "DOCS_FILE_INCLUDE_FILTER_LIST", "rag.docs_file_include_filter_list",
+    os.getenv("DOCS_FILE_INCLUDE_FILTER_LIST", []))
+DOCS_FILE_EXCLUDE_FILTER_LIST = PersistentConfig(
+    "DOCS_FILE_EXCLUDE_FILTER_LIST", "rag.docs_file_exclude_filter_list",
+    os.getenv("DOCS_FILE_EXCLUDE_FILTER_LIST", []))
 
 ####################################
 # Tools DIR
