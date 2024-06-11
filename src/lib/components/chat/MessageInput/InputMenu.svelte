@@ -52,11 +52,10 @@
 							class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
 						>
 							<div class="flex-1 flex items-center gap-2">
-								<Tooltip content={tools[toolId]?.description ?? ''}>
-									<WrenchSolid />
+								<WrenchSolid />
+								<Tooltip content={tools[toolId]?.description ?? ''} className="flex-1">
+									<div class=" line-clamp-1">{tools[toolId].name}</div>
 								</Tooltip>
-
-								<div class=" line-clamp-1">{tools[toolId].name}</div>
 							</div>
 
 							<Switch
