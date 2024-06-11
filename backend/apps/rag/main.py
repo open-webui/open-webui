@@ -71,6 +71,7 @@ from apps.rag.search.searxng import search_searxng
 from apps.rag.search.serper import search_serper
 from apps.rag.search.serpstack import search_serpstack
 from apps.rag.search.serply import search_serply
+from apps.rag.search.duckduckgo import search_duckduckgo
 
 from utils.misc import (
     calculate_sha256,
@@ -821,6 +822,8 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
+    elif engine == "duckduckgo":
+        return search_duckduckgo(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
     else:
         raise Exception("No search engine API key found in environment variables")
 
