@@ -172,6 +172,7 @@ async def delete_toolkit_by_id(request: Request, id: str, user=Depends(get_admin
 
     if result:
         TOOLS = request.app.state.TOOLS
-        del TOOLS[id]
+        if id in TOOLS:
+            del TOOLS[id]
 
     return result
