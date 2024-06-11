@@ -46,28 +46,31 @@
 			transition={flyAndScale}
 		>
 			{#if Object.keys(tools).length > 0}
-				{#each Object.keys(tools) as toolId}
-					<div
-						class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-					>
-						<div class="flex-1 flex items-center gap-2">
-							<WrenchSolid />
+				<div class="  max-h-28 overflow-y-auto scrollbar-hidden">
+					{#each Object.keys(tools) as toolId}
+						<div
+							class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+						>
+							<div class="flex-1 flex items-center gap-2">
+								<WrenchSolid />
 
-							<Tooltip content={tools[toolId]?.description ?? ''}>
-								<div class="flex items-center line-clamp-1">{tools[toolId].name}</div>
-							</Tooltip>
+								<Tooltip content={tools[toolId]?.description ?? ''}>
+									<div class="flex items-center line-clamp-1">{tools[toolId].name}</div>
+								</Tooltip>
+							</div>
+
+							<Switch
+								bind:state={tools[toolId].enabled}
+								on:change={(e) => {
+									selectedToolIds = e.detail
+										? [...selectedToolIds, toolId]
+										: selectedToolIds.filter((id) => id !== toolId);
+								}}
+							/>
 						</div>
+					{/each}
+				</div>
 
-						<Switch
-							bind:state={tools[toolId].enabled}
-							on:change={(e) => {
-								selectedToolIds = e.detail
-									? [...selectedToolIds, toolId]
-									: selectedToolIds.filter((id) => id !== toolId);
-							}}
-						/>
-					</div>
-				{/each}
 				<hr class="border-gray-100 dark:border-gray-800 my-1" />
 			{/if}
 
