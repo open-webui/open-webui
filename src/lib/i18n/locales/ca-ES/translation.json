@@ -515,6 +515,7 @@
 	"To add documents here, upload them to the \"Documents\" workspace first.": "",
 	"to chat input.": "a l'entrada del xat.",
 	"To enable tool access for users, tools must be assigned individually to the desired model within the models workspace.": "",
+	"To select toolkits here, add them to the \"Tools\" workspace first.": "",
 	"Today": "Avui",
 	"Toggle settings": "Commuta configuracions",
 	"Toggle sidebar": "Commuta barra lateral",

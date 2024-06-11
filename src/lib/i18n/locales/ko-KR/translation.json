@@ -513,6 +513,7 @@
 	"To add documents here, upload them to the \"Documents\" workspace first.": "",
 	"to chat input.": "채팅 입력으로.",
 	"To enable tool access for users, tools must be assigned individually to the desired model within the models workspace.": "",
+	"To select toolkits here, add them to the \"Tools\" workspace first.": "",
 	"Today": "오늘",
 	"Toggle settings": "설정 전환",
 	"Toggle sidebar": "사이드바 전환",

@@ -513,6 +513,7 @@
 	"To add documents here, upload them to the \"Documents\" workspace first.": "要在此处添加文档，请先将它们上传到工作空间中的“文档”内。",
 	"to chat input.": "到对话输入。",
 	"To enable tool access for users, tools must be assigned individually to the desired model within the models workspace.": "为了让用户可以使用工具，须在模型工作空间中将工具分别分配给所需的模型。",
+	"To select toolkits here, add them to the \"Tools\" workspace first.": "",
 	"Today": "今天",
 	"Toggle settings": "切换设置",
 	"Toggle sidebar": "切换侧边栏",
