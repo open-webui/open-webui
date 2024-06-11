@@ -40,6 +40,8 @@
 				goto('/workspace/tools');
 				return null;
 			});
+
+			console.log(tool);
 		}
 	});
 </script>

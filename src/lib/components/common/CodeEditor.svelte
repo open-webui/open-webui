@@ -60,7 +60,10 @@
 	];
 
 	onMount(() => {
-		value = boilerplate;
+		console.log(value);
+		if (value === '') {
+			value = boilerplate;
+		}
 
 		// Check if html class has dark mode
 		isDarkMode = document.documentElement.classList.contains('dark');

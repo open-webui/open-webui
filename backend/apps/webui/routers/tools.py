@@ -111,7 +111,7 @@ async def create_new_toolkit(form_data: ToolForm, user=Depends(get_admin_user)):
 ############################
 
 
-@router.get("/id/{id}", response_model=Optional[ToolResponse])
+@router.get("/id/{id}", response_model=Optional[ToolModel])
 async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
     toolkit = Tools.get_tool_by_id(id)
 
@@ -129,7 +129,7 @@ async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
 ############################
 
 
-@router.post("/id/{id}/update", response_model=Optional[ToolResponse])
+@router.post("/id/{id}/update", response_model=Optional[ToolModel])
 async def update_toolkit_by_id(
     id: str, form_data: ToolForm, user=Depends(get_admin_user)
 ):
@@ -143,9 +143,14 @@ async def update_toolkit_by_id(
         TOOLS[id] = toolkit_module
 
         specs = get_tools_specs(TOOLS[id])
-        toolkit = Tools.update_tool_by_id(
-            id, {**form_data.model_dump(), "specs": specs}
-        )
+
+        updated = {
+            **form_data.model_dump(),
+            "specs": specs,
+        }
+
+        print(updated)
+        toolkit = Tools.update_tool_by_id(id, updated)
 
         if toolkit:
             return toolkit
