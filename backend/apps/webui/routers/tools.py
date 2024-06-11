@@ -80,6 +80,8 @@ async def create_new_toolkit(form_data: ToolForm, user=Depends(get_admin_user)):
             detail="Only alphanumeric characters and underscores are allowed in the id",
         )
 
+    form_data.id = form_data.id.lower()
+
     toolkit = Tools.get_tool_by_id(form_data.id)
     if toolkit == None:
         toolkit_path = os.path.join(TOOLS_DIR, f"{form_data.id}.py")
@@ -151,7 +153,7 @@ async def update_toolkit_by_id(
         specs = get_tools_specs(TOOLS[id])
 
         updated = {
-            **form_data.model_dump(),
+            **form_data.model_dump(exclude={"id"}),
             "specs": specs,
         }
 

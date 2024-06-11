@@ -9,7 +9,6 @@
 	const dispatch = createEventDispatcher();
 
 	let formElement = null;
-
 	let loading = false;
 
 	export let edit = false;

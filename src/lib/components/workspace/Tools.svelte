@@ -8,7 +8,13 @@
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 
 	import { goto } from '$app/navigation';
-	import { createNewTool, deleteToolById, exportTools, getTools } from '$lib/apis/tools';
+	import {
+		createNewTool,
+		deleteToolById,
+		exportTools,
+		getToolById,
+		getTools
+	} from '$lib/apis/tools';
 
 	const i18n = getContext('i18n');
 
@@ -121,9 +127,20 @@
 				<button
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
-					on:click={() => {
-						sessionStorage.tool = JSON.stringify(tool);
-						goto('/workspace/tools/create');
+					on:click={async () => {
+						const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
+							toast.error(error);
+							return null;
+						});
+
+						if (_tool) {
+							sessionStorage.tool = JSON.stringify({
+								..._tool,
+								id: `${_tool.id}_clone`,
+								name: `${_tool.name} (Clone)`
+							});
+							goto('/workspace/tools/create');
+						}
 					}}
 				>
 					<svg
