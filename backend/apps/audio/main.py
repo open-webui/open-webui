@@ -74,7 +74,7 @@ async def get_audio_config(user=Depends(get_admin_user)) -> AudioConfigUpdateFor
     }
 
 
-@app.post("general/tts/config/update")
+@app.post("/general/tts/config/update")
 async def update_audio_tts_config(
     form_data: TTSGeneralConfigForm, user=Depends(get_admin_user)
 ) -> TTSGeneralConfigForm:
@@ -89,7 +89,7 @@ async def update_audio_tts_config(
     }
 
 
-@app.post("general/stt/config/update")
+@app.post("/general/stt/config/update")
 async def update_audio_stt_config(
     form_data: STTGeneralConfigForm, user=Depends(get_admin_user)
 ) -> STTGeneralConfigForm:

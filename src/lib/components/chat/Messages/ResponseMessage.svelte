@@ -16,7 +16,7 @@
 	const dispatch = createEventDispatcher();
 
 	import { config, models, settings } from '$lib/stores';
-	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
+	import { synthesizeOpenAISpeech, _alltalk } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		approximateToHumanReadable,
@@ -199,6 +199,24 @@
 		});
 	};
 
+	const mergeTexts = (text) => {
+		return text.reduce((mergedTexts, currentText) => {
+				const lastIndex = mergedTexts.length - 1;
+				if (lastIndex >= 0) {
+					const previousText = mergedTexts[lastIndex];
+					const wordCount = previousText.split(/\s+/).length;
+					if (wordCount < 2) {
+						mergedTexts[lastIndex] = previousText + ' ' + currentText;
+					} else {
+						mergedTexts.push(currentText);
+					}
+				} else {
+					mergedTexts.push(currentText);
+				}
+				return mergedTexts;
+			}, []);
+	};
+
 	const toggleSpeakMessage = async () => {
 		if (speaking) {
 			try {
@@ -217,21 +235,7 @@
 				if ($config.audio.tts.engine === 'openai') {
 					loadingSpeech = true;
 
-					const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
-						const lastIndex = mergedTexts.length - 1;
-						if (lastIndex >= 0) {
-							const previousText = mergedTexts[lastIndex];
-							const wordCount = previousText.split(/\s+/).length;
-							if (wordCount < 2) {
-								mergedTexts[lastIndex] = previousText + ' ' + currentText;
-							} else {
-								mergedTexts.push(currentText);
-							}
-						} else {
-							mergedTexts.push(currentText);
-						}
-						return mergedTexts;
-					}, []);
+					const sentences = mergeTexts(extractSentences(message.content));
 
 					console.log(sentences);
 
@@ -260,6 +264,64 @@
 							const blob = await res.blob();
 							const blobUrl = URL.createObjectURL(blob);
 							const audio = new Audio(blobUrl);
+							sentencesAudio[idx] = audio;
+							loadingSpeech = false;
+							lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+						}
+					}
+				} else if($config.audio.tts.engine === 'alltalk') {
+					const texts = extractSentences(message.content);
+					let sentences = mergeTexts(texts);
+
+					console.log(texts);
+					console.log(sentences);
+
+					sentencesAudio = sentences.reduce((a, e, i, arr) => {
+						a[i] = null;
+						return a;
+					}, {});
+
+					console.log(sentencesAudio);
+
+					let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+
+					// Load context if necessary
+					if(!_alltalk.isReady){
+						try{
+							await _alltalk.setup(true);
+						}catch(error){
+							toast.error(error);
+							return;
+						}
+						if(!_alltalk.isReady){
+							toast.error("error loading alltalk");
+							return;
+						}
+					}
+
+					for (const [idx, sentence] of sentences.entries()) {
+						let text = sentence;
+						if(_alltalk.useNarrator){
+							const occurences = (sentence.split("\"").length - 1)
+							// If the number of occurences of " is even, then it is a normal sentence
+							// If the number of occurences of " is odd, then it is a sentence that needs to be closed with a quote
+							if(occurences % 2 !== 0){
+								text = text + "\"";
+							}
+							console.log("text: ", text);
+							console.log("sentences: ", sentences);
+						}
+						const speechUrl = await _alltalk.toggleSpeakMessage(text).catch((error) => {
+							toast.error(error);
+
+							speaking = null;
+							loadingSpeech = false;
+
+							return null;
+						});
+
+						if(speechUrl && speechUrl.length > 0){
+							const audio = new Audio(speechUrl);
 							sentencesAudio[idx] = audio;
 							loadingSpeech = false;
 							lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));

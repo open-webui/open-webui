@@ -88,7 +88,7 @@ export class Alltalk {
     async getModels(): Promise<string[]>{
         let result = null;
         if (!this.currentsSettings) {
-            await this.getCurrentSettings();
+            this.currentsSettings = await this.getCurrentSettings();
             this.currentModel = this.currentsSettings.current_model_loaded;
         }
         result = this.currentsSettings.models_available.map((model) => model.model_name);
@@ -158,6 +158,17 @@ export class Alltalk {
         console.log("toggleSpeakMessage: ", result);
 
         return result;
+    }
+
+    updateInstanceSettings(config: AllTalkConfigForm): void {
+        this.baseUrl = config.url;
+        this.currentModel = config.model;
+        this.currentVoice = config.speaker;
+        this.useDeepSpeed = config.deepspeed;
+        this.useLowVRAM = config.lowVram;
+        this.useStreamingMode = config.useStreaming;
+        this.useNarrator = config.useNarrator;
+        this.narratorVoice = config.narratorVoice;
     }
 
     getConfigPayload(): AllTalkConfigForm {

@@ -41,7 +41,6 @@ export enum ConfigMode {
 	STT = 'stt'
 }
 
-
 export const getAudioConfig  = async (token: string): Promise<AudioConfigUpdateForm> => {
 	let error = null;
 
@@ -69,7 +68,7 @@ export const getAudioConfig  = async (token: string): Promise<AudioConfigUpdateF
 	return res;
 };
 
-export const updateAlltalkAudioConfig = async (token: string, alltalkInstance: Alltalk) => {
+export const updateAlltalkAudioConfig = async (token: string, alltalkInstance: Alltalk): Promise<AllTalkConfigForm> => {
 	const res = updateAudioConfig('alltalk', ConfigMode.TTS, token, alltalkInstance.getConfigPayload());
 	if(!res){
 		const message = 'Alltalk Audio settings update failed';

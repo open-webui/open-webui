@@ -686,7 +686,7 @@ SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get(
         "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
         """You are tasked with generating web search queries. Give me an appropriate query to answer my question for google search. Answer with only the query. Today is {{CURRENT_DATE}}.
-        
+
 Question:
 {{prompt:end:4000}}""",
     ),
@@ -1083,49 +1083,49 @@ AUDIO_TTS_VOICE = PersistentConfig(
 
 AUDIO_TTS_ALLTALK_API_BASE_URL = PersistentConfig(
     "AUDIO_TTS_ALLTALK_API_BASE_URL",
-    "audio.alltalk.api_base_url",
+    "audio.tts.alltalk.api_base_url",
     os.getenv("AUDIO_TTS_ALLTALK_API_BASE_URL", ALLTALK_API_BASE_URL),
 )
 
 AUDIO_TTS_ALLTALK_API_MODEL = PersistentConfig(
     "AUDIO_TTS_ALLTALK_API_MODEL",
-    "audio.alltalk.api_model",
+    "audio.tts.alltalk.api_model",
     os.getenv("AUDIO_TTS_ALLTALK_API_MODEL", ""),
 )
 
 AUDIO_TTS_ALLTALK_API_VOICE = PersistentConfig(
     "AUDIO_TTS_ALLTALK_API_VOICE",
-    "audio.alltalk.api_voice",
+    "audio.tts.alltalk.api_voice",
     os.getenv("AUDIO_TTS_ALLTALK_API_VOICE", ""),
 )
 
 AUDIO_TTS_ALLTALK_API_DEEPSPEED = PersistentConfig(
     "AUDIO_TTS_ALLTALK_API_DEEPSPEED",
-    "audio.alltalk.api_deepspeed",
+    "audio.tts.alltalk.api_deepspeed",
     os.getenv("AUDIO_TTS_ALLTALK_API_DEEPSPEED", "False").lower() == "true",
 )
 
 AUDIO_TTS_ALLTALK_API_LOW_VRAM = PersistentConfig(
     "AUDIO_TTS_ALLTALK_API_LOW_VRAM",
-    "audio.alltalk.api_low_vram",
+    "audio.tts.alltalk.api_low_vram",
     os.getenv("AUDIO_TTS_ALLTALK_API_LOW_VRAM", "False").lower() == "true",
 )
 
 AUDIO_TTS_ALLTALK_API_USE_STREAMING = PersistentConfig(
     "AUDIO_TTS_ALLTALK_API_USE_STREAMING",
-    "audio.alltalk.api_use_streaming",
+    "audio.tts.alltalk.api_use_streaming",
     os.getenv("AUDIO_TTS_ALLTALK_API_USE_STREAMING", "False").lower() == "true",
 )
 
 AUDIO_TTS_ALLTALK_API_USE_NARRATOR = PersistentConfig(
     "AUDIO_TTS_ALLTALK_API_USE_NARRATOR",
-    "audio.alltalk.api_use_narrator",
+    "audio.tts.alltalk.api_use_narrator",
     os.getenv("AUDIO_TTS_ALLTALK_API_USE_NARRATOR", "False").lower() == "true",
 )
 
 AUDIO_TTS_ALLTALK_API_NARRATOR_VOICE = PersistentConfig(
     "AUDIO_TTS_ALLTALK_API_NARRATOR_VOICE",
-    "audio.alltalk.api_narrator_voice",
+    "audio.tts.alltalk.api_narrator_voice",
     os.getenv("AUDIO_TTS_ALLTALK_API_NARRATOR_VOICE", ""),
 )
 

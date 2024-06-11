@@ -16,26 +16,20 @@ router = APIRouter(
      dependencies=[Depends(get_config)]
 )
 
-@router.post("tts/config/update")
+@router.post("/tts/config/update")
 async def update_openai_tts_config(
     form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user), config=Depends(get_config)
 ):
-    if form_data.OPENAI_API_KEY == "":
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
-
     config.TTS_OPENAI_API_BASE_URL = form_data.OPENAI_API_BASE_URL
     config.TTS_OPENAI_API_KEY = form_data.OPENAI_API_KEY
 
     return get_openai_tts_config()
 
 
-@router.post("stt/config/update")
+@router.post("/stt/config/update")
 async def update_openai_stt_config(
-    form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user), config =Depends(get_config)
+    form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user), config=Depends(get_config)
 ):
-    if form_data.OPENAI_API_KEY == "":
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
-
     config.STT_OPENAI_API_BASE_URL = form_data.OPENAI_API_BASE_URL
     config.STT_OPENAI_API_KEY = form_data.OPENAI_API_KEY
 

@@ -57,7 +57,7 @@ async def generate_tts_streaming(payload: TTSStreamingPayload):
     return {"streaming_url": streaming_url}
 
 
-@app.post("tts/config/update")
+@app.post("/tts/config/update")
 async def update_provider_config(
     form_data: AllTalkConfigForm, user=Depends(get_admin_user), config=Depends(get_config)
 ) -> AllTalkConfigForm:
@@ -67,23 +67,23 @@ async def update_provider_config(
     update_alltalk_tts_base_url(form_data.url)
 
     # Update the config to the TTS server if the values have changed
-    if (config.ALLTALK_API_MODEL != form_data.model):
+    if (config.TTS_ALLTALK_API_MODEL != form_data.model):
         await switch_model(form_data.model)
 
-    if (config.ALLTALK_API_DEEPSPEED != form_data.deepspeed):
+    if (config.TTS_ALLTALK_API_DEEPSPEED != form_data.deepspeed):
         await switch_deepspeed(form_data.deepspeed)
 
-    if (config.ALLTALK_API_LOW_VRAM != form_data.lowVram):
+    if (config.TTS_ALLTALK_API_LOW_VRAM != form_data.lowVram):
         await switch_low_vram(form_data.lowVram)
 
 
-    config.ALLTALK_API_BASE_URL = form_data.url
-    config.ALLTALK_API_MODEL = form_data.model
-    config.ALLTALK_API_VOICE = form_data.speaker
-    config.ALLTALK_API_DEEPSPEED = form_data.deepspeed
-    config.ALLTALK_API_LOW_VRAM = form_data.lowVram
-    config.ALLTALK_API_USE_STREAMING = form_data.useStreaming
-    config.ALLTALK_API_USE_NARRATOR = form_data.useNarrator
-    config.ALLTALK_API_NARRATOR_VOICE = form_data.narratorVoice
+    config.TTS_ALLTALK_API_BASE_URL = form_data.url
+    config.TTS_ALLTALK_API_MODEL = form_data.model
+    config.TTS_ALLTALK_API_VOICE = form_data.speaker
+    config.TTS_ALLTALK_API_DEEPSPEED = form_data.deepspeed
+    config.TTS_ALLTALK_API_LOW_VRAM = form_data.lowVram
+    config.TTS_ALLTALK_API_USE_STREAMING = form_data.useStreaming
+    config.TTS_ALLTALK_API_USE_NARRATOR = form_data.useNarrator
+    config.TTS_ALLTALK_API_NARRATOR_VOICE = form_data.narratorVoice
 
     return get_alltalk_tts_config()
