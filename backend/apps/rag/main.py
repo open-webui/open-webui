@@ -717,7 +717,7 @@ def validate_url(url: Union[str, Sequence[str]]):
         if isinstance(validators.url(url), validators.ValidationError):
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
         if not ENABLE_RAG_LOCAL_WEB_FETCH:
-            # Check if the URL exists by making a HEAD request        
+            # Check if the URL exists by making a HEAD request
             try:
                 response = requests.head(url, allow_redirects=True)
                 if response.status_code != 200:
@@ -729,6 +729,7 @@ def validate_url(url: Union[str, Sequence[str]]):
         return all(validate_url(u) for u in url)
     else:
         return False
+
 
 def search_web(engine: str, query: str) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
