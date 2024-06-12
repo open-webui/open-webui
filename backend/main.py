@@ -472,13 +472,10 @@ def filter_pipeline(payload, user):
             if r is not None:
                 try:
                     res = r.json()
-                    if "detail" in res:
-                        return JSONResponse(
-                            status_code=r.status_code,
-                            content=res,
-                        )
                 except:
                     pass
+                if "detail" in res:
+                    raise Exception(r.status_code, res["detail"])
 
             else:
                 pass
@@ -489,6 +486,7 @@ def filter_pipeline(payload, user):
 
         if "title" in payload:
             del payload["title"]
+
     return payload
 
 
@@ -510,7 +508,14 @@ class PipelineMiddleware(BaseHTTPMiddleware):
             user = get_current_user(
                 get_http_authorization_cred(request.headers.get("Authorization"))
             )
-            data = filter_pipeline(data, user)
+
+            try:
+                data = filter_pipeline(data, user)
+            except Exception as e:
+                return JSONResponse(
+                    status_code=e.args[0],
+                    content={"detail": e.args[1]},
+                )
 
             modified_body_bytes = json.dumps(data).encode("utf-8")
             # Replace the request body with the modified one
