@@ -89,7 +89,7 @@
 				>
 					<div class="flex-1 flex items-center gap-2">
 						<GlobeAltSolid />
-						<div class="flex items-center">{$i18n.t('Web Search')}</div>
+						<div class=" line-clamp-1">{$i18n.t('Web Search')}</div>
 					</div>
 
 					<Switch bind:state={webSearchEnabled} />
@@ -105,7 +105,7 @@
 				}}
 			>
 				<DocumentArrowUpSolid />
-				<div class="flex items-center">{$i18n.t('Upload Files')}</div>
+				<div class=" line-clamp-1">{$i18n.t('Upload Files')}</div>
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</div>
