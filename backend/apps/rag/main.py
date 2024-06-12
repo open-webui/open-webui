@@ -831,7 +831,9 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
 @app.post("/web/search")
 def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
     try:
-        logging.info(f"trying to web search with {app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}")
+        logging.info(
+            f"trying to web search with {app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
+        )
         web_results = search_web(
             app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query
         )
@@ -1241,8 +1243,10 @@ def reset(user=Depends(get_admin_user)) -> bool:
 
     return True
 
+
 class SafeWebBaseLoader(WebBaseLoader):
     """WebBaseLoader with enhanced error handling for URLs."""
+
     def lazy_load(self) -> Iterator[Document]:
         """Lazy load text from the url(s) in web_path with error handling."""
         for path in self.web_paths:
@@ -1255,15 +1259,18 @@ class SafeWebBaseLoader(WebBaseLoader):
                 if title := soup.find("title"):
                     metadata["title"] = title.get_text()
                 if description := soup.find("meta", attrs={"name": "description"}):
-                    metadata["description"] = description.get("content", "No description found.")
+                    metadata["description"] = description.get(
+                        "content", "No description found."
+                    )
                 if html := soup.find("html"):
                     metadata["language"] = html.get("lang", "No language found.")
-                
+
                 yield Document(page_content=text, metadata=metadata)
             except Exception as e:
                 # Log the error and continue with the next URL
                 log.error(f"Error loading {path}: {e}")
-                
+
+
 if ENV == "dev":
 
     @app.get("/ef")
