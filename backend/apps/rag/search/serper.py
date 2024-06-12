@@ -1,16 +1,16 @@
 import json
 import logging
-
+from typing import List
 import requests
 
-from apps.rag.search.main import SearchResult
+from apps.rag.search.main import SearchResult, filter_by_whitelist
 from config import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def search_serper(api_key: str, query: str, count: int) -> list[SearchResult]:
+def search_serper(api_key: str, query: str, count: int, whitelist:List[str]) -> list[SearchResult]:
     """Search using serper.dev's API and return the results as a list of SearchResult objects.
 
     Args:
@@ -29,11 +29,12 @@ def search_serper(api_key: str, query: str, count: int) -> list[SearchResult]:
     results = sorted(
         json_response.get("organic", []), key=lambda x: x.get("position", 0)
     )
+    filtered_results = filter_by_whitelist(results, whitelist)
     return [
         SearchResult(
             link=result["link"],
             title=result.get("title"),
             snippet=result.get("description"),
         )
-        for result in results[:count]
+        for result in filtered_results[:count]
     ]
