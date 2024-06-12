@@ -8,7 +8,6 @@ from fastapi import (
     Form,
 )
 from fastapi.middleware.cors import CORSMiddleware
-import requests
 import os, shutil, logging, re
 from datetime import datetime
 
@@ -701,35 +700,12 @@ def store_web(form_data: UrlForm, user=Depends(get_current_user)):
 
 
 def get_web_loader(url: Union[str, Sequence[str]], verify_ssl: bool = True):
-    # Check if the URL is valid
-    if not validate_url(url):
-        raise ValueError(ERROR_MESSAGES.INVALID_URL)
     return SafeWebBaseLoader(
         url,
         verify_ssl=verify_ssl,
         requests_per_second=RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         continue_on_failure=True,
     )
-
-
-def validate_url(url: Union[str, Sequence[str]]):
-    if isinstance(url, str):
-        if isinstance(validators.url(url), validators.ValidationError):
-            raise ValueError(ERROR_MESSAGES.INVALID_URL)
-        if not ENABLE_RAG_LOCAL_WEB_FETCH:
-            # Check if the URL exists by making a HEAD request
-            try:
-                response = requests.head(url, allow_redirects=True)
-                if response.status_code != 200:
-                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
-            except requests.exceptions.RequestException:
-                raise ValueError(ERROR_MESSAGES.INVALID_URL)
-        return True
-    elif isinstance(url, Sequence):
-        return all(validate_url(u) for u in url)
-    else:
-        return False
-
 
 def search_web(engine: str, query: str) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
@@ -1236,6 +1212,10 @@ class SafeWebBaseLoader(WebBaseLoader):
         """Lazy load text from the url(s) in web_path with error handling."""
         for path in self.web_paths:
             try:
+                # Copy requests_kwargs and set timeout
+                requests_kwargs = self.requests_kwargs.copy()
+                requests_kwargs['timeout'] = 10  # Set timeout to 10 seconds
+                
                 soup = self._scrape(path, bs_kwargs=self.bs_kwargs)
                 text = soup.get_text(**self.bs_get_text_kwargs)
 
