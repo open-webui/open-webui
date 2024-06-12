@@ -236,10 +236,9 @@ def get_embedding_function(
         return lambda query: generate_multiple(query, func)
 
 
-def rag_messages(
+def get_rag_context(
     docs,
     messages,
-    template,
     embedding_function,
     k,
     reranking_function,
@@ -318,16 +317,7 @@ def rag_messages(
 
     context_string = context_string.strip()
 
-    ra_content = rag_template(
-        template=template,
-        context=context_string,
-        query=query,
-    )
-
-    log.debug(f"ra_content: {ra_content}")
-    messages = add_or_update_system_message(ra_content, messages)
-
-    return messages, citations
+    return context_string, citations
 
 
 def get_model_path(model: str, update_model: bool = False):

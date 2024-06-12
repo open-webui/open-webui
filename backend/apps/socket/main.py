@@ -19,8 +19,6 @@ TIMEOUT_DURATION = 3
 
 @sio.event
 async def connect(sid, environ, auth):
-    print("connect ", sid)
-
     user = None
     if auth and "token" in auth:
         data = decode_token(auth["token"])
@@ -37,7 +35,6 @@ async def connect(sid, environ, auth):
 
             print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
-            print(len(set(USER_POOL)))
             await sio.emit("user-count", {"count": len(set(USER_POOL))})
             await sio.emit("usage", {"models": get_models_in_use()})
 
@@ -64,13 +61,11 @@ async def user_join(sid, data):
 
             print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
-            print(len(set(USER_POOL)))
             await sio.emit("user-count", {"count": len(set(USER_POOL))})
 
 
 @sio.on("user-count")
 async def user_count(sid):
-    print("user-count", sid)
     await sio.emit("user-count", {"count": len(set(USER_POOL))})
 
 
@@ -79,14 +74,12 @@ def get_models_in_use():
     models_in_use = []
     for model_id, data in USAGE_POOL.items():
         models_in_use.append(model_id)
-    print(f"Models in use: {models_in_use}")
 
     return models_in_use
 
 
 @sio.on("usage")
 async def usage(sid, data):
-    print(f'Received "usage" event from {sid}: {data}')
 
     model_id = data["model"]
 
@@ -114,7 +107,6 @@ async def usage(sid, data):
 
 async def remove_after_timeout(sid, model_id):
     try:
-        print("remove_after_timeout", sid, model_id)
         await asyncio.sleep(TIMEOUT_DURATION)
         if model_id in USAGE_POOL:
             print(USAGE_POOL[model_id]["sids"])
@@ -124,7 +116,6 @@ async def remove_after_timeout(sid, model_id):
             if len(USAGE_POOL[model_id]["sids"]) == 0:
                 del USAGE_POOL[model_id]
 
-            print(f"Removed usage data for {model_id} due to timeout")
             # Broadcast the usage data to all clients
             await sio.emit("usage", {"models": get_models_in_use()})
     except asyncio.CancelledError:
@@ -142,9 +133,6 @@ async def disconnect(sid):
 
         if len(USER_POOL[user_id]) == 0:
             del USER_POOL[user_id]
-
-        print(f"user {user_id} disconnected with session ID {sid}")
-        print(USER_POOL)
 
         await sio.emit("user-count", {"count": len(USER_POOL)})
     else:

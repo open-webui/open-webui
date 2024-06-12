@@ -152,6 +152,7 @@
 
 					toast.error(error);
 					// opts.callback({ success: false, error, modelName: opts.modelName });
+					break;
 				}
 			}
 
