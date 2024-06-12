@@ -894,6 +894,15 @@ RAG_WEB_SEARCH_ENGINE = PersistentConfig(
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
 )
 
+RAG_WEB_SEARCH_WHITE_LIST_DOMAINS = PersistentConfig(
+    "RAG_WEB_SEARCH_WHITE_LIST_DOMAINS",
+    "rag.rag_web_search_white_list_domains",
+    [
+        # "example.com", 
+        # "anotherdomain.com",        
+    ],
+)
+
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",
     "rag.web.search.searxng_query_url",
