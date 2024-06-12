@@ -17,12 +17,14 @@
 	} from '$lib/apis/tools';
 	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
 	let toolsImportInputElement: HTMLInputElement;
 	let importFiles;
 
+	let showConfirm = false;
 	let query = '';
 </script>
 
@@ -251,24 +253,7 @@
 			hidden
 			on:change={() => {
 				console.log(importFiles);
-
-				const reader = new FileReader();
-				reader.onload = async (event) => {
-					const _tools = JSON.parse(event.target.result);
-					console.log(_tools);
-
-					for (const tool of _tools) {
-						const res = await createNewTool(localStorage.token, tool).catch((error) => {
-							toast.error(error);
-							return null;
-						});
-					}
-
-					toast.success('Tool imported successfully');
-					tools.set(await getTools(localStorage.token));
-				};
-
-				reader.readAsText(importFiles[0]);
+				showConfirm = true;
 			}}
 		/>
 
@@ -331,3 +316,43 @@
 		</button>
 	</div>
 </div>
+
+<ConfirmDialog
+	bind:show={showConfirm}
+	on:confirm={() => {
+		const reader = new FileReader();
+		reader.onload = async (event) => {
+			const _tools = JSON.parse(event.target.result);
+			console.log(_tools);
+
+			for (const tool of _tools) {
+				const res = await createNewTool(localStorage.token, tool).catch((error) => {
+					toast.error(error);
+					return null;
+				});
+			}
+
+			toast.success('Tool imported successfully');
+			tools.set(await getTools(localStorage.token));
+		};
+
+		reader.readAsText(importFiles[0]);
+	}}
+>
+	<div class="text-sm text-gray-500">
+		<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
+			<div>Please carefully review the following warnings:</div>
+
+			<ul class=" mt-1 list-disc pl-4 text-xs">
+				<li>Tools have a function calling system that allows arbitrary code execution.</li>
+				<li>Do not install tools from sources you do not fully trust.</li>
+			</ul>
+		</div>
+
+		<div class="my-3">
+			I acknowledge that I have read and I understand the implications of my action. I am aware of
+			the risks associated with executing arbitrary code and I have verified the trustworthiness of
+			the source.
+		</div>
+	</div>
+</ConfirmDialog>
