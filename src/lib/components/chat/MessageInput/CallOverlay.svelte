@@ -626,7 +626,8 @@
 								<button
 									class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
 									type="button"
-									on:click={() => {
+									on:click={async () => {
+										await navigator.mediaDevices.getUserMedia({ video: true });
 										startCamera();
 									}}
 								>
