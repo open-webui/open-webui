@@ -171,4 +171,4 @@
 	<slot />
 {/if}
 
-<Toaster richColors position="top-center" />
+<Toaster richColors position="top-center" closeButton />
