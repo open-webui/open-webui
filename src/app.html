@@ -83,54 +83,53 @@
 				src="/logo.svg"
 			/>
 
-			<img
-				id="logo-her"
+			<div
 				style="
 					position: absolute;
-					width: 13rem;
-					height: 13rem;
 					top: 33%;
 					left: 50%;
-					margin-left: -6.5rem;
-				"
-				src="/logo.svg"
-				class="animate-pulse-fast"
-			/>
-
-			<div
-				id="progress-background"
-				style="
-					position: absolute;
-					top: 58%;
-					left: 50%;
-
-					margin-left: -12rem;
 
 					width: 24rem;
-					height: 0.75rem;
-					border-radius: 9999px;
-					background-color: #fafafa9a;
-				"
-				class="bg-white"
-			></div>
-
-			<div
-				id="progress-bar"
-				style="
-					position: absolute;
-					top: 58%;
-					left: 50%;
-
 					margin-left: -12rem;
 
-					height: 0.75rem;
-					border-radius: 9999px;
-					background-color: #fff;
-
-					width: 0rem;
+					display: flex;
+					flex-direction: column;
+					align-items: center;
 				"
-				class="bg-white"
-			></div>
+			>
+				<img
+					id="logo-her"
+					style="width: 13rem; height: 13rem"
+					src="/logo.svg"
+					class="animate-pulse-fast"
+				/>
+
+				<div style="position: relative; width: 24rem; margin-top: 0.5rem">
+					<div
+						id="progress-background"
+						style="
+							position: absolute;
+							width: 100%;
+							height: 0.75rem;
+
+							border-radius: 9999px;
+							background-color: #fafafa9a;
+						"
+					></div>
+
+					<div
+						id="progress-bar"
+						style="
+							position: absolute;
+							width: 100%;
+							height: 0.75rem;
+							border-radius: 9999px;
+							background-color: #fff;
+						"
+						class="bg-white"
+					></div>
+				</div>
+			</div>
 
 			<!-- <span style="position: absolute; bottom: 32px; left: 50%; margin: -36px 0 0 -36px">
 				Footer content
@@ -186,6 +185,16 @@
 
 	html.her #progress-bar {
 		display: block;
+	}
+
+	@media (max-width: 24rem) {
+		html.her #progress-background {
+			display: none;
+		}
+
+		html.her #progress-bar {
+			display: none;
+		}
 	}
 
 	@keyframes pulse {
