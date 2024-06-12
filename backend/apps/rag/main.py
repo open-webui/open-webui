@@ -715,21 +715,23 @@ def get_web_loader(url: Union[str, Sequence[str]], verify_ssl: bool = True):
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
         if isinstance(validators.url(url), validators.ValidationError):
-            raise ValueError(ERROR_MESSAGES.INVALID_URL)
+            log.exception(ERROR_MESSAGES.INVALID_URL)
+            return False
         if not ENABLE_RAG_LOCAL_WEB_FETCH:
             # Check if the URL exists by making a HEAD request
             try:
-                response = requests.head(url, allow_redirects=True)
-                if response.status_code != 200:
-                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
+                response = requests.head(url, allow_redirects=False, timeout=10)
+                if response.status_code != 200 or response.status_code != 302:
+                    log.exception(ERROR_MESSAGES.INVALID_URL)
+                    return False
             except requests.exceptions.RequestException:
-                raise ValueError(ERROR_MESSAGES.INVALID_URL)
+                log.exception(ERROR_MESSAGES.INVALID_URL)
+                return False
         return True
     elif isinstance(url, Sequence):
         return all(validate_url(u) for u in url)
     else:
         return False
-
 
 def search_web(engine: str, query: str) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
