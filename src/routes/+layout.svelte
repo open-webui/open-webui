@@ -129,7 +129,7 @@
 				const progressBar = document.getElementById('progress-bar');
 
 				if (progressBar) {
-					progressBar.style.width = `${value * 0.24}rem`;
+					progressBar.style.width = `${value}%`;
 				}
 			});
 
