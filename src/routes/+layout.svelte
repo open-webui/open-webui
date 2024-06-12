@@ -126,7 +126,11 @@
 			document.getElementById('progress-bar')
 		) {
 			loadingProgress.subscribe((value) => {
-				document.getElementById('progress-bar').style.width = `${value * 0.24}rem`;
+				const progressBar = document.getElementById('progress-bar');
+
+				if (progressBar) {
+					progressBar.style.width = `${value * 0.24}rem`;
+				}
 			});
 
 			await loadingProgress.set(100);
