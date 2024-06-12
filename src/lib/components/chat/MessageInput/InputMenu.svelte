@@ -21,6 +21,16 @@
 	export let tools = {};
 	export let onClose: Function;
 
+	$: tools = Object.fromEntries(
+		Object.keys(tools).map((toolId) => [
+			toolId,
+			{
+				...tools[toolId],
+				enabled: selectedToolIds.includes(toolId)
+			}
+		])
+	);
+
 	let show = false;
 </script>
 
