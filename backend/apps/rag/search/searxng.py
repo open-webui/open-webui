@@ -25,6 +25,7 @@ def search_searxng(
 
     Keyword Args:
         language (str): Language filter for the search results; e.g., "en-US". Defaults to an empty string.
+        safesearch (int): Safe search filter for safer web results; 0 = off, 1 = moderate, 2 = strict. Defaults to 1 (moderate).
         time_range (str): Time range for filtering results by date; e.g., "2023-04-05..today" or "all-time". Defaults to ''.
         categories: (Optional[List[str]]): Specific categories within which the search should be performed, defaulting to an empty string if not provided.
 
@@ -36,7 +37,8 @@ def search_searxng(
     """
 
     # Default values for optional parameters are provided as empty strings or None when not specified.
-    language = kwargs.get("language", "en-US")
+    language = kwargs.get("language", "auto")
+    safesearch = kwargs.get("safesearch", "1")
     time_range = kwargs.get("time_range", "")
     categories = "".join(kwargs.get("categories", []))
 
@@ -44,6 +46,7 @@ def search_searxng(
         "q": query,
         "format": "json",
         "pageno": 1,
+        "safesearch": safesearch,
         "language": language,
         "time_range": time_range,
         "categories": categories,
