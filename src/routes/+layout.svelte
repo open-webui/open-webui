@@ -2,7 +2,9 @@
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 
-	let loadingProgress = spring(0);
+	let loadingProgress = spring(0, {
+		stiffness: 0.05
+	});
 
 	import { onMount, tick, setContext } from 'svelte';
 	import {
