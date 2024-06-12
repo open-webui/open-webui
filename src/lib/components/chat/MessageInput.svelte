@@ -8,7 +8,9 @@
 		showSidebar,
 		models,
 		config,
-		showCallOverlay
+		showCallOverlay,
+		tools,
+		user as _user
 	} from '$lib/stores';
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
@@ -58,6 +60,8 @@
 
 	export let files = [];
 
+	export let availableToolIds = [];
+	export let selectedToolIds = [];
 	export let webSearchEnabled = false;
 
 	export let prompt = '';
@@ -653,6 +657,17 @@
 								<div class=" ml-0.5 self-end mb-1.5 flex space-x-1">
 									<InputMenu
 										bind:webSearchEnabled
+										bind:selectedToolIds
+										tools={$tools.reduce((a, e, i, arr) => {
+											if (availableToolIds.includes(e.id) || ($_user?.role ?? 'user') === 'admin') {
+												a[e.id] = {
+													name: e.name,
+													description: e.meta.description,
+													enabled: false
+												};
+											}
+											return a;
+										}, {})}
 										uploadFilesHandler={() => {
 											filesInputElement.click();
 										}}

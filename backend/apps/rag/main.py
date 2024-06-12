@@ -8,13 +8,15 @@ from fastapi import (
     Form,
 )
 from fastapi.middleware.cors import CORSMiddleware
+import requests
 import os, shutil, logging, re
 from datetime import datetime
 
 from pathlib import Path
-from typing import List, Union, Sequence
+from typing import List, Union, Sequence, Iterator, Any
 
 from chromadb.utils.batch_utils import create_batches
+from langchain_core.documents import Document
 
 from langchain_community.document_loaders import (
     WebBaseLoader,
@@ -70,6 +72,7 @@ from apps.rag.search.searxng import search_searxng
 from apps.rag.search.serper import search_serper
 from apps.rag.search.serpstack import search_serpstack
 from apps.rag.search.serply import search_serply
+from apps.rag.search.duckduckgo import search_duckduckgo
 
 from utils.misc import (
     calculate_sha256,
@@ -701,7 +704,7 @@ def get_web_loader(url: Union[str, Sequence[str]], verify_ssl: bool = True):
     # Check if the URL is valid
     if not validate_url(url):
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
-    return WebBaseLoader(
+    return SafeWebBaseLoader(
         url,
         verify_ssl=verify_ssl,
         requests_per_second=RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
@@ -714,34 +717,18 @@ def validate_url(url: Union[str, Sequence[str]]):
         if isinstance(validators.url(url), validators.ValidationError):
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
         if not ENABLE_RAG_LOCAL_WEB_FETCH:
-            # Local web fetch is disabled, filter out any URLs that resolve to private IP addresses
-            parsed_url = urllib.parse.urlparse(url)
-            # Get IPv4 and IPv6 addresses
-            ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
-            # Check if any of the resolved addresses are private
-            # This is technically still vulnerable to DNS rebinding attacks, as we don't control WebBaseLoader
-            for ip in ipv4_addresses:
-                if validators.ipv4(ip, private=True):
+            # Check if the URL exists by making a HEAD request
+            try:
+                response = requests.head(url, allow_redirects=True)
+                if response.status_code != 200:
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
-            for ip in ipv6_addresses:
-                if validators.ipv6(ip, private=True):
-                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
+            except requests.exceptions.RequestException:
+                raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return True
     elif isinstance(url, Sequence):
         return all(validate_url(u) for u in url)
     else:
         return False
-
-
-def resolve_hostname(hostname):
-    # Get address information
-    addr_info = socket.getaddrinfo(hostname, None)
-
-    # Extract IP addresses from address information
-    ipv4_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET]
-    ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
-
-    return ipv4_addresses, ipv6_addresses
 
 
 def search_web(engine: str, query: str) -> list[SearchResult]:
@@ -820,6 +807,8 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
+    elif engine == "duckduckgo":
+        return search_duckduckgo(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
     else:
         raise Exception("No search engine API key found in environment variables")
 
@@ -827,7 +816,9 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
 @app.post("/web/search")
 def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
     try:
-        logging.info(f"trying to web search with {app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}")
+        logging.info(
+            f"trying to web search with {app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
+        )
         web_results = search_web(
             app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query
         )
@@ -1236,6 +1227,33 @@ def reset(user=Depends(get_admin_user)) -> bool:
         log.exception(e)
 
     return True
+
+
+class SafeWebBaseLoader(WebBaseLoader):
+    """WebBaseLoader with enhanced error handling for URLs."""
+
+    def lazy_load(self) -> Iterator[Document]:
+        """Lazy load text from the url(s) in web_path with error handling."""
+        for path in self.web_paths:
+            try:
+                soup = self._scrape(path, bs_kwargs=self.bs_kwargs)
+                text = soup.get_text(**self.bs_get_text_kwargs)
+
+                # Build metadata
+                metadata = {"source": path}
+                if title := soup.find("title"):
+                    metadata["title"] = title.get_text()
+                if description := soup.find("meta", attrs={"name": "description"}):
+                    metadata["description"] = description.get(
+                        "content", "No description found."
+                    )
+                if html := soup.find("html"):
+                    metadata["language"] = html.get("lang", "No language found.")
+
+                yield Document(page_content=text, metadata=metadata)
+            except Exception as e:
+                # Log the error and continue with the next URL
+                log.error(f"Error loading {path}: {e}")
 
 
 if ENV == "dev":

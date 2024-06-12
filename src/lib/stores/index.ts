@@ -23,24 +23,11 @@ export const chatId = writable('');
 
 export const chats = writable([]);
 export const tags = writable([]);
-export const models: Writable<Model[]> = writable([]);
 
-export const modelfiles = writable([]);
+export const models: Writable<Model[]> = writable([]);
 export const prompts: Writable<Prompt[]> = writable([]);
-export const documents = writable([
-	{
-		collection_name: 'collection_name',
-		filename: 'filename',
-		name: 'name',
-		title: 'title'
-	},
-	{
-		collection_name: 'collection_name1',
-		filename: 'filename1',
-		name: 'name1',
-		title: 'title1'
-	}
-]);
+export const documents: Writable<Document[]> = writable([]);
+export const tools = writable([]);
 
 export const banners: Writable<Banner[]> = writable([]);
 
@@ -133,6 +120,13 @@ type Prompt = {
 	title: string;
 	content: string;
 	timestamp: number;
+};
+
+type Document = {
+	collection_name: string;
+	filename: string;
+	name: string;
+	title: string;
 };
 
 type Config = {
