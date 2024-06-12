@@ -1,17 +1,17 @@
 import logging
 import requests
-
 from typing import List
 
-from apps.rag.search.main import SearchResult
+from apps.rag.search.main import SearchResult, filter_by_whitelist
 from config import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
+
 def search_searxng(
-    query_url: str, query: str, count: int, **kwargs
+    query_url: str, query: str, count: int, whitelist:List[str],  **kwargs
 ) -> List[SearchResult]:
     """
     Search a SearXNG instance for a given query and return the results as a list of SearchResult objects.
@@ -36,7 +36,8 @@ def search_searxng(
     """
 
     # Default values for optional parameters are provided as empty strings or None when not specified.
-    language = kwargs.get("language", "en-US")
+    language = kwargs.get("language", "auto")
+    safesearch = kwargs.get("safesearch", "2")
     time_range = kwargs.get("time_range", "")
     categories = "".join(kwargs.get("categories", []))
 
@@ -44,6 +45,7 @@ def search_searxng(
         "q": query,
         "format": "json",
         "pageno": 1,
+        "safesearch": safesearch,
         "language": language,
         "time_range": time_range,
         "categories": categories,
@@ -75,9 +77,10 @@ def search_searxng(
     json_response = response.json()
     results = json_response.get("results", [])
     sorted_results = sorted(results, key=lambda x: x.get("score", 0), reverse=True)
+    filtered_results = filter_by_whitelist(sorted_results, whitelist)
     return [
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("content")
         )
-        for result in sorted_results[:count]
+        for result in filtered_results[:count]
     ]
