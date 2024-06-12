@@ -57,7 +57,11 @@
 			bind:this={formElement}
 			class=" flex flex-col max-h-[100dvh] h-full"
 			on:submit|preventDefault={() => {
-				showConfirm = true;
+				if (edit) {
+					submitHandler();
+				} else {
+					showConfirm = true;
+				}
 			}}
 		>
 			<div class="mb-2.5">
