@@ -22,6 +22,39 @@ export const getGravatarUrl = async (email: string) => {
 	return res;
 };
 
+export const formatPythonCode = async (code: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/code/format`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			code: code
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+
+			error = err;
+			if (err.detail) {
+				error = err.detail;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const downloadChatAsPDF = async (chat: object) => {
 	let error = null;
 

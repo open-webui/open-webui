@@ -24,7 +24,8 @@
 		banners,
 		user,
 		socket,
-		showCallOverlay
+		showCallOverlay,
+		tools
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -73,6 +74,10 @@
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 
+	let selectedModelIds = [];
+	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+
+	let selectedToolIds = [];
 	let webSearchEnabled = false;
 
 	let chat = null;
@@ -687,6 +692,7 @@
 			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
+			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 			docs: docs.length > 0 ? docs : undefined,
 			citations: docs.length > 0,
 			chat_id: $chatId
@@ -948,6 +954,7 @@
 					top_p: $settings?.params?.top_p ?? undefined,
 					frequency_penalty: $settings?.params?.frequency_penalty ?? undefined,
 					max_tokens: $settings?.params?.max_tokens ?? undefined,
+					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 					docs: docs.length > 0 ? docs : undefined,
 					citations: docs.length > 0,
 					chat_id: $chatId
@@ -1274,8 +1281,16 @@
 				bind:files
 				bind:prompt
 				bind:autoScroll
+				bind:selectedToolIds
 				bind:webSearchEnabled
 				bind:atSelectedModel
+				availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
+					const model = $models.find((m) => m.id === e);
+					if (model?.info?.meta?.toolIds ?? false) {
+						return [...new Set([...a, ...model.info.meta.toolIds])];
+					}
+					return a;
+				}, [])}
 				{selectedModels}
 				{messages}
 				{submitPrompt}
