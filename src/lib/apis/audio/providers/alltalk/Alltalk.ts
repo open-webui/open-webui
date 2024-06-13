@@ -54,7 +54,6 @@ export class Alltalk {
     async isReadyCheck(): Promise<boolean> {
         let result: boolean = false;
         const res = await this.api.ready();
-        console.log("isReadyCheck: ", res);
         result = res && res.status === 'Ready';
         if (!result) {
             console.error('Alltalk is not ready.', result);
@@ -101,18 +100,15 @@ export class Alltalk {
             this.currentModel = this.currentsSettings.current_model_loaded;
         }
         result = this.currentsSettings.models_available.map((model) => model.model_name);
-        console.log("modelList: ", result);
 
         return result;
     }
 
     async getCurrentSettings(): Promise<CurrentSettings> {
-        console.log("getCurrentSettings !!!!");
         const res = await this.api.currentSettings();
         this.currentModel = res.current_model_loaded;
         this.useDeepSpeed = res.deepspeed_status;
         this.useLowVRAM = res.low_vram_status;
-        console.log("after getting settings: ", this);
         return res;
     }
 
