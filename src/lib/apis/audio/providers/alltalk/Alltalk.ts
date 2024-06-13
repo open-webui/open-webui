@@ -199,34 +199,51 @@ export class Alltalk {
         if (this.useNarrator) {
             const result = [];
             let inQuote = false;
+            let addedEndQuote = false;
+
             for (let i = 0; i < sentences.length; i++) {
                 let sentence = sentences[i].trim();
 
-                const quoteCount = (sentence.match(/"/g) || []).length;
+                const startsWithQuote = sentence.startsWith("\"");
+                const endsWithQuote = sentence.endsWith("\"");
 
-                if (quoteCount % 2 !== 0) {
-                    if (inQuote) {
-                        // If currently in a quote and the sentence has an odd number of quotes, close the quote
-                        sentence += "\"";
-                    } else {
-                        // If not currently in a quote and the sentence has an odd number of quotes, open a quote
-                        sentence = "\"" + sentence;
-                    }
-                    inQuote = !inQuote;
-                } else if (inQuote) {
-                    // If already in a quote and the sentence has an even number of quotes, continue the quote
-                    sentence = "\"" + sentence;
+                if(startsWithQuote && addedEndQuote){
+                    console.log("sentence before substring: ", sentence);
+                    sentence = sentence.substring(1);
+                    console.log("sentence after substring: ", sentence);
+                    addedEndQuote = false;
+                    inQuote = false;
                 }
 
-                result.push(sentence);
+                const occurrencesOfQuote = (sentence.split("\"").length - 1);
+
+                if(occurrencesOfQuote === 0 && inQuote){
+                    sentence = "\"" + sentence + "\"";
+                }else if (occurrencesOfQuote % 2 !== 0) {
+                    if (!endsWithQuote) {
+                        sentence = sentence + "\"";
+                        addedEndQuote = true;
+                        inQuote = true;
+                    } else if (inQuote && !startsWithQuote) {
+                        sentence = "\"" + sentence;
+                        inQuote = false;
+                    } else {
+                        inQuote = !inQuote;
+                    }
+                } else {
+                    inQuote = false;
+                }
+
+                result.push(sentence.trim());
             }
 
             // If still in a quote after processing all sentences, close it
             if (inQuote) {
                 result[result.length - 1] += "\"";
             }
+
             return result;
-        } else{
+        } else {
             return sentences;
         }
     }
