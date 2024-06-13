@@ -935,7 +935,7 @@
 													}
 													// check if user has access to getUserMedia
 													try {
-														await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+														await navigator.mediaDevices.getUserMedia({ audio: true });
 														// If the user grants the permission, proceed to show the call overlay
 
 														showCallOverlay.set(true);

@@ -34,7 +34,7 @@ export const createNewTool = async (token: string, tool: object) => {
 export const getTools = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
