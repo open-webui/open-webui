@@ -11,7 +11,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_searxng(
-    query_url: str, query: str, count: int, **kwargs
+    query_url: str, query: str, count: int, whitelist:List[str],  **kwargs
 ) -> List[SearchResult]:
     """
     Search a SearXNG instance for a given query and return the results as a list of SearchResult objects.
@@ -78,9 +78,10 @@ def search_searxng(
     json_response = response.json()
     results = json_response.get("results", [])
     sorted_results = sorted(results, key=lambda x: x.get("score", 0), reverse=True)
+    filtered_results = filter_by_whitelist(sorted_results, whitelist)
     return [
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("content")
         )
-        for result in sorted_results[:count]
+        for result in filtered_results[:count]
     ]

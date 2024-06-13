@@ -1,6 +1,6 @@
 import logging
-
-from apps.rag.search.main import SearchResult
+from typing import List
+from apps.rag.search.main import SearchResult, filter_by_whitelist
 from duckduckgo_search import DDGS
 from config import SRC_LOG_LEVELS
 
@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def search_duckduckgo(query: str, count: int) -> list[SearchResult]:
+def search_duckduckgo(query: str, count: int, whitelist:List[str]) -> list[SearchResult]:
     """
     Search using DuckDuckGo's Search API and return the results as a list of SearchResult objects.
     Args:
@@ -41,6 +41,7 @@ def search_duckduckgo(query: str, count: int) -> list[SearchResult]:
                 snippet=result.get("body"),
             )
         )
-    print(results)
+    # print(results)
+    filtered_results = filter_by_whitelist(results, whitelist)
     # Return the list of search results
-    return results
+    return filtered_results

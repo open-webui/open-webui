@@ -111,6 +111,7 @@ from config import (
     YOUTUBE_LOADER_LANGUAGE,
     ENABLE_RAG_WEB_SEARCH,
     RAG_WEB_SEARCH_ENGINE,
+    RAG_WEB_SEARCH_WHITE_LIST_DOMAINS,
     SEARXNG_QUERY_URL,
     GOOGLE_PSE_API_KEY,
     GOOGLE_PSE_ENGINE_ID,
@@ -163,6 +164,7 @@ app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
+app.state.config.RAG_WEB_SEARCH_WHITE_LIST_DOMAINS = RAG_WEB_SEARCH_WHITE_LIST_DOMAINS
 
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
@@ -768,6 +770,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SEARXNG_QUERY_URL,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_WHITE_LIST_DOMAINS
             )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
@@ -781,6 +784,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.GOOGLE_PSE_ENGINE_ID,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_WHITE_LIST_DOMAINS
             )
         else:
             raise Exception(
@@ -792,6 +796,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.BRAVE_SEARCH_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_WHITE_LIST_DOMAINS
             )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
@@ -801,6 +806,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPSTACK_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_WHITE_LIST_DOMAINS,
                 https_enabled=app.state.config.SERPSTACK_HTTPS,
             )
         else:
@@ -811,6 +817,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPER_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_WHITE_LIST_DOMAINS
             )
         else:
             raise Exception("No SERPER_API_KEY found in environment variables")
@@ -820,11 +827,12 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPLY_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_WHITE_LIST_DOMAINS
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
     elif engine == "duckduckgo":
-        return search_duckduckgo(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
+        return search_duckduckgo(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT, app.state.config.RAG_WEB_SEARCH_WHITE_LIST_DOMAINS)
     else:
         raise Exception("No search engine API key found in environment variables")
 

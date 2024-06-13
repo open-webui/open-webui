@@ -1,10 +1,10 @@
 import json
 import logging
-
+from typing import List
 import requests
 from urllib.parse import urlencode
 
-from apps.rag.search.main import SearchResult
+from apps.rag.search.main import SearchResult, filter_by_whitelist
 from config import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -15,6 +15,7 @@ def search_serply(
     api_key: str,
     query: str,
     count: int,
+    whitelist:List[str],
     hl: str = "us",
     limit: int = 10,
     device_type: str = "desktop",
@@ -57,12 +58,12 @@ def search_serply(
     results = sorted(
         json_response.get("results", []), key=lambda x: x.get("realPosition", 0)
     )
-
+    filtered_results = filter_by_whitelist(results, whitelist)
     return [
         SearchResult(
             link=result["link"],
             title=result.get("title"),
             snippet=result.get("description"),
         )
-        for result in results[:count]
+        for result in filtered_results[:count]
     ]
