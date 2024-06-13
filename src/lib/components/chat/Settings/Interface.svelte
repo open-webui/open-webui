@@ -20,8 +20,11 @@
 	// Interface
 	let defaultModelId = '';
 	let showUsername = false;
+
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' = 'LTR';
+
+	let showEmojiInCall = false;
 
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
@@ -41,6 +44,11 @@
 	const toggleShowUsername = async () => {
 		showUsername = !showUsername;
 		saveSettings({ showUsername: showUsername });
+	};
+
+	const toggleEmojiInCall = async () => {
+		showEmojiInCall = !showEmojiInCall;
+		saveSettings({ showEmojiInCall: showEmojiInCall });
 	};
 
 	const toggleTitleAutoGenerate = async () => {
@@ -88,8 +96,12 @@
 
 	onMount(async () => {
 		titleAutoGenerate = $settings?.title?.auto ?? true;
+
 		responseAutoCopy = $settings.responseAutoCopy ?? false;
 		showUsername = $settings.showUsername ?? false;
+
+		showEmojiInCall = $settings.showEmojiInCall ?? false;
+
 		chatBubble = $settings.chatBubble ?? true;
 		widescreenMode = $settings.widescreenMode ?? false;
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
@@ -184,6 +196,26 @@
 						type="button"
 					>
 						{#if widescreenMode === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Display Emoji in Call')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleEmojiInCall();
+						}}
+						type="button"
+					>
+						{#if showEmojiInCall === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
