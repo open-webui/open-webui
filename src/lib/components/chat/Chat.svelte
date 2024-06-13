@@ -1209,6 +1209,7 @@
 
 <CallOverlay
 	{submitPrompt}
+	{stopResponse}
 	bind:files
 	modelId={selectedModelIds?.at(0) ?? null}
 	chatId={$chatId}
