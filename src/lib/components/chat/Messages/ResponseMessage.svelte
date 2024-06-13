@@ -273,15 +273,10 @@
 					const texts = extractSentences(message.content);
 					let sentences = mergeTexts(texts);
 
-					console.log(texts);
-					console.log(sentences);
-
 					sentencesAudio = sentences.reduce((a, e, i, arr) => {
 						a[i] = null;
 						return a;
 					}, {});
-
-					console.log(sentencesAudio);
 
 					let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
 
@@ -298,11 +293,7 @@
 							return;
 						}
 					}
-					console.log("sentences before:", sentences);
-
 					sentences = _alltalk.processSentences(sentences);
-
-					console.log("sentences after:", sentences);
 
 					for (const [idx, sentence] of sentences.entries()) {
 						const speechUrl = await _alltalk.toggleSpeakMessage(sentence).catch((error) => {

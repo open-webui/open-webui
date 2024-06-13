@@ -107,7 +107,6 @@
 	};
 
 	onMount(async () => {
-		console.log("getting audio config! on mount");
 		const res = await getAudioConfig(localStorage.token);
 
 		if (res) {
@@ -130,11 +129,9 @@
 			TTSEngineConfig[TTS_ENGINE].getVoices();
 			TTSEngineConfig[TTS_ENGINE].getModels();
 		} else if(TTS_ENGINE === 'alltalk'){
-			console.log("starting setup alltalk !");
 			await _alltalk.setup();
 			voices = _alltalk.voicesList;
 			models = _alltalk.modelList;
-			console.log("alltalk model: ", _alltalk.currentModel);
 		} else {
 			TTSEngineConfig.webapi.getVoices();
 		}
@@ -230,7 +227,6 @@
 									await _alltalk.getVoices();
 									TTS_VOICE = _alltalk.currentVoice;
 									await _alltalk.getModels();
-									console.log("alltalk model 2: ", _alltalk.currentModel);
 									TTS_MODEL = _alltalk.currentModel;
 								}  else {
 									TTSEngineConfig.webapi.getVoices();
