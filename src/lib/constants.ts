@@ -3,8 +3,13 @@ import { browser, dev } from '$app/environment';
 
 export const APP_NAME = 'YUBB UI';
 
-export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
-export const WEBUI_BASE_URL = browser ? (dev ? `http://${WEBUI_HOSTNAME}` : ``) : ``;
+// 获取当前的协议和主机名
+const protocol = browser ? window.location.protocol : '';
+const hostname = browser ? window.location.hostname : '';
+
+// 根据当前请求地址动态设置 WEBUI_HOSTNAME 和 WEBUI_BASE_URL
+export const WEBUI_HOSTNAME = browser ? (dev ? `${hostname}:8080` : hostname) : '';
+export const WEBUI_BASE_URL = browser ? `${protocol}//${WEBUI_HOSTNAME}` : '';
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;
