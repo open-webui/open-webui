@@ -64,6 +64,20 @@ class MemoriesTable:
             return memory
         else:
             return None
+        
+    def update_memory(
+        self,
+        id: str,
+        content: str,
+    ) -> Optional[MemoryModel]:
+        try:
+            memory = Memory.get(Memory.id == id)
+            memory.content = content
+            memory.updated_at = int(time.time())
+            memory.save()
+            return MemoryModel(**model_to_dict(memory))
+        except:
+            return None
 
     def get_memories(self) -> List[MemoryModel]:
         try:

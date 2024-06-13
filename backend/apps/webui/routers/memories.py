@@ -43,6 +43,8 @@ async def get_memories(user=Depends(get_verified_user)):
 class AddMemoryForm(BaseModel):
     content: str
 
+class MemoryUpdateModel(BaseModel):
+    content: Optional[str] = None
 
 @router.post("/add", response_model=Optional[MemoryModel])
 async def add_memory(
@@ -58,6 +60,27 @@ async def add_memory(
         embeddings=[memory_embedding],
         metadatas=[{"created_at": memory.created_at}],
     )
+
+    return memory
+
+
+@router.patch("/{memory_id}", response_model=Optional[MemoryModel])
+async def update_memory(
+    memory_id: str, request: Request, form_data: MemoryUpdateModel, user=Depends(get_verified_user)
+):
+    memory = Memories.update_memory(memory_id, form_data.content)
+    if memory is None:
+        raise HTTPException(status_code=404, detail="Memory not found")
+
+    if form_data.content is not None:
+        memory_embedding = request.app.state.EMBEDDING_FUNCTION(form_data.content)
+        collection = CHROMA_CLIENT.get_or_create_collection(name=f"user-memory-{user.id}")
+        collection.upsert(
+            documents=[form_data.content],
+            ids=[memory.id],
+            embeddings=[memory_embedding],
+            metadatas=[{"created_at": memory.created_at, "updated_at": memory.updated_at}],
+        )
 
     return memory
 
