@@ -207,30 +207,34 @@ export class Alltalk {
                 const startsWithQuote = sentence.startsWith("\"");
                 const endsWithQuote = sentence.endsWith("\"");
 
-                if(startsWithQuote && addedEndQuote){
-                    console.log("sentence before substring: ", sentence);
+                // Remove leading quote if it was added at the end of the previous sentence
+                if (startsWithQuote && addedEndQuote) {
                     sentence = sentence.substring(1);
-                    console.log("sentence after substring: ", sentence);
                     addedEndQuote = false;
                     inQuote = false;
                 }
 
                 const occurrencesOfQuote = (sentence.split("\"").length - 1);
 
-                if(occurrencesOfQuote === 0 && inQuote){
+                if (occurrencesOfQuote === 0 && inQuote) {
+                    // If inside a quote and the sentence has no quotes, wrap it with quotes
                     sentence = "\"" + sentence + "\"";
-                }else if (occurrencesOfQuote % 2 !== 0) {
+                } else if (occurrencesOfQuote % 2 !== 0) {
                     if (!endsWithQuote) {
+                        // If sentence has an odd number of quotes and does not end with a quote, add a closing quote
                         sentence = sentence + "\"";
                         addedEndQuote = true;
                         inQuote = true;
                     } else if (inQuote && !startsWithQuote) {
+                        // If inside a quote and the sentence does not start with a quote, add an opening quote
                         sentence = "\"" + sentence;
                         inQuote = false;
                     } else {
+                        // Toggle the inQuote state if the sentence has an odd number of quotes
                         inQuote = !inQuote;
                     }
                 } else {
+                    // Reset inQuote state if the sentence has an even number of quotes
                     inQuote = false;
                 }
 
