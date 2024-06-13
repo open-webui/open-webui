@@ -3,20 +3,29 @@
 	import { onMount, tick, getContext } from 'svelte';
 
 	import { blobToFile, calculateSHA256, extractSentences, findWordIndices } from '$lib/utils';
+	import { generateEmoji } from '$lib/apis';
 	import { synthesizeOpenAISpeech, transcribeAudio } from '$lib/apis/audio';
+
 	import { toast } from 'svelte-sonner';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
-	import { get } from 'svelte/store';
 
 	const i18n = getContext('i18n');
 
+	export let eventTarget: EventTarget;
 	export let submitPrompt: Function;
 	export let files;
 
+	export let chatId;
+	export let modelId;
+
+	let message = '';
+
 	let loading = false;
 	let confirmed = false;
+
+	let emoji = null;
 
 	let camera = false;
 	let cameraStream = null;
@@ -125,9 +134,11 @@
 		}
 
 		const audioElement = document.getElementById('audioElement');
-		audioElement.pause();
-		audioElement.currentTime = 0;
 
+		if (audioElement) {
+			audioElement.pause();
+			audioElement.currentTime = 0;
+		}
 		assistantSpeaking = false;
 	};
 
@@ -138,28 +149,30 @@
 				const audioElement = document.getElementById('audioElement');
 				const audio = assistantAudio[idx];
 
-				audioElement.src = audio.src; // Assume `assistantAudio` has objects with a `src` property
+				if (audioElement) {
+					audioElement.src = audio.src; // Assume `assistantAudio` has objects with a `src` property
 
-				audioElement.muted = true;
+					audioElement.muted = true;
 
-				audioElement
-					.play()
-					.then(() => {
-						audioElement.muted = false;
-					})
-					.catch((error) => {
-						toast.error(error);
-					});
+					audioElement
+						.play()
+						.then(() => {
+							audioElement.muted = false;
+						})
+						.catch((error) => {
+							toast.error(error);
+						});
 
-				audioElement.onended = async (e) => {
-					await new Promise((r) => setTimeout(r, 300));
+					audioElement.onended = async (e) => {
+						await new Promise((r) => setTimeout(r, 300));
 
-					if (Object.keys(assistantAudio).length - 1 === idx) {
-						assistantSpeaking = false;
-					}
+						if (Object.keys(assistantAudio).length - 1 === idx) {
+							assistantSpeaking = false;
+						}
 
-					res(e);
-				};
+						res(e);
+					};
+				}
 			});
 		} else {
 			return Promise.resolve();
@@ -200,21 +213,31 @@
 			console.log(res.text);
 
 			if (res.text !== '') {
-				const _responses = await submitPrompt(res.text);
+				const _responses = await submitPrompt(res.text, { _raw: true });
 				console.log(_responses);
-
-				if (_responses.at(0)) {
-					const content = _responses[0];
-					if ((content ?? '').trim() !== '') {
-						assistantSpeakingHandler(content);
-					}
-				}
 			}
 		}
 	};
 
 	const assistantSpeakingHandler = async (content) => {
 		assistantSpeaking = true;
+
+		if (modelId && ($settings?.showEmojiInCall ?? false)) {
+			console.log('Generating emoji');
+			const res = await generateEmoji(localStorage.token, modelId, content, chatId).catch(
+				(error) => {
+					console.error(error);
+					return null;
+				}
+			);
+
+			if (res) {
+				console.log(res);
+				if (/\p{Extended_Pictographic}/u.test(res)) {
+					emoji = res.match(/\p{Extended_Pictographic}/gu)[0];
+				}
+			}
+		}
 
 		if (($config.audio.tts.engine ?? '') == '') {
 			let voices = [];
@@ -237,6 +260,10 @@
 					}
 
 					speechSynthesis.speak(currentUtterance);
+
+					currentUtterance.onend = async () => {
+						assistantSpeaking = false;
+					};
 				}
 			}, 100);
 		} else if ($config.audio.tts.engine === 'openai') {
@@ -280,15 +307,22 @@
 					const audio = new Audio(blobUrl);
 					assistantAudio[idx] = audio;
 					lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+
+					if (idx === sentences.length - 1) {
+						lastPlayedAudioPromise.then(() => {
+							assistantSpeaking = false;
+						});
+					}
 				}
 			}
 		}
 	};
 
-	const stopRecordingCallback = async () => {
+	const stopRecordingCallback = async (_continue = true) => {
 		if ($showCallOverlay) {
 			if (confirmed) {
 				loading = true;
+				emoji = null;
 
 				if (cameraStream) {
 					const imageUrl = takeScreenshot();
@@ -310,7 +344,9 @@
 			audioChunks = [];
 			mediaRecorder = false;
 
-			startRecording();
+			if (_continue) {
+				startRecording();
+			}
 		} else {
 			audioChunks = [];
 			mediaRecorder = false;
@@ -443,7 +479,30 @@
 		startRecording();
 	} else {
 		stopCamera();
+		stopAllAudio();
+		stopRecordingCallback(false);
 	}
+
+	onMount(() => {
+		console.log(eventTarget);
+
+		eventTarget.addEventListener('chat:start', async (e) => {
+			console.log('Chat start event:', e.detail);
+			message = '';
+		});
+
+		eventTarget.addEventListener('chat', async (e) => {
+			const { content } = e.detail;
+
+			message += content;
+			console.log('Chat event:', message);
+		});
+
+		eventTarget.addEventListener('chat:finish', async (e) => {
+			console.log('Chat finish event:', e.detail);
+			message = '';
+		});
+	});
 </script>
 
 {#if $showCallOverlay}
@@ -492,6 +551,19 @@
 									r="3"
 								/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
 							>
+						{:else if emoji}
+							<div
+								class="  transition-all rounded-full"
+								style="font-size:{rmsLevel * 100 > 4
+									? '4.5'
+									: rmsLevel * 100 > 2
+									? '4'
+									: rmsLevel * 100 > 1
+									? '3.5'
+									: '3'}rem;width:100%;text-align:center;"
+							>
+								{emoji}
+							</div>
 						{:else}
 							<div
 								class=" {rmsLevel * 100 > 4
@@ -546,6 +618,19 @@
 									r="3"
 								/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
 							>
+						{:else if emoji}
+							<div
+								class="  transition-all rounded-full"
+								style="font-size:{rmsLevel * 100 > 4
+									? '13'
+									: rmsLevel * 100 > 2
+									? '12'
+									: rmsLevel * 100 > 1
+									? '11.5'
+									: '11'}rem;width:100%;text-align:center;"
+							>
+								{emoji}
+							</div>
 						{:else}
 							<div
 								class=" {rmsLevel * 100 > 4

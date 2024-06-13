@@ -494,6 +494,9 @@ def filter_pipeline(payload, user):
         if "title" in payload:
             del payload["title"]
 
+        if "task" in payload:
+            del payload["task"]
+
     return payload
 
 
@@ -835,6 +838,71 @@ async def generate_search_query(form_data: dict, user=Depends(get_verified_user)
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         "max_tokens": 30,
+        "task": True,
+    }
+
+    print(payload)
+
+    try:
+        payload = filter_pipeline(payload, user)
+    except Exception as e:
+        return JSONResponse(
+            status_code=e.args[0],
+            content={"detail": e.args[1]},
+        )
+
+    if model["owned_by"] == "ollama":
+        return await generate_ollama_chat_completion(
+            OpenAIChatCompletionForm(**payload), user=user
+        )
+    else:
+        return await generate_openai_chat_completion(payload, user=user)
+
+
+@app.post("/api/task/emoji/completions")
+async def generate_emoji(form_data: dict, user=Depends(get_verified_user)):
+    print("generate_emoji")
+
+    model_id = form_data["model"]
+    if model_id not in app.state.MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+
+    # Check if the user has a custom task model
+    # If the user has a custom task model, use that model
+    if app.state.MODELS[model_id]["owned_by"] == "ollama":
+        if app.state.config.TASK_MODEL:
+            task_model_id = app.state.config.TASK_MODEL
+            if task_model_id in app.state.MODELS:
+                model_id = task_model_id
+    else:
+        if app.state.config.TASK_MODEL_EXTERNAL:
+            task_model_id = app.state.config.TASK_MODEL_EXTERNAL
+            if task_model_id in app.state.MODELS:
+                model_id = task_model_id
+
+    print(model_id)
+    model = app.state.MODELS[model_id]
+
+    template = '''
+You are a perceptive assistant skilled at interpreting emotions from a provided message. Your task is to reflect the speaker's likely facial expression through a fitting emoji. Prioritize using diverse facial expression emojis to convey the nuanced emotions expressed in the text. Please avoid using generic or overly ambiguous emojis like "🤔", and instead, choose ones that vividly represent the speaker's mood or reaction.
+
+Message: """{{prompt}}"""
+'''
+
+    content = title_generation_template(
+        template, form_data["prompt"], user.model_dump()
+    )
+
+    payload = {
+        "model": model_id,
+        "messages": [{"role": "user", "content": content}],
+        "stream": False,
+        "max_tokens": 4,
+        "chat_id": form_data.get("chat_id", None),
+        "task": True,
     }
 
     print(payload)

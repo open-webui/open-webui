@@ -436,7 +436,7 @@ export const removeEmojis = (str) => {
 
 export const extractSentences = (text) => {
 	// Split the paragraph into sentences based on common punctuation marks
-	const sentences = text.split(/(?<=[.!?])/);
+	const sentences = text.split(/(?<=[.!?])\s+/);
 
 	return sentences
 		.map((sentence) => removeEmojis(sentence.trim()))

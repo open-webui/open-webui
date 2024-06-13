@@ -79,7 +79,7 @@
 		history.currentId = userMessageId;
 
 		await tick();
-		await sendPrompt(userPrompt, userMessageId, undefined, false);
+		await sendPrompt(userPrompt, userMessageId);
 	};
 
 	const updateChatMessages = async () => {
