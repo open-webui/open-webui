@@ -64,7 +64,10 @@ export class Alltalk {
 
     async setup(firstLoad?: boolean): Promise<void> {
         console.log("Setting up Alltalk");
-        console.log("baseUrl: ", this.baseUrl);
+        // First off load the settings from the server
+        const config = await this.getStoredConfig();
+        this.updateInstanceSettings(config);
+
         if (!this.baseUrl && !firstLoad) {
             return;
         }
@@ -76,6 +79,12 @@ export class Alltalk {
         }
         this.modelList = await this.getModels();
         this.isReady = await this.isReadyCheck();
+
+        console.log("Alltalk setup done: ", this);
+    }
+
+    async getStoredConfig(): Promise<AllTalkConfigForm> {
+        return this.api.storedConfig();
     }
 
     async getVoices(): Promise<string[]> {
@@ -169,6 +178,8 @@ export class Alltalk {
         this.useStreamingMode = config.useStreaming;
         this.useNarrator = config.useNarrator;
         this.narratorVoice = config.narratorVoice;
+
+        console.log("Alltalk instance updated ", this);
     }
 
     getConfigPayload(): AllTalkConfigForm {
@@ -182,5 +193,41 @@ export class Alltalk {
             this.useNarrator,
             this.narratorVoice
         );
+    }
+
+    processSentences(sentences: string[]): string[] {
+        if (this.useNarrator) {
+            const result = [];
+            let inQuote = false;
+            for (let i = 0; i < sentences.length; i++) {
+                let sentence = sentences[i].trim();
+
+                const quoteCount = (sentence.match(/"/g) || []).length;
+
+                if (quoteCount % 2 !== 0) {
+                    if (inQuote) {
+                        // If currently in a quote and the sentence has an odd number of quotes, close the quote
+                        sentence += "\"";
+                    } else {
+                        // If not currently in a quote and the sentence has an odd number of quotes, open a quote
+                        sentence = "\"" + sentence;
+                    }
+                    inQuote = !inQuote;
+                } else if (inQuote) {
+                    // If already in a quote and the sentence has an even number of quotes, continue the quote
+                    sentence = "\"" + sentence;
+                }
+
+                result.push(sentence);
+            }
+
+            // If still in a quote after processing all sentences, close it
+            if (inQuote) {
+                result[result.length - 1] += "\"";
+            }
+            return result;
+        } else{
+            return sentences;
+        }
     }
 }

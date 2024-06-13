@@ -1,4 +1,5 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
+import type { AllTalkConfigForm } from './Alltalk';
 import type { CurrentSettings, PreviewVoice, TTSGenerationPayload, TTSGenerationStreaming, VoicesList } from './alltalkApiModel';
 
 export class AlltalkApi {
@@ -70,6 +71,12 @@ export class AlltalkApi {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
+        }).then((res) => res.json());
+    }
+
+    async storedConfig(): Promise<AllTalkConfigForm> {
+        return await fetch(`${AUDIO_API_BASE_URL}/${this.provider}/tts/config`, {
+            method: 'GET'
         }).then((res) => res.json());
     }
 }

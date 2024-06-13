@@ -57,6 +57,10 @@ async def generate_tts_streaming(payload: TTSStreamingPayload):
     return {"streaming_url": streaming_url}
 
 
+@app.get("/tts/config")
+async def get_provider_config() -> AllTalkConfigForm:
+    return get_alltalk_tts_config()
+
 @app.post("/tts/config/update")
 async def update_provider_config(
     form_data: AllTalkConfigForm, user=Depends(get_admin_user), config=Depends(get_config)
