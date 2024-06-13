@@ -41,6 +41,7 @@
 	let assistantSentenceIdx = -1;
 
 	let audioQueue = [];
+	let emojiQueue = [];
 
 	$: assistantSentences = extractSentences(assistantMessage).reduce((mergedTexts, currentText) => {
 		const lastIndex = mergedTexts.length - 1;
@@ -64,8 +65,6 @@
 	let hasStartedSpeaking = false;
 	let mediaRecorder;
 	let audioChunks = [];
-
-	$: console.log('hasStartedSpeaking', hasStartedSpeaking);
 
 	let videoInputDevices = [];
 	let selectedVideoInputDeviceId = null;
@@ -274,6 +273,7 @@
 		}
 
 		await tick();
+		emojiQueue = [];
 		audioQueue = [];
 		await tick();
 
@@ -354,6 +354,14 @@
 		console.log('playAudioHandler', audioQueue, assistantSpeaking, audioQueue.length > 0);
 		if (!assistantSpeaking && !interrupted && audioQueue.length > 0) {
 			assistantSpeaking = true;
+
+			if ($settings?.showEmojiInCall ?? false) {
+				if (emojiQueue.length > 0) {
+					emoji = emojiQueue.shift();
+					emojiQueue = emojiQueue;
+				}
+			}
+
 			const audioToPlay = audioQueue.shift(); // Shift the audio out from queue before playing.
 			audioQueue = audioQueue;
 			await playAudio(audioToPlay);
@@ -363,9 +371,39 @@
 
 	const setContentAudio = async (content, idx) => {
 		if (assistantSentenceAudios[idx] === undefined) {
-			console.log('%c%s', 'color: red; font-size: 20px;', content);
+			// Wait for the previous audio to be loaded
+			if (idx > 0) {
+				await new Promise((resolve) => {
+					const check = setInterval(() => {
+						if (
+							assistantSentenceAudios[idx - 1] !== undefined &&
+							assistantSentenceAudios[idx - 1] !== null
+						) {
+							clearInterval(check);
+							resolve();
+						}
+					}, 100);
+				});
+			}
 
 			assistantSentenceAudios[idx] = null;
+
+			if ($settings?.showEmojiInCall ?? false) {
+				const sentenceEmoji = await generateEmoji(localStorage.token, modelId, content);
+
+				if (sentenceEmoji) {
+					// Big red text with content and emoji
+					console.log('%c%s', 'color: blue; font-size: 10px;', `${sentenceEmoji}: ${content}`);
+
+					if (/\p{Extended_Pictographic}/u.test(sentenceEmoji)) {
+						emojiQueue.push(sentenceEmoji.match(/\p{Extended_Pictographic}/gu)[0]);
+						emojiQueue = emojiQueue;
+					}
+				}
+
+				await tick();
+			}
+
 			const res = await synthesizeOpenAISpeech(
 				localStorage.token,
 				$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
@@ -381,6 +419,9 @@
 				const blobUrl = URL.createObjectURL(blob);
 				const audio = new Audio(blobUrl);
 				assistantSentenceAudios[idx] = audio;
+
+				console.log('%c%s', 'color: red; font-size: 20px;', content);
+
 				audioQueue.push(audio);
 				audioQueue = audioQueue;
 			}
@@ -388,9 +429,9 @@
 	};
 
 	const stopRecordingCallback = async (_continue = true) => {
-		console.log('%c%s', 'color: red; font-size: 20px;', '🚨 stopRecordingCallback 🚨');
-
 		if ($showCallOverlay) {
+			console.log('%c%s', 'color: red; font-size: 20px;', '🚨 stopRecordingCallback 🚨');
+
 			// deep copy the audioChunks array
 			const _audioChunks = audioChunks.slice(0);
 
@@ -448,13 +489,31 @@
 		mediaRecorder.start();
 	};
 
-	$: if ($showCallOverlay) {
-		startRecording();
-	} else {
-		stopCamera();
-		stopAllAudio();
-		stopRecordingCallback(false);
-	}
+	const resetAssistantMessage = async () => {
+		interrupted = false;
+
+		assistantMessage = '';
+		assistantSentenceIdx = -1;
+		assistantSentenceAudios = {}; // Reset audio tracking
+		audioQueue = []; // Clear the audio queue
+		audioQueue = audioQueue;
+
+		emoji = null;
+		emojiQueue = [];
+		emojiQueue = emojiQueue;
+	};
+
+	$: (async () => {
+		if ($showCallOverlay) {
+			await resetAssistantMessage();
+			await tick();
+			startRecording();
+		} else {
+			stopCamera();
+			stopAllAudio();
+			stopRecordingCallback(false);
+		}
+	})();
 
 	$: {
 		if (audioQueue.length > 0 && !assistantSpeaking) {
@@ -463,57 +522,66 @@
 	}
 
 	onMount(() => {
-		console.log(eventTarget);
-
 		eventTarget.addEventListener('chat:start', async (e) => {
-			console.log('Chat start event:', e);
-			interrupted = false;
-
-			assistantMessage = '';
-			assistantSentenceIdx = -1;
-			assistantSentenceAudios = {}; // Reset audio tracking
-			audioQueue = []; // Clear the audio queue
-
-			chatStreaming = true;
+			if ($showCallOverlay) {
+				console.log('Chat start event:', e);
+				await resetAssistantMessage();
+				await tick();
+				chatStreaming = true;
+			}
 		});
 
 		eventTarget.addEventListener('chat', async (e) => {
-			const { content } = e.detail;
-			assistantMessage += content;
-			await tick();
+			if ($showCallOverlay) {
+				const { content } = e.detail;
+				assistantMessage += content;
+				await tick();
 
-			if (!interrupted) {
-				if ($config.audio.tts.engine !== '') {
-					assistantSentenceIdx = assistantSentences.length - 2;
+				if (!interrupted) {
+					if ($config.audio.tts.engine !== '') {
+						assistantSentenceIdx = assistantSentences.length - 2;
 
-					if (assistantSentenceIdx >= 0 && !assistantSentenceAudios[assistantSentenceIdx]) {
-						await tick();
-						setContentAudio(assistantSentences[assistantSentenceIdx], assistantSentenceIdx);
+						if (assistantSentenceIdx >= 0 && !assistantSentenceAudios[assistantSentenceIdx]) {
+							await tick();
+							setContentAudio(assistantSentences[assistantSentenceIdx], assistantSentenceIdx);
+						}
 					}
 				}
-			}
 
-			chatStreaming = true;
+				chatStreaming = true;
+			}
 		});
 
 		eventTarget.addEventListener('chat:finish', async (e) => {
-			chatStreaming = false;
-			loading = false;
+			if ($showCallOverlay) {
+				chatStreaming = false;
+				loading = false;
 
-			console.log('Chat finish event:', e);
-			await tick();
+				console.log('Chat finish event:', e);
+				await tick();
 
-			if (!interrupted) {
-				if ($config.audio.tts.engine !== '') {
-					for (const [idx, sentence] of assistantSentences.entries()) {
-						if (!assistantSentenceAudios[idx]) {
-							await tick();
-							setContentAudio(sentence, idx);
+				if (!interrupted) {
+					if ($config.audio.tts.engine !== '') {
+						for (const [idx, sentence] of assistantSentences.entries()) {
+							if (!assistantSentenceAudios[idx]) {
+								await tick();
+								setContentAudio(sentence, idx);
+							}
 						}
+					} else {
+						if ($settings?.showEmojiInCall ?? false) {
+							const res = await generateEmoji(localStorage.token, modelId, assistantMessage);
+
+							if (res) {
+								console.log(res);
+								if (/\p{Extended_Pictographic}/u.test(res)) {
+									emoji = res.match(/\p{Extended_Pictographic}/gu)[0];
+								}
+							}
+						}
+
+						speakSpeechSynthesisHandler(assistantMessage);
 					}
-				} else {
-					emoji = generateEmoji(localStorage.token, modelId, assistantMessage);
-					speakSpeechSynthesisHandler(assistantMessage);
 				}
 			}
 		});
@@ -529,7 +597,7 @@
 		>
 			<div class="max-w-lg w-full h-screen max-h-[100dvh] flex flex-col justify-between p-3 md:p-6">
 				{#if camera}
-					<div class="flex justify-center items-center w-full min-h-20">
+					<div class="flex justify-center items-center w-full h-20 min-h-20">
 						{#if loading}
 							<svg
 								class="size-12 text-gray-900 dark:text-gray-400"
@@ -573,10 +641,10 @@
 								style="font-size:{rmsLevel * 100 > 4
 									? '4.5'
 									: rmsLevel * 100 > 2
-									? '4'
+									? '4.25'
 									: rmsLevel * 100 > 1
-									? '3.5'
-									: '3'}rem;width:100%;text-align:center;"
+									? '3.75'
+									: '3.5'}rem;width: 100%; text-align:center;"
 							>
 								{emoji}
 							</div>

@@ -887,7 +887,7 @@ async def generate_emoji(form_data: dict, user=Depends(get_verified_user)):
     model = app.state.MODELS[model_id]
 
     template = '''
-You are a perceptive assistant skilled at interpreting emotions from a provided message. Your task is to reflect the speaker's likely facial expression through a fitting emoji. Prioritize using diverse facial expression emojis to convey the nuanced emotions expressed in the text. Please choose ones that vividly represent the speaker's mood or reaction.
+Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
 
 Message: """{{prompt}}"""
 '''
