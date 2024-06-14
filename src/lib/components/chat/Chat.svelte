@@ -30,6 +30,7 @@
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
+		extractSentencesForAudio,
 		promptTemplate,
 		splitStream
 	} from '$lib/utils';
@@ -593,7 +594,15 @@
 				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
 
-		eventTarget.dispatchEvent(new CustomEvent('chat:start'));
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:start', {
+				detail: {
+					id: responseMessageId
+				}
+			})
+		);
+
+		await tick();
 
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
 			model: model.id,
@@ -664,9 +673,23 @@
 									continue;
 								} else {
 									responseMessage.content += data.message.content;
-									eventTarget.dispatchEvent(
-										new CustomEvent('chat', { detail: { content: data.message.content } })
-									);
+
+									const sentences = extractSentencesForAudio(responseMessage.content);
+									sentences.pop();
+
+									// dispatch only last sentence and make sure it hasn't been dispatched before
+									if (
+										sentences.length > 0 &&
+										sentences[sentences.length - 1] !== responseMessage.lastSentence
+									) {
+										responseMessage.lastSentence = sentences[sentences.length - 1];
+										eventTarget.dispatchEvent(
+											new CustomEvent('chat', {
+												detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
+											})
+										);
+									}
+
 									messages = messages;
 								}
 							} else {
@@ -760,7 +783,23 @@
 
 		stopResponseFlag = false;
 		await tick();
-		eventTarget.dispatchEvent(new CustomEvent('chat:finish'));
+
+		let lastSentence = extractSentencesForAudio(responseMessage.content)?.at(-1) ?? '';
+		if (lastSentence) {
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: { id: responseMessageId, content: lastSentence }
+				})
+			);
+		}
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:finish', {
+				detail: {
+					id: responseMessageId,
+					content: responseMessage.content
+				}
+			})
+		);
 
 		if (autoScroll) {
 			scrollToBottom();
@@ -802,7 +841,14 @@
 
 		scrollToBottom();
 
-		eventTarget.dispatchEvent(new CustomEvent('chat:start'));
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:start', {
+				detail: {
+					id: responseMessageId
+				}
+			})
+		);
+		await tick();
 
 		try {
 			const [res, controller] = await generateOpenAIChatCompletion(
@@ -924,7 +970,23 @@
 						continue;
 					} else {
 						responseMessage.content += value;
-						eventTarget.dispatchEvent(new CustomEvent('chat', { detail: { content: value } }));
+
+						const sentences = extractSentencesForAudio(responseMessage.content);
+						sentences.pop();
+
+						// dispatch only last sentence and make sure it hasn't been dispatched before
+						if (
+							sentences.length > 0 &&
+							sentences[sentences.length - 1] !== responseMessage.lastSentence
+						) {
+							responseMessage.lastSentence = sentences[sentences.length - 1];
+							eventTarget.dispatchEvent(
+								new CustomEvent('chat', {
+									detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
+								})
+							);
+						}
+
 						messages = messages;
 					}
 
@@ -975,7 +1037,23 @@
 		stopResponseFlag = false;
 		await tick();
 
-		eventTarget.dispatchEvent(new CustomEvent('chat:finish'));
+		let lastSentence = extractSentencesForAudio(responseMessage.content)?.at(-1) ?? '';
+		if (lastSentence) {
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: { id: responseMessageId, content: lastSentence }
+				})
+			);
+		}
+
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:finish', {
+				detail: {
+					id: responseMessageId,
+					content: responseMessage.content
+				}
+			})
+		);
 
 		if (autoScroll) {
 			scrollToBottom();
@@ -1207,14 +1285,18 @@
 	</title>
 </svelte:head>
 
-<CallOverlay
-	{submitPrompt}
-	{stopResponse}
-	bind:files
-	modelId={selectedModelIds?.at(0) ?? null}
-	chatId={$chatId}
-	{eventTarget}
-/>
+<audio id="audioElement" src="" style="display: none;" />
+
+{#if $showCallOverlay}
+	<CallOverlay
+		{submitPrompt}
+		{stopResponse}
+		bind:files
+		modelId={selectedModelIds?.at(0) ?? null}
+		chatId={$chatId}
+		{eventTarget}
+	/>
+{/if}
 
 {#if !chatIdProp || (loaded && chatIdProp)}
 	<div

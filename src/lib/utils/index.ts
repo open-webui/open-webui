@@ -443,6 +443,24 @@ export const extractSentences = (text) => {
 		.filter((sentence) => sentence !== '');
 };
 
+export const extractSentencesForAudio = (text) => {
+	return extractSentences(text).reduce((mergedTexts, currentText) => {
+		const lastIndex = mergedTexts.length - 1;
+		if (lastIndex >= 0) {
+			const previousText = mergedTexts[lastIndex];
+			const wordCount = previousText.split(/\s+/).length;
+			if (wordCount < 2) {
+				mergedTexts[lastIndex] = previousText + ' ' + currentText;
+			} else {
+				mergedTexts.push(currentText);
+			}
+		} else {
+			mergedTexts.push(currentText);
+		}
+		return mergedTexts;
+	}, []);
+};
+
 export const blobToFile = (blob, fileName) => {
 	// Create a new File object from the Blob
 	const file = new File([blob], fileName, { type: blob.type });
