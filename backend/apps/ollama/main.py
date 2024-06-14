@@ -46,7 +46,7 @@ from config import (
     SRC_LOG_LEVELS,
     OLLAMA_BASE_URLS,
     ENABLE_OLLAMA_API,
-    OLLAMA_GENERATE_TIMEOUT,
+    AIOHTTP_CLIENT_TIMEOUT,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     UPLOAD_DIR,
@@ -155,7 +155,9 @@ async def cleanup_response(
 async def post_streaming_url(url: str, payload: str):
     r = None
     try:
-        session = aiohttp.ClientSession(trust_env=True, timeout=aiohttp.ClientTimeout(total=OLLAMA_GENERATE_TIMEOUT))
+        session = aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        )
         r = await session.post(url, data=payload)
         r.raise_for_status()
 
