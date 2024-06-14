@@ -5,7 +5,7 @@
 
 	import { onMount, getContext } from 'svelte';
 	import { page } from '$app/stores';
-	import { settings, user, config, models } from '$lib/stores';
+	import { settings, user, config, models, tools } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
 	import { getModelInfos, updateModelById } from '$lib/apis/models';
@@ -15,6 +15,7 @@
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
+	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -60,6 +61,7 @@
 	};
 
 	let knowledge = [];
+	let toolIds = [];
 
 	const updateHandler = async () => {
 		loading = true;
@@ -73,6 +75,14 @@
 		} else {
 			if (info.meta.knowledge) {
 				delete info.meta.knowledge;
+			}
+		}
+
+		if (toolIds.length > 0) {
+			info.meta.toolIds = toolIds;
+		} else {
+			if (info.meta.toolIds) {
+				delete info.meta.toolIds;
 			}
 		}
 
@@ -131,6 +141,10 @@
 
 				if (model?.info?.meta?.knowledge) {
 					knowledge = [...model?.info?.meta?.knowledge];
+				}
+
+				if (model?.info?.meta?.toolIds) {
+					toolIds = [...model?.info?.meta?.toolIds];
 				}
 
 				if (model?.owned_by === 'openai') {
@@ -513,6 +527,10 @@
 
 			<div class="my-2">
 				<Knowledge bind:knowledge />
+			</div>
+
+			<div class="my-2">
+				<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
 			</div>
 
 			<div class="my-2">

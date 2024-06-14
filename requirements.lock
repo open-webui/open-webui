@@ -12,7 +12,6 @@
 aiohttp==3.9.5
     # via langchain
     # via langchain-community
-    # via litellm
     # via open-webui
 aiosignal==1.3.1
     # via aiohttp
@@ -20,11 +19,9 @@ annotated-types==0.6.0
     # via pydantic
 anyio==4.3.0
     # via httpx
-    # via openai
     # via starlette
     # via watchfiles
 apscheduler==3.10.4
-    # via litellm
     # via open-webui
 argon2-cffi==23.1.0
     # via open-webui
@@ -38,7 +35,6 @@ av==11.0.0
     # via faster-whisper
 backoff==2.2.1
     # via langfuse
-    # via litellm
     # via posthog
     # via unstructured
 bcrypt==4.1.3
@@ -46,6 +42,7 @@ bcrypt==4.1.3
     # via open-webui
     # via passlib
 beautifulsoup4==4.12.3
+    # via extract-msg
     # via unstructured
 bidict==0.23.1
     # via python-socketio
@@ -83,17 +80,20 @@ chromadb==0.5.0
     # via open-webui
 click==8.1.7
     # via black
+    # via duckduckgo-search
     # via flask
-    # via litellm
     # via nltk
     # via peewee-migrate
-    # via rq
     # via typer
     # via uvicorn
+colorclass==2.2.2
+    # via oletools
 coloredlogs==15.0.1
     # via onnxruntime
+compressed-rtf==1.0.6
+    # via extract-msg
 cryptography==42.0.7
-    # via litellm
+    # via msoffcrypto-tool
     # via pyjwt
 ctranslate2==4.2.1
     # via faster-whisper
@@ -109,33 +109,34 @@ defusedxml==0.7.1
 deprecated==1.2.14
     # via opentelemetry-api
     # via opentelemetry-exporter-otlp-proto-grpc
-distro==1.9.0
-    # via openai
 dnspython==2.6.1
     # via email-validator
 docx2txt==0.8
     # via open-webui
+duckduckgo-search==6.1.5
+    # via open-webui
+easygui==0.98.3
+    # via oletools
+ebcdic==1.1.1
+    # via extract-msg
 ecdsa==0.19.0
     # via python-jose
 email-validator==2.1.1
     # via fastapi
-    # via pydantic
 emoji==2.11.1
     # via unstructured
 et-xmlfile==1.1.0
     # via openpyxl
+extract-msg==0.48.5
+    # via open-webui
 fake-useragent==1.5.1
     # via open-webui
 fastapi==0.111.0
     # via chromadb
-    # via fastapi-sso
     # via langchain-chroma
-    # via litellm
     # via open-webui
 fastapi-cli==0.0.4
     # via fastapi
-fastapi-sso==0.10.0
-    # via litellm
 faster-whisper==1.0.2
     # via open-webui
 filelock==3.14.0
@@ -191,8 +192,6 @@ grpcio==1.63.0
     # via opentelemetry-exporter-otlp-proto-grpc
 grpcio-status==1.62.2
     # via google-api-core
-gunicorn==22.0.0
-    # via litellm
 h11==0.14.0
     # via httpcore
     # via uvicorn
@@ -206,9 +205,7 @@ httptools==0.6.1
     # via uvicorn
 httpx==0.27.0
     # via fastapi
-    # via fastapi-sso
     # via langfuse
-    # via openai
 huggingface-hub==0.23.0
     # via faster-whisper
     # via sentence-transformers
@@ -225,7 +222,6 @@ idna==3.7
     # via unstructured-client
     # via yarl
 importlib-metadata==7.0.0
-    # via litellm
     # via opentelemetry-api
 importlib-resources==6.4.0
     # via chromadb
@@ -234,7 +230,6 @@ itsdangerous==2.2.0
 jinja2==3.1.4
     # via fastapi
     # via flask
-    # via litellm
     # via torch
 jmespath==1.0.1
     # via boto3
@@ -272,8 +267,8 @@ langsmith==0.1.57
     # via langchain
     # via langchain-community
     # via langchain-core
-litellm==1.37.20
-    # via open-webui
+lark==1.1.8
+    # via rtfde
 lxml==5.2.2
     # via unstructured
 markdown==3.6
@@ -294,6 +289,8 @@ monotonic==1.6
     # via posthog
 mpmath==1.3.0
     # via sympy
+msoffcrypto-tool==5.4.1
+    # via oletools
 multidict==6.0.5
     # via aiohttp
     # via yarl
@@ -325,15 +322,19 @@ numpy==1.26.4
     # via transformers
     # via unstructured
 oauthlib==3.2.2
-    # via fastapi-sso
     # via kubernetes
     # via requests-oauthlib
+olefile==0.47
+    # via extract-msg
+    # via msoffcrypto-tool
+    # via oletools
+oletools==0.60.1
+    # via pcodedmp
+    # via rtfde
 onnxruntime==1.17.3
     # via chromadb
     # via faster-whisper
     # via rapidocr-onnxruntime
-openai==1.28.1
-    # via litellm
 opencv-python==4.9.0.80
     # via rapidocr-onnxruntime
 opencv-python-headless==4.9.0.80
@@ -375,15 +376,14 @@ ordered-set==4.1.0
     # via deepdiff
 orjson==3.10.3
     # via chromadb
+    # via duckduckgo-search
     # via fastapi
     # via langsmith
-    # via litellm
 overrides==7.7.0
     # via chromadb
 packaging==23.2
     # via black
     # via build
-    # via gunicorn
     # via huggingface-hub
     # via langchain-core
     # via langfuse
@@ -397,6 +397,8 @@ passlib==1.7.4
     # via open-webui
 pathspec==0.12.1
     # via black
+pcodedmp==1.2.6
+    # via oletools
 peewee==3.17.5
     # via open-webui
     # via peewee-migrate
@@ -437,27 +439,27 @@ pycparser==2.22
 pydantic==2.7.1
     # via chromadb
     # via fastapi
-    # via fastapi-sso
     # via google-generativeai
     # via langchain
     # via langchain-core
     # via langfuse
     # via langsmith
     # via open-webui
-    # via openai
 pydantic-core==2.18.2
     # via pydantic
+pydub==0.25.1
+    # via open-webui
 pygments==2.18.0
     # via rich
 pyjwt==2.8.0
-    # via litellm
     # via open-webui
 pymysql==1.1.0
     # via open-webui
 pypandoc==1.13
     # via open-webui
-pyparsing==3.1.2
+pyparsing==2.4.7
     # via httplib2
+    # via oletools
 pypdf==4.2.0
     # via open-webui
     # via unstructured-client
@@ -465,6 +467,8 @@ pypika==0.48.9
     # via chromadb
 pyproject-hooks==1.1.0
     # via build
+pyreqwest-impersonate==0.4.7
+    # via duckduckgo-search
 python-dateutil==2.9.0.post0
     # via botocore
     # via kubernetes
@@ -472,7 +476,6 @@ python-dateutil==2.9.0.post0
     # via posthog
     # via unstructured-client
 python-dotenv==1.0.1
-    # via litellm
     # via uvicorn
 python-engineio==4.9.0
     # via python-socketio
@@ -484,7 +487,6 @@ python-magic==0.4.27
     # via unstructured
 python-multipart==0.0.9
     # via fastapi
-    # via litellm
     # via open-webui
 python-socketio==5.11.2
     # via open-webui
@@ -503,7 +505,6 @@ pyyaml==6.0.1
     # via langchain
     # via langchain-community
     # via langchain-core
-    # via litellm
     # via rapidocr-onnxruntime
     # via transformers
     # via uvicorn
@@ -513,11 +514,10 @@ rapidfuzz==3.9.0
     # via unstructured
 rapidocr-onnxruntime==1.3.22
     # via open-webui
-redis==5.0.4
-    # via rq
+red-black-tree-mod==1.20
+    # via extract-msg
 regex==2024.5.10
     # via nltk
-    # via tiktoken
     # via transformers
 requests==2.32.2
     # via chromadb
@@ -527,11 +527,9 @@ requests==2.32.2
     # via langchain
     # via langchain-community
     # via langsmith
-    # via litellm
     # via open-webui
     # via posthog
     # via requests-oauthlib
-    # via tiktoken
     # via transformers
     # via unstructured
     # via unstructured-client
@@ -540,11 +538,11 @@ requests-oauthlib==2.0.0
     # via kubernetes
 rich==13.7.1
     # via typer
-rq==1.16.2
-    # via litellm
 rsa==4.9
     # via google-auth
     # via python-jose
+rtfde==0.1.1
+    # via extract-msg
 s3transfer==0.10.1
     # via boto3
 safetensors==0.4.3
@@ -577,7 +575,6 @@ six==1.16.0
 sniffio==1.3.1
     # via anyio
     # via httpx
-    # via openai
 soupsieve==2.5
     # via beautifulsoup4
 sqlalchemy==2.0.30
@@ -597,12 +594,9 @@ tenacity==8.3.0
     # via langchain-core
 threadpoolctl==3.5.0
     # via scikit-learn
-tiktoken==0.6.0
-    # via litellm
 tokenizers==0.15.2
     # via chromadb
     # via faster-whisper
-    # via litellm
     # via transformers
 torch==2.3.0
     # via sentence-transformers
@@ -611,7 +605,6 @@ tqdm==4.66.4
     # via google-generativeai
     # via huggingface-hub
     # via nltk
-    # via openai
     # via sentence-transformers
     # via transformers
 transformers==4.39.3
@@ -624,7 +617,6 @@ typing-extensions==4.11.0
     # via fastapi
     # via google-generativeai
     # via huggingface-hub
-    # via openai
     # via opentelemetry-sdk
     # via pydantic
     # via pydantic-core
@@ -641,6 +633,7 @@ tzdata==2024.1
     # via pandas
 tzlocal==5.2
     # via apscheduler
+    # via extract-msg
 ujson==5.10.0
     # via fastapi
 unstructured==0.14.0
@@ -657,7 +650,6 @@ urllib3==2.2.1
 uvicorn==0.22.0
     # via chromadb
     # via fastapi
-    # via litellm
     # via open-webui
 uvloop==0.19.0
     # via uvicorn

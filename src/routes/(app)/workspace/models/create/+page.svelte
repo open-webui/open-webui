@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { settings, user, config, models } from '$lib/stores';
+	import { settings, user, config, models, tools } from '$lib/stores';
 
 	import { onMount, tick, getContext } from 'svelte';
 	import { addNewModel, getModelById, getModelInfos } from '$lib/apis/models';
@@ -12,6 +12,8 @@
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
+	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
+	import { stringify } from 'postcss';
 
 	const i18n = getContext('i18n');
 
@@ -54,16 +56,16 @@
 		vision: true
 	};
 
+	let toolIds = [];
 	let knowledge = [];
 
 	$: if (name) {
 		id = name.replace(/\s+/g, '-').toLowerCase();
 	}
 
-	let baseModel = null;
-	$: {
-		baseModel = $models.find((m) => m.id === info.base_model_id);
-		console.log(baseModel);
+	const addUsage = (base_model_id) => {
+		const baseModel = $models.find((m) => m.id === base_model_id);
+
 		if (baseModel) {
 			if (baseModel.owned_by === 'openai') {
 				capabilities.usage = baseModel.info?.meta?.capabilities?.usage ?? false;
@@ -72,7 +74,7 @@
 			}
 			capabilities = capabilities;
 		}
-	}
+	};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -86,6 +88,14 @@
 		} else {
 			if (info.meta.knowledge) {
 				delete info.meta.knowledge;
+			}
+		}
+
+		if (toolIds.length > 0) {
+			info.meta.toolIds = toolIds;
+		} else {
+			if (info.meta.toolIds) {
+				delete info.meta.toolIds;
 			}
 		}
 
@@ -155,6 +165,7 @@
 		params.stop = params?.stop ? (params?.stop ?? []).join(',') : null;
 
 		capabilities = { ...capabilities, ...(model?.info?.meta?.capabilities ?? {}) };
+		toolIds = model?.info?.meta?.toolIds ?? [];
 
 		info = {
 			...info,
@@ -360,6 +371,9 @@
 					class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
 					placeholder="Select a base model (e.g. llama3, gpt-4o)"
 					bind:value={info.base_model_id}
+					on:change={(e) => {
+						addUsage(e.target.value);
+					}}
 					required
 				>
 					<option value={null} class=" text-gray-900">{$i18n.t('Select a base model')}</option>
@@ -550,6 +564,10 @@
 
 		<div class="my-2">
 			<Knowledge bind:knowledge />
+		</div>
+
+		<div class="my-2">
+			<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
 		</div>
 
 		<div class="my-1">

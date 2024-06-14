@@ -166,6 +166,8 @@
 				chunk_size: chunkSize
 			}
 		});
+
+		await updateQuerySettings(localStorage.token, querySettings);
 	};
 
 	const setEmbeddingConfig = async () => {
