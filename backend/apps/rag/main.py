@@ -9,6 +9,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 import os, shutil, logging, re
+from datetime import datetime
 
 from pathlib import Path
 from typing import List, Union, Sequence
@@ -30,6 +31,7 @@ from langchain_community.document_loaders import (
     UnstructuredExcelLoader,
     UnstructuredPowerPointLoader,
     YoutubeLoader,
+    OutlookMessageLoader,
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
@@ -67,7 +69,7 @@ from apps.rag.search.main import SearchResult
 from apps.rag.search.searxng import search_searxng
 from apps.rag.search.serper import search_serper
 from apps.rag.search.serpstack import search_serpstack
-
+from apps.rag.search.serply import search_serply
 
 from utils.misc import (
     calculate_sha256,
@@ -113,6 +115,7 @@ from config import (
     SERPSTACK_API_KEY,
     SERPSTACK_HTTPS,
     SERPER_API_KEY,
+    SERPLY_API_KEY,
     RAG_WEB_SEARCH_RESULT_COUNT,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     RAG_EMBEDDING_OPENAI_BATCH_SIZE,
@@ -165,6 +168,7 @@ app.state.config.BRAVE_SEARCH_API_KEY = BRAVE_SEARCH_API_KEY
 app.state.config.SERPSTACK_API_KEY = SERPSTACK_API_KEY
 app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
 app.state.config.SERPER_API_KEY = SERPER_API_KEY
+app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 
@@ -392,6 +396,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
                 "serpstack_api_key": app.state.config.SERPSTACK_API_KEY,
                 "serpstack_https": app.state.config.SERPSTACK_HTTPS,
                 "serper_api_key": app.state.config.SERPER_API_KEY,
+                "serply_api_key": app.state.config.SERPLY_API_KEY,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -419,6 +424,7 @@ class WebSearchConfig(BaseModel):
     serpstack_api_key: Optional[str] = None
     serpstack_https: Optional[bool] = None
     serper_api_key: Optional[str] = None
+    serply_api_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
 
@@ -469,6 +475,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.SERPSTACK_API_KEY = form_data.web.search.serpstack_api_key
         app.state.config.SERPSTACK_HTTPS = form_data.web.search.serpstack_https
         app.state.config.SERPER_API_KEY = form_data.web.search.serper_api_key
+        app.state.config.SERPLY_API_KEY = form_data.web.search.serply_api_key
         app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = form_data.web.search.result_count
         app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
@@ -497,6 +504,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
                 "serpstack_api_key": app.state.config.SERPSTACK_API_KEY,
                 "serpstack_https": app.state.config.SERPSTACK_HTTPS,
                 "serper_api_key": app.state.config.SERPER_API_KEY,
+                "serply_api_key": app.state.config.SERPLY_API_KEY,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -744,6 +752,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
     - BRAVE_SEARCH_API_KEY
     - SERPSTACK_API_KEY
     - SERPER_API_KEY
+    - SERPLY_API_KEY
 
     Args:
         query (str): The query to search for
@@ -802,6 +811,15 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No SERPER_API_KEY found in environment variables")
+    elif engine == "serply":
+        if app.state.config.SERPLY_API_KEY:
+            return search_serply(
+                app.state.config.SERPLY_API_KEY,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            )
+        else:
+            raise Exception("No SERPLY_API_KEY found in environment variables")
     else:
         raise Exception("No search engine API key found in environment variables")
 
@@ -809,6 +827,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
 @app.post("/web/search")
 def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
     try:
+        logging.info(f"trying to web search with {app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}")
         web_results = search_web(
             app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query
         )
@@ -878,6 +897,13 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
 
     texts = [doc.page_content for doc in docs]
     metadatas = [doc.metadata for doc in docs]
+
+    # ChromaDB does not like datetime formats
+    # for meta-data so convert them to string.
+    for metadata in metadatas:
+        for key, value in metadata.items():
+            if isinstance(value, datetime):
+                metadata[key] = str(value)
 
     try:
         if overwrite:
@@ -965,6 +991,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         "swift",
         "vue",
         "svelte",
+        "msg",
     ]
 
     if file_ext == "pdf":
@@ -999,6 +1026,8 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     ] or file_ext in ["ppt", "pptx"]:
         loader = UnstructuredPowerPointLoader(file_path)
+    elif file_ext == "msg":
+        loader = OutlookMessageLoader(file_path)
     elif file_ext in known_source_ext or (
         file_content_type and file_content_type.find("text/") >= 0
     ):

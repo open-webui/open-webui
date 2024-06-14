@@ -541,7 +541,7 @@
 			]);
 		} else {
 			ollamaEnabled = false;
-			toast.error('Ollama API is disabled');
+			toast.error($i18n.t('Ollama API is disabled'));
 		}
 	});
 </script>
@@ -1063,7 +1063,7 @@
 				</div>
 			{/if}
 		{:else if ollamaEnabled === false}
-			<div>Ollama API is disabled</div>
+			<div>{$i18n.t('Ollama API is disabled')}</div>
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">
