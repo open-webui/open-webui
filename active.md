@@ -8,6 +8,7 @@ Our weekly meetups are [Thursdays at NOON EDT](/io/coders/) and [Sundays at 10 P
 [Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
 **SQL, Vite, Supabase, AI Chat**
+- [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab
 - [Open Footprint Data in SQL](/useeio.js/footprint) 
 - [Feed Player](../feed/) - for Video, Images, JSON, YAML, CSS, RSS news feeds and our [Feed Viewer](../feed/view/#feed=nasa)  
 - [Datausa.io](https://datausa.io) - For embeddable visualizations
