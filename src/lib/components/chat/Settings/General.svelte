@@ -55,6 +55,8 @@
 		stop: null,
 		tfs_z: null,
 		num_ctx: null,
+		num_batch: null,
+		num_keep: null,
 		max_tokens: null
 	};
 
@@ -308,6 +310,8 @@
 						top_p: params.top_p !== null ? params.top_p : undefined,
 						tfs_z: params.tfs_z !== null ? params.tfs_z : undefined,
 						num_ctx: params.num_ctx !== null ? params.num_ctx : undefined,
+						num_batch: params.num_batch !== null ? params.num_batch : undefined,
+						num_keep: params.num_keep !== null ? params.num_keep : undefined,
 						max_tokens: params.max_tokens !== null ? params.max_tokens : undefined,
 						use_mmap: params.use_mmap !== null ? params.use_mmap : undefined,
 						use_mlock: params.use_mlock !== null ? params.use_mlock : undefined,
