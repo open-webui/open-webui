@@ -179,8 +179,6 @@
 			audioChunks = [];
 			mediaRecorder = false;
 
-			await tick();
-
 			if (_continue) {
 				startRecording();
 			}
