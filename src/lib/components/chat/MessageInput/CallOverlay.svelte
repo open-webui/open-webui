@@ -179,6 +179,8 @@
 			audioChunks = [];
 			mediaRecorder = false;
 
+			await tick();
+
 			if (_continue) {
 				startRecording();
 			}
@@ -213,20 +215,24 @@
 	const startRecording = async () => {
 		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 		mediaRecorder = new MediaRecorder(stream);
+
 		mediaRecorder.onstart = () => {
 			console.log('Recording started');
 			audioChunks = [];
 			analyseAudio(stream);
 		};
+
 		mediaRecorder.ondataavailable = (event) => {
 			if (hasStartedSpeaking) {
 				audioChunks.push(event.data);
 			}
 		};
-		mediaRecorder.onstop = async () => {
-			console.log('Recording stopped');
-			await stopRecordingCallback();
+
+		mediaRecorder.onstop = (e) => {
+			console.log('Recording stopped', e);
+			stopRecordingCallback();
 		};
+
 		mediaRecorder.start();
 	};
 
@@ -255,6 +261,8 @@
 
 		let lastSoundTime = Date.now();
 		hasStartedSpeaking = false;
+
+		console.log('🔊 Sound detection started', lastSoundTime, hasStartedSpeaking);
 
 		const detectSound = () => {
 			const processFrame = () => {
@@ -288,7 +296,9 @@
 						confirmed = true;
 
 						if (mediaRecorder) {
+							console.log('%c%s', 'color: red; font-size: 20px;', '🔇 Silence detected');
 							mediaRecorder.stop();
+							return;
 						}
 					}
 				}
@@ -384,6 +394,7 @@
 
 		const audioElement = document.getElementById('audioElement');
 		if (audioElement) {
+			audioElement.muted = true;
 			audioElement.pause();
 			audioElement.currentTime = 0;
 		}
@@ -535,6 +546,7 @@
 
 			audioAbortController.abort();
 			await tick();
+
 			await stopAllAudio();
 
 			await stopRecordingCallback(false);
