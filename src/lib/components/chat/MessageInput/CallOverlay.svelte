@@ -533,6 +533,10 @@
 			eventTarget.removeEventListener('chat', chatEventHandler);
 			eventTarget.removeEventListener('chat:finish', chatFinishHandler);
 
+			audioAbortController.abort();
+			await tick();
+			await stopAllAudio();
+
 			await stopRecordingCallback(false);
 			await stopCamera();
 		};
