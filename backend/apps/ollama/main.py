@@ -751,6 +751,14 @@ async def generate_chat_completion(
             if model_info.params.get("num_ctx", None):
                 payload["options"]["num_ctx"] = model_info.params.get("num_ctx", None)
 
+            if model_info.params.get("num_batch", None):
+                payload["options"]["num_batch"] = model_info.params.get(
+                    "num_batch", None
+                )
+
+            if model_info.params.get("num_keep", None):
+                payload["options"]["num_keep"] = model_info.params.get("num_keep", None)
+
             if model_info.params.get("repeat_last_n", None):
                 payload["options"]["repeat_last_n"] = model_info.params.get(
                     "repeat_last_n", None
