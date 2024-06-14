@@ -338,7 +338,7 @@
 
 						speechSynthesis.speak(currentUtterance);
 						currentUtterance.onend = async (e) => {
-							await new Promise((r) => setTimeout(r, 100));
+							await new Promise((r) => setTimeout(r, 200));
 							resolve(e);
 						};
 					}
@@ -402,27 +402,42 @@
 
 	// Audio cache map where key is the content and value is the Audio object.
 	const audioCache = new Map();
+	const emojiCache = new Map();
+
 	const fetchAudio = async (content) => {
 		if (!audioCache.has(content)) {
 			try {
-				const res = await synthesizeOpenAISpeech(
-					localStorage.token,
-					$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
-					content
-				).catch((error) => {
-					console.error(error);
-					return null;
-				});
+				// Set the emoji for the content if needed
+				if ($settings?.showEmojiInCall ?? false) {
+					const emoji = await generateEmoji(localStorage.token, modelId, content, chatId);
+					if (emoji) {
+						emojiCache.set(content, emoji);
+					}
+				}
 
-				if (res) {
-					const blob = await res.blob();
-					const blobUrl = URL.createObjectURL(blob);
-					audioCache.set(content, new Audio(blobUrl));
+				if ($config.audio.tts.engine !== '') {
+					const res = await synthesizeOpenAISpeech(
+						localStorage.token,
+						$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
+						content
+					).catch((error) => {
+						console.error(error);
+						return null;
+					});
+
+					if (res) {
+						const blob = await res.blob();
+						const blobUrl = URL.createObjectURL(blob);
+						audioCache.set(content, new Audio(blobUrl));
+					}
+				} else {
+					audioCache.set(content, true);
 				}
 			} catch (error) {
 				console.error('Error synthesizing speech:', error);
 			}
 		}
+
 		return audioCache.get(content);
 	};
 
@@ -436,19 +451,31 @@
 
 				if (audioCache.has(content)) {
 					// If content is available in the cache, play it
-					try {
-						console.log(
-							'%c%s',
-							'color: red; font-size: 20px;',
-							`Playing audio for content: ${content}`
-						);
 
-						const audio = audioCache.get(content);
-						await playAudio(audio); // Here ensure that playAudio is indeed correct method to execute
-						console.log(`Played audio for content: ${content}`);
-						await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
-					} catch (error) {
-						console.error('Error playing audio:', error);
+					// Set the emoji for the content if available
+					if (($settings?.showEmojiInCall ?? false) && emojiCache.has(content)) {
+						emoji = emojiCache.get(content);
+					} else {
+						emoji = null;
+					}
+
+					if ($config.audio.tts.engine !== '') {
+						try {
+							console.log(
+								'%c%s',
+								'color: red; font-size: 20px;',
+								`Playing audio for content: ${content}`
+							);
+
+							const audio = audioCache.get(content);
+							await playAudio(audio); // Here ensure that playAudio is indeed correct method to execute
+							console.log(`Played audio for content: ${content}`);
+							await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
+						} catch (error) {
+							console.error('Error playing audio:', error);
+						}
+					} else {
+						await speakSpeechSynthesisHandler(content);
 					}
 				} else {
 					// If not available in the cache, push it back to the queue and delay
@@ -475,20 +502,17 @@
 
 			chatStreaming = true;
 
-			if ($config.audio.tts.engine !== '') {
-				// set currentMessageId to id
-				if (currentMessageId !== id) {
-					console.log(`Received chat start event for message ID ${id}`);
+			if (currentMessageId !== id) {
+				console.log(`Received chat start event for message ID ${id}`);
 
-					currentMessageId = id;
-					if (audioAbortController) {
-						audioAbortController.abort();
-					}
-					audioAbortController = new AbortController();
-
-					// Start monitoring and playing audio for the message ID
-					monitorAndPlayAudio(id, audioAbortController.signal);
+				currentMessageId = id;
+				if (audioAbortController) {
+					audioAbortController.abort();
 				}
+				audioAbortController = new AbortController();
+
+				// Start monitoring and playing audio for the message ID
+				monitorAndPlayAudio(id, audioAbortController.signal);
 			}
 		};
 
@@ -499,23 +523,21 @@
 			// "content" here is a sentence from the assistant,
 			// there will be many sentences for the same "id"
 
-			if ($config.audio.tts.engine !== '') {
-				if (currentMessageId === id) {
-					console.log(`Received chat event for message ID ${id}: ${content}`);
+			if (currentMessageId === id) {
+				console.log(`Received chat event for message ID ${id}: ${content}`);
 
-					try {
-						if (messages[id] === undefined) {
-							messages[id] = [content];
-						} else {
-							messages[id].push(content);
-						}
-
-						console.log(content);
-
-						fetchAudio(content);
-					} catch (error) {
-						console.error('Failed to fetch or play audio:', error);
+				try {
+					if (messages[id] === undefined) {
+						messages[id] = [content];
+					} else {
+						messages[id].push(content);
 					}
+
+					console.log(content);
+
+					fetchAudio(content);
+				} catch (error) {
+					console.error('Failed to fetch or play audio:', error);
 				}
 			}
 		};
@@ -525,12 +547,7 @@
 			// "content" here is the entire message from the assistant
 
 			chatStreaming = false;
-
-			if ($config.audio.tts.engine !== '') {
-				finishedMessages[id] = true;
-			} else {
-				speakSpeechSynthesisHandler(content);
-			}
+			finishedMessages[id] = true;
 		};
 
 		eventTarget.addEventListener('chat:start', chatStartHandler);
@@ -561,7 +578,20 @@
 			<div class="max-w-lg w-full h-screen max-h-[100dvh] flex flex-col justify-between p-3 md:p-6">
 				{#if camera}
 					<div class="flex justify-center items-center w-full h-20 min-h-20">
-						{#if loading}
+						{#if emoji}
+							<div
+								class="  transition-all rounded-full"
+								style="font-size:{rmsLevel * 100 > 4
+									? '4.5'
+									: rmsLevel * 100 > 2
+									? '4.25'
+									: rmsLevel * 100 > 1
+									? '3.75'
+									: '3.5'}rem;width: 100%; text-align:center;"
+							>
+								{emoji}
+							</div>
+						{:else if loading}
 							<svg
 								class="size-12 text-gray-900 dark:text-gray-400"
 								viewBox="0 0 24 24"
@@ -598,19 +628,6 @@
 									r="3"
 								/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
 							>
-						{:else if emoji}
-							<div
-								class="  transition-all rounded-full"
-								style="font-size:{rmsLevel * 100 > 4
-									? '4.5'
-									: rmsLevel * 100 > 2
-									? '4.25'
-									: rmsLevel * 100 > 1
-									? '3.75'
-									: '3.5'}rem;width: 100%; text-align:center;"
-							>
-								{emoji}
-							</div>
 						{:else}
 							<div
 								class=" {rmsLevel * 100 > 4
@@ -628,7 +645,20 @@
 
 				<div class="flex justify-center items-center flex-1 h-full w-full max-h-full">
 					{#if !camera}
-						{#if loading}
+						{#if emoji}
+							<div
+								class="  transition-all rounded-full"
+								style="font-size:{rmsLevel * 100 > 4
+									? '13'
+									: rmsLevel * 100 > 2
+									? '12'
+									: rmsLevel * 100 > 1
+									? '11.5'
+									: '11'}rem;width:100%;text-align:center;"
+							>
+								{emoji}
+							</div>
+						{:else if loading}
 							<svg
 								class="size-44 text-gray-900 dark:text-gray-400"
 								viewBox="0 0 24 24"
@@ -665,19 +695,6 @@
 									r="3"
 								/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
 							>
-						{:else if emoji}
-							<div
-								class="  transition-all rounded-full"
-								style="font-size:{rmsLevel * 100 > 4
-									? '13'
-									: rmsLevel * 100 > 2
-									? '12'
-									: rmsLevel * 100 > 1
-									? '11.5'
-									: '11'}rem;width:100%;text-align:center;"
-							>
-								{emoji}
-							</div>
 						{:else}
 							<div
 								class=" {rmsLevel * 100 > 4

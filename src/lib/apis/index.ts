@@ -242,7 +242,15 @@ export const generateEmoji = async (
 		throw error;
 	}
 
-	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? null;
+	const response = res?.choices[0]?.message?.content.replace(/["']/g, '') ?? null;
+
+	if (response) {
+		if (/\p{Extended_Pictographic}/u.test(response)) {
+			return response.match(/\p{Extended_Pictographic}/gu)[0];
+		}
+	}
+
+	return null;
 };
 
 export const generateSearchQuery = async (
