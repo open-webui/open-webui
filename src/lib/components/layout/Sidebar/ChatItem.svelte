@@ -17,17 +17,17 @@
 
 	import ChatMenu from './ChatMenu.svelte';
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	export let chat;
-
-	let showShareChatModal = false;
-
 	export let selected = false;
 
-	let confirmEdit = false;
-	let confirmDelete = false;
+	let showDeleteConfirmDialog = false;
+	let showShareChatModal = false;
 
-	let chatTitle = '';
+	let confirmEdit = false;
+
+	let chatTitle = chat.title;
 
 	const editChatTitle = async (id, _title) => {
 		if (_title === '') {
@@ -43,7 +43,6 @@
 	const deleteChat = async (id) => {
 		const res = await deleteChatById(localStorage.token, id).catch((error) => {
 			toast.error(error);
-			confirmDelete = false;
 
 			return null;
 		});
@@ -80,12 +79,22 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={chat.id} />
 
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	title="Delete chat?"
+	on:confirm={() => {
+		deleteChat(chat.id);
+	}}
+>
+	<div class=" text-sm text-gray-500">
+		This will delete <span class="  font-semibold">{chat.title}</span>.
+	</div>
+</DeleteConfirmDialog>
+
 <div class=" w-full pr-2 relative group">
 	{#if confirmEdit}
 		<div
-			class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
-			confirmEdit ||
-			confirmDelete
+			class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 				? 'bg-gray-100 dark:bg-gray-950'
@@ -99,9 +108,7 @@
 		</div>
 	{:else}
 		<a
-			class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId ||
-			confirmEdit ||
-			confirmDelete
+			class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 				? 'bg-gray-100 dark:bg-gray-950'
@@ -138,7 +145,7 @@
 	<div
 		class="
 
-        {chat.id === $chatId || confirmEdit || confirmDelete
+        {chat.id === $chatId || confirmEdit
 			? 'from-gray-200 dark:from-gray-900'
 			: selected
 			? 'from-gray-100 dark:from-gray-950'
@@ -189,45 +196,6 @@
 					</svg>
 				</button>
 			</div>
-		{:else if confirmDelete}
-			<div class="flex self-center space-x-1.5 z-10">
-				<button
-					class=" self-center dark:hover:text-white transition"
-					on:click={() => {
-						deleteChat(chat.id);
-					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</button>
-				<button
-					class=" self-center dark:hover:text-white transition"
-					on:click={() => {
-						confirmDelete = false;
-					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-						/>
-					</svg>
-				</button>
-			</div>
 		{:else}
 			<div class="flex self-center space-x-1 z-10">
 				<ChatMenu
@@ -242,10 +210,12 @@
 						archiveChatHandler(chat.id);
 					}}
 					renameHandler={() => {
+						chatTitle = chat.title;
+
 						confirmEdit = true;
 					}}
 					deleteHandler={() => {
-						confirmDelete = true;
+						showDeleteConfirmDialog = true;
 					}}
 					onClose={() => {
 						selected = false;
@@ -277,7 +247,7 @@
 						id="delete-chat-button"
 						class="hidden"
 						on:click={() => {
-							confirmDelete = true;
+							showDeleteConfirmDialog = true;
 						}}
 					>
 						<svg
