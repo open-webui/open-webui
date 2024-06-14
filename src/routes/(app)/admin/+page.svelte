@@ -155,7 +155,7 @@
 					  {#if sortKey === 'role'}
 						{sortOrder === 'asc' ? '▲' : '▼'}
 					  {:else}
-						<span style="visibility:hidden">▲</span>
+						<span class="invisible">▲</span>
 					  {/if}
 					</th>
 					<th scope="col" class="px-3 py-2 cursor-pointer select-none" on:click={() => setSortKey('name')}>
@@ -163,7 +163,7 @@
 					  {#if sortKey === 'name'}
 						{sortOrder === 'asc' ? '▲' : '▼'}
 					  {:else}
-						<span style="visibility:hidden">▲</span>
+						<span class="invisible">▲</span>
 					  {/if}
 					</th>
 					<th scope="col" class="px-3 py-2 cursor-pointer select-none" on:click={() => setSortKey('email')}>
@@ -171,7 +171,7 @@
 					  {#if sortKey === 'email'}
 						{sortOrder === 'asc' ? '▲' : '▼'}
 					  {:else}
-						<span style="visibility:hidden">▲</span>
+						<span class="invisible">▲</span>
 					  {/if}
 					</th>
 					<th scope="col" class="px-3 py-2 cursor-pointer select-none" on:click={() => setSortKey('last_active_at')}>
@@ -179,7 +179,7 @@
 					  {#if sortKey === 'last_active_at'}
 						{sortOrder === 'asc' ? '▲' : '▼'}
 					  {:else}
-						<span style="visibility:hidden">▲</span>
+						<span class="invisible">▲</span>
 					  {/if}
 					</th>
 					<th scope="col" class="px-3 py-2 cursor-pointer select-none" on:click={() => setSortKey('created_at')}>
@@ -187,7 +187,7 @@
 					  {#if sortKey === 'created_at'}
 						{sortOrder === 'asc' ? '▲' : '▼'}
 					  {:else}
-						<span style="visibility:hidden">▲</span>
+						<span class="invisible">▲</span>
 					  {/if}
 					</th>
 
