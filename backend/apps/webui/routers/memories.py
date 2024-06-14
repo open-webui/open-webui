@@ -64,11 +64,11 @@ async def add_memory(
     return memory
 
 
-@router.patch("/{memory_id}", response_model=Optional[MemoryModel])
-async def update_memory(
+@router.post("/{memory_id}", response_model=Optional[MemoryModel])
+async def update_memory_by_id(
     memory_id: str, request: Request, form_data: MemoryUpdateModel, user=Depends(get_verified_user)
 ):
-    memory = Memories.update_memory(memory_id, form_data.content)
+    memory = Memories.update_memory_by_id(memory_id, form_data.content)
     if memory is None:
         raise HTTPException(status_code=404, detail="Memory not found")
 

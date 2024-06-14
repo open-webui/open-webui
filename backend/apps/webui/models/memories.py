@@ -65,7 +65,7 @@ class MemoriesTable:
         else:
             return None
         
-    def update_memory(
+    def update_memory_by_id(
         self,
         id: str,
         content: str,
