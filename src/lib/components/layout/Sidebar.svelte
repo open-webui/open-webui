@@ -38,7 +38,10 @@
 	let navElement;
 	let search = '';
 
+	let shiftKey = false;
+
 	let selectedChatId = null;
+
 	let showDropdown = false;
 	let filteredChatList = [];
 
@@ -102,10 +105,28 @@
 			checkDirection();
 		};
 
+		const onKeyDown = (e) => {
+			if (e.key === 'Shift') {
+				shiftKey = true;
+			}
+		};
+
+		const onKeyUp = (e) => {
+			if (e.key === 'Shift') {
+				shiftKey = false;
+			}
+		};
+
+		document.addEventListener('keydown', onKeyDown);
+		document.addEventListener('keyup', onKeyUp);
+
 		window.addEventListener('touchstart', onTouchStart);
 		window.addEventListener('touchend', onTouchEnd);
 
 		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+
 			window.removeEventListener('touchstart', onTouchStart);
 			window.removeEventListener('touchend', onTouchEnd);
 		};
@@ -407,6 +428,7 @@
 
 					<ChatItem
 						{chat}
+						{shiftKey}
 						selected={selectedChatId === chat.id}
 						on:select={() => {
 							selectedChatId = chat.id;

@@ -111,7 +111,8 @@
 
 	$: if (chatIdProp) {
 		(async () => {
-			if (await loadChat()) {
+			console.log(chatIdProp);
+			if (chatIdProp && (await loadChat())) {
 				await tick();
 				loaded = true;
 
@@ -126,7 +127,11 @@
 
 	onMount(async () => {
 		if (!$chatId) {
-			await initNewChat();
+			chatId.subscribe(async (value) => {
+				if (!value) {
+					await initNewChat();
+				}
+			});
 		} else {
 			if (!($settings.saveChatHistory ?? true)) {
 				await goto('/');
