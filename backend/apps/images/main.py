@@ -446,7 +446,7 @@ async def image_generations(
                 "size": (
                     form_data.size if form_data.size else app.state.config.IMAGE_SIZE
                 ),
-                "response_format": "b64_json",
+                "response_format": "url",
             }
 
             r = requests.post(
@@ -461,7 +461,7 @@ async def image_generations(
             images = []
 
             for image in res["data"]:
-                image_filename = save_b64_image(image["b64_json"])
+                image_filename = save_url_image(image["url"])
                 images.append({"url": f"/cache/image/generations/{image_filename}"})
                 file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
 
