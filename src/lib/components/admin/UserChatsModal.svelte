@@ -85,7 +85,7 @@
 											{#if sortKey === 'title'}
 												{sortOrder === 'asc' ? '▲' : '▼'}
 											{:else}
-												<span style="visibility:hidden">▲</span>
+												<span class="invisible">▲</span>
 											{/if}
 										</th>
 										<th scope="col" class="px-3 py-2 cursor-pointer select-none" on:click={() => setSortKey('created_at')}>
@@ -93,7 +93,7 @@
 											{#if sortKey === 'created_at'}
 												{sortOrder === 'asc' ? '▲' : '▼'}
 											{:else}
-												<span style="visibility:hidden">▲</span>
+												<span class="invisible">▲</span>
 											{/if}
 										</th>
 										<th scope="col" class="px-3 py-2 hidden md:flex cursor-pointer select-none" on:click={() => setSortKey('updated_at')}>
@@ -101,7 +101,7 @@
 											{#if sortKey === 'updated_at'}
 												{sortOrder === 'asc' ? '▲' : '▼'}
 											{:else}
-												<span style="visibility:hidden">▲</span>
+												<span class="invisible">▲</span>
 											{/if}
 										</th>
 										<th scope="col" class="px-3 py-2 text-right" />
