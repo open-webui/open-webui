@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import {
 		user,
@@ -11,10 +12,11 @@
 		mobile,
 		showArchivedChats
 	} from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
 
+	import { updateUserSettings } from '$lib/apis/users';
 	import {
 		deleteChatById,
 		getChatList,
@@ -25,13 +27,12 @@
 		archiveChatById,
 		cloneChatById
 	} from '$lib/apis/chats';
-	import { toast } from 'svelte-sonner';
-	import { fade, slide } from 'svelte/transition';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
-	import { updateUserSettings } from '$lib/apis/users';
 	import ChatItem from './Sidebar/ChatItem.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -41,7 +42,9 @@
 	let shiftKey = false;
 
 	let selectedChatId = null;
+	let deleteChat = null;
 
+	let showDeleteConfirm = false;
 	let showDropdown = false;
 	let filteredChatList = [];
 
@@ -152,6 +155,22 @@
 		await updateUserSettings(localStorage.token, { ui: $settings });
 		location.href = '/';
 	};
+
+	const deleteChatHandler = async (id) => {
+		const res = await deleteChatById(localStorage.token, id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			if ($chatId === id) {
+				await chatId.set('');
+				await tick();
+				goto('/');
+			}
+			await chats.set(await getChatList(localStorage.token));
+		}
+	};
 </script>
 
 <ArchivedChatsModal
@@ -160,6 +179,18 @@
 		await chats.set(await getChatList(localStorage.token));
 	}}
 />
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title="Delete chat?"
+	on:confirm={() => {
+		deleteChatHandler(deleteChat.id);
+	}}
+>
+	<div class=" text-sm text-gray-500">
+		This will delete <span class="  font-semibold">{deleteChat.title}</span>.
+	</div>
+</DeleteConfirmDialog>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 
@@ -432,6 +463,10 @@
 						selected={selectedChatId === chat.id}
 						on:select={() => {
 							selectedChatId = chat.id;
+						}}
+						on:delete={() => {
+							deleteChat = chat;
+							showDeleteConfirm = true;
 						}}
 					/>
 				{/each}

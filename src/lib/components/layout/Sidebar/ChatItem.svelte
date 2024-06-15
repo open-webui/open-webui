@@ -17,7 +17,6 @@
 
 	import ChatMenu from './ChatMenu.svelte';
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
-	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
@@ -28,9 +27,7 @@
 
 	let mouseOver = false;
 
-	let showDeleteConfirmDialog = false;
 	let showShareChatModal = false;
-
 	let confirmEdit = false;
 
 	let chatTitle = chat.title;
@@ -42,22 +39,6 @@
 			await updateChatById(localStorage.token, id, {
 				title: _title
 			});
-			await chats.set(await getChatList(localStorage.token));
-		}
-	};
-
-	const deleteChat = async (id) => {
-		const res = await deleteChatById(localStorage.token, id).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (res) {
-			if ($chatId === id) {
-				await chatId.set('');
-				await tick();
-				goto('/');
-			}
 			await chats.set(await getChatList(localStorage.token));
 		}
 	};
@@ -85,18 +66,6 @@
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={chat.id} />
-
-<DeleteConfirmDialog
-	bind:show={showDeleteConfirmDialog}
-	title="Delete chat?"
-	on:confirm={() => {
-		deleteChat(chat.id);
-	}}
->
-	<div class=" text-sm text-gray-500">
-		This will delete <span class="  font-semibold">{chat.title}</span>.
-	</div>
-</DeleteConfirmDialog>
 
 <div class=" w-full pr-2 relative group">
 	{#if confirmEdit}
@@ -259,7 +228,7 @@
 						confirmEdit = true;
 					}}
 					deleteHandler={() => {
-						showDeleteConfirmDialog = true;
+						dispatch('delete');
 					}}
 					onClose={() => {
 						selected = false;
@@ -291,7 +260,7 @@
 						id="delete-chat-button"
 						class="hidden"
 						on:click={() => {
-							showDeleteConfirmDialog = true;
+							dispatch('delete');
 						}}
 					>
 						<svg
