@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
+	import { marked } from 'marked';
+
 	import tippy from 'tippy.js';
 
 	export let placement = 'top';
@@ -15,7 +17,7 @@
 			tooltipInstance.setContent(content);
 		} else {
 			tooltipInstance = tippy(tooltipElement, {
-				content: content,
+				content: marked.parse(content),
 				placement: placement,
 				allowHTML: true,
 				touch: touch
