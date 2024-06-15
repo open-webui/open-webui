@@ -2,20 +2,59 @@
 	import { createEventDispatcher, getContext } from 'svelte';
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { addNewMemory } from '$lib/apis/memories';
+	import { addNewMemory, updateMemoryById } from '$lib/apis/memories';
 	import { toast } from 'svelte-sonner';
 
 	const dispatch = createEventDispatcher();
 
 	export let show;
+	export let memory = {};
+
+	let showUpdateBtn = false;
 
 	const i18n = getContext('i18n');
 
 	let loading = false;
 	let content = '';
+    let isMemoryLoaded = false;
+
+	$: {
+		if (memory && memory.id && !isMemoryLoaded) {
+			showUpdateBtn = true;
+            content = memory.content;
+			isMemoryLoaded = true;
+		}
+		if (!show) {
+			showUpdateBtn = false;
+			isMemoryLoaded = false;
+			memory = {};
+			content = '';
+		}
+	}
 
 	const submitHandler = async () => {
 		loading = true;
+
+		if (memory && memory.id) {
+			const res = await updateMemoryById(localStorage.token, memory.id, content).catch((error) => {
+				toast.error(error);
+
+				return null;
+			});
+
+			if (res) {
+				console.log(res);
+				toast.success('Memory updated successfully');
+				content = '';
+				show = false;
+				isMemoryLoaded = false;
+				memory = {};
+				dispatch('save');
+			}
+
+			loading = false;
+			return;
+		}
 
 		const res = await addNewMemory(localStorage.token, content).catch((error) => {
 			toast.error(error);
@@ -38,7 +77,9 @@
 <Modal bind:show size="sm">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Add Memory')}</div>
+			<div class=" text-lg font-medium self-center">
+				{memory.id ? $i18n.t('Edit Memory') : $i18n.t('Add Memory')}
+			</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -87,7 +128,12 @@
 							type="submit"
 							disabled={loading}
 						>
-							{$i18n.t('Add')}
+
+							{#if showUpdateBtn}
+								{$i18n.t('Update')}
+							{:else}
+								{$i18n.t('Add')}
+							{/if}
 
 							{#if loading}
 								<div class="ml-2 self-center">
