@@ -1,5 +1,10 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import { onMount, getContext } from 'svelte';
+
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user, config } from '$lib/stores';
+	import { splitStream } from '$lib/utils';
 
 	import {
 		createModel,
@@ -11,15 +16,11 @@
 		uploadModel,
 		getOllamaConfig
 	} from '$lib/apis/ollama';
-
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, models, MODEL_DOWNLOAD_POOL, user, config } from '$lib/stores';
-	import { splitStream } from '$lib/utils';
-	import { onMount, getContext } from 'svelte';
+	import { getModels as _getModels } from '$lib/apis';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { getModels as _getModels } from '$lib/apis';
+	import ModelDeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -28,6 +29,8 @@
 	};
 
 	let modelUploadInputElement: HTMLInputElement;
+
+	let showModelDeleteConfirm = false;
 
 	// Models
 
@@ -549,6 +552,13 @@
 	});
 </script>
 
+<ModelDeleteConfirmDialog
+	bind:show={showModelDeleteConfirm}
+	on:confirm={() => {
+		deleteModelHandler();
+	}}
+/>
+
 <div class="flex flex-col h-full justify-between text-sm">
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		{#if ollamaEnabled}
@@ -763,7 +773,7 @@
 								<button
 									class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 									on:click={() => {
-										deleteModelHandler();
+										showModelDeleteConfirm = true;
 									}}
 								>
 									<svg
