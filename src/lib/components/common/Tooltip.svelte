@@ -17,7 +17,7 @@
 			tooltipInstance.setContent(content);
 		} else {
 			tooltipInstance = tippy(tooltipElement, {
-				content: marked.parse(content),
+				content: content,
 				placement: placement,
 				allowHTML: true,
 				touch: touch
