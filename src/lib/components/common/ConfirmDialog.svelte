@@ -9,6 +9,9 @@
 	export let title = 'Confirm your action';
 	export let message = 'This action cannot be undone. Do you wish to continue?';
 
+	export let cancelLabel = 'Cancel';
+	export let confirmLabel = 'Confirm';
+
 	export let show = false;
 	let modalElement = null;
 	let mounted = false;
@@ -70,7 +73,7 @@
 						}}
 						type="button"
 					>
-						Cancel
+						{cancelLabel}
 					</button>
 					<button
 						class="bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2.5 rounded-lg transition"
@@ -80,7 +83,7 @@
 						}}
 						type="button"
 					>
-						Confirm
+						{confirmLabel}
 					</button>
 				</div>
 			</div>

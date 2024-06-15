@@ -436,11 +436,29 @@ export const removeEmojis = (str) => {
 
 export const extractSentences = (text) => {
 	// Split the paragraph into sentences based on common punctuation marks
-	const sentences = text.split(/(?<=[.!?])/);
+	const sentences = text.split(/(?<=[.!?])\s+/);
 
 	return sentences
 		.map((sentence) => removeEmojis(sentence.trim()))
 		.filter((sentence) => sentence !== '');
+};
+
+export const extractSentencesForAudio = (text) => {
+	return extractSentences(text).reduce((mergedTexts, currentText) => {
+		const lastIndex = mergedTexts.length - 1;
+		if (lastIndex >= 0) {
+			const previousText = mergedTexts[lastIndex];
+			const wordCount = previousText.split(/\s+/).length;
+			if (wordCount < 2) {
+				mergedTexts[lastIndex] = previousText + ' ' + currentText;
+			} else {
+				mergedTexts.push(currentText);
+			}
+		} else {
+			mergedTexts.push(currentText);
+		}
+		return mergedTexts;
+	}, []);
 };
 
 export const blobToFile = (blob, fileName) => {

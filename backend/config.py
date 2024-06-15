@@ -425,6 +425,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
+AIOHTTP_CLIENT_TIMEOUT = int(os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "300"))
 K8S_FLAG = os.environ.get("K8S_FLAG", "")
 USE_OLLAMA_DOCKER = os.environ.get("USE_OLLAMA_DOCKER", "false")
 
@@ -951,6 +952,11 @@ SERPLY_API_KEY = PersistentConfig(
     os.getenv("SERPLY_API_KEY", ""),
 )
 
+TAVILY_API_KEY = PersistentConfig(
+    "TAVILY_API_KEY",
+    "rag.web.search.tavily_api_key",
+    os.getenv("TAVILY_API_KEY", ""),
+)
 
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",

@@ -28,6 +28,10 @@ math {
 	@apply rounded-lg;
 }
 
+.markdown a {
+	@apply underline;
+}
+
 ol > li {
 	counter-increment: list-number;
 	display: block;
