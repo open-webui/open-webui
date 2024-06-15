@@ -17,8 +17,12 @@
 	let content = '';
 
 	$: if (show) {
-		content = memory.content;
+		setContent();
 	}
+
+	const setContent = () => {
+		content = memory.content;
+	};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -32,6 +36,7 @@
 		if (res) {
 			console.log(res);
 			toast.success('Memory updated successfully');
+			dispatch('save');
 			show = false;
 		}
 
