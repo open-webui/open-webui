@@ -62,7 +62,7 @@ export const addNewMemory = async (token: string, content: string) => {
 export const updateMemoryById = async (token: string, id: string, content: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/${id}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/${id}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
