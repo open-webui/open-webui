@@ -64,7 +64,7 @@ class MemoriesTable:
             return memory
         else:
             return None
-        
+
     def update_memory_by_id(
         self,
         id: str,
