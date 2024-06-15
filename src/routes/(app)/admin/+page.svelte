@@ -18,6 +18,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import UserChatsModal from '$lib/components/admin/UserChatsModal.svelte';
 	import AddUserModal from '$lib/components/admin/AddUserModal.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -30,6 +31,7 @@
 
 	let page = 1;
 
+	let showDeleteConfirmDialog = false;
 	let showAddUserModal = false;
 
 	let showUserChatsModal = false;
@@ -76,6 +78,13 @@
 		loaded = true;
 	});
 </script>
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	on:confirm={() => {
+		deleteUserHandler(selectedUser.id);
+	}}
+/>
 
 {#key selectedUser}
 	<EditUserModal
@@ -256,7 +265,8 @@
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 											on:click={async () => {
-												deleteUserHandler(user.id);
+												showDeleteConfirmDialog = true;
+												selectedUser = user;
 											}}
 										>
 											<svg
