@@ -94,12 +94,12 @@
 				<div class=" text-lg font-semibold mt-2">/</div>
 			</div>
 
-			<div class="max-h-60 flex flex-col w-full rounded-r-xl bg-white">
+			<div class="max-h-60 flex flex-col w-full rounded-r-xl bg-white dark:bg-gray-850">
 				<div class="m-1 overflow-y-auto p-1 rounded-r-xl space-y-0.5">
 					{#each filteredPromptCommands as command, commandIdx}
 						<button
 							class=" px-3 py-1.5 rounded-xl w-full text-left {commandIdx === selectedCommandIdx
-								? ' bg-gray-100 selected-command-option-button'
+								? ' bg-gray-100 dark:bg-gray-600 selected-command-option-button'
 								: ''}"
 							type="button"
 							on:click={() => {
@@ -110,11 +110,11 @@
 							}}
 							on:focus={() => {}}
 						>
-							<div class=" font-medium text-black">
+							<div class=" font-medium text-black dark:text-gray-100">
 								{command.command}
 							</div>
 
-							<div class=" text-xs text-gray-600">
+							<div class=" text-xs text-gray-600 dark:text-gray-100">
 								{command.title}
 							</div>
 						</button>
@@ -122,7 +122,7 @@
 				</div>
 
 				<div
-					class=" px-2 pb-1 text-xs text-gray-600 bg-white rounded-br-xl flex items-center space-x-1"
+					class=" px-2 pb-1 text-xs text-gray-600 dark:text-gray-100 bg-white dark:bg-gray-850 rounded-br-xl flex items-center space-x-1"
 				>
 					<div>
 						<svg
