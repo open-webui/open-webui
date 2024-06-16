@@ -120,11 +120,21 @@
 			}
 		};
 
-		document.addEventListener('keydown', onKeyDown);
-		document.addEventListener('keyup', onKeyUp);
+		const onFocus = () => {};
+
+		const onBlur = () => {
+			shiftKey = false;
+			selectedChatId = false;
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
 
 		window.addEventListener('touchstart', onTouchStart);
 		window.addEventListener('touchend', onTouchEnd);
+
+		window.addEventListener('focus', onFocus);
+		window.addEventListener('blur', onBlur);
 
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
@@ -132,6 +142,9 @@
 
 			window.removeEventListener('touchstart', onTouchStart);
 			window.removeEventListener('touchend', onTouchEnd);
+
+			window.removeEventListener('focus', onFocus);
+			window.removeEventListener('blur', onBlur);
 		};
 	});
 
