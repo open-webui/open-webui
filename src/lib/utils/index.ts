@@ -302,6 +302,29 @@ export const getImportOrigin = (_chats) => {
 	return 'webui';
 };
 
+export const getUserPosition = async (raw = false) => {
+	// Get the user's location using the Geolocation API
+	const position = await new Promise((resolve, reject) => {
+		navigator.geolocation.getCurrentPosition(resolve, reject);
+	}).catch((error) => {
+		console.error('Error getting user location:', error);
+		throw error;
+	});
+
+	if (!position) {
+		return 'Location not available';
+	}
+
+	// Extract the latitude and longitude from the position
+	const { latitude, longitude } = position.coords;
+
+	if (raw) {
+		return { latitude, longitude };
+	} else {
+		return `${latitude.toFixed(3)}, ${longitude.toFixed(3)} (lat, long)`;
+	}
+};
+
 const convertOpenAIMessages = (convo) => {
 	// Parse OpenAI chat messages and create chat dictionary for creating new chats
 	const mapping = convo['mapping'];
@@ -474,7 +497,7 @@ export const blobToFile = (blob, fileName) => {
 export const promptTemplate = (
 	template: string,
 	user_name?: string,
-	current_location?: string
+	user_location?: string
 ): string => {
 	// Get the current date
 	const currentDate = new Date();
@@ -509,9 +532,9 @@ export const promptTemplate = (
 		template = template.replace('{{USER_NAME}}', user_name);
 	}
 
-	if (current_location) {
-		// Replace {{CURRENT_LOCATION}} in the template with the current location
-		template = template.replace('{{CURRENT_LOCATION}}', current_location);
+	if (user_location) {
+		// Replace {{USER_LOCATION}} in the template with the current location
+		template = template.replace('{{USER_LOCATION}}', user_location);
 	}
 
 	return template;

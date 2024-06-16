@@ -6,7 +6,7 @@ from typing import Optional
 
 
 def prompt_template(
-    template: str, user_name: str = None, current_location: str = None
+    template: str, user_name: str = None, user_location: str = None
 ) -> str:
     # Get the current date
     current_date = datetime.now()
@@ -25,9 +25,9 @@ def prompt_template(
         # Replace {{USER_NAME}} in the template with the user's name
         template = template.replace("{{USER_NAME}}", user_name)
 
-    if current_location:
-        # Replace {{CURRENT_LOCATION}} in the template with the current location
-        template = template.replace("{{CURRENT_LOCATION}}", current_location)
+    if user_location:
+        # Replace {{USER_LOCATION}} in the template with the current location
+        template = template.replace("{{USER_LOCATION}}", user_location)
 
     return template
 
@@ -65,7 +65,7 @@ def title_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "current_location": user.get("location")}
+            {"user_name": user.get("name"), "user_location": user.get("location")}
             if user
             else {}
         ),
@@ -108,7 +108,7 @@ def search_query_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "current_location": user.get("location")}
+            {"user_name": user.get("name"), "user_location": user.get("location")}
             if user
             else {}
         ),

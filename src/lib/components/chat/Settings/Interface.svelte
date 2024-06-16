@@ -5,6 +5,8 @@
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { updateUserInfo } from '$lib/apis/users';
+	import { getUserPosition } from '$lib/utils';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -16,6 +18,7 @@
 	let responseAutoCopy = false;
 	let widescreenMode = false;
 	let splitLargeChunks = false;
+	let userLocation = false;
 
 	// Interface
 	let defaultModelId = '';
@@ -49,6 +52,26 @@
 	const toggleEmojiInCall = async () => {
 		showEmojiInCall = !showEmojiInCall;
 		saveSettings({ showEmojiInCall: showEmojiInCall });
+	};
+
+	const toggleUserLocation = async () => {
+		userLocation = !userLocation;
+
+		if (userLocation) {
+			const position = await getUserPosition().catch((error) => {
+				toast.error(error.message);
+				return null;
+			});
+
+			if (position) {
+				await updateUserInfo(localStorage.token, { location: position });
+				toast.success('User location successfully retrieved.');
+			} else {
+				userLocation = false;
+			}
+		}
+
+		saveSettings({ userLocation });
 	};
 
 	const toggleTitleAutoGenerate = async () => {
@@ -106,6 +129,7 @@
 		widescreenMode = $settings.widescreenMode ?? false;
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
 		chatDirection = $settings.chatDirection ?? 'LTR';
+		userLocation = $settings.userLocation ?? false;
 
 		defaultModelId = ($settings?.models ?? ['']).at(0);
 	});
@@ -134,6 +158,26 @@
 						type="button"
 					>
 						{#if chatBubble === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Widescreen Mode')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							togglewidescreenMode();
+						}}
+						type="button"
+					>
+						{#if widescreenMode === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
@@ -186,16 +230,16 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Widescreen Mode')}</div>
+					<div class=" self-center text-xs font-medium">{$i18n.t('Allow User Location')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
-							togglewidescreenMode();
+							toggleUserLocation();
 						}}
 						type="button"
 					>
-						{#if widescreenMode === true}
+						{#if userLocation === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>

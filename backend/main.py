@@ -764,7 +764,12 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     template = app.state.config.TITLE_GENERATION_PROMPT_TEMPLATE
 
     content = title_generation_template(
-        template, form_data["prompt"], user.model_dump()
+        template,
+        form_data["prompt"],
+        {
+            "name": user.name,
+            "location": user.info.get("location") if user.info else None,
+        },
     )
 
     payload = {
@@ -830,7 +835,7 @@ async def generate_search_query(form_data: dict, user=Depends(get_verified_user)
     template = app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE
 
     content = search_query_generation_template(
-        template, form_data["prompt"], user.model_dump()
+        template, form_data["prompt"], {"name": user.name}
     )
 
     payload = {
@@ -893,7 +898,12 @@ Message: """{{prompt}}"""
 '''
 
     content = title_generation_template(
-        template, form_data["prompt"], user.model_dump()
+        template,
+        form_data["prompt"],
+        {
+            "name": user.name,
+            "location": user.info.get("location") if user.info else None,
+        },
     )
 
     payload = {

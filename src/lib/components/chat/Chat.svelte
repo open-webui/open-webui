@@ -31,6 +31,7 @@
 		convertMessagesToHistory,
 		copyToClipboard,
 		extractSentencesForAudio,
+		getUserPosition,
 		promptTemplate,
 		splitStream
 	} from '$lib/utils';
@@ -50,7 +51,7 @@
 	import { runWebSearch } from '$lib/apis/rag';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
-	import { getUserSettings } from '$lib/apis/users';
+	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import { chatCompleted, generateTitle, generateSearchQuery } from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
@@ -533,7 +534,13 @@
 			$settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
-						content: `${promptTemplate($settings?.system ?? '', $user.name)}${
+						content: `${promptTemplate(
+							$settings?.system ?? '',
+							$user.name,
+							$settings?.userLocation
+								? await getAndUpdateUserLocation(localStorage.token)
+								: undefined
+						)}${
 							responseMessage?.userContext ?? null
 								? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 								: ''
@@ -871,7 +878,13 @@
 						$settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
-									content: `${promptTemplate($settings?.system ?? '', $user.name)}${
+									content: `${promptTemplate(
+										$settings?.system ?? '',
+										$user.name,
+										$settings?.userLocation
+											? await getAndUpdateUserLocation(localStorage.token)
+											: undefined
+									)}${
 										responseMessage?.userContext ?? null
 											? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 											: ''
