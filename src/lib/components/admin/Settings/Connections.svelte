@@ -44,6 +44,8 @@
 	let ENABLE_OLLAMA_API = null;
 
 	const verifyOpenAIHandler = async (idx) => {
+		OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
+
 		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
 		OPENAI_API_KEYS = await updateOpenAIKeys(localStorage.token, OPENAI_API_KEYS);
 
@@ -63,6 +65,10 @@
 	};
 
 	const verifyOllamaHandler = async (idx) => {
+		OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url) => url !== '').map((url) =>
+			url.replace(/\/$/, '')
+		);
+
 		OLLAMA_BASE_URLS = await updateOllamaUrls(localStorage.token, OLLAMA_BASE_URLS);
 
 		const res = await getOllamaVersion(localStorage.token, idx).catch((error) => {
@@ -78,6 +84,8 @@
 	};
 
 	const updateOpenAIHandler = async () => {
+		OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
+
 		// Check if API KEYS length is same than API URLS length
 		if (OPENAI_API_KEYS.length !== OPENAI_API_BASE_URLS.length) {
 			// if there are more keys than urls, remove the extra keys
@@ -100,7 +108,10 @@
 	};
 
 	const updateOllamaUrlsHandler = async () => {
-		OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url) => url !== '');
+		OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url) => url !== '').map((url) =>
+			url.replace(/\/$/, '')
+		);
+
 		console.log(OLLAMA_BASE_URLS);
 
 		if (OLLAMA_BASE_URLS.length === 0) {
