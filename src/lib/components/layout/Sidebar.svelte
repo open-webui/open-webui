@@ -464,9 +464,13 @@
 						on:select={() => {
 							selectedChatId = chat.id;
 						}}
-						on:delete={() => {
-							deleteChat = chat;
-							showDeleteConfirm = true;
+						on:delete={(e) => {
+							if ((e?.detail ?? '') === 'shift') {
+								deleteChatHandler(chat.id);
+							} else {
+								deleteChat = chat;
+								showDeleteConfirm = true;
+							}
 						}}
 					/>
 				{/each}
