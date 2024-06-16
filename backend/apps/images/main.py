@@ -37,6 +37,10 @@ from config import (
     ENABLE_IMAGE_GENERATION,
     AUTOMATIC1111_BASE_URL,
     COMFYUI_BASE_URL,
+    COMFYUI_CFG_SCALE,
+    COMFYUI_SAMPLER,
+    COMFYUI_SCHEDULER,
+    COMFYUI_SD3,
     IMAGES_OPENAI_API_BASE_URL,
     IMAGES_OPENAI_API_KEY,
     IMAGE_GENERATION_MODEL,
@@ -78,6 +82,10 @@ app.state.config.COMFYUI_BASE_URL = COMFYUI_BASE_URL
 
 app.state.config.IMAGE_SIZE = IMAGE_SIZE
 app.state.config.IMAGE_STEPS = IMAGE_STEPS
+app.state.config.COMFYUI_CFG_SCALE = COMFYUI_CFG_SCALE
+app.state.config.COMFYUI_SAMPLER = COMFYUI_SAMPLER
+app.state.config.COMFYUI_SCHEDULER = COMFYUI_SCHEDULER
+app.state.config.COMFYUI_SD3 = COMFYUI_SD3
 
 
 @app.get("/config")
@@ -456,6 +464,18 @@ def generate_image(
 
             if form_data.negative_prompt is not None:
                 data["negative_prompt"] = form_data.negative_prompt
+
+            if app.state.config.COMFYUI_CFG_SCALE:
+                data["cfg_scale"] = app.state.config.COMFYUI_CFG_SCALE
+
+            if app.state.config.COMFYUI_SAMPLER is not None:
+                data["sampler"] = app.state.config.COMFYUI_SAMPLER
+
+            if app.state.config.COMFYUI_SCHEDULER is not None:
+                data["scheduler"] = app.state.config.COMFYUI_SCHEDULER
+
+            if app.state.config.COMFYUI_SD3 is not None:
+                data["sd3"] = app.state.config.COMFYUI_SD3
 
             data = ImageGenerationPayload(**data)
 
