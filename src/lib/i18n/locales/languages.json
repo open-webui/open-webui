@@ -80,6 +80,14 @@
 		"title": "Korean (한국어)"
 	},
 	{
+		"code": "lt-LT",
+		"title": "Lithuanian (Lietuvių)"
+	},
+	{
+		"code": "nb-NO",
+		"title": "Norwegian Bokmål (Norway)"
+	},
+	{
 		"code": "nl-NL",
 		"title": "Dutch (Netherlands)"
 	},
@@ -114,6 +122,10 @@
 	{
 		"code": "tr-TR",
 		"title": "Turkish (Türkçe)"
+	},
+	{
+		"code": "tk-TW",
+		"title": "Turkmen (Türkmençe)"
 	},
 	{
 		"code": "uk-UA",

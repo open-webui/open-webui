@@ -234,7 +234,7 @@
 			<UpdatePassword />
 		</div>
 
-		<hr class=" dark:border-gray-700 my-4" />
+		<hr class=" dark:border-gray-850 my-4" />
 
 		<div class="flex justify-between items-center text-sm">
 			<div class="  font-medium">{$i18n.t('API keys')}</div>

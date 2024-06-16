@@ -3,7 +3,7 @@
 	import { userSignIn, userSignUp } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user } from '$lib/stores';
+	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
@@ -22,6 +22,8 @@
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
 			localStorage.token = sessionUser.token;
+
+			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			goto('/');
 		}
@@ -105,7 +107,7 @@
 			{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 				<div class=" my-auto pb-10 w-full">
 					<div
-						class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-bold dark:text-gray-200"
+						class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-medium dark:text-gray-200"
 					>
 						<div>
 							{$i18n.t('Signing in')}
@@ -127,7 +129,7 @@
 						}}
 					>
 						<div class="mb-1">
-							<div class=" text-2xl font-bold">
+							<div class=" text-2xl font-medium">
 								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Sign up')}
 								{$i18n.t('to')}
 								{$WEBUI_NAME}
@@ -146,7 +148,7 @@
 						<div class="flex flex-col mt-4">
 							{#if mode === 'signup'}
 								<div>
-									<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Name')}</div>
+									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Name')}</div>
 									<input
 										bind:value={name}
 										type="text"
@@ -161,7 +163,7 @@
 							{/if}
 
 							<div class="mb-2">
-								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Email')}</div>
+								<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Email')}</div>
 								<input
 									bind:value={email}
 									type="email"
@@ -173,7 +175,7 @@
 							</div>
 
 							<div>
-								<div class=" text-sm font-semibold text-left mb-1">{$i18n.t('Password')}</div>
+								<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
 
 								<input
 									bind:value={password}
@@ -188,7 +190,7 @@
 
 						<div class="mt-5">
 							<button
-								class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-semibold text-sm py-3 transition"
+								class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-medium text-sm py-3 transition"
 								type="submit"
 							>
 								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}

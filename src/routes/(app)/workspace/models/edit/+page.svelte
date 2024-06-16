@@ -5,7 +5,7 @@
 
 	import { onMount, getContext } from 'svelte';
 	import { page } from '$app/stores';
-	import { settings, user, config, models } from '$lib/stores';
+	import { settings, user, config, models, tools } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
 	import { getModelInfos, updateModelById } from '$lib/apis/models';
@@ -13,6 +13,9 @@
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import { getModels } from '$lib/apis';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
+	import Tags from '$lib/components/common/Tags.svelte';
+	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
+	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -44,7 +47,8 @@
 		meta: {
 			profile_image_url: '/favicon.png',
 			description: '',
-			suggestion_prompts: null
+			suggestion_prompts: null,
+			tags: []
 		},
 		params: {
 			system: ''
@@ -52,10 +56,12 @@
 	};
 
 	let params = {};
-
 	let capabilities = {
 		vision: true
 	};
+
+	let knowledge = [];
+	let toolIds = [];
 
 	const updateHandler = async () => {
 		loading = true;
@@ -63,14 +69,36 @@
 		info.id = id;
 		info.name = name;
 		info.meta.capabilities = capabilities;
+
+		if (knowledge.length > 0) {
+			info.meta.knowledge = knowledge;
+		} else {
+			if (info.meta.knowledge) {
+				delete info.meta.knowledge;
+			}
+		}
+
+		if (toolIds.length > 0) {
+			info.meta.toolIds = toolIds;
+		} else {
+			if (info.meta.toolIds) {
+				delete info.meta.toolIds;
+			}
+		}
+
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
+		Object.keys(info.params).forEach((key) => {
+			if (info.params[key] === '' || info.params[key] === null) {
+				delete info.params[key];
+			}
+		});
 
 		const res = await updateModelById(localStorage.token, info.id, info);
 
 		if (res) {
+			await models.set(await getModels(localStorage.token));
 			toast.success('Model updated successfully');
 			await goto('/workspace/models');
-			await models.set(await getModels(localStorage.token));
 		}
 
 		loading = false;
@@ -105,7 +133,19 @@
 				}
 
 				params = { ...params, ...model?.info?.params };
-				params.stop = params?.stop ? (params?.stop ?? []).join(',') : null;
+				params.stop = params?.stop
+					? (typeof params.stop === 'string' ? params.stop.split(',') : params?.stop ?? []).join(
+							','
+					  )
+					: null;
+
+				if (model?.info?.meta?.knowledge) {
+					knowledge = [...model?.info?.meta?.knowledge];
+				}
+
+				if (model?.info?.meta?.toolIds) {
+					toolIds = [...model?.info?.meta?.toolIds];
+				}
 
 				if (model?.owned_by === 'openai') {
 					capabilities.usage = false;
@@ -114,6 +154,7 @@
 				if (model?.info?.meta?.capabilities) {
 					capabilities = { ...capabilities, ...model?.info?.meta?.capabilities };
 				}
+
 				console.log(model);
 			} else {
 				goto('/workspace/models');
@@ -193,7 +234,7 @@
 	<button
 		class="flex space-x-1"
 		on:click={() => {
-			history.back();
+			goto('/workspace/models');
 		}}
 	>
 		<div class=" self-center">
@@ -223,26 +264,26 @@
 			<div class="flex justify-center my-4">
 				<div class="self-center">
 					<button
-						class=" {info?.meta?.profile_image_url
+						class=" {info.meta.profile_image_url
 							? ''
-							: 'p-6'} rounded-full dark:bg-gray-700 border border-dashed border-gray-200"
+							: 'p-4'} rounded-full dark:bg-gray-700 border border-dashed border-gray-200 flex items-center"
 						type="button"
 						on:click={() => {
 							filesInputElement.click();
 						}}
 					>
-						{#if info?.meta?.profile_image_url}
+						{#if info.meta.profile_image_url}
 							<img
-								src={info?.meta?.profile_image_url}
+								src={info.meta.profile_image_url}
 								alt="modelfile profile"
-								class=" rounded-full w-20 h-20 object-cover"
+								class=" rounded-full size-16 object-cover"
 							/>
 						{:else}
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 24 24"
 								fill="currentColor"
-								class="w-8"
+								class="size-8"
 							>
 								<path
 									fill-rule="evenodd"
@@ -255,9 +296,9 @@
 				</div>
 			</div>
 
-			<div class="my-2 flex space-x-2">
+			<div class="mt-2 my-1 flex space-x-2">
 				<div class="flex-1">
-					<div class=" text-sm font-semibold mb-2">{$i18n.t('Name')}*</div>
+					<div class=" text-sm font-semibold mb-1">{$i18n.t('Name')}*</div>
 
 					<div>
 						<input
@@ -270,7 +311,7 @@
 				</div>
 
 				<div class="flex-1">
-					<div class=" text-sm font-semibold mb-2">{$i18n.t('Model ID')}*</div>
+					<div class=" text-sm font-semibold mb-1">{$i18n.t('Model ID')}*</div>
 
 					<div>
 						<input
@@ -285,8 +326,8 @@
 			</div>
 
 			{#if model.preset}
-				<div class="my-2">
-					<div class=" text-sm font-semibold mb-2">{$i18n.t('Base Model (From)')}</div>
+				<div class="my-1">
+					<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
 
 					<div>
 						<select
@@ -304,17 +345,39 @@
 				</div>
 			{/if}
 
-			<div class="my-2">
-				<div class=" text-sm font-semibold mb-2">{$i18n.t('Description')}</div>
+			<div class="my-1">
+				<div class="flex w-full justify-between items-center">
+					<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
 
-				<div>
+					<button
+						class="p-1 text-xs flex rounded transition"
+						type="button"
+						on:click={() => {
+							if (info.meta.description === null) {
+								info.meta.description = '';
+							} else {
+								info.meta.description = null;
+							}
+						}}
+					>
+						{#if info.meta.description === null}
+							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+						{/if}
+					</button>
+				</div>
+
+				{#if info.meta.description !== null}
 					<input
-						class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
+						class="mt-1 px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
 						placeholder={$i18n.t('Add a short description about what this model does')}
 						bind:value={info.meta.description}
 					/>
-				</div>
+				{/if}
 			</div>
+
+			<hr class=" dark:border-gray-850 my-1" />
 
 			<div class="my-2">
 				<div class="flex w-full justify-between">
@@ -359,6 +422,7 @@
 					{#if showAdvanced}
 						<div class="my-2">
 							<AdvancedParams
+								admin={true}
 								bind:params
 								on:change={(e) => {
 									info.params = { ...info.params, ...params };
@@ -368,6 +432,8 @@
 					{/if}
 				</div>
 			</div>
+
+			<hr class=" dark:border-gray-850 my-1" />
 
 			<div class="my-2">
 				<div class="flex w-full justify-between items-center">
@@ -460,7 +526,15 @@
 			</div>
 
 			<div class="my-2">
-				<div class="flex w-full justify-between">
+				<Knowledge bind:knowledge />
+			</div>
+
+			<div class="my-2">
+				<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+			</div>
+
+			<div class="my-2">
+				<div class="flex w-full justify-between mb-1">
 					<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
 				</div>
 				<div class="flex flex-col">
@@ -473,7 +547,7 @@
 								}}
 							/>
 
-							<div class=" py-1.5 text-sm w-full capitalize">
+							<div class=" py-0.5 text-sm w-full capitalize">
 								{$i18n.t(capability)}
 							</div>
 						</div>
@@ -481,7 +555,30 @@
 				</div>
 			</div>
 
-			<div class="my-2 text-gray-500">
+			<div class="my-1">
+				<div class="flex w-full justify-between items-center">
+					<div class=" self-center text-sm font-semibold">{$i18n.t('Tags')}</div>
+				</div>
+
+				<div class="mt-2">
+					<Tags
+						tags={info?.meta?.tags ?? []}
+						deleteTag={(tagName) => {
+							info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+						}}
+						addTag={(tagName) => {
+							console.log(tagName);
+							if (!(info?.meta?.tags ?? null)) {
+								info.meta.tags = [{ name: tagName }];
+							} else {
+								info.meta.tags = [...info.meta.tags, { name: tagName }];
+							}
+						}}
+					/>
+				</div>
+			</div>
+
+			<div class="my-2 text-gray-300 dark:text-gray-700">
 				<div class="flex w-full justify-between mb-2">
 					<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
 

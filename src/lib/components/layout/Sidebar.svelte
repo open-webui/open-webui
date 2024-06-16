@@ -22,7 +22,8 @@
 		getChatListByTagName,
 		updateChatById,
 		getAllChatTags,
-		archiveChatById
+		archiveChatById,
+		cloneChatById
 	} from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	import { fade, slide } from 'svelte/transition';
@@ -182,6 +183,18 @@
 		}
 	};
 
+	const cloneChatHandler = async (id) => {
+		const res = await cloneChatById(localStorage.token, id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			goto(`/c/${res.id}`);
+			await chats.set(await getChatList(localStorage.token));
+		}
+	};
+
 	const saveSettings = async (updated) => {
 		await settings.set({ ...$settings, ...updated });
 		await updateUserSettings(localStorage.token, { ui: $settings });
@@ -191,6 +204,10 @@
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
 		await chats.set(await getChatList(localStorage.token));
+	};
+
+	const focusEdit = async (node: HTMLInputElement) => {
+		node.focus();
 	};
 </script>
 
@@ -308,6 +325,10 @@
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
+
+						if ($mobile) {
+							showSidebar.set(false);
+						}
 					}}
 					draggable="false"
 				>
@@ -476,7 +497,11 @@
 									? 'bg-gray-100 dark:bg-gray-950'
 									: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 							>
-								<input bind:value={chatTitle} class=" bg-transparent w-full outline-none mr-10" />
+								<input
+									use:focusEdit
+									bind:value={chatTitle}
+									class=" bg-transparent w-full outline-none mr-10"
+								/>
 							</div>
 						{:else}
 							<a
@@ -493,6 +518,10 @@
 									if ($mobile) {
 										showSidebar.set(false);
 									}
+								}}
+								on:dblclick={() => {
+									chatTitle = chat.title;
+									chatTitleEditId = chat.id;
 								}}
 								draggable="false"
 							>
@@ -601,6 +630,9 @@
 								<div class="flex self-center space-x-1 z-10">
 									<ChatMenu
 										chatId={chat.id}
+										cloneChatHandler={() => {
+											cloneChatHandler(chat.id);
+										}}
 										shareHandler={() => {
 											shareChatId = selectedChatId;
 											showShareChatModal = true;

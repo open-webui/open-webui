@@ -29,7 +29,7 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-6xl px-8 lg:px-24 pb-16">
+	<div class="m-auto w-full max-w-6xl px-8 lg:px-24 pb-10">
 		<div class="flex justify-start">
 			<div class="flex -space-x-4 mb-1" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
@@ -64,7 +64,7 @@
 				</div>
 
 				<div in:fade={{ duration: 200, delay: 200 }}>
-					{#if models[selectedModelIdx]?.info}
+					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 						<div class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3">
 							{models[selectedModelIdx]?.info?.meta?.description}
 						</div>
@@ -85,7 +85,7 @@
 							</div>
 						{/if}
 					{:else}
-						<div class=" font-medium text-gray-400 dark:text-gray-500">
+						<div class=" font-medium text-gray-400 dark:text-gray-500 line-clamp-1">
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}

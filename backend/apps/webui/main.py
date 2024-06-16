@@ -6,6 +6,7 @@ from apps.webui.routers import (
     users,
     chats,
     documents,
+    tools,
     models,
     prompts,
     configs,
@@ -14,6 +15,8 @@ from apps.webui.routers import (
 )
 from config import (
     WEBUI_BUILD_HASH,
+    SHOW_ADMIN_DETAILS,
+    ADMIN_EMAIL,
     WEBUI_AUTH,
     DEFAULT_MODELS,
     DEFAULT_PROMPT_SUGGESTIONS,
@@ -24,8 +27,8 @@ from config import (
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     JWT_EXPIRES_IN,
     WEBUI_BANNERS,
-    AppConfig,
     ENABLE_COMMUNITY_SHARING,
+    AppConfig,
 )
 
 app = FastAPI()
@@ -36,6 +39,12 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
 app.state.config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
+app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+
+
+app.state.config.SHOW_ADMIN_DETAILS = SHOW_ADMIN_DETAILS
+app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
+
 
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
@@ -47,7 +56,7 @@ app.state.config.BANNERS = WEBUI_BANNERS
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 
 app.state.MODELS = {}
-app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+app.state.TOOLS = {}
 
 
 app.add_middleware(
@@ -63,6 +72,7 @@ app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(chats.router, prefix="/chats", tags=["chats"])
 
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
+app.include_router(tools.router, prefix="/tools", tags=["tools"])
 app.include_router(models.router, prefix="/models", tags=["models"])
 app.include_router(prompts.router, prefix="/prompts", tags=["prompts"])
 app.include_router(memories.router, prefix="/memories", tags=["memories"])

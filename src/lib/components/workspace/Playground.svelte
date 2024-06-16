@@ -8,7 +8,7 @@
 	import { OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
-	import { cancelOllamaRequest, generateChatCompletion } from '$lib/apis/ollama';
+	import { generateChatCompletion } from '$lib/apis/ollama';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
@@ -24,7 +24,6 @@
 	let selectedModelId = '';
 
 	let loading = false;
-	let currentRequestId = null;
 	let stopResponseFlag = false;
 
 	let messagesContainerElement: HTMLDivElement;
@@ -45,14 +44,6 @@
 			element.scrollTop = element?.scrollHeight;
 		}
 	};
-
-	// const cancelHandler = async () => {
-	// 	if (currentRequestId) {
-	// 		const res = await cancelOllamaRequest(localStorage.token, currentRequestId);
-	// 		currentRequestId = null;
-	// 		loading = false;
-	// 	}
-	// };
 
 	const stopResponse = () => {
 		stopResponseFlag = true;
@@ -89,8 +80,6 @@
 					if (stopResponseFlag) {
 						controller.abort('User: Stop Response');
 					}
-
-					currentRequestId = null;
 					break;
 				}
 
@@ -106,11 +95,7 @@
 								let data = JSON.parse(line.replace(/^data: /, ''));
 								console.log(data);
 
-								if ('request_id' in data) {
-									currentRequestId = data.request_id;
-								} else {
-									text += data.choices[0].delta.content ?? '';
-								}
+								text += data.choices[0].delta.content ?? '';
 							}
 						}
 					}
@@ -171,8 +156,6 @@
 					if (stopResponseFlag) {
 						controller.abort('User: Stop Response');
 					}
-
-					currentRequestId = null;
 					break;
 				}
 
@@ -189,21 +172,17 @@
 								let data = JSON.parse(line.replace(/^data: /, ''));
 								console.log(data);
 
-								if ('request_id' in data) {
-									currentRequestId = data.request_id;
+								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
+									continue;
 								} else {
-									if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
-										continue;
-									} else {
-										textareaElement.style.height = textareaElement.scrollHeight + 'px';
+									textareaElement.style.height = textareaElement.scrollHeight + 'px';
 
-										responseMessage.content += data.choices[0].delta.content ?? '';
-										messages = messages;
+									responseMessage.content += data.choices[0].delta.content ?? '';
+									messages = messages;
 
-										textareaElement.style.height = textareaElement.scrollHeight + 'px';
+									textareaElement.style.height = textareaElement.scrollHeight + 'px';
 
-										await tick();
-									}
+									await tick();
 								}
 							}
 						}
@@ -229,7 +208,6 @@
 
 			loading = false;
 			stopResponseFlag = false;
-			currentRequestId = null;
 		}
 	};
 

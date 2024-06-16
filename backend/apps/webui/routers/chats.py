@@ -114,6 +114,19 @@ async def get_user_chats(user=Depends(get_current_user)):
 
 
 ############################
+# GetArchivedChats
+############################
+
+
+@router.get("/all/archived", response_model=List[ChatResponse])
+async def get_user_chats(user=Depends(get_current_user)):
+    return [
+        ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+        for chat in Chats.get_archived_chats_by_user_id(user.id)
+    ]
+
+
+############################
 # GetAllChatsInDB
 ############################
 
@@ -148,7 +161,7 @@ async def get_archived_session_user_chat_list(
 ############################
 
 
-@router.post("/archive/all", response_model=List[ChatTitleIdResponse])
+@router.post("/archive/all", response_model=bool)
 async def archive_all_chats(user=Depends(get_current_user)):
     return Chats.archive_all_chats_by_user_id(user.id)
 
@@ -286,6 +299,32 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_current_
 
         result = Chats.delete_chat_by_id_and_user_id(id, user.id)
         return result
+
+
+############################
+# CloneChat
+############################
+
+
+@router.get("/{id}/clone", response_model=Optional[ChatResponse])
+async def clone_chat_by_id(id: str, user=Depends(get_current_user)):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+
+        chat_body = json.loads(chat.chat)
+        updated_chat = {
+            **chat_body,
+            "originalChatId": chat.id,
+            "branchPointMessageId": chat_body["history"]["currentId"],
+            "title": f"Clone of {chat.title}",
+        }
+
+        chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))
+        return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
+        )
 
 
 ############################

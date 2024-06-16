@@ -75,7 +75,7 @@
 						/>
 
 						<div class="text-xs text-gray-500">
-							ⓘ Refer to yourself as "User" (e.g., "User is learning Spanish")
+							ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}
 						</div>
 					</div>
 

@@ -14,7 +14,11 @@
 	</title>
 </svelte:head>
 
-<div class=" flex flex-col w-full min-h-screen max-h-screen">
+<div
+	class=" flex flex-col w-full min-h-screen max-h-screen {$showSidebar
+		? 'md:max-w-[calc(100%-260px)]'
+		: ''}"
+>
 	<div class=" px-4 pt-3 mt-0.5 mb-1">
 		<div class=" flex items-center gap-1">
 			<div class="{$showSidebar ? 'md:hidden' : ''} mr-1 self-start flex flex-none items-center">
@@ -30,29 +34,29 @@
 					</div>
 				</button>
 			</div>
-			<div class="flex items-center text-xl font-semibold">{$i18n.t('Workspace')}</div>
+			<div class="flex items-center text-xl font-semibold">{$i18n.t('Admin Panel')}</div>
 		</div>
 	</div>
 
-	<!-- <div class="px-4 my-1">
+	<div class="px-4 my-1">
 		<div
 			class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-xl bg-transparent/10 p-1"
 		>
 			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/models')
+				class="min-w-fit rounded-lg p-1.5 px-3 {['/admin', '/admin/'].includes($page.url.pathname)
 					? 'bg-gray-50 dark:bg-gray-850'
 					: ''} transition"
-				href="/workspace/models">{$i18n.t('Models')}</a
+				href="/admin">{$i18n.t('Dashboard')}</a
 			>
 
 			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/prompts')
+				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/admin/settings')
 					? 'bg-gray-50 dark:bg-gray-850'
 					: ''} transition"
-				href="/workspace/prompts">{$i18n.t('Prompts')}</a
+				href="/admin/settings">{$i18n.t('Settings')}</a
 			>
 
-			<a
+			<!-- <a
 				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/documents')
 					? 'bg-gray-50 dark:bg-gray-850'
 					: ''} transition"
@@ -66,9 +70,9 @@
 					? 'bg-gray-50 dark:bg-gray-850'
 					: ''} transition"
 				href="/workspace/playground">{$i18n.t('Playground')}</a
-			>
+			> -->
 		</div>
-	</div> -->
+	</div>
 
 	<hr class=" my-2 dark:border-gray-850" />
 
