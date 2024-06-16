@@ -28,6 +28,10 @@ math {
 	@apply rounded-lg;
 }
 
+.markdown a {
+	@apply underline;
+}
+
 ol > li {
 	counter-increment: list-number;
 	display: block;
@@ -92,8 +96,16 @@ select {
 	visibility: hidden;
 }
 
+.scrollbar-hidden::-webkit-scrollbar-corner {
+	display: none;
+}
+
 .scrollbar-none::-webkit-scrollbar {
 	display: none; /* for Chrome, Safari and Opera */
+}
+
+.scrollbar-none::-webkit-scrollbar-corner {
+	display: none;
 }
 
 .scrollbar-none {
@@ -110,4 +122,17 @@ input::-webkit-inner-spin-button {
 
 input[type='number'] {
 	-moz-appearance: textfield; /* Firefox */
+}
+
+.cm-editor {
+	height: 100%;
+	width: 100%;
+}
+
+.cm-scroller {
+	@apply scrollbar-hidden;
+}
+
+.cm-editor.cm-focused {
+	outline: none;
 }

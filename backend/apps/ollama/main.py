@@ -41,13 +41,12 @@ from utils.utils import (
     get_admin_user,
 )
 
-from utils.models import get_model_id_from_custom_model_id
-
 
 from config import (
     SRC_LOG_LEVELS,
     OLLAMA_BASE_URLS,
     ENABLE_OLLAMA_API,
+    AIOHTTP_CLIENT_TIMEOUT,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     UPLOAD_DIR,
@@ -156,7 +155,9 @@ async def cleanup_response(
 async def post_streaming_url(url: str, payload: str):
     r = None
     try:
-        session = aiohttp.ClientSession(trust_env=True)
+        session = aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        )
         r = await session.post(url, data=payload)
         r.raise_for_status()
 
@@ -728,7 +729,6 @@ async def generate_chat_completion(
     model_info = Models.get_model_by_id(model_id)
 
     if model_info:
-        print(model_info)
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
 
@@ -754,6 +754,14 @@ async def generate_chat_completion(
             if model_info.params.get("num_ctx", None):
                 payload["options"]["num_ctx"] = model_info.params.get("num_ctx", None)
 
+            if model_info.params.get("num_batch", None):
+                payload["options"]["num_batch"] = model_info.params.get(
+                    "num_batch", None
+                )
+
+            if model_info.params.get("num_keep", None):
+                payload["options"]["num_keep"] = model_info.params.get("num_keep", None)
+
             if model_info.params.get("repeat_last_n", None):
                 payload["options"]["repeat_last_n"] = model_info.params.get(
                     "repeat_last_n", None
@@ -764,7 +772,7 @@ async def generate_chat_completion(
                     "frequency_penalty", None
                 )
 
-            if model_info.params.get("temperature", None):
+            if model_info.params.get("temperature", None) is not None:
                 payload["options"]["temperature"] = model_info.params.get(
                     "temperature", None
                 )
@@ -849,9 +857,14 @@ async def generate_chat_completion(
 
 
 # TODO: we should update this part once Ollama supports other types
+class OpenAIChatMessageContent(BaseModel):
+    type: str
+    model_config = ConfigDict(extra="allow")
+
+
 class OpenAIChatMessage(BaseModel):
     role: str
-    content: str
+    content: Union[str, OpenAIChatMessageContent]
 
     model_config = ConfigDict(extra="allow")
 
@@ -879,7 +892,6 @@ async def generate_openai_chat_completion(
     model_info = Models.get_model_by_id(model_id)
 
     if model_info:
-        print(model_info)
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
 

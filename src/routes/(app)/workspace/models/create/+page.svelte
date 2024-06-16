@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { settings, user, config, models } from '$lib/stores';
+	import { settings, user, config, models, tools } from '$lib/stores';
 
 	import { onMount, tick, getContext } from 'svelte';
 	import { addNewModel, getModelById, getModelInfos } from '$lib/apis/models';
@@ -11,6 +11,9 @@
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
+	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
+	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
+	import { stringify } from 'postcss';
 
 	const i18n = getContext('i18n');
 
@@ -30,11 +33,6 @@
 	let id = '';
 	let name = '';
 
-	let params = {};
-	let capabilities = {
-		vision: true
-	};
-
 	let info = {
 		id: '',
 		base_model_id: null,
@@ -53,14 +51,21 @@
 		}
 	};
 
+	let params = {};
+	let capabilities = {
+		vision: true
+	};
+
+	let toolIds = [];
+	let knowledge = [];
+
 	$: if (name) {
 		id = name.replace(/\s+/g, '-').toLowerCase();
 	}
 
-	let baseModel = null;
-	$: {
-		baseModel = $models.find((m) => m.id === info.base_model_id);
-		console.log(baseModel);
+	const addUsage = (base_model_id) => {
+		const baseModel = $models.find((m) => m.id === base_model_id);
+
 		if (baseModel) {
 			if (baseModel.owned_by === 'openai') {
 				capabilities.usage = baseModel.info?.meta?.capabilities?.usage ?? false;
@@ -69,7 +74,7 @@
 			}
 			capabilities = capabilities;
 		}
-	}
+	};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -77,8 +82,24 @@
 		info.id = id;
 		info.name = name;
 		info.meta.capabilities = capabilities;
-		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 
+		if (knowledge.length > 0) {
+			info.meta.knowledge = knowledge;
+		} else {
+			if (info.meta.knowledge) {
+				delete info.meta.knowledge;
+			}
+		}
+
+		if (toolIds.length > 0) {
+			info.meta.toolIds = toolIds;
+		} else {
+			if (info.meta.toolIds) {
+				delete info.meta.toolIds;
+			}
+		}
+
+		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
 				delete info.params[key];
@@ -124,15 +145,34 @@
 
 		id = model.id;
 
+		if (model.info.base_model_id) {
+			const base_model = $models
+				.filter((m) => !m?.preset)
+				.find((m) =>
+					[model.info.base_model_id, `${model.info.base_model_id}:latest`].includes(m.id)
+				);
+
+			console.log('base_model', base_model);
+
+			if (!base_model) {
+				model.info.base_model_id = null;
+			} else if ($models.find((m) => m.id === `${model.info.base_model_id}:latest`)) {
+				model.info.base_model_id = `${model.info.base_model_id}:latest`;
+			}
+		}
+
 		params = { ...params, ...model?.info?.params };
 		params.stop = params?.stop ? (params?.stop ?? []).join(',') : null;
 
 		capabilities = { ...capabilities, ...(model?.info?.meta?.capabilities ?? {}) };
+		toolIds = model?.info?.meta?.toolIds ?? [];
 
 		info = {
 			...info,
 			...model.info
 		};
+
+		console.log(info);
 	};
 
 	onMount(async () => {
@@ -233,7 +273,7 @@
 	<button
 		class="flex space-x-1"
 		on:click={() => {
-			history.back();
+			goto('/workspace/models');
 		}}
 	>
 		<div class=" self-center">
@@ -252,7 +292,7 @@
 		</div>
 		<div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
 	</button>
-	<!-- <hr class="my-3 dark:border-gray-700" /> -->
+	<!-- <hr class="my-3 dark:border-gray-850" /> -->
 
 	<form
 		class="flex flex-col max-w-2xl mx-auto mt-4 mb-10"
@@ -331,6 +371,9 @@
 					class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
 					placeholder="Select a base model (e.g. llama3, gpt-4o)"
 					bind:value={info.base_model_id}
+					on:change={(e) => {
+						addUsage(e.target.value);
+					}}
 					required
 				>
 					<option value={null} class=" text-gray-900">{$i18n.t('Select a base model')}</option>
@@ -416,6 +459,7 @@
 				{#if showAdvanced}
 					<div class="my-2">
 						<AdvancedParams
+							admin={true}
 							bind:params
 							on:change={(e) => {
 								info.params = { ...info.params, ...params };
@@ -516,6 +560,14 @@
 					{/if}
 				</div>
 			{/if}
+		</div>
+
+		<div class="my-2">
+			<Knowledge bind:knowledge />
+		</div>
+
+		<div class="my-2">
+			<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
 		</div>
 
 		<div class="my-1">

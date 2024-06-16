@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
+	import { marked } from 'marked';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
@@ -152,6 +153,7 @@
 
 					toast.error(error);
 					// opts.callback({ success: false, error, modelName: opts.modelName });
+					break;
 				}
 			}
 
@@ -219,7 +221,7 @@
 	<DropdownMenu.Content
 		class=" z-40 {$mobile
 			? `w-full`
-			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/50  outline-none "
+			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-850/50  outline-none "
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={4}
@@ -265,7 +267,7 @@
 								</div>
 							{/if}
 							<div class="flex items-center gap-2">
-								<div class="flex items-center">
+								<div class="flex items-center min-w-fit">
 									<div class="line-clamp-1">
 										{item.label}
 									</div>
@@ -332,9 +334,12 @@
 
 								{#if item.model?.info?.meta?.description}
 									<Tooltip
-										content={`${sanitizeResponseContent(
-											item.model?.info?.meta?.description
-										).replaceAll('\n', '<br>')}`}
+										content={`${marked.parse(
+											sanitizeResponseContent(item.model?.info?.meta?.description).replaceAll(
+												'\n',
+												'<br>'
+											)
+										)}`}
 									>
 										<div class="">
 											<svg

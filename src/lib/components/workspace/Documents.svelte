@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, documents } from '$lib/stores';
+	import { WEBUI_NAME, documents, showSidebar } from '$lib/stores';
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
@@ -15,7 +15,6 @@
 
 	import EditDocModal from '$lib/components/documents/EditDocModal.svelte';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
-	import SettingsModal from '$lib/components/documents/SettingsModal.svelte';
 	import AddDocModal from '$lib/components/documents/AddDocModal.svelte';
 
 	const i18n = getContext('i18n');
@@ -158,12 +157,14 @@
 
 {#if dragged}
 	<div
-		class="fixed w-full h-full flex z-50 touch-none pointer-events-none"
+		class="fixed {$showSidebar
+			? 'left-0 md:left-[260px] md:w-[calc(100%-260px)]'
+			: 'left-0'}  w-full h-full flex z-50 touch-none pointer-events-none"
 		id="dropzone"
 		role="region"
 		aria-label="Drag and Drop Container"
 	>
-		<div class="absolute rounded-xl w-full h-full backdrop-blur bg-gray-800/40 flex justify-center">
+		<div class="absolute w-full h-full backdrop-blur bg-gray-800/40 flex justify-center">
 			<div class="m-auto pt-64 flex flex-col justify-center">
 				<div class="max-w-md">
 					<AddFilesPlaceholder>
@@ -183,39 +184,9 @@
 
 <AddDocModal bind:show={showAddDocModal} />
 
-<SettingsModal bind:show={showSettingsModal} />
-
 <div class="mb-3">
 	<div class="flex justify-between items-center">
 		<div class=" text-lg font-semibold self-center">{$i18n.t('Documents')}</div>
-
-		<div>
-			<button
-				class="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
-				type="button"
-				on:click={() => {
-					showSettingsModal = !showSettingsModal;
-				}}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 16 16"
-					fill="currentColor"
-					class="w-4 h-4"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M6.955 1.45A.5.5 0 0 1 7.452 1h1.096a.5.5 0 0 1 .497.45l.17 1.699c.484.12.94.312 1.356.562l1.321-1.081a.5.5 0 0 1 .67.033l.774.775a.5.5 0 0 1 .034.67l-1.08 1.32c.25.417.44.873.561 1.357l1.699.17a.5.5 0 0 1 .45.497v1.096a.5.5 0 0 1-.45.497l-1.699.17c-.12.484-.312.94-.562 1.356l1.082 1.322a.5.5 0 0 1-.034.67l-.774.774a.5.5 0 0 1-.67.033l-1.322-1.08c-.416.25-.872.44-1.356.561l-.17 1.699a.5.5 0 0 1-.497.45H7.452a.5.5 0 0 1-.497-.45l-.17-1.699a4.973 4.973 0 0 1-1.356-.562L4.108 13.37a.5.5 0 0 1-.67-.033l-.774-.775a.5.5 0 0 1-.034-.67l1.08-1.32a4.971 4.971 0 0 1-.561-1.357l-1.699-.17A.5.5 0 0 1 1 8.548V7.452a.5.5 0 0 1 .45-.497l1.699-.17c.12-.484.312-.94.562-1.356L2.629 4.107a.5.5 0 0 1 .034-.67l.774-.774a.5.5 0 0 1 .67-.033L5.43 3.71a4.97 4.97 0 0 1 1.356-.561l.17-1.699ZM6 8c0 .538.212 1.026.558 1.385l.057.057a2 2 0 0 0 2.828-2.828l-.058-.056A2 2 0 0 0 6 8Z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-
-				<div class=" text-xs">{$i18n.t('Document Settings')}</div>
-			</button>
-		</div>
-	</div>
-	<div class=" text-gray-500 text-xs mt-1">
-		ⓘ {$i18n.t("Use '#' in the prompt input to load and select your documents.")}
 	</div>
 </div>
 
@@ -518,6 +489,10 @@
 			</div>
 		</button>
 	{/each}
+</div>
+
+<div class=" text-gray-500 text-xs mt-1 mb-2">
+	ⓘ {$i18n.t("Use '#' in the prompt input to load and select your documents.")}
 </div>
 
 <div class=" flex justify-end w-full mb-2">

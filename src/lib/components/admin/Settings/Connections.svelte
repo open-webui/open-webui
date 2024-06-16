@@ -23,10 +23,14 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { getModels as _getModels } from '$lib/apis';
 
 	const i18n = getContext('i18n');
 
-	export let getModels: Function;
+	const getModels = async () => {
+		const models = await _getModels(localStorage.token);
+		return models;
+	};
 
 	// External
 	let OLLAMA_BASE_URLS = [''];
@@ -40,6 +44,8 @@
 	let ENABLE_OLLAMA_API = null;
 
 	const verifyOpenAIHandler = async (idx) => {
+		OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
+
 		OPENAI_API_BASE_URLS = await updateOpenAIUrls(localStorage.token, OPENAI_API_BASE_URLS);
 		OPENAI_API_KEYS = await updateOpenAIKeys(localStorage.token, OPENAI_API_KEYS);
 
@@ -59,6 +65,10 @@
 	};
 
 	const verifyOllamaHandler = async (idx) => {
+		OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url) => url !== '').map((url) =>
+			url.replace(/\/$/, '')
+		);
+
 		OLLAMA_BASE_URLS = await updateOllamaUrls(localStorage.token, OLLAMA_BASE_URLS);
 
 		const res = await getOllamaVersion(localStorage.token, idx).catch((error) => {
@@ -74,6 +84,8 @@
 	};
 
 	const updateOpenAIHandler = async () => {
+		OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
+
 		// Check if API KEYS length is same than API URLS length
 		if (OPENAI_API_KEYS.length !== OPENAI_API_BASE_URLS.length) {
 			// if there are more keys than urls, remove the extra keys
@@ -96,7 +108,10 @@
 	};
 
 	const updateOllamaUrlsHandler = async () => {
-		OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url) => url !== '');
+		OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url) => url !== '').map((url) =>
+			url.replace(/\/$/, '')
+		);
+
 		console.log(OLLAMA_BASE_URLS);
 
 		if (OLLAMA_BASE_URLS.length === 0) {
@@ -158,7 +173,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="space-y-3 pr-1.5 overflow-y-scroll h-[24rem] max-h-[25rem]">
+	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null}
 			<div class=" space-y-3">
 				<div class="mt-2 space-y-2 pr-1.5">
@@ -300,7 +315,7 @@
 				</div>
 			</div>
 
-			<hr class=" dark:border-gray-700" />
+			<hr class=" dark:border-gray-850" />
 
 			<div class="pr-1.5 space-y-2">
 				<div class="flex justify-between items-center text-sm">

@@ -5,7 +5,7 @@
 
 	import { onMount, getContext } from 'svelte';
 	import { page } from '$app/stores';
-	import { settings, user, config, models } from '$lib/stores';
+	import { settings, user, config, models, tools } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
 	import { getModelInfos, updateModelById } from '$lib/apis/models';
@@ -14,6 +14,8 @@
 	import { getModels } from '$lib/apis';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
+	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
+	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -54,10 +56,12 @@
 	};
 
 	let params = {};
-
 	let capabilities = {
 		vision: true
 	};
+
+	let knowledge = [];
+	let toolIds = [];
 
 	const updateHandler = async () => {
 		loading = true;
@@ -65,8 +69,24 @@
 		info.id = id;
 		info.name = name;
 		info.meta.capabilities = capabilities;
-		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 
+		if (knowledge.length > 0) {
+			info.meta.knowledge = knowledge;
+		} else {
+			if (info.meta.knowledge) {
+				delete info.meta.knowledge;
+			}
+		}
+
+		if (toolIds.length > 0) {
+			info.meta.toolIds = toolIds;
+		} else {
+			if (info.meta.toolIds) {
+				delete info.meta.toolIds;
+			}
+		}
+
+		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
 				delete info.params[key];
@@ -119,6 +139,14 @@
 					  )
 					: null;
 
+				if (model?.info?.meta?.knowledge) {
+					knowledge = [...model?.info?.meta?.knowledge];
+				}
+
+				if (model?.info?.meta?.toolIds) {
+					toolIds = [...model?.info?.meta?.toolIds];
+				}
+
 				if (model?.owned_by === 'openai') {
 					capabilities.usage = false;
 				}
@@ -126,6 +154,7 @@
 				if (model?.info?.meta?.capabilities) {
 					capabilities = { ...capabilities, ...model?.info?.meta?.capabilities };
 				}
+
 				console.log(model);
 			} else {
 				goto('/workspace/models');
@@ -205,7 +234,7 @@
 	<button
 		class="flex space-x-1"
 		on:click={() => {
-			history.back();
+			goto('/workspace/models');
 		}}
 	>
 		<div class=" self-center">
@@ -393,6 +422,7 @@
 					{#if showAdvanced}
 						<div class="my-2">
 							<AdvancedParams
+								admin={true}
 								bind:params
 								on:change={(e) => {
 									info.params = { ...info.params, ...params };
@@ -405,7 +435,7 @@
 
 			<hr class=" dark:border-gray-850 my-1" />
 
-			<div class="my-1">
+			<div class="my-2">
 				<div class="flex w-full justify-between items-center">
 					<div class="flex w-full justify-between items-center">
 						<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt suggestions')}</div>
@@ -495,7 +525,15 @@
 				{/if}
 			</div>
 
-			<div class="my-1">
+			<div class="my-2">
+				<Knowledge bind:knowledge />
+			</div>
+
+			<div class="my-2">
+				<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+			</div>
+
+			<div class="my-2">
 				<div class="flex w-full justify-between mb-1">
 					<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
 				</div>

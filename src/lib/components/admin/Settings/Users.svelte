@@ -48,7 +48,7 @@
 		await config.set(await getBackendConfig());
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
+	<div class=" space-y-3 overflow-y-scroll max-h-full">
 		<div>
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('User Permissions')}</div>
 
@@ -58,11 +58,11 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded transition"
 					on:click={() => {
-						permissions.chat.deletion = !permissions.chat.deletion;
+						permissions.chat.deletion = !(permissions?.chat?.deletion ?? true);
 					}}
 					type="button"
 				>
-					{#if permissions.chat.deletion}
+					{#if permissions?.chat?.deletion ?? true}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 16 16"
@@ -94,7 +94,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-700 my-2" />
+		<hr class=" dark:border-gray-850 my-2" />
 
 		<div class="mt-2 space-y-3">
 			<div>

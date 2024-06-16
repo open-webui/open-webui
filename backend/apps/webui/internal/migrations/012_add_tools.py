@@ -1,4 +1,4 @@
-"""Peewee migrations -- 011_add_user_oauth_sub.py.
+"""Peewee migrations -- 009_add_models.py.
 
 Some examples (model - class or model name)::
 
@@ -37,13 +37,25 @@ with suppress(ImportError):
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
-    migrator.add_fields(
-        "user",
-        oauth_sub=pw.TextField(null=True, unique=True),
-    )
+    @migrator.create_model
+    class Tool(pw.Model):
+        id = pw.TextField(unique=True)
+        user_id = pw.TextField()
+
+        name = pw.TextField()
+        content = pw.TextField()
+        specs = pw.TextField()
+
+        meta = pw.TextField()
+
+        created_at = pw.BigIntegerField(null=False)
+        updated_at = pw.BigIntegerField(null=False)
+
+        class Meta:
+            table_name = "tool"
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
-    migrator.remove_fields("user", "oauth_sub")
+    migrator.remove_model("tool")

@@ -11,17 +11,14 @@
 	import { toast } from 'svelte-sonner';
 
 	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
-	import { getSignUpEnabledStatus, toggleSignUpEnabledStatus } from '$lib/apis/auths';
-
-	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
-	import SettingsModal from '$lib/components/admin/SettingsModal.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import UserChatsModal from '$lib/components/admin/UserChatsModal.svelte';
 	import AddUserModal from '$lib/components/admin/AddUserModal.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -34,7 +31,7 @@
 
 	let page = 1;
 
-	let showSettingsModal = false;
+	let showDeleteConfirmDialog = false;
 	let showAddUserModal = false;
 
 	let showUserChatsModal = false;
@@ -82,6 +79,13 @@
 	});
 </script>
 
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	on:confirm={() => {
+		deleteUserHandler(selectedUser.id);
+	}}
+/>
+
 {#key selectedUser}
 	<EditUserModal
 		bind:show={showEditUserModal}
@@ -100,7 +104,6 @@
 	}}
 />
 <UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
-<SettingsModal bind:show={showSettingsModal} />
 
 {#if loaded}
 	<div class="mt-0.5 mb-3 gap-1 flex flex-col md:flex-row justify-between">
@@ -118,7 +121,7 @@
 			/>
 
 			<div class="flex gap-0.5">
-				<Tooltip content="Add User">
+				<Tooltip content={$i18n.t('Add User')}>
 					<button
 						class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition font-medium text-sm flex items-center space-x-1"
 						on:click={() => {
@@ -133,28 +136,6 @@
 						>
 							<path
 								d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
-							/>
-						</svg>
-					</button>
-				</Tooltip>
-
-				<Tooltip content={$i18n.t('Admin Settings')}>
-					<button
-						class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition font-medium text-sm flex items-center space-x-1"
-						on:click={() => {
-							showSettingsModal = !showSettingsModal;
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M6.955 1.45A.5.5 0 0 1 7.452 1h1.096a.5.5 0 0 1 .497.45l.17 1.699c.484.12.94.312 1.356.562l1.321-1.081a.5.5 0 0 1 .67.033l.774.775a.5.5 0 0 1 .034.67l-1.08 1.32c.25.417.44.873.561 1.357l1.699.17a.5.5 0 0 1 .45.497v1.096a.5.5 0 0 1-.45.497l-1.699.17c-.12.484-.312.94-.562 1.356l1.082 1.322a.5.5 0 0 1-.034.67l-.774.774a.5.5 0 0 1-.67.033l-1.322-1.08c-.416.25-.872.44-1.356.561l-.17 1.699a.5.5 0 0 1-.497.45H7.452a.5.5 0 0 1-.497-.45l-.17-1.699a4.973 4.973 0 0 1-1.356-.562L4.108 13.37a.5.5 0 0 1-.67-.033l-.774-.775a.5.5 0 0 1-.034-.67l1.08-1.32a4.971 4.971 0 0 1-.561-1.357l-1.699-.17A.5.5 0 0 1 1 8.548V7.452a.5.5 0 0 1 .45-.497l1.699-.17c.12-.484.312-.94.562-1.356L2.629 4.107a.5.5 0 0 1 .034-.67l.774-.774a.5.5 0 0 1 .67-.033L5.43 3.71a4.97 4.97 0 0 1 1.356-.561l.17-1.699ZM6 8c0 .538.212 1.026.558 1.385l.057.057a2 2 0 0 0 2.828-2.828l-.058-.056A2 2 0 0 0 6 8Z"
-								clip-rule="evenodd"
 							/>
 						</svg>
 					</button>
@@ -189,7 +170,7 @@
 						}
 					})
 					.slice((page - 1) * 20, page * 20) as user}
-					<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-700 text-xs">
+					<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-850 text-xs">
 						<td class="px-3 py-2 min-w-[7rem] w-28">
 							<button
 								class=" flex items-center gap-2 text-xs px-3 py-0.5 rounded-lg {user.role ===
@@ -284,7 +265,8 @@
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 											on:click={async () => {
-												deleteUserHandler(user.id);
+												showDeleteConfirmDialog = true;
+												selectedUser = user;
 											}}
 										>
 											<svg

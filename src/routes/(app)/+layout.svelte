@@ -8,11 +8,14 @@
 	import { goto } from '$app/navigation';
 
 	import { getModels as _getModels } from '$lib/apis';
-	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { getPrompts } from '$lib/apis/prompts';
-
-	import { getDocs } from '$lib/apis/documents';
 	import { getAllChatTags } from '$lib/apis/chats';
+
+	import { getPrompts } from '$lib/apis/prompts';
+	import { getDocs } from '$lib/apis/documents';
+	import { getTools } from '$lib/apis/tools';
+
+	import { getBanners } from '$lib/apis/configs';
+	import { getUserSettings } from '$lib/apis/users';
 
 	import {
 		user,
@@ -24,31 +27,21 @@
 		tags,
 		banners,
 		showChangelog,
-		config
+		config,
+		showCallOverlay,
+		tools
 	} from '$lib/stores';
-	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
-	import { compareVersion } from '$lib/utils';
 
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
-	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { getBanners } from '$lib/apis/configs';
-	import { getUserSettings } from '$lib/apis/users';
-	import Help from '$lib/components/layout/Help.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
-	import { error } from '@sveltejs/kit';
 
 	const i18n = getContext('i18n');
 
-	let ollamaVersion = '';
 	let loaded = false;
-	let showShortcutsButtonElement: HTMLButtonElement;
 	let DB = null;
 	let localDBChats = [];
-
-	let showShortcuts = false;
 
 	const getModels = async () => {
 		return _getModels(localStorage.token);
@@ -96,6 +89,9 @@
 				})(),
 				(async () => {
 					documents.set(await getDocs(localStorage.token));
+				})(),
+				(async () => {
+					tools.set(await getTools(localStorage.token));
 				})(),
 				(async () => {
 					banners.set(await getBanners(localStorage.token));
@@ -181,7 +177,6 @@
 	});
 </script>
 
-<Help />
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
 

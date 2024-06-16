@@ -1,0 +1,206 @@
+{
+	"ads": [],
+	"ads_count": 0,
+	"answers": [],
+	"results": [
+		{
+			"title": "Apple",
+			"link": "https://www.apple.com/",
+			"description": "Discover the innovative world of Apple and shop everything iPhone, iPad, Apple Watch, Mac, and Apple TV, plus explore accessories, entertainment, ...",
+			"additional_links": [
+				{
+					"text": "AppleApplehttps://www.apple.com",
+					"href": "https://www.apple.com/"
+				}
+			],
+			"cite": {},
+			"subdomains": [
+				{
+					"title": "Support",
+					"link": "https://support.apple.com/",
+					"description": "SupportContact - iPhone Support - Billing and Subscriptions - Apple Repair"
+				},
+				{
+					"title": "Store",
+					"link": "https://www.apple.com/store",
+					"description": "StoreShop iPhone - Shop iPad - App Store - Shop Mac - ..."
+				},
+				{
+					"title": "Mac",
+					"link": "https://www.apple.com/mac/",
+					"description": "MacMacBook Air - MacBook Pro - iMac - Compare Mac models - Mac mini"
+				},
+				{
+					"title": "iPad",
+					"link": "https://www.apple.com/ipad/",
+					"description": "iPadShop iPad - iPad Pro - iPad Air - Compare iPad models - ..."
+				},
+				{
+					"title": "Watch",
+					"link": "https://www.apple.com/watch/",
+					"description": "WatchShop Apple Watch - Series 9 - SE - Ultra 2 - Nike - Hermès - ..."
+				}
+			],
+			"realPosition": 1
+		},
+		{
+			"title": "Apple",
+			"link": "https://www.apple.com/",
+			"description": "Discover the innovative world of Apple and shop everything iPhone, iPad, Apple Watch, Mac, and Apple TV, plus explore accessories, entertainment, ...",
+			"additional_links": [
+				{
+					"text": "AppleApplehttps://www.apple.com",
+					"href": "https://www.apple.com/"
+				}
+			],
+			"cite": {},
+			"realPosition": 2
+		},
+		{
+			"title": "Apple Inc.",
+			"link": "https://en.wikipedia.org/wiki/Apple_Inc.",
+			"description": "Apple Inc. (formerly Apple Computer, Inc.) is an American multinational corporation and technology company headquartered in Cupertino, California, ...",
+			"additional_links": [
+				{
+					"text": "Apple Inc.Wikipediahttps://en.wikipedia.org › wiki › Apple_Inc",
+					"href": "https://en.wikipedia.org/wiki/Apple_Inc."
+				},
+				{
+					"text": "",
+					"href": "https://en.wikipedia.org/wiki/Apple_Inc."
+				},
+				{
+					"text": "History",
+					"href": "https://en.wikipedia.org/wiki/History_of_Apple_Inc."
+				},
+				{
+					"text": "List of Apple products",
+					"href": "https://en.wikipedia.org/wiki/List_of_Apple_products"
+				},
+				{
+					"text": "Litigation involving Apple Inc.",
+					"href": "https://en.wikipedia.org/wiki/Litigation_involving_Apple_Inc."
+				},
+				{
+					"text": "Apple Park",
+					"href": "https://en.wikipedia.org/wiki/Apple_Park"
+				}
+			],
+			"cite": {
+				"domain": "https://en.wikipedia.org › wiki › Apple_Inc",
+				"span": " › wiki › Apple_Inc"
+			},
+			"realPosition": 3
+		},
+		{
+			"title": "Apple Inc. (AAPL) Company Profile & Facts",
+			"link": "https://finance.yahoo.com/quote/AAPL/profile/",
+			"description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide. The company offers iPhone, a line ...",
+			"additional_links": [
+				{
+					"text": "Apple Inc. (AAPL) Company Profile & FactsYahoo Financehttps://finance.yahoo.com › quote › AAPL › profile",
+					"href": "https://finance.yahoo.com/quote/AAPL/profile/"
+				}
+			],
+			"cite": {
+				"domain": "https://finance.yahoo.com › quote › AAPL › profile",
+				"span": " › quote › AAPL › profile"
+			},
+			"realPosition": 4
+		},
+		{
+			"title": "Apple Inc - Company Profile and News",
+			"link": "https://www.bloomberg.com/profile/company/AAPL:US",
+			"description": "Apple Inc. Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables and accessories, and sells a variety of related ...",
+			"additional_links": [
+				{
+					"text": "Apple Inc - Company Profile and NewsBloomberghttps://www.bloomberg.com › company › AAPL:US",
+					"href": "https://www.bloomberg.com/profile/company/AAPL:US"
+				},
+				{
+					"text": "",
+					"href": "https://www.bloomberg.com/profile/company/AAPL:US"
+				}
+			],
+			"cite": {
+				"domain": "https://www.bloomberg.com › company › AAPL:US",
+				"span": " › company › AAPL:US"
+			},
+			"realPosition": 5
+		},
+		{
+			"title": "Apple Inc. | History, Products, Headquarters, & Facts",
+			"link": "https://www.britannica.com/money/Apple-Inc",
+			"description": "May 22, 2024 — Apple Inc. is an American multinational technology company that revolutionized the technology sector through its innovation of computer ...",
+			"additional_links": [
+				{
+					"text": "Apple Inc. | History, Products, Headquarters, & FactsBritannicahttps://www.britannica.com › money › Apple-Inc",
+					"href": "https://www.britannica.com/money/Apple-Inc"
+				},
+				{
+					"text": "",
+					"href": "https://www.britannica.com/money/Apple-Inc"
+				}
+			],
+			"cite": {
+				"domain": "https://www.britannica.com › money › Apple-Inc",
+				"span": " › money › Apple-Inc"
+			},
+			"realPosition": 6
+		}
+	],
+	"shopping_ads": [],
+	"places": [
+		{
+			"title": "Apple Inc."
+		},
+		{
+			"title": "Apple Inc"
+		},
+		{
+			"title": "Apple Inc"
+		}
+	],
+	"related_searches": {
+		"images": [],
+		"text": [
+			{
+				"title": "apple inc full form",
+				"link": "https://www.google.com/search?sca_esv=6b6df170a5c9891b&sca_upv=1&q=Apple+Inc+full+form&sa=X&ved=2ahUKEwjLxuSJwM-GAxUHODQIHYuJBhgQ1QJ6BAhPEAE"
+			},
+			{
+				"title": "apple company history",
+				"link": "https://www.google.com/search?sca_esv=6b6df170a5c9891b&sca_upv=1&q=Apple+company+history&sa=X&ved=2ahUKEwjLxuSJwM-GAxUHODQIHYuJBhgQ1QJ6BAhOEAE"
+			},
+			{
+				"title": "apple store",
+				"link": "https://www.google.com/search?sca_esv=6b6df170a5c9891b&sca_upv=1&q=Apple+Store&sa=X&ved=2ahUKEwjLxuSJwM-GAxUHODQIHYuJBhgQ1QJ6BAhQEAE"
+			},
+			{
+				"title": "apple id",
+				"link": "https://www.google.com/search?sca_esv=6b6df170a5c9891b&sca_upv=1&q=Apple+id&sa=X&ved=2ahUKEwjLxuSJwM-GAxUHODQIHYuJBhgQ1QJ6BAhSEAE"
+			},
+			{
+				"title": "apple inc industry",
+				"link": "https://www.google.com/search?sca_esv=6b6df170a5c9891b&sca_upv=1&q=Apple+Inc+industry&sa=X&ved=2ahUKEwjLxuSJwM-GAxUHODQIHYuJBhgQ1QJ6BAhREAE"
+			},
+			{
+				"title": "apple login",
+				"link": "https://www.google.com/search?sca_esv=6b6df170a5c9891b&sca_upv=1&q=Apple+login&sa=X&ved=2ahUKEwjLxuSJwM-GAxUHODQIHYuJBhgQ1QJ6BAhTEAE"
+			}
+		]
+	},
+	"image_results": [],
+	"carousel": [],
+	"total": 2450000000,
+	"knowledge_graph": "",
+	"related_questions": [
+		"What does the Apple Inc do?",
+		"Why did Apple change to Apple Inc?",
+		"Who owns Apple Inc.?",
+		"What is Apple Inc best known for?"
+	],
+	"carousel_count": 0,
+	"ts": 2.491065263748169,
+	"device_type": null
+}

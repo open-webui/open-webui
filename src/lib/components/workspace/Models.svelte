@@ -17,8 +17,11 @@
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ModelMenu from './Models/ModelMenu.svelte';
+	import ModelDeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
+
+	let showModelDeleteConfirm = false;
 
 	let localModelfiles = [];
 
@@ -26,6 +29,7 @@
 	let modelsImportInputElement: HTMLInputElement;
 
 	let _models = [];
+	let selectedModel = null;
 
 	let sortable = null;
 	let searchValue = '';
@@ -71,16 +75,19 @@
 		const url = 'https://openwebui.com';
 
 		const tab = await window.open(`${url}/models/create`, '_blank');
-		window.addEventListener(
-			'message',
-			(event) => {
-				if (event.origin !== url) return;
-				if (event.data === 'loaded') {
-					tab.postMessage(JSON.stringify(model), '*');
-				}
-			},
-			false
-		);
+
+		// Define the event handler function
+		const messageHandler = (event) => {
+			if (event.origin !== url) return;
+			if (event.data === 'loaded') {
+				tab.postMessage(JSON.stringify(model), '*');
+
+				// Remove the event listener after handling the message
+				window.removeEventListener('message', messageHandler);
+			}
+		};
+
+		window.addEventListener('message', messageHandler, false);
 	};
 
 	const hideModelHandler = async (model) => {
@@ -195,6 +202,13 @@
 		{$i18n.t('Models')} | {$WEBUI_NAME}
 	</title>
 </svelte:head>
+
+<ModelDeleteConfirmDialog
+	bind:show={showModelDeleteConfirm}
+	on:confirm={() => {
+		deleteModelHandler(selectedModel);
+	}}
+/>
 
 <div class=" text-lg font-semibold mb-3">{$i18n.t('Models')}</div>
 
@@ -336,7 +350,8 @@
 						hideModelHandler(model);
 					}}
 					deleteHandler={() => {
-						deleteModelHandler(model);
+						selectedModel = model;
+						showModelDeleteConfirm = true;
 					}}
 					onClose={() => {}}
 				>

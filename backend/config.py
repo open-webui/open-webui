@@ -435,7 +435,11 @@ STATIC_DIR = Path(os.getenv("STATIC_DIR", BACKEND_DIR / "static")).resolve()
 
 frontend_favicon = FRONTEND_BUILD_DIR / "favicon.png"
 if frontend_favicon.exists():
-    shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon.png")
+    try:
+        shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon.png")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+
 else:
     logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
@@ -494,6 +498,14 @@ Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
 
 
 ####################################
+# Tools DIR
+####################################
+
+TOOLS_DIR = os.getenv("TOOLS_DIR", f"{DATA_DIR}/tools")
+Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
+
+
+####################################
 # LITELLM_CONFIG
 ####################################
 
@@ -542,6 +554,7 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
+AIOHTTP_CLIENT_TIMEOUT = int(os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "300"))
 K8S_FLAG = os.environ.get("K8S_FLAG", "")
 USE_OLLAMA_DOCKER = os.environ.get("USE_OLLAMA_DOCKER", "false")
 
@@ -741,6 +754,78 @@ ADMIN_EMAIL = PersistentConfig(
     "ADMIN_EMAIL",
     "auth.admin.email",
     os.environ.get("ADMIN_EMAIL", None),
+)
+
+
+####################################
+# TASKS
+####################################
+
+
+TASK_MODEL = PersistentConfig(
+    "TASK_MODEL",
+    "task.model.default",
+    os.environ.get("TASK_MODEL", ""),
+)
+
+TASK_MODEL_EXTERNAL = PersistentConfig(
+    "TASK_MODEL_EXTERNAL",
+    "task.model.external",
+    os.environ.get("TASK_MODEL_EXTERNAL", ""),
+)
+
+TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "TITLE_GENERATION_PROMPT_TEMPLATE",
+    "task.title.prompt_template",
+    os.environ.get(
+        "TITLE_GENERATION_PROMPT_TEMPLATE",
+        """Here is the query:
+{{prompt:middletruncate:8000}}
+
+Create a concise, 3-5 word phrase with an emoji as a title for the previous query. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
+
+Examples of titles:
+📉 Stock Market Trends
+🍪 Perfect Chocolate Chip Recipe
+Evolution of Music Streaming
+Remote Work Productivity Tips
+Artificial Intelligence in Healthcare
+🎮 Video Game Development Insights""",
+    ),
+)
+
+
+SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
+    "task.search.prompt_template",
+    os.environ.get(
+        "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
+        """You are tasked with generating web search queries. Give me an appropriate query to answer my question for google search. Answer with only the query. Today is {{CURRENT_DATE}}.
+        
+Question:
+{{prompt:end:4000}}""",
+    ),
+)
+
+SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD = PersistentConfig(
+    "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD",
+    "task.search.prompt_length_threshold",
+    int(
+        os.environ.get(
+            "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD",
+            100,
+        )
+    ),
+)
+
+TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
+    "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
+    "task.tools.prompt_template",
+    os.environ.get(
+        "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
+        """Tools: {{TOOLS}}
+If a function tool doesn't match the query, return an empty string. Else, pick a function tool, fill in the parameters from the function tool's schema, and return it in the format { "name": \"functionName\", "parameters": { "key": "value" } }. Only pick a function if the user asks.  Only return the object. Do not return any other text.""",
+    ),
 )
 
 
@@ -991,6 +1076,17 @@ SERPER_API_KEY = PersistentConfig(
     os.getenv("SERPER_API_KEY", ""),
 )
 
+SERPLY_API_KEY = PersistentConfig(
+    "SERPLY_API_KEY",
+    "rag.web.search.serply_api_key",
+    os.getenv("SERPLY_API_KEY", ""),
+)
+
+TAVILY_API_KEY = PersistentConfig(
+    "TAVILY_API_KEY",
+    "rag.web.search.tavily_api_key",
+    os.getenv("TAVILY_API_KEY", ""),
+)
 
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",
@@ -1072,25 +1168,59 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
 # Audio
 ####################################
 
-AUDIO_OPENAI_API_BASE_URL = PersistentConfig(
-    "AUDIO_OPENAI_API_BASE_URL",
-    "audio.openai.api_base_url",
-    os.getenv("AUDIO_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
+    "AUDIO_STT_OPENAI_API_BASE_URL",
+    "audio.stt.openai.api_base_url",
+    os.getenv("AUDIO_STT_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
 )
-AUDIO_OPENAI_API_KEY = PersistentConfig(
-    "AUDIO_OPENAI_API_KEY",
-    "audio.openai.api_key",
-    os.getenv("AUDIO_OPENAI_API_KEY", OPENAI_API_KEY),
+
+AUDIO_STT_OPENAI_API_KEY = PersistentConfig(
+    "AUDIO_STT_OPENAI_API_KEY",
+    "audio.stt.openai.api_key",
+    os.getenv("AUDIO_STT_OPENAI_API_KEY", OPENAI_API_KEY),
 )
-AUDIO_OPENAI_API_MODEL = PersistentConfig(
-    "AUDIO_OPENAI_API_MODEL",
-    "audio.openai.api_model",
-    os.getenv("AUDIO_OPENAI_API_MODEL", "tts-1"),
+
+AUDIO_STT_ENGINE = PersistentConfig(
+    "AUDIO_STT_ENGINE",
+    "audio.stt.engine",
+    os.getenv("AUDIO_STT_ENGINE", ""),
 )
-AUDIO_OPENAI_API_VOICE = PersistentConfig(
-    "AUDIO_OPENAI_API_VOICE",
-    "audio.openai.api_voice",
-    os.getenv("AUDIO_OPENAI_API_VOICE", "alloy"),
+
+AUDIO_STT_MODEL = PersistentConfig(
+    "AUDIO_STT_MODEL",
+    "audio.stt.model",
+    os.getenv("AUDIO_STT_MODEL", "whisper-1"),
+)
+
+AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
+    "AUDIO_TTS_OPENAI_API_BASE_URL",
+    "audio.tts.openai.api_base_url",
+    os.getenv("AUDIO_TTS_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+)
+AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
+    "AUDIO_TTS_OPENAI_API_KEY",
+    "audio.tts.openai.api_key",
+    os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
+)
+
+
+AUDIO_TTS_ENGINE = PersistentConfig(
+    "AUDIO_TTS_ENGINE",
+    "audio.tts.engine",
+    os.getenv("AUDIO_TTS_ENGINE", ""),
+)
+
+
+AUDIO_TTS_MODEL = PersistentConfig(
+    "AUDIO_TTS_MODEL",
+    "audio.tts.model",
+    os.getenv("AUDIO_TTS_MODEL", "tts-1"),
+)
+
+AUDIO_TTS_VOICE = PersistentConfig(
+    "AUDIO_TTS_VOICE",
+    "audio.tts.voice",
+    os.getenv("AUDIO_TTS_VOICE", "alloy"),
 )
 
 
