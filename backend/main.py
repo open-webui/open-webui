@@ -773,7 +773,7 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
         "title": True,
     }
 
-    print(payload)
+    log.debug(payload)
 
     try:
         payload = filter_pipeline(payload, user)
@@ -837,7 +837,7 @@ async def generate_search_query(form_data: dict, user=Depends(get_verified_user)
         "max_tokens": 30,
     }
 
-    print(payload)
+    log.debug(payload)
 
     try:
         payload = filter_pipeline(payload, user)
