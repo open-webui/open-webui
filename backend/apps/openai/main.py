@@ -430,12 +430,10 @@ async def generate_chat_completion(
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
 
-    print(payload)
+    log.debug(payload)
 
     url = app.state.config.OPENAI_API_BASE_URLS[idx]
     key = app.state.config.OPENAI_API_KEYS[idx]
-
-    print(payload)
 
     headers = {}
     headers["Authorization"] = f"Bearer {key}"

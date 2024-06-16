@@ -850,8 +850,7 @@ async def generate_chat_completion(
 
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
-
-    print(payload)
+    log.debug(payload)
 
     return await post_streaming_url(f"{url}/api/chat", json.dumps(payload))
 

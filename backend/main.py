@@ -776,7 +776,7 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
         "title": True,
     }
 
-    print(payload)
+    log.debug(payload)
 
     try:
         payload = filter_pipeline(payload, user)
@@ -905,7 +905,7 @@ Message: """{{prompt}}"""
         "task": True,
     }
 
-    print(payload)
+    log.debug(payload)
 
     try:
         payload = filter_pipeline(payload, user)
