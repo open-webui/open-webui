@@ -487,8 +487,22 @@ export const promptTemplate = (
 		'-' +
 		String(currentDate.getDate()).padStart(2, '0');
 
+	// Format the time to HH:MM:SS AM/PM
+	const currentTime = currentDate.toLocaleTimeString('en-US', {
+		hour: 'numeric',
+		minute: 'numeric',
+		second: 'numeric',
+		hour12: true
+	});
+
+	// Replace {{CURRENT_DATETIME}} in the template with the formatted datetime
+	template = template.replace('{{CURRENT_DATETIME}}', `${formattedDate} ${currentTime}`);
+
 	// Replace {{CURRENT_DATE}} in the template with the formatted date
 	template = template.replace('{{CURRENT_DATE}}', formattedDate);
+
+	// Replace {{CURRENT_TIME}} in the template with the formatted time
+	template = template.replace('{{CURRENT_TIME}}', currentTime);
 
 	if (user_name) {
 		// Replace {{USER_NAME}} in the template with the user's name
