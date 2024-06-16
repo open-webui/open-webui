@@ -107,12 +107,12 @@
 				<div class=" text-lg font-semibold mt-2">#</div>
 			</div>
 
-			<div class="max-h-60 flex flex-col w-full rounded-r-xl bg-white">
+			<div class="max-h-60 flex flex-col w-full rounded-r-xl bg-white dark:bg-gray-850 dark:text-gray-100 ">
 				<div class="m-1 overflow-y-auto p-1 rounded-r-xl space-y-0.5">
 					{#each filteredItems as doc, docIdx}
 						<button
 							class=" px-3 py-1.5 rounded-xl w-full text-left {docIdx === selectedIdx
-								? ' bg-gray-100 selected-command-option-button'
+								? ' bg-gray-100 dark:bg-gray-600 dark:text-gray-100 selected-command-option-button'
 								: ''}"
 							type="button"
 							on:click={() => {
@@ -126,17 +126,17 @@
 							on:focus={() => {}}
 						>
 							{#if doc.type === 'collection'}
-								<div class=" font-medium text-black line-clamp-1">
+								<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
 									{doc?.title ?? `#${doc.name}`}
 								</div>
 
-								<div class=" text-xs text-gray-600 line-clamp-1">{$i18n.t('Collection')}</div>
+								<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">{$i18n.t('Collection')}</div>
 							{:else}
-								<div class=" font-medium text-black line-clamp-1">
+								<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
 									#{doc.name} ({doc.filename})
 								</div>
 
-								<div class=" text-xs text-gray-600 line-clamp-1">
+								<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
 									{doc.title}
 								</div>
 							{/if}
