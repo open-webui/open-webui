@@ -195,6 +195,7 @@ class ImageGenerationPayload(BaseModel):
     scheduler: Optional[str] = None
     sd3: Optional[bool] = None
 
+
 def comfyui_generate_image(
     model: str, payload: ImageGenerationPayload, client_id, base_url
 ):
