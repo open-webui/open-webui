@@ -231,7 +231,7 @@
 						dispatch('delete');
 					}}
 					onClose={() => {
-						selected = false;
+						dispatch('unselect');
 					}}
 				>
 					<button

@@ -124,7 +124,7 @@
 
 		const onBlur = () => {
 			shiftKey = false;
-			selectedChatId = false;
+			selectedChatId = null;
 		};
 
 		window.addEventListener('keydown', onKeyDown);
@@ -476,6 +476,9 @@
 						selected={selectedChatId === chat.id}
 						on:select={() => {
 							selectedChatId = chat.id;
+						}}
+						on:unselect={() => {
+							selectedChatId = null;
 						}}
 						on:delete={(e) => {
 							if ((e?.detail ?? '') === 'shift') {
