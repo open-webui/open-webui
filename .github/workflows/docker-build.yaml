@@ -30,10 +30,10 @@ jobs:
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
-          echo "IMAGE_NAME=${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME_MIXED_CASE: '${{ github.repository }}'
+          IMAGE_NAME: '${{ github.repository }}'
 
       - name: Prepare
         run: |
@@ -127,10 +127,10 @@ jobs:
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
-          echo "IMAGE_NAME=${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME_MIXED_CASE: '${{ github.repository }}'
+          IMAGE_NAME: '${{ github.repository }}'
 
       - name: Prepare
         run: |
@@ -227,10 +227,10 @@ jobs:
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
-          echo "IMAGE_NAME=${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME_MIXED_CASE: '${{ github.repository }}'
+          IMAGE_NAME: '${{ github.repository }}'
 
       - name: Prepare
         run: |
@@ -318,10 +318,10 @@ jobs:
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
-          echo "IMAGE_NAME=${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME_MIXED_CASE: '${{ github.repository }}'
+          IMAGE_NAME: '${{ github.repository }}'
 
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -373,10 +373,10 @@ jobs:
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
-          echo "IMAGE_NAME=${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME_MIXED_CASE: '${{ github.repository }}'
+          IMAGE_NAME: '${{ github.repository }}'
 
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -429,10 +429,10 @@ jobs:
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
       - name: Set repository and image name to lowercase
         run: |
-          echo "IMAGE_NAME=${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME_MIXED_CASE,,}" >>${GITHUB_ENV}
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME_MIXED_CASE: '${{ github.repository }}'
+          IMAGE_NAME: '${{ github.repository }}'
 
       - name: Download digests
         uses: actions/download-artifact@v4
