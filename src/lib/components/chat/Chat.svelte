@@ -273,6 +273,7 @@
 				id: m.id,
 				role: m.role,
 				content: m.content,
+				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp
 			})),
 			chat_id: $chatId
@@ -1322,6 +1323,19 @@
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} w-full max-w-full flex flex-col"
 	>
+		{#if $settings?.backgroundImageUrl ?? null}
+			<div
+				class="absolute {$showSidebar
+					? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
+					: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
+				style="background-image: url({$settings.backgroundImageUrl})  "
+			/>
+
+			<div
+				class="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-white to-white/90 dark:from-gray-900 dark:to-[#171717]/90 z-0 -translate-y-[78px]"
+			/>
+		{/if}
+
 		<Navbar
 			{title}
 			bind:selectedModels
@@ -1333,7 +1347,9 @@
 
 		{#if $banners.length > 0 && messages.length === 0 && !$chatId && selectedModels.length <= 1}
 			<div
-				class="absolute top-[4.25rem] w-full {$showSidebar ? 'md:max-w-[calc(100%-260px)]' : ''}"
+				class="absolute top-[4.25rem] w-full {$showSidebar
+					? 'md:max-w-[calc(100%-260px)]'
+					: ''} z-0"
 			>
 				<div class=" flex flex-col gap-1 w-full">
 					{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
@@ -1358,9 +1374,9 @@
 			</div>
 		{/if}
 
-		<div class="flex flex-col flex-auto">
+		<div class="flex flex-col flex-auto z-10">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full"
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10"
 				id="messages-container"
 				bind:this={messagesContainerElement}
 				on:scroll={(e) => {
