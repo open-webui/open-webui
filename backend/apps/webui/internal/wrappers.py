@@ -1,8 +1,12 @@
 from contextvars import ContextVar
 from peewee import *
+import logging
 from playhouse.db_url import connect
-from playhouse.pool import PooledPostgresqlExtDatabase
-from playhouse.pool import PooledSqliteDatabase
+
+from config import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["DB"])
 
 db_state_default = {"closed": None, "conn": None, "ctx": None, "transactions": None}
 db_state = ContextVar("db_state", default=db_state_default.copy())
@@ -22,11 +26,13 @@ class PeeweeConnectionState(object):
 def register_connection(db_url):
     db = connect(db_url)
     if isinstance(db, PostgresqlDatabase):
-        # Directly use PostgresqlDatabase without pooling
+        # Enable autoconnect for SQLite databases, managed by Peewee
         db.autoconnect = True
+        log.info("Connected to PostgreSQL database")
     elif isinstance(db, SqliteDatabase):
-        # Directly use SqliteDatabase without pooling
+        # Enable autoconnect for SQLite databases, managed by Peewee
         db.autoconnect = True
+        log.info("Connected to SQLite database")
     else:
         raise ValueError('Unsupported database connection')
     return db
