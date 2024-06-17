@@ -12,14 +12,14 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_serply(
-        api_key: str,
-        query: str,
-        count: int,
-        hl: str = "us",
-        limit: int = 10,
-        device_type: str = "desktop",
-        proxy_location: str = "US"
-    ) -> list[SearchResult]:
+    api_key: str,
+    query: str,
+    count: int,
+    hl: str = "us",
+    limit: int = 10,
+    device_type: str = "desktop",
+    proxy_location: str = "US",
+) -> list[SearchResult]:
     """Search using serper.dev's API and return the results as a list of SearchResult objects.
 
     Args:
@@ -37,7 +37,7 @@ def search_serply(
         "language": "en",
         "num": limit,
         "gl": proxy_location.upper(),
-        "hl": hl.lower()
+        "hl": hl.lower(),
     }
 
     url = f"{url}{urlencode(query_payload)}"
@@ -45,7 +45,7 @@ def search_serply(
         "X-API-KEY": api_key,
         "X-User-Agent": device_type,
         "User-Agent": "open-webui",
-        "X-Proxy-Location": proxy_location
+        "X-Proxy-Location": proxy_location,
     }
 
     response = requests.request("GET", url, headers=headers)

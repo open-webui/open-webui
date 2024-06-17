@@ -7,6 +7,8 @@ from pydantic import BaseModel
 
 from fpdf import FPDF
 import markdown
+import black
+
 
 from apps.webui.internal.db import DB
 from utils.utils import get_admin_user
@@ -24,6 +26,21 @@ async def get_gravatar(
     email: str,
 ):
     return get_gravatar_url(email)
+
+
+class CodeFormatRequest(BaseModel):
+    code: str
+
+
+@router.post("/code/format")
+async def format_code(request: CodeFormatRequest):
+    try:
+        formatted_code = black.format_str(request.code, mode=black.Mode())
+        return {"code": formatted_code}
+    except black.NothingChanged:
+        return {"code": request.code}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 class MarkdownForm(BaseModel):

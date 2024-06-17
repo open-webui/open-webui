@@ -491,7 +491,7 @@
 	{/each}
 </div>
 
-<div class=" text-gray-500 text-xs mt-1">
+<div class=" text-gray-500 text-xs mt-1 mb-2">
 	ⓘ {$i18n.t("Use '#' in the prompt input to load and select your documents.")}
 </div>
 
