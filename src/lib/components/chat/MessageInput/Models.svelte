@@ -133,7 +133,7 @@
 
 {#if prompt.charAt(0) === '@'}
 	{#if filteredModels.length > 0}
-		<div class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0">
+		<div class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10">
 			<div class="flex w-full dark:border dark:border-gray-850 rounded-lg">
 				<div class=" bg-gray-50 dark:bg-gray-850 w-10 rounded-l-lg text-center">
 					<div class=" text-lg font-semibold mt-2">@</div>
