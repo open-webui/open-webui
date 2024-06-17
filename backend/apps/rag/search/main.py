@@ -3,13 +3,13 @@ from urllib.parse import urlparse
 from pydantic import BaseModel
 
 
-def filter_by_whitelist(results, whitelist):
-    if not whitelist:
+def get_filtered_results(results, filter_list):
+    if not filter_list:
         return results
     filtered_results = []
     for result in results:
         domain = urlparse(result["url"]).netloc
-        if any(domain.endswith(whitelisted_domain) for whitelisted_domain in whitelist):
+        if any(domain.endswith(filtered_domain) for filtered_domain in filter_list):
             filtered_results.append(result)
     return filtered_results
 
