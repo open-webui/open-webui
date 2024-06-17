@@ -44,7 +44,7 @@
 					>
 						<Tooltip
 							content={marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
+								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
 							)}
 							placement="right"
 						>
