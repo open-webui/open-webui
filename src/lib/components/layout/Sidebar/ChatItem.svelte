@@ -138,7 +138,7 @@
 	>
 		{#if confirmEdit}
 			<div class="flex self-center space-x-1.5 z-10">
-				<Tooltip content="Confirm">
+				<Tooltip content={$i18n.t('Confirm')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
@@ -162,7 +162,7 @@
 					</button>
 				</Tooltip>
 
-				<Tooltip content="Cancel">
+				<Tooltip content={$i18n.t('Cancel')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
@@ -185,7 +185,7 @@
 			</div>
 		{:else if shiftKey && mouseOver}
 			<div class=" flex items-center self-center space-x-1.5">
-				<Tooltip content="Archive" className="flex items-center">
+				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
@@ -197,7 +197,7 @@
 					</button>
 				</Tooltip>
 
-				<Tooltip content="Delete">
+				<Tooltip content={$i18n.t('Delete')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
