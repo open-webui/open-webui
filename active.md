@@ -8,9 +8,10 @@ Our weekly meetups are [Thursdays at NOON EDT](/io/coders/) and [Sundays at 10 P
 [Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
 **SQL, Vite, Supabase, AI Chat**
-- [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab
-- [Open Footprint Data in SQL](/useeio.js/footprint) 
-- [Feed Player](../feed/) - for Video, Images, JSON, YAML, CSS, RSS news feeds and our [Feed Viewer](../feed/view/#feed=nasa)  
+- [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab - Song
+- [Open Footprint Data in SQL](/useeio.js/footprint) - Sahil, Himanshu, Sridevi, Song
+- [Feed Player](../feed/) - Video and Images - Gary, Marco, Fanyi
+- [Feed Viewer](../feed/view/#feed=nasa) - JSON, YAML, CSS, RSS - Loren and Gary (address lookup) 
 - [Datausa.io](https://datausa.io) - For embeddable visualizations
 - [Restack.io](https://www.restack.io/docs/supabase-knowledge-supabase-rust-sdk-guide) - for Supabase with Rust and Streamlit
 - [Open WebUI](src) with [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/) like Pinecone
@@ -45,7 +46,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 **Observable Framework + GDC Visualization Projects**
 
-- [Python CoLabs for GDC timeline automation - Air and Climate](/data-commons/dist/air) - Paul and Anna
+- [Python CoLabs for GDC timeline automation - Air and Climate](/data-commons/dist/air)
 - [Observable with Data Commons](/data-commons/) - [Data Loaders How-To](/data-commons/dist/air/)
 - [Sankey Industry Chart](/useeio.js/charts/echarts/sankey-nodeAlign-left.html) - Chenbohan
 - [Balanced Food](/balance/) - [World Nutrition](/data-commons/dist/food) - Kargil, Meiru
