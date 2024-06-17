@@ -6,24 +6,28 @@ from typing import Optional
 
 
 def prompt_template(
-    template: str, user_name: str = None, current_location: str = None
+    template: str, user_name: str = None, user_location: str = None
 ) -> str:
     # Get the current date
     current_date = datetime.now()
 
     # Format the date to YYYY-MM-DD
     formatted_date = current_date.strftime("%Y-%m-%d")
+    formatted_time = current_date.strftime("%I:%M:%S %p")
 
-    # Replace {{CURRENT_DATE}} in the template with the formatted date
     template = template.replace("{{CURRENT_DATE}}", formatted_date)
+    template = template.replace("{{CURRENT_TIME}}", formatted_time)
+    template = template.replace(
+        "{{CURRENT_DATETIME}}", f"{formatted_date} {formatted_time}"
+    )
 
     if user_name:
         # Replace {{USER_NAME}} in the template with the user's name
         template = template.replace("{{USER_NAME}}", user_name)
 
-    if current_location:
-        # Replace {{CURRENT_LOCATION}} in the template with the current location
-        template = template.replace("{{CURRENT_LOCATION}}", current_location)
+    if user_location:
+        # Replace {{USER_LOCATION}} in the template with the current location
+        template = template.replace("{{USER_LOCATION}}", user_location)
 
     return template
 
@@ -61,7 +65,7 @@ def title_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "current_location": user.get("location")}
+            {"user_name": user.get("name"), "user_location": user.get("location")}
             if user
             else {}
         ),
@@ -104,7 +108,7 @@ def search_query_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "current_location": user.get("location")}
+            {"user_name": user.get("name"), "user_location": user.get("location")}
             if user
             else {}
         ),

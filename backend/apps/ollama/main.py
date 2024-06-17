@@ -46,6 +46,7 @@ from config import (
     SRC_LOG_LEVELS,
     OLLAMA_BASE_URLS,
     ENABLE_OLLAMA_API,
+    AIOHTTP_CLIENT_TIMEOUT,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     UPLOAD_DIR,
@@ -154,7 +155,9 @@ async def cleanup_response(
 async def post_streaming_url(url: str, payload: str):
     r = None
     try:
-        session = aiohttp.ClientSession(trust_env=True)
+        session = aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        )
         r = await session.post(url, data=payload)
         r.raise_for_status()
 
@@ -751,6 +754,14 @@ async def generate_chat_completion(
             if model_info.params.get("num_ctx", None):
                 payload["options"]["num_ctx"] = model_info.params.get("num_ctx", None)
 
+            if model_info.params.get("num_batch", None):
+                payload["options"]["num_batch"] = model_info.params.get(
+                    "num_batch", None
+                )
+
+            if model_info.params.get("num_keep", None):
+                payload["options"]["num_keep"] = model_info.params.get("num_keep", None)
+
             if model_info.params.get("repeat_last_n", None):
                 payload["options"]["repeat_last_n"] = model_info.params.get(
                     "repeat_last_n", None
@@ -839,8 +850,7 @@ async def generate_chat_completion(
 
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
-
-    print(payload)
+    log.debug(payload)
 
     return await post_streaming_url(f"{url}/api/chat", json.dumps(payload))
 

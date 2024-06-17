@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { marked } from 'marked';
+
 	import { config, user, models as _models } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	import { blur, fade } from 'svelte/transition';
 
 	import Suggestions from '../MessageInput/Suggestions.svelte';
+	import { sanitizeResponseContent } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -65,8 +68,12 @@
 
 				<div in:fade={{ duration: 200, delay: 200 }}>
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
-						<div class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3">
-							{models[selectedModelIdx]?.info?.meta?.description}
+						<div
+							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
+						>
+							{@html marked.parse(
+								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
+							)}
 						</div>
 						{#if models[selectedModelIdx]?.info?.meta?.user}
 							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
