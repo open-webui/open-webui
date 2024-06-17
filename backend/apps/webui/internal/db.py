@@ -46,7 +46,7 @@ router = Router(
 )
 router.run()
 try:
-    DB.connect()
+    DB.connect(reuse_if_open=True)
 except OperationalError as e:
     log.info(f"Failed to connect to database again due to: {e}")
     pass
