@@ -244,23 +244,28 @@ async def get_function_call_response(messages, tool_id, template, task_model_id,
                 try:
                     # Get the signature of the function
                     sig = inspect.signature(function)
-                    # Check if '__user__' is a parameter of the function
+                    params = result["parameters"]
+
                     if "__user__" in sig.parameters:
                         # Call the function with the '__user__' parameter included
-                        function_result = function(
-                            **{
-                                **result["parameters"],
-                                "__user__": {
-                                    "id": user.id,
-                                    "email": user.email,
-                                    "name": user.name,
-                                    "role": user.role,
-                                },
-                            }
-                        )
-                    else:
-                        # Call the function without modifying the parameters
-                        function_result = function(**result["parameters"])
+                        params = {
+                            **params,
+                            "__user__": {
+                                "id": user.id,
+                                "email": user.email,
+                                "name": user.name,
+                                "role": user.role,
+                            },
+                        }
+
+                    if "__messages__" in sig.parameters:
+                        # Call the function with the '__messages__' parameter included
+                        params = {
+                            **params,
+                            "__messages__": messages,
+                        }
+
+                    function_result = function(**params)
                 except Exception as e:
                     print(e)
 
@@ -339,8 +344,9 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                             user=user,
                         )
 
-                        if response:
+                        if isinstance(response, str):
                             context += ("\n" if context != "" else "") + response
+
                     except Exception as e:
                         print(f"Error: {e}")
                 del data["tool_ids"]
