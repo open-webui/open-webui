@@ -31,6 +31,7 @@
 	let loading = false;
 	let confirmed = false;
 	let interrupted = false;
+	let assistantSpeaking = false;
 
 	let emoji = null;
 
@@ -268,6 +269,15 @@
 					return;
 				}
 
+				if (assistantSpeaking) {
+					// Mute the audio if the assistant is speaking
+					analyser.maxDecibels = 0;
+					analyser.minDecibels = -1;
+				} else {
+					analyser.minDecibels = MIN_DECIBELS;
+					analyser.maxDecibels = -30;
+				}
+
 				analyser.getByteTimeDomainData(timeDomainData);
 				analyser.getByteFrequencyData(domainData);
 
@@ -379,6 +389,7 @@
 	};
 
 	const stopAllAudio = async () => {
+		assistantSpeaking = false;
 		interrupted = true;
 
 		if (chatStreaming) {
@@ -485,6 +496,7 @@
 				}
 			} else if (finishedMessages[id] && messages[id] && messages[id].length === 0) {
 				// If the message is finished and there are no more messages to process, break the loop
+				assistantSpeaking = false;
 				break;
 			} else {
 				// No messages to process, sleep for a bit
@@ -511,6 +523,7 @@
 				}
 				audioAbortController = new AbortController();
 
+				assistantSpeaking = true;
 				// Start monitoring and playing audio for the message ID
 				monitorAndPlayAudio(id, audioAbortController.signal);
 			}
@@ -545,9 +558,9 @@
 		const chatFinishHandler = async (e) => {
 			const { id, content } = e.detail;
 			// "content" here is the entire message from the assistant
+			finishedMessages[id] = true;
 
 			chatStreaming = false;
-			finishedMessages[id] = true;
 		};
 
 		eventTarget.addEventListener('chat:start', chatStartHandler);
@@ -577,7 +590,15 @@
 		>
 			<div class="max-w-lg w-full h-screen max-h-[100dvh] flex flex-col justify-between p-3 md:p-6">
 				{#if camera}
-					<div class="flex justify-center items-center w-full h-20 min-h-20">
+					<button
+						type="button"
+						class="flex justify-center items-center w-full h-20 min-h-20"
+						on:click={() => {
+							if (assistantSpeaking) {
+								stopAllAudio();
+							}
+						}}
+					>
 						{#if emoji}
 							<div
 								class="  transition-all rounded-full"
@@ -591,7 +612,7 @@
 							>
 								{emoji}
 							</div>
-						{:else if loading}
+						{:else if loading || assistantSpeaking}
 							<svg
 								class="size-12 text-gray-900 dark:text-gray-400"
 								viewBox="0 0 24 24"
@@ -640,72 +661,81 @@
 							/>
 						{/if}
 						<!-- navbar -->
-					</div>
+					</button>
 				{/if}
 
 				<div class="flex justify-center items-center flex-1 h-full w-full max-h-full">
 					{#if !camera}
-						{#if emoji}
-							<div
-								class="  transition-all rounded-full"
-								style="font-size:{rmsLevel * 100 > 4
-									? '13'
-									: rmsLevel * 100 > 2
-									? '12'
-									: rmsLevel * 100 > 1
-									? '11.5'
-									: '11'}rem;width:100%;text-align:center;"
-							>
-								{emoji}
-							</div>
-						{:else if loading}
-							<svg
-								class="size-44 text-gray-900 dark:text-gray-400"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								xmlns="http://www.w3.org/2000/svg"
-								><style>
-									.spinner_qM83 {
-										animation: spinner_8HQG 1.05s infinite;
-									}
-									.spinner_oXPr {
-										animation-delay: 0.1s;
-									}
-									.spinner_ZTLf {
-										animation-delay: 0.2s;
-									}
-									@keyframes spinner_8HQG {
-										0%,
-										57.14% {
-											animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-											transform: translate(0);
+						<button
+							type="button"
+							on:click={() => {
+								if (assistantSpeaking) {
+									stopAllAudio();
+								}
+							}}
+						>
+							{#if emoji}
+								<div
+									class="  transition-all rounded-full"
+									style="font-size:{rmsLevel * 100 > 4
+										? '13'
+										: rmsLevel * 100 > 2
+										? '12'
+										: rmsLevel * 100 > 1
+										? '11.5'
+										: '11'}rem;width:100%;text-align:center;"
+								>
+									{emoji}
+								</div>
+							{:else if loading || assistantSpeaking}
+								<svg
+									class="size-44 text-gray-900 dark:text-gray-400"
+									viewBox="0 0 24 24"
+									fill="currentColor"
+									xmlns="http://www.w3.org/2000/svg"
+									><style>
+										.spinner_qM83 {
+											animation: spinner_8HQG 1.05s infinite;
 										}
-										28.57% {
-											animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-											transform: translateY(-6px);
+										.spinner_oXPr {
+											animation-delay: 0.1s;
 										}
-										100% {
-											transform: translate(0);
+										.spinner_ZTLf {
+											animation-delay: 0.2s;
 										}
-									}
-								</style><circle class="spinner_qM83" cx="4" cy="12" r="3" /><circle
-									class="spinner_qM83 spinner_oXPr"
-									cx="12"
-									cy="12"
-									r="3"
-								/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
-							>
-						{:else}
-							<div
-								class=" {rmsLevel * 100 > 4
-									? ' size-52'
-									: rmsLevel * 100 > 2
-									? 'size-48'
-									: rmsLevel * 100 > 1
-									? 'size-[11.5rem]'
-									: 'size-44'}  transition-all bg-black dark:bg-white rounded-full"
-							/>
-						{/if}
+										@keyframes spinner_8HQG {
+											0%,
+											57.14% {
+												animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
+												transform: translate(0);
+											}
+											28.57% {
+												animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
+												transform: translateY(-6px);
+											}
+											100% {
+												transform: translate(0);
+											}
+										}
+									</style><circle class="spinner_qM83" cx="4" cy="12" r="3" /><circle
+										class="spinner_qM83 spinner_oXPr"
+										cx="12"
+										cy="12"
+										r="3"
+									/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
+								>
+							{:else}
+								<div
+									class=" {rmsLevel * 100 > 4
+										? ' size-52'
+										: rmsLevel * 100 > 2
+										? 'size-48'
+										: rmsLevel * 100 > 1
+										? 'size-[11.5rem]'
+										: 'size-44'}  transition-all bg-black dark:bg-white rounded-full"
+								/>
+							{/if}
+						</button>
 					{:else}
 						<div
 							class="relative flex video-container w-full max-h-full pt-2 pb-4 md:py-6 px-2 h-full"
@@ -805,10 +835,19 @@
 					</div>
 
 					<div>
-						<button type="button">
+						<button
+							type="button"
+							on:click={() => {
+								if (assistantSpeaking) {
+									stopAllAudio();
+								}
+							}}
+						>
 							<div class=" line-clamp-1 text-sm font-medium">
 								{#if loading}
 									{$i18n.t('Thinking...')}
+								{:else if assistantSpeaking}
+									{$i18n.t('Tap to interrupt')}
 								{:else}
 									{$i18n.t('Listening...')}
 								{/if}

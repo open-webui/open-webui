@@ -89,17 +89,19 @@
 
 {#if filteredPromptCommands.length > 0}
 	<div class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0">
-		<div class="flex w-full px-2">
-			<div class=" bg-gray-100 dark:bg-gray-700 w-10 rounded-l-xl text-center">
+		<div class="flex w-full dark:border dark:border-gray-850 rounded-lg">
+			<div class="  bg-gray-50 dark:bg-gray-850 w-10 rounded-l-lg text-center">
 				<div class=" text-lg font-semibold mt-2">/</div>
 			</div>
 
-			<div class="max-h-60 flex flex-col w-full rounded-r-xl bg-white">
-				<div class="m-1 overflow-y-auto p-1 rounded-r-xl space-y-0.5">
+			<div
+				class="max-h-60 flex flex-col w-full rounded-r-lg bg-white dark:bg-gray-900 dark:text-gray-100"
+			>
+				<div class="m-1 overflow-y-auto p-1 rounded-r-lg space-y-0.5 scrollbar-hidden">
 					{#each filteredPromptCommands as command, commandIdx}
 						<button
 							class=" px-3 py-1.5 rounded-xl w-full text-left {commandIdx === selectedCommandIdx
-								? ' bg-gray-100 selected-command-option-button'
+								? '  bg-gray-50 dark:bg-gray-850 selected-command-option-button'
 								: ''}"
 							type="button"
 							on:click={() => {
@@ -110,11 +112,11 @@
 							}}
 							on:focus={() => {}}
 						>
-							<div class=" font-medium text-black">
+							<div class=" font-medium text-black dark:text-gray-100">
 								{command.command}
 							</div>
 
-							<div class=" text-xs text-gray-600">
+							<div class=" text-xs text-gray-600 dark:text-gray-100">
 								{command.title}
 							</div>
 						</button>
@@ -122,7 +124,7 @@
 				</div>
 
 				<div
-					class=" px-2 pb-1 text-xs text-gray-600 bg-white rounded-br-xl flex items-center space-x-1"
+					class=" px-2 pb-1 text-xs text-gray-600 dark:text-gray-100 bg-white dark:bg-gray-900 rounded-br-xl flex items-center space-x-1"
 				>
 					<div>
 						<svg

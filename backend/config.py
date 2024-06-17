@@ -294,6 +294,7 @@ WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
 WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
 )
+WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER", None)
 JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
 )
@@ -425,7 +426,14 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
-AIOHTTP_CLIENT_TIMEOUT = int(os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "300"))
+AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "300")
+
+if AIOHTTP_CLIENT_TIMEOUT == "":
+    AIOHTTP_CLIENT_TIMEOUT = None
+else:
+    AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
+
+
 K8S_FLAG = os.environ.get("K8S_FLAG", "")
 USE_OLLAMA_DOCKER = os.environ.get("USE_OLLAMA_DOCKER", "false")
 
@@ -1007,6 +1015,30 @@ COMFYUI_BASE_URL = PersistentConfig(
     "COMFYUI_BASE_URL",
     "image_generation.comfyui.base_url",
     os.getenv("COMFYUI_BASE_URL", ""),
+)
+
+COMFYUI_CFG_SCALE = PersistentConfig(
+    "COMFYUI_CFG_SCALE",
+    "image_generation.comfyui.cfg_scale",
+    os.getenv("COMFYUI_CFG_SCALE", ""),
+)
+
+COMFYUI_SAMPLER = PersistentConfig(
+    "COMFYUI_SAMPLER",
+    "image_generation.comfyui.sampler",
+    os.getenv("COMFYUI_SAMPLER", ""),
+)
+
+COMFYUI_SCHEDULER = PersistentConfig(
+    "COMFYUI_SCHEDULER",
+    "image_generation.comfyui.scheduler",
+    os.getenv("COMFYUI_SCHEDULER", ""),
+)
+
+COMFYUI_SD3 = PersistentConfig(
+    "COMFYUI_SD3",
+    "image_generation.comfyui.sd3",
+    os.environ.get("COMFYUI_SD3", "").lower() == "true",
 )
 
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(

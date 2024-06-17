@@ -201,7 +201,7 @@
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
-							deleteChat(chat.id);
+							dispatch('delete', 'shift');
 						}}
 						type="button"
 					>
@@ -231,7 +231,7 @@
 						dispatch('delete');
 					}}
 					onClose={() => {
-						selected = false;
+						dispatch('unselect');
 					}}
 				>
 					<button
