@@ -20,6 +20,8 @@ from utils.utils import (
     get_verified_user,
     get_admin_user,
 )
+from utils.task import prompt_template
+
 from config import (
     SRC_LOG_LEVELS,
     ENABLE_OPENAI_API,
@@ -392,22 +394,34 @@ async def generate_chat_completion(
                     else None
                 )
 
-        if model_info.params.get("system", None):
+        system = model_info.params.get("system", None)
+        if system:
+            system = prompt_template(
+                system,
+                **(
+                    {
+                        "user_name": user.name,
+                        "user_location": (
+                            user.info.get("location") if user.info else None
+                        ),
+                    }
+                    if user
+                    else {}
+                ),
+            )
             # Check if the payload already has a system message
             # If not, add a system message to the payload
             if payload.get("messages"):
                 for message in payload["messages"]:
                     if message.get("role") == "system":
-                        message["content"] = (
-                            model_info.params.get("system", None) + message["content"]
-                        )
+                        message["content"] = system + message["content"]
                         break
                 else:
                     payload["messages"].insert(
                         0,
                         {
                             "role": "system",
-                            "content": model_info.params.get("system", None),
+                            "content": system,
                         },
                     )
 
