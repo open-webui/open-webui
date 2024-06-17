@@ -24,12 +24,16 @@ async function downloadPackages() {
 	const packageJson = JSON.parse(await readFile('package.json'));
 	const pyodideVersion = packageJson.dependencies.pyodide;
 
-	const pyodidePackageJson = JSON.parse(await readFile('static/pyodide/package.json'));
-	const pyodidePackageVersion = pyodidePackageJson.version;
+	try {
+		const pyodidePackageJson = JSON.parse(await readFile('static/pyodide/package.json'));
+		const pyodidePackageVersion = pyodidePackageJson.version;
 
-	if (pyodideVersion.replace('^', '') !== pyodidePackageVersion) {
-		console.log('Pyodide version mismatch, removing static/pyodide directory');
-		await rmdir('static/pyodide', { recursive: true });
+		if (pyodideVersion.replace('^', '') !== pyodidePackageVersion) {
+			console.log('Pyodide version mismatch, removing static/pyodide directory');
+			await rmdir('static/pyodide', { recursive: true });
+		}
+	} catch (e) {
+		console.log('Pyodide package not found, downloading packages');
 	}
 
 	await pyodide.loadPackage('micropip');
