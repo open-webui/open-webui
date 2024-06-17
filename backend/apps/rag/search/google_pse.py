@@ -1,9 +1,9 @@
 import json
 import logging
-from typing import List
+from typing import List, Optional
 import requests
 
-from apps.rag.search.main import SearchResult, filter_by_whitelist
+from apps.rag.search.main import SearchResult, get_filtered_results
 from config import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_google_pse(
-    api_key: str, search_engine_id: str, query: str, count: int, whitelist:List[str]
+    api_key: str, search_engine_id: str, query: str, count: int, filter_list: Optional[List[str]] = None
 ) -> list[SearchResult]:
     """Search using Google's Programmable Search Engine API and return the results as a list of SearchResult objects.
 
@@ -35,12 +35,13 @@ def search_google_pse(
 
     json_response = response.json()
     results = json_response.get("items", [])
-    filtered_results = filter_by_whitelist(results, whitelist)
+    if filter_list:
+        results = get_filtered_results(results, filter_list)
     return [
         SearchResult(
             link=result["link"],
             title=result.get("title"),
             snippet=result.get("snippet"),
         )
-        for result in filtered_results
+        for result in results
     ]
