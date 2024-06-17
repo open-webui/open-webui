@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { config, settings, showCallOverlay } from '$lib/stores';
+	import { config, models, settings, showCallOverlay } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 
 	import {
@@ -27,6 +27,8 @@
 
 	export let chatId;
 	export let modelId;
+
+	let model = null;
 
 	let loading = false;
 	let confirmed = false;
@@ -507,6 +509,8 @@
 	};
 
 	onMount(async () => {
+		model = $models.find((m) => m.id === modelId);
+
 		startRecording();
 
 		const chatStartHandler = async (e) => {
@@ -657,7 +661,13 @@
 									? ' size-16'
 									: rmsLevel * 100 > 1
 									? 'size-14'
-									: 'size-12'}  transition-all bg-black dark:bg-white rounded-full"
+									: 'size-12'}  transition-all rounded-full {(model?.info?.meta
+									?.profile_image_url ?? '/favicon.png') !== '/favicon.png'
+									? ' bg-cover bg-center bg-no-repeat'
+									: 'bg-black dark:bg-white'}  bg-black dark:bg-white"
+								style={(model?.info?.meta?.profile_image_url ?? '/favicon.png') !== '/favicon.png'
+									? `background-image: url('${model?.info?.meta?.profile_image_url}');`
+									: ''}
 							/>
 						{/if}
 						<!-- navbar -->
@@ -732,7 +742,13 @@
 										? 'size-48'
 										: rmsLevel * 100 > 1
 										? 'size-[11.5rem]'
-										: 'size-44'}  transition-all bg-black dark:bg-white rounded-full"
+										: 'size-44'}  transition-all rounded-full {(model?.info?.meta
+										?.profile_image_url ?? '/favicon.png') !== '/favicon.png'
+										? ' bg-cover bg-center bg-no-repeat'
+										: 'bg-black dark:bg-white'} "
+									style={(model?.info?.meta?.profile_image_url ?? '/favicon.png') !== '/favicon.png'
+										? `background-image: url('${model?.info?.meta?.profile_image_url}');`
+										: ''}
 								/>
 							{/if}
 						</button>

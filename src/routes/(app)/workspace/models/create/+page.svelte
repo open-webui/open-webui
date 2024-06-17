@@ -229,20 +229,20 @@
 					// Calculate the new width and height to fit within 100x100
 					let newWidth, newHeight;
 					if (aspectRatio > 1) {
-						newWidth = 100 * aspectRatio;
-						newHeight = 100;
+						newWidth = 250 * aspectRatio;
+						newHeight = 250;
 					} else {
-						newWidth = 100;
-						newHeight = 100 / aspectRatio;
+						newWidth = 250;
+						newHeight = 250 / aspectRatio;
 					}
 
 					// Set the canvas size
-					canvas.width = 100;
-					canvas.height = 100;
+					canvas.width = 250;
+					canvas.height = 250;
 
 					// Calculate the position to center the image
-					const offsetX = (100 - newWidth) / 2;
-					const offsetY = (100 - newHeight) / 2;
+					const offsetX = (250 - newWidth) / 2;
+					const offsetY = (250 - newHeight) / 2;
 
 					// Draw the image on the canvas
 					ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
