@@ -80,7 +80,11 @@
 									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-800"
 								>
 									<tr>
-										<th scope="col" class="px-3 py-2 cursor-pointer select-none" on:click={() => setSortKey('title')}>
+										<th
+											scope="col"
+											class="px-3 py-2 cursor-pointer select-none"
+											on:click={() => setSortKey('title')}
+										>
 											{$i18n.t('Title')}
 											{#if sortKey === 'title'}
 												{sortOrder === 'asc' ? '▲' : '▼'}
@@ -88,7 +92,11 @@
 												<span class="invisible">▲</span>
 											{/if}
 										</th>
-										<th scope="col" class="px-3 py-2 cursor-pointer select-none" on:click={() => setSortKey('created_at')}>
+										<th
+											scope="col"
+											class="px-3 py-2 cursor-pointer select-none"
+											on:click={() => setSortKey('created_at')}
+										>
 											{$i18n.t('Created at')}
 											{#if sortKey === 'created_at'}
 												{sortOrder === 'asc' ? '▲' : '▼'}
@@ -96,7 +104,11 @@
 												<span class="invisible">▲</span>
 											{/if}
 										</th>
-										<th scope="col" class="px-3 py-2 hidden md:flex cursor-pointer select-none" on:click={() => setSortKey('updated_at')}>
+										<th
+											scope="col"
+											class="px-3 py-2 hidden md:flex cursor-pointer select-none"
+											on:click={() => setSortKey('updated_at')}
+										>
 											{$i18n.t('Updated at')}
 											{#if sortKey === 'updated_at'}
 												{sortOrder === 'asc' ? '▲' : '▼'}
@@ -108,12 +120,11 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each chats
-										.sort((a, b) => {
-											if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
-											if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
-											return 0;
-										}) as chat, idx}
+									{#each chats.sort((a, b) => {
+										if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
+										if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
+										return 0;
+									}) as chat, idx}
 										<tr
 											class="bg-transparent {idx !== chats.length - 1 &&
 												'border-b'} dark:bg-gray-900 dark:border-gray-850 text-xs"
