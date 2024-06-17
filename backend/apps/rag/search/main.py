@@ -13,6 +13,7 @@ def get_filtered_results(results, filter_list):
             filtered_results.append(result)
     return filtered_results
 
+
 class SearchResult(BaseModel):
     link: str
     title: Optional[str]

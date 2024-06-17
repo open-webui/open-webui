@@ -11,7 +11,11 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_serpstack(
-    api_key: str, query: str, count: int, filter_list: Optional[List[str]] = None, https_enabled: bool = True
+    api_key: str,
+    query: str,
+    count: int,
+    filter_list: Optional[List[str]] = None,
+    https_enabled: bool = True,
 ) -> list[SearchResult]:
     """Search using serpstack.com's and return the results as a list of SearchResult objects.
 

@@ -11,7 +11,11 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_google_pse(
-    api_key: str, search_engine_id: str, query: str, count: int, filter_list: Optional[List[str]] = None
+    api_key: str,
+    search_engine_id: str,
+    query: str,
+    count: int,
+    filter_list: Optional[List[str]] = None,
 ) -> list[SearchResult]:
     """Search using Google's Programmable Search Engine API and return the results as a list of SearchResult objects.
 

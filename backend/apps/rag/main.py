@@ -777,7 +777,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SEARXNG_QUERY_URL,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
@@ -791,7 +791,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.GOOGLE_PSE_ENGINE_ID,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception(
@@ -803,7 +803,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.BRAVE_SEARCH_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
@@ -824,7 +824,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPER_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SERPER_API_KEY found in environment variables")
@@ -834,12 +834,16 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPLY_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
     elif engine == "duckduckgo":
-        return search_duckduckgo(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT, app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST)
+        return search_duckduckgo(
+            query,
+            app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     elif engine == "tavily":
         if app.state.config.TAVILY_API_KEY:
             return search_tavily(
