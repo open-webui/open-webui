@@ -16,6 +16,23 @@ export const sanitizeResponseContent = (content: string) => {
 		.trim();
 };
 
+export const replaceTokens = (content, char, user) => {
+	const charToken = /{{char}}/gi;
+	const userToken = /{{user}}/gi;
+
+	// Replace {{char}} if char is provided
+	if (char !== undefined && char !== null) {
+		content = content.replace(charToken, char);
+	}
+
+	// Replace {{user}} if user is provided
+	if (user !== undefined && user !== null) {
+		content = content.replace(userToken, user);
+	}
+
+	return content;
+};
+
 export const revertSanitizedResponseContent = (content: string) => {
 	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
 };

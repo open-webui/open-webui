@@ -232,8 +232,13 @@
 
 					name = character.name;
 
-					const turndownService = new TurndownService();
-					info.meta.description = turndownService.turndown(character.summary);
+					const pattern = /<\/?[a-z][\s\S]*>/i;
+					if (character.summary.match(pattern)) {
+						const turndownService = new TurndownService();
+						info.meta.description = turndownService.turndown(character.summary);
+					} else {
+						info.meta.description = character.summary;
+					}
 
 					info.params.system = `Personality: ${character.personality}${
 						character?.scenario ? `\nScenario: ${character.scenario}` : ''
