@@ -22,23 +22,11 @@ class PeeweeConnectionState(object):
 def register_connection(db_url):
     db = connect(db_url)
     if isinstance(db, PostgresqlDatabase):
-        db = PooledPostgresqlExtDatabase(
-            db.database,
-            max_connections=8,
-            stale_timeout=300,
-            timeout=None,
-            autoconnect=True,
-            **db.connect_params
-        )
+        # Directly use PostgresqlDatabase without pooling
+        db.autoconnect = True
     elif isinstance(db, SqliteDatabase):
-        db = PooledSqliteDatabase(
-            db.database,
-            max_connections=8,
-            stale_timeout=300,
-            timeout=None,
-            autoconnect=True,
-            **db.connect_params
-        )
+        # Directly use SqliteDatabase without pooling
+        db.autoconnect = True
     else:
         raise ValueError('Unsupported database connection')
     return db
