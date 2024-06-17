@@ -369,10 +369,11 @@
 				</div>
 
 				{#if info.meta.description !== null}
-					<input
+					<textarea
 						class="mt-1 px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
 						placeholder={$i18n.t('Add a short description about what this model does')}
 						bind:value={info.meta.description}
+						row="3"
 					/>
 				{/if}
 			</div>

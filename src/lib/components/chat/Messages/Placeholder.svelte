@@ -9,6 +9,7 @@
 
 	import Suggestions from '../MessageInput/Suggestions.svelte';
 	import { sanitizeResponseContent } from '$lib/utils';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -41,14 +42,23 @@
 							selectedModelIdx = modelIdx;
 						}}
 					>
-						<img
-							crossorigin="anonymous"
-							src={model?.info?.meta?.profile_image_url ??
-								($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
-							class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
-							alt="logo"
-							draggable="false"
-						/>
+						<Tooltip
+							content={marked.parse(
+								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
+							)}
+							placement="right"
+						>
+							<img
+								crossorigin="anonymous"
+								src={model?.info?.meta?.profile_image_url ??
+									($i18n.language === 'dg-DG'
+										? `/doge.png`
+										: `${WEBUI_BASE_URL}/static/favicon.png`)}
+								class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
+								alt="logo"
+								draggable="false"
+							/>
+						</Tooltip>
 					</button>
 				{/each}
 			</div>

@@ -126,7 +126,7 @@
 			: selected
 			? 'from-gray-100 dark:from-gray-950'
 			: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
-            absolute right-[10px] top-[10px] pr-2 pl-5 bg-gradient-to-l from-80%
+            absolute right-[10px] top-[6px] py-1 pr-2 pl-5 bg-gradient-to-l from-80%
 
               to-transparent"
 		on:mouseenter={(e) => {

@@ -4,6 +4,8 @@
 	import { goto } from '$app/navigation';
 	import { settings, user, config, models, tools } from '$lib/stores';
 
+	import TurndownService from 'turndown';
+
 	import { onMount, tick, getContext } from 'svelte';
 	import { addNewModel, getModelById, getModelInfos } from '$lib/apis/models';
 	import { getModels } from '$lib/apis';
@@ -14,6 +16,7 @@
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 	import { stringify } from 'postcss';
+	import { parseFile } from '$lib/utils/characters';
 
 	const i18n = getContext('i18n');
 
@@ -60,7 +63,10 @@
 	let knowledge = [];
 
 	$: if (name) {
-		id = name.replace(/\s+/g, '-').toLowerCase();
+		id = name
+			.replace(/\s+/g, '-')
+			.replace(/[^a-zA-Z0-9-]/g, '')
+			.toLowerCase();
 	}
 
 	const addUsage = (base_model_id) => {
@@ -213,8 +219,28 @@
 		accept="image/*"
 		on:change={() => {
 			let reader = new FileReader();
-			reader.onload = (event) => {
+			reader.onload = async (event) => {
 				let originalImageUrl = `${event.target.result}`;
+
+				let character = await parseFile(inputFiles[0]).catch((error) => {
+					return null;
+				});
+
+				if (character && character.character) {
+					character = character.character;
+					console.log(character);
+
+					name = character.name;
+
+					const turndownService = new TurndownService();
+					info.meta.description = turndownService.turndown(character.summary);
+
+					info.params.system = `Personality: ${character.personality}${
+						character?.scenario ? `\nScenario: ${character.scenario}` : ''
+					}${character?.greeting ? `\First Message: ${character.greeting}` : ''}${
+						character?.examples ? `\nExamples: ${character.examples}` : ''
+					}`;
+				}
 
 				const img = new Image();
 				img.src = originalImageUrl;
@@ -408,10 +434,11 @@
 			</div>
 
 			{#if info.meta.description !== null}
-				<input
+				<textarea
 					class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
 					placeholder={$i18n.t('Add a short description about what this model does')}
 					bind:value={info.meta.description}
+					row="3"
 				/>
 			{/if}
 		</div>
