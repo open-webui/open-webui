@@ -1332,7 +1332,7 @@
 			/>
 
 			<div
-				class="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-white to-white/90 dark:from-gray-900 dark:to-[#171717]/90 z-0 -translate-y-[78px]"
+				class="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-white to-white/90 dark:from-gray-900 dark:to-[#171717]/90 z-0"
 			/>
 		{/if}
 
@@ -1415,6 +1415,7 @@
 					}
 					return a;
 				}, [])}
+				transparentBackground={$settings?.backgroundImageUrl ?? false}
 				{selectedModels}
 				{messages}
 				{submitPrompt}

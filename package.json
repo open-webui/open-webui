@@ -56,6 +56,7 @@
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
 		"codemirror": "^6.0.1",
+		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
 		"eventsource-parser": "^1.1.2",
 		"file-saver": "^2.0.5",

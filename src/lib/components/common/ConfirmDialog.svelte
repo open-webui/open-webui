@@ -7,11 +7,11 @@
 
 	const dispatch = createEventDispatcher();
 
-	export let title = ($i18n.t('Confirm your action'));
-	export let message = ($i18n.t('This action cannot be undone. Do you wish to continue?'));
+	export let title = $i18n.t('Confirm your action');
+	export let message = $i18n.t('This action cannot be undone. Do you wish to continue?');
 
-	export let cancelLabel = ($i18n.t('Cancel'));
-	export let confirmLabel = ($i18n.t('Confirm'));
+	export let cancelLabel = $i18n.t('Cancel');
+	export let confirmLabel = $i18n.t('Confirm');
 
 	export let show = false;
 	let modalElement = null;
