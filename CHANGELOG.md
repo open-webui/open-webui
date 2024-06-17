@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2024-06-16
+
+### Added
+
+- **📞 Enhanced Voice Call**: Text-to-speech (TTS) callback now operates in real-time for each sentence, reducing latency by not waiting for full completion.
+- **👆 Tap to Interrupt**: During a call, you can now stop the assistant from speaking by simply tapping, instead of using voice. This resolves the issue of the speaker's voice being mistakenly registered as input.
+- **😊 Emoji Call**: Toggle this feature on from the Settings > Interface, allowing LLMs to express emotions using emojis during voice calls for a more dynamic interaction.
+- **🖱️ Quick Archive/Delete**: Use the Shift key + mouseover on the chat list to swiftly archive or delete items.
+- **📝 Markdown Support in Model Descriptions**: You can now format model descriptions with markdown, enabling bold text, links, etc.
+- **🧠 Editable Memories**: Adds the capability to modify memories.
+- **📋 Admin Panel Sorting**: Introduces the ability to sort users/chats within the admin panel.
+- **🌑 Dark Mode for Quick Selectors**: Dark mode now available for chat quick selectors (prompts, models, documents).
+- **🔧 Advanced Parameters**: Adds 'num_keep' and 'num_batch' to advanced parameters for customization.
+- **📅 Dynamic System Prompts**: New variables '{{CURRENT_DATETIME}}', '{{CURRENT_TIME}}', '{{USER_LOCATION}}' added for system prompts. Ensure '{{USER_LOCATION}}' is toggled on from Settings > Interface.
+- **🌐 Tavily Web Search**: Includes Tavily as a web search provider option.
+- **🖊️ Federated Auth Usernames**: Ability to set user names for federated authentication.
+- **🔗 Auto Clean URLs**: When adding connection URLs, trailing slashes are now automatically removed.
+- **🌐 Enhanced Translations**: Improved Chinese and Swedish translations.
+
+### Fixed
+
+- **⏳ AIOHTTP_CLIENT_TIMEOUT**: Introduced a new environment variable 'AIOHTTP_CLIENT_TIMEOUT' for requests to Ollama lasting longer than 5 minutes. Default is 300 seconds; set to blank ('') for no timeout.
+- **❌ Message Delete Freeze**: Resolved an issue where message deletion would sometimes cause the web UI to freeze.
+
 ## [0.3.4] - 2024-06-12
 
 ### Fixed
