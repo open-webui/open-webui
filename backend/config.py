@@ -903,6 +903,18 @@ RAG_WEB_SEARCH_ENGINE = PersistentConfig(
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
 )
 
+# You can provide a list of your own websites to filter after performing a web search. 
+# This ensures the highest level of safety and reliability of the information sources.
+RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
+    "RAG_WEB_SEARCH_DOMAIN_FILTER_LIST",
+    "rag.rag.web.search.domain.filter_list",
+    [
+        # "wikipedia.com", 
+        # "wikimedia.org",        
+        # "wikidata.org",
+    ],
+)
+
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",
     "rag.web.search.searxng_query_url",
