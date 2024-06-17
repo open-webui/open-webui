@@ -270,8 +270,9 @@
 				}
 
 				if (assistantSpeaking) {
+					// Mute the audio if the assistant is speaking
 					analyser.maxDecibels = 0;
-					analyser.minDecibels = -10;
+					analyser.minDecibels = -1;
 				} else {
 					analyser.minDecibels = MIN_DECIBELS;
 					analyser.maxDecibels = -30;
