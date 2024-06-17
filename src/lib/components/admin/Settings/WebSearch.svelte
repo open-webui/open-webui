@@ -18,7 +18,8 @@
 		'serpstack',
 		'serper',
 		'serply',
-		'duckduckgo'
+		'duckduckgo',
+		'tavily'
 	];
 
 	let youtubeLanguage = 'en';
@@ -209,6 +210,24 @@
 											type="text"
 											placeholder={$i18n.t('Enter Serply API Key')}
 											bind:value={webConfig.search.serply_api_key}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+						{:else if webConfig.search.engine === 'tavily'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Tavily API Key')}
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+											type="text"
+											placeholder={$i18n.t('Enter Tavily API Key')}
+											bind:value={webConfig.search.tavily_api_key}
 											autocomplete="off"
 										/>
 									</div>

@@ -17,8 +17,11 @@
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ModelMenu from './Models/ModelMenu.svelte';
+	import ModelDeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
+
+	let showModelDeleteConfirm = false;
 
 	let localModelfiles = [];
 
@@ -26,6 +29,7 @@
 	let modelsImportInputElement: HTMLInputElement;
 
 	let _models = [];
+	let selectedModel = null;
 
 	let sortable = null;
 	let searchValue = '';
@@ -199,6 +203,13 @@
 	</title>
 </svelte:head>
 
+<ModelDeleteConfirmDialog
+	bind:show={showModelDeleteConfirm}
+	on:confirm={() => {
+		deleteModelHandler(selectedModel);
+	}}
+/>
+
 <div class=" text-lg font-semibold mb-3">{$i18n.t('Models')}</div>
 
 <div class=" flex w-full space-x-2">
@@ -339,7 +350,8 @@
 						hideModelHandler(model);
 					}}
 					deleteHandler={() => {
-						deleteModelHandler(model);
+						selectedModel = model;
+						showModelDeleteConfirm = true;
 					}}
 					onClose={() => {}}
 				>

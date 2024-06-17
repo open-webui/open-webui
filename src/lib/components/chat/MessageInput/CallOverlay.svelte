@@ -2,341 +2,48 @@
 	import { config, settings, showCallOverlay } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 
-	import { blobToFile, calculateSHA256, extractSentences, findWordIndices } from '$lib/utils';
+	import {
+		blobToFile,
+		calculateSHA256,
+		extractSentencesForAudio,
+		findWordIndices
+	} from '$lib/utils';
+	import { generateEmoji } from '$lib/apis';
 	import { synthesizeOpenAISpeech, transcribeAudio } from '$lib/apis/audio';
+
 	import { toast } from 'svelte-sonner';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
-	import { get } from 'svelte/store';
 
 	const i18n = getContext('i18n');
 
+	export let eventTarget: EventTarget;
+
 	export let submitPrompt: Function;
+	export let stopResponse: Function;
+
 	export let files;
+
+	export let chatId;
+	export let modelId;
 
 	let loading = false;
 	let confirmed = false;
+	let interrupted = false;
+	let assistantSpeaking = false;
+
+	let emoji = null;
 
 	let camera = false;
 	let cameraStream = null;
 
-	let assistantSpeaking = false;
-	let assistantAudio = {};
-	let assistantAudioIdx = null;
+	let chatStreaming = false;
 
 	let rmsLevel = 0;
 	let hasStartedSpeaking = false;
-
-	let currentUtterance = null;
-
 	let mediaRecorder;
 	let audioChunks = [];
-
-	const MIN_DECIBELS = -45;
-	const VISUALIZER_BUFFER_LENGTH = 300;
-
-	// Function to calculate the RMS level from time domain data
-	const calculateRMS = (data: Uint8Array) => {
-		let sumSquares = 0;
-		for (let i = 0; i < data.length; i++) {
-			const normalizedValue = (data[i] - 128) / 128; // Normalize the data
-			sumSquares += normalizedValue * normalizedValue;
-		}
-		return Math.sqrt(sumSquares / data.length);
-	};
-
-	const normalizeRMS = (rms) => {
-		rms = rms * 10;
-		const exp = 1.5; // Adjust exponent value; values greater than 1 expand larger numbers more and compress smaller numbers more
-		const scaledRMS = Math.pow(rms, exp);
-
-		// Scale between 0.01 (1%) and 1.0 (100%)
-		return Math.min(1.0, Math.max(0.01, scaledRMS));
-	};
-
-	const analyseAudio = (stream) => {
-		const audioContext = new AudioContext();
-		const audioStreamSource = audioContext.createMediaStreamSource(stream);
-
-		const analyser = audioContext.createAnalyser();
-		analyser.minDecibels = MIN_DECIBELS;
-		audioStreamSource.connect(analyser);
-
-		const bufferLength = analyser.frequencyBinCount;
-
-		const domainData = new Uint8Array(bufferLength);
-		const timeDomainData = new Uint8Array(analyser.fftSize);
-
-		let lastSoundTime = Date.now();
-		hasStartedSpeaking = false;
-
-		const detectSound = () => {
-			const processFrame = () => {
-				if (!mediaRecorder || !$showCallOverlay) {
-					if (mediaRecorder) {
-						mediaRecorder.stop();
-					}
-
-					return;
-				}
-				analyser.getByteTimeDomainData(timeDomainData);
-				analyser.getByteFrequencyData(domainData);
-
-				// Calculate RMS level from time domain data
-				rmsLevel = calculateRMS(timeDomainData);
-
-				// Check if initial speech/noise has started
-				const hasSound = domainData.some((value) => value > 0);
-				if (hasSound) {
-					stopAllAudio();
-					hasStartedSpeaking = true;
-					lastSoundTime = Date.now();
-				}
-
-				// Start silence detection only after initial speech/noise has been detected
-				if (hasStartedSpeaking) {
-					if (Date.now() - lastSoundTime > 2000) {
-						confirmed = true;
-
-						if (mediaRecorder) {
-							mediaRecorder.stop();
-						}
-					}
-				}
-
-				window.requestAnimationFrame(processFrame);
-			};
-
-			window.requestAnimationFrame(processFrame);
-		};
-
-		detectSound();
-	};
-
-	const stopAllAudio = () => {
-		if (currentUtterance) {
-			speechSynthesis.cancel();
-			currentUtterance = null;
-		}
-		if (assistantAudio[assistantAudioIdx]) {
-			assistantAudio[assistantAudioIdx].pause();
-			assistantAudio[assistantAudioIdx].currentTime = 0;
-		}
-
-		const audioElement = document.getElementById('audioElement');
-		audioElement.pause();
-		audioElement.currentTime = 0;
-
-		assistantSpeaking = false;
-	};
-
-	const playAudio = (idx) => {
-		if ($showCallOverlay) {
-			return new Promise((res) => {
-				assistantAudioIdx = idx;
-				const audioElement = document.getElementById('audioElement');
-				const audio = assistantAudio[idx];
-
-				audioElement.src = audio.src; // Assume `assistantAudio` has objects with a `src` property
-
-				audioElement.muted = true;
-
-				audioElement
-					.play()
-					.then(() => {
-						audioElement.muted = false;
-					})
-					.catch((error) => {
-						toast.error(error);
-					});
-
-				audioElement.onended = async (e) => {
-					await new Promise((r) => setTimeout(r, 300));
-
-					if (Object.keys(assistantAudio).length - 1 === idx) {
-						assistantSpeaking = false;
-					}
-
-					res(e);
-				};
-			});
-		} else {
-			return Promise.resolve();
-		}
-	};
-
-	const getOpenAISpeech = async (text) => {
-		const res = await synthesizeOpenAISpeech(
-			localStorage.token,
-			$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
-			text
-		).catch((error) => {
-			toast.error(error);
-			assistantSpeaking = false;
-			return null;
-		});
-
-		if (res) {
-			const blob = await res.blob();
-			const blobUrl = URL.createObjectURL(blob);
-			const audio = new Audio(blobUrl);
-			assistantAudio = audio;
-		}
-	};
-
-	const transcribeHandler = async (audioBlob) => {
-		// Create a blob from the audio chunks
-
-		await tick();
-		const file = blobToFile(audioBlob, 'recording.wav');
-
-		const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (res) {
-			console.log(res.text);
-
-			if (res.text !== '') {
-				const _responses = await submitPrompt(res.text);
-				console.log(_responses);
-
-				if (_responses.at(0)) {
-					const content = _responses[0];
-					if ((content ?? '').trim() !== '') {
-						assistantSpeakingHandler(content);
-					}
-				}
-			}
-		}
-	};
-
-	const assistantSpeakingHandler = async (content) => {
-		assistantSpeaking = true;
-
-		if (($config.audio.tts.engine ?? '') == '') {
-			let voices = [];
-			const getVoicesLoop = setInterval(async () => {
-				voices = await speechSynthesis.getVoices();
-				if (voices.length > 0) {
-					clearInterval(getVoicesLoop);
-
-					const voice =
-						voices
-							?.filter(
-								(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							)
-							?.at(0) ?? undefined;
-
-					currentUtterance = new SpeechSynthesisUtterance(content);
-
-					if (voice) {
-						currentUtterance.voice = voice;
-					}
-
-					speechSynthesis.speak(currentUtterance);
-				}
-			}, 100);
-		} else if ($config.audio.tts.engine === 'openai') {
-			console.log('openai');
-
-			const sentences = extractSentences(content).reduce((mergedTexts, currentText) => {
-				const lastIndex = mergedTexts.length - 1;
-				if (lastIndex >= 0) {
-					const previousText = mergedTexts[lastIndex];
-					const wordCount = previousText.split(/\s+/).length;
-					if (wordCount < 2) {
-						mergedTexts[lastIndex] = previousText + ' ' + currentText;
-					} else {
-						mergedTexts.push(currentText);
-					}
-				} else {
-					mergedTexts.push(currentText);
-				}
-				return mergedTexts;
-			}, []);
-
-			console.log(sentences);
-
-			let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
-
-			for (const [idx, sentence] of sentences.entries()) {
-				const res = await synthesizeOpenAISpeech(
-					localStorage.token,
-					$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
-					sentence
-				).catch((error) => {
-					toast.error(error);
-
-					assistantSpeaking = false;
-					return null;
-				});
-
-				if (res) {
-					const blob = await res.blob();
-					const blobUrl = URL.createObjectURL(blob);
-					const audio = new Audio(blobUrl);
-					assistantAudio[idx] = audio;
-					lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
-				}
-			}
-		}
-	};
-
-	const stopRecordingCallback = async () => {
-		if ($showCallOverlay) {
-			if (confirmed) {
-				loading = true;
-
-				if (cameraStream) {
-					const imageUrl = takeScreenshot();
-
-					files = [
-						{
-							type: 'image',
-							url: imageUrl
-						}
-					];
-				}
-
-				const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-				await transcribeHandler(audioBlob);
-
-				confirmed = false;
-				loading = false;
-			}
-			audioChunks = [];
-			mediaRecorder = false;
-
-			startRecording();
-		} else {
-			audioChunks = [];
-			mediaRecorder = false;
-		}
-	};
-
-	const startRecording = async () => {
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		mediaRecorder = new MediaRecorder(stream);
-		mediaRecorder.onstart = () => {
-			console.log('Recording started');
-			audioChunks = [];
-			analyseAudio(stream);
-		};
-		mediaRecorder.ondataavailable = (event) => {
-			if (hasStartedSpeaking) {
-				audioChunks.push(event.data);
-			}
-		};
-		mediaRecorder.onstop = async () => {
-			console.log('Recording stopped');
-
-			await stopRecordingCallback();
-		};
-		mediaRecorder.start();
-	};
 
 	let videoInputDevices = [];
 	let selectedVideoInputDeviceId = null;
@@ -439,23 +146,473 @@
 		camera = false;
 	};
 
-	$: if ($showCallOverlay) {
+	const MIN_DECIBELS = -55;
+	const VISUALIZER_BUFFER_LENGTH = 300;
+
+	const transcribeHandler = async (audioBlob) => {
+		// Create a blob from the audio chunks
+
+		await tick();
+		const file = blobToFile(audioBlob, 'recording.wav');
+
+		const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			console.log(res.text);
+
+			if (res.text !== '') {
+				const _responses = await submitPrompt(res.text, { _raw: true });
+				console.log(_responses);
+			}
+		}
+	};
+
+	const stopRecordingCallback = async (_continue = true) => {
+		if ($showCallOverlay) {
+			console.log('%c%s', 'color: red; font-size: 20px;', '🚨 stopRecordingCallback 🚨');
+
+			// deep copy the audioChunks array
+			const _audioChunks = audioChunks.slice(0);
+
+			audioChunks = [];
+			mediaRecorder = false;
+
+			if (_continue) {
+				startRecording();
+			}
+
+			if (confirmed) {
+				loading = true;
+				emoji = null;
+
+				if (cameraStream) {
+					const imageUrl = takeScreenshot();
+
+					files = [
+						{
+							type: 'image',
+							url: imageUrl
+						}
+					];
+				}
+
+				const audioBlob = new Blob(_audioChunks, { type: 'audio/wav' });
+				await transcribeHandler(audioBlob);
+
+				confirmed = false;
+				loading = false;
+			}
+		} else {
+			audioChunks = [];
+			mediaRecorder = false;
+		}
+	};
+
+	const startRecording = async () => {
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		mediaRecorder = new MediaRecorder(stream);
+
+		mediaRecorder.onstart = () => {
+			console.log('Recording started');
+			audioChunks = [];
+			analyseAudio(stream);
+		};
+
+		mediaRecorder.ondataavailable = (event) => {
+			if (hasStartedSpeaking) {
+				audioChunks.push(event.data);
+			}
+		};
+
+		mediaRecorder.onstop = (e) => {
+			console.log('Recording stopped', e);
+			stopRecordingCallback();
+		};
+
+		mediaRecorder.start();
+	};
+
+	// Function to calculate the RMS level from time domain data
+	const calculateRMS = (data: Uint8Array) => {
+		let sumSquares = 0;
+		for (let i = 0; i < data.length; i++) {
+			const normalizedValue = (data[i] - 128) / 128; // Normalize the data
+			sumSquares += normalizedValue * normalizedValue;
+		}
+		return Math.sqrt(sumSquares / data.length);
+	};
+
+	const analyseAudio = (stream) => {
+		const audioContext = new AudioContext();
+		const audioStreamSource = audioContext.createMediaStreamSource(stream);
+
+		const analyser = audioContext.createAnalyser();
+		analyser.minDecibels = MIN_DECIBELS;
+		audioStreamSource.connect(analyser);
+
+		const bufferLength = analyser.frequencyBinCount;
+
+		const domainData = new Uint8Array(bufferLength);
+		const timeDomainData = new Uint8Array(analyser.fftSize);
+
+		let lastSoundTime = Date.now();
+		hasStartedSpeaking = false;
+
+		console.log('🔊 Sound detection started', lastSoundTime, hasStartedSpeaking);
+
+		const detectSound = () => {
+			const processFrame = () => {
+				if (!mediaRecorder || !$showCallOverlay) {
+					return;
+				}
+
+				if (assistantSpeaking) {
+					// Mute the audio if the assistant is speaking
+					analyser.maxDecibels = 0;
+					analyser.minDecibels = -1;
+				} else {
+					analyser.minDecibels = MIN_DECIBELS;
+					analyser.maxDecibels = -30;
+				}
+
+				analyser.getByteTimeDomainData(timeDomainData);
+				analyser.getByteFrequencyData(domainData);
+
+				// Calculate RMS level from time domain data
+				rmsLevel = calculateRMS(timeDomainData);
+
+				// Check if initial speech/noise has started
+				const hasSound = domainData.some((value) => value > 0);
+				if (hasSound) {
+					// BIG RED TEXT
+					console.log('%c%s', 'color: red; font-size: 20px;', '🔊 Sound detected');
+
+					if (!hasStartedSpeaking) {
+						hasStartedSpeaking = true;
+						stopAllAudio();
+					}
+
+					lastSoundTime = Date.now();
+				}
+
+				// Start silence detection only after initial speech/noise has been detected
+				if (hasStartedSpeaking) {
+					if (Date.now() - lastSoundTime > 2000) {
+						confirmed = true;
+
+						if (mediaRecorder) {
+							console.log('%c%s', 'color: red; font-size: 20px;', '🔇 Silence detected');
+							mediaRecorder.stop();
+							return;
+						}
+					}
+				}
+
+				window.requestAnimationFrame(processFrame);
+			};
+
+			window.requestAnimationFrame(processFrame);
+		};
+
+		detectSound();
+	};
+
+	let finishedMessages = {};
+	let currentMessageId = null;
+	let currentUtterance = null;
+
+	const speakSpeechSynthesisHandler = (content) => {
+		if ($showCallOverlay) {
+			return new Promise((resolve) => {
+				let voices = [];
+				const getVoicesLoop = setInterval(async () => {
+					voices = await speechSynthesis.getVoices();
+					if (voices.length > 0) {
+						clearInterval(getVoicesLoop);
+
+						const voice =
+							voices
+								?.filter(
+									(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+								)
+								?.at(0) ?? undefined;
+
+						currentUtterance = new SpeechSynthesisUtterance(content);
+
+						if (voice) {
+							currentUtterance.voice = voice;
+						}
+
+						speechSynthesis.speak(currentUtterance);
+						currentUtterance.onend = async (e) => {
+							await new Promise((r) => setTimeout(r, 200));
+							resolve(e);
+						};
+					}
+				}, 100);
+			});
+		} else {
+			return Promise.resolve();
+		}
+	};
+
+	const playAudio = (audio) => {
+		if ($showCallOverlay) {
+			return new Promise((resolve) => {
+				const audioElement = document.getElementById('audioElement');
+
+				if (audioElement) {
+					audioElement.src = audio.src;
+					audioElement.muted = true;
+
+					audioElement
+						.play()
+						.then(() => {
+							audioElement.muted = false;
+						})
+						.catch((error) => {
+							console.error(error);
+						});
+
+					audioElement.onended = async (e) => {
+						await new Promise((r) => setTimeout(r, 100));
+						resolve(e);
+					};
+				}
+			});
+		} else {
+			return Promise.resolve();
+		}
+	};
+
+	const stopAllAudio = async () => {
+		assistantSpeaking = false;
+		interrupted = true;
+
+		if (chatStreaming) {
+			stopResponse();
+		}
+
+		if (currentUtterance) {
+			speechSynthesis.cancel();
+			currentUtterance = null;
+		}
+
+		const audioElement = document.getElementById('audioElement');
+		if (audioElement) {
+			audioElement.muted = true;
+			audioElement.pause();
+			audioElement.currentTime = 0;
+		}
+	};
+
+	let audioAbortController = new AbortController();
+
+	// Audio cache map where key is the content and value is the Audio object.
+	const audioCache = new Map();
+	const emojiCache = new Map();
+
+	const fetchAudio = async (content) => {
+		if (!audioCache.has(content)) {
+			try {
+				// Set the emoji for the content if needed
+				if ($settings?.showEmojiInCall ?? false) {
+					const emoji = await generateEmoji(localStorage.token, modelId, content, chatId);
+					if (emoji) {
+						emojiCache.set(content, emoji);
+					}
+				}
+
+				if ($config.audio.tts.engine !== '') {
+					const res = await synthesizeOpenAISpeech(
+						localStorage.token,
+						$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
+						content
+					).catch((error) => {
+						console.error(error);
+						return null;
+					});
+
+					if (res) {
+						const blob = await res.blob();
+						const blobUrl = URL.createObjectURL(blob);
+						audioCache.set(content, new Audio(blobUrl));
+					}
+				} else {
+					audioCache.set(content, true);
+				}
+			} catch (error) {
+				console.error('Error synthesizing speech:', error);
+			}
+		}
+
+		return audioCache.get(content);
+	};
+
+	let messages = {};
+
+	const monitorAndPlayAudio = async (id, signal) => {
+		while (!signal.aborted) {
+			if (messages[id] && messages[id].length > 0) {
+				// Retrieve the next content string from the queue
+				const content = messages[id].shift(); // Dequeues the content for playing
+
+				if (audioCache.has(content)) {
+					// If content is available in the cache, play it
+
+					// Set the emoji for the content if available
+					if (($settings?.showEmojiInCall ?? false) && emojiCache.has(content)) {
+						emoji = emojiCache.get(content);
+					} else {
+						emoji = null;
+					}
+
+					if ($config.audio.tts.engine !== '') {
+						try {
+							console.log(
+								'%c%s',
+								'color: red; font-size: 20px;',
+								`Playing audio for content: ${content}`
+							);
+
+							const audio = audioCache.get(content);
+							await playAudio(audio); // Here ensure that playAudio is indeed correct method to execute
+							console.log(`Played audio for content: ${content}`);
+							await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
+						} catch (error) {
+							console.error('Error playing audio:', error);
+						}
+					} else {
+						await speakSpeechSynthesisHandler(content);
+					}
+				} else {
+					// If not available in the cache, push it back to the queue and delay
+					messages[id].unshift(content); // Re-queue the content at the start
+					console.log(`Audio for "${content}" not yet available in the cache, re-queued...`);
+					await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
+				}
+			} else if (finishedMessages[id] && messages[id] && messages[id].length === 0) {
+				// If the message is finished and there are no more messages to process, break the loop
+				assistantSpeaking = false;
+				break;
+			} else {
+				// No messages to process, sleep for a bit
+				await new Promise((resolve) => setTimeout(resolve, 200));
+			}
+		}
+		console.log(`Audio monitoring and playing stopped for message ID ${id}`);
+	};
+
+	onMount(async () => {
 		startRecording();
-	} else {
-		stopCamera();
-	}
+
+		const chatStartHandler = async (e) => {
+			const { id } = e.detail;
+
+			chatStreaming = true;
+
+			if (currentMessageId !== id) {
+				console.log(`Received chat start event for message ID ${id}`);
+
+				currentMessageId = id;
+				if (audioAbortController) {
+					audioAbortController.abort();
+				}
+				audioAbortController = new AbortController();
+
+				assistantSpeaking = true;
+				// Start monitoring and playing audio for the message ID
+				monitorAndPlayAudio(id, audioAbortController.signal);
+			}
+		};
+
+		const chatEventHandler = async (e) => {
+			const { id, content } = e.detail;
+			// "id" here is message id
+			// if "id" is not the same as "currentMessageId" then do not process
+			// "content" here is a sentence from the assistant,
+			// there will be many sentences for the same "id"
+
+			if (currentMessageId === id) {
+				console.log(`Received chat event for message ID ${id}: ${content}`);
+
+				try {
+					if (messages[id] === undefined) {
+						messages[id] = [content];
+					} else {
+						messages[id].push(content);
+					}
+
+					console.log(content);
+
+					fetchAudio(content);
+				} catch (error) {
+					console.error('Failed to fetch or play audio:', error);
+				}
+			}
+		};
+
+		const chatFinishHandler = async (e) => {
+			const { id, content } = e.detail;
+			// "content" here is the entire message from the assistant
+			finishedMessages[id] = true;
+
+			chatStreaming = false;
+		};
+
+		eventTarget.addEventListener('chat:start', chatStartHandler);
+		eventTarget.addEventListener('chat', chatEventHandler);
+		eventTarget.addEventListener('chat:finish', chatFinishHandler);
+
+		return async () => {
+			eventTarget.removeEventListener('chat:start', chatStartHandler);
+			eventTarget.removeEventListener('chat', chatEventHandler);
+			eventTarget.removeEventListener('chat:finish', chatFinishHandler);
+
+			audioAbortController.abort();
+			await tick();
+
+			await stopAllAudio();
+
+			await stopRecordingCallback(false);
+			await stopCamera();
+		};
+	});
 </script>
 
 {#if $showCallOverlay}
-	<audio id="audioElement" src="" style="display: none;" />
 	<div class=" absolute w-full h-screen max-h-[100dvh] flex z-[999] overflow-hidden">
 		<div
 			class="absolute w-full h-screen max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
 		>
 			<div class="max-w-lg w-full h-screen max-h-[100dvh] flex flex-col justify-between p-3 md:p-6">
 				{#if camera}
-					<div class="flex justify-center items-center w-full min-h-20">
-						{#if loading}
+					<button
+						type="button"
+						class="flex justify-center items-center w-full h-20 min-h-20"
+						on:click={() => {
+							if (assistantSpeaking) {
+								stopAllAudio();
+							}
+						}}
+					>
+						{#if emoji}
+							<div
+								class="  transition-all rounded-full"
+								style="font-size:{rmsLevel * 100 > 4
+									? '4.5'
+									: rmsLevel * 100 > 2
+									? '4.25'
+									: rmsLevel * 100 > 1
+									? '3.75'
+									: '3.5'}rem;width: 100%; text-align:center;"
+							>
+								{emoji}
+							</div>
+						{:else if loading || assistantSpeaking}
 							<svg
 								class="size-12 text-gray-900 dark:text-gray-400"
 								viewBox="0 0 24 24"
@@ -504,59 +661,81 @@
 							/>
 						{/if}
 						<!-- navbar -->
-					</div>
+					</button>
 				{/if}
 
 				<div class="flex justify-center items-center flex-1 h-full w-full max-h-full">
 					{#if !camera}
-						{#if loading}
-							<svg
-								class="size-44 text-gray-900 dark:text-gray-400"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								xmlns="http://www.w3.org/2000/svg"
-								><style>
-									.spinner_qM83 {
-										animation: spinner_8HQG 1.05s infinite;
-									}
-									.spinner_oXPr {
-										animation-delay: 0.1s;
-									}
-									.spinner_ZTLf {
-										animation-delay: 0.2s;
-									}
-									@keyframes spinner_8HQG {
-										0%,
-										57.14% {
-											animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
-											transform: translate(0);
+						<button
+							type="button"
+							on:click={() => {
+								if (assistantSpeaking) {
+									stopAllAudio();
+								}
+							}}
+						>
+							{#if emoji}
+								<div
+									class="  transition-all rounded-full"
+									style="font-size:{rmsLevel * 100 > 4
+										? '13'
+										: rmsLevel * 100 > 2
+										? '12'
+										: rmsLevel * 100 > 1
+										? '11.5'
+										: '11'}rem;width:100%;text-align:center;"
+								>
+									{emoji}
+								</div>
+							{:else if loading || assistantSpeaking}
+								<svg
+									class="size-44 text-gray-900 dark:text-gray-400"
+									viewBox="0 0 24 24"
+									fill="currentColor"
+									xmlns="http://www.w3.org/2000/svg"
+									><style>
+										.spinner_qM83 {
+											animation: spinner_8HQG 1.05s infinite;
 										}
-										28.57% {
-											animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-											transform: translateY(-6px);
+										.spinner_oXPr {
+											animation-delay: 0.1s;
 										}
-										100% {
-											transform: translate(0);
+										.spinner_ZTLf {
+											animation-delay: 0.2s;
 										}
-									}
-								</style><circle class="spinner_qM83" cx="4" cy="12" r="3" /><circle
-									class="spinner_qM83 spinner_oXPr"
-									cx="12"
-									cy="12"
-									r="3"
-								/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
-							>
-						{:else}
-							<div
-								class=" {rmsLevel * 100 > 4
-									? ' size-52'
-									: rmsLevel * 100 > 2
-									? 'size-48'
-									: rmsLevel * 100 > 1
-									? 'size-[11.5rem]'
-									: 'size-44'}  transition-all bg-black dark:bg-white rounded-full"
-							/>
-						{/if}
+										@keyframes spinner_8HQG {
+											0%,
+											57.14% {
+												animation-timing-function: cubic-bezier(0.33, 0.66, 0.66, 1);
+												transform: translate(0);
+											}
+											28.57% {
+												animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
+												transform: translateY(-6px);
+											}
+											100% {
+												transform: translate(0);
+											}
+										}
+									</style><circle class="spinner_qM83" cx="4" cy="12" r="3" /><circle
+										class="spinner_qM83 spinner_oXPr"
+										cx="12"
+										cy="12"
+										r="3"
+									/><circle class="spinner_qM83 spinner_ZTLf" cx="20" cy="12" r="3" /></svg
+								>
+							{:else}
+								<div
+									class=" {rmsLevel * 100 > 4
+										? ' size-52'
+										: rmsLevel * 100 > 2
+										? 'size-48'
+										: rmsLevel * 100 > 1
+										? 'size-[11.5rem]'
+										: 'size-44'}  transition-all bg-black dark:bg-white rounded-full"
+								/>
+							{/if}
+						</button>
 					{:else}
 						<div
 							class="relative flex video-container w-full max-h-full pt-2 pb-4 md:py-6 px-2 h-full"
@@ -656,10 +835,19 @@
 					</div>
 
 					<div>
-						<button type="button">
+						<button
+							type="button"
+							on:click={() => {
+								if (assistantSpeaking) {
+									stopAllAudio();
+								}
+							}}
+						>
 							<div class=" line-clamp-1 text-sm font-medium">
 								{#if loading}
 									{$i18n.t('Thinking...')}
+								{:else if assistantSpeaking}
+									{$i18n.t('Tap to interrupt')}
 								{:else}
 									{$i18n.t('Listening...')}
 								{/if}

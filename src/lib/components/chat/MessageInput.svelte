@@ -348,7 +348,6 @@
 				<Models
 					bind:this={modelsElement}
 					bind:prompt
-					bind:user
 					bind:chatInputPlaceholder
 					{messages}
 					on:select={(e) => {
@@ -467,7 +466,7 @@
 							document.getElementById('chat-textarea')?.focus();
 
 							if ($settings?.speechAutoSend ?? false) {
-								submitPrompt(prompt, user);
+								submitPrompt(prompt);
 							}
 						}}
 					/>
@@ -476,7 +475,7 @@
 						class="w-full flex gap-1.5"
 						on:submit|preventDefault={() => {
 							// check if selectedModels support image input
-							submitPrompt(prompt, user);
+							submitPrompt(prompt);
 						}}
 					>
 						<div
@@ -718,7 +717,7 @@
 
 											// Submit the prompt when Enter key is pressed
 											if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
-												submitPrompt(prompt, user);
+												submitPrompt(prompt);
 											}
 										}
 									}}
