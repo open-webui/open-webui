@@ -99,5 +99,14 @@ class FilesTable:
         except:
             return False
 
+    def delete_all_files(self) -> bool:
+        try:
+            query = File.delete()
+            query.execute()  # Remove the rows, return number of rows removed.
+
+            return True
+        except:
+            return False
+
 
 Files = FilesTable(DB)

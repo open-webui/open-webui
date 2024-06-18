@@ -171,6 +171,7 @@ export const processDocToVectorDB = async (token: string, file_id: string) => {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
+			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({

@@ -147,7 +147,6 @@
 
 			if (res) {
 				fileItem.status = 'processed';
-				fileItem.collection_name = res.collection_name;
 				files = files;
 			}
 		} catch (e) {
@@ -523,12 +522,12 @@
 														</Tooltip>
 													{/if}
 												</div>
-											{:else if file.type === 'doc'}
+											{:else if ['doc', 'file'].includes(file.type)}
 												<div
 													class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
 												>
 													<div class="p-2.5 bg-red-400 text-white rounded-lg">
-														{#if file.upload_status}
+														{#if file.status === 'processed'}
 															<svg
 																xmlns="http://www.w3.org/2000/svg"
 																viewBox="0 0 24 24"

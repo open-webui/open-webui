@@ -53,6 +53,7 @@ def upload_file(
 
         # replace filename with uuid
         id = str(uuid.uuid4())
+        filename = f"{id}_{filename}"
         file_path = f"{UPLOAD_DIR}/{filename}"
 
         contents = file.file.read()
@@ -142,4 +143,21 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# Delete All Files
+############################
+
+
+@router.delete("/all")
+async def delete_all_files(user=Depends(get_admin_user)):
+    result = Files.delete_all_files()
+    if result:
+        return {"message": "All files deleted successfully"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
         )

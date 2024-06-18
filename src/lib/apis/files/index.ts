@@ -9,7 +9,6 @@ export const uploadFile = async (token: string, file: File) => {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
-			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
 		body: data

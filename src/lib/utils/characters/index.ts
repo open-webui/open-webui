@@ -117,15 +117,39 @@ const decodeTextChunk = (data) => {
 
 const extractCharacter = (json) => {
 	function getTrimmedValue(json, keys) {
-		return keys.map((key) => json[key]).find((value) => value && value.trim());
+		return keys
+			.map((key) => {
+				const keyParts = key.split('.');
+				let value = json;
+				for (const part of keyParts) {
+					if (value && value[part] != null) {
+						value = value[part];
+					} else {
+						value = null;
+						break;
+					}
+				}
+				return value && value.trim();
+			})
+			.find((value) => value);
 	}
 
-	const name = getTrimmedValue(json, ['char_name', 'name']);
-	const summary = getTrimmedValue(json, ['personality', 'title']);
-	const personality = getTrimmedValue(json, ['char_persona', 'description']);
-	const scenario = getTrimmedValue(json, ['world_scenario', 'scenario']);
-	const greeting = getTrimmedValue(json, ['char_greeting', 'greeting', 'first_mes']);
-	const examples = getTrimmedValue(json, ['example_dialogue', 'mes_example', 'definition']);
+	const name = getTrimmedValue(json, ['char_name', 'name', 'data.name']);
+	const summary = getTrimmedValue(json, ['personality', 'title', 'data.description']);
+	const personality = getTrimmedValue(json, ['char_persona', 'description', 'data.personality']);
+	const scenario = getTrimmedValue(json, ['world_scenario', 'scenario', 'data.scenario']);
+	const greeting = getTrimmedValue(json, [
+		'char_greeting',
+		'greeting',
+		'first_mes',
+		'data.first_mes'
+	]);
+	const examples = getTrimmedValue(json, [
+		'example_dialogue',
+		'mes_example',
+		'definition',
+		'data.mes_example'
+	]);
 
 	return { name, summary, personality, scenario, greeting, examples };
 };

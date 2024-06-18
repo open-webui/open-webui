@@ -226,6 +226,8 @@
 					return null;
 				});
 
+				console.log(character);
+
 				if (character && character.character) {
 					character = character.character;
 					console.log(character);

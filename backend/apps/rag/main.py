@@ -1136,6 +1136,7 @@ def store_doc(
 
 class ProcessDocForm(BaseModel):
     file_id: str
+    collection_name: Optional[str] = None
 
 
 @app.post("/process/doc")
@@ -1148,6 +1149,8 @@ def process_doc(
         file_path = file.meta.get("path", f"{UPLOAD_DIR}/{file.filename}")
 
         f = open(file_path, "rb")
+
+        collection_name = form_data.collection_name
         if collection_name == None:
             collection_name = calculate_sha256(f)[:63]
         f.close()
