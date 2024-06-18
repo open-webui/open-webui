@@ -206,9 +206,7 @@ async def get_function_call_response(messages, tool_id, template, task_model_id,
     response = None
     try:
         if model["owned_by"] == "ollama":
-            response = await generate_ollama_chat_completion(
-                OpenAIChatCompletionForm(**payload), user=user
-            )
+            response = await generate_ollama_chat_completion(payload, user=user)
         else:
             response = await generate_openai_chat_completion(payload, user=user)
 
@@ -798,9 +796,7 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
         )
 
     if model["owned_by"] == "ollama":
-        return await generate_ollama_chat_completion(
-            OpenAIChatCompletionForm(**payload), user=user
-        )
+        return await generate_ollama_chat_completion(payload, user=user)
     else:
         return await generate_openai_chat_completion(payload, user=user)
 
@@ -863,9 +859,7 @@ async def generate_search_query(form_data: dict, user=Depends(get_verified_user)
         )
 
     if model["owned_by"] == "ollama":
-        return await generate_ollama_chat_completion(
-            OpenAIChatCompletionForm(**payload), user=user
-        )
+        return await generate_ollama_chat_completion(payload, user=user)
     else:
         return await generate_openai_chat_completion(payload, user=user)
 
@@ -932,9 +926,7 @@ Message: """{{prompt}}"""
         )
 
     if model["owned_by"] == "ollama":
-        return await generate_ollama_chat_completion(
-            OpenAIChatCompletionForm(**payload), user=user
-        )
+        return await generate_ollama_chat_completion(payload, user=user)
     else:
         return await generate_openai_chat_completion(payload, user=user)
 
@@ -991,9 +983,7 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
     print(model)
 
     if model["owned_by"] == "ollama":
-        return await generate_ollama_chat_completion(
-            OpenAIChatCompletionForm(**form_data), user=user
-        )
+        return await generate_ollama_chat_completion(form_data, user=user)
     else:
         return await generate_openai_chat_completion(form_data, user=user)
 

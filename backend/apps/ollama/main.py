@@ -889,10 +889,11 @@ class OpenAIChatCompletionForm(BaseModel):
 @app.post("/v1/chat/completions")
 @app.post("/v1/chat/completions/{url_idx}")
 async def generate_openai_chat_completion(
-    form_data: OpenAIChatCompletionForm,
+    form_data: dict,
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
+    form_data = OpenAIChatCompletionForm(**form_data)
 
     payload = {
         **form_data.model_dump(exclude_none=True),
