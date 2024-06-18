@@ -12,6 +12,7 @@ from apps.webui.routers import (
     configs,
     memories,
     utils,
+    files,
 )
 from config import (
     WEBUI_BUILD_HASH,
@@ -81,6 +82,7 @@ app.include_router(memories.router, prefix="/memories", tags=["memories"])
 
 app.include_router(configs.router, prefix="/configs", tags=["configs"])
 app.include_router(utils.router, prefix="/utils", tags=["utils"])
+app.include_router(files.router, prefix="/files", tags=["files"])
 
 
 @app.get("/")

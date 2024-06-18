@@ -11,6 +11,7 @@ import requests
 import mimetypes
 import shutil
 import os
+import uuid
 import inspect
 import asyncio
 
@@ -76,6 +77,7 @@ from config import (
     VERSION,
     CHANGELOG,
     FRONTEND_BUILD_DIR,
+    UPLOAD_DIR,
     CACHE_DIR,
     STATIC_DIR,
     ENABLE_OPENAI_API,
@@ -1376,6 +1378,7 @@ async def update_pipeline_valves(
             status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
             detail=detail,
         )
+
 
 
 @app.get("/api/config")
