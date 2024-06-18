@@ -463,6 +463,18 @@
 									e.target.style.height = '';
 									e.target.style.height = `${e.target.scrollHeight}px`;
 								}}
+								on:keydown={(e) => {
+									if (e.key === 'Escape') {
+										document.getElementById('close-edit-message-button')?.click();
+									}
+
+									const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
+									const isEnterPressed = e.key === 'Enter';
+
+									if (isCmdOrCtrlPressed && isEnterPressed) {
+										document.getElementById('save-edit-message-button')?.click();
+									}
+								}}
 							/>
 
 							<div class=" mt-2 mb-1 flex justify-end space-x-1.5 text-sm font-medium">
