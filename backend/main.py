@@ -357,7 +357,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             if "files" in data:
                 data = {**data}
                 rag_context, citations = get_rag_context(
-                    docs=data["files"],
+                    files=data["files"],
                     messages=data["messages"],
                     embedding_function=rag_app.state.EMBEDDING_FUNCTION,
                     k=rag_app.state.config.TOP_K,
