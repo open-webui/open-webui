@@ -587,22 +587,17 @@
 		});
 
 		let files = [];
-
 		if (model?.info?.meta?.knowledge ?? false) {
 			files = model.info.meta.knowledge;
 		}
-
+		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
 		files = [
 			...files,
-			...messages
-				.filter((message) => message?.files ?? null)
-				.map((message) =>
-					message.files.filter((item) =>
-						['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
-					)
-				)
-				.flat(1)
+			...(lastUserMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? [])
 		].filter(
+			// Remove duplicates
 			(item, index, array) =>
 				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
@@ -832,22 +827,17 @@
 		const responseMessage = history.messages[responseMessageId];
 
 		let files = [];
-
 		if (model?.info?.meta?.knowledge ?? false) {
 			files = model.info.meta.knowledge;
 		}
-
+		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
 		files = [
 			...files,
-			...messages
-				.filter((message) => message?.files ?? null)
-				.map((message) =>
-					message.files.filter((item) =>
-						['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
-					)
-				)
-				.flat(1)
+			...(lastUserMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? [])
 		].filter(
+			// Remove duplicates
 			(item, index, array) =>
 				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);

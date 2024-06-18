@@ -153,6 +153,7 @@
 
 			if (res) {
 				fileItem.status = 'processed';
+				fileItem.collection_name = res.collection_name;
 				files = files;
 			}
 		} catch (e) {
