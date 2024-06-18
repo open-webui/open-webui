@@ -586,19 +586,19 @@
 			}
 		});
 
-		let docs = [];
+		let files = [];
 
 		if (model?.info?.meta?.knowledge ?? false) {
-			docs = model.info.meta.knowledge;
+			files = model.info.meta.knowledge;
 		}
 
-		docs = [
-			...docs,
+		files = [
+			...files,
 			...messages
 				.filter((message) => message?.files ?? null)
 				.map((message) =>
 					message.files.filter((item) =>
-						['doc', 'collection', 'web_search_results'].includes(item.type)
+						['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
 					)
 				)
 				.flat(1)
@@ -634,8 +634,8 @@
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
 			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-			docs: docs.length > 0 ? docs : undefined,
-			citations: docs.length > 0,
+			files: files.length > 0 ? files : undefined,
+			citations: files.length > 0,
 			chat_id: $chatId
 		});
 
@@ -831,19 +831,19 @@
 		let _response = null;
 		const responseMessage = history.messages[responseMessageId];
 
-		let docs = [];
+		let files = [];
 
 		if (model?.info?.meta?.knowledge ?? false) {
-			docs = model.info.meta.knowledge;
+			files = model.info.meta.knowledge;
 		}
 
-		docs = [
-			...docs,
+		files = [
+			...files,
 			...messages
 				.filter((message) => message?.files ?? null)
 				.map((message) =>
 					message.files.filter((item) =>
-						['doc', 'collection', 'web_search_results'].includes(item.type)
+						['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
 					)
 				)
 				.flat(1)
@@ -937,8 +937,8 @@
 					frequency_penalty: $settings?.params?.frequency_penalty ?? undefined,
 					max_tokens: $settings?.params?.max_tokens ?? undefined,
 					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-					docs: docs.length > 0 ? docs : undefined,
-					citations: docs.length > 0,
+					files: files.length > 0 ? files : undefined,
+					citations: files.length > 0,
 					chat_id: $chatId
 				},
 				`${OPENAI_API_BASE_URL}`
