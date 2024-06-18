@@ -1321,7 +1321,7 @@
 	<div
 		class="h-screen max-h-[100dvh] {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
-			: ''} w-full max-w-full flex flex-col z-40"
+			: ''} w-full max-w-full flex flex-col"
 	>
 		{#if $settings?.backgroundImageUrl ?? null}
 			<div
@@ -1349,7 +1349,7 @@
 			<div
 				class="absolute top-[4.25rem] w-full {$showSidebar
 					? 'md:max-w-[calc(100%-260px)]'
-					: ''} z-0"
+					: ''} z-20"
 			>
 				<div class=" flex flex-col gap-1 w-full">
 					{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
