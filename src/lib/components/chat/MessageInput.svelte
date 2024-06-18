@@ -15,10 +15,13 @@
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
+		processDocToVectorDB,
 		uploadDocToVectorDB,
 		uploadWebToVectorDB,
 		uploadYoutubeTranscriptionToVectorDB
 	} from '$lib/apis/rag';
+
+	import { uploadFile } from '$lib/apis/files';
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Prompts from './MessageInput/PromptCommands.svelte';
@@ -86,43 +89,70 @@
 		element.scrollTop = element.scrollHeight;
 	};
 
-	const uploadDoc = async (file) => {
+	const uploadFileHandler = async (file) => {
 		console.log(file);
-
-		const doc = {
-			type: 'doc',
-			name: file.name,
-			collection_name: '',
-			upload_status: false,
-			error: ''
-		};
-
-		try {
-			files = [...files, doc];
-
-			if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
-				const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-					toast.error(error);
-					return null;
-				});
-
-				if (res) {
-					console.log(res);
-					const blob = new Blob([res.text], { type: 'text/plain' });
-					file = blobToFile(blob, `${file.name}.txt`);
-				}
-			}
-
-			const res = await uploadDocToVectorDB(localStorage.token, '', file);
+		// Check if the file is an audio file and transcribe/convert it to text file
+		if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
+			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+				toast.error(error);
+				return null;
+			});
 
 			if (res) {
-				doc.upload_status = true;
-				doc.collection_name = res.collection_name;
+				console.log(res);
+				const blob = new Blob([res.text], { type: 'text/plain' });
+				file = blobToFile(blob, `${file.name}.txt`);
+			}
+		}
+
+		// Upload the file to the server
+		const uploadedFile = await uploadFile(localStorage.token, file).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (uploadedFile) {
+			const fileItem = {
+				type: 'file',
+				file: uploadedFile,
+				id: uploadedFile.id,
+				name: file.name,
+				collection_name: '',
+				status: 'uploaded',
+				error: ''
+			};
+			files = [...files, fileItem];
+
+			// TODO: Check if tools & functions have files support to skip this step to delegate file processing
+			// Default Upload to VectorDB
+			if (
+				SUPPORTED_FILE_TYPE.includes(file['type']) ||
+				SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+			) {
+				processFileItem(fileItem);
+			} else {
+				toast.error(
+					$i18n.t(`Unknown File Type '{{file_type}}', but accepting and treating as plain text`, {
+						file_type: file['type']
+					})
+				);
+				processFileItem(fileItem);
+			}
+		}
+	};
+
+	const processFileItem = async (fileItem) => {
+		try {
+			const res = await processDocToVectorDB(localStorage.token, fileItem.id);
+
+			if (res) {
+				fileItem.status = 'processed';
+				fileItem.collection_name = res.collection_name;
 				files = files;
 			}
 		} catch (e) {
 			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== file.name);
+			files = files.filter((f) => f.id !== fileItem.id);
 			toast.error(e);
 		}
 	};
@@ -230,19 +260,8 @@
 								];
 							};
 							reader.readAsDataURL(file);
-						} else if (
-							SUPPORTED_FILE_TYPE.includes(file['type']) ||
-							SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-						) {
-							uploadDoc(file);
 						} else {
-							toast.error(
-								$i18n.t(
-									`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
-									{ file_type: file['type'] }
-								)
-							);
-							uploadDoc(file);
+							uploadFileHandler(file);
 						}
 					});
 				} else {
@@ -409,8 +428,6 @@
 								if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
 									if (visionCapableModels.length === 0) {
 										toast.error($i18n.t('Selected model(s) do not support image inputs'));
-										inputFiles = null;
-										filesInputElement.value = '';
 										return;
 									}
 									let reader = new FileReader();
@@ -422,30 +439,17 @@
 												url: `${event.target.result}`
 											}
 										];
-										inputFiles = null;
-										filesInputElement.value = '';
 									};
 									reader.readAsDataURL(file);
-								} else if (
-									SUPPORTED_FILE_TYPE.includes(file['type']) ||
-									SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-								) {
-									uploadDoc(file);
-									filesInputElement.value = '';
 								} else {
-									toast.error(
-										$i18n.t(
-											`Unknown File Type '{{file_type}}', but accepting and treating as plain text`,
-											{ file_type: file['type'] }
-										)
-									);
-									uploadDoc(file);
-									filesInputElement.value = '';
+									uploadFileHandler(file);
 								}
 							});
 						} else {
 							toast.error($i18n.t(`File not found.`));
 						}
+
+						filesInputElement.value = '';
 					}}
 				/>
 

@@ -61,7 +61,18 @@ def upload_file(
             f.close()
 
         file = Files.insert_new_file(
-            user.id, FileForm(**{"id": id, "filename": filename})
+            user.id,
+            FileForm(
+                **{
+                    "id": id,
+                    "filename": filename,
+                    "meta": {
+                        "content_type": file.content_type,
+                        "size": len(contents),
+                        "path": file_path,
+                    },
+                }
+            ),
         )
 
         if file:

@@ -55,6 +55,9 @@ from apps.webui.models.documents import (
     DocumentForm,
     DocumentResponse,
 )
+from apps.webui.models.files import (
+    Files,
+)
 
 from apps.rag.utils import (
     get_model_path,
@@ -1110,6 +1113,57 @@ def store_doc(
                     "status": True,
                     "collection_name": collection_name,
                     "filename": filename,
+                    "known_type": known_type,
+                }
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=e,
+            )
+    except Exception as e:
+        log.exception(e)
+        if "No pandoc was found" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
+
+
+class ProcessDocForm(BaseModel):
+    file_id: str
+
+
+@app.post("/process/doc")
+def process_doc(
+    form_data: ProcessDocForm,
+    user=Depends(get_current_user),
+):
+    try:
+        file = Files.get_file_by_id(form_data.file_id)
+        file_path = file.meta.get("path", f"{UPLOAD_DIR}/{file.filename}")
+
+        f = open(file_path, "rb")
+        if collection_name == None:
+            collection_name = calculate_sha256(f)[:63]
+        f.close()
+
+        loader, known_type = get_loader(
+            file.filename, file.meta.get("content_type"), file_path
+        )
+        data = loader.load()
+
+        try:
+            result = store_data_in_vector_db(data, collection_name)
+
+            if result:
+                return {
+                    "status": True,
+                    "collection_name": collection_name,
                     "known_type": known_type,
                 }
         except Exception as e:
