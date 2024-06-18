@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getDocs } from '$lib/apis/documents';
+	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
 	import {
 		getQuerySettings,
 		scanDocs,
@@ -217,8 +218,8 @@
 
 <ResetUploadDirConfirmDialog
 	bind:show={showResetUploadDirConfirm}
-	on:confirm={() => {
-		const res = resetUploadDir(localStorage.token).catch((error) => {
+	on:confirm={async () => {
+		const res = await deleteAllFiles(localStorage.token).catch((error) => {
 			toast.error(error);
 			return null;
 		});
