@@ -124,7 +124,11 @@
 				{/if}
 
 				<div class="flex items-center">
-					{$i18n.t(model?.info?.meta?.hidden ?? false ? 'Show Model' : 'Hide Model')}
+					{#if model?.info?.meta?.hidden ?? false}
+						{$i18n.t('Show Model')}
+					{:else}
+						{$i18n.t('Hide Model')}
+					{/if}
 				</div>
 			</DropdownMenu.Item>
 
