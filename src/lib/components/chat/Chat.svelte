@@ -1321,7 +1321,7 @@
 	<div
 		class="h-screen max-h-[100dvh] {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
-			: ''} w-full max-w-full flex flex-col"
+			: ''} w-full max-w-full flex flex-col z-40"
 	>
 		{#if $settings?.backgroundImageUrl ?? null}
 			<div
