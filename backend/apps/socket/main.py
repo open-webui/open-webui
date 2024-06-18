@@ -24,7 +24,9 @@ async def connect(sid, environ, auth):
         data = decode_token(auth["token"])
 
         if data is not None and "id" in data:
-            user = Users.get_user_by_id(data["id"])
+            from apps.webui.internal.db import SessionLocal
+
+            user = Users.get_user_by_id(SessionLocal(), data["id"])
 
         if user:
             SESSION_POOL[sid] = user.id

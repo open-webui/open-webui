@@ -1,10 +1,12 @@
-from pydantic import BaseModel
-from peewee import *
-from playhouse.shortcuts import model_to_dict
+from pydantic import BaseModel, ConfigDict
 from typing import List, Union, Optional
 import time
 import logging
-from apps.webui.internal.db import DB, JSONField
+
+from sqlalchemy import Column, String, Text, BigInteger, Boolean
+from sqlalchemy.orm import Session
+
+from apps.webui.internal.db import JSONField, Base
 from apps.webui.models.users import Users
 
 import json
@@ -21,20 +23,19 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 ####################
 
 
-class Function(Model):
-    id = CharField(unique=True)
-    user_id = CharField()
-    name = TextField()
-    type = TextField()
-    content = TextField()
-    meta = JSONField()
-    valves = JSONField()
-    is_active = BooleanField(default=False)
-    updated_at = BigIntegerField()
-    created_at = BigIntegerField()
+class Function(Base):
+    __tablename__ = "function"
 
-    class Meta:
-        database = DB
+    id = Column(String, primary_key=True)
+    user_id = Column(String)
+    name = Column(Text)
+    type = Column(Text)
+    content = Column(Text)
+    meta = Column(JSONField)
+    valves = Column(JSONField)
+    is_active = Column(Boolean)
+    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)
 
 
 class FunctionMeta(BaseModel):
@@ -52,6 +53,8 @@ class FunctionModel(BaseModel):
     is_active: bool = False
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 ####################
@@ -82,12 +85,9 @@ class FunctionValves(BaseModel):
 
 
 class FunctionsTable:
-    def __init__(self, db):
-        self.db = db
-        self.db.create_tables([Function])
 
     def insert_new_function(
-        self, user_id: str, type: str, form_data: FunctionForm
+        self, db: Session, user_id: str, type: str, form_data: FunctionForm
     ) -> Optional[FunctionModel]:
         function = FunctionModel(
             **{
@@ -100,19 +100,22 @@ class FunctionsTable:
         )
 
         try:
-            result = Function.create(**function.model_dump())
+            result = Function(**function.model_dump())
+            db.add(result)
+            db.commit()
+            db.refresh(result)
             if result:
-                return function
+                return FunctionModel.model_validate(result)
             else:
                 return None
         except Exception as e:
             print(f"Error creating tool: {e}")
             return None
 
-    def get_function_by_id(self, id: str) -> Optional[FunctionModel]:
+    def get_function_by_id(self, db: Session, id: str) -> Optional[FunctionModel]:
         try:
-            function = Function.get(Function.id == id)
-            return FunctionModel(**model_to_dict(function))
+            function = db.get(Function, id)
+            return FunctionModel.model_validate(function)
         except:
             return None
 
@@ -211,14 +214,11 @@ class FunctionsTable:
 
     def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:
         try:
-            query = Function.update(
+            db.query(Function).filter_by(id=id).update({
                 **updated,
-                updated_at=int(time.time()),
-            ).where(Function.id == id)
-            query.execute()
-
-            function = Function.get(Function.id == id)
-            return FunctionModel(**model_to_dict(function))
+                "updated_at": int(time.time()),
+            })
+            return self.get_function_by_id(db, id)
         except:
             return None
 
@@ -235,14 +235,12 @@ class FunctionsTable:
         except:
             return None
 
-    def delete_function_by_id(self, id: str) -> bool:
+    def delete_function_by_id(self, db: Session, id: str) -> bool:
         try:
-            query = Function.delete().where((Function.id == id))
-            query.execute()  # Remove the rows, return number of rows removed.
-
+            db.query(Function).filter_by(id=id).delete()
             return True
         except:
             return False
 
 
-Functions = FunctionsTable(DB)
+Functions = FunctionsTable()

@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import json
 
-
+from apps.webui.internal.db import get_db
 from apps.webui.models.users import Users
 from apps.webui.models.tools import Tools, ToolForm, ToolModel, ToolResponse
 from apps.webui.utils import load_toolkit_module_by_id
@@ -34,7 +34,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[ToolResponse])
-async def get_toolkits(user=Depends(get_verified_user)):
+async def get_toolkits(user=Depends(get_verified_user), db=Depends(get_db)):
     toolkits = [toolkit for toolkit in Tools.get_tools()]
     return toolkits
 
@@ -45,8 +45,8 @@ async def get_toolkits(user=Depends(get_verified_user)):
 
 
 @router.get("/export", response_model=List[ToolModel])
-async def get_toolkits(user=Depends(get_admin_user)):
-    toolkits = [toolkit for toolkit in Tools.get_tools()]
+async def get_toolkits(user=Depends(get_admin_user), db=Depends(get_db)):
+    toolkits = [toolkit for toolkit in Tools.get_tools(db)]
     return toolkits
 
 
@@ -57,7 +57,10 @@ async def get_toolkits(user=Depends(get_admin_user)):
 
 @router.post("/create", response_model=Optional[ToolResponse])
 async def create_new_toolkit(
-    request: Request, form_data: ToolForm, user=Depends(get_admin_user)
+    request: Request,
+    form_data: ToolForm,
+    user=Depends(get_admin_user),
+    db=Depends(get_db),
 ):
     if not form_data.id.isidentifier():
         raise HTTPException(
@@ -67,7 +70,7 @@ async def create_new_toolkit(
 
     form_data.id = form_data.id.lower()
 
-    toolkit = Tools.get_tool_by_id(form_data.id)
+    toolkit = Tools.get_tool_by_id(db, form_data.id)
     if toolkit == None:
         toolkit_path = os.path.join(TOOLS_DIR, f"{form_data.id}.py")
         try:
@@ -81,7 +84,7 @@ async def create_new_toolkit(
             TOOLS[form_data.id] = toolkit_module
 
             specs = get_tools_specs(TOOLS[form_data.id])
-            toolkit = Tools.insert_new_tool(user.id, form_data, specs)
+            toolkit = Tools.insert_new_tool(db, user.id, form_data, specs)
 
             tool_cache_dir = Path(CACHE_DIR) / "tools" / form_data.id
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -112,8 +115,8 @@ async def create_new_toolkit(
 
 
 @router.get("/id/{id}", response_model=Optional[ToolModel])
-async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
-    toolkit = Tools.get_tool_by_id(id)
+async def get_toolkit_by_id(id: str, user=Depends(get_admin_user), db=Depends(get_db)):
+    toolkit = Tools.get_tool_by_id(db, id)
 
     if toolkit:
         return toolkit
@@ -131,7 +134,11 @@ async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
 
 @router.post("/id/{id}/update", response_model=Optional[ToolModel])
 async def update_toolkit_by_id(
-    request: Request, id: str, form_data: ToolForm, user=Depends(get_admin_user)
+    request: Request,
+    id: str,
+    form_data: ToolForm,
+    user=Depends(get_admin_user),
+    db=Depends(get_db),
 ):
     toolkit_path = os.path.join(TOOLS_DIR, f"{id}.py")
 
@@ -153,7 +160,7 @@ async def update_toolkit_by_id(
         }
 
         print(updated)
-        toolkit = Tools.update_tool_by_id(id, updated)
+        toolkit = Tools.update_tool_by_id(db, id, updated)
 
         if toolkit:
             return toolkit
@@ -176,8 +183,10 @@ async def update_toolkit_by_id(
 
 
 @router.delete("/id/{id}/delete", response_model=bool)
-async def delete_toolkit_by_id(request: Request, id: str, user=Depends(get_admin_user)):
-    result = Tools.delete_tool_by_id(id)
+async def delete_toolkit_by_id(
+    request: Request, id: str, user=Depends(get_admin_user), db=Depends(get_db)
+):
+    result = Tools.delete_tool_by_id(db, id)
 
     if result:
         TOOLS = request.app.state.TOOLS

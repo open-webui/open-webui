@@ -1,10 +1,11 @@
-from pydantic import BaseModel
-from peewee import *
-from playhouse.shortcuts import model_to_dict
-from typing import List, Union, Optional
+from pydantic import BaseModel, ConfigDict
+from typing import List, Optional
 import time
 import logging
-from apps.webui.internal.db import DB, JSONField
+from sqlalchemy import String, Column, BigInteger
+from sqlalchemy.orm import Session
+
+from apps.webui.internal.db import Base, JSONField
 from apps.webui.models.users import Users
 
 import json
@@ -21,19 +22,18 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 ####################
 
 
-class Tool(Model):
-    id = CharField(unique=True)
-    user_id = CharField()
-    name = TextField()
-    content = TextField()
-    specs = JSONField()
-    meta = JSONField()
-    valves = JSONField()
-    updated_at = BigIntegerField()
-    created_at = BigIntegerField()
+class Tool(Base):
+    __tablename__ = "tool"
 
-    class Meta:
-        database = DB
+    id = Column(String, primary_key=True)
+    user_id = Column(String)
+    name = Column(String)
+    content = Column(String)
+    specs = Column(JSONField)
+    meta = Column(JSONField)
+    valves = Column(JSONField)
+    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)
 
 
 class ToolMeta(BaseModel):
@@ -50,6 +50,8 @@ class ToolModel(BaseModel):
     meta: ToolMeta
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 ####################
@@ -78,12 +80,9 @@ class ToolValves(BaseModel):
 
 
 class ToolsTable:
-    def __init__(self, db):
-        self.db = db
-        self.db.create_tables([Tool])
 
     def insert_new_tool(
-        self, user_id: str, form_data: ToolForm, specs: List[dict]
+        self, db: Session, user_id: str, form_data: ToolForm, specs: List[dict]
     ) -> Optional[ToolModel]:
         tool = ToolModel(
             **{
@@ -96,24 +95,27 @@ class ToolsTable:
         )
 
         try:
-            result = Tool.create(**tool.model_dump())
+            result = Tool(**tool.dict())
+            db.add(result)
+            db.commit()
+            db.refresh(result)
             if result:
-                return tool
+                return ToolModel.model_validate(result)
             else:
                 return None
         except Exception as e:
             print(f"Error creating tool: {e}")
             return None
 
-    def get_tool_by_id(self, id: str) -> Optional[ToolModel]:
+    def get_tool_by_id(self, db: Session, id: str) -> Optional[ToolModel]:
         try:
-            tool = Tool.get(Tool.id == id)
-            return ToolModel(**model_to_dict(tool))
+            tool = db.get(Tool, id)
+            return ToolModel.model_validate(tool)
         except:
             return None
 
-    def get_tools(self) -> List[ToolModel]:
-        return [ToolModel(**model_to_dict(tool)) for tool in Tool.select()]
+    def get_tools(self, db: Session) -> List[ToolModel]:
+        return [ToolModel.model_validate(tool) for tool in db.query(Tool).all()]
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:
@@ -180,25 +182,19 @@ class ToolsTable:
 
     def update_tool_by_id(self, id: str, updated: dict) -> Optional[ToolModel]:
         try:
-            query = Tool.update(
-                **updated,
-                updated_at=int(time.time()),
-            ).where(Tool.id == id)
-            query.execute()
-
-            tool = Tool.get(Tool.id == id)
-            return ToolModel(**model_to_dict(tool))
+            db.query(Tool).filter_by(id=id).update(
+                {**updated, "updated_at": int(time.time())}
+            )
+            return self.get_tool_by_id(db, id)
         except:
             return None
 
-    def delete_tool_by_id(self, id: str) -> bool:
+    def delete_tool_by_id(self, db: Session, id: str) -> bool:
         try:
-            query = Tool.delete().where((Tool.id == id))
-            query.execute()  # Remove the rows, return number of rows removed.
-
+            db.query(Tool).filter_by(id=id).delete()
             return True
         except:
             return False
 
 
-Tools = ToolsTable(DB)
+Tools = ToolsTable()

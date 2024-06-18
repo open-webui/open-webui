@@ -1,9 +1,10 @@
-from pydantic import BaseModel
-from peewee import *
-from playhouse.shortcuts import model_to_dict
+from pydantic import BaseModel, ConfigDict
 from typing import List, Union, Optional
 
-from apps.webui.internal.db import DB
+from sqlalchemy import Column, String, BigInteger
+from sqlalchemy.orm import Session
+
+from apps.webui.internal.db import Base
 from apps.webui.models.chats import Chats
 
 import time
@@ -14,15 +15,14 @@ import uuid
 ####################
 
 
-class Memory(Model):
-    id = CharField(unique=True)
-    user_id = CharField()
-    content = TextField()
-    updated_at = BigIntegerField()
-    created_at = BigIntegerField()
+class Memory(Base):
+    __tablename__ = "memory"
 
-    class Meta:
-        database = DB
+    id = Column(String, primary_key=True)
+    user_id = Column(String)
+    content = Column(String)
+    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)
 
 
 class MemoryModel(BaseModel):
@@ -32,6 +32,8 @@ class MemoryModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 ####################
 # Forms
@@ -39,12 +41,10 @@ class MemoryModel(BaseModel):
 
 
 class MemoriesTable:
-    def __init__(self, db):
-        self.db = db
-        self.db.create_tables([Memory])
 
     def insert_new_memory(
         self,
+        db: Session,
         user_id: str,
         content: str,
     ) -> Optional[MemoryModel]:
@@ -59,74 +59,73 @@ class MemoriesTable:
                 "updated_at": int(time.time()),
             }
         )
-        result = Memory.create(**memory.model_dump())
+        result = Memory(**memory.dict())
+        db.add(result)
+        db.commit()
+        db.refresh(result)
         if result:
-            return memory
+            return MemoryModel.model_validate(result)
         else:
             return None
 
     def update_memory_by_id(
         self,
+        db: Session,
         id: str,
         content: str,
     ) -> Optional[MemoryModel]:
         try:
-            memory = Memory.get(Memory.id == id)
-            memory.content = content
-            memory.updated_at = int(time.time())
-            memory.save()
-            return MemoryModel(**model_to_dict(memory))
+            db.query(Memory).filter_by(id=id).update(
+                {"content": content, "updated_at": int(time.time())}
+            )
+            return self.get_memory_by_id(db, id)
         except:
             return None
 
-    def get_memories(self) -> List[MemoryModel]:
+    def get_memories(self, db: Session) -> List[MemoryModel]:
         try:
-            memories = Memory.select()
-            return [MemoryModel(**model_to_dict(memory)) for memory in memories]
+            memories = db.query(Memory).all()
+            return [MemoryModel.model_validate(memory) for memory in memories]
         except:
             return None
 
-    def get_memories_by_user_id(self, user_id: str) -> List[MemoryModel]:
+    def get_memories_by_user_id(self, db: Session, user_id: str) -> List[MemoryModel]:
         try:
-            memories = Memory.select().where(Memory.user_id == user_id)
-            return [MemoryModel(**model_to_dict(memory)) for memory in memories]
+            memories = db.query(Memory).filter_by(user_id=user_id).all()
+            return [MemoryModel.model_validate(memory) for memory in memories]
         except:
             return None
 
-    def get_memory_by_id(self, id) -> Optional[MemoryModel]:
+    def get_memory_by_id(self, db: Session, id: str) -> Optional[MemoryModel]:
         try:
-            memory = Memory.get(Memory.id == id)
-            return MemoryModel(**model_to_dict(memory))
+            memory = db.get(Memory, id)
+            return MemoryModel.model_validate(memory)
         except:
             return None
 
-    def delete_memory_by_id(self, id: str) -> bool:
+    def delete_memory_by_id(self, db: Session, id: str) -> bool:
         try:
-            query = Memory.delete().where(Memory.id == id)
-            query.execute()  # Remove the rows, return number of rows removed.
-
+            db.query(Memory).filter_by(id=id).delete()
             return True
 
         except:
             return False
 
-    def delete_memories_by_user_id(self, user_id: str) -> bool:
+    def delete_memories_by_user_id(self, db: Session, user_id: str) -> bool:
         try:
-            query = Memory.delete().where(Memory.user_id == user_id)
-            query.execute()
-
+            db.query(Memory).filter_by(user_id=user_id).delete()
             return True
         except:
             return False
 
-    def delete_memory_by_id_and_user_id(self, id: str, user_id: str) -> bool:
+    def delete_memory_by_id_and_user_id(
+        self, db: Session, id: str, user_id: str
+    ) -> bool:
         try:
-            query = Memory.delete().where(Memory.id == id, Memory.user_id == user_id)
-            query.execute()
-
+            db.query(Memory).filter_by(id=id, user_id=user_id).delete()
             return True
         except:
             return False
 
 
-Memories = MemoriesTable(DB)
+Memories = MemoriesTable()

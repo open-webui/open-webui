@@ -1,10 +1,12 @@
-from pydantic import BaseModel
-from peewee import *
-from playhouse.shortcuts import model_to_dict
+from pydantic import BaseModel, ConfigDict
 from typing import List, Union, Optional
 import time
 import logging
-from apps.webui.internal.db import DB, JSONField
+
+from sqlalchemy import Column, String, BigInteger
+from sqlalchemy.orm import Session
+
+from apps.webui.internal.db import JSONField, Base
 
 import json
 
@@ -18,15 +20,14 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 ####################
 
 
-class File(Model):
-    id = CharField(unique=True)
-    user_id = CharField()
-    filename = TextField()
-    meta = JSONField()
-    created_at = BigIntegerField()
+class File(Base):
+    __tablename__ = "file"
 
-    class Meta:
-        database = DB
+    id = Column(String, primary_key=True)
+    user_id = Column(String)
+    filename = Column(String)
+    meta = Column(JSONField)
+    created_at = Column(BigInteger)
 
 
 class FileModel(BaseModel):
@@ -36,6 +37,7 @@ class FileModel(BaseModel):
     meta: dict
     created_at: int  # timestamp in epoch
 
+    model_config = ConfigDict(from_attributes=True)
 
 ####################
 # Forms
@@ -57,11 +59,8 @@ class FileForm(BaseModel):
 
 
 class FilesTable:
-    def __init__(self, db):
-        self.db = db
-        self.db.create_tables([File])
 
-    def insert_new_file(self, user_id: str, form_data: FileForm) -> Optional[FileModel]:
+    def insert_new_file(self, db: Session, user_id: str, form_data: FileForm) -> Optional[FileModel]:
         file = FileModel(
             **{
                 **form_data.model_dump(),
@@ -71,42 +70,41 @@ class FilesTable:
         )
 
         try:
-            result = File.create(**file.model_dump())
+            result = File(**file.model_dump())
+            db.add(result)
+            db.commit()
+            db.refresh(result)
             if result:
-                return file
+                return FileModel.model_validate(result)
             else:
                 return None
         except Exception as e:
             print(f"Error creating tool: {e}")
             return None
 
-    def get_file_by_id(self, id: str) -> Optional[FileModel]:
+    def get_file_by_id(self, db: Session, id: str) -> Optional[FileModel]:
         try:
-            file = File.get(File.id == id)
-            return FileModel(**model_to_dict(file))
+            file = db.get(File, id)
+            return FileModel.model_validate(file)
         except:
             return None
 
-    def get_files(self) -> List[FileModel]:
-        return [FileModel(**model_to_dict(file)) for file in File.select()]
+    def get_files(self, db: Session) -> List[FileModel]:
+        return [FileModel.model_validate(file) for file in db.query(File).all()]
 
-    def delete_file_by_id(self, id: str) -> bool:
+    def delete_file_by_id(self, db: Session, id: str) -> bool:
         try:
-            query = File.delete().where((File.id == id))
-            query.execute()  # Remove the rows, return number of rows removed.
-
+            db.query(File).filter_by(id=id).delete()
             return True
         except:
             return False
 
-    def delete_all_files(self) -> bool:
+    def delete_all_files(self, db: Session) -> bool:
         try:
-            query = File.delete()
-            query.execute()  # Remove the rows, return number of rows removed.
-
+            db.query(File).delete()
             return True
         except:
             return False
 
 
-Files = FilesTable(DB)
+Files = FilesTable()

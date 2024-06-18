@@ -11,6 +11,7 @@ import logging
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
+from apps.webui.internal.db import get_db
 from apps.webui.models.models import Models
 from apps.webui.models.users import Users
 from constants import ERROR_MESSAGES
@@ -353,12 +354,13 @@ async def generate_chat_completion(
     form_data: dict,
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
+    db=Depends(get_db),
 ):
     idx = 0
     payload = {**form_data}
 
     model_id = form_data.get("model")
-    model_info = Models.get_model_by_id(model_id)
+    model_info = Models.get_model_by_id(db, model_id)
 
     if model_info:
         if model_info.base_model_id:

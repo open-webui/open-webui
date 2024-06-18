@@ -1,14 +1,12 @@
-from pydantic import BaseModel
-from peewee import *
-from playhouse.shortcuts import model_to_dict
-from typing import List, Union, Optional
+from pydantic import BaseModel, ConfigDict
+from typing import List, Optional
 import time
 import logging
 
-from utils.utils import decode_token
-from utils.misc import get_gravatar_url
+from sqlalchemy import String, Column, BigInteger
+from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import DB
+from apps.webui.internal.db import Base
 
 import json
 
@@ -22,20 +20,21 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 ####################
 
 
-class Document(Model):
-    collection_name = CharField(unique=True)
-    name = CharField(unique=True)
-    title = TextField()
-    filename = TextField()
-    content = TextField(null=True)
-    user_id = CharField()
-    timestamp = BigIntegerField()
+class Document(Base):
+    __tablename__ = "document"
 
-    class Meta:
-        database = DB
+    collection_name = Column(String, primary_key=True)
+    name = Column(String, unique=True)
+    title = Column(String)
+    filename = Column(String)
+    content = Column(String, nullable=True)
+    user_id = Column(String)
+    timestamp = Column(BigInteger)
 
 
 class DocumentModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     collection_name: str
     name: str
     title: str
@@ -72,12 +71,9 @@ class DocumentForm(DocumentUpdateForm):
 
 
 class DocumentsTable:
-    def __init__(self, db):
-        self.db = db
-        self.db.create_tables([Document])
 
     def insert_new_doc(
-        self, user_id: str, form_data: DocumentForm
+        self, db: Session, user_id: str, form_data: DocumentForm
     ) -> Optional[DocumentModel]:
         document = DocumentModel(
             **{
@@ -88,73 +84,69 @@ class DocumentsTable:
         )
 
         try:
-            result = Document.create(**document.model_dump())
+            result = Document(**document.model_dump())
+            db.add(result)
+            db.commit()
+            db.refresh(result)
             if result:
-                return document
+                return DocumentModel.model_validate(result)
             else:
                 return None
         except:
             return None
 
-    def get_doc_by_name(self, name: str) -> Optional[DocumentModel]:
+    def get_doc_by_name(self, db: Session, name: str) -> Optional[DocumentModel]:
         try:
-            document = Document.get(Document.name == name)
-            return DocumentModel(**model_to_dict(document))
+            document = db.query(Document).filter_by(name=name).first()
+            return DocumentModel.model_validate(document) if document else None
         except:
             return None
 
-    def get_docs(self) -> List[DocumentModel]:
-        return [
-            DocumentModel(**model_to_dict(doc))
-            for doc in Document.select()
-            # .limit(limit).offset(skip)
-        ]
+    def get_docs(self, db: Session) -> List[DocumentModel]:
+        return [DocumentModel.model_validate(doc) for doc in db.query(Document).all()]
 
     def update_doc_by_name(
-        self, name: str, form_data: DocumentUpdateForm
+        self, db: Session, name: str, form_data: DocumentUpdateForm
     ) -> Optional[DocumentModel]:
         try:
-            query = Document.update(
-                title=form_data.title,
-                name=form_data.name,
-                timestamp=int(time.time()),
-            ).where(Document.name == name)
-            query.execute()
-
-            doc = Document.get(Document.name == form_data.name)
-            return DocumentModel(**model_to_dict(doc))
+            db.query(Document).filter_by(name=name).update(
+                {
+                    "title": form_data.title,
+                    "name": form_data.name,
+                    "timestamp": int(time.time()),
+                }
+            )
+            return self.get_doc_by_name(db, form_data.name)
         except Exception as e:
             log.exception(e)
             return None
 
     def update_doc_content_by_name(
-        self, name: str, updated: dict
+        self, db: Session, name: str, updated: dict
     ) -> Optional[DocumentModel]:
         try:
-            doc = self.get_doc_by_name(name)
+            doc = self.get_doc_by_name(db, name)
             doc_content = json.loads(doc.content if doc.content else "{}")
             doc_content = {**doc_content, **updated}
 
-            query = Document.update(
-                content=json.dumps(doc_content),
-                timestamp=int(time.time()),
-            ).where(Document.name == name)
-            query.execute()
+            db.query(Document).filter_by(name=name).update(
+                {
+                    "content": json.dumps(doc_content),
+                    "timestamp": int(time.time()),
+                }
+            )
 
-            doc = Document.get(Document.name == name)
-            return DocumentModel(**model_to_dict(doc))
+            return self.get_doc_by_name(db, name)
         except Exception as e:
             log.exception(e)
             return None
 
-    def delete_doc_by_name(self, name: str) -> bool:
+    def delete_doc_by_name(self, db: Session, name: str) -> bool:
         try:
-            query = Document.delete().where((Document.name == name))
-            query.execute()  # Remove the rows, return number of rows removed.
-
+            db.query(Document).filter_by(name=name).delete()
             return True
         except:
             return False
 
 
-Documents = DocumentsTable(DB)
+Documents = DocumentsTable()

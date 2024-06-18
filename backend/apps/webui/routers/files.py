@@ -20,6 +20,7 @@ from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from pydantic import BaseModel
 import json
 
+from apps.webui.internal.db import get_db
 from apps.webui.models.files import (
     Files,
     FileForm,
@@ -53,6 +54,7 @@ router = APIRouter()
 def upload_file(
     file: UploadFile = File(...),
     user=Depends(get_verified_user),
+    db=Depends(get_db)
 ):
     log.info(f"file.content_type: {file.content_type}")
     try:
@@ -70,6 +72,7 @@ def upload_file(
             f.close()
 
         file = Files.insert_new_file(
+            db,
             user.id,
             FileForm(
                 **{
@@ -106,8 +109,8 @@ def upload_file(
 
 
 @router.get("/", response_model=List[FileModel])
-async def list_files(user=Depends(get_verified_user)):
-    files = Files.get_files()
+async def list_files(user=Depends(get_verified_user), db=Depends(get_db)):
+    files = Files.get_files(db)
     return files
 
 
@@ -117,8 +120,8 @@ async def list_files(user=Depends(get_verified_user)):
 
 
 @router.delete("/all")
-async def delete_all_files(user=Depends(get_admin_user)):
-    result = Files.delete_all_files()
+async def delete_all_files(user=Depends(get_admin_user), db=Depends(get_db)):
+    result = Files.delete_all_files(db)
 
     if result:
         folder = f"{UPLOAD_DIR}"
@@ -154,8 +157,8 @@ async def delete_all_files(user=Depends(get_admin_user)):
 
 
 @router.get("/{id}", response_model=Optional[FileModel])
-async def get_file_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+async def get_file_by_id(id: str, user=Depends(get_verified_user), db=Depends(get_db)):
+    file = Files.get_file_by_id(db, id)
 
     if file:
         return file
@@ -172,8 +175,8 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.get("/{id}/content", response_model=Optional[FileModel])
-async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+async def get_file_content_by_id(id: str, user=Depends(get_verified_user), db=Depends(get_db)):
+    file = Files.get_file_by_id(db, id)
 
     if file:
         file_path = Path(file.meta["path"])
@@ -223,11 +226,11 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.delete("/{id}")
-async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
-    file = Files.get_file_by_id(id)
+async def delete_file_by_id(id: str, user=Depends(get_verified_user), db=Depends(get_db)):
+    file = Files.get_file_by_id(db, id)
 
     if file:
-        result = Files.delete_file_by_id(id)
+        result = Files.delete_file_by_id(db, id)
         if result:
             return {"message": "File deleted successfully"}
         else:
