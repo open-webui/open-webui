@@ -354,10 +354,10 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 print(f"tool_context: {context}")
 
             # If docs field is present, generate RAG completions
-            if "docs" in data:
+            if "files" in data:
                 data = {**data}
                 rag_context, citations = get_rag_context(
-                    docs=data["docs"],
+                    docs=data["files"],
                     messages=data["messages"],
                     embedding_function=rag_app.state.EMBEDDING_FUNCTION,
                     k=rag_app.state.config.TOP_K,
@@ -369,8 +369,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 if rag_context:
                     context += ("\n" if context != "" else "") + rag_context
 
-                del data["docs"]
-
+                del data["files"]
                 log.debug(f"rag_context: {rag_context}, citations: {citations}")
 
             if context != "":
@@ -1378,7 +1377,6 @@ async def update_pipeline_valves(
             status_code=(r.status_code if r is not None else status.HTTP_404_NOT_FOUND),
             detail=detail,
         )
-
 
 
 @app.get("/api/config")
