@@ -22,7 +22,12 @@
 	} from '$lib/apis/rag';
 
 	import { uploadFile } from '$lib/apis/files';
-	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS, WEBUI_BASE_URL } from '$lib/constants';
+	import {
+		SUPPORTED_FILE_TYPE,
+		SUPPORTED_FILE_EXTENSIONS,
+		WEBUI_BASE_URL,
+		WEBUI_API_BASE_URL
+	} from '$lib/constants';
 
 	import Prompts from './MessageInput/PromptCommands.svelte';
 	import Suggestions from './MessageInput/Suggestions.svelte';
@@ -116,6 +121,7 @@
 				type: 'file',
 				file: uploadedFile,
 				id: uploadedFile.id,
+				url: `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`,
 				name: file.name,
 				collection_name: '',
 				status: 'uploaded',

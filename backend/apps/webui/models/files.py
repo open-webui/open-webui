@@ -42,7 +42,7 @@ class FileModel(BaseModel):
 ####################
 
 
-class FileResponse(BaseModel):
+class FileModelResponse(BaseModel):
     id: str
     user_id: str
     filename: str

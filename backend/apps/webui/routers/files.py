@@ -12,12 +12,20 @@ from fastapi import (
 
 from datetime import datetime, timedelta
 from typing import List, Union, Optional
+from pathlib import Path
 
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
+
 from pydantic import BaseModel
 import json
 
-from apps.webui.models.files import Files, FileForm, FileModel, FileResponse
+from apps.webui.models.files import (
+    Files,
+    FileForm,
+    FileModel,
+    FileModelResponse,
+)
 from utils.utils import get_verified_user, get_admin_user
 from constants import ERROR_MESSAGES
 
@@ -114,6 +122,35 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user)):
 
     if file:
         return file
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# Get File Content By Id
+############################
+
+
+@router.get("/{id}/content", response_model=Optional[FileModel])
+async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
+    file = Files.get_file_by_id(id)
+
+    if file:
+        file_path = Path(file.meta["path"])
+
+        # Check if the file already exists in the cache
+        if file_path.is_file():
+
+            print(f"file_path: {file_path}")
+            return FileResponse(file_path)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
