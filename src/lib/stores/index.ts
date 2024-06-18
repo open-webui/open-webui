@@ -92,6 +92,8 @@ type Settings = {
 	top_k?: string;
 	top_p?: string;
 	num_ctx?: string;
+	num_batch?: string;
+	num_keep?: string;
 	options?: ModelOptions;
 };
 

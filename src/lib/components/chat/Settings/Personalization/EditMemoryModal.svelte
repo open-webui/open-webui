@@ -1,22 +1,33 @@
 <script>
 	import { createEventDispatcher, getContext } from 'svelte';
+	import { toast } from 'svelte-sonner';
+
+	import { updateMemoryById } from '$lib/apis/memories';
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { addNewMemory, updateMemoryById } from '$lib/apis/memories';
-	import { toast } from 'svelte-sonner';
 
 	const dispatch = createEventDispatcher();
 
 	export let show;
+	export let memory = {};
+
 	const i18n = getContext('i18n');
 
 	let loading = false;
 	let content = '';
 
+	$: if (show) {
+		setContent();
+	}
+
+	const setContent = () => {
+		content = memory.content;
+	};
+
 	const submitHandler = async () => {
 		loading = true;
 
-		const res = await addNewMemory(localStorage.token, content).catch((error) => {
+		const res = await updateMemoryById(localStorage.token, memory.id, content).catch((error) => {
 			toast.error(error);
 
 			return null;
@@ -24,10 +35,9 @@
 
 		if (res) {
 			console.log(res);
-			toast.success('Memory added successfully');
-			content = '';
-			show = false;
+			toast.success('Memory updated successfully');
 			dispatch('save');
+			show = false;
 		}
 
 		loading = false;
@@ -38,7 +48,7 @@
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center">
-				{$i18n.t('Add Memory')}
+				{$i18n.t('Edit Memory')}
 			</div>
 			<button
 				class="self-center"
@@ -88,7 +98,7 @@
 							type="submit"
 							disabled={loading}
 						>
-							{$i18n.t('Add')}
+							{$i18n.t('Update')}
 
 							{#if loading}
 								<div class="ml-2 self-center">

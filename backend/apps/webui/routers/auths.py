@@ -33,7 +33,11 @@ from utils.utils import (
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from config import WEBUI_AUTH, WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+from config import (
+    WEBUI_AUTH,
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
+    WEBUI_AUTH_TRUSTED_NAME_HEADER,
+)
 
 router = APIRouter()
 
@@ -110,11 +114,16 @@ async def signin(request: Request, form_data: SigninForm):
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
 
         trusted_email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower()
+        trusted_name = trusted_email
+        if WEBUI_AUTH_TRUSTED_NAME_HEADER:
+            trusted_name = request.headers.get(
+                WEBUI_AUTH_TRUSTED_NAME_HEADER, trusted_email
+            )
         if not Users.get_user_by_email(trusted_email.lower()):
             await signup(
                 request,
                 SignupForm(
-                    email=trusted_email, password=str(uuid.uuid4()), name=trusted_email
+                    email=trusted_email, password=str(uuid.uuid4()), name=trusted_name
                 ),
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)

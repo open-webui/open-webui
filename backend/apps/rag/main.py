@@ -73,6 +73,7 @@ from apps.rag.search.serper import search_serper
 from apps.rag.search.serpstack import search_serpstack
 from apps.rag.search.serply import search_serply
 from apps.rag.search.duckduckgo import search_duckduckgo
+from apps.rag.search.tavily import search_tavily
 
 from utils.misc import (
     calculate_sha256,
@@ -119,6 +120,7 @@ from config import (
     SERPSTACK_HTTPS,
     SERPER_API_KEY,
     SERPLY_API_KEY,
+    TAVILY_API_KEY,
     RAG_WEB_SEARCH_RESULT_COUNT,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     RAG_EMBEDDING_OPENAI_BATCH_SIZE,
@@ -172,6 +174,7 @@ app.state.config.SERPSTACK_API_KEY = SERPSTACK_API_KEY
 app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
 app.state.config.SERPER_API_KEY = SERPER_API_KEY
 app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
+app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 
@@ -400,6 +403,7 @@ async def get_rag_config(user=Depends(get_admin_user)):
                 "serpstack_https": app.state.config.SERPSTACK_HTTPS,
                 "serper_api_key": app.state.config.SERPER_API_KEY,
                 "serply_api_key": app.state.config.SERPLY_API_KEY,
+                "tavily_api_key": app.state.config.TAVILY_API_KEY,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -428,6 +432,7 @@ class WebSearchConfig(BaseModel):
     serpstack_https: Optional[bool] = None
     serper_api_key: Optional[str] = None
     serply_api_key: Optional[str] = None
+    tavily_api_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
 
@@ -479,6 +484,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         app.state.config.SERPSTACK_HTTPS = form_data.web.search.serpstack_https
         app.state.config.SERPER_API_KEY = form_data.web.search.serper_api_key
         app.state.config.SERPLY_API_KEY = form_data.web.search.serply_api_key
+        app.state.config.TAVILY_API_KEY = form_data.web.search.tavily_api_key
         app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = form_data.web.search.result_count
         app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
@@ -508,6 +514,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
                 "serpstack_https": app.state.config.SERPSTACK_HTTPS,
                 "serper_api_key": app.state.config.SERPER_API_KEY,
                 "serply_api_key": app.state.config.SERPLY_API_KEY,
+                "tavily_api_key": app.state.config.TAVILY_API_KEY,
                 "result_count": app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             },
@@ -756,7 +763,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
     - SERPSTACK_API_KEY
     - SERPER_API_KEY
     - SERPLY_API_KEY
-
+    - TAVILY_API_KEY
     Args:
         query (str): The query to search for
     """
@@ -825,6 +832,15 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             raise Exception("No SERPLY_API_KEY found in environment variables")
     elif engine == "duckduckgo":
         return search_duckduckgo(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
+    elif engine == "tavily":
+        if app.state.config.TAVILY_API_KEY:
+            return search_tavily(
+                app.state.config.TAVILY_API_KEY,
+                query,
+                app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            )
+        else:
+            raise Exception("No TAVILY_API_KEY found in environment variables")
     else:
         raise Exception("No search engine API key found in environment variables")
 
