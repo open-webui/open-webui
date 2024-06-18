@@ -1,0 +1,4 @@
+services:
+  open-webui:
+    volumes:
+      - ${OPEN_WEBUI_DATA_DIR-./webui-data}:/app/backend/data

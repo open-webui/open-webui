@@ -74,6 +74,7 @@ usage() {
     echo "  --enable-api[port=PORT]    Enable API and expose it on the specified port."
     echo "  --webui[port=PORT]         Set the port for the web user interface."
     echo "  --data[folder=PATH]        Bind mount for ollama data folder (by default will create the 'ollama' volume)."
+    echo "  --webui-data[folder=PATH]  Bind mount for open-webui data folder (by default will create the 'open-webui' volume)."
     echo "  --build                    Build the docker image before running the compose project."
     echo "  --drop                     Drop the compose project."
     echo "  -q, --quiet                Run script in headless mode."
@@ -86,7 +87,7 @@ usage() {
     echo "  $0 --enable-api[port=11435]"
     echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=3000]"
     echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=3000] --data[folder=./ollama-data]"
-    echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=3000] --data[folder=./ollama-data] --build"
+    echo "  $0 --enable-gpu[count=1] --enable-api[port=12345] --webui[port=3000] --data[folder=./ollama-data] --webui-data[folder=./webui-data] --build"
     echo ""
     echo "This script configures and runs a docker-compose setup with optional GPU support, API exposure, and web UI configuration."
     echo "About the gpu to use, the script automatically detects it using the "lspci" command."
@@ -125,9 +126,18 @@ while [[ $# -gt 0 ]]; do
             value=$(extract_value "$key")
             webui_port=${value:-3000}
             ;;
-        --data*)
+        --data*) # Maintain old --data flag for backward compatibility but this should be removed in the future
             value=$(extract_value "$key")
             data_dir=${value:-"./ollama-data"}
+            echo "WARNING: --data flag is deprecated. Please use --ollama-data instead."
+            ;;
+        --ollama-data*)
+            value=$(extract_value "$key")
+            data_dir=${value:-"./ollama-data"}
+            ;;
+        --open-webui-data*) # Used open-webui-data instead of webui-data because of the conflict with the webui flag catching webui-data
+            value=$(extract_value "$key")
+            webui_data_dir=${value:-"./webui-data"}
             ;;
         --drop)
             kill_compose=true
@@ -179,8 +189,13 @@ else
         fi
     fi
     if [[ -n $data_dir ]]; then
-        DEFAULT_COMPOSE_COMMAND+=" -f docker-compose.data.yaml"
+        DEFAULT_COMPOSE_COMMAND+=" -f docker-compose.ollamadata.yaml"
         export OLLAMA_DATA_DIR=$data_dir # Set OLLAMA_DATA_DIR environment variable
+    fi
+    if [[ -n $webui_data_dir ]]; then
+        echo "LOGGING: $webui_data_dir"
+        DEFAULT_COMPOSE_COMMAND+=" -f docker-compose.webuidata.yaml"
+        export OPEN_WEBUI_DATA_DIR=$webui_data_dir # Set OPEN_WEBUI_DATA_DIR environment variable
     fi
     if [[ -n $webui_port ]]; then
         export OPEN_WEBUI_PORT=$webui_port # Set OPEN_WEBUI_PORT environment variable
@@ -199,7 +214,8 @@ echo -e "${WHITE}${BOLD}Current Setup:${NC}"
 echo -e "   ${GREEN}${BOLD}GPU Driver:${NC} ${OLLAMA_GPU_DRIVER:-Not Enabled}"
 echo -e "   ${GREEN}${BOLD}GPU Count:${NC} ${OLLAMA_GPU_COUNT:-Not Enabled}"
 echo -e "   ${GREEN}${BOLD}WebAPI Port:${NC} ${OLLAMA_WEBAPI_PORT:-Not Enabled}"
-echo -e "   ${GREEN}${BOLD}Data Folder:${NC} ${data_dir:-Using ollama volume}"
+echo -e "   ${GREEN}${BOLD}Ollama Data Folder:${NC} ${data_dir:-Using ollama volume}"
+echo -e "   ${GREEN}${BOLD}WebUI Data Folder:${NC} ${webui_data_dir:-Using open-webui volume}"
 echo -e "   ${GREEN}${BOLD}WebUI Port:${NC} $webui_port"
 echo
 
