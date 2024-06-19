@@ -138,7 +138,7 @@
 				processFileItem(fileItem);
 			} else {
 				toast.error(
-					$i18n.t(`Unknown File Type '{{file_type}}', but accepting and treating as plain text`, {
+					$i18n.t(`Unknown file type '{{file_type}}'. Proceeding with the file upload anyway.`, {
 						file_type: file['type']
 					})
 				);
@@ -158,8 +158,11 @@
 			}
 		} catch (e) {
 			// Remove the failed doc from the files array
-			files = files.filter((f) => f.id !== fileItem.id);
+			// files = files.filter((f) => f.id !== fileItem.id);
 			toast.error(e);
+
+			fileItem.status = 'processed';
+			files = files;
 		}
 	};
 
@@ -214,7 +217,7 @@
 			}
 		} catch (e) {
 			// Remove the failed doc from the files array
-			// files = files.filter((f) => f.name !== url);
+			files = files.filter((f) => f.name !== url);
 			toast.error(e);
 		}
 	};
