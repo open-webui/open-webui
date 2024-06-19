@@ -32,20 +32,51 @@ def query_doc(
     query: str,
     embedding_function,
     k: int,
+    query_template: str = "{text}",
 ):
-    try:
-        collection = CHROMA_CLIENT.get_collection(name=collection_name)
-        query_embeddings = embedding_function(query)
-
-        result = collection.query(
-            query_embeddings=[query_embeddings],
-            n_results=k,
-        )
-
-        log.info(f"query_doc:result {result}")
+    search_url = "https://localhost:9200/document-index/_search"
+    source_excludes = ["content_embedding"]
+    search_body = {
+        "_source": {
+            # Don't return vector, unnecessary
+            "excludes": source_excludes,
+        },
+        "size": 10,
+        "query": {
+            "hybrid": {
+                "queries": [
+                    {
+                        "match": {
+                            "text": {"query": query},
+                        }
+                    },
+                    {
+                        "neural": {
+                            "content_embedding": {
+                                "query_text": query_template.format(text=query),
+                                "model_id": "53PaBpABpJ19Uw4ynHdo",
+                                "k": k,
+                            }
+                        }
+                    },
+                ]
+            }
+        },
+    }
+    headers = {"Content-Type": "application/json"}
+    response = requests.get(
+        search_url,
+        headers=headers,
+        json=search_body,
+        verify=False,
+    )
+    if response.status_code == 200:
+        result = response.json()
+        log.info(f"query_doc_opensearch:result {result}")
         return result
-    except Exception as e:
-        raise e
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
 
 
 def query_doc_with_hybrid_search(
@@ -107,9 +138,10 @@ def merge_and_sort_query_results(query_results, k, reverse=False):
     combined_metadatas = []
 
     for data in query_results:
-        combined_distances.extend(data["distances"][0])
-        combined_documents.extend(data["documents"][0])
-        combined_metadatas.extend(data["metadatas"][0])
+        for hits in data["hits"]["hits"]:
+            combined_distances.append(hits["_score"])
+            combined_documents.append(hits["_source"]["text"])
+            combined_metadatas.append(hits["_source"])
 
     # Create a list of tuples (distance, document, metadata)
     combined = list(zip(combined_distances, combined_documents, combined_metadatas))
