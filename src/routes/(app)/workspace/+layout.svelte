@@ -82,13 +82,6 @@
 			>
 				{$i18n.t('Functions')}
 			</a>
-
-			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/playground')
-					? 'bg-gray-50 dark:bg-gray-850'
-					: ''} transition"
-				href="/workspace/playground">{$i18n.t('Playground')}</a
-			>
 		</div>
 	</div>
 
