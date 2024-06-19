@@ -1,15 +1,15 @@
+import os
+import logging
 import json
 
 from peewee import *
 from peewee_migrate import Router
-from playhouse.db_url import connect
+
+from apps.webui.internal.wrappers import register_connection
 from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL, BACKEND_DIR
-import os
-import logging
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])
-
 
 class JSONField(TextField):
     def db_value(self, value):
@@ -19,7 +19,6 @@ class JSONField(TextField):
         if value is not None:
             return json.loads(value)
 
-
 # Check if the file exists
 if os.path.exists(f"{DATA_DIR}/ollama.db"):
     # Rename the file
@@ -28,12 +27,26 @@ if os.path.exists(f"{DATA_DIR}/ollama.db"):
 else:
     pass
 
-DB = connect(DATABASE_URL)
-log.info(f"Connected to a {DB.__class__.__name__} database.")
+
+# The `register_connection` function encapsulates the logic for setting up 
+# the database connection based on the connection string, while `connect` 
+# is a Peewee-specific method to manage the connection state and avoid errors 
+# when a connection is already open.
+try:
+    DB = register_connection(DATABASE_URL)
+    log.info(f"Connected to a {DB.__class__.__name__} database.")
+except Exception as e:
+    log.error(f"Failed to initialize the database connection: {e}")
+    raise
+
 router = Router(
     DB,
     migrate_dir=BACKEND_DIR / "apps" / "webui" / "internal" / "migrations",
     logger=log,
 )
 router.run()
-DB.connect(reuse_if_open=True)
+try:
+    DB.connect(reuse_if_open=True)
+except OperationalError as e:
+    log.info(f"Failed to connect to database again due to: {e}")
+    pass
