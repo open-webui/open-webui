@@ -2,6 +2,7 @@ import logging
 
 from fastapi import Request, UploadFile, File
 from fastapi import Depends, HTTPException, status
+from fastapi.responses import Response
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -47,7 +48,23 @@ router = APIRouter()
 
 
 @router.get("/", response_model=UserResponse)
-async def get_session_user(user=Depends(get_current_user)):
+async def get_session_user(
+    request: Request, response: Response, user=Depends(get_current_user)
+):
+    token = create_token(
+        data={"id": user.id},
+        expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
+    )
+
+    # Set the cookie token
+    response.set_cookie(
+        key="token",
+        value=token,
+        httponly=True,  # Ensures the cookie is not accessible via JavaScript
+        secure=True,  # Ensures the cookie is sent over https
+        samesite="lax",
+    )
+
     return {
         "id": user.id,
         "email": user.email,

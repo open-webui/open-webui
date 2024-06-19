@@ -90,7 +90,8 @@ export const getSessionUser = async (token: string) => {
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

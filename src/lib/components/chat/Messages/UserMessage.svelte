@@ -104,7 +104,7 @@
 									type="button"
 									on:click={async () => {
 										if (file?.url) {
-											getFileContentById(localStorage.token, file.id).then((blob) => {
+											getFileContentById(file.id).then((blob) => {
 												if (blob) {
 													const url = URL.createObjectURL(blob);
 													window.open(url, '_blank').focus();
