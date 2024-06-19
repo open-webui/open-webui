@@ -363,7 +363,7 @@
 							files = [
 								...files,
 								{
-									type: e?.detail?.type ?? 'doc',
+									type: e?.detail?.type ?? 'file',
 									...e.detail,
 									status: 'processed'
 								}

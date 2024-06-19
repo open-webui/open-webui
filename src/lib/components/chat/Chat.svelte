@@ -323,7 +323,7 @@
 		} else if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
 			console.log('wait');
-		} else if (files.length > 0 && files.filter((file) => file.status === 'processed').length > 0) {
+		} else if (files.length > 0 && files.filter((file) => file.status !== 'processed').length > 0) {
 			// Upload not done
 			toast.error(
 				$i18n.t(
