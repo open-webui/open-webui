@@ -204,6 +204,7 @@
 		searchValue = '';
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 	}}
+	closeFocus={false}
 >
 	<DropdownMenu.Trigger class="relative w-full" aria-label={placeholder}>
 		<div
