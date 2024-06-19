@@ -280,6 +280,13 @@ async def get_function_call_response(
                             "__files__": files,
                         }
 
+                    if "__model__" in sig.parameters:
+                        # Call the function with the '__model__' parameter included
+                        params = {
+                            **params,
+                            "__model__": model,
+                        }
+
                     if "__id__" in sig.parameters:
                         # Call the function with the '__id__' parameter included
                         params = {
