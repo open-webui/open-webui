@@ -280,6 +280,13 @@ async def get_function_call_response(
                             "__files__": files,
                         }
 
+                    if "__id__" in sig.parameters:
+                        # Call the function with the '__id__' parameter included
+                        params = {
+                            **params,
+                            "__id__": tool_id,
+                        }
+
                     function_result = function(**params)
                 except Exception as e:
                     print(e)
