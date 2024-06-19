@@ -6,7 +6,17 @@ import sha256 from 'js-sha256';
 //////////////////////////
 
 export const sanitizeResponseContent = (content: string) => {
-	return content
+	// First, temporarily replace valid <video> tags with a placeholder
+	const videoTagRegex = /<video\s+src="([^"]+)"\s+controls><\/video>/gi;
+	const placeholders: string[] = [];
+	content = content.replace(videoTagRegex, (_, src) => {
+		const placeholder = `{{VIDEO_${placeholders.length}}}`;
+		placeholders.push(`<video src="${src}" controls></video>`);
+		return placeholder;
+	});
+
+	// Now apply the sanitization to the rest of the content
+	content = content
 		.replace(/<\|[a-z]*$/, '')
 		.replace(/<\|[a-z]+\|$/, '')
 		.replace(/<$/, '')
@@ -14,6 +24,13 @@ export const sanitizeResponseContent = (content: string) => {
 		.replaceAll('<', '&lt;')
 		.replaceAll('>', '&gt;')
 		.trim();
+
+	// Replace placeholders with original <video> tags
+	placeholders.forEach((placeholder, index) => {
+		content = content.replace(`{{VIDEO_${index}}}`, placeholder);
+	});
+
+	return content.trim();
 };
 
 export const replaceTokens = (content, char, user) => {

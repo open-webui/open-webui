@@ -214,7 +214,7 @@
 			}
 		} catch (e) {
 			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== url);
+			// files = files.filter((f) => f.name !== url);
 			toast.error(e);
 		}
 	};
