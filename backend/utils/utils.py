@@ -25,7 +25,6 @@ ALGORITHM = "HS256"
 ##############
 
 bearer_security = HTTPBearer(auto_error=False)
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -79,14 +78,16 @@ def get_current_user(
     request: Request,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
-    # get token from cookie
-    token = request.cookies.get("token")
-
-    if auth_token is None and token is None:
-        raise HTTPException(status_code=403, detail="Not authenticated")
+    token = None
 
     if auth_token is not None:
         token = auth_token.credentials
+
+    if token is None and "token" in request.cookies:
+        token = request.cookies.get("token")
+
+    if token is None:
+        raise HTTPException(status_code=403, detail="Not authenticated")
 
     # auth by api key
     if token.startswith("sk-"):

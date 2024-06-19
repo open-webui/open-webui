@@ -325,6 +325,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             data = json.loads(body_str) if body_str else {}
 
             user = get_current_user(
+                request,
                 get_http_authorization_cred(request.headers.get("Authorization"))
             )
 
@@ -558,6 +559,7 @@ class PipelineMiddleware(BaseHTTPMiddleware):
             data = json.loads(body_str) if body_str else {}
 
             user = get_current_user(
+                request,
                 get_http_authorization_cred(request.headers.get("Authorization"))
             )
 
