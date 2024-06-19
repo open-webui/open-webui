@@ -170,7 +170,7 @@
 			type: 'doc',
 			name: url,
 			collection_name: '',
-			upload_status: false,
+			status: false,
 			url: url,
 			error: ''
 		};
@@ -180,7 +180,7 @@
 			const res = await uploadWebToVectorDB(localStorage.token, '', url);
 
 			if (res) {
-				doc.upload_status = true;
+				doc.status = 'processed';
 				doc.collection_name = res.collection_name;
 				files = files;
 			}
@@ -198,7 +198,7 @@
 			type: 'doc',
 			name: url,
 			collection_name: '',
-			upload_status: false,
+			status: false,
 			url: url,
 			error: ''
 		};
@@ -208,7 +208,7 @@
 			const res = await uploadYoutubeTranscriptionToVectorDB(localStorage.token, url);
 
 			if (res) {
-				doc.upload_status = true;
+				doc.status = 'processed';
 				doc.collection_name = res.collection_name;
 				files = files;
 			}
@@ -365,7 +365,7 @@
 								{
 									type: e?.detail?.type ?? 'doc',
 									...e.detail,
-									upload_status: true
+									status: 'processed'
 								}
 							];
 						}}
