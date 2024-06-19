@@ -104,12 +104,7 @@
 									type="button"
 									on:click={async () => {
 										if (file?.url) {
-											getFileContentById(file.id).then((blob) => {
-												if (blob) {
-													const url = URL.createObjectURL(blob);
-													window.open(url, '_blank').focus();
-												}
-											});
+											window.open(`${file?.url}/content`, '_blank').focus();
 										}
 									}}
 								>
