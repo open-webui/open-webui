@@ -88,35 +88,6 @@
 					<div class=" self-center">{$i18n.t('General')}</div>
 				</button>
 
-				{#if $user.role === 'admin'}
-					<button
-						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-						'admin'
-							? 'bg-gray-200 dark:bg-gray-700'
-							: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
-						on:click={async () => {
-							await goto('/admin/settings');
-							show = false;
-						}}
-					>
-						<div class=" self-center mr-2">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								class="size-4"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-15Zm4.125 3a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm-3.873 8.703a4.126 4.126 0 0 1 7.746 0 .75.75 0 0 1-.351.92 7.47 7.47 0 0 1-3.522.877 7.47 7.47 0 0 1-3.522-.877.75.75 0 0 1-.351-.92ZM15 8.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15ZM14.25 12a.75.75 0 0 1 .75-.75h3.75a.75.75 0 0 1 0 1.5H15a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</div>
-						<div class=" self-center">{$i18n.t('Admin Settings')}</div>
-					</button>
-				{/if}
-
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 					'interface'
@@ -236,6 +207,35 @@
 					</div>
 					<div class=" self-center">{$i18n.t('Account')}</div>
 				</button>
+
+				{#if $user.role === 'admin'}
+					<button
+						class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+						'admin'
+							? 'bg-gray-200 dark:bg-gray-700'
+							: ' hover:bg-gray-300 dark:hover:bg-gray-800'}"
+						on:click={async () => {
+							await goto('/admin/settings');
+							show = false;
+						}}
+					>
+						<div class=" self-center mr-2">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								class="size-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-15Zm4.125 3a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm-3.873 8.703a4.126 4.126 0 0 1 7.746 0 .75.75 0 0 1-.351.92 7.47 7.47 0 0 1-3.522.877 7.47 7.47 0 0 1-3.522-.877.75.75 0 0 1-.351-.92ZM15 8.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15ZM14.25 12a.75.75 0 0 1 .75-.75h3.75a.75.75 0 0 1 0 1.5H15a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</div>
+						<div class=" self-center">{$i18n.t('Admin Settings')}</div>
+					</button>
+				{/if}
 
 				<button
 					class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
