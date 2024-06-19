@@ -83,7 +83,7 @@ def search_searxng(
     results = json_response.get("results", [])
     sorted_results = sorted(results, key=lambda x: x.get("score", 0), reverse=True)
     if filter_list:
-        sorted_results = get_filtered_results(sorted_results, whitelist)
+        sorted_results = get_filtered_results(sorted_results, filter_list)
     return [
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("content")
