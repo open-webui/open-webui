@@ -278,7 +278,9 @@
 			})),
 			chat_id: $chatId
 		}).catch((error) => {
-			console.error(error);
+			toast.error(error);
+			messages.at(-1).error = { content: error };
+
 			return null;
 		});
 
