@@ -153,7 +153,7 @@
 							type="button"
 							on:click={() => {
 								tab = '';
-							}}>Form</button
+							}}>{$i18n.t('Form')}</button
 						>
 
 						<button
@@ -161,7 +161,7 @@
 							type="button"
 							on:click={() => {
 								tab = 'import';
-							}}>CSV Import</button
+							}}>{$i18n.t('CSV Import')}</button
 						>
 					</div>
 					<div class="px-1">
