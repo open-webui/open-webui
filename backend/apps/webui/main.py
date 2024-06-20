@@ -120,16 +120,16 @@ async def get_pipe_models():
                 manifold_pipes = []
 
                 # Check if pipes is a function or a list
-                if callable(pipe.pipes):
-                    manifold_pipes = pipe.pipes()
+                if callable(function_module.pipes):
+                    manifold_pipes = function_module.pipes()
                 else:
-                    manifold_pipes = pipe.pipes
+                    manifold_pipes = function_module.pipes
 
                 for p in manifold_pipes:
                     manifold_pipe_id = f'{pipe.id}.{p["id"]}'
                     manifold_pipe_name = p["name"]
 
-                    if hasattr(pipe, "name"):
+                    if hasattr(function_module, "name"):
                         manifold_pipe_name = f"{pipe.name}{manifold_pipe_name}"
 
                     pipe_models.append(
