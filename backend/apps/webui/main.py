@@ -60,7 +60,7 @@ app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 
 app.state.MODELS = {}
 app.state.TOOLS = {}
-
+app.state.FUNCTIONS = {}
 
 app.add_middleware(
     CORSMiddleware,

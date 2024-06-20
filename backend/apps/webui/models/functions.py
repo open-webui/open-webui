@@ -69,7 +69,7 @@ class FunctionForm(BaseModel):
     meta: FunctionMeta
 
 
-class ToolsTable:
+class FunctionsTable:
     def __init__(self, db):
         self.db = db
         self.db.create_tables([Function])
@@ -137,4 +137,4 @@ class ToolsTable:
             return False
 
 
-Tools = ToolsTable(DB)
+Functions = FunctionsTable(DB)
