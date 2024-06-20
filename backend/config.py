@@ -1001,6 +1001,11 @@ AUTOMATIC1111_BASE_URL = PersistentConfig(
     "image_generation.automatic1111.base_url",
     os.getenv("AUTOMATIC1111_BASE_URL", ""),
 )
+AUTOMATIC1111_API_AUTH = PersistentConfig(
+    "AUTOMATIC1111_API_AUTH",
+    "image_generation.automatic1111.api_auth",
+    os.getenv("AUTOMATIC1111_API_AUTH", ""),
+)
 
 COMFYUI_BASE_URL = PersistentConfig(
     "COMFYUI_BASE_URL",
