@@ -941,7 +941,7 @@
 
 					chat_id: $chatId
 				},
-				`${OPENAI_API_BASE_URL}`
+				`${WEBUI_BASE_URL}/api`
 			);
 
 			// Wait until history/message have been updated
