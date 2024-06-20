@@ -72,7 +72,13 @@ class Filter:
         print(f"outlet:body:{body}")
         print(f"outlet:user:{user}")
 
-        return body`;
+        messages = [
+            {**message, "content": f"{message['content']} - @@Modified from Outlet"}
+            for message in body.get("messages", [])
+        ]
+
+        return {"messages": messages}
+`;
 
 	const saveHandler = async () => {
 		loading = true;
