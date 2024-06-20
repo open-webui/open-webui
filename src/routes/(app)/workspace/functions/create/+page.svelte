@@ -3,9 +3,10 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { functions } from '$lib/stores';
+	import { functions, models } from '$lib/stores';
 	import { createNewFunction, getFunctions } from '$lib/apis/functions';
 	import FunctionEditor from '$lib/components/workspace/Functions/FunctionEditor.svelte';
+	import { getModels } from '$lib/apis';
 
 	let mounted = false;
 	let clone = false;
@@ -26,6 +27,8 @@
 		if (res) {
 			toast.success('Function created successfully');
 			functions.set(await getFunctions(localStorage.token));
+			models.set(await getModels(localStorage.token));
+
 			await goto('/workspace/functions');
 		}
 	};

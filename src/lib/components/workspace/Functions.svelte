@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { WEBUI_NAME, functions } from '$lib/stores';
+	import { WEBUI_NAME, functions, models } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 
@@ -19,6 +19,7 @@
 	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
+	import { getModels } from '$lib/apis';
 
 	const i18n = getContext('i18n');
 
@@ -226,7 +227,9 @@
 
 							if (res) {
 								toast.success('Function deleted successfully');
+
 								functions.set(await getFunctions(localStorage.token));
+								models.set(await getModels(localStorage.token));
 							}
 						}}
 					>
@@ -349,6 +352,7 @@
 
 			toast.success('Functions imported successfully');
 			functions.set(await getFunctions(localStorage.token));
+			models.set(await getModels(localStorage.token));
 		};
 
 		reader.readAsText(importFiles[0]);

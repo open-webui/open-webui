@@ -4,11 +4,12 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { functions } from '$lib/stores';
+	import { functions, models } from '$lib/stores';
 	import { updateFunctionById, getFunctions, getFunctionById } from '$lib/apis/functions';
 
 	import FunctionEditor from '$lib/components/workspace/Functions/FunctionEditor.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { getModels } from '$lib/apis';
 
 	let func = null;
 
@@ -27,6 +28,7 @@
 		if (res) {
 			toast.success('Function updated successfully');
 			functions.set(await getFunctions(localStorage.token));
+			models.set(await getModels(localStorage.token));
 		}
 	};
 
