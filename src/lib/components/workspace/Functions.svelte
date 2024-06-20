@@ -3,29 +3,39 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
+	import { WEBUI_NAME } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, prompts, tools } from '$lib/stores';
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 
 	import { goto } from '$app/navigation';
 	import {
-		createNewTool,
-		deleteToolById,
-		exportTools,
-		getToolById,
-		getTools
-	} from '$lib/apis/tools';
+		createNewFunction,
+		deleteFunctionById,
+		exportFunctions,
+		getFunctionById,
+		getFunctions
+	} from '$lib/apis/functions';
+
 	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
-	let toolsImportInputElement: HTMLInputElement;
+	let functionsImportInputElement: HTMLInputElement;
 	let importFiles;
 
 	let showConfirm = false;
 	let query = '';
+
+	let functions = [];
+
+	onMount(async () => {
+		functions = await getFunctions(localStorage.token).catch((error) => {
+			toast.error(error);
+			return [];
+		});
+	});
 </script>
 
 <svelte:head>
@@ -82,30 +92,30 @@
 <hr class=" dark:border-gray-850 my-2.5" />
 
 <div class="my-3 mb-5">
-	{#each $tools.filter((t) => query === '' || t.name
+	{#each functions.filter((f) => query === '' || f.name
 				.toLowerCase()
-				.includes(query.toLowerCase()) || t.id.toLowerCase().includes(query.toLowerCase())) as tool}
+				.includes(query.toLowerCase()) || f.id.toLowerCase().includes(query.toLowerCase())) as func}
 		<button
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
 			type="button"
 			on:click={() => {
-				goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
+				goto(`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`);
 			}}
 		>
 			<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 				<a
-					href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
+					href={`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`}
 					class="flex items-center text-left"
 				>
 					<div class=" flex-1 self-center pl-5">
 						<div class=" font-semibold flex items-center gap-1.5">
 							<div>
-								{tool.name}
+								{func.name}
 							</div>
-							<div class=" text-gray-500 text-xs font-medium">{tool.id}</div>
+							<div class=" text-gray-500 text-xs font-medium">{func.id}</div>
 						</div>
 						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-							{tool.meta.description}
+							{func.meta.description}
 						</div>
 					</div>
 				</a>
@@ -115,7 +125,7 @@
 					<a
 						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 						type="button"
-						href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
+						href={`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -141,18 +151,20 @@
 						on:click={async (e) => {
 							e.stopPropagation();
 
-							const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
-								toast.error(error);
-								return null;
-							});
+							const _function = await getFunctionById(localStorage.token, func.id).catch(
+								(error) => {
+									toast.error(error);
+									return null;
+								}
+							);
 
-							if (_tool) {
-								sessionStorage.tool = JSON.stringify({
-									..._tool,
-									id: `${_tool.id}_clone`,
-									name: `${_tool.name} (Clone)`
+							if (_function) {
+								sessionStorage.function = JSON.stringify({
+									..._function,
+									id: `${_function.id}_clone`,
+									name: `${_function.name} (Clone)`
 								});
-								goto('/workspace/tools/create');
+								goto('/workspace/functions/create');
 							}
 						}}
 					>
@@ -180,16 +192,18 @@
 						on:click={async (e) => {
 							e.stopPropagation();
 
-							const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
-								toast.error(error);
-								return null;
-							});
+							const _function = await getFunctionById(localStorage.token, func.id).catch(
+								(error) => {
+									toast.error(error);
+									return null;
+								}
+							);
 
-							if (_tool) {
-								let blob = new Blob([JSON.stringify([_tool])], {
+							if (_function) {
+								let blob = new Blob([JSON.stringify([_function])], {
 									type: 'application/json'
 								});
-								saveAs(blob, `tool-${_tool.id}-export-${Date.now()}.json`);
+								saveAs(blob, `function-${_function.id}-export-${Date.now()}.json`);
 							}
 						}}
 					>
@@ -204,14 +218,18 @@
 						on:click={async (e) => {
 							e.stopPropagation();
 
-							const res = await deleteToolById(localStorage.token, tool.id).catch((error) => {
+							const res = await deleteFunctionById(localStorage.token, func.id).catch((error) => {
 								toast.error(error);
 								return null;
 							});
 
 							if (res) {
-								toast.success('Tool deleted successfully');
-								tools.set(await getTools(localStorage.token));
+								toast.success('Function deleted successfully');
+
+								functions = await getFunctions(localStorage.token).catch((error) => {
+									toast.error(error);
+									return [];
+								});
 							}
 						}}
 					>
@@ -246,7 +264,7 @@
 	<div class="flex space-x-2">
 		<input
 			id="documents-import-input"
-			bind:this={toolsImportInputElement}
+			bind:this={functionsImportInputElement}
 			bind:files={importFiles}
 			type="file"
 			accept=".json"
@@ -260,7 +278,7 @@
 		<button
 			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 			on:click={() => {
-				toolsImportInputElement.click();
+				functionsImportInputElement.click();
 			}}
 		>
 			<div class=" self-center mr-2 font-medium">{$i18n.t('Import Functions')}</div>
@@ -284,16 +302,16 @@
 		<button
 			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 			on:click={async () => {
-				const _tools = await exportTools(localStorage.token).catch((error) => {
+				const _functions = await exportFunctions(localStorage.token).catch((error) => {
 					toast.error(error);
 					return null;
 				});
 
-				if (_tools) {
-					let blob = new Blob([JSON.stringify(_tools)], {
+				if (_functions) {
+					let blob = new Blob([JSON.stringify(_functions)], {
 						type: 'application/json'
 					});
-					saveAs(blob, `tools-export-${Date.now()}.json`);
+					saveAs(blob, `functions-export-${Date.now()}.json`);
 				}
 			}}
 		>
@@ -322,18 +340,22 @@
 	on:confirm={() => {
 		const reader = new FileReader();
 		reader.onload = async (event) => {
-			const _tools = JSON.parse(event.target.result);
-			console.log(_tools);
+			const _functions = JSON.parse(event.target.result);
+			console.log(_functions);
 
-			for (const tool of _tools) {
-				const res = await createNewTool(localStorage.token, tool).catch((error) => {
+			for (const func of _functions) {
+				const res = await createNewFunction(localStorage.token, func).catch((error) => {
 					toast.error(error);
 					return null;
 				});
 			}
 
-			toast.success('Tool imported successfully');
-			tools.set(await getTools(localStorage.token));
+			toast.success('Functions imported successfully');
+
+			functions = await getFunctions(localStorage.token).catch((error) => {
+				toast.error(error);
+				return [];
+			});
 		};
 
 		reader.readAsText(importFiles[0]);
@@ -344,8 +366,8 @@
 			<div>Please carefully review the following warnings:</div>
 
 			<ul class=" mt-1 list-disc pl-4 text-xs">
-				<li>Tools have a function calling system that allows arbitrary code execution.</li>
-				<li>Do not install tools from sources you do not fully trust.</li>
+				<li>Functions allow arbitrary code execution.</li>
+				<li>Do not install functions from sources you do not fully trust.</li>
 			</ul>
 		</div>
 
