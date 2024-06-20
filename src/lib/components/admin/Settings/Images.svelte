@@ -75,7 +75,7 @@
 			}
 		} else {
 			const res = await updateImageGenerationEngineUrls(localStorage.token, {
-				AUTOMATIC1111_BASE_URL: AUTOMATIC1111_BASE_URL
+				AUTOMATIC1111_BASE_URL: AUTOMATIC1111_BASE_URL,
 				AUTOMATIC1111_API_AUTH: AUTOMATIC1111_API_AUTH
 			}).catch((error) => {
 				toast.error(error);
