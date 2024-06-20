@@ -5,7 +5,7 @@
 
 	import { onMount, getContext } from 'svelte';
 	import { page } from '$app/stores';
-	import { settings, user, config, models, tools } from '$lib/stores';
+	import { settings, user, config, models, tools, functions } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
 
 	import { getModelInfos, updateModelById } from '$lib/apis/models';
@@ -16,6 +16,7 @@
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
+	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -62,6 +63,7 @@
 
 	let knowledge = [];
 	let toolIds = [];
+	let filterIds = [];
 
 	const updateHandler = async () => {
 		loading = true;
@@ -83,6 +85,14 @@
 		} else {
 			if (info.meta.toolIds) {
 				delete info.meta.toolIds;
+			}
+		}
+
+		if (filterIds.length > 0) {
+			info.meta.filterIds = filterIds;
+		} else {
+			if (info.meta.filterIds) {
+				delete info.meta.filterIds;
 			}
 		}
 
@@ -145,6 +155,10 @@
 
 				if (model?.info?.meta?.toolIds) {
 					toolIds = [...model?.info?.meta?.toolIds];
+				}
+
+				if (model?.info?.meta?.filterIds) {
+					filterIds = [...model?.info?.meta?.filterIds];
 				}
 
 				if (model?.owned_by === 'openai') {
@@ -532,6 +546,13 @@
 
 			<div class="my-2">
 				<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+			</div>
+
+			<div class="my-2">
+				<FiltersSelector
+					bind:selectedFilterIds={filterIds}
+					filters={$functions.filter((func) => func.type === 'filter')}
+				/>
 			</div>
 
 			<div class="my-2">

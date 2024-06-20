@@ -1,18 +1,21 @@
 <script>
+	import { toast } from 'svelte-sonner';
+	import { onMount } from 'svelte';
+
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { getToolById, getTools, updateToolById } from '$lib/apis/tools';
-	import Spinner from '$lib/components/common/Spinner.svelte';
-	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
-	import { tools } from '$lib/stores';
-	import { onMount } from 'svelte';
-	import { toast } from 'svelte-sonner';
+	import { functions, models } from '$lib/stores';
+	import { updateFunctionById, getFunctions, getFunctionById } from '$lib/apis/functions';
 
-	let tool = null;
+	import FunctionEditor from '$lib/components/workspace/Functions/FunctionEditor.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { getModels } from '$lib/apis';
+
+	let func = null;
 
 	const saveHandler = async (data) => {
 		console.log(data);
-		const res = await updateToolById(localStorage.token, tool.id, {
+		const res = await updateFunctionById(localStorage.token, func.id, {
 			id: data.id,
 			name: data.name,
 			meta: data.meta,
@@ -23,10 +26,9 @@
 		});
 
 		if (res) {
-			toast.success('Tool updated successfully');
-			tools.set(await getTools(localStorage.token));
-
-			// await goto('/workspace/tools');
+			toast.success('Function updated successfully');
+			functions.set(await getFunctions(localStorage.token));
+			models.set(await getModels(localStorage.token));
 		}
 	};
 
@@ -35,24 +37,24 @@
 		const id = $page.url.searchParams.get('id');
 
 		if (id) {
-			tool = await getToolById(localStorage.token, id).catch((error) => {
+			func = await getFunctionById(localStorage.token, id).catch((error) => {
 				toast.error(error);
-				goto('/workspace/tools');
+				goto('/workspace/functions');
 				return null;
 			});
 
-			console.log(tool);
+			console.log(func);
 		}
 	});
 </script>
 
-{#if tool}
-	<ToolkitEditor
+{#if func}
+	<FunctionEditor
 		edit={true}
-		id={tool.id}
-		name={tool.name}
-		meta={tool.meta}
-		content={tool.content}
+		id={func.id}
+		name={func.name}
+		meta={func.meta}
+		content={func.content}
 		on:save={(e) => {
 			saveHandler(e.detail);
 		}}

@@ -55,6 +55,7 @@ class FunctionModel(BaseModel):
 class FunctionResponse(BaseModel):
     id: str
     user_id: str
+    type: str
     name: str
     meta: FunctionMeta
     updated_at: int  # timestamp in epoch
@@ -64,23 +65,23 @@ class FunctionResponse(BaseModel):
 class FunctionForm(BaseModel):
     id: str
     name: str
-    type: str
     content: str
     meta: FunctionMeta
 
 
-class ToolsTable:
+class FunctionsTable:
     def __init__(self, db):
         self.db = db
         self.db.create_tables([Function])
 
     def insert_new_function(
-        self, user_id: str, form_data: FunctionForm
+        self, user_id: str, type: str, form_data: FunctionForm
     ) -> Optional[FunctionModel]:
         function = FunctionModel(
             **{
                 **form_data.model_dump(),
                 "user_id": user_id,
+                "type": type,
                 "updated_at": int(time.time()),
                 "created_at": int(time.time()),
             }
@@ -137,4 +138,4 @@ class ToolsTable:
             return False
 
 
-Tools = ToolsTable(DB)
+Functions = FunctionsTable(DB)

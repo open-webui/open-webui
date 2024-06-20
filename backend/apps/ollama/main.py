@@ -53,7 +53,7 @@ from config import (
     UPLOAD_DIR,
     AppConfig,
 )
-from utils.misc import calculate_sha256
+from utils.misc import calculate_sha256, add_or_update_system_message
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
@@ -834,18 +834,9 @@ async def generate_chat_completion(
             )
 
             if payload.get("messages"):
-                for message in payload["messages"]:
-                    if message.get("role") == "system":
-                        message["content"] = system + message["content"]
-                        break
-                else:
-                    payload["messages"].insert(
-                        0,
-                        {
-                            "role": "system",
-                            "content": system,
-                        },
-                    )
+                payload["messages"] = add_or_update_system_message(
+                    system, payload["messages"]
+                )
 
     if url_idx == None:
         if ":" not in payload["model"]:

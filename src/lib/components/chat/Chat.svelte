@@ -278,7 +278,9 @@
 			})),
 			chat_id: $chatId
 		}).catch((error) => {
-			console.error(error);
+			toast.error(error);
+			messages.at(-1).error = { content: error };
+
 			return null;
 		});
 
@@ -323,6 +325,13 @@
 		} else if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
 			console.log('wait');
+		} else if (messages.length != 0 && messages.at(-1).error) {
+			// Error in response
+			toast.error(
+				$i18n.t(
+					`Oops! There was an error in the previous response. Please try again or contact admin.`
+				)
+			);
 		} else if (
 			files.length > 0 &&
 			files.filter((file) => file.type !== 'image' && file.status !== 'processed').length > 0
@@ -630,7 +639,7 @@
 			keep_alive: $settings.keepAlive ?? undefined,
 			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 			files: files.length > 0 ? files : undefined,
-			citations: files.length > 0,
+			citations: files.length > 0 ? true : undefined,
 			chat_id: $chatId
 		});
 
@@ -928,10 +937,11 @@
 					max_tokens: $settings?.params?.max_tokens ?? undefined,
 					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 					files: files.length > 0 ? files : undefined,
-					citations: files.length > 0,
+					citations: files.length > 0 ? true : undefined,
+
 					chat_id: $chatId
 				},
-				`${OPENAI_API_BASE_URL}`
+				`${WEBUI_BASE_URL}/api`
 			);
 
 			// Wait until history/message have been updated

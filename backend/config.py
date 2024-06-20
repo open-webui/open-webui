@@ -378,6 +378,14 @@ Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
 
 
 ####################################
+# Functions DIR
+####################################
+
+FUNCTIONS_DIR = os.getenv("FUNCTIONS_DIR", f"{DATA_DIR}/functions")
+Path(FUNCTIONS_DIR).mkdir(parents=True, exist_ok=True)
+
+
+####################################
 # LITELLM_CONFIG
 ####################################
 

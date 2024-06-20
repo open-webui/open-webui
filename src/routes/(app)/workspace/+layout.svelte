@@ -1,11 +1,16 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 
-	import { WEBUI_NAME, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, showSidebar, functions } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { page } from '$app/stores';
+	import { getFunctions } from '$lib/apis/functions';
 
 	const i18n = getContext('i18n');
+
+	onMount(async () => {
+		functions.set(await getFunctions(localStorage.token));
+	});
 </script>
 
 <svelte:head>
