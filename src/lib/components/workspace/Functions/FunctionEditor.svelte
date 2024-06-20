@@ -36,6 +36,8 @@ class Filter:
         pass
 
     def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
+        # This method is invoked before the request is sent to the chat completion API.
+        # It can be used to modify the request body or perform validation checks.
         print("inlet")
         print(body)
         print(user)
@@ -50,9 +52,12 @@ class Filter:
         return body
 
     def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
+        # This method is invoked after the chat completion API has processed
+        # the request and generated a response. It can be used to overwrite the response messages.
         print(f"outlet")
         print(body)
         print(user)
+
         return body`;
 
 	const saveHandler = async () => {
