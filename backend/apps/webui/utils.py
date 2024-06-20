@@ -33,9 +33,9 @@ def load_function_module_by_id(function_id):
         spec.loader.exec_module(module)
         print(f"Loaded module: {module.__name__}")
         if hasattr(module, "Pipe"):
-            return module.Pipe()
+            return module.Pipe(), "pipe"
         elif hasattr(module, "Filter"):
-            return module.Filter()
+            return module.Filter(), "filter"
         else:
             raise Exception("No Function class found")
     except Exception as e:

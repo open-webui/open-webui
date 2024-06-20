@@ -69,12 +69,12 @@ async def create_new_function(
             with open(function_path, "w") as function_file:
                 function_file.write(form_data.content)
 
-            function_module = load_function_module_by_id(form_data.id)
+            function_module, function_type = load_function_module_by_id(form_data.id)
 
             FUNCTIONS = request.app.state.FUNCTIONS
             FUNCTIONS[form_data.id] = function_module
 
-            function = Functions.insert_new_function(user.id, form_data)
+            function = Functions.insert_new_function(user.id, function_type, form_data)
 
             function_cache_dir = Path(CACHE_DIR) / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -132,12 +132,12 @@ async def update_toolkit_by_id(
         with open(function_path, "w") as function_file:
             function_file.write(form_data.content)
 
-        function_module = load_function_module_by_id(id)
+        function_module, function_type = load_function_module_by_id(id)
 
         FUNCTIONS = request.app.state.FUNCTIONS
         FUNCTIONS[id] = function_module
 
-        updated = {**form_data.model_dump(exclude={"id"})}
+        updated = {**form_data.model_dump(exclude={"id"}), "type": function_type}
         print(updated)
 
         function = Functions.update_function_by_id(id, updated)

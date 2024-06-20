@@ -64,7 +64,6 @@ class FunctionResponse(BaseModel):
 class FunctionForm(BaseModel):
     id: str
     name: str
-    type: str
     content: str
     meta: FunctionMeta
 
@@ -75,12 +74,13 @@ class FunctionsTable:
         self.db.create_tables([Function])
 
     def insert_new_function(
-        self, user_id: str, form_data: FunctionForm
+        self, user_id: str, type: str, form_data: FunctionForm
     ) -> Optional[FunctionModel]:
         function = FunctionModel(
             **{
                 **form_data.model_dump(),
                 "user_id": user_id,
+                "type": type,
                 "updated_at": int(time.time()),
                 "created_at": int(time.time()),
             }

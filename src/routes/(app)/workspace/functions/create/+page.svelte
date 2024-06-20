@@ -1,18 +1,18 @@
 <script>
-	import { goto } from '$app/navigation';
-	import { createNewTool, getTools } from '$lib/apis/tools';
-	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
-	import { tools } from '$lib/stores';
-	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+
+	import { createNewFunction, getFunctions } from '$lib/apis/functions';
+	import FunctionEditor from '$lib/components/workspace/Functions/FunctionEditor.svelte';
 
 	let mounted = false;
 	let clone = false;
-	let tool = null;
+	let func = null;
 
 	const saveHandler = async (data) => {
 		console.log(data);
-		const res = await createNewTool(localStorage.token, {
+		const res = await createNewFunction(localStorage.token, {
 			id: data.id,
 			name: data.name,
 			meta: data.meta,
@@ -23,19 +23,17 @@
 		});
 
 		if (res) {
-			toast.success('Tool created successfully');
-			tools.set(await getTools(localStorage.token));
-
-			await goto('/workspace/tools');
+			toast.success('Function created successfully');
+			await goto('/workspace/functions');
 		}
 	};
 
 	onMount(() => {
-		if (sessionStorage.tool) {
-			tool = JSON.parse(sessionStorage.tool);
-			sessionStorage.removeItem('tool');
+		if (sessionStorage.function) {
+			func = JSON.parse(sessionStorage.function);
+			sessionStorage.removeItem('function');
 
-			console.log(tool);
+			console.log(func);
 			clone = true;
 		}
 
@@ -44,11 +42,11 @@
 </script>
 
 {#if mounted}
-	<ToolkitEditor
-		id={tool?.id ?? ''}
-		name={tool?.name ?? ''}
-		meta={tool?.meta ?? { description: '' }}
-		content={tool?.content ?? ''}
+	<FunctionEditor
+		id={func?.id ?? ''}
+		name={func?.name ?? ''}
+		meta={func?.meta ?? { description: '' }}
+		content={func?.content ?? ''}
 		{clone}
 		on:save={(e) => {
 			saveHandler(e.detail);
