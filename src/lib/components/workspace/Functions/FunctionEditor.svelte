@@ -39,6 +39,7 @@ class Filter:
     def __init__(self):
         # Indicates custom file handling logic. This flag helps disengage default routines in favor of custom
         # implementations, informing the WebUI to defer file-related operations to designated methods within this class.
+        # Alternatively, you can remove the files directly from the body in from the inlet hook
         self.file_handler = True
 
         # Initialize 'valves' with specific configurations. Using 'Valves' instance helps encapsulate settings,
@@ -50,16 +51,15 @@ class Filter:
         # Modify the request body or validate it before processing by the chat completion API.
         # This function is the pre-processor for the API where various checks on the input can be performed.
         # It can also modify the request before sending it to the API.
+        print(f"inlet:{__name__}")
+        print(f"inlet:body:{body}")
+        print(f"inlet:user:{user}")
 
-        print("inlet")
-        print(body)
-        print(user)
-
-        if user.get("role", "admin") in ["user"]:
+        if user.get("role", "admin") in ["user", "admin"]:
             messages = body.get("messages", [])
-            if len(messages) > self.max_turns:
+            if len(messages) > self.valves.max_turns:
                 raise Exception(
-                    f"Conversation turn limit exceeded. Max turns: {self.max_turns}"
+                    f"Conversation turn limit exceeded. Max turns: {self.valves.max_turns}"
                 )
 
         return body
@@ -68,9 +68,9 @@ class Filter:
         # Modify or analyze the response body after processing by the API.
         # This function is the post-processor for the API, which can be used to modify the response
         # or perform additional checks and analytics.
-        print(f"outlet")
-        print(body)
-        print(user)
+        print(f"outlet:{__name__}")
+        print(f"outlet:body:{body}")
+        print(f"outlet:user:{user}")
 
         return body`;
 
