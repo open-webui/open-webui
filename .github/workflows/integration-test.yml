@@ -25,7 +25,7 @@ jobs:
             --file docker-compose.api.yaml \
             --file docker-compose.a1111-test.yaml \
             up --detach --build
-          
+
       - name: Wait for Ollama to be up
         timeout-minutes: 5
         run: |
@@ -43,7 +43,7 @@ jobs:
         uses: cypress-io/github-action@v6
         with:
           browser: chrome
-          wait-on: 'http://localhost:3000'
+          wait-on: "http://localhost:3000"
           config: baseUrl=http://localhost:3000
 
       - uses: actions/upload-artifact@v4
@@ -82,18 +82,18 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-#      mysql:
-#        image: mysql
-#        env:
-#          MYSQL_ROOT_PASSWORD: mysql
-#          MYSQL_DATABASE: mysql
-#        options: >-
-#          --health-cmd "mysqladmin ping -h localhost"
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 5
-#        ports:
-#          - 3306:3306
+    #      mysql:
+    #        image: mysql
+    #        env:
+    #          MYSQL_ROOT_PASSWORD: mysql
+    #          MYSQL_DATABASE: mysql
+    #        options: >-
+    #          --health-cmd "mysqladmin ping -h localhost"
+    #          --health-interval 10s
+    #          --health-timeout 5s
+    #          --health-retries 5
+    #        ports:
+    #          - 3306:3306
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -142,7 +142,6 @@ jobs:
               echo "Server has stopped"
               exit 1
           fi
-          
 
       - name: Test backend with Postgres
         if: success() || steps.sqlite.conclusion == 'failure'
@@ -170,9 +169,9 @@ jobs:
               echo "Server has stopped"
               exit 1
           fi
-          
+
           # Check that service will reconnect to postgres when connection will be closed
-          status_code=$(curl --write-out %{http_code} -s --output /dev/null http://localhost:8081/api/tags)
+          status_code=$(curl --write-out %{http_code} -s --output /dev/null http://localhost:8081/health)
           if [[ "$status_code" -ne 200 ]] ; then
             echo "Server has failed before postgres reconnect check"
             exit 1
@@ -183,13 +182,12 @@ jobs:
             conn = pg2.connect(dsn=os.environ['DATABASE_URL'].replace('+pool', '')); \
             cur = conn.cursor(); \
             cur.execute('SELECT pg_terminate_backend(psa.pid) FROM pg_stat_activity psa WHERE datname = current_database() AND pid <> pg_backend_pid();')"
-          
-          status_code=$(curl --write-out %{http_code} -s --output /dev/null http://localhost:8081/api/tags)
+
+          status_code=$(curl --write-out %{http_code} -s --output /dev/null http://localhost:8081/health)
           if [[ "$status_code" -ne 200 ]] ; then
             echo "Server has not reconnected to postgres after connection was closed: returned status $status_code"
             exit 1
           fi
-
 
 #      - name: Test backend with MySQL
 #        if: success() || steps.sqlite.conclusion == 'failure' || steps.postgres.conclusion == 'failure'
