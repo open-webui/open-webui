@@ -61,8 +61,6 @@ async def get_session_user(
         key="token",
         value=token,
         httponly=True,  # Ensures the cookie is not accessible via JavaScript
-        secure=True,  # Ensures the cookie is sent over https
-        samesite="lax",
     )
 
     return {
@@ -125,7 +123,7 @@ async def update_password(
 
 
 @router.post("/signin", response_model=SigninResponse)
-async def signin(request: Request, form_data: SigninForm):
+async def signin(request: Request, response: Response, form_data: SigninForm):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
@@ -169,6 +167,13 @@ async def signin(request: Request, form_data: SigninForm):
             expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
         )
 
+        # Set the cookie token
+        response.set_cookie(
+            key="token",
+            value=token,
+            httponly=True,  # Ensures the cookie is not accessible via JavaScript
+        )
+
         return {
             "token": token,
             "token_type": "Bearer",
@@ -188,7 +193,7 @@ async def signin(request: Request, form_data: SigninForm):
 
 
 @router.post("/signup", response_model=SigninResponse)
-async def signup(request: Request, form_data: SignupForm):
+async def signup(request: Request, response: Response, form_data: SignupForm):
     if not request.app.state.config.ENABLE_SIGNUP and WEBUI_AUTH:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
@@ -223,6 +228,13 @@ async def signup(request: Request, form_data: SignupForm):
                 expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
             )
             # response.set_cookie(key='token', value=token, httponly=True)
+
+            # Set the cookie token
+            response.set_cookie(
+                key="token",
+                value=token,
+                httponly=True,  # Ensures the cookie is not accessible via JavaScript
+            )
 
             if request.app.state.config.WEBHOOK_URL:
                 post_webhook(

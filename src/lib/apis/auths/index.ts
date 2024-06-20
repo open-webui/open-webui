@@ -118,6 +118,7 @@ export const userSignIn = async (email: string, password: string) => {
 		headers: {
 			'Content-Type': 'application/json'
 		},
+		credentials: 'include',
 		body: JSON.stringify({
 			email: email,
 			password: password
@@ -154,6 +155,7 @@ export const userSignUp = async (
 		headers: {
 			'Content-Type': 'application/json'
 		},
+		credentials: 'include',
 		body: JSON.stringify({
 			name: name,
 			email: email,
