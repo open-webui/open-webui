@@ -1,4 +1,4 @@
-Our weekly meetups are [Thursdays at NOON EDT](/io/coders/) and [Sundays at 10 PM EDT](/io/coders/) and [Wednesdays at 10 PM EDT](/io/coders).
+Our weekly meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](/io/coders) and [Sundays at 10 PM EDT](/io/coders/).
 
 <hr style="margin-bottom:20px">
 
@@ -7,17 +7,20 @@ Our weekly meetups are [Thursdays at NOON EDT](/io/coders/) and [Sundays at 10 P
 
 [Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
-**SQL, Vite, Supabase, AI Chat**
+**Chose one to fork and install locally**
+- [Open WebUI (Projects)](src) with Python and [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/) like Pinecone
+- [Earthscape for Chatbot AI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/)
+
+**Charts, SQL, Vite, Supabase, AI Chat**
+- [Sankey Industry eChart](/useeio.js/charts/echarts/sankey-nodeAlign-left.html) - eCharts uses a common echarts.min.js file which well load in [Feed Viewer](/feed/view). <!-- Chenbohan -->
 - [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab - Song
 - [Open Footprint Data in SQL](/useeio.js/footprint) - Sahil, Himanshu, Sridevi, Song
-- [Feed Player](../feed/) - Video and Images - Gary, Marco, Fanyi
-- [Feed Viewer](../feed/view/#feed=nasa) - JSON, YAML, CSS, RSS - Loren and Gary (address lookup) 
-- [Datausa.io](https://datausa.io) - For embeddable visualizations
-- [Restack.io](https://www.restack.io/docs/supabase-knowledge-supabase-rust-sdk-guide) - for Supabase with Rust and Streamlit
-- [Open WebUI](src) with [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/) like Pinecone
-- [Earthscape for Chatbot AI - Supabase and NextJS Hosting](/earthscape/app/)
+- [Feed Player](../feed/intro.html) - Video and Images - Gary, Fanyi, Marco
+- [Feed Viewer](../feed/view/#feed=nasa) - JSON, YAML, CSS, RSS - Loren and Gary ([address lookup](/feed/view/#feed=311)) 
+- [Datausa.io](https://datausa.io) - Add API and embeddable visualizations to Feed Player
+
 <!--
-- [ChatAll - Share simultaneous AI Chats with Chatbot UI](https://github.com/sunner/ChatALL)
+- [Restack.io](https://www.restack.io/docs/supabase-knowledge-supabase-rust-sdk-guide) - for Supabase with Rust and Streamlit
 -->
 
 <!-- 
@@ -48,7 +51,6 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 - [Python CoLabs for GDC timeline automation - Air and Climate](/data-commons/dist/air)
 - [Observable with Data Commons](/data-commons/) - [Data Loaders How-To](/data-commons/dist/air/)
-- [Sankey Industry Chart](/useeio.js/charts/echarts/sankey-nodeAlign-left.html) - Chenbohan
 - [Balanced Food](/balance/) - [World Nutrition](/data-commons/dist/food) - Kargil, Meiru
 - [Chord Chart Data Prep](/io/charts/chord/) - [ask Kargil for location](https://github.com/modelearth/Observables-DataLoader/tree/master/docs)
 - [International Google Data Commons API](/data-commons/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
