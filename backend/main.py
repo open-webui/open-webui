@@ -330,11 +330,11 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             body = await request.body()
             body_str = body.decode("utf-8")
             data = json.loads(body_str) if body_str else {}
+
             user = get_current_user(
                 request,
                 get_http_authorization_cred(request.headers.get("Authorization")),
             )
-
             # Flag to skip RAG completions if file_handler is present in tools/functions
             skip_files = False
 
@@ -345,8 +345,6 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     detail="Model not found",
                 )
             model = app.state.MODELS[model_id]
-
-            print(":", data)
 
             # Check if the model has any filters
             for filter_id in model["info"]["meta"].get("filterIds", []):
@@ -377,12 +375,11 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                             )
                     except Exception as e:
                         print(f"Error: {e}")
-                        raise HTTPException(
+                        return JSONResponse(
                             status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=e,
+                            content={"detail": str(e)},
                         )
 
-            print("Filtered:", data)
             # Set the task model
             task_model_id = data["model"]
             # Check if the user has a custom task model and use that model
