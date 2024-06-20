@@ -123,6 +123,7 @@ async def update_config(form_data: ConfigUpdateForm, user=Depends(get_admin_user
 
 class EngineUrlUpdateForm(BaseModel):
     AUTOMATIC1111_BASE_URL: Optional[str] = None
+    AUTOMATIC1111_API_AUTH: Optional[str] = None
     COMFYUI_BASE_URL: Optional[str] = None
 
 
