@@ -27,17 +27,29 @@
 	}
 
 	let codeEditor;
-	let boilerplate = `from typing import Optional
-
+	let boilerplate = `from pydantic import BaseModel
+from typing import Optional
 
 class Filter:
+    class Valves(BaseModel):
+        max_turns: int
+        pass
+
     def __init__(self):
-        self.max_turns = 10
+        # Indicates custom file handling logic. This flag helps disengage default routines in favor of custom
+        # implementations, informing the WebUI to defer file-related operations to designated methods within this class.
+        self.file_handler = True
+
+        # Initialize 'valves' with specific configurations. Using 'Valves' instance helps encapsulate settings,
+        # which ensures settings are managed cohesively and not confused with operational flags like 'file_handler'.
+        self.valves = self.Valves(**{"max_turns": 10})
         pass
 
     def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        # This method is invoked before the request is sent to the chat completion API.
-        # It can be used to modify the request body or perform validation checks.
+        # Modify the request body or validate it before processing by the chat completion API.
+        # This function is the pre-processor for the API where various checks on the input can be performed.
+        # It can also modify the request before sending it to the API.
+        
         print("inlet")
         print(body)
         print(user)
@@ -52,8 +64,9 @@ class Filter:
         return body
 
     def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
-        # This method is invoked after the chat completion API has processed
-        # the request and generated a response. It can be used to overwrite the response messages.
+        # Modify or analyze the response body after processing by the API.
+        # This function is the post-processor for the API, which can be used to modify the response 
+        # or perform additional checks and analytics.
         print(f"outlet")
         print(body)
         print(user)

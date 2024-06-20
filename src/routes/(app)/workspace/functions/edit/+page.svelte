@@ -4,6 +4,7 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { functions } from '$lib/stores';
 	import { updateFunctionById, getFunctions, getFunctionById } from '$lib/apis/functions';
 
 	import FunctionEditor from '$lib/components/workspace/Functions/FunctionEditor.svelte';
@@ -25,6 +26,7 @@
 
 		if (res) {
 			toast.success('Function updated successfully');
+			functions.set(await getFunctions(localStorage.token));
 		}
 	};
 

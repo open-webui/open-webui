@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { WEBUI_NAME } from '$lib/stores';
+	import { WEBUI_NAME, functions } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 
@@ -27,17 +27,6 @@
 
 	let showConfirm = false;
 	let query = '';
-
-	let functions = [];
-
-	onMount(async () => {
-		functions = await getFunctions(localStorage.token).catch((error) => {
-			toast.error(error);
-			return [];
-		});
-
-		console.log(functions);
-	});
 </script>
 
 <svelte:head>
@@ -94,7 +83,7 @@
 <hr class=" dark:border-gray-850 my-2.5" />
 
 <div class="my-3 mb-5">
-	{#each functions.filter((f) => query === '' || f.name
+	{#each $functions.filter((f) => query === '' || f.name
 				.toLowerCase()
 				.includes(query.toLowerCase()) || f.id.toLowerCase().includes(query.toLowerCase())) as func}
 		<button
@@ -237,11 +226,7 @@
 
 							if (res) {
 								toast.success('Function deleted successfully');
-
-								functions = await getFunctions(localStorage.token).catch((error) => {
-									toast.error(error);
-									return [];
-								});
+								functions.set(await getFunctions(localStorage.token));
 							}
 						}}
 					>
@@ -363,11 +348,7 @@
 			}
 
 			toast.success('Functions imported successfully');
-
-			functions = await getFunctions(localStorage.token).catch((error) => {
-				toast.error(error);
-				return [];
-			});
+			functions.set(await getFunctions(localStorage.token));
 		};
 
 		reader.readAsText(importFiles[0]);

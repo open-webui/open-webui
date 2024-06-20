@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
+	import { functions } from '$lib/stores';
 	import { createNewFunction, getFunctions } from '$lib/apis/functions';
 	import FunctionEditor from '$lib/components/workspace/Functions/FunctionEditor.svelte';
 
@@ -24,6 +25,7 @@
 
 		if (res) {
 			toast.success('Function created successfully');
+			functions.set(await getFunctions(localStorage.token));
 			await goto('/workspace/functions');
 		}
 	};
