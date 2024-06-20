@@ -1,13 +1,12 @@
 <script>
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 
+	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
-	import { goto } from '$app/navigation';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-
-	const dispatch = createEventDispatcher();
 
 	let formElement = null;
 	let loading = false;
@@ -28,107 +27,33 @@
 	}
 
 	let codeEditor;
-	let boilerplate = `import os
-import requests
-from datetime import datetime
+	let boilerplate = `from typing import Optional
 
 
-class Tools:
+class Filter:
     def __init__(self):
+        self.max_turns = 10
         pass
 
-    # Add your custom tools using pure Python code here, make sure to add type hints
-    # Use Sphinx-style docstrings to document your tools, they will be used for generating tools specifications
-    # Please refer to function_calling_filter_pipeline.py file from pipelines project for an example
+    def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
+        print("inlet")
+        print(body)
+        print(user)
 
-    def get_user_name_and_email_and_id(self, __user__: dict = {}) -> str:
-        """
-        Get the user name, Email and ID from the user object.
-        """
+        if user.get("role", "admin") in ["user"]:
+            messages = body.get("messages", [])
+            if len(messages) > self.max_turns:
+                raise Exception(
+                    f"Conversation turn limit exceeded. Max turns: {self.max_turns}"
+                )
 
-        # Do not include :param for __user__ in the docstring as it should not be shown in the tool's specification
-        # The session user object will be passed as a parameter when the function is called
+        return body
 
-        print(__user__)
-        result = ""
-
-        if "name" in __user__:
-            result += f"User: {__user__['name']}"
-        if "id" in __user__:
-            result += f" (ID: {__user__['id']})"
-        if "email" in __user__:
-            result += f" (Email: {__user__['email']})"
-
-        if result == "":
-            result = "User: Unknown"
-
-        return result
-
-    def get_current_time(self) -> str:
-        """
-        Get the current time in a more human-readable format.
-        :return: The current time.
-        """
-
-        now = datetime.now()
-        current_time = now.strftime("%I:%M:%S %p")  # Using 12-hour format with AM/PM
-        current_date = now.strftime(
-            "%A, %B %d, %Y"
-        )  # Full weekday, month name, day, and year
-
-        return f"Current Date and Time = {current_date}, {current_time}"
-
-    def calculator(self, equation: str) -> str:
-        """
-        Calculate the result of an equation.
-        :param equation: The equation to calculate.
-        """
-
-        # Avoid using eval in production code
-        # https://nedbatchelder.com/blog/201206/eval_really_is_dangerous.html
-        try:
-            result = eval(equation)
-            return f"{equation} = {result}"
-        except Exception as e:
-            print(e)
-            return "Invalid equation"
-
-    def get_current_weather(self, city: str) -> str:
-        """
-        Get the current weather for a given city.
-        :param city: The name of the city to get the weather for.
-        :return: The current weather information or an error message.
-        """
-        api_key = os.getenv("OPENWEATHER_API_KEY")
-        if not api_key:
-            return (
-                "API key is not set in the environment variable 'OPENWEATHER_API_KEY'."
-            )
-
-        base_url = "http://api.openweathermap.org/data/2.5/weather"
-        params = {
-            "q": city,
-            "appid": api_key,
-            "units": "metric",  # Optional: Use 'imperial' for Fahrenheit
-        }
-
-        try:
-            response = requests.get(base_url, params=params)
-            response.raise_for_status()  # Raise HTTPError for bad responses (4xx and 5xx)
-            data = response.json()
-
-            if data.get("cod") != 200:
-                return f"Error fetching weather data: {data.get('message')}"
-
-            weather_description = data["weather"][0]["description"]
-            temperature = data["main"]["temp"]
-            humidity = data["main"]["humidity"]
-            wind_speed = data["wind"]["speed"]
-
-            return f"Weather in {city}: {temperature}°C"
-        except requests.RequestException as e:
-            return f"Error fetching weather data: {str(e)}"
-`;
+    def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
+        print(f"outlet")
+        print(body)
+        print(user)
+        return body`;
 
 	const saveHandler = async () => {
 		loading = true;
@@ -169,7 +94,7 @@ class Tools:
 				<button
 					class="flex space-x-1"
 					on:click={() => {
-						goto('/workspace/tools');
+						goto('/workspace/functions');
 					}}
 					type="button"
 				>
@@ -197,7 +122,7 @@ class Tools:
 						<input
 							class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 							type="text"
-							placeholder="Toolkit Name (e.g. My ToolKit)"
+							placeholder="Function Name (e.g. My Filter)"
 							bind:value={name}
 							required
 						/>
@@ -205,7 +130,7 @@ class Tools:
 						<input
 							class="w-full px-3 py-2 text-sm font-medium disabled:text-gray-300 dark:disabled:text-gray-700 bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 							type="text"
-							placeholder="Toolkit ID (e.g. my_toolkit)"
+							placeholder="Function ID (e.g. my_filter)"
 							bind:value={id}
 							required
 							disabled={edit}
@@ -214,7 +139,7 @@ class Tools:
 					<input
 						class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 						type="text"
-						placeholder="Toolkit Description (e.g. A toolkit for performing various operations)"
+						placeholder="Function Description (e.g. A filter to remove profanity from text)"
 						bind:value={meta.description}
 						required
 					/>
@@ -236,10 +161,10 @@ class Tools:
 				<div class="pb-3 flex justify-between">
 					<div class="flex-1 pr-3">
 						<div class="text-xs text-gray-500 line-clamp-2">
-							<span class=" font-semibold dark:text-gray-200">Warning:</span> Tools are a function
-							calling system with arbitrary code execution <br />—
+							<span class=" font-semibold dark:text-gray-200">Warning:</span> Functions allow
+							arbitrary code execution <br />—
 							<span class=" font-medium dark:text-gray-400"
-								>don't install random tools from sources you don't trust.</span
+								>don't install random functions from sources you don't trust.</span
 							>
 						</div>
 					</div>
@@ -267,8 +192,8 @@ class Tools:
 			<div>Please carefully review the following warnings:</div>
 
 			<ul class=" mt-1 list-disc pl-4 text-xs">
-				<li>Tools have a function calling system that allows arbitrary code execution.</li>
-				<li>Do not install tools from sources you do not fully trust.</li>
+				<li>Functions allow arbitrary code execution.</li>
+				<li>Do not install functions from sources you do not fully trust.</li>
 			</ul>
 		</div>
 
