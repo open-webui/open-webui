@@ -326,7 +326,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
 
             user = get_current_user(
                 request,
-                get_http_authorization_cred(request.headers.get("Authorization"))
+                get_http_authorization_cred(request.headers.get("Authorization")),
             )
 
             # Remove the citations from the body
@@ -471,7 +471,7 @@ app.add_middleware(ChatCompletionMiddleware)
 
 
 def filter_pipeline(payload, user):
-    user = {"id": user.id, "name": user.name, "role": user.role}
+    user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
     model_id = payload["model"]
     filters = [
         model
@@ -560,7 +560,7 @@ class PipelineMiddleware(BaseHTTPMiddleware):
 
             user = get_current_user(
                 request,
-                get_http_authorization_cred(request.headers.get("Authorization"))
+                get_http_authorization_cred(request.headers.get("Authorization")),
             )
 
             try:
