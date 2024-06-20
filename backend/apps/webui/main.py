@@ -15,6 +15,9 @@ from apps.webui.routers import (
     files,
     functions,
 )
+from apps.webui.models.functions import Functions
+from apps.webui.utils import load_function_module_by_id
+
 from config import (
     WEBUI_BUILD_HASH,
     SHOW_ADMIN_DETAILS,
@@ -97,3 +100,58 @@ async def get_status():
         "default_models": app.state.config.DEFAULT_MODELS,
         "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
     }
+
+
+async def get_pipe_models():
+    pipes = Functions.get_functions_by_type("pipe")
+    pipe_models = []
+
+    for pipe in pipes:
+        # Check if function is already loaded
+        if pipe.id not in app.state.FUNCTIONS:
+            function_module, function_type = load_function_module_by_id(pipe.id)
+            app.state.FUNCTIONS[pipe.id] = function_module
+        else:
+            function_module = app.state.FUNCTIONS[pipe.id]
+
+        # Check if function is a manifold
+        if hasattr(function_module, "type"):
+            if function_module.type == "manifold":
+                manifold_pipes = []
+
+                # Check if pipes is a function or a list
+                if callable(pipe.pipes):
+                    manifold_pipes = pipe.pipes()
+                else:
+                    manifold_pipes = pipe.pipes
+
+                for p in manifold_pipes:
+                    manifold_pipe_id = f'{pipe.id}.{p["id"]}'
+                    manifold_pipe_name = p["name"]
+
+                    if hasattr(pipe, "name"):
+                        manifold_pipe_name = f"{pipe.name}{manifold_pipe_name}"
+
+                    pipe_models.append(
+                        {
+                            "id": manifold_pipe_id,
+                            "name": manifold_pipe_name,
+                            "object": "model",
+                            "created": pipe.created_at,
+                            "owned_by": "openai",
+                            "pipe": {"type": pipe.type},
+                        }
+                    )
+        else:
+            pipe_models.append(
+                {
+                    "id": pipe.id,
+                    "name": pipe.name,
+                    "object": "model",
+                    "created": pipe.created_at,
+                    "owned_by": "openai",
+                    "pipe": {"type": "pipe"},
+                }
+            )
+
+    return pipe_models
