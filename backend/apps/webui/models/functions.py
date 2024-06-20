@@ -55,6 +55,7 @@ class FunctionModel(BaseModel):
 class FunctionResponse(BaseModel):
     id: str
     user_id: str
+    type: str
     name: str
     meta: FunctionMeta
     updated_at: int  # timestamp in epoch

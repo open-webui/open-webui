@@ -35,6 +35,8 @@
 			toast.error(error);
 			return [];
 		});
+
+		console.log(functions);
 	});
 </script>
 
@@ -107,15 +109,25 @@
 					href={`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`}
 					class="flex items-center text-left"
 				>
-					<div class=" flex-1 self-center pl-5">
+					<div class=" flex-1 self-center pl-1">
 						<div class=" font-semibold flex items-center gap-1.5">
+							<div
+								class=" text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+							>
+								{func.type}
+							</div>
+
 							<div>
 								{func.name}
 							</div>
-							<div class=" text-gray-500 text-xs font-medium">{func.id}</div>
 						</div>
-						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-							{func.meta.description}
+
+						<div class="flex gap-1.5 px-1">
+							<div class=" text-gray-500 text-xs font-medium">{func.id}</div>
+
+							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
+								{func.meta.description}
+							</div>
 						</div>
 					</div>
 				</a>
