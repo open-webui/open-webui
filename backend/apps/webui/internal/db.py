@@ -11,6 +11,7 @@ from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL, BACKEND_DIR
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])
 
+
 class JSONField(TextField):
     def db_value(self, value):
         return json.dumps(value)
@@ -18,6 +19,7 @@ class JSONField(TextField):
     def python_value(self, value):
         if value is not None:
             return json.loads(value)
+
 
 # Check if the file exists
 if os.path.exists(f"{DATA_DIR}/ollama.db"):
@@ -28,9 +30,9 @@ else:
     pass
 
 
-# The `register_connection` function encapsulates the logic for setting up 
-# the database connection based on the connection string, while `connect` 
-# is a Peewee-specific method to manage the connection state and avoid errors 
+# The `register_connection` function encapsulates the logic for setting up
+# the database connection based on the connection string, while `connect`
+# is a Peewee-specific method to manage the connection state and avoid errors
 # when a connection is already open.
 try:
     DB = register_connection(DATABASE_URL)
