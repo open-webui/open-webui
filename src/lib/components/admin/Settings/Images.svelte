@@ -293,7 +293,7 @@
 					href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/13993"
 					target="_blank"
 				>
-					{$i18n.t('(e.g. `sh webui.sh --api --api-auth username:password`)')}
+                    {$i18n.t('(e.g. `sh webui.sh --api --api-auth username_password`)').replace('_',':')}
 				</a>
 			</div>
 		{:else if imageGenerationEngine === 'comfyui'}

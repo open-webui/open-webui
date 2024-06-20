@@ -2,7 +2,7 @@
 	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s', 'm', 'h', 'd', 'w' 或 '-1' 表示无过期时间。",
 	"(Beta)": "（测试版）",
 	"(e.g. `sh webui.sh --api`)": "（例如 `sh webui.sh --api`）",
-	"(e.g. `sh webui.sh --api --api-auth username:password`)": "（例如 `sh webui.sh --api --api-auth username:password`）",
+    "(e.g. `sh webui.sh --api --api-auth username_password`)": "（例如 `sh webui.sh --api --api-auth username_password`）",
 	"(latest)": "（最新版）",
 	"{{ models }}": "{{ models }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}：您不能删除基础模型",
