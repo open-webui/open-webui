@@ -1817,7 +1817,6 @@ async def get_manifest_json():
         "start_url": "/",
         "display": "standalone",
         "background_color": "#343541",
-        "theme_color": "#343541",
         "orientation": "portrait-primary",
         "icons": [{"src": "/static/logo.png", "type": "image/png", "sizes": "500x500"}],
     }
