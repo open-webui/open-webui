@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from utils.misc import get_gravatar_url
 
-from apps.webui.internal.db import Base, JSONField
+from apps.webui.internal.db import Base, JSONField, get_session
 from apps.webui.models.chats import Chats
 
 ####################
@@ -42,8 +42,6 @@ class UserSettings(BaseModel):
 
 
 class UserModel(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: str
     name: str
     email: str
@@ -59,6 +57,8 @@ class UserModel(BaseModel):
     info: Optional[dict] = None
 
     oauth_sub: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 ####################
@@ -82,7 +82,6 @@ class UsersTable:
 
     def insert_new_user(
         self,
-        db: Session,
         id: str,
         name: str,
         email: str,
@@ -90,165 +89,181 @@ class UsersTable:
         role: str = "pending",
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
-        user = UserModel(
-            **{
-                "id": id,
-                "name": name,
-                "email": email,
-                "role": role,
-                "profile_image_url": profile_image_url,
-                "last_active_at": int(time.time()),
-                "created_at": int(time.time()),
-                "updated_at": int(time.time()),
-                "oauth_sub": oauth_sub,
-            }
-        )
-        result = User(**user.model_dump())
-        db.add(result)
-        db.commit()
-        db.refresh(result)
-        if result:
-            return user
-        else:
-            return None
+        with get_session() as db:
+            user = UserModel(
+                **{
+                    "id": id,
+                    "name": name,
+                    "email": email,
+                    "role": role,
+                    "profile_image_url": profile_image_url,
+                    "last_active_at": int(time.time()),
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
+                    "oauth_sub": oauth_sub,
+                }
+            )
+            result = User(**user.model_dump())
+            db.add(result)
+            db.commit()
+            db.refresh(result)
+            if result:
+                return user
+            else:
+                return None
 
-    def get_user_by_id(self, db: Session, id: str) -> Optional[UserModel]:
-        try:
-            user = db.query(User).filter_by(id=id).first()
-            return UserModel.model_validate(user)
-        except Exception as e:
-            return None
+    def get_user_by_id(self, id: str) -> Optional[UserModel]:
+        with get_session() as db:
+            try:
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
+            except Exception as e:
+                return None
 
-    def get_user_by_api_key(self, db: Session, api_key: str) -> Optional[UserModel]:
-        try:
-            user = db.query(User).filter_by(api_key=api_key).first()
-            return UserModel.model_validate(user)
-        except:
-            return None
+    def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
+        with get_session() as db:
+            try:
+                user = db.query(User).filter_by(api_key=api_key).first()
+                return UserModel.model_validate(user)
+            except:
+                return None
 
-    def get_user_by_email(self, db: Session, email: str) -> Optional[UserModel]:
-        try:
-            user = db.query(User).filter_by(email=email).first()
-            return UserModel.model_validate(user)
-        except:
-            return None
+    def get_user_by_email(self, email: str) -> Optional[UserModel]:
+        with get_session() as db:
+            try:
+                user = db.query(User).filter_by(email=email).first()
+                return UserModel.model_validate(user)
+            except:
+                return None
 
     def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
-        try:
-            user = User.get(User.oauth_sub == sub)
-            return UserModel(**model_to_dict(user))
-        except:
-            return None
+        with get_session() as db:
+            try:
+                user = db.query(User).filter_by(oauth_sub=sub).first()
+                return UserModel.model_validate(user)
+            except:
+                return None
 
-    def get_users(self, db: Session, skip: int = 0, limit: int = 50) -> List[UserModel]:
-        users = (
-            db.query(User)
-            # .offset(skip).limit(limit)
-            .all()
-        )
-        return [UserModel.model_validate(user) for user in users]
+    def get_users(self, skip: int = 0, limit: int = 50) -> List[UserModel]:
+        with get_session() as db:
+            users = (
+                db.query(User)
+                # .offset(skip).limit(limit)
+                .all()
+            )
+            return [UserModel.model_validate(user) for user in users]
 
-    def get_num_users(self, db: Session) -> Optional[int]:
-        return db.query(User).count()
+    def get_num_users(self) -> Optional[int]:
+        with get_session() as db:
+            return db.query(User).count()
 
-    def get_first_user(self, db: Session) -> UserModel:
-        try:
-            user = db.query(User).order_by(User.created_at).first()
-            return UserModel.model_validate(user)
-        except:
-            return None
+    def get_first_user(self) -> UserModel:
+        with get_session() as db:
+            try:
+                user = db.query(User).order_by(User.created_at).first()
+                return UserModel.model_validate(user)
+            except:
+                return None
 
     def update_user_role_by_id(
-        self, db: Session, id: str, role: str
+        self, id: str, role: str
     ) -> Optional[UserModel]:
-        try:
-            db.query(User).filter_by(id=id).update({"role": role})
-            db.commit()
-
-            user = db.query(User).filter_by(id=id).first()
-            return UserModel.model_validate(user)
-        except:
-            return None
-
-    def update_user_profile_image_url_by_id(
-        self, db: Session, id: str, profile_image_url: str
-    ) -> Optional[UserModel]:
-        try:
-            db.query(User).filter_by(id=id).update(
-                {"profile_image_url": profile_image_url}
-            )
-            db.commit()
-
-            user = db.query(User).filter_by(id=id).first()
-            return UserModel.model_validate(user)
-        except:
-            return None
-
-    def update_user_last_active_by_id(
-        self, db: Session, id: str
-    ) -> Optional[UserModel]:
-        try:
-            db.query(User).filter_by(id=id).update({"last_active_at": int(time.time())})
-
-            user = db.query(User).filter_by(id=id).first()
-            return UserModel.model_validate(user)
-        except:
-            return None
-
-    def update_user_oauth_sub_by_id(
-        self, db: Session, id: str, oauth_sub: str
-    ) -> Optional[UserModel]:
-        try:
-            db.query(User).filter_by(id=id).update({"oauth_sub": oauth_sub})
-
-            user = db.query(User).filter_by(id=id).first()
-            return UserModel.model_validate(user)
-        except:
-            return None
-
-    def update_user_by_id(
-        self, db: Session, id: str, updated: dict
-    ) -> Optional[UserModel]:
-        try:
-            db.query(User).filter_by(id=id).update(updated)
-            db.commit()
-
-            user = db.query(User).filter_by(id=id).first()
-            return UserModel.model_validate(user)
-            # return UserModel(**user.dict())
-        except Exception as e:
-            return None
-
-    def delete_user_by_id(self, db: Session, id: str) -> bool:
-        try:
-            # Delete User Chats
-            result = Chats.delete_chats_by_user_id(db, id)
-
-            if result:
-                # Delete User
-                db.query(User).filter_by(id=id).delete()
+        with get_session() as db:
+            try:
+                db.query(User).filter_by(id=id).update({"role": role})
                 db.commit()
 
-                return True
-            else:
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
+            except:
+                return None
+
+    def update_user_profile_image_url_by_id(
+        self, id: str, profile_image_url: str
+    ) -> Optional[UserModel]:
+        with get_session() as db:
+            try:
+                db.query(User).filter_by(id=id).update(
+                    {"profile_image_url": profile_image_url}
+                )
+                db.commit()
+
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
+            except:
+                return None
+
+    def update_user_last_active_by_id(
+        self, id: str
+    ) -> Optional[UserModel]:
+        with get_session() as db:
+            try:
+                db.query(User).filter_by(id=id).update({"last_active_at": int(time.time())})
+
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
+            except:
+                return None
+
+    def update_user_oauth_sub_by_id(
+        self, id: str, oauth_sub: str
+    ) -> Optional[UserModel]:
+        with get_session() as db:
+            try:
+                db.query(User).filter_by(id=id).update({"oauth_sub": oauth_sub})
+
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
+            except:
+                return None
+
+    def update_user_by_id(
+        self, id: str, updated: dict
+    ) -> Optional[UserModel]:
+        with get_session() as db:
+            try:
+                db.query(User).filter_by(id=id).update(updated)
+                db.commit()
+
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
+                # return UserModel(**user.dict())
+            except Exception as e:
+                return None
+
+    def delete_user_by_id(self, id: str) -> bool:
+        with get_session() as db:
+            try:
+                # Delete User Chats
+                result = Chats.delete_chats_by_user_id(id)
+
+                if result:
+                    # Delete User
+                    db.query(User).filter_by(id=id).delete()
+                    db.commit()
+
+                    return True
+                else:
+                    return False
+            except:
                 return False
-        except:
-            return False
 
-    def update_user_api_key_by_id(self, db: Session, id: str, api_key: str) -> str:
-        try:
-            result = db.query(User).filter_by(id=id).update({"api_key": api_key})
-            db.commit()
-            return True if result == 1 else False
-        except:
-            return False
+    def update_user_api_key_by_id(self, id: str, api_key: str) -> str:
+        with get_session() as db:
+            try:
+                result = db.query(User).filter_by(id=id).update({"api_key": api_key})
+                db.commit()
+                return True if result == 1 else False
+            except:
+                return False
 
-    def get_user_api_key_by_id(self, db: Session, id: str) -> Optional[str]:
-        try:
-            user = db.query(User).filter_by(id=id).first()
-            return user.api_key
-        except Exception as e:
-            return None
+    def get_user_api_key_by_id(self, id: str) -> Optional[str]:
+        with get_session() as db:
+            try:
+                user = db.query(User).filter_by(id=id).first()
+                return user.api_key
+            except Exception as e:
+                return None
 
 
 Users = UsersTable()

@@ -6,7 +6,7 @@ import logging
 from sqlalchemy import Column, String, Text, BigInteger, Boolean
 from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import JSONField, Base
+from apps.webui.internal.db import JSONField, Base, get_session
 from apps.webui.models.users import Users
 
 import json
@@ -87,7 +87,7 @@ class FunctionValves(BaseModel):
 class FunctionsTable:
 
     def insert_new_function(
-        self, db: Session, user_id: str, type: str, form_data: FunctionForm
+        self, user_id: str, type: str, form_data: FunctionForm
     ) -> Optional[FunctionModel]:
         function = FunctionModel(
             **{
@@ -100,57 +100,64 @@ class FunctionsTable:
         )
 
         try:
-            result = Function(**function.model_dump())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
-            if result:
-                return FunctionModel.model_validate(result)
-            else:
-                return None
+            with get_session() as db:
+                result = Function(**function.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return FunctionModel.model_validate(result)
+                else:
+                    return None
         except Exception as e:
             print(f"Error creating tool: {e}")
             return None
 
-    def get_function_by_id(self, db: Session, id: str) -> Optional[FunctionModel]:
+    def get_function_by_id(self, id: str) -> Optional[FunctionModel]:
         try:
-            function = db.get(Function, id)
-            return FunctionModel.model_validate(function)
+            with get_session() as db:
+                function = db.get(Function, id)
+                return FunctionModel.model_validate(function)
         except:
             return None
 
     def get_functions(self, active_only=False) -> List[FunctionModel]:
         if active_only:
-            return [
-                FunctionModel(**model_to_dict(function))
-                for function in Function.select().where(Function.is_active == True)
-            ]
+            with get_session() as db:
+                return [
+                    FunctionModel.model_validate(function)
+                    for function in db.query(Function).filter_by(is_active=True).all()
+                ]
         else:
-            return [
-                FunctionModel(**model_to_dict(function))
-                for function in Function.select()
-            ]
+            with get_session() as db:
+                return [
+                    FunctionModel.model_validate(function)
+                    for function in db.query(Function).all()
+                ]
 
     def get_functions_by_type(
         self, type: str, active_only=False
     ) -> List[FunctionModel]:
         if active_only:
-            return [
-                FunctionModel(**model_to_dict(function))
-                for function in Function.select().where(
-                    Function.type == type, Function.is_active == True
-                )
-            ]
+            with get_session() as db:
+                return [
+                    FunctionModel.model_validate(function)
+                    for function in db.query(Function).filter_by(
+                        type=type, is_active=True
+                    ).all()
+                ]
         else:
-            return [
-                FunctionModel(**model_to_dict(function))
-                for function in Function.select().where(Function.type == type)
-            ]
+            with get_session() as db:
+                return [
+                    FunctionModel.model_validate(function)
+                    for function in db.query(Function).filter_by(type=type).all()
+                ]
 
     def get_function_valves_by_id(self, id: str) -> Optional[dict]:
         try:
-            function = Function.get(Function.id == id)
-            return function.valves if function.valves else {}
+            with get_session() as db:
+                function = db.get(Function, id)
+                return function.valves if function.valves else {}
         except Exception as e:
             print(f"An error occurred: {e}")
             return None
@@ -159,14 +166,12 @@ class FunctionsTable:
         self, id: str, valves: dict
     ) -> Optional[FunctionValves]:
         try:
-            query = Function.update(
-                **{"valves": valves},
-                updated_at=int(time.time()),
-            ).where(Function.id == id)
-            query.execute()
-
-            function = Function.get(Function.id == id)
-            return FunctionValves(**model_to_dict(function))
+            with get_session() as db:
+                db.query(Function).filter_by(id=id).update(
+                    {"valves": valves, "updated_at": int(time.time())}
+                )
+                db.commit()
+                return self.get_function_by_id(id)
         except:
             return None
 
@@ -214,30 +219,32 @@ class FunctionsTable:
 
     def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:
         try:
-            db.query(Function).filter_by(id=id).update({
-                **updated,
-                "updated_at": int(time.time()),
-            })
-            return self.get_function_by_id(db, id)
+            with get_session() as db:
+                db.query(Function).filter_by(id=id).update({
+                    **updated,
+                    "updated_at": int(time.time()),
+                })
+                db.commit()
+                return self.get_function_by_id(id)
         except:
             return None
 
     def deactivate_all_functions(self) -> Optional[bool]:
         try:
-            query = Function.update(
-                **{"is_active": False},
-                updated_at=int(time.time()),
-            )
-
-            query.execute()
-
+            with get_session() as db:
+                db.query(Function).update({
+                    "is_active": False,
+                    "updated_at": int(time.time()),
+                })
+                db.commit()
             return True
         except:
             return None
 
-    def delete_function_by_id(self, db: Session, id: str) -> bool:
+    def delete_function_by_id(self, id: str) -> bool:
         try:
-            db.query(Function).filter_by(id=id).delete()
+            with get_session() as db:
+                db.query(Function).filter_by(id=id).delete()
             return True
         except:
             return False

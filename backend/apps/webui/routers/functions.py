@@ -6,7 +6,6 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import json
 
-from apps.webui.internal.db import get_db
 from apps.webui.models.functions import (
     Functions,
     FunctionForm,
@@ -32,8 +31,8 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[FunctionResponse])
-async def get_functions(user=Depends(get_verified_user), db=Depends(get_db)):
-    return Functions.get_functions(db)
+async def get_functions(user=Depends(get_verified_user)):
+    return Functions.get_functions()
 
 
 ############################
@@ -42,8 +41,8 @@ async def get_functions(user=Depends(get_verified_user), db=Depends(get_db)):
 
 
 @router.get("/export", response_model=List[FunctionModel])
-async def get_functions(user=Depends(get_admin_user), db=Depends(get_db)):
-    return Functions.get_functions(db)
+async def get_functions(user=Depends(get_admin_user)):
+    return Functions.get_functions()
 
 
 ############################
@@ -53,7 +52,7 @@ async def get_functions(user=Depends(get_admin_user), db=Depends(get_db)):
 
 @router.post("/create", response_model=Optional[FunctionResponse])
 async def create_new_function(
-    request: Request, form_data: FunctionForm, user=Depends(get_admin_user), db=Depends(get_db)
+    request: Request, form_data: FunctionForm, user=Depends(get_admin_user)
 ):
     if not form_data.id.isidentifier():
         raise HTTPException(
@@ -63,7 +62,7 @@ async def create_new_function(
 
     form_data.id = form_data.id.lower()
 
-    function = Functions.get_function_by_id(db, form_data.id)
+    function = Functions.get_function_by_id(form_data.id)
     if function == None:
         function_path = os.path.join(FUNCTIONS_DIR, f"{form_data.id}.py")
         try:
@@ -78,7 +77,7 @@ async def create_new_function(
             FUNCTIONS = request.app.state.FUNCTIONS
             FUNCTIONS[form_data.id] = function_module
 
-            function = Functions.insert_new_function(db, user.id, function_type, form_data)
+            function = Functions.insert_new_function(user.id, function_type, form_data)
 
             function_cache_dir = Path(CACHE_DIR) / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -109,8 +108,8 @@ async def create_new_function(
 
 
 @router.get("/id/{id}", response_model=Optional[FunctionModel])
-async def get_function_by_id(id: str, user=Depends(get_admin_user), db=Depends(get_db)):
-    function = Functions.get_function_by_id(db, id)
+async def get_function_by_id(id: str, user=Depends(get_admin_user)):
+    function = Functions.get_function_by_id(id)
 
     if function:
         return function
@@ -155,7 +154,7 @@ async def toggle_function_by_id(id: str, user=Depends(get_admin_user)):
 
 @router.post("/id/{id}/update", response_model=Optional[FunctionModel])
 async def update_function_by_id(
-    request: Request, id: str, form_data: FunctionForm, user=Depends(get_admin_user), db=Depends(get_db)
+    request: Request, id: str, form_data: FunctionForm, user=Depends(get_admin_user)
 ):
     function_path = os.path.join(FUNCTIONS_DIR, f"{id}.py")
 
@@ -172,7 +171,7 @@ async def update_function_by_id(
         updated = {**form_data.model_dump(exclude={"id"}), "type": function_type}
         print(updated)
 
-        function = Functions.update_function_by_id(db, id, updated)
+        function = Functions.update_function_by_id(id, updated)
 
         if function:
             return function
@@ -196,9 +195,9 @@ async def update_function_by_id(
 
 @router.delete("/id/{id}/delete", response_model=bool)
 async def delete_function_by_id(
-    request: Request, id: str, user=Depends(get_admin_user), db=Depends(get_db)
+    request: Request, id: str, user=Depends(get_admin_user)
 ):
-    result = Functions.delete_function_by_id(db, id)
+    result = Functions.delete_function_by_id(id)
 
     if result:
         FUNCTIONS = request.app.state.FUNCTIONS

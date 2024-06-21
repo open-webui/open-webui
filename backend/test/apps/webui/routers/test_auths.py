@@ -31,7 +31,6 @@ class TestAuths(AbstractPostgresTest):
         from utils.utils import get_password_hash
 
         user = self.auths.insert_new_auth(
-            self.db_session,
             email="john.doe@openwebui.com",
             password=get_password_hash("old_password"),
             name="John Doe",
@@ -45,7 +44,7 @@ class TestAuths(AbstractPostgresTest):
                 json={"name": "John Doe 2", "profile_image_url": "/user2.png"},
             )
         assert response.status_code == 200
-        db_user = self.users.get_user_by_id(self.db_session, user.id)
+        db_user = self.users.get_user_by_id(user.id)
         assert db_user.name == "John Doe 2"
         assert db_user.profile_image_url == "/user2.png"
 
@@ -53,7 +52,6 @@ class TestAuths(AbstractPostgresTest):
         from utils.utils import get_password_hash
 
         user = self.auths.insert_new_auth(
-            self.db_session,
             email="john.doe@openwebui.com",
             password=get_password_hash("old_password"),
             name="John Doe",
@@ -69,11 +67,11 @@ class TestAuths(AbstractPostgresTest):
         assert response.status_code == 200
 
         old_auth = self.auths.authenticate_user(
-            self.db_session, "john.doe@openwebui.com", "old_password"
+            "john.doe@openwebui.com", "old_password"
         )
         assert old_auth is None
         new_auth = self.auths.authenticate_user(
-            self.db_session, "john.doe@openwebui.com", "new_password"
+            "john.doe@openwebui.com", "new_password"
         )
         assert new_auth is not None
 
@@ -81,7 +79,6 @@ class TestAuths(AbstractPostgresTest):
         from utils.utils import get_password_hash
 
         user = self.auths.insert_new_auth(
-            self.db_session,
             email="john.doe@openwebui.com",
             password=get_password_hash("password"),
             name="John Doe",
@@ -144,7 +141,6 @@ class TestAuths(AbstractPostgresTest):
 
     def test_get_admin_details(self):
         self.auths.insert_new_auth(
-            self.db_session,
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
@@ -162,7 +158,6 @@ class TestAuths(AbstractPostgresTest):
 
     def test_create_api_key_(self):
         user = self.auths.insert_new_auth(
-            self.db_session,
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
@@ -178,31 +173,29 @@ class TestAuths(AbstractPostgresTest):
 
     def test_delete_api_key(self):
         user = self.auths.insert_new_auth(
-            self.db_session,
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
             profile_image_url="/user.png",
             role="admin",
         )
-        self.users.update_user_api_key_by_id(self.db_session, user.id, "abc")
+        self.users.update_user_api_key_by_id(user.id, "abc")
         with mock_webui_user(id=user.id):
             response = self.fast_api_client.delete(self.create_url("/api_key"))
         assert response.status_code == 200
         assert response.json() == True
-        db_user = self.users.get_user_by_id(self.db_session, user.id)
+        db_user = self.users.get_user_by_id(user.id)
         assert db_user.api_key is None
 
     def test_get_api_key(self):
         user = self.auths.insert_new_auth(
-            self.db_session,
             email="john.doe@openwebui.com",
             password="password",
             name="John Doe",
             profile_image_url="/user.png",
             role="admin",
         )
-        self.users.update_user_api_key_by_id(self.db_session, user.id, "abc")
+        self.users.update_user_api_key_by_id(user.id, "abc")
         with mock_webui_user(id=user.id):
             response = self.fast_api_client.get(self.create_url("/api_key"))
         assert response.status_code == 200

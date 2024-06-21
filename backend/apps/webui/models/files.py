@@ -6,7 +6,7 @@ import logging
 from sqlalchemy import Column, String, BigInteger
 from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import JSONField, Base
+from apps.webui.internal.db import JSONField, Base, get_session
 
 import json
 
@@ -60,7 +60,7 @@ class FileForm(BaseModel):
 
 class FilesTable:
 
-    def insert_new_file(self, db: Session, user_id: str, form_data: FileForm) -> Optional[FileModel]:
+    def insert_new_file(self, user_id: str, form_data: FileForm) -> Optional[FileModel]:
         file = FileModel(
             **{
                 **form_data.model_dump(),
@@ -70,38 +70,45 @@ class FilesTable:
         )
 
         try:
-            result = File(**file.model_dump())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
-            if result:
-                return FileModel.model_validate(result)
-            else:
-                return None
+            with get_session() as db:
+                result = File(**file.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return FileModel.model_validate(result)
+                else:
+                    return None
         except Exception as e:
             print(f"Error creating tool: {e}")
             return None
 
-    def get_file_by_id(self, db: Session, id: str) -> Optional[FileModel]:
+    def get_file_by_id(self, id: str) -> Optional[FileModel]:
         try:
-            file = db.get(File, id)
-            return FileModel.model_validate(file)
+            with get_session() as db:
+                file = db.get(File, id)
+                return FileModel.model_validate(file)
         except:
             return None
 
-    def get_files(self, db: Session) -> List[FileModel]:
-        return [FileModel.model_validate(file) for file in db.query(File).all()]
+    def get_files(self) -> List[FileModel]:
+        with get_session() as db:
+            return [FileModel.model_validate(file) for file in db.query(File).all()]
 
-    def delete_file_by_id(self, db: Session, id: str) -> bool:
+    def delete_file_by_id(self, id: str) -> bool:
         try:
-            db.query(File).filter_by(id=id).delete()
+            with get_session() as db:
+                db.query(File).filter_by(id=id).delete()
+                db.commit()
             return True
         except:
             return False
 
-    def delete_all_files(self, db: Session) -> bool:
+    def delete_all_files(self) -> bool:
         try:
-            db.query(File).delete()
+            with get_session() as db:
+                db.query(File).delete()
+                db.commit()
             return True
         except:
             return False

@@ -5,7 +5,7 @@ import time
 from sqlalchemy import String, Column, BigInteger
 from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import Base
+from apps.webui.internal.db import Base, get_session
 
 import json
 
@@ -48,61 +48,65 @@ class PromptForm(BaseModel):
 class PromptsTable:
 
     def insert_new_prompt(
-        self, db: Session, user_id: str, form_data: PromptForm
+        self, user_id: str, form_data: PromptForm
     ) -> Optional[PromptModel]:
-        prompt = PromptModel(
-            **{
-                "user_id": user_id,
-                "command": form_data.command,
-                "title": form_data.title,
-                "content": form_data.content,
-                "timestamp": int(time.time()),
-            }
-        )
-
-        try:
-            result = Prompt(**prompt.dict())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
-            if result:
-                return PromptModel.model_validate(result)
-            else:
-                return None
-        except Exception as e:
-            return None
-
-    def get_prompt_by_command(self, db: Session, command: str) -> Optional[PromptModel]:
-        try:
-            prompt = db.query(Prompt).filter_by(command=command).first()
-            return PromptModel.model_validate(prompt)
-        except:
-            return None
-
-    def get_prompts(self, db: Session) -> List[PromptModel]:
-        return [PromptModel.model_validate(prompt) for prompt in db.query(Prompt).all()]
-
-    def update_prompt_by_command(
-        self, db: Session, command: str, form_data: PromptForm
-    ) -> Optional[PromptModel]:
-        try:
-            db.query(Prompt).filter_by(command=command).update(
-                {
+        with get_session() as db:
+            prompt = PromptModel(
+                **{
+                    "user_id": user_id,
+                    "command": form_data.command,
                     "title": form_data.title,
                     "content": form_data.content,
                     "timestamp": int(time.time()),
                 }
             )
-            return self.get_prompt_by_command(db, command)
-        except:
-            return None
 
-    def delete_prompt_by_command(self, db: Session, command: str) -> bool:
-        try:
-            db.query(Prompt).filter_by(command=command).delete()
-            return True
-        except:
-            return False
+            try:
+                result = Prompt(**prompt.dict())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return PromptModel.model_validate(result)
+                else:
+                    return None
+            except Exception as e:
+                return None
+
+    def get_prompt_by_command(self, command: str) -> Optional[PromptModel]:
+        with get_session() as db:
+            try:
+                prompt = db.query(Prompt).filter_by(command=command).first()
+                return PromptModel.model_validate(prompt)
+            except:
+                return None
+
+    def get_prompts(self) -> List[PromptModel]:
+        with get_session() as db:
+            return [PromptModel.model_validate(prompt) for prompt in db.query(Prompt).all()]
+
+    def update_prompt_by_command(
+        self, command: str, form_data: PromptForm
+    ) -> Optional[PromptModel]:
+        with get_session() as db:
+            try:
+                prompt = db.query(Prompt).filter_by(command=command).first()
+                prompt.title = form_data.title
+                prompt.content = form_data.content
+                prompt.timestamp = int(time.time())
+                db.commit()
+                return prompt
+                # return self.get_prompt_by_command(command)
+            except:
+                return None
+
+    def delete_prompt_by_command(self, command: str) -> bool:
+        with get_session() as db:
+            try:
+                db.query(Prompt).filter_by(command=command).delete()
+                return True
+            except:
+                return False
 
 
 Prompts = PromptsTable()

@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import String, Column, BigInteger
 from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import Base, JSONField
+from apps.webui.internal.db import Base, JSONField, get_session
 
 from typing import List, Union, Optional
 from config import SRC_LOG_LEVELS
@@ -78,8 +78,6 @@ class Model(Base):
 
 
 class ModelModel(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: str
     user_id: str
     base_model_id: Optional[str] = None
@@ -90,6 +88,8 @@ class ModelModel(BaseModel):
 
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 ####################
@@ -116,7 +116,7 @@ class ModelForm(BaseModel):
 class ModelsTable:
 
     def insert_new_model(
-        self, db: Session, form_data: ModelForm, user_id: str
+        self, form_data: ModelForm, user_id: str
     ) -> Optional[ModelModel]:
         model = ModelModel(
             **{
@@ -127,47 +127,52 @@ class ModelsTable:
             }
         )
         try:
-            result = Model(**model.dict())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
+            with get_session() as db:
+                result = Model(**model.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
 
-            if result:
-                return ModelModel.model_validate(result)
-            else:
-                return None
+                if result:
+                    return ModelModel.model_validate(result)
+                else:
+                    return None
         except Exception as e:
             print(e)
             return None
 
-    def get_all_models(self, db: Session) -> List[ModelModel]:
-        return [ModelModel.model_validate(model) for model in db.query(Model).all()]
+    def get_all_models(self) -> List[ModelModel]:
+        with get_session() as db:
+            return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 
-    def get_model_by_id(self, db: Session, id: str) -> Optional[ModelModel]:
+    def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
-            model = db.get(Model, id)
-            return ModelModel.model_validate(model)
+            with get_session() as db:
+                model = db.get(Model, id)
+                return ModelModel.model_validate(model)
         except:
             return None
 
     def update_model_by_id(
-        self, db: Session, id: str, model: ModelForm
+        self, id: str, model: ModelForm
     ) -> Optional[ModelModel]:
         try:
             # update only the fields that are present in the model
-            model = db.query(Model).get(id)
-            model.update(**model.model_dump())
-            db.commit()
-            db.refresh(model)
-            return ModelModel.model_validate(model)
+            with get_session() as db:
+                model = db.query(Model).get(id)
+                model.update(**model.model_dump())
+                db.commit()
+                db.refresh(model)
+                return ModelModel.model_validate(model)
         except Exception as e:
             print(e)
 
             return None
 
-    def delete_model_by_id(self, db: Session, id: str) -> bool:
+    def delete_model_by_id(self, id: str) -> bool:
         try:
-            db.query(Model).filter_by(id=id).delete()
+            with get_session() as db:
+                db.query(Model).filter_by(id=id).delete()
             return True
         except:
             return False

@@ -2,7 +2,6 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import HTTPException, status, Depends, Request
 from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import get_db
 from apps.webui.models.users import Users
 
 from pydantic import BaseModel
@@ -79,7 +78,6 @@ def get_http_authorization_cred(auth_header: str):
 def get_current_user(
     request: Request,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
-    db=Depends(get_db),
 ):
     token = None
 
@@ -94,19 +92,19 @@ def get_current_user(
 
     # auth by api key
     if token.startswith("sk-"):
-        return get_current_user_by_api_key(db, token)
+        return get_current_user_by_api_key(token)
 
     # auth by jwt token
     data = decode_token(token)
     if data != None and "id" in data:
-        user = Users.get_user_by_id(db, data["id"])
+        user = Users.get_user_by_id(data["id"])
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.INVALID_TOKEN,
             )
         else:
-            Users.update_user_last_active_by_id(db, user.id)
+            Users.update_user_last_active_by_id(user.id)
         return user
     else:
         raise HTTPException(

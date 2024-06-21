@@ -14,7 +14,7 @@ class TestDocuments(AbstractPostgresTest):
 
     def test_documents(self):
         # Empty database
-        assert len(self.documents.get_docs(self.db_session)) == 0
+        assert len(self.documents.get_docs()) == 0
         with mock_webui_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
@@ -34,7 +34,7 @@ class TestDocuments(AbstractPostgresTest):
             )
         assert response.status_code == 200
         assert response.json()["name"] == "doc_name"
-        assert len(self.documents.get_docs(self.db_session)) == 1
+        assert len(self.documents.get_docs()) == 1
 
         # Get the document
         with mock_webui_user(id="2"):
@@ -61,7 +61,7 @@ class TestDocuments(AbstractPostgresTest):
             )
         assert response.status_code == 200
         assert response.json()["name"] == "doc_name 2"
-        assert len(self.documents.get_docs(self.db_session)) == 2
+        assert len(self.documents.get_docs()) == 2
 
         # Get all documents
         with mock_webui_user(id="2"):
@@ -95,7 +95,7 @@ class TestDocuments(AbstractPostgresTest):
         assert data["content"] == {
             "tags": [{"name": "testing-tag"}, {"name": "another-tag"}]
         }
-        assert len(self.documents.get_docs(self.db_session)) == 2
+        assert len(self.documents.get_docs()) == 2
 
         # Delete the first document
         with mock_webui_user(id="2"):
@@ -103,4 +103,4 @@ class TestDocuments(AbstractPostgresTest):
                 self.create_url("/doc/delete?name=doc_name rework")
             )
         assert response.status_code == 200
-        assert len(self.documents.get_docs(self.db_session)) == 1
+        assert len(self.documents.get_docs()) == 1

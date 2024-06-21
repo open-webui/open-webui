@@ -4,7 +4,7 @@ from typing import List, Union, Optional
 from sqlalchemy import Column, String, BigInteger
 from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import Base
+from apps.webui.internal.db import Base, get_session
 from apps.webui.models.chats import Chats
 
 import time
@@ -44,7 +44,6 @@ class MemoriesTable:
 
     def insert_new_memory(
         self,
-        db: Session,
         user_id: str,
         content: str,
     ) -> Optional[MemoryModel]:
@@ -59,53 +58,59 @@ class MemoriesTable:
                 "updated_at": int(time.time()),
             }
         )
-        result = Memory(**memory.dict())
-        db.add(result)
-        db.commit()
-        db.refresh(result)
-        if result:
-            return MemoryModel.model_validate(result)
-        else:
-            return None
+        with get_session() as db:
+            result = Memory(**memory.model_dump())
+            db.add(result)
+            db.commit()
+            db.refresh(result)
+            if result:
+                return MemoryModel.model_validate(result)
+            else:
+                return None
 
     def update_memory_by_id(
         self,
-        db: Session,
         id: str,
         content: str,
     ) -> Optional[MemoryModel]:
         try:
-            db.query(Memory).filter_by(id=id).update(
-                {"content": content, "updated_at": int(time.time())}
-            )
-            return self.get_memory_by_id(db, id)
+            with get_session() as db:
+                db.query(Memory).filter_by(id=id).update(
+                    {"content": content, "updated_at": int(time.time())}
+                )
+                db.commit()
+                return self.get_memory_by_id(id)
         except:
             return None
 
-    def get_memories(self, db: Session) -> List[MemoryModel]:
+    def get_memories(self) -> List[MemoryModel]:
         try:
-            memories = db.query(Memory).all()
-            return [MemoryModel.model_validate(memory) for memory in memories]
+            with get_session() as db:
+                memories = db.query(Memory).all()
+                return [MemoryModel.model_validate(memory) for memory in memories]
         except:
             return None
 
-    def get_memories_by_user_id(self, db: Session, user_id: str) -> List[MemoryModel]:
+    def get_memories_by_user_id(self, user_id: str) -> List[MemoryModel]:
         try:
-            memories = db.query(Memory).filter_by(user_id=user_id).all()
-            return [MemoryModel.model_validate(memory) for memory in memories]
+            with get_session() as db:
+                memories = db.query(Memory).filter_by(user_id=user_id).all()
+                return [MemoryModel.model_validate(memory) for memory in memories]
         except:
             return None
 
-    def get_memory_by_id(self, db: Session, id: str) -> Optional[MemoryModel]:
+    def get_memory_by_id(self, id: str) -> Optional[MemoryModel]:
         try:
-            memory = db.get(Memory, id)
-            return MemoryModel.model_validate(memory)
+            with get_session() as db:
+                memory = db.get(Memory, id)
+                return MemoryModel.model_validate(memory)
         except:
             return None
 
-    def delete_memory_by_id(self, db: Session, id: str) -> bool:
+    def delete_memory_by_id(self, id: str) -> bool:
         try:
-            db.query(Memory).filter_by(id=id).delete()
+            with get_session() as db:
+                db.query(Memory).filter_by(id=id).delete()
             return True
 
         except:
@@ -113,7 +118,8 @@ class MemoriesTable:
 
     def delete_memories_by_user_id(self, db: Session, user_id: str) -> bool:
         try:
-            db.query(Memory).filter_by(user_id=user_id).delete()
+            with get_session() as db:
+                db.query(Memory).filter_by(user_id=user_id).delete()
             return True
         except:
             return False
@@ -122,7 +128,8 @@ class MemoriesTable:
         self, db: Session, id: str, user_id: str
     ) -> bool:
         try:
-            db.query(Memory).filter_by(id=id, user_id=user_id).delete()
+            with get_session() as db:
+                db.query(Memory).filter_by(id=id, user_id=user_id).delete()
             return True
         except:
             return False

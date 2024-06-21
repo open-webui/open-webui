@@ -18,7 +18,6 @@ class TestChats(AbstractPostgresTest):
 
         self.chats = Chats
         self.chats.insert_new_chat(
-            self.db_session,
             "2",
             ChatForm(
                 **{
@@ -46,7 +45,7 @@ class TestChats(AbstractPostgresTest):
         with mock_webui_user(id="2"):
             response = self.fast_api_client.delete(self.create_url("/"))
         assert response.status_code == 200
-        assert len(self.chats.get_chats(self.db_session)) == 0
+        assert len(self.chats.get_chats()) == 0
 
     def test_get_user_chat_list_by_user_id(self):
         with mock_webui_user(id="3"):
@@ -84,14 +83,13 @@ class TestChats(AbstractPostgresTest):
         assert data["title"] == "New Chat"
         assert data["updated_at"] is not None
         assert data["created_at"] is not None
-        assert len(self.chats.get_chats(self.db_session)) == 2
+        assert len(self.chats.get_chats()) == 2
 
     def test_get_user_chats(self):
         self.test_get_session_user_chat_list()
 
     def test_get_user_archived_chats(self):
-        self.chats.archive_all_chats_by_user_id(self.db_session, "2")
-        self.db_session.commit()
+        self.chats.archive_all_chats_by_user_id("2")
         with mock_webui_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/all/archived"))
         assert response.status_code == 200
@@ -114,12 +112,11 @@ class TestChats(AbstractPostgresTest):
         with mock_webui_user(id="2"):
             response = self.fast_api_client.post(self.create_url("/archive/all"))
         assert response.status_code == 200
-        assert len(self.chats.get_archived_chats_by_user_id(self.db_session, "2")) == 1
+        assert len(self.chats.get_archived_chats_by_user_id("2")) == 1
 
     def test_get_shared_chat_by_id(self):
-        chat_id = self.chats.get_chats(self.db_session)[0].id
-        self.chats.update_chat_share_id_by_id(self.db_session, chat_id, chat_id)
-        self.db_session.commit()
+        chat_id = self.chats.get_chats()[0].id
+        self.chats.update_chat_share_id_by_id(chat_id, chat_id)
         with mock_webui_user(id="2"):
             response = self.fast_api_client.get(self.create_url(f"/share/{chat_id}"))
         assert response.status_code == 200
@@ -136,7 +133,7 @@ class TestChats(AbstractPostgresTest):
         assert data["title"] == "New Chat"
 
     def test_get_chat_by_id(self):
-        chat_id = self.chats.get_chats(self.db_session)[0].id
+        chat_id = self.chats.get_chats()[0].id
         with mock_webui_user(id="2"):
             response = self.fast_api_client.get(self.create_url(f"/{chat_id}"))
         assert response.status_code == 200
@@ -153,7 +150,7 @@ class TestChats(AbstractPostgresTest):
         assert data["user_id"] == "2"
 
     def test_update_chat_by_id(self):
-        chat_id = self.chats.get_chats(self.db_session)[0].id
+        chat_id = self.chats.get_chats()[0].id
         with mock_webui_user(id="2"):
             response = self.fast_api_client.post(
                 self.create_url(f"/{chat_id}"),
@@ -181,14 +178,14 @@ class TestChats(AbstractPostgresTest):
         assert data["user_id"] == "2"
 
     def test_delete_chat_by_id(self):
-        chat_id = self.chats.get_chats(self.db_session)[0].id
+        chat_id = self.chats.get_chats()[0].id
         with mock_webui_user(id="2"):
             response = self.fast_api_client.delete(self.create_url(f"/{chat_id}"))
         assert response.status_code == 200
         assert response.json() is True
 
     def test_clone_chat_by_id(self):
-        chat_id = self.chats.get_chats(self.db_session)[0].id
+        chat_id = self.chats.get_chats()[0].id
         with mock_webui_user(id="2"):
             response = self.fast_api_client.get(self.create_url(f"/{chat_id}/clone"))
 
@@ -209,31 +206,30 @@ class TestChats(AbstractPostgresTest):
         assert data["user_id"] == "2"
 
     def test_archive_chat_by_id(self):
-        chat_id = self.chats.get_chats(self.db_session)[0].id
+        chat_id = self.chats.get_chats()[0].id
         with mock_webui_user(id="2"):
             response = self.fast_api_client.get(self.create_url(f"/{chat_id}/archive"))
         assert response.status_code == 200
 
-        chat = self.chats.get_chat_by_id(self.db_session, chat_id)
+        chat = self.chats.get_chat_by_id(chat_id)
         assert chat.archived is True
 
     def test_share_chat_by_id(self):
-        chat_id = self.chats.get_chats(self.db_session)[0].id
+        chat_id = self.chats.get_chats()[0].id
         with mock_webui_user(id="2"):
             response = self.fast_api_client.post(self.create_url(f"/{chat_id}/share"))
         assert response.status_code == 200
 
-        chat = self.chats.get_chat_by_id(self.db_session, chat_id)
+        chat = self.chats.get_chat_by_id(chat_id)
         assert chat.share_id is not None
 
     def test_delete_shared_chat_by_id(self):
-        chat_id = self.chats.get_chats(self.db_session)[0].id
+        chat_id = self.chats.get_chats()[0].id
         share_id = str(uuid.uuid4())
-        self.chats.update_chat_share_id_by_id(self.db_session, chat_id, share_id)
-        self.db_session.commit()
+        self.chats.update_chat_share_id_by_id(chat_id, share_id)
         with mock_webui_user(id="2"):
             response = self.fast_api_client.delete(self.create_url(f"/{chat_id}/share"))
         assert response.status_code
 
-        chat = self.chats.get_chat_by_id(self.db_session, chat_id)
+        chat = self.chats.get_chat_by_id(chat_id)
         assert chat.share_id is None

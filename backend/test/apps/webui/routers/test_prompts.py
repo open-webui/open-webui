@@ -68,6 +68,16 @@ class TestPrompts(AbstractPostgresTest):
         assert data["content"] == "description Updated"
         assert data["user_id"] == "3"
 
+        # Get prompt by command
+        with mock_webui_user(id="2"):
+            response = self.fast_api_client.get(self.create_url("/command/my-command2"))
+        assert response.status_code == 200
+        data = response.json()
+        assert data["command"] == "/my-command2"
+        assert data["title"] == "Hello World Updated"
+        assert data["content"] == "description Updated"
+        assert data["user_id"] == "3"
+
         # Delete prompt
         with mock_webui_user(id="2"):
             response = self.fast_api_client.delete(

@@ -1,6 +1,7 @@
 import os
 import logging
 import json
+from contextlib import contextmanager
 from typing import Optional, Any
 from typing_extensions import Self
 
@@ -52,11 +53,12 @@ if "sqlite" in SQLALCHEMY_DATABASE_URL:
     )
 else:
     engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
 Base = declarative_base()
 
 
-def get_db():
+@contextmanager
+def get_session():
     db = SessionLocal()
     try:
         yield db
@@ -64,5 +66,4 @@ def get_db():
     except Exception as e:
         db.rollback()
         raise e
-    finally:
-        db.close()
+

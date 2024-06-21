@@ -33,7 +33,6 @@ class TestUsers(AbstractPostgresTest):
     def setup_method(self):
         super().setup_method()
         self.users.insert_new_user(
-            self.db_session,
             id="1",
             name="user 1",
             email="user1@openwebui.com",
@@ -41,7 +40,6 @@ class TestUsers(AbstractPostgresTest):
             role="user",
         )
         self.users.insert_new_user(
-            self.db_session,
             id="2",
             name="user 2",
             email="user2@openwebui.com",

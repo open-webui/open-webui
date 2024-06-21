@@ -114,8 +114,8 @@ async def get_status():
     }
 
 
-async def get_pipe_models(db: Session):
-    pipes = Functions.get_functions_by_type(db, "pipe", active_only=True)
+async def get_pipe_models():
+    pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
     for pipe in pipes:
