@@ -1,4 +1,4 @@
-"""Peewee migrations -- 013_add_user_oauth_sub.py.
+"""Peewee migrations -- 016_add_user_oauth_sub.py.
 
 Some examples (model - class or model name)::
 
