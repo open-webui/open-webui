@@ -1,3 +1,4 @@
+import base64
 import uuid
 from contextlib import asynccontextmanager
 
@@ -1903,13 +1904,33 @@ async def oauth_callback(provider: str, request: Request):
     if not user:
         # If the user does not exist, check if signups are enabled
         if ENABLE_OAUTH_SIGNUP.value:
+            picture_url = user_data.get("picture", "")
+            if picture_url:
+                # Download the profile image into a base64 string
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(picture_url) as resp:
+                            picture = await resp.read()
+                            base64_encoded_picture = base64.b64encode(picture).decode(
+                                "utf-8"
+                            )
+                            guessed_mime_type = mimetypes.guess_type(picture_url)[0]
+                            if guessed_mime_type is None:
+                                # assume JPG, browsers are tolerant enough of image formats
+                                guessed_mime_type = "image/jpeg"
+                            picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
+                except Exception as e:
+                    log.error(f"Profile image download error: {e}")
+                    picture_url = ""
+            if not picture_url:
+                picture_url = "/user.png"
             user = Auths.insert_new_auth(
                 email=user_data.get("email", "").lower(),
                 password=get_password_hash(
                     str(uuid.uuid4())
                 ),  # Random password, not used
                 name=user_data.get("name", "User"),
-                profile_image_url=user_data.get("picture", "/user.png"),
+                profile_image_url=picture_url,
                 role=webui_app.state.config.DEFAULT_USER_ROLE,
                 oauth_sub=provider_sub,
             )
