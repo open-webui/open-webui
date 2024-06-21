@@ -1870,7 +1870,7 @@ async def oauth_login(provider: str, request: Request):
 
 
 @app.get("/oauth/{provider}/callback")
-async def oauth_callback(provider: str, request: Request):
+async def oauth_callback(provider: str, request: Request, response: Response):
     if provider not in OAUTH_PROVIDERS:
         raise HTTPException(404)
     client = oauth.create_client(provider)
@@ -1951,6 +1951,13 @@ async def oauth_callback(provider: str, request: Request):
     jwt_token = create_token(
         data={"id": user.id},
         expires_delta=parse_duration(webui_app.state.config.JWT_EXPIRES_IN),
+    )
+
+    # Set the cookie token
+    response.set_cookie(
+        key="token",
+        value=token,
+        httponly=True,  # Ensures the cookie is not accessible via JavaScript
     )
 
     # Redirect back to the frontend with the JWT token
