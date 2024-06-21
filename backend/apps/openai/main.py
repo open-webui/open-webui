@@ -20,6 +20,8 @@ from utils.utils import (
     get_verified_user,
     get_admin_user,
 )
+from utils.task import prompt_template
+
 from config import (
     SRC_LOG_LEVELS,
     ENABLE_OPENAI_API,
@@ -392,22 +394,34 @@ async def generate_chat_completion(
                     else None
                 )
 
-        if model_info.params.get("system", None):
+        system = model_info.params.get("system", None)
+        if system:
+            system = prompt_template(
+                system,
+                **(
+                    {
+                        "user_name": user.name,
+                        "user_location": (
+                            user.info.get("location") if user.info else None
+                        ),
+                    }
+                    if user
+                    else {}
+                ),
+            )
             # Check if the payload already has a system message
             # If not, add a system message to the payload
             if payload.get("messages"):
                 for message in payload["messages"]:
                     if message.get("role") == "system":
-                        message["content"] = (
-                            model_info.params.get("system", None) + message["content"]
-                        )
+                        message["content"] = system + message["content"]
                         break
                 else:
                     payload["messages"].insert(
                         0,
                         {
                             "role": "system",
-                            "content": model_info.params.get("system", None),
+                            "content": system,
                         },
                     )
 
@@ -418,7 +432,12 @@ async def generate_chat_completion(
     idx = model["urlIdx"]
 
     if "pipeline" in model and model.get("pipeline"):
-        payload["user"] = {"name": user.name, "id": user.id}
+        payload["user"] = {
+            "name": user.name,
+            "id": user.id,
+            "email": user.email,
+            "role": user.role,
+        }
 
     # Check if the model is "gpt-4-vision-preview" and set "max_tokens" to 4000
     # This is a workaround until OpenAI fixes the issue with this model
@@ -430,12 +449,10 @@ async def generate_chat_completion(
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
 
-    print(payload)
+    log.debug(payload)
 
     url = app.state.config.OPENAI_API_BASE_URLS[idx]
     key = app.state.config.OPENAI_API_KEYS[idx]
-
-    print(payload)
 
     headers = {}
     headers["Authorization"] = f"Bearer {key}"

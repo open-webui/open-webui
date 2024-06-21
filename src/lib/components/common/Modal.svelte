@@ -33,14 +33,14 @@
 		mounted = true;
 	});
 
-	$: if (mounted) {
-		if (show) {
-			window.addEventListener('keydown', handleKeyDown);
-			document.body.style.overflow = 'hidden';
-		} else {
-			window.removeEventListener('keydown', handleKeyDown);
-			document.body.style.overflow = 'unset';
-		}
+	$: if (show && modalElement) {
+		document.body.appendChild(modalElement);
+		window.addEventListener('keydown', handleKeyDown);
+		document.body.style.overflow = 'hidden';
+	} else if (modalElement) {
+		document.body.removeChild(modalElement);
+		window.removeEventListener('keydown', handleKeyDown);
+		document.body.style.overflow = 'unset';
 	}
 </script>
 

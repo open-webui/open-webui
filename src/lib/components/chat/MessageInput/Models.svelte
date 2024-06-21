@@ -133,18 +133,20 @@
 
 {#if prompt.charAt(0) === '@'}
 	{#if filteredModels.length > 0}
-		<div class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0">
-			<div class="flex w-full px-2">
-				<div class=" bg-gray-100 dark:bg-gray-700 w-10 rounded-l-xl text-center">
+		<div class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10">
+			<div class="flex w-full dark:border dark:border-gray-850 rounded-lg">
+				<div class=" bg-gray-50 dark:bg-gray-850 w-10 rounded-l-lg text-center">
 					<div class=" text-lg font-semibold mt-2">@</div>
 				</div>
 
-				<div class="max-h-60 flex flex-col w-full rounded-r-xl bg-white dark:bg-gray-850">
-					<div class="m-1 overflow-y-auto p-1 rounded-r-xl space-y-0.5">
+				<div
+					class="max-h-60 flex flex-col w-full rounded-r-lg bg-white dark:bg-gray-900 dark:text-gray-100"
+				>
+					<div class="m-1 overflow-y-auto p-1 rounded-r-lg space-y-0.5 scrollbar-hidden">
 						{#each filteredModels as model, modelIdx}
 							<button
 								class=" px-3 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
-									? ' bg-gray-100 dark:bg-gray-600 selected-command-option-button'
+									? '  bg-gray-50 dark:bg-gray-850  selected-command-option-button'
 									: ''}"
 								type="button"
 								on:click={() => {

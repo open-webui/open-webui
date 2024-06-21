@@ -15,8 +15,9 @@ from constants import ERROR_MESSAGES
 
 from importlib import util
 import os
+from pathlib import Path
 
-from config import DATA_DIR
+from config import DATA_DIR, CACHE_DIR
 
 
 TOOLS_DIR = f"{DATA_DIR}/tools"
@@ -78,6 +79,9 @@ async def create_new_toolkit(
 
             specs = get_tools_specs(TOOLS[form_data.id])
             toolkit = Tools.insert_new_tool(user.id, form_data, specs)
+
+            tool_cache_dir = Path(CACHE_DIR) / "tools" / form_data.id
+            tool_cache_dir.mkdir(parents=True, exist_ok=True)
 
             if toolkit:
                 return toolkit

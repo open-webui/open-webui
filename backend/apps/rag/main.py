@@ -55,6 +55,9 @@ from apps.webui.models.documents import (
     DocumentForm,
     DocumentResponse,
 )
+from apps.webui.models.files import (
+    Files,
+)
 
 from apps.rag.utils import (
     get_model_path,
@@ -112,6 +115,7 @@ from config import (
     YOUTUBE_LOADER_LANGUAGE,
     ENABLE_RAG_WEB_SEARCH,
     RAG_WEB_SEARCH_ENGINE,
+    RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
     SEARXNG_QUERY_URL,
     GOOGLE_PSE_API_KEY,
     GOOGLE_PSE_ENGINE_ID,
@@ -165,6 +169,7 @@ app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
+app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
 
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
@@ -775,6 +780,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SEARXNG_QUERY_URL,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
@@ -788,6 +794,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.GOOGLE_PSE_ENGINE_ID,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception(
@@ -799,6 +806,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.BRAVE_SEARCH_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
@@ -808,6 +816,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPSTACK_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
                 https_enabled=app.state.config.SERPSTACK_HTTPS,
             )
         else:
@@ -818,6 +827,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPER_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SERPER_API_KEY found in environment variables")
@@ -827,11 +837,16 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPLY_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
     elif engine == "duckduckgo":
-        return search_duckduckgo(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
+        return search_duckduckgo(
+            query,
+            app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     elif engine == "tavily":
         if app.state.config.TAVILY_API_KEY:
             return search_tavily(
@@ -1098,6 +1113,60 @@ def store_doc(
                     "status": True,
                     "collection_name": collection_name,
                     "filename": filename,
+                    "known_type": known_type,
+                }
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=e,
+            )
+    except Exception as e:
+        log.exception(e)
+        if "No pandoc was found" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
+
+
+class ProcessDocForm(BaseModel):
+    file_id: str
+    collection_name: Optional[str] = None
+
+
+@app.post("/process/doc")
+def process_doc(
+    form_data: ProcessDocForm,
+    user=Depends(get_current_user),
+):
+    try:
+        file = Files.get_file_by_id(form_data.file_id)
+        file_path = file.meta.get("path", f"{UPLOAD_DIR}/{file.filename}")
+
+        f = open(file_path, "rb")
+
+        collection_name = form_data.collection_name
+        if collection_name == None:
+            collection_name = calculate_sha256(f)[:63]
+        f.close()
+
+        loader, known_type = get_loader(
+            file.filename, file.meta.get("content_type"), file_path
+        )
+        data = loader.load()
+
+        try:
+            result = store_data_in_vector_db(data, collection_name)
+
+            if result:
+                return {
+                    "status": True,
+                    "collection_name": collection_name,
                     "known_type": known_type,
                 }
         except Exception as e:

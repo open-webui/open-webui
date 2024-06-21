@@ -120,11 +120,21 @@
 			}
 		};
 
-		document.addEventListener('keydown', onKeyDown);
-		document.addEventListener('keyup', onKeyUp);
+		const onFocus = () => {};
+
+		const onBlur = () => {
+			shiftKey = false;
+			selectedChatId = null;
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
 
 		window.addEventListener('touchstart', onTouchStart);
 		window.addEventListener('touchend', onTouchEnd);
+
+		window.addEventListener('focus', onFocus);
+		window.addEventListener('blur', onBlur);
 
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
@@ -132,6 +142,9 @@
 
 			window.removeEventListener('touchstart', onTouchStart);
 			window.removeEventListener('touchend', onTouchEnd);
+
+			window.removeEventListener('focus', onFocus);
+			window.removeEventListener('blur', onBlur);
 		};
 	});
 
@@ -182,13 +195,13 @@
 
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
-	title="Delete chat?"
+	title={$i18n.t('Delete chat?')}
 	on:confirm={() => {
 		deleteChatHandler(deleteChat.id);
 	}}
 >
 	<div class=" text-sm text-gray-500">
-		This will delete <span class="  font-semibold">{deleteChat.title}</span>.
+		{$i18n.t('This will delete')} <span class="  font-semibold">{deleteChat.title}</span>.
 	</div>
 </DeleteConfirmDialog>
 
@@ -464,9 +477,16 @@
 						on:select={() => {
 							selectedChatId = chat.id;
 						}}
-						on:delete={() => {
-							deleteChat = chat;
-							showDeleteConfirm = true;
+						on:unselect={() => {
+							selectedChatId = null;
+						}}
+						on:delete={(e) => {
+							if ((e?.detail ?? '') === 'shift') {
+								deleteChatHandler(chat.id);
+							} else {
+								deleteChat = chat;
+								showDeleteConfirm = true;
+							}
 						}}
 					/>
 				{/each}

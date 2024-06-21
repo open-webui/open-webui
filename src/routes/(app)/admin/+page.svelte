@@ -77,6 +77,17 @@
 		}
 		loaded = true;
 	});
+	let sortKey = 'created_at'; // default sort key
+	let sortOrder = 'asc'; // default sort order
+
+	function setSortKey(key) {
+		if (sortKey === key) {
+			sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortKey = key;
+			sortOrder = 'asc';
+		}
+	}
 </script>
 
 <ConfirmDialog
@@ -148,12 +159,66 @@
 		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
 			<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400">
 				<tr>
-					<th scope="col" class="px-3 py-2"> {$i18n.t('Role')} </th>
-					<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
-					<th scope="col" class="px-3 py-2"> {$i18n.t('Email')} </th>
-					<th scope="col" class="px-3 py-2"> {$i18n.t('Last Active')} </th>
-
-					<th scope="col" class="px-3 py-2"> {$i18n.t('Created at')} </th>
+					<th
+						scope="col"
+						class="px-3 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('role')}
+					>
+						{$i18n.t('Role')}
+						{#if sortKey === 'role'}
+							{sortOrder === 'asc' ? '▲' : '▼'}
+						{:else}
+							<span class="invisible">▲</span>
+						{/if}
+					</th>
+					<th
+						scope="col"
+						class="px-3 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('name')}
+					>
+						{$i18n.t('Name')}
+						{#if sortKey === 'name'}
+							{sortOrder === 'asc' ? '▲' : '▼'}
+						{:else}
+							<span class="invisible">▲</span>
+						{/if}
+					</th>
+					<th
+						scope="col"
+						class="px-3 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('email')}
+					>
+						{$i18n.t('Email')}
+						{#if sortKey === 'email'}
+							{sortOrder === 'asc' ? '▲' : '▼'}
+						{:else}
+							<span class="invisible">▲</span>
+						{/if}
+					</th>
+					<th
+						scope="col"
+						class="px-3 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('last_active_at')}
+					>
+						{$i18n.t('Last Active')}
+						{#if sortKey === 'last_active_at'}
+							{sortOrder === 'asc' ? '▲' : '▼'}
+						{:else}
+							<span class="invisible">▲</span>
+						{/if}
+					</th>
+					<th
+						scope="col"
+						class="px-3 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('created_at')}
+					>
+						{$i18n.t('Created at')}
+						{#if sortKey === 'created_at'}
+							{sortOrder === 'asc' ? '▲' : '▼'}
+						{:else}
+							<span class="invisible">▲</span>
+						{/if}
+					</th>
 
 					<th scope="col" class="px-3 py-2 text-right" />
 				</tr>
@@ -168,6 +233,11 @@
 							const query = search.toLowerCase();
 							return name.includes(query);
 						}
+					})
+					.sort((a, b) => {
+						if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
+						if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
+						return 0;
 					})
 					.slice((page - 1) * 20, page * 20) as user}
 					<tr class="bg-white border-b dark:bg-gray-900 dark:border-gray-850 text-xs">

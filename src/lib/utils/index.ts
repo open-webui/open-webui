@@ -1,12 +1,23 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
+import { WEBUI_BASE_URL } from '$lib/constants';
 
 //////////////////////////
 // Helper functions
 //////////////////////////
 
 export const sanitizeResponseContent = (content: string) => {
-	return content
+	// First, temporarily replace valid <video> tags with a placeholder
+	const videoTagRegex = /<video\s+src="([^"]+)"\s+controls><\/video>/gi;
+	const placeholders: string[] = [];
+	content = content.replace(videoTagRegex, (_, src) => {
+		const placeholder = `{{VIDEO_${placeholders.length}}}`;
+		placeholders.push(`<video src="${src}" controls></video>`);
+		return placeholder;
+	});
+
+	// Now apply the sanitization to the rest of the content
+	content = content
 		.replace(/<\|[a-z]*$/, '')
 		.replace(/<\|[a-z]+\|$/, '')
 		.replace(/<$/, '')
@@ -14,6 +25,44 @@ export const sanitizeResponseContent = (content: string) => {
 		.replaceAll('<', '&lt;')
 		.replaceAll('>', '&gt;')
 		.trim();
+
+	// Replace placeholders with original <video> tags
+	placeholders.forEach((placeholder, index) => {
+		content = content.replace(`{{VIDEO_${index}}}`, placeholder);
+	});
+
+	return content.trim();
+};
+
+export const replaceTokens = (content, char, user) => {
+	const charToken = /{{char}}/gi;
+	const userToken = /{{user}}/gi;
+	const videoIdToken = /{{VIDEO_FILE_ID_([a-f0-9-]+)}}/gi; // Regex to capture the video ID
+	const htmlIdToken = /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi; // Regex to capture the HTML ID
+
+	// Replace {{char}} if char is provided
+	if (char !== undefined && char !== null) {
+		content = content.replace(charToken, char);
+	}
+
+	// Replace {{user}} if user is provided
+	if (user !== undefined && user !== null) {
+		content = content.replace(userToken, user);
+	}
+
+	// Replace video ID tags with corresponding <video> elements
+	content = content.replace(videoIdToken, (match, fileId) => {
+		const videoUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`;
+		return `<video src="${videoUrl}" controls></video>`;
+	});
+
+	// Replace HTML ID tags with corresponding HTML content
+	content = content.replace(htmlIdToken, (match, fileId) => {
+		const htmlUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`;
+		return `<iframe src="${htmlUrl}" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`;
+	});
+
+	return content;
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
@@ -302,6 +351,29 @@ export const getImportOrigin = (_chats) => {
 	return 'webui';
 };
 
+export const getUserPosition = async (raw = false) => {
+	// Get the user's location using the Geolocation API
+	const position = await new Promise((resolve, reject) => {
+		navigator.geolocation.getCurrentPosition(resolve, reject);
+	}).catch((error) => {
+		console.error('Error getting user location:', error);
+		throw error;
+	});
+
+	if (!position) {
+		return 'Location not available';
+	}
+
+	// Extract the latitude and longitude from the position
+	const { latitude, longitude } = position.coords;
+
+	if (raw) {
+		return { latitude, longitude };
+	} else {
+		return `${latitude.toFixed(3)}, ${longitude.toFixed(3)} (lat, long)`;
+	}
+};
+
 const convertOpenAIMessages = (convo) => {
 	// Parse OpenAI chat messages and create chat dictionary for creating new chats
 	const mapping = convo['mapping'];
@@ -474,7 +546,7 @@ export const blobToFile = (blob, fileName) => {
 export const promptTemplate = (
 	template: string,
 	user_name?: string,
-	current_location?: string
+	user_location?: string
 ): string => {
 	// Get the current date
 	const currentDate = new Date();
@@ -487,17 +559,31 @@ export const promptTemplate = (
 		'-' +
 		String(currentDate.getDate()).padStart(2, '0');
 
+	// Format the time to HH:MM:SS AM/PM
+	const currentTime = currentDate.toLocaleTimeString('en-US', {
+		hour: 'numeric',
+		minute: 'numeric',
+		second: 'numeric',
+		hour12: true
+	});
+
+	// Replace {{CURRENT_DATETIME}} in the template with the formatted datetime
+	template = template.replace('{{CURRENT_DATETIME}}', `${formattedDate} ${currentTime}`);
+
 	// Replace {{CURRENT_DATE}} in the template with the formatted date
 	template = template.replace('{{CURRENT_DATE}}', formattedDate);
+
+	// Replace {{CURRENT_TIME}} in the template with the formatted time
+	template = template.replace('{{CURRENT_TIME}}', currentTime);
 
 	if (user_name) {
 		// Replace {{USER_NAME}} in the template with the user's name
 		template = template.replace('{{USER_NAME}}', user_name);
 	}
 
-	if (current_location) {
-		// Replace {{CURRENT_LOCATION}} in the template with the current location
-		template = template.replace('{{CURRENT_LOCATION}}', current_location);
+	if (user_location) {
+		// Replace {{USER_LOCATION}} in the template with the current location
+		template = template.replace('{{USER_LOCATION}}', user_location);
 	}
 
 	return template;

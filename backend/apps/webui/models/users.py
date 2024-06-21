@@ -26,6 +26,7 @@ class User(Model):
 
     api_key = CharField(null=True, unique=True)
     settings = JSONField(null=True)
+    info = JSONField(null=True)
 
     oauth_sub = TextField(null=True, unique=True)
 
@@ -52,6 +53,7 @@ class UserModel(BaseModel):
 
     api_key: Optional[str] = None
     settings: Optional[UserSettings] = None
+    info: Optional[dict] = None
 
     oauth_sub: Optional[str] = None
 

@@ -126,7 +126,7 @@
 			: selected
 			? 'from-gray-100 dark:from-gray-950'
 			: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
-            absolute right-[10px] top-[10px] pr-2 pl-5 bg-gradient-to-l from-80%
+            absolute right-[10px] top-[6px] py-1 pr-2 pl-5 bg-gradient-to-l from-80%
 
               to-transparent"
 		on:mouseenter={(e) => {
@@ -138,7 +138,7 @@
 	>
 		{#if confirmEdit}
 			<div class="flex self-center space-x-1.5 z-10">
-				<Tooltip content="Confirm">
+				<Tooltip content={$i18n.t('Confirm')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
@@ -162,7 +162,7 @@
 					</button>
 				</Tooltip>
 
-				<Tooltip content="Cancel">
+				<Tooltip content={$i18n.t('Cancel')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
@@ -185,7 +185,7 @@
 			</div>
 		{:else if shiftKey && mouseOver}
 			<div class=" flex items-center self-center space-x-1.5">
-				<Tooltip content="Archive" className="flex items-center">
+				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
@@ -197,11 +197,11 @@
 					</button>
 				</Tooltip>
 
-				<Tooltip content="Delete">
+				<Tooltip content={$i18n.t('Delete')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
-							deleteChat(chat.id);
+							dispatch('delete', 'shift');
 						}}
 						type="button"
 					>
@@ -231,7 +231,7 @@
 						dispatch('delete');
 					}}
 					onClose={() => {
-						selected = false;
+						dispatch('unselect');
 					}}
 				>
 					<button

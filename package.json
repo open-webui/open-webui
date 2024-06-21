@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.3.4",
+	"version": "0.3.5",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -56,6 +56,7 @@
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
 		"codemirror": "^6.0.1",
+		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
 		"eventsource-parser": "^1.1.2",
 		"file-saver": "^2.0.5",
@@ -68,11 +69,12 @@
 		"katex": "^0.16.9",
 		"marked": "^9.1.0",
 		"mermaid": "^10.9.1",
-		"pyodide": "^0.26.0-alpha.4",
-		"socket.io-client": "^4.7.5",
+		"pyodide": "^0.26.1",
+		"socket.io-client": "^4.2.0",
 		"sortablejs": "^1.15.2",
 		"svelte-sonner": "^0.3.19",
 		"tippy.js": "^6.3.7",
+		"turndown": "^7.2.0",
 		"uuid": "^9.0.1"
 	}
 }
