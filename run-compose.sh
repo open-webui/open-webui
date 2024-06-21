@@ -128,7 +128,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --data*) # Maintain old --data flag for backward compatibility but this should be removed in the future
             value=$(extract_value "$key")
-            data_dir=${value:-"./ollama-data"}
+            ollama_data_dir=${value:-"./ollama-data"}
             echo "WARNING: --data flag is deprecated. Please use --ollama-data instead."
             ;;
         --ollama-data*)
@@ -215,7 +215,7 @@ echo -e "${WHITE}${BOLD}Current Setup:${NC}"
 echo -e "   ${GREEN}${BOLD}GPU Driver:${NC} ${OLLAMA_GPU_DRIVER:-Not Enabled}"
 echo -e "   ${GREEN}${BOLD}GPU Count:${NC} ${OLLAMA_GPU_COUNT:-Not Enabled}"
 echo -e "   ${GREEN}${BOLD}WebAPI Port:${NC} ${OLLAMA_WEBAPI_PORT:-Not Enabled}"
-echo -e "   ${GREEN}${BOLD}Ollama Data Folder:${NC} ${data_dir:-Using ollama volume}"
+echo -e "   ${GREEN}${BOLD}Ollama Data Folder:${NC} ${ollama_data_dir:-Using ollama volume}"
 echo -e "   ${GREEN}${BOLD}WebUI Data Folder:${NC} ${webui_data_dir:-Using open-webui volume}"
 echo -e "   ${GREEN}${BOLD}WebUI Port:${NC} $webui_port"
 echo

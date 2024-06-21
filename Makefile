@@ -14,6 +14,10 @@ remove:
 
 start:
 	$(DOCKER_COMPOSE) start
+	
+logs: 
+	$(DOCKER_COMPOSE) logs -f
+
 startAndBuild: 
 	$(DOCKER_COMPOSE) up -d --build
 
