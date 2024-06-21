@@ -309,7 +309,10 @@ async def get_function_call_response(
                             "__id__": tool_id,
                         }
 
-                    function_result = function(**params)
+                    if inspect.iscoroutinefunction(function):
+                        function_result = await function(**params)
+                    else:
+                        function_result = function(**params)
 
                     if hasattr(toolkit_module, "citation") and toolkit_module.citation:
                         citation = {
