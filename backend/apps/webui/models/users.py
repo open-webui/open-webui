@@ -131,7 +131,7 @@ class UsersTable:
                 if not oauth_user
                 else (User.email == email)
             )
-            user = User.get(conditions)
+            user = User.get(*conditions)
             return UserModel(**model_to_dict(user))
         except:
             return None
