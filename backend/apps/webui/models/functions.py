@@ -8,6 +8,8 @@ from apps.webui.internal.db import DB, JSONField
 from apps.webui.models.users import Users
 
 import json
+import copy
+
 
 from config import SRC_LOG_LEVELS
 
@@ -121,14 +123,15 @@ class FunctionsTable:
     ) -> Optional[dict]:
         try:
             user = Users.get_user_by_id(user_id)
+            user_settings = user.settings.model_dump()
 
             # Check if user has "functions" and "valves" settings
-            if "functions" not in user.settings:
-                user.settings["functions"] = {}
-            if "valves" not in user.settings["functions"]:
-                user.settings["functions"]["valves"] = {}
+            if "functions" not in user_settings:
+                user_settings["functions"] = {}
+            if "valves" not in user_settings["functions"]:
+                user_settings["functions"]["valves"] = {}
 
-            return user.settings["functions"]["valves"].get(id, {})
+            return user_settings["functions"]["valves"].get(id, {})
         except Exception as e:
             print(f"An error occurred: {e}")
             return None
@@ -138,20 +141,21 @@ class FunctionsTable:
     ) -> Optional[dict]:
         try:
             user = Users.get_user_by_id(user_id)
+            user_settings = user.settings.model_dump()
 
             # Check if user has "functions" and "valves" settings
-            if "functions" not in user.settings:
-                user.settings["functions"] = {}
-            if "valves" not in user.settings["functions"]:
-                user.settings["functions"]["valves"] = {}
+            if "functions" not in user_settings:
+                user_settings["functions"] = {}
+            if "valves" not in user_settings["functions"]:
+                user_settings["functions"]["valves"] = {}
 
-            user.settings["functions"]["valves"][id] = valves
+            user_settings["functions"]["valves"][id] = valves
 
             # Update the user settings in the database
-            query = Users.update_user_by_id(user_id, {"settings": user.settings})
+            query = Users.update_user_by_id(user_id, {"settings": user_settings})
             query.execute()
 
-            return user.settings["functions"]["valves"][id]
+            return user_settings["functions"]["valves"][id]
         except Exception as e:
             print(f"An error occurred: {e}")
             return None

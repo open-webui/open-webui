@@ -145,7 +145,7 @@ async def get_function_user_valves_by_id(id: str, user=Depends(get_verified_user
 async def get_function_user_valves_spec_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    function = Functions.get_tool_by_id(id)
+    function = Functions.get_function_by_id(id)
     if function:
         if id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[id]
@@ -168,8 +168,7 @@ async def get_function_user_valves_spec_by_id(
 async def update_function_user_valves_by_id(
     request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
 ):
-
-    function = Functions.get_tool_by_id(id)
+    function = Functions.get_function_by_id(id)
 
     if function:
         if id in request.app.state.FUNCTIONS:
@@ -211,7 +210,7 @@ async def update_function_user_valves_by_id(
 
 
 @router.post("/id/{id}/update", response_model=Optional[FunctionModel])
-async def update_toolkit_by_id(
+async def update_function_by_id(
     request: Request, id: str, form_data: FunctionForm, user=Depends(get_admin_user)
 ):
     function_path = os.path.join(FUNCTIONS_DIR, f"{id}.py")
