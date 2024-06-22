@@ -5,6 +5,7 @@ from typing import List, Union, Optional
 import time
 import logging
 from apps.webui.internal.db import DB, JSONField
+from apps.webui.models.users import Users
 
 import json
 
@@ -105,6 +106,46 @@ class ToolsTable:
 
     def get_tools(self) -> List[ToolModel]:
         return [ToolModel(**model_to_dict(tool)) for tool in Tool.select()]
+
+    def get_user_valves_by_id_and_user_id(
+        self, id: str, user_id: str
+    ) -> Optional[dict]:
+        try:
+            user = Users.get_user_by_id(user_id)
+
+            # Check if user has "tools" and "valves" settings
+            if "tools" not in user.settings:
+                user.settings["tools"] = {}
+            if "valves" not in user.settings["tools"]:
+                user.settings["tools"]["valves"] = {}
+
+            return user.settings["tools"]["valves"].get(id, {})
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
+
+    def update_user_valves_by_id_and_user_id(
+        self, id: str, user_id: str, valves: dict
+    ) -> Optional[dict]:
+        try:
+            user = Users.get_user_by_id(user_id)
+
+            # Check if user has "tools" and "valves" settings
+            if "tools" not in user.settings:
+                user.settings["tools"] = {}
+            if "valves" not in user.settings["tools"]:
+                user.settings["tools"]["valves"] = {}
+
+            user.settings["tools"]["valves"][id] = valves
+
+            # Update the user settings in the database
+            query = Users.update_user_by_id(user_id, {"settings": user.settings})
+            query.execute()
+
+            return user.settings["tools"]["valves"][id]
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
 
     def update_tool_by_id(self, id: str, updated: dict) -> Optional[ToolModel]:
         try:

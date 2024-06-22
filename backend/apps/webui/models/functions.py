@@ -5,6 +5,7 @@ from typing import List, Union, Optional
 import time
 import logging
 from apps.webui.internal.db import DB, JSONField
+from apps.webui.models.users import Users
 
 import json
 
@@ -114,6 +115,46 @@ class FunctionsTable:
             FunctionModel(**model_to_dict(function))
             for function in Function.select().where(Function.type == type)
         ]
+
+    def get_user_valves_by_id_and_user_id(
+        self, id: str, user_id: str
+    ) -> Optional[dict]:
+        try:
+            user = Users.get_user_by_id(user_id)
+
+            # Check if user has "functions" and "valves" settings
+            if "functions" not in user.settings:
+                user.settings["functions"] = {}
+            if "valves" not in user.settings["functions"]:
+                user.settings["functions"]["valves"] = {}
+
+            return user.settings["functions"]["valves"].get(id, {})
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
+
+    def update_user_valves_by_id_and_user_id(
+        self, id: str, user_id: str, valves: dict
+    ) -> Optional[dict]:
+        try:
+            user = Users.get_user_by_id(user_id)
+
+            # Check if user has "functions" and "valves" settings
+            if "functions" not in user.settings:
+                user.settings["functions"] = {}
+            if "valves" not in user.settings["functions"]:
+                user.settings["functions"]["valves"] = {}
+
+            user.settings["functions"]["valves"][id] = valves
+
+            # Update the user settings in the database
+            query = Users.update_user_by_id(user_id, {"settings": user.settings})
+            query.execute()
+
+            return user.settings["functions"]["valves"][id]
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
 
     def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:
         try:

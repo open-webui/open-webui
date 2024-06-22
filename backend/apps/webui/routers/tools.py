@@ -6,10 +6,12 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import json
 
+
+from apps.webui.models.users import Users
 from apps.webui.models.tools import Tools, ToolForm, ToolModel, ToolResponse
 from apps.webui.utils import load_toolkit_module_by_id
 
-from utils.utils import get_current_user, get_admin_user
+from utils.utils import get_admin_user, get_verified_user
 from utils.tools import get_tools_specs
 from constants import ERROR_MESSAGES
 
@@ -32,7 +34,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[ToolResponse])
-async def get_toolkits(user=Depends(get_current_user)):
+async def get_toolkits(user=Depends(get_verified_user)):
     toolkits = [toolkit for toolkit in Tools.get_tools()]
     return toolkits
 
@@ -114,6 +116,93 @@ async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
 
     if toolkit:
         return toolkit
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# ToolUserValves
+############################
+
+
+@router.get("/id/{id}/valves/user", response_model=Optional[dict])
+async def get_toolkit_user_valves_by_id(id: str, user=Depends(get_verified_user)):
+    toolkit = Tools.get_tool_by_id(id)
+    if toolkit:
+        try:
+            user_valves = Tools.get_user_valves_by_id_and_user_id(id, user.id)
+            return user_valves
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+@router.get("/id/{id}/valves/user/spec", response_model=Optional[dict])
+async def get_toolkit_user_valves_spec_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
+    toolkit = Tools.get_tool_by_id(id)
+    if toolkit:
+        if id in request.app.state.TOOLS:
+            toolkit_module = request.app.state.TOOLS[id]
+        else:
+            toolkit_module = load_toolkit_module_by_id(id)
+            request.app.state.TOOLS[id] = toolkit_module
+
+        if hasattr(toolkit_module, "UserValves"):
+            UserValves = toolkit_module.UserValves
+            return UserValves.schema()
+        return None
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+@router.post("/id/{id}/valves/user/update", response_model=Optional[dict])
+async def update_toolkit_user_valves_by_id(
+    request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
+):
+    toolkit = Tools.get_tool_by_id(id)
+
+    if toolkit:
+        if id in request.app.state.TOOLS:
+            toolkit_module = request.app.state.TOOLS[id]
+        else:
+            toolkit_module = load_toolkit_module_by_id(id)
+            request.app.state.TOOLS[id] = toolkit_module
+
+        if hasattr(toolkit_module, "UserValves"):
+            UserValves = toolkit_module.UserValves
+
+            try:
+                user_valves = UserValves(**form_data)
+                Tools.update_user_valves_by_id_and_user_id(
+                    id, user.id, user_valves.model_dump()
+                )
+                return user_valves.model_dump()
+            except Exception as e:
+                print(e)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(e),
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

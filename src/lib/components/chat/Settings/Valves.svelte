@@ -29,25 +29,28 @@
 	}}
 >
 	<div class="flex flex-col pr-1.5 overflow-y-scroll max-h-[25rem]">
-		<div class="flex text-center text-sm font-medium rounded-xl bg-transparent/10 p-1 mb-2">
-			<button
-				class="w-full rounded-lg p-1.5 {tab === 'tools' ? 'bg-gray-50 dark:bg-gray-850' : ''}"
-				type="button"
-				on:click={() => {
-					tab = 'tools';
-				}}>{$i18n.t('Tools')}</button
-			>
+		<div>
+			<div class="flex items-center justify-between mb-2">
+				<Tooltip content="">
+					<div class="text-sm font-medium">
+						{$i18n.t('Manage Valves')}
+					</div>
+				</Tooltip>
 
-			<button
-				class="w-full rounded-lg p-1 {tab === 'functions' ? 'bg-gray-50 dark:bg-gray-850' : ''}"
-				type="button"
-				on:click={() => {
-					tab = 'functions';
-				}}>{$i18n.t('Functions')}</button
-			>
+				<div class=" self-end">
+					<select
+						class=" dark:bg-gray-900 w-fit pr-8 rounded text-xs bg-transparent outline-none text-right"
+						bind:value={tab}
+						placeholder="Select"
+					>
+						<option value="tools">{$i18n.t('Tools')}</option>
+						<option value="functions">{$i18n.t('Functions')}</option>
+					</select>
+				</div>
+			</div>
 		</div>
 
-		<div class="space-y-1 px-1">
+		<div class="space-y-1">
 			<div class="flex gap-2">
 				<div class="flex-1">
 					<select
@@ -57,17 +60,29 @@
 							await tick();
 						}}
 					>
-						<option value="" selected disabled class="bg-gray-100 dark:bg-gray-700"
-							>{$i18n.t('Select a tool/function')}</option
-						>
+						{#if tab === 'tools'}
+							<option value="" selected disabled class="bg-gray-100 dark:bg-gray-700"
+								>{$i18n.t('Select a tool')}</option
+							>
 
-						{#each $tools as tool, toolIdx}
-							<option value={tool.id} class="bg-gray-100 dark:bg-gray-700">{tool.name}</option>
-						{/each}
+							{#each $tools as tool, toolIdx}
+								<option value={tool.id} class="bg-gray-100 dark:bg-gray-700">{tool.name}</option>
+							{/each}
+						{:else if tab === 'functions'}
+							<option value="" selected disabled class="bg-gray-100 dark:bg-gray-700"
+								>{$i18n.t('Select a function')}</option
+							>
+
+							{#each $functions as func, funcIdx}
+								<option value={func.id} class="bg-gray-100 dark:bg-700">{func.name}</option>
+							{/each}
+						{/if}
 					</select>
 				</div>
 			</div>
 		</div>
+
+		<hr class="dark:border-gray-800 my-3 w-full" />
 
 		<div>
 			<div class="flex items-center justify-between mb-1" />
