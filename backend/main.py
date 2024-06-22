@@ -898,7 +898,7 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
                         "role": user.role,
                         **(
                             {
-                                "valves": pipe.UserValves(
+                                "valves": function_module.UserValves(
                                     Functions.get_user_valves_by_id_and_user_id(
                                         pipe_id, user.id
                                     )
