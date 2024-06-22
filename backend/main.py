@@ -271,27 +271,24 @@ async def get_function_call_response(
 
                     if "__user__" in sig.parameters:
                         # Call the function with the '__user__' parameter included
-                        params = {
-                            **params,
-                            "__user__": {
-                                "id": user.id,
-                                "email": user.email,
-                                "name": user.name,
-                                "role": user.role,
-                                **(
-                                    {
-                                        "valves": toolkit_module.UserValves(
-                                            **Tools.get_user_valves_by_id_and_user_id(
-                                                tool_id, user.id
-                                            )
-                                        )
-                                    }
-                                    if hasattr(toolkit_module, "UserValves")
-                                    else {}
-                                ),
-                            },
+                        __user__ = {
+                            "id": user.id,
+                            "email": user.email,
+                            "name": user.name,
+                            "role": user.role,
                         }
 
+                        try:
+                            if hasattr(toolkit_module, "UserValves"):
+                                __user__["valves"] = toolkit_module.UserValves(
+                                    **Tools.get_user_valves_by_id_and_user_id(
+                                        tool_id, user.id
+                                    )
+                                )
+                        except Exception as e:
+                            print(e)
+
+                        params = {**params, "__user__": __user__}
                     if "__messages__" in sig.parameters:
                         # Call the function with the '__messages__' parameter included
                         params = {
@@ -405,28 +402,26 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                                 param = {"body": data}
 
                                 if "__user__" in sig.parameters:
-                                    param = {
-                                        **param,
-                                        "__user__": {
-                                            "id": user.id,
-                                            "email": user.email,
-                                            "name": user.name,
-                                            "role": user.role,
-                                            **(
-                                                {
-                                                    "valves": function_module.UserValves(
-                                                        **Functions.get_user_valves_by_id_and_user_id(
-                                                            filter_id, user.id
-                                                        )
-                                                    )
-                                                }
-                                                if hasattr(
-                                                    function_module, "UserValves"
-                                                )
-                                                else {}
-                                            ),
-                                        },
+                                    __user__ = {
+                                        "id": user.id,
+                                        "email": user.email,
+                                        "name": user.name,
+                                        "role": user.role,
                                     }
+
+                                    try:
+                                        if hasattr(function_module, "UserValves"):
+                                            __user__["valves"] = (
+                                                function_module.UserValves(
+                                                    **Functions.get_user_valves_by_id_and_user_id(
+                                                        filter_id, user.id
+                                                    )
+                                                )
+                                            )
+                                    except Exception as e:
+                                        print(e)
+
+                                    params = {**params, "__user__": __user__}
 
                                 if "__id__" in sig.parameters:
                                     param = {
@@ -889,26 +884,24 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
             param = {"body": form_data}
 
             if "__user__" in sig.parameters:
-                param = {
-                    **param,
-                    "__user__": {
-                        "id": user.id,
-                        "email": user.email,
-                        "name": user.name,
-                        "role": user.role,
-                        **(
-                            {
-                                "valves": function_module.UserValves(
-                                    **Functions.get_user_valves_by_id_and_user_id(
-                                        pipe_id, user.id
-                                    )
-                                )
-                            }
-                            if hasattr(function_module, "UserValves")
-                            else {}
-                        ),
-                    },
+                __user__ = {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
+                    "role": user.role,
                 }
+
+                try:
+                    if hasattr(function_module, "UserValves"):
+                        __user__["valves"] = function_module.UserValves(
+                            **Functions.get_user_valves_by_id_and_user_id(
+                                pipe_id, user.id
+                            )
+                        )
+                except Exception as e:
+                    print(e)
+
+                params = {**params, "__user__": __user__}
 
             if form_data["stream"]:
 
@@ -974,7 +967,7 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
                         res = pipe(**param)
                 except Exception as e:
                     print(f"Error: {e}")
-                    return {"error": {"detail":str(e)}}
+                    return {"error": {"detail": str(e)}}
 
                 if inspect.iscoroutinefunction(pipe):
                     res = await pipe(**param)
@@ -1114,26 +1107,24 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                         param = {"body": data}
 
                         if "__user__" in sig.parameters:
-                            param = {
-                                **param,
-                                "__user__": {
-                                    "id": user.id,
-                                    "email": user.email,
-                                    "name": user.name,
-                                    "role": user.role,
-                                    **(
-                                        {
-                                            "valves": function_module.UserValves(
-                                                **Functions.get_user_valves_by_id_and_user_id(
-                                                    filter_id, user.id
-                                                )
-                                            )
-                                        }
-                                        if hasattr(function_module, "UserValves")
-                                        else {}
-                                    ),
-                                },
+                            __user__ = {
+                                "id": user.id,
+                                "email": user.email,
+                                "name": user.name,
+                                "role": user.role,
                             }
+
+                            try:
+                                if hasattr(function_module, "UserValves"):
+                                    __user__["valves"] = function_module.UserValves(
+                                        **Functions.get_user_valves_by_id_and_user_id(
+                                            filter_id, user.id
+                                        )
+                                    )
+                            except Exception as e:
+                                print(e)
+
+                            params = {**params, "__user__": __user__}
 
                         if "__id__" in sig.parameters:
                             param = {
