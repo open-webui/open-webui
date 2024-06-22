@@ -506,12 +506,16 @@ export const removeEmojis = (str) => {
 	return str.replace(emojiRegex, '');
 };
 
+export const removeFormattings = (str) => {
+	return str.replace(/(\*)(.*?)\1/g, '').replace(/(```)(.*?)\1/gs, '');
+};
+
 export const extractSentences = (text) => {
 	// Split the paragraph into sentences based on common punctuation marks
 	const sentences = text.split(/(?<=[.!?])\s+/);
 
 	return sentences
-		.map((sentence) => removeEmojis(sentence.trim()))
+		.map((sentence) => removeFormattings(removeEmojis(sentence.trim())))
 		.filter((sentence) => sentence !== '');
 };
 
