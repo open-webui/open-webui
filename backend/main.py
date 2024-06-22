@@ -913,10 +913,15 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
             if form_data["stream"]:
 
                 async def stream_content():
-                    if inspect.iscoroutinefunction(pipe):
-                        res = await pipe(**param)
-                    else:
-                        res = pipe(**param)
+                    try:
+                        if inspect.iscoroutinefunction(pipe):
+                            res = await pipe(**param)
+                        else:
+                            res = pipe(**param)
+                    except Exception as e:
+                        print(f"Error: {e}")
+                        yield f"data: {json.dumps({'error': {'detail':str(e)}})}\n\n"
+                        return
 
                     if isinstance(res, str):
                         message = stream_message_template(form_data["model"], res)
@@ -961,6 +966,16 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
                     stream_content(), media_type="text/event-stream"
                 )
             else:
+
+                try:
+                    if inspect.iscoroutinefunction(pipe):
+                        res = await pipe(**param)
+                    else:
+                        res = pipe(**param)
+                except Exception as e:
+                    print(f"Error: {e}")
+                    return {"error": {"detail":str(e)}}
+
                 if inspect.iscoroutinefunction(pipe):
                     res = await pipe(**param)
                 else:
