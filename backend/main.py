@@ -281,7 +281,7 @@ async def get_function_call_response(
                                 **(
                                     {
                                         "valves": toolkit_module.UserValves(
-                                            Tools.get_user_valves_by_id_and_user_id(
+                                            **Tools.get_user_valves_by_id_and_user_id(
                                                 tool_id, user.id
                                             )
                                         )
@@ -415,7 +415,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                                             **(
                                                 {
                                                     "valves": function_module.UserValves(
-                                                        Functions.get_user_valves_by_id_and_user_id(
+                                                        **Functions.get_user_valves_by_id_and_user_id(
                                                             filter_id, user.id
                                                         )
                                                     )
@@ -899,7 +899,7 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
                         **(
                             {
                                 "valves": function_module.UserValves(
-                                    Functions.get_user_valves_by_id_and_user_id(
+                                    **Functions.get_user_valves_by_id_and_user_id(
                                         pipe_id, user.id
                                     )
                                 )
@@ -1109,7 +1109,7 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                                     **(
                                         {
                                             "valves": function_module.UserValves(
-                                                Functions.get_user_valves_by_id_and_user_id(
+                                                **Functions.get_user_valves_by_id_and_user_id(
                                                     filter_id, user.id
                                                 )
                                             )
