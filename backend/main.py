@@ -278,6 +278,9 @@ async def get_function_call_response(
                                 "email": user.email,
                                 "name": user.name,
                                 "role": user.role,
+                                "valves": Tools.get_user_valves_by_id_and_user_id(
+                                    tool_id, user.id
+                                ),
                             },
                         }
 
@@ -401,6 +404,9 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                                             "email": user.email,
                                             "name": user.name,
                                             "role": user.role,
+                                            "valves": Functions.get_user_valves_by_id_and_user_id(
+                                                filter_id, user.id
+                                            ),
                                         },
                                     }
 
@@ -871,10 +877,14 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
                         "email": user.email,
                         "name": user.name,
                         "role": user.role,
+                        "valves": Functions.get_user_valves_by_id_and_user_id(
+                            pipe_id, user.id
+                        ),
                     },
                 }
 
             if form_data["stream"]:
+
                 async def stream_content():
                     if inspect.iscoroutinefunction(pipe):
                         res = await pipe(**param)
@@ -1010,7 +1020,12 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                     f"{url}/{filter['id']}/filter/outlet",
                     headers=headers,
                     json={
-                        "user": {"id": user.id, "name": user.name, "role": user.role},
+                        "user": {
+                            "id": user.id,
+                            "name": user.name,
+                            "email": user.email,
+                            "role": user.role,
+                        },
                         "body": data,
                     },
                 )
@@ -1064,6 +1079,9 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                                     "email": user.email,
                                     "name": user.name,
                                     "role": user.role,
+                                    "valves": Functions.get_user_valves_by_id_and_user_id(
+                                        filter_id, user.id
+                                    ),
                                 },
                             }
 
