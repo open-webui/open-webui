@@ -408,7 +408,7 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Voice Interruption in Call')}</div>
+					<div class=" self-center text-xs">{$i18n.t('Allow Voice Interruption in Call')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
