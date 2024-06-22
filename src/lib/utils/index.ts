@@ -511,12 +511,31 @@ export const removeFormattings = (str) => {
 };
 
 export const extractSentences = (text) => {
-	// Split the paragraph into sentences based on common punctuation marks
-	const sentences = text.split(/(?<=[.!?])\s+/);
+	// This regular expression matches code blocks marked by triple backticks
+	const codeBlockRegex = /```[\s\S]*?```/g;
+
+	let codeBlocks = [];
+	let index = 0;
+
+	// Temporarily replace code blocks with placeholders and store the blocks separately
+	text = text.replace(codeBlockRegex, (match) => {
+		let placeholder = `\u0000${index}\u0000`; // Use a unique placeholder
+		codeBlocks[index++] = match;
+		return placeholder;
+	});
+
+	// Split the modified text into sentences based on common punctuation marks, avoiding these blocks
+	let sentences = text.split(/(?<=[.!?])\s+/);
+
+	// Restore code blocks and process sentences
+	sentences = sentences.map((sentence) => {
+		// Check if the sentence includes a placeholder for a code block
+		return sentence.replace(/\u0000(\d+)\u0000/g, (_, idx) => codeBlocks[idx]);
+	});
 
 	return sentences
 		.map((sentence) => removeFormattings(removeEmojis(sentence.trim())))
-		.filter((sentence) => sentence !== '');
+		.filter((sentence) => sentence);
 };
 
 export const extractSentencesForAudio = (text) => {
