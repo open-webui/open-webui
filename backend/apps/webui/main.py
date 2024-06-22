@@ -130,7 +130,9 @@ async def get_pipe_models():
                     manifold_pipe_name = p["name"]
 
                     if hasattr(function_module, "name"):
-                        manifold_pipe_name = f"{pipe.name}{manifold_pipe_name}"
+                        manifold_pipe_name = (
+                            f"{function_module.name}{manifold_pipe_name}"
+                        )
 
                     pipe_models.append(
                         {

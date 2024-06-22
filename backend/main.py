@@ -389,26 +389,31 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                             if hasattr(function_module, "inlet"):
                                 inlet = function_module.inlet
 
+                                # Get the signature of the function
+                                sig = inspect.signature(inlet)
+                                param = {"body": data}
+
+                                if "__user__" in sig.parameters:
+                                    param = {
+                                        **param,
+                                        "__user__": {
+                                            "id": user.id,
+                                            "email": user.email,
+                                            "name": user.name,
+                                            "role": user.role,
+                                        },
+                                    }
+
+                                if "__id__" in sig.parameters:
+                                    param = {
+                                        **param,
+                                        "__id__": filter_id,
+                                    }
+
                                 if inspect.iscoroutinefunction(inlet):
-                                    data = await inlet(
-                                        data,
-                                        {
-                                            "id": user.id,
-                                            "email": user.email,
-                                            "name": user.name,
-                                            "role": user.role,
-                                        },
-                                    )
+                                    data = await inlet(**param)
                                 else:
-                                    data = inlet(
-                                        data,
-                                        {
-                                            "id": user.id,
-                                            "email": user.email,
-                                            "name": user.name,
-                                            "role": user.role,
-                                        },
-                                    )
+                                    data = inlet(**param)
 
                         except Exception as e:
                             print(f"Error: {e}")
@@ -1031,26 +1036,32 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                 try:
                     if hasattr(function_module, "outlet"):
                         outlet = function_module.outlet
+
+                        # Get the signature of the function
+                        sig = inspect.signature(outlet)
+                        param = {"body": data}
+
+                        if "__user__" in sig.parameters:
+                            param = {
+                                **param,
+                                "__user__": {
+                                    "id": user.id,
+                                    "email": user.email,
+                                    "name": user.name,
+                                    "role": user.role,
+                                },
+                            }
+
+                        if "__id__" in sig.parameters:
+                            param = {
+                                **param,
+                                "__id__": filter_id,
+                            }
+
                         if inspect.iscoroutinefunction(outlet):
-                            data = await outlet(
-                                data,
-                                {
-                                    "id": user.id,
-                                    "email": user.email,
-                                    "name": user.name,
-                                    "role": user.role,
-                                },
-                            )
+                            data = await outlet(**param)
                         else:
-                            data = outlet(
-                                data,
-                                {
-                                    "id": user.id,
-                                    "email": user.email,
-                                    "name": user.name,
-                                    "role": user.role,
-                                },
-                            )
+                            data = outlet(**param)
 
                 except Exception as e:
                     print(f"Error: {e}")
