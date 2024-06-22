@@ -600,9 +600,13 @@
 			files = model.info.meta.knowledge;
 		}
 		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
+
 		files = [
 			...files,
 			...(lastUserMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? []),
+			...(responseMessage?.files?.filter((item) =>
 				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
 			) ?? [])
 		].filter(
@@ -843,6 +847,9 @@
 		files = [
 			...files,
 			...(lastUserMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? []),
+			...(responseMessage?.files?.filter((item) =>
 				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
 			) ?? [])
 		].filter(
@@ -1213,6 +1220,7 @@
 
 	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
 		const responseMessage = history.messages[responseId];
+		const userMessage = history.messages[parentId];
 
 		responseMessage.statusHistory = [
 			{
@@ -1223,7 +1231,7 @@
 		];
 		messages = messages;
 
-		const prompt = history.messages[parentId].content;
+		const prompt = userMessage.content;
 		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt).catch(
 			(error) => {
 				console.log(error);
