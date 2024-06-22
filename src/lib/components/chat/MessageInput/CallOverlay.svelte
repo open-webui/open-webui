@@ -271,7 +271,7 @@
 					return;
 				}
 
-				if (assistantSpeaking) {
+				if (assistantSpeaking && !($settings?.voiceInterruption ?? false)) {
 					// Mute the audio if the assistant is speaking
 					analyser.maxDecibels = 0;
 					analyser.minDecibels = -1;
