@@ -74,6 +74,7 @@ from apps.rag.search.serpstack import search_serpstack
 from apps.rag.search.serply import search_serply
 from apps.rag.search.duckduckgo import search_duckduckgo
 from apps.rag.search.tavily import search_tavily
+from apps.rag.search.jina_search import search_jina
 
 from utils.misc import (
     calculate_sha256,
@@ -841,6 +842,8 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No TAVILY_API_KEY found in environment variables")
+    elif engine == "jina":
+        return search_jina(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
     else:
         raise Exception("No search engine API key found in environment variables")
 
