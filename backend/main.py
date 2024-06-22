@@ -876,11 +876,11 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
             print(pipe_id)
 
             # Check if function is already loaded
-            if pipe_id not in app.state.FUNCTIONS:
+            if pipe_id not in webui_app.state.FUNCTIONS:
                 function_module, function_type = load_function_module_by_id(pipe_id)
-                app.state.FUNCTIONS[pipe_id] = function_module
+                webui_app.state.FUNCTIONS[pipe_id] = function_module
             else:
-                function_module = app.state.FUNCTIONS[pipe_id]
+                function_module = webui_app.state.FUNCTIONS[pipe_id]
 
             pipe = function_module.pipe
 
