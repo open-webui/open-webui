@@ -111,7 +111,7 @@
 						</div>
 
 						<div class="flex gap-1.5 px-1">
-							<div class=" text-gray-500 text-xs font-medium">{tool.id}</div>
+							<div class=" text-gray-500 text-xs font-medium flex-shrink-0">{tool.id}</div>
 
 							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 								{tool.meta.description}

@@ -113,7 +113,7 @@
 						</div>
 
 						<div class="flex gap-1.5 px-1">
-							<div class=" text-gray-500 text-xs font-medium">{func.id}</div>
+							<div class=" text-gray-500 text-xs font-medium flex-shrink-0">{func.id}</div>
 
 							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 								{func.meta.description}
