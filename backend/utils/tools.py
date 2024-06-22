@@ -67,6 +67,7 @@ def get_tools_specs(tools) -> List[dict]:
                             function
                         ).parameters.items()
                         if param.default is param.empty
+                        and not (name.startswith("__") and name.endswith("__"))
                     ],
                 },
             }
