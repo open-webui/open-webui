@@ -881,7 +881,7 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
 
             # Get the signature of the function
             sig = inspect.signature(pipe)
-            param = {"body": form_data}
+            params = {"body": form_data}
 
             if "__user__" in sig.parameters:
                 __user__ = {
@@ -908,9 +908,9 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
                 async def stream_content():
                     try:
                         if inspect.iscoroutinefunction(pipe):
-                            res = await pipe(**param)
+                            res = await pipe(**params)
                         else:
-                            res = pipe(**param)
+                            res = pipe(**params)
                     except Exception as e:
                         print(f"Error: {e}")
                         yield f"data: {json.dumps({'error': {'detail':str(e)}})}\n\n"
