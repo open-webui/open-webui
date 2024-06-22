@@ -189,7 +189,13 @@
 										}}
 									>
 										{#if (valves[property] ?? null) === null}
-											<span class="ml-2 self-center"> {$i18n.t('None')} </span>
+											<span class="ml-2 self-center">
+												{#if (valvesSpec?.required ?? []).includes(property)}
+													{$i18n.t('None')}
+												{:else}
+													{$i18n.t('Default')}
+												{/if}
+											</span>
 										{:else}
 											<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
 										{/if}
