@@ -39,7 +39,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 - [RealityStream](/RealityStream/) - Machine Learning Classification Models - Ivy, Kelvin and many more
 - [ML for Community Forecasting Timelines](../data-pipeline/timelines/)
-- [Open Footprint Panels - YAML Display](/OpenFootprint)
+- [Open Data Panels - YAML Display](/OpenFootprint)
 - [Process Industry NAICS by Zip Code](/data-pipeline/industries/naics) - David
 - [Top Commodities by State (hide sort columns)](/data-pipeline/research/economy) - Dinesh
 - [State Regions using Sets of Counties](/community-data/us/edd/) - Dinesh
