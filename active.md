@@ -1,6 +1,6 @@
-Our weekly meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](/io/coders) and [Sundays at 10 PM EDT](/io/coders/).
+Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](/io/coders) and [Sundays at 10 PM EDT](/io/coders/).
 
-<hr style="margin-bottom:20px">
+---
 
 # Active Projects
 
@@ -13,24 +13,23 @@ Our weekly meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 P
 **Charts, SQL, Vite, Supabase, AI Chat**
 - [Sankey Industry eChart](/useeio.js/charts/echarts/sankey-nodeAlign-left.html) - eCharts uses a common echarts.min.js file which well load in [Feed Viewer](/feed/view). <!-- Chenbohan -->
 - [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab - Song
-- [Open Footprint Data in SQL](/useeio.js/footprint) - Sahil, Himanshu, Sridevi, Song
+- [SQL Data Prep](/useeio.js/footprint) - Sahil, Himanshu, Sridevi, Song
 - [Feed Player](../feed/intro.html) - Video and Images - Gary, Fanyi, Marco
 - [Feed Viewer](../feed/view/#feed=nasa) - JSON, YAML, CSS, RSS - Loren and Gary ([address lookup](/feed/view/#feed=311)) 
-- [Datausa.io](https://datausa.io) - Add API and embeddable visualizations to Feed Player
 
 <!--
+- [Datausa.io](https://datausa.io) - Add API and embeddable visualizations to Feed Player
 - [Restack.io](https://www.restack.io/docs/supabase-knowledge-supabase-rust-sdk-guide) - for Supabase with Rust and Streamlit
--->
 
-<!-- 
+
 openai
 Docker path: https://chat.openai.com/share/61b0997f-ea9b-49f7-9bcb-12fa0519a2d1 
 
 Matthew Berman list of true Agents: 
 https://youtu.be/_AOA6M9Ta2I?si=Bh8SMhyD3GmuCLks&t=378
--->
 
-<!--
+
+
 CSV Files to use for Timelines, Observable, and AI Training at: [industries/naics/US/counties](https://github.com/ModelEarth/community-data/tree/master/industries/naics/US/counties)  
 Pre-processed data for county industry levels, based on employment, establishments and payroll.-->
 
@@ -83,8 +82,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [Steps for SQLite in Browser](/data-pipeline/timelines/sqlite/phiresky/) - [Example (Runs SQL)](https://phiresky.github.io/blog/2021/hosting-sqlite-databases-on-github-pages/) - Aashish
 - [Impact Label Pipeline](/apps/impact) - Too optimize and change inputs
 
-**Moonshot Challenges**
-Are you ready to [take the leap?](/community/projects/)
+**Moonshot Challenges** - [Take the leap](/community/projects/)
 <br>
 
 <div id="activeDivLoaded"></div>
