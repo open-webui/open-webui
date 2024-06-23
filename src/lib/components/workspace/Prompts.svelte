@@ -115,7 +115,7 @@
 			<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 				<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
 					<div class=" flex-1 self-center pl-5">
-						<div class=" font-bold">{prompt.command}</div>
+						<div class=" font-bold line-clamp-1">{prompt.command}</div>
 						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 							{prompt.title}
 						</div>
@@ -213,7 +213,7 @@
 				promptsImportInputElement.click();
 			}}
 		>
-			<div class=" self-center mr-2 font-medium">{$i18n.t('Import Prompts')}</div>
+			<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Prompts')}</div>
 
 			<div class=" self-center">
 				<svg
@@ -241,7 +241,7 @@
 				saveAs(blob, `prompts-export-${Date.now()}.json`);
 			}}
 		>
-			<div class=" self-center mr-2 font-medium">{$i18n.t('Export Prompts')}</div>
+			<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Prompts')}</div>
 
 			<div class=" self-center">
 				<svg
@@ -270,14 +270,16 @@
 </div>
 
 <div class=" my-16">
-	<div class=" text-lg font-semibold mb-3">{$i18n.t('Made by OpenWebUI Community')}</div>
+	<div class=" text-lg font-semibold mb-3 line-clamp-1">
+		{$i18n.t('Made by OpenWebUI Community')}
+	</div>
 
 	<a
-		class=" flex space-x-4 cursor-pointer w-full mb-3 px-3 py-2"
-		href="https://openwebui.com/?type=prompts"
+		class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2"
+		href="https://openwebui.com/"
 		target="_blank"
 	>
-		<div class=" self-center w-10">
+		<div class=" self-center w-10 flex-shrink-0">
 			<div
 				class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
 			>
@@ -292,8 +294,10 @@
 		</div>
 
 		<div class=" self-center">
-			<div class=" font-bold">{$i18n.t('Discover a prompt')}</div>
-			<div class=" text-sm">{$i18n.t('Discover, download, and explore custom prompts')}</div>
+			<div class=" font-bold line-clamp-1">{$i18n.t('Discover a prompt')}</div>
+			<div class=" text-sm line-clamp-1">
+				{$i18n.t('Discover, download, and explore custom prompts')}
+			</div>
 		</div>
 	</a>
 </div>
