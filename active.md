@@ -37,7 +37,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 **Machine Learning with Python and Google Data Commons**
 
-- [RealityStream](/RealityStream/) - Machine Learning Classification Models - Ivy, and more
+- [RealityStream](/RealityStream/) - Machine Learning Classification Models - Ivy, Kelvin and many more
 - [ML for Community Forecasting Timelines](../data-pipeline/timelines/)
 - [Open Footprint Panels - YAML Display](/OpenFootprint)
 - [Process Industry NAICS by Zip Code](/data-pipeline/industries/naics) - David
