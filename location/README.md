@@ -1,7 +1,10 @@
 # Open WebUI Install
 
+If you already have an "open-webui" Docker container, the server may already be running at [localhost:3000](http://localhost:3000)
+
+
 If you don't have Ollama installed yet, you can run the following in your local projects folder.  
-(If you already have an "open-webui" container in Docker, delete or rename it.)
+<!--(If you already have an "open-webui" container in Docker, delete or rename it.)-->
 
 	docker compose up -d --build
 
