@@ -20,6 +20,8 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import { getModels } from '$lib/apis';
+	import FunctionMenu from './Functions/FunctionMenu.svelte';
+	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -28,6 +30,54 @@
 
 	let showConfirm = false;
 	let query = '';
+
+	const shareHandler = async (tool) => {
+		console.log(tool);
+	};
+
+	const cloneHandler = async (func) => {
+		const _function = await getFunctionById(localStorage.token, func.id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (_function) {
+			sessionStorage.function = JSON.stringify({
+				..._function,
+				id: `${_function.id}_clone`,
+				name: `${_function.name} (Clone)`
+			});
+			goto('/workspace/functions/create');
+		}
+	};
+
+	const exportHandler = async (func) => {
+		const _function = await getFunctionById(localStorage.token, func.id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (_function) {
+			let blob = new Blob([JSON.stringify([_function])], {
+				type: 'application/json'
+			});
+			saveAs(blob, `function-${_function.id}-export-${Date.now()}.json`);
+		}
+	};
+
+	const deleteHandler = async (func) => {
+		const res = await deleteFunctionById(localStorage.token, func.id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
+		if (res) {
+			toast.success('Function deleted successfully');
+
+			functions.set(await getFunctions(localStorage.token));
+			models.set(await getModels(localStorage.token));
+		}
+	};
 </script>
 
 <svelte:head>
@@ -87,18 +137,14 @@
 	{#each $functions.filter((f) => query === '' || f.name
 				.toLowerCase()
 				.includes(query.toLowerCase()) || f.id.toLowerCase().includes(query.toLowerCase())) as func}
-		<button
+		<div
 			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
-			type="button"
-			on:click={() => {
-				goto(`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`);
-			}}
 		>
-			<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-				<a
-					href={`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`}
-					class="flex items-center text-left"
-				>
+			<a
+				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
+				href={`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`}
+			>
+				<div class="flex items-center text-left">
 					<div class=" flex-1 self-center pl-1">
 						<div class=" font-semibold flex items-center gap-1.5">
 							<div
@@ -120,8 +166,8 @@
 							</div>
 						</div>
 					</div>
-				</a>
-			</div>
+				</div>
+			</a>
 			<div class="flex flex-row space-x-1 self-center">
 				<Tooltip content="Edit">
 					<a
@@ -146,111 +192,30 @@
 					</a>
 				</Tooltip>
 
-				<Tooltip content="Clone">
+				<FunctionMenu
+					shareHandler={() => {
+						shareHandler(func);
+					}}
+					cloneHandler={() => {
+						cloneHandler(func);
+					}}
+					exportHandler={() => {
+						exportHandler(func);
+					}}
+					deleteHandler={async () => {
+						deleteHandler(func);
+					}}
+					onClose={() => {}}
+				>
 					<button
-						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+						class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 						type="button"
-						on:click={async (e) => {
-							e.stopPropagation();
-
-							const _function = await getFunctionById(localStorage.token, func.id).catch(
-								(error) => {
-									toast.error(error);
-									return null;
-								}
-							);
-
-							if (_function) {
-								sessionStorage.function = JSON.stringify({
-									..._function,
-									id: `${_function.id}_clone`,
-									name: `${_function.name} (Clone)`
-								});
-								goto('/workspace/functions/create');
-							}
-						}}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
-							/>
-						</svg>
+						<EllipsisHorizontal className="size-5" />
 					</button>
-				</Tooltip>
-
-				<Tooltip content="Export">
-					<button
-						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-						type="button"
-						on:click={async (e) => {
-							e.stopPropagation();
-
-							const _function = await getFunctionById(localStorage.token, func.id).catch(
-								(error) => {
-									toast.error(error);
-									return null;
-								}
-							);
-
-							if (_function) {
-								let blob = new Blob([JSON.stringify([_function])], {
-									type: 'application/json'
-								});
-								saveAs(blob, `function-${_function.id}-export-${Date.now()}.json`);
-							}
-						}}
-					>
-						<ArrowDownTray />
-					</button>
-				</Tooltip>
-
-				<Tooltip content="Delete">
-					<button
-						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-						type="button"
-						on:click={async (e) => {
-							e.stopPropagation();
-
-							const res = await deleteFunctionById(localStorage.token, func.id).catch((error) => {
-								toast.error(error);
-								return null;
-							});
-
-							if (res) {
-								toast.success('Function deleted successfully');
-
-								functions.set(await getFunctions(localStorage.token));
-								models.set(await getModels(localStorage.token));
-							}
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-							/>
-						</svg>
-					</button>
-				</Tooltip>
+				</FunctionMenu>
 			</div>
-		</button>
+		</div>
 	{/each}
 </div>
 
