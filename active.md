@@ -4,13 +4,16 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 
 # Active Projects
 
-[Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/dist/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
+[Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
 **Chose one to fork and install locally**
 - [Open WebUI (Projects)](src) with Python and [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/) like Pinecone
 - [Earthscape for Chatbot AI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/)
 
 **Charts, SQL, Vite, Supabase, AI Chat**
+- [Food Nutrition Labels](/data-commons/docs/food) - Shali<!--[Balance](/balance/)-->
+- [Requests Visualization](/requests/) - for Storyboards, Meal Planning and Project Visualization
+- [Evaporation Kits](/evaporation-kits/) - Desalination x4 using cold, green LED light - Soham
 - [Sankey Industry eChart](/useeio.js/charts/echarts/sankey-nodeAlign-left.html) - eCharts uses a common echarts.min.js file which well load in [Feed Viewer](/feed/view). <!-- Chenbohan -->
 - [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab - Song
 - [SQL Data Prep](/useeio.js/footprint) - Sahil, Himanshu, Sridevi, Song
@@ -29,27 +32,25 @@ Matthew Berman list of true Agents:
 https://youtu.be/_AOA6M9Ta2I?si=Bh8SMhyD3GmuCLks&t=378
 
 
-
 CSV Files to use for Timelines, Observable, and AI Training at: [industries/naics/US/counties](https://github.com/ModelEarth/community-data/tree/master/industries/naics/US/counties)  
 Pre-processed data for county industry levels, based on employment, establishments and payroll.-->
 
 **Machine Learning with Python and Google Data Commons**
 
-- [RStudio - API to JSON](/localsite/info/data/flowsa/)
+- [RealityStream](/RealityStream/) - Machine Learning Classification Models - Ivy, and more
 - [ML for Community Forecasting Timelines](../data-pipeline/timelines/)
-- [RealityStream](/RealityStream/) - Machine Learning Classification Models
 - [Open Footprint Panels - YAML Display](/OpenFootprint)
-- [Process Industry NAICS by Zip Code](/data-pipeline/industries/naics)
+- [Process Industry NAICS by Zip Code](/data-pipeline/industries/naics) - David
 - [Top Commodities by State (hide sort columns)](/data-pipeline/research/economy) - Dinesh
 - [State Regions using Sets of Counties](/community-data/us/edd/) - Dinesh
 - [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - <!--Honglin-->Rupesh
 - [CrewAI+Ollama integration](https://lightning.ai/lightning-ai/studios/ai-agents-powered-by-crewai) within our [Open WebUI fork](src)
+- [Flowsa RStudio - API to JSON](/localsite/info/data/flowsa/)
 
 **Observable Framework + GDC Visualization Projects**
 
 - [Python CoLabs for GDC timeline automation - Air and Climate](/data-commons/dist/air)
 - [Observable with Data Commons](/data-commons/) - [Data Loaders How-To](/data-commons/dist/air/)
-- [Balanced Food](/balance/) - [World Nutrition](/data-commons/dist/food) - Kargil, Meiru
 - [Chord Chart Data Prep](/io/charts/chord/) - [ask Kargil for location](https://github.com/modelearth/Observables-DataLoader/tree/master/docs)
 - [International Google Data Commons API](/data-commons/) - with [Observable Data Loaders](https://observablehq.com/framework/loaders)
 
@@ -60,7 +61,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [Use our state map filter](#geoview=country) with colors for [new USEEIO reporting maps](https://figshare.com/collections/USEEIO_State_Models_v1_0_-_Supporting_Figures/7041473)
 - [Python - Process All the Places by State and Zip](/places) - Carolyn
 - [BuildingTransparency - Product Impact Profiles by State and Zip](/io/template/feed/) - Ronan
-- [BuildingTransparency - API Aggregates of States and Countries](/io/template/product/) - Previously Luwei
+- [BuildingTransparency - API Aggregates of States and Countries](/io/template/product/) - Initially Luwei
 - [BuildingTransparency - JSON file pull for impact templates](/io/template/product/)
 - [AI Process for Farm Fresh Data and Food Deserts ML](/community-data/process/python/farmfresh/)
 - [Push EPA date to Google Data Commons API](https://docs.datacommons.org/api/)
@@ -68,7 +69,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 **Storyboard Generator - Images and Video for Request Visualization**
 - [Image Gallery (JQuery) and Video (Leonardo)](/data-pipeline/research/stream)
-- [Our Storyboard Generator](/data-pipeline/research/) and [Request Visualizer for Meals and City Planning](/requests/)
+- [Our Storyboard Generator](/data-pipeline/research/)  
 - [Open Webui image generation](https://docs.openwebui.com/tutorial/images/) - Integrate our image .csv process
 <!-- [Kishor's Repo](https://github.com/mannurkishorreddy/streamlit-replicate-img-app)-->
 <!--- [Image Gallery (React)](/react-gallery/view/) - Anthony -->
