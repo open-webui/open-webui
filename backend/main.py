@@ -270,8 +270,9 @@ async def get_function_call_response(
                 if hasattr(toolkit_module, "valves") and hasattr(
                     toolkit_module, "Valves"
                 ):
+                    valves = Tools.get_tool_valves_by_id(tool_id)
                     toolkit_module.valves = toolkit_module.Valves(
-                        **Tools.get_tool_valves_by_id(tool_id)
+                        **(valves if valves else {})
                     )
 
                 function = getattr(toolkit_module, result["name"])
@@ -417,8 +418,9 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     if hasattr(function_module, "valves") and hasattr(
                         function_module, "Valves"
                     ):
+                        valves = Functions.get_function_valves_by_id(filter_id)
                         function_module.valves = function_module.Valves(
-                            **Functions.get_function_valves_by_id(filter_id)
+                            **(valves if valves else {})
                         )
 
                     try:
@@ -906,8 +908,10 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
             if hasattr(function_module, "valves") and hasattr(
                 function_module, "Valves"
             ):
+
+                valves = Functions.get_function_valves_by_id(pipe_id)
                 function_module.valves = function_module.Valves(
-                    **Functions.get_function_valves_by_id(pipe_id)
+                    **(valves if valves else {})
                 )
 
             pipe = function_module.pipe
@@ -1134,8 +1138,9 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                 if hasattr(function_module, "valves") and hasattr(
                     function_module, "Valves"
                 ):
+                    valves = Functions.get_function_valves_by_id(filter_id)
                     function_module.valves = function_module.Valves(
-                        **Functions.get_function_valves_by_id(filter_id)
+                        **(valves if valves else {})
                     )
 
                 try:
