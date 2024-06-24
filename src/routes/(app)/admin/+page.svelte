@@ -295,7 +295,7 @@
 						</td>
 						<td class=" px-3 py-2"> {user.email} </td>
 
-						<td class=" px-3 py-2"> {user.oauth_sub ?? ""} </td>
+						<td class=" px-3 py-2"> {user.oauth_sub ?? ''} </td>
 
 						<td class=" px-3 py-2">
 							{dayjs(user.last_active_at * 1000).fromNow()}
