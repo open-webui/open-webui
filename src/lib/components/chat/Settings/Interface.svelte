@@ -111,7 +111,9 @@
 			saveSettings({ responseAutoCopy: responseAutoCopy });
 		} else {
 			toast.error(
-				$i18n.t('Clipboard write permission denied. Please check your browser settings to grant the necessary access.')
+				$i18n.t(
++					'Clipboard write permission denied. Please check your browser settings to grant the necessary access.'
++				)
 			);
 		}
 	};
