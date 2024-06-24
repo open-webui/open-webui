@@ -173,13 +173,11 @@ https://github.com/open-webui/open-webui
 
 
 def run_migrations():
-    from alembic.config import Config
-    from alembic import command
-
-    alembic_cfg = Config(f"{BACKEND_DIR}/alembic.ini")
-    alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
-    alembic_cfg.set_main_option("script_location", f"{BACKEND_DIR}/migrations")
-    command.upgrade(alembic_cfg, "head")
+    env = os.environ.copy()
+    env["DATABASE_URL"] = DATABASE_URL
+    migration_task = subprocess.run(["alembic", f"-c{BACKEND_DIR}/alembic.ini", "upgrade", "head"], env=env)
+    if migration_task.returncode > 0:
+        raise ValueError("Error running migrations")
 
 
 @asynccontextmanager
