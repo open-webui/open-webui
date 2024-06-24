@@ -51,7 +51,7 @@
 			}
 
 			if (res) {
-				toast.success('Valves updated successfully');
+				toast.success($i18n.t('Valves updated successfully'));
 			}
 		}
 
