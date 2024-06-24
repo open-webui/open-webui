@@ -117,7 +117,7 @@ class ToolsTable:
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:
             tool = Tool.get(Tool.id == id)
-            return tool.valves if "valves" in tool and tool.valves else {}
+            return tool.valves if tool.valves else {}
         except Exception as e:
             print(f"An error occurred: {e}")
             return None

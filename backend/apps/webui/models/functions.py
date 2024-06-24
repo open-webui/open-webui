@@ -146,7 +146,7 @@ class FunctionsTable:
     def get_function_valves_by_id(self, id: str) -> Optional[dict]:
         try:
             function = Function.get(Function.id == id)
-            return function.valves if "valves" in function and function.valves else {}
+            return function.valves if function.valves else {}
         except Exception as e:
             print(f"An error occurred: {e}")
             return None
