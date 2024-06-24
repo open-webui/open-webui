@@ -149,7 +149,7 @@
 														placeholder={valvesSpec.properties[property].title}
 														bind:value={valves[property]}
 														autocomplete="off"
-														required={(valvesSpec?.required ?? []).includes(property)}
+														required
 													/>
 												</div>
 											</div>
