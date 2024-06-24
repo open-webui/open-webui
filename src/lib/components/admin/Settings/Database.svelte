@@ -126,7 +126,9 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center text-sm font-medium">{$i18n.t('Export LiteLLM config.yaml')}</div>
+					<div class=" self-center text-sm font-medium">
+						{$i18n.t('Export LiteLLM config.yaml')}
+					</div>
 				</button>
 			</div>
 		</div>
