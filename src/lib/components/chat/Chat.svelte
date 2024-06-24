@@ -534,9 +534,8 @@
 										const createdAtDate = new Date(createdAtTimestamp * 1000)
 											.toISOString()
 											.split('T')[0];
-										acc.push(`${index + 1}. [${createdAtDate}]. ${doc}`);
-										return acc;
-									}, []);
+										return `${acc}${index + 1}. [${createdAtDate}]. ${doc}\n`;
+									}, '');
 								}
 
 								console.log(userContext);
