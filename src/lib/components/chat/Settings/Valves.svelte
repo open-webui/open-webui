@@ -203,7 +203,7 @@
 								</div>
 
 								{#if (valves[property] ?? null) !== null}
-									<div class="flex mt-0.5 space-x-2">
+									<div class="flex mt-0.5 mb-1 space-x-2">
 										<div class=" flex-1">
 											<input
 												class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
@@ -214,6 +214,12 @@
 												required={(valvesSpec?.required ?? []).includes(property)}
 											/>
 										</div>
+									</div>
+								{/if}
+
+								{#if (valvesSpec.properties[property]?.description ?? null) !== null}
+									<div class="text-xs text-gray-500">
+										{valvesSpec.properties[property].description}
 									</div>
 								{/if}
 							</div>
