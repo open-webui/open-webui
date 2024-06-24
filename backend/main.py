@@ -751,7 +751,6 @@ class PipelineMiddleware(BaseHTTPMiddleware):
             user = get_current_user(
                 request,
                 get_http_authorization_cred(request.headers.get("Authorization")),
-                SessionLocal(),
             )
 
             try:
