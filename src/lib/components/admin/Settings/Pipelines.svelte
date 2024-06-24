@@ -509,7 +509,7 @@
 					</div>
 				{/if}
 			{:else}
-				<div>Pipelines Not Detected</div>
+				<div>{$i18n.t('Pipelines Not Detected')}</div>
 			{/if}
 		{:else}
 			<div class="flex justify-center h-full">
@@ -525,7 +525,7 @@
 			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			type="submit"
 		>
-			Save
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </form>
