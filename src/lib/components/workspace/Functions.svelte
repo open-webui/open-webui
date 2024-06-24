@@ -227,8 +227,9 @@
 				<div class=" self-center mx-1">
 					<Switch
 						bind:state={func.is_active}
-						on:change={(e) => {
+						on:change={async (e) => {
 							toggleFunctionById(localStorage.token, func.id);
+							models.set(await getModels(localStorage.token));
 						}}
 					/>
 				</div>
