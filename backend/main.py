@@ -794,11 +794,10 @@ app.add_middleware(
 )
 
 @app.middleware("http")
-async def remove_session_after_request(request: Request, call_next):
+async def commit_session_after_request(request: Request, call_next):
     response = await call_next(request)
-    log.debug("Removing session after request")
+    log.debug("Commit session after request")
     Session.commit()
-    Session.remove()
     return response
 
 

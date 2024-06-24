@@ -113,8 +113,8 @@ def get_current_user(
         )
 
 
-def get_current_user_by_api_key(db: Session, api_key: str):
-    user = Users.get_user_by_api_key(db, api_key)
+def get_current_user_by_api_key(api_key: str):
+    user = Users.get_user_by_api_key(api_key)
 
     if user is None:
         raise HTTPException(
@@ -122,7 +122,7 @@ def get_current_user_by_api_key(db: Session, api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
     else:
-        Users.update_user_last_active_by_id(db, user.id)
+        Users.update_user_last_active_by_id(user.id)
 
     return user
 

@@ -185,6 +185,7 @@ class UsersTable:
             Session.query(User).filter_by(id=id).update(
                 {"last_active_at": int(time.time())}
             )
+            Session.commit()
 
             user = Session.query(User).filter_by(id=id).first()
             return UserModel.model_validate(user)
