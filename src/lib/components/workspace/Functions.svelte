@@ -223,7 +223,7 @@
 					</button>
 				</FunctionMenu>
 
-				<div class=" self-center mx-1.5">
+				<div class=" self-center mx-1">
 					<Switch />
 				</div>
 			</div>
