@@ -1,6 +1,6 @@
 <script>
 	import { toast } from 'svelte-sonner';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -10,6 +10,8 @@
 	import FunctionEditor from '$lib/components/workspace/Functions/FunctionEditor.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getModels } from '$lib/apis';
+
+	const i18n = getContext('i18n');
 
 	let func = null;
 
