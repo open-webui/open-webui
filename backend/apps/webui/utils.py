@@ -10,17 +10,32 @@ def extract_frontmatter(file_path):
     Extract frontmatter as a dictionary from the specified file path.
     """
     frontmatter = {}
-    frontmatter_pattern = re.compile(r"^([a-z_]+):\s*(.*)\s*$", re.IGNORECASE)
+    frontmatter_started = False
+    frontmatter_ended = False
+    frontmatter_pattern = re.compile(r"^\s*([a-z_]+):\s*(.*)\s*$", re.IGNORECASE)
 
-    with open(file_path, "r", encoding="utf-8") as file:
-        for line in file:
-            if line.strip() == '"""':
-                # End of frontmatter section
-                break
-            match = frontmatter_pattern.match(line)
-            if match:
-                key, value = match.groups()
-                frontmatter[key] = value
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            for line in file:
+                if '"""' in line:
+                    if not frontmatter_started:
+                        frontmatter_started = True
+                        continue  # skip the line with the opening triple quotes
+                    else:
+                        frontmatter_ended = True
+                        break
+
+                if frontmatter_started and not frontmatter_ended:
+                    match = frontmatter_pattern.match(line)
+                    if match:
+                        key, value = match.groups()
+                        frontmatter[key.strip()] = value.strip()
+    except FileNotFoundError:
+        print(f"Error: The file {file_path} does not exist.")
+        return {}
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return {}
 
     return frontmatter
 
