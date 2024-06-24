@@ -13,7 +13,8 @@
 		deleteFunctionById,
 		exportFunctions,
 		getFunctionById,
-		getFunctions
+		getFunctions,
+		toggleFunctionById
 	} from '$lib/apis/functions';
 
 	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
@@ -224,7 +225,12 @@
 				</FunctionMenu>
 
 				<div class=" self-center mx-1">
-					<Switch />
+					<Switch
+						bind:state={func.is_active}
+						on:change={(e) => {
+							toggleFunctionById(localStorage.token, func.id);
+						}}
+					/>
 				</div>
 			</div>
 		</div>

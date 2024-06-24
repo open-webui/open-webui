@@ -863,7 +863,6 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
 
     pipe = model.get("pipe")
     if pipe:
-
         async def job():
             pipe_id = form_data["model"]
             if "." in pipe_id:

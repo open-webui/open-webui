@@ -124,6 +124,56 @@ async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
 
 
 ############################
+# GetToolValves
+############################
+
+
+@router.get("/id/{id}/valves", response_model=Optional[dict])
+async def get_toolkit_valves_by_id(id: str, user=Depends(get_admin_user)):
+    toolkit = Tools.get_tool_by_id(id)
+    if toolkit:
+        try:
+            valves = Tools.get_tool_valves_by_id(id)
+            return valves
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# UpdateToolValves
+############################
+
+
+@router.post("/id/{id}/valves/update", response_model=Optional[dict])
+async def update_toolkit_valves_by_id(
+    id: str, form_data: dict, user=Depends(get_admin_user)
+):
+    toolkit = Tools.get_tool_by_id(id)
+    if toolkit:
+        try:
+            valves = Tools.update_tool_valves_by_id(id, form_data)
+            return valves
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
 # ToolUserValves
 ############################
 

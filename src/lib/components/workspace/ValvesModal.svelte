@@ -5,16 +5,16 @@
 	import { addUser } from '$lib/apis/auths';
 
 	import Modal from '../common/Modal.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let show = false;
 
+	export let type = 'tool';
+	export let id = null;
+
 	let loading = false;
-	let tab = '';
-	let inputFiles;
 
 	let _user = {
 		name: '',
@@ -23,96 +23,11 @@
 		role: 'user'
 	};
 
-	$: if (show) {
-		_user = {
-			name: '',
-			email: '',
-			password: '',
-			role: 'user'
-		};
-	}
-
 	const submitHandler = async () => {
 		const stopLoading = () => {
 			dispatch('save');
 			loading = false;
 		};
-
-		if (tab === '') {
-			loading = true;
-
-			const res = await addUser(
-				localStorage.token,
-				_user.name,
-				_user.email,
-				_user.password,
-				_user.role
-			).catch((error) => {
-				toast.error(error);
-			});
-
-			if (res) {
-				stopLoading();
-				show = false;
-			}
-		} else {
-			if (inputFiles) {
-				loading = true;
-
-				const file = inputFiles[0];
-				const reader = new FileReader();
-
-				reader.onload = async (e) => {
-					const csv = e.target.result;
-					const rows = csv.split('\n');
-
-					let userCount = 0;
-
-					for (const [idx, row] of rows.entries()) {
-						const columns = row.split(',').map((col) => col.trim());
-						console.log(idx, columns);
-
-						if (idx > 0) {
-							if (
-								columns.length === 4 &&
-								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
-							) {
-								const res = await addUser(
-									localStorage.token,
-									columns[0],
-									columns[1],
-									columns[2],
-									columns[3].toLowerCase()
-								).catch((error) => {
-									toast.error(`Row ${idx + 1}: ${error}`);
-									return null;
-								});
-
-								if (res) {
-									userCount = userCount + 1;
-								}
-							} else {
-								toast.error(`Row ${idx + 1}: invalid format.`);
-							}
-						}
-					}
-
-					toast.success(`Successfully imported ${userCount} users.`);
-					inputFiles = null;
-					const uploadInputElement = document.getElementById('upload-user-csv-input');
-
-					if (uploadInputElement) {
-						uploadInputElement.value = null;
-					}
-
-					stopLoading();
-				};
-
-				reader.readAsText(file);
-			} else {
-				toast.error($i18n.t('File not found.'));
-			}
-		}
 	};
 </script>
 
@@ -147,126 +62,69 @@
 						submitHandler();
 					}}
 				>
-					<div class="flex text-center text-sm font-medium rounded-xl bg-transparent/10 p-1 mb-2">
-						<button
-							class="w-full rounded-lg p-1.5 {tab === '' ? 'bg-gray-50 dark:bg-gray-850' : ''}"
-							type="button"
-							on:click={() => {
-								tab = '';
-							}}>{$i18n.t('Form')}</button
-						>
-
-						<button
-							class="w-full rounded-lg p-1 {tab === 'import' ? 'bg-gray-50 dark:bg-gray-850' : ''}"
-							type="button"
-							on:click={() => {
-								tab = 'import';
-							}}>{$i18n.t('CSV Import')}</button
-						>
-					</div>
 					<div class="px-1">
-						{#if tab === ''}
-							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+						<div class="flex flex-col w-full">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
 
-								<div class="flex-1">
-									<select
-										class="w-full capitalize rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
-										bind:value={_user.role}
-										placeholder={$i18n.t('Enter Your Role')}
-										required
-									>
-										<option value="pending"> {$i18n.t('pending')} </option>
-										<option value="user"> {$i18n.t('user')} </option>
-										<option value="admin"> {$i18n.t('admin')} </option>
-									</select>
-								</div>
+							<div class="flex-1">
+								<select
+									class="w-full capitalize rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+									bind:value={_user.role}
+									placeholder={$i18n.t('Enter Your Role')}
+									required
+								>
+									<option value="pending"> {$i18n.t('pending')} </option>
+									<option value="user"> {$i18n.t('user')} </option>
+									<option value="admin"> {$i18n.t('admin')} </option>
+								</select>
 							</div>
+						</div>
 
-							<div class="flex flex-col w-full mt-2">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+						<div class="flex flex-col w-full mt-2">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
 
-								<div class="flex-1">
-									<input
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
-										type="text"
-										bind:value={_user.name}
-										placeholder={$i18n.t('Enter Your Full Name')}
-										autocomplete="off"
-										required
-									/>
-								</div>
+							<div class="flex-1">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+									type="text"
+									bind:value={_user.name}
+									placeholder={$i18n.t('Enter Your Full Name')}
+									autocomplete="off"
+									required
+								/>
 							</div>
+						</div>
 
-							<hr class=" dark:border-gray-800 my-3 w-full" />
+						<hr class=" dark:border-gray-800 my-3 w-full" />
 
-							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
+						<div class="flex flex-col w-full">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
 
-								<div class="flex-1">
-									<input
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
-										type="email"
-										bind:value={_user.email}
-										placeholder={$i18n.t('Enter Your Email')}
-										autocomplete="off"
-										required
-									/>
-								</div>
+							<div class="flex-1">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+									type="email"
+									bind:value={_user.email}
+									placeholder={$i18n.t('Enter Your Email')}
+									autocomplete="off"
+									required
+								/>
 							</div>
+						</div>
 
-							<div class="flex flex-col w-full mt-2">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Password')}</div>
+						<div class="flex flex-col w-full mt-2">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Password')}</div>
 
-								<div class="flex-1">
-									<input
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
-										type="password"
-										bind:value={_user.password}
-										placeholder={$i18n.t('Enter Your Password')}
-										autocomplete="off"
-									/>
-								</div>
+							<div class="flex-1">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+									type="password"
+									bind:value={_user.password}
+									placeholder={$i18n.t('Enter Your Password')}
+									autocomplete="off"
+								/>
 							</div>
-						{:else if tab === 'import'}
-							<div>
-								<div class="mb-3 w-full">
-									<input
-										id="upload-user-csv-input"
-										hidden
-										bind:files={inputFiles}
-										type="file"
-										accept=".csv"
-									/>
-
-									<button
-										class="w-full text-sm font-medium py-3 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-800 dark:hover:bg-gray-850 text-center rounded-xl"
-										type="button"
-										on:click={() => {
-											document.getElementById('upload-user-csv-input')?.click();
-										}}
-									>
-										{#if inputFiles}
-											{inputFiles.length > 0 ? `${inputFiles.length}` : ''} document(s) selected.
-										{:else}
-											{$i18n.t('Click here to select a csv file.')}
-										{/if}
-									</button>
-								</div>
-
-								<div class=" text-xs text-gray-500">
-									ⓘ {$i18n.t(
-										'Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.'
-									)}
-									<a
-										class="underline dark:text-gray-200"
-										href="{WEBUI_BASE_URL}/static/user-import.csv"
-									>
-										{$i18n.t('Click here to download user import template file.')}
-									</a>
-								</div>
-							</div>
-						{/if}
+						</div>
 					</div>
 
 					<div class="flex justify-end pt-3 text-sm font-medium">
