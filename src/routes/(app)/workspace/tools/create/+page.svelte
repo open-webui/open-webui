@@ -23,7 +23,7 @@
 		});
 
 		if (res) {
-			toast.success('Tool created successfully');
+			toast.success($i18n.t('Tool created successfully'));
 			tools.set(await getTools(localStorage.token));
 
 			await goto('/workspace/tools');
