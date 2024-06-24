@@ -30,20 +30,29 @@
 	const submitHandler = async () => {
 		saving = true;
 
-		let res = null;
+		if (valvesSpec) {
+			// Convert string to array
+			for (const property in valvesSpec.properties) {
+				if (valvesSpec.properties[property]?.type === 'array') {
+					valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim());
+				}
+			}
 
-		if (type === 'tool') {
-			res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
-				toast.error(error);
-			});
-		} else if (type === 'function') {
-			res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
-				toast.error(error);
-			});
-		}
+			let res = null;
 
-		if (res) {
-			toast.success('Valves updated successfully');
+			if (type === 'tool') {
+				res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
+					toast.error(error);
+				});
+			} else if (type === 'function') {
+				res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
+					toast.error(error);
+				});
+			}
+
+			if (res) {
+				toast.success('Valves updated successfully');
+			}
 		}
 
 		saving = false;
@@ -64,6 +73,15 @@
 
 		if (!valves) {
 			valves = {};
+		}
+
+		if (valvesSpec) {
+			// Convert array to string
+			for (const property in valvesSpec.properties) {
+				if (valvesSpec.properties[property]?.type === 'array') {
+					valves[property] = (valves[property] ?? []).join(',');
+				}
+			}
 		}
 
 		loading = false;
