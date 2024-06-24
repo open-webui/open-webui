@@ -72,7 +72,7 @@
 		});
 
 		if (res) {
-			toast.success('Audio settings updated successfully');
+			toast.success($i18n.t('Audio settings updated successfully'));
 
 			config.set(await getBackendConfig());
 		}

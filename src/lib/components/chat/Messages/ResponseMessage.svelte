@@ -305,7 +305,7 @@
 					}, 100);
 				}
 			} else {
-				toast.error('No content to speak');
+				toast.error($i18n.t('No content to speak'));
 			}
 		}
 	};
