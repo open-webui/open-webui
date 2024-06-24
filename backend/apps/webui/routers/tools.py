@@ -74,7 +74,8 @@ async def create_new_toolkit(
             with open(toolkit_path, "w") as tool_file:
                 tool_file.write(form_data.content)
 
-            toolkit_module = load_toolkit_module_by_id(form_data.id)
+            toolkit_module, frontmatter = load_toolkit_module_by_id(form_data.id)
+            form_data.meta.manifest = frontmatter
 
             TOOLS = request.app.state.TOOLS
             TOOLS[form_data.id] = toolkit_module
@@ -124,6 +125,73 @@ async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
 
 
 ############################
+# UpdateToolkitById
+############################
+
+
+@router.post("/id/{id}/update", response_model=Optional[ToolModel])
+async def update_toolkit_by_id(
+    request: Request, id: str, form_data: ToolForm, user=Depends(get_admin_user)
+):
+    toolkit_path = os.path.join(TOOLS_DIR, f"{id}.py")
+
+    try:
+        with open(toolkit_path, "w") as tool_file:
+            tool_file.write(form_data.content)
+
+        toolkit_module, frontmatter = load_toolkit_module_by_id(id)
+        form_data.meta.manifest = frontmatter
+
+        TOOLS = request.app.state.TOOLS
+        TOOLS[id] = toolkit_module
+
+        specs = get_tools_specs(TOOLS[id])
+
+        updated = {
+            **form_data.model_dump(exclude={"id"}),
+            "specs": specs,
+        }
+
+        print(updated)
+        toolkit = Tools.update_tool_by_id(id, updated)
+
+        if toolkit:
+            return toolkit
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error updating toolkit"),
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+############################
+# DeleteToolkitById
+############################
+
+
+@router.delete("/id/{id}/delete", response_model=bool)
+async def delete_toolkit_by_id(request: Request, id: str, user=Depends(get_admin_user)):
+    result = Tools.delete_tool_by_id(id)
+
+    if result:
+        TOOLS = request.app.state.TOOLS
+        if id in TOOLS:
+            del TOOLS[id]
+
+        # delete the toolkit file
+        toolkit_path = os.path.join(TOOLS_DIR, f"{id}.py")
+        os.remove(toolkit_path)
+
+    return result
+
+
+############################
 # GetToolValves
 ############################
 
@@ -161,7 +229,7 @@ async def get_toolkit_valves_spec_by_id(
         if id in request.app.state.TOOLS:
             toolkit_module = request.app.state.TOOLS[id]
         else:
-            toolkit_module = load_toolkit_module_by_id(id)
+            toolkit_module, frontmatter = load_toolkit_module_by_id(id)
             request.app.state.TOOLS[id] = toolkit_module
 
         if hasattr(toolkit_module, "Valves"):
@@ -189,7 +257,7 @@ async def update_toolkit_valves_by_id(
         if id in request.app.state.TOOLS:
             toolkit_module = request.app.state.TOOLS[id]
         else:
-            toolkit_module = load_toolkit_module_by_id(id)
+            toolkit_module, frontmatter = load_toolkit_module_by_id(id)
             request.app.state.TOOLS[id] = toolkit_module
 
         if hasattr(toolkit_module, "Valves"):
@@ -252,7 +320,7 @@ async def get_toolkit_user_valves_spec_by_id(
         if id in request.app.state.TOOLS:
             toolkit_module = request.app.state.TOOLS[id]
         else:
-            toolkit_module = load_toolkit_module_by_id(id)
+            toolkit_module, frontmatter = load_toolkit_module_by_id(id)
             request.app.state.TOOLS[id] = toolkit_module
 
         if hasattr(toolkit_module, "UserValves"):
@@ -276,7 +344,7 @@ async def update_toolkit_user_valves_by_id(
         if id in request.app.state.TOOLS:
             toolkit_module = request.app.state.TOOLS[id]
         else:
-            toolkit_module = load_toolkit_module_by_id(id)
+            toolkit_module, frontmatter = load_toolkit_module_by_id(id)
             request.app.state.TOOLS[id] = toolkit_module
 
         if hasattr(toolkit_module, "UserValves"):
@@ -305,69 +373,3 @@ async def update_toolkit_user_valves_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
-
-############################
-# UpdateToolkitById
-############################
-
-
-@router.post("/id/{id}/update", response_model=Optional[ToolModel])
-async def update_toolkit_by_id(
-    request: Request, id: str, form_data: ToolForm, user=Depends(get_admin_user)
-):
-    toolkit_path = os.path.join(TOOLS_DIR, f"{id}.py")
-
-    try:
-        with open(toolkit_path, "w") as tool_file:
-            tool_file.write(form_data.content)
-
-        toolkit_module = load_toolkit_module_by_id(id)
-
-        TOOLS = request.app.state.TOOLS
-        TOOLS[id] = toolkit_module
-
-        specs = get_tools_specs(TOOLS[id])
-
-        updated = {
-            **form_data.model_dump(exclude={"id"}),
-            "specs": specs,
-        }
-
-        print(updated)
-        toolkit = Tools.update_tool_by_id(id, updated)
-
-        if toolkit:
-            return toolkit
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error updating toolkit"),
-            )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
-
-
-############################
-# DeleteToolkitById
-############################
-
-
-@router.delete("/id/{id}/delete", response_model=bool)
-async def delete_toolkit_by_id(request: Request, id: str, user=Depends(get_admin_user)):
-    result = Tools.delete_tool_by_id(id)
-
-    if result:
-        TOOLS = request.app.state.TOOLS
-        if id in TOOLS:
-            del TOOLS[id]
-
-        # delete the toolkit file
-        toolkit_path = os.path.join(TOOLS_DIR, f"{id}.py")
-        os.remove(toolkit_path)
-
-    return result

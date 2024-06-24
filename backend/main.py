@@ -258,7 +258,7 @@ async def get_function_call_response(
                 if tool_id in webui_app.state.TOOLS:
                     toolkit_module = webui_app.state.TOOLS[tool_id]
                 else:
-                    toolkit_module = load_toolkit_module_by_id(tool_id)
+                    toolkit_module, frontmatter = load_toolkit_module_by_id(tool_id)
                     webui_app.state.TOOLS[tool_id] = toolkit_module
 
                 file_handler = False
@@ -415,8 +415,8 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     if filter_id in webui_app.state.FUNCTIONS:
                         function_module = webui_app.state.FUNCTIONS[filter_id]
                     else:
-                        function_module, function_type = load_function_module_by_id(
-                            filter_id
+                        function_module, function_type, frontmatter = (
+                            load_function_module_by_id(filter_id)
                         )
                         webui_app.state.FUNCTIONS[filter_id] = function_module
 
@@ -909,7 +909,9 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
 
             # Check if function is already loaded
             if pipe_id not in webui_app.state.FUNCTIONS:
-                function_module, function_type = load_function_module_by_id(pipe_id)
+                function_module, function_type, frontmatter = (
+                    load_function_module_by_id(pipe_id)
+                )
                 webui_app.state.FUNCTIONS[pipe_id] = function_module
             else:
                 function_module = webui_app.state.FUNCTIONS[pipe_id]
@@ -1155,7 +1157,9 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
             if filter_id in webui_app.state.FUNCTIONS:
                 function_module = webui_app.state.FUNCTIONS[filter_id]
             else:
-                function_module, function_type = load_function_module_by_id(filter_id)
+                function_module, function_type, frontmatter = (
+                    load_function_module_by_id(filter_id)
+                )
                 webui_app.state.FUNCTIONS[filter_id] = function_module
 
             if hasattr(function_module, "valves") and hasattr(

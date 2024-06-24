@@ -109,7 +109,9 @@ async def get_pipe_models():
     for pipe in pipes:
         # Check if function is already loaded
         if pipe.id not in app.state.FUNCTIONS:
-            function_module, function_type = load_function_module_by_id(pipe.id)
+            function_module, function_type, frontmatter = load_function_module_by_id(
+                pipe.id
+            )
             app.state.FUNCTIONS[pipe.id] = function_module
         else:
             function_module = app.state.FUNCTIONS[pipe.id]

@@ -39,6 +39,7 @@ class Function(Model):
 
 class FunctionMeta(BaseModel):
     description: Optional[str] = None
+    manifest: Optional[dict] = {}
 
 
 class FunctionModel(BaseModel):

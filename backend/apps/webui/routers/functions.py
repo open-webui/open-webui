@@ -69,7 +69,10 @@ async def create_new_function(
             with open(function_path, "w") as function_file:
                 function_file.write(form_data.content)
 
-            function_module, function_type = load_function_module_by_id(form_data.id)
+            function_module, function_type, frontmatter = load_function_module_by_id(
+                form_data.id
+            )
+            form_data.meta.manifest = frontmatter
 
             FUNCTIONS = request.app.state.FUNCTIONS
             FUNCTIONS[form_data.id] = function_module
@@ -118,6 +121,97 @@ async def get_function_by_id(id: str, user=Depends(get_admin_user)):
 
 
 ############################
+# ToggleFunctionById
+############################
+
+
+@router.post("/id/{id}/toggle", response_model=Optional[FunctionModel])
+async def toggle_function_by_id(id: str, user=Depends(get_admin_user)):
+    function = Functions.get_function_by_id(id)
+    if function:
+        function = Functions.update_function_by_id(
+            id, {"is_active": not function.is_active}
+        )
+
+        if function:
+            return function
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error updating function"),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# UpdateFunctionById
+############################
+
+
+@router.post("/id/{id}/update", response_model=Optional[FunctionModel])
+async def update_function_by_id(
+    request: Request, id: str, form_data: FunctionForm, user=Depends(get_admin_user)
+):
+    function_path = os.path.join(FUNCTIONS_DIR, f"{id}.py")
+
+    try:
+        with open(function_path, "w") as function_file:
+            function_file.write(form_data.content)
+
+        function_module, function_type, frontmatter = load_function_module_by_id(id)
+        form_data.meta.manifest = frontmatter
+
+        FUNCTIONS = request.app.state.FUNCTIONS
+        FUNCTIONS[id] = function_module
+
+        updated = {**form_data.model_dump(exclude={"id"}), "type": function_type}
+        print(updated)
+
+        function = Functions.update_function_by_id(id, updated)
+
+        if function:
+            return function
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error updating function"),
+            )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+############################
+# DeleteFunctionById
+############################
+
+
+@router.delete("/id/{id}/delete", response_model=bool)
+async def delete_function_by_id(
+    request: Request, id: str, user=Depends(get_admin_user)
+):
+    result = Functions.delete_function_by_id(id)
+
+    if result:
+        FUNCTIONS = request.app.state.FUNCTIONS
+        if id in FUNCTIONS:
+            del FUNCTIONS[id]
+
+        # delete the function file
+        function_path = os.path.join(FUNCTIONS_DIR, f"{id}.py")
+        os.remove(function_path)
+
+    return result
+
+
+############################
 # GetFunctionValves
 ############################
 
@@ -155,7 +249,7 @@ async def get_function_valves_spec_by_id(
         if id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[id]
         else:
-            function_module, function_type = load_function_module_by_id(id)
+            function_module, function_type, frontmatter = load_function_module_by_id(id)
             request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "Valves"):
@@ -184,7 +278,7 @@ async def update_function_valves_by_id(
         if id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[id]
         else:
-            function_module, function_type = load_function_module_by_id(id)
+            function_module, function_type, frontmatter = load_function_module_by_id(id)
             request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "Valves"):
@@ -247,7 +341,7 @@ async def get_function_user_valves_spec_by_id(
         if id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[id]
         else:
-            function_module, function_type = load_function_module_by_id(id)
+            function_module, function_type, frontmatter = load_function_module_by_id(id)
             request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "UserValves"):
@@ -271,7 +365,7 @@ async def update_function_user_valves_by_id(
         if id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[id]
         else:
-            function_module, function_type = load_function_module_by_id(id)
+            function_module, function_type, frontmatter = load_function_module_by_id(id)
             request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "UserValves"):
@@ -300,93 +394,3 @@ async def update_function_user_valves_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
-
-############################
-# ToggleFunctionById
-############################
-
-
-@router.post("/id/{id}/toggle", response_model=Optional[FunctionModel])
-async def toggle_function_by_id(id: str, user=Depends(get_admin_user)):
-    function = Functions.get_function_by_id(id)
-    if function:
-        function = Functions.update_function_by_id(
-            id, {"is_active": not function.is_active}
-        )
-
-        if function:
-            return function
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error updating function"),
-            )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-
-############################
-# UpdateFunctionById
-############################
-
-
-@router.post("/id/{id}/update", response_model=Optional[FunctionModel])
-async def update_function_by_id(
-    request: Request, id: str, form_data: FunctionForm, user=Depends(get_admin_user)
-):
-    function_path = os.path.join(FUNCTIONS_DIR, f"{id}.py")
-
-    try:
-        with open(function_path, "w") as function_file:
-            function_file.write(form_data.content)
-
-        function_module, function_type = load_function_module_by_id(id)
-
-        FUNCTIONS = request.app.state.FUNCTIONS
-        FUNCTIONS[id] = function_module
-
-        updated = {**form_data.model_dump(exclude={"id"}), "type": function_type}
-        print(updated)
-
-        function = Functions.update_function_by_id(id, updated)
-
-        if function:
-            return function
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error updating function"),
-            )
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
-
-
-############################
-# DeleteFunctionById
-############################
-
-
-@router.delete("/id/{id}/delete", response_model=bool)
-async def delete_function_by_id(
-    request: Request, id: str, user=Depends(get_admin_user)
-):
-    result = Functions.delete_function_by_id(id)
-
-    if result:
-        FUNCTIONS = request.app.state.FUNCTIONS
-        if id in FUNCTIONS:
-            del FUNCTIONS[id]
-
-        # delete the function file
-        function_path = os.path.join(FUNCTIONS_DIR, f"{id}.py")
-        os.remove(function_path)
-
-    return result

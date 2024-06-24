@@ -38,6 +38,7 @@ class Tool(Model):
 
 class ToolMeta(BaseModel):
     description: Optional[str] = None
+    manifest: Optional[dict] = {}
 
 
 class ToolModel(BaseModel):
