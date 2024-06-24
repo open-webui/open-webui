@@ -28,6 +28,7 @@ class Tool(Model):
     content = TextField()
     specs = JSONField()
     meta = JSONField()
+    valves = JSONField()
     updated_at = BigIntegerField()
     created_at = BigIntegerField()
 
@@ -71,6 +72,10 @@ class ToolForm(BaseModel):
     meta: ToolMeta
 
 
+class ToolValves(BaseModel):
+    valves: Optional[dict] = None
+
+
 class ToolsTable:
     def __init__(self, db):
         self.db = db
@@ -108,6 +113,27 @@ class ToolsTable:
 
     def get_tools(self) -> List[ToolModel]:
         return [ToolModel(**model_to_dict(tool)) for tool in Tool.select()]
+
+    def get_tool_valves_by_id(self, id: str) -> Optional[ToolValves]:
+        try:
+            tool = Tool.get(Tool.id == id)
+            return ToolValves(**model_to_dict(tool))
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
+
+    def update_tool_valves_by_id(self, id: str, valves: dict) -> Optional[ToolValves]:
+        try:
+            query = Tool.update(
+                **{"valves": valves},
+                updated_at=int(time.time()),
+            ).where(Tool.id == id)
+            query.execute()
+
+            tool = Tool.get(Tool.id == id)
+            return ToolValves(**model_to_dict(tool))
+        except:
+            return None
 
     def get_user_valves_by_id_and_user_id(
         self, id: str, user_id: str

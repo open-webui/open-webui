@@ -118,6 +118,103 @@ async def get_function_by_id(id: str, user=Depends(get_admin_user)):
 
 
 ############################
+# GetFunctionValves
+############################
+
+
+@router.get("/id/{id}/valves", response_model=Optional[dict])
+async def get_function_valves_by_id(id: str, user=Depends(get_admin_user)):
+    function = Functions.get_function_by_id(id)
+    if function:
+        try:
+            function_valves = Functions.get_function_valves_by_id(id)
+            return function_valves.valves
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# GetFunctionValvesSpec
+############################
+
+
+@router.get("/id/{id}/valves/spec", response_model=Optional[dict])
+async def get_function_valves_spec_by_id(
+    request: Request, id: str, user=Depends(get_admin_user)
+):
+    function = Functions.get_function_by_id(id)
+    if function:
+        if id in request.app.state.FUNCTIONS:
+            function_module = request.app.state.FUNCTIONS[id]
+        else:
+            function_module, function_type = load_function_module_by_id(id)
+            request.app.state.FUNCTIONS[id] = function_module
+
+        if hasattr(function_module, "Valves"):
+            Valves = function_module.Valves
+            return Valves.schema()
+        return None
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# UpdateFunctionValves
+############################
+
+
+@router.post("/id/{id}/valves/update", response_model=Optional[dict])
+async def update_function_valves_by_id(
+    request: Request, id: str, form_data: dict, user=Depends(get_admin_user)
+):
+    function = Functions.get_function_by_id(id)
+    if function:
+
+        if id in request.app.state.FUNCTIONS:
+            function_module = request.app.state.FUNCTIONS[id]
+        else:
+            function_module, function_type = load_function_module_by_id(id)
+            request.app.state.FUNCTIONS[id] = function_module
+
+        if hasattr(function_module, "Valves"):
+            Valves = function_module.Valves
+
+            try:
+                form_data = {k: v for k, v in form_data.items() if v is not None}
+                valves = Valves(**form_data)
+                Functions.update_function_valves_by_id(id, valves.model_dump())
+                return valves.model_dump()
+            except Exception as e:
+                print(e)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(e),
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
 # FunctionUserValves
 ############################
 
@@ -181,6 +278,7 @@ async def update_function_user_valves_by_id(
             UserValves = function_module.UserValves
 
             try:
+                form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
                 Functions.update_user_valves_by_id_and_user_id(
                     id, user.id, user_valves.model_dump()
@@ -196,6 +294,33 @@ async def update_function_user_valves_by_id(
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# ToggleFunctionById
+############################
+
+
+@router.post("/id/{id}/toggle", response_model=Optional[FunctionModel])
+async def toggle_function_by_id(id: str, user=Depends(get_admin_user)):
+    function = Functions.get_function_by_id(id)
+    if function:
+        function = Functions.update_function_by_id(
+            id, {"is_active": not function.is_active}
+        )
+
+        if function:
+            return function
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error updating function"),
             )
     else:
         raise HTTPException(
