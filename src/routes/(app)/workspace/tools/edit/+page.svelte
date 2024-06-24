@@ -23,7 +23,7 @@
 		});
 
 		if (res) {
-			toast.success('Tool updated successfully');
+			toast.success($i18n.t('Tool updated successfully'));
 			tools.set(await getTools(localStorage.token));
 
 			// await goto('/workspace/tools');

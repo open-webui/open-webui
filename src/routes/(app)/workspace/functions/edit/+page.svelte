@@ -26,7 +26,7 @@
 		});
 
 		if (res) {
-			toast.success('Function updated successfully');
+			toast.success($i18n.t('Function updated successfully'));
 			functions.set(await getFunctions(localStorage.token));
 			models.set(await getModels(localStorage.token));
 		}

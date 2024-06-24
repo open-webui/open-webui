@@ -81,7 +81,7 @@
 		});
 
 		if (res) {
-			toast.success('Function deleted successfully');
+			toast.success($i18n.t('Function deleted successfully'));
 
 			functions.set(await getFunctions(localStorage.token));
 			models.set(await getModels(localStorage.token));
@@ -412,7 +412,7 @@
 				});
 			}
 
-			toast.success('Functions imported successfully');
+			toast.success($i18n.t('Functions imported successfully'));
 			functions.set(await getFunctions(localStorage.token));
 			models.set(await getModels(localStorage.token));
 		};

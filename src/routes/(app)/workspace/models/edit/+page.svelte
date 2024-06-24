@@ -107,7 +107,7 @@
 
 		if (res) {
 			await models.set(await getModels(localStorage.token));
-			toast.success('Model updated successfully');
+			toast.success($i18n.t('Model updated successfully'));
 			await goto('/workspace/models');
 		}
 

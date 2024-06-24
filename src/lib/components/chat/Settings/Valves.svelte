@@ -73,7 +73,7 @@
 				);
 
 				if (res) {
-					toast.success('Valves updated');
+					toast.success($i18n.t('Valves updated'));
 					valves = res;
 				}
 			} else if (tab === 'functions') {
@@ -87,7 +87,7 @@
 				});
 
 				if (res) {
-					toast.success('Valves updated');
+					toast.success($i18n.t('Valves updated'));
 					valves = res;
 				}
 			}

@@ -77,7 +77,7 @@
 		});
 
 		if (res) {
-			toast.success('Tool deleted successfully');
+			toast.success($i18n.t('Tool deleted successfully'));
 			tools.set(await getTools(localStorage.token));
 		}
 	};
@@ -388,7 +388,7 @@
 				});
 			}
 
-			toast.success('Tool imported successfully');
+			toast.success($i18n.t('Tool imported successfully'));
 			tools.set(await getTools(localStorage.token));
 		};
 
