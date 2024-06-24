@@ -16,12 +16,16 @@ def extract_frontmatter(file_path):
 
     try:
         with open(file_path, "r", encoding="utf-8") as file:
+            first_line = file.readline()
+            if first_line.strip() != '"""':
+                # The file doesn't start with triple quotes
+                return {}
+
+            frontmatter_started = True
+
             for line in file:
                 if '"""' in line:
-                    if not frontmatter_started:
-                        frontmatter_started = True
-                        continue  # skip the line with the opening triple quotes
-                    else:
+                    if frontmatter_started:
                         frontmatter_ended = True
                         break
 
@@ -30,6 +34,7 @@ def extract_frontmatter(file_path):
                     if match:
                         key, value = match.groups()
                         frontmatter[key.strip()] = value.strip()
+
     except FileNotFoundError:
         print(f"Error: The file {file_path} does not exist.")
         return {}

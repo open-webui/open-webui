@@ -116,6 +116,13 @@ async def get_pipe_models():
         else:
             function_module = app.state.FUNCTIONS[pipe.id]
 
+        if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
+            print(f"Getting valves for {pipe.id}")
+            valves = Functions.get_function_valves_by_id(pipe.id)
+            function_module.valves = function_module.Valves(
+                **(valves if valves else {})
+            )
+
         # Check if function is a manifold
         if hasattr(function_module, "type"):
             if function_module.type == "manifold":
