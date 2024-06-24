@@ -156,6 +156,14 @@
 								TOOL
 							</div>
 
+							{#if tool?.meta?.manifest?.version}
+								<div
+									class="text-xs font-black px-1 rounded line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+								>
+									v{tool?.meta?.manifest?.version ?? ''}
+								</div>
+							{/if}
+
 							<div class="line-clamp-1">
 								{tool.name}
 							</div>
