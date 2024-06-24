@@ -163,7 +163,7 @@
 									</div>
 								{/each}
 							{:else}
-								<div>No valves</div>
+								<div class="text-sm">No valves</div>
 							{/if}
 						{:else}
 							<Spinner className="size-5" />
