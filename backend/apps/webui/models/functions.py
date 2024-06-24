@@ -143,10 +143,10 @@ class FunctionsTable:
                 for function in Function.select().where(Function.type == type)
             ]
 
-    def get_function_valves_by_id(self, id: str) -> Optional[FunctionValves]:
+    def get_function_valves_by_id(self, id: str) -> Optional[dict]:
         try:
             function = Function.get(Function.id == id)
-            return FunctionValves(**model_to_dict(function))
+            return function.valves if "valves" in function and function.valves else {}
         except Exception as e:
             print(f"An error occurred: {e}")
             return None

@@ -133,8 +133,8 @@ async def get_toolkit_valves_by_id(id: str, user=Depends(get_admin_user)):
     toolkit = Tools.get_tool_by_id(id)
     if toolkit:
         try:
-            tool_valves = Tools.get_tool_valves_by_id(id)
-            return tool_valves.valves
+            valves = Tools.get_tool_valves_by_id(id)
+            return valves
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

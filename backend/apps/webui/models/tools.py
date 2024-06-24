@@ -114,10 +114,10 @@ class ToolsTable:
     def get_tools(self) -> List[ToolModel]:
         return [ToolModel(**model_to_dict(tool)) for tool in Tool.select()]
 
-    def get_tool_valves_by_id(self, id: str) -> Optional[ToolValves]:
+    def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:
             tool = Tool.get(Tool.id == id)
-            return ToolValves(**model_to_dict(tool))
+            return tool.valves if "valves" in tool and tool.valves else {}
         except Exception as e:
             print(f"An error occurred: {e}")
             return None

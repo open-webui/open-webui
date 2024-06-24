@@ -127,8 +127,8 @@ async def get_function_valves_by_id(id: str, user=Depends(get_admin_user)):
     function = Functions.get_function_by_id(id)
     if function:
         try:
-            function_valves = Functions.get_function_valves_by_id(id)
-            return function_valves.valves
+            valves = Functions.get_function_valves_by_id(id)
+            return valves
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

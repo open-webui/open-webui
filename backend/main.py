@@ -262,6 +262,13 @@ async def get_function_call_response(
                     file_handler = True
                     print("file_handler: ", file_handler)
 
+                if hasattr(toolkit_module, "valves") and hasattr(
+                    toolkit_module, "Valves"
+                ):
+                    toolkit_module.valves = toolkit_module.Valves(
+                        **Tools.get_tool_valves_by_id(tool_id)
+                    )
+
                 function = getattr(toolkit_module, result["name"])
                 function_result = None
                 try:
@@ -401,6 +408,13 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     # Check if the function has a file_handler variable
                     if hasattr(function_module, "file_handler"):
                         skip_files = function_module.file_handler
+
+                    if hasattr(function_module, "valves") and hasattr(
+                        function_module, "Valves"
+                    ):
+                        function_module.valves = function_module.Valves(
+                            **Functions.get_function_valves_by_id(filter_id)
+                        )
 
                     try:
                         if hasattr(function_module, "inlet"):
@@ -884,6 +898,13 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
             else:
                 function_module = webui_app.state.FUNCTIONS[pipe_id]
 
+            if hasattr(function_module, "valves") and hasattr(
+                function_module, "Valves"
+            ):
+                function_module.valves = function_module.Valves(
+                    **Functions.get_function_valves_by_id(pipe_id)
+                )
+
             pipe = function_module.pipe
 
             # Get the signature of the function
@@ -1104,6 +1125,13 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                         filter_id
                     )
                     webui_app.state.FUNCTIONS[filter_id] = function_module
+
+                if hasattr(function_module, "valves") and hasattr(
+                    function_module, "Valves"
+                ):
+                    function_module.valves = function_module.Valves(
+                        **Functions.get_function_valves_by_id(filter_id)
+                    )
 
                 try:
                     if hasattr(function_module, "outlet"):
