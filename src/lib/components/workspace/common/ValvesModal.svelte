@@ -52,6 +52,7 @@
 
 			if (res) {
 				toast.success('Valves updated successfully');
+				dispatch('save');
 			}
 		}
 
