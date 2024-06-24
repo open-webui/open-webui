@@ -24,6 +24,7 @@
 	import FunctionMenu from './Functions/FunctionMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import Switch from '../common/Switch.svelte';
+	import ValvesModal from './ValvesModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -32,6 +33,9 @@
 
 	let showConfirm = false;
 	let query = '';
+
+	let showValvesModal = false;
+	let selectedFunction = null;
 
 	const shareHandler = async (tool) => {
 		console.log(tool);
@@ -175,6 +179,10 @@
 					<button
 						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 						type="button"
+						on:click={() => {
+							selectedFunction = func;
+							showValvesModal = true;
+						}}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -351,6 +359,8 @@
 		</div>
 	</a>
 </div>
+
+<ValvesModal bind:show={showValvesModal} type="function" id={selectedFunction?.id ?? null} />
 
 <ConfirmDialog
 	bind:show={showConfirm}

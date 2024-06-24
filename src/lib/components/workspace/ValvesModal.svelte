@@ -5,6 +5,13 @@
 	import { addUser } from '$lib/apis/auths';
 
 	import Modal from '../common/Modal.svelte';
+	import {
+		getFunctionValvesById,
+		getFunctionValvesSpecById,
+		updateFunctionValvesById
+	} from '$lib/apis/functions';
+	import { getToolValvesById, getToolValvesSpecById, updateToolValvesById } from '$lib/apis/tools';
+	import Spinner from '../common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -14,21 +21,57 @@
 	export let type = 'tool';
 	export let id = null;
 
+	let saving = false;
 	let loading = false;
 
-	let _user = {
-		name: '',
-		email: '',
-		password: '',
-		role: 'user'
-	};
+	let valvesSpec = null;
+	let valves = {};
 
 	const submitHandler = async () => {
-		const stopLoading = () => {
-			dispatch('save');
-			loading = false;
-		};
+		saving = true;
+
+		let res = null;
+
+		if (type === 'tool') {
+			res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
+				toast.error(error);
+			});
+		} else if (type === 'function') {
+			res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
+				toast.error(error);
+			});
+		}
+
+		if (res) {
+			toast.success('Valves updated successfully');
+		}
+
+		saving = false;
 	};
+
+	const initHandler = async () => {
+		loading = true;
+		valves = {};
+		valvesSpec = null;
+
+		if (type === 'tool') {
+			valves = await getToolValvesById(localStorage.token, id);
+			valvesSpec = await getToolValvesSpecById(localStorage.token, id);
+		} else if (type === 'function') {
+			valves = await getFunctionValvesById(localStorage.token, id);
+			valvesSpec = await getFunctionValvesSpecById(localStorage.token, id);
+		}
+
+		if (!valves) {
+			valves = {};
+		}
+
+		loading = false;
+	};
+
+	$: if (show) {
+		initHandler();
+	}
 </script>
 
 <Modal size="sm" bind:show>
@@ -63,81 +106,81 @@
 					}}
 				>
 					<div class="px-1">
-						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+						{#if !loading}
+							{#if valvesSpec}
+								{#each Object.keys(valvesSpec.properties) as property, idx}
+									<div class=" py-0.5 w-full justify-between">
+										<div class="flex w-full justify-between">
+											<div class=" self-center text-xs font-medium">
+												{valvesSpec.properties[property].title}
 
-							<div class="flex-1">
-								<select
-									class="w-full capitalize rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
-									bind:value={_user.role}
-									placeholder={$i18n.t('Enter Your Role')}
-									required
-								>
-									<option value="pending"> {$i18n.t('pending')} </option>
-									<option value="user"> {$i18n.t('user')} </option>
-									<option value="admin"> {$i18n.t('admin')} </option>
-								</select>
-							</div>
-						</div>
+												{#if (valvesSpec?.required ?? []).includes(property)}
+													<span class=" text-gray-500">*required</span>
+												{/if}
+											</div>
 
-						<div class="flex flex-col w-full mt-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+											<button
+												class="p-1 px-3 text-xs flex rounded transition"
+												type="button"
+												on:click={() => {
+													valves[property] = (valves[property] ?? null) === null ? '' : null;
+												}}
+											>
+												{#if (valves[property] ?? null) === null}
+													<span class="ml-2 self-center">
+														{#if (valvesSpec?.required ?? []).includes(property)}
+															{$i18n.t('None')}
+														{:else}
+															{$i18n.t('Default')}
+														{/if}
+													</span>
+												{:else}
+													<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+												{/if}
+											</button>
+										</div>
 
-							<div class="flex-1">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
-									type="text"
-									bind:value={_user.name}
-									placeholder={$i18n.t('Enter Your Full Name')}
-									autocomplete="off"
-									required
-								/>
-							</div>
-						</div>
+										{#if (valves[property] ?? null) !== null}
+											<div class="flex mt-0.5 mb-1.5 space-x-2">
+												<div class=" flex-1">
+													<input
+														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+														type="text"
+														placeholder={valvesSpec.properties[property].title}
+														bind:value={valves[property]}
+														autocomplete="off"
+														required={(valvesSpec?.required ?? []).includes(property)}
+													/>
+												</div>
+											</div>
+										{/if}
 
-						<hr class=" dark:border-gray-800 my-3 w-full" />
-
-						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
-
-							<div class="flex-1">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
-									type="email"
-									bind:value={_user.email}
-									placeholder={$i18n.t('Enter Your Email')}
-									autocomplete="off"
-									required
-								/>
-							</div>
-						</div>
-
-						<div class="flex flex-col w-full mt-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Password')}</div>
-
-							<div class="flex-1">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
-									type="password"
-									bind:value={_user.password}
-									placeholder={$i18n.t('Enter Your Password')}
-									autocomplete="off"
-								/>
-							</div>
-						</div>
+										{#if (valvesSpec.properties[property]?.description ?? null) !== null}
+											<div class="text-xs text-gray-500">
+												{valvesSpec.properties[property].description}
+											</div>
+										{/if}
+									</div>
+								{/each}
+							{:else}
+								<div>No valves</div>
+							{/if}
+						{:else}
+							<Spinner className="size-5" />
+						{/if}
 					</div>
 
 					<div class="flex justify-end pt-3 text-sm font-medium">
 						<button
-							class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg flex flex-row space-x-1 items-center {loading
+							class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg flex flex-row space-x-1 items-center {saving
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"
-							disabled={loading}
+							disabled={saving}
 						>
-							{$i18n.t('Submit')}
+							{$i18n.t('Save')}
 
-							{#if loading}
+							{#if saving}
 								<div class="ml-2 self-center">
 									<svg
 										class=" w-4 h-4"

@@ -133,13 +133,41 @@ async def get_toolkit_valves_by_id(id: str, user=Depends(get_admin_user)):
     toolkit = Tools.get_tool_by_id(id)
     if toolkit:
         try:
-            valves = Tools.get_tool_valves_by_id(id)
-            return valves
+            tool_valves = Tools.get_tool_valves_by_id(id)
+            return tool_valves.valves
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT(e),
             )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# GetToolValvesSpec
+############################
+
+
+@router.get("/id/{id}/valves/spec", response_model=Optional[dict])
+async def get_toolkit_valves_spec_by_id(
+    request: Request, id: str, user=Depends(get_admin_user)
+):
+    toolkit = Tools.get_tool_by_id(id)
+    if toolkit:
+        if id in request.app.state.TOOLS:
+            toolkit_module = request.app.state.TOOLS[id]
+        else:
+            toolkit_module = load_toolkit_module_by_id(id)
+            request.app.state.TOOLS[id] = toolkit_module
+
+        if hasattr(toolkit_module, "UserValves"):
+            UserValves = toolkit_module.UserValves
+            return UserValves.schema()
+        return None
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -154,18 +182,35 @@ async def get_toolkit_valves_by_id(id: str, user=Depends(get_admin_user)):
 
 @router.post("/id/{id}/valves/update", response_model=Optional[dict])
 async def update_toolkit_valves_by_id(
-    id: str, form_data: dict, user=Depends(get_admin_user)
+    request: Request, id: str, form_data: dict, user=Depends(get_admin_user)
 ):
     toolkit = Tools.get_tool_by_id(id)
     if toolkit:
-        try:
-            valves = Tools.update_tool_valves_by_id(id, form_data)
-            return valves
-        except Exception as e:
+        if id in request.app.state.TOOLS:
+            toolkit_module = request.app.state.TOOLS[id]
+        else:
+            toolkit_module = load_toolkit_module_by_id(id)
+            request.app.state.TOOLS[id] = toolkit_module
+
+        if hasattr(toolkit_module, "Valves"):
+            Valves = toolkit_module.Valves
+
+            try:
+                valves = Valves(**form_data)
+                Tools.update_tool_valves_by_id(id, valves.model_dump())
+                return valves.model_dump()
+            except Exception as e:
+                print(e)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(e),
+                )
+        else:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(e),
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.NOT_FOUND,
             )
+
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
