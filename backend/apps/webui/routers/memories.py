@@ -167,9 +167,7 @@ async def delete_memory_by_user_id(user=Depends(get_verified_user)):
 
 
 @router.delete("/{memory_id}", response_model=bool)
-async def delete_memory_by_id(
-    memory_id: str, user=Depends(get_verified_user)
-):
+async def delete_memory_by_id(memory_id: str, user=Depends(get_verified_user)):
     result = Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
 
     if result:

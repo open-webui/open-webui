@@ -83,7 +83,9 @@ class PromptsTable:
 
     def get_prompts(self) -> List[PromptModel]:
         with get_session() as db:
-            return [PromptModel.model_validate(prompt) for prompt in db.query(Prompt).all()]
+            return [
+                PromptModel.model_validate(prompt) for prompt in db.query(Prompt).all()
+            ]
 
     def update_prompt_by_command(
         self, command: str, form_data: PromptForm

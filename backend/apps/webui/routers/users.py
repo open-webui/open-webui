@@ -40,9 +40,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[UserModel])
-async def get_users(
-    skip: int = 0, limit: int = 50, user=Depends(get_admin_user)
-):
+async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)):
     return Users.get_users(skip, limit)
 
 
@@ -70,9 +68,7 @@ async def update_user_permissions(
 
 
 @router.post("/update/role", response_model=Optional[UserModel])
-async def update_user_role(
-    form_data: UserRoleUpdateForm, user=Depends(get_admin_user)
-):
+async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
 
     if user.id != form_data.id and form_data.id != Users.get_first_user().id:
         return Users.update_user_role_by_id(form_data.id, form_data.role)
@@ -89,9 +85,7 @@ async def update_user_role(
 
 
 @router.get("/user/settings", response_model=Optional[UserSettings])
-async def get_user_settings_by_session_user(
-    user=Depends(get_verified_user)
-):
+async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
     user = Users.get_user_by_id(user.id)
     if user:
         return user.settings
@@ -127,9 +121,7 @@ async def update_user_settings_by_session_user(
 
 
 @router.get("/user/info", response_model=Optional[dict])
-async def get_user_info_by_session_user(
-    user=Depends(get_verified_user)
-):
+async def get_user_info_by_session_user(user=Depends(get_verified_user)):
     user = Users.get_user_by_id(user.id)
     if user:
         return user.info
@@ -154,9 +146,7 @@ async def update_user_info_by_session_user(
         if user.info is None:
             user.info = {}
 
-        user = Users.update_user_by_id(
-            user.id, {"info": {**user.info, **form_data}}
-        )
+        user = Users.update_user_by_id(user.id, {"info": {**user.info, **form_data}})
         if user:
             return user.info
         else:
@@ -182,9 +172,7 @@ class UserResponse(BaseModel):
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user_by_id(
-    user_id: str, user=Depends(get_verified_user)
-):
+async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
 
     # Check if user_id is a shared chat
     # If it is, get the user_id from the chat
@@ -267,9 +255,7 @@ async def update_user_by_id(
 
 
 @router.delete("/{user_id}", response_model=bool)
-async def delete_user_by_id(
-    user_id: str, user=Depends(get_admin_user)
-):
+async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
     if user.id != user_id:
         result = Auths.delete_auth_by_id(user_id)
 

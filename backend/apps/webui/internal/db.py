@@ -53,7 +53,9 @@ if "sqlite" in SQLALCHEMY_DATABASE_URL:
     )
 else:
     engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
+SessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
+)
 Base = declarative_base()
 
 
@@ -66,4 +68,3 @@ def get_session():
     except Exception as e:
         db.rollback()
         raise e
-

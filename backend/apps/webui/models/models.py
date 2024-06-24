@@ -153,9 +153,7 @@ class ModelsTable:
         except:
             return None
 
-    def update_model_by_id(
-        self, id: str, model: ModelForm
-    ) -> Optional[ModelModel]:
+    def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
         try:
             # update only the fields that are present in the model
             with get_session() as db:

@@ -165,9 +165,7 @@ class UsersTable:
             except:
                 return None
 
-    def update_user_role_by_id(
-        self, id: str, role: str
-    ) -> Optional[UserModel]:
+    def update_user_role_by_id(self, id: str, role: str) -> Optional[UserModel]:
         with get_session() as db:
             try:
                 db.query(User).filter_by(id=id).update({"role": role})
@@ -193,12 +191,12 @@ class UsersTable:
             except:
                 return None
 
-    def update_user_last_active_by_id(
-        self, id: str
-    ) -> Optional[UserModel]:
+    def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         with get_session() as db:
             try:
-                db.query(User).filter_by(id=id).update({"last_active_at": int(time.time())})
+                db.query(User).filter_by(id=id).update(
+                    {"last_active_at": int(time.time())}
+                )
 
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
@@ -217,9 +215,7 @@ class UsersTable:
             except:
                 return None
 
-    def update_user_by_id(
-        self, id: str, updated: dict
-    ) -> Optional[UserModel]:
+    def update_user_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
         with get_session() as db:
             try:
                 db.query(User).filter_by(id=id).update(updated)

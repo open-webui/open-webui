@@ -126,9 +126,7 @@ class AuthsTable:
             else:
                 return None
 
-    def authenticate_user(
-        self, email: str, password: str
-    ) -> Optional[UserModel]:
+    def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
         log.info(f"authenticate_user: {email}")
         with get_session() as db:
             try:
@@ -144,9 +142,7 @@ class AuthsTable:
             except:
                 return None
 
-    def authenticate_user_by_api_key(
-        self, api_key: str
-    ) -> Optional[UserModel]:
+    def authenticate_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_api_key: {api_key}")
         with get_session() as db:
             # if no api_key, return None
@@ -159,9 +155,7 @@ class AuthsTable:
             except:
                 return False
 
-    def authenticate_user_by_trusted_header(
-        self, email: str
-    ) -> Optional[UserModel]:
+    def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_trusted_header: {email}")
         with get_session() as db:
             try:
@@ -172,12 +166,12 @@ class AuthsTable:
             except:
                 return None
 
-    def update_user_password_by_id(
-        self, id: str, new_password: str
-    ) -> bool:
+    def update_user_password_by_id(self, id: str, new_password: str) -> bool:
         with get_session() as db:
             try:
-                result = db.query(Auth).filter_by(id=id).update({"password": new_password})
+                result = (
+                    db.query(Auth).filter_by(id=id).update({"password": new_password})
+                )
                 return True if result == 1 else False
             except:
                 return False

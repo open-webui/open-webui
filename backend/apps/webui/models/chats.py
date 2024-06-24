@@ -79,9 +79,7 @@ class ChatTitleIdResponse(BaseModel):
 
 class ChatTable:
 
-    def insert_new_chat(
-        self, user_id: str, form_data: ChatForm
-    ) -> Optional[ChatModel]:
+    def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_session() as db:
             id = str(uuid.uuid4())
             chat = ChatModel(
@@ -89,7 +87,9 @@ class ChatTable:
                     "id": id,
                     "user_id": user_id,
                     "title": (
-                        form_data.chat["title"] if "title" in form_data.chat else "New Chat"
+                        form_data.chat["title"]
+                        if "title" in form_data.chat
+                        else "New Chat"
                     ),
                     "chat": json.dumps(form_data.chat),
                     "created_at": int(time.time()),
@@ -103,9 +103,7 @@ class ChatTable:
             db.refresh(result)
             return ChatModel.model_validate(result) if result else None
 
-    def update_chat_by_id(
-        self, id: str, chat: dict
-    ) -> Optional[ChatModel]:
+    def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
         with get_session() as db:
             try:
                 chat_obj = db.get(Chat, id)
@@ -119,9 +117,7 @@ class ChatTable:
             except Exception as e:
                 return None
 
-    def insert_shared_chat_by_chat_id(
-        self, chat_id: str
-    ) -> Optional[ChatModel]:
+    def insert_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         with get_session() as db:
             # Get the existing chat to share
             chat = db.get(Chat, chat_id)
@@ -145,14 +141,14 @@ class ChatTable:
             db.refresh(shared_result)
             # Update the original chat with the share_id
             result = (
-                db.query(Chat).filter_by(id=chat_id).update({"share_id": shared_chat.id})
+                db.query(Chat)
+                .filter_by(id=chat_id)
+                .update({"share_id": shared_chat.id})
             )
 
             return shared_chat if (shared_result and result) else None
 
-    def update_shared_chat_by_chat_id(
-        self, chat_id: str
-    ) -> Optional[ChatModel]:
+    def update_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         with get_session() as db:
             try:
                 print("update_shared_chat_by_id")
@@ -271,9 +267,7 @@ class ChatTable:
         except Exception as e:
             return None
 
-    def get_chat_by_id_and_user_id(
-        self, id: str, user_id: str
-    ) -> Optional[ChatModel]:
+    def get_chat_by_id_and_user_id(self, id: str, user_id: str) -> Optional[ChatModel]:
         try:
             with get_session() as db:
                 chat = db.query(Chat).filter_by(id=id, user_id=user_id).first()
@@ -293,13 +287,13 @@ class ChatTable:
     def get_chats_by_user_id(self, user_id: str) -> List[ChatModel]:
         with get_session() as db:
             all_chats = (
-                db.query(Chat).filter_by(user_id=user_id).order_by(Chat.updated_at.desc())
+                db.query(Chat)
+                .filter_by(user_id=user_id)
+                .order_by(Chat.updated_at.desc())
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
-    def get_archived_chats_by_user_id(
-        self, user_id: str
-    ) -> List[ChatModel]:
+    def get_archived_chats_by_user_id(self, user_id: str) -> List[ChatModel]:
         with get_session() as db:
             all_chats = (
                 db.query(Chat)

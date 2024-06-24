@@ -91,6 +91,7 @@ class AbstractPostgresTest(AbstractIntegrationTest):
             while retries > 0:
                 try:
                     from config import BACKEND_DIR
+
                     db = create_engine(database_url, pool_pre_ping=True)
                     db = db.connect()
                     log.info("postgres is ready!")

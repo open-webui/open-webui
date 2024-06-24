@@ -55,9 +55,7 @@ async def get_session_user_chat_list(
 
 
 @router.delete("/", response_model=bool)
-async def delete_all_user_chats(
-    request: Request, user=Depends(get_current_user)
-):
+async def delete_all_user_chats(request: Request, user=Depends(get_current_user)):
 
     if (
         user.role == "user"
@@ -95,9 +93,7 @@ async def get_user_chat_list_by_user_id(
 
 
 @router.post("/new", response_model=Optional[ChatResponse])
-async def create_new_chat(
-    form_data: ChatForm, user=Depends(get_current_user)
-):
+async def create_new_chat(form_data: ChatForm, user=Depends(get_current_user)):
     try:
         chat = Chats.insert_new_chat(user.id, form_data)
         return ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
@@ -180,9 +176,7 @@ async def archive_all_chats(user=Depends(get_current_user)):
 
 
 @router.get("/share/{share_id}", response_model=Optional[ChatResponse])
-async def get_shared_chat_by_id(
-    share_id: str, user=Depends(get_current_user)
-):
+async def get_shared_chat_by_id(share_id: str, user=Depends(get_current_user)):
     if user.role == "pending":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
@@ -225,9 +219,7 @@ async def get_user_chat_list_by_tag_name(
         )
     ]
 
-    chats = Chats.get_chat_list_by_chat_ids(
-        chat_ids, form_data.skip, form_data.limit
-    )
+    chats = Chats.get_chat_list_by_chat_ids(chat_ids, form_data.skip, form_data.limit)
 
     if len(chats) == 0:
         Tags.delete_tag_by_tag_name_and_user_id(form_data.name, user.id)
@@ -297,9 +289,7 @@ async def update_chat_by_id(
 
 
 @router.delete("/{id}", response_model=bool)
-async def delete_chat_by_id(
-    request: Request, id: str, user=Depends(get_current_user)
-):
+async def delete_chat_by_id(request: Request, id: str, user=Depends(get_current_user)):
 
     if user.role == "admin":
         result = Chats.delete_chat_by_id(id)
@@ -347,9 +337,7 @@ async def clone_chat_by_id(id: str, user=Depends(get_current_user)):
 
 
 @router.get("/{id}/archive", response_model=Optional[ChatResponse])
-async def archive_chat_by_id(
-    id: str, user=Depends(get_current_user)
-):
+async def archive_chat_by_id(id: str, user=Depends(get_current_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         chat = Chats.toggle_chat_archive_by_id(id)
@@ -398,9 +386,7 @@ async def share_chat_by_id(id: str, user=Depends(get_current_user)):
 
 
 @router.delete("/{id}/share", response_model=Optional[bool])
-async def delete_shared_chat_by_id(
-    id: str, user=Depends(get_current_user)
-):
+async def delete_shared_chat_by_id(id: str, user=Depends(get_current_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         if not chat.share_id:
@@ -423,9 +409,7 @@ async def delete_shared_chat_by_id(
 
 
 @router.get("/{id}/tags", response_model=List[TagModel])
-async def get_chat_tags_by_id(
-    id: str, user=Depends(get_current_user)
-):
+async def get_chat_tags_by_id(id: str, user=Depends(get_current_user)):
     tags = Tags.get_tags_by_chat_id_and_user_id(id, user.id)
 
     if tags != None:
@@ -443,9 +427,7 @@ async def get_chat_tags_by_id(
 
 @router.post("/{id}/tags", response_model=Optional[ChatIdTagModel])
 async def add_chat_tag_by_id(
-    id: str,
-    form_data: ChatIdTagForm,
-    user=Depends(get_current_user)
+    id: str, form_data: ChatIdTagForm, user=Depends(get_current_user)
 ):
     tags = Tags.get_tags_by_chat_id_and_user_id(id, user.id)
 
@@ -494,9 +476,7 @@ async def delete_chat_tag_by_id(
 
 
 @router.delete("/{id}/tags/all", response_model=Optional[bool])
-async def delete_all_chat_tags_by_id(
-    id: str, user=Depends(get_current_user)
-):
+async def delete_all_chat_tags_by_id(id: str, user=Depends(get_current_user)):
     result = Tags.delete_tags_by_chat_id_and_user_id(id, user.id)
 
     if result:

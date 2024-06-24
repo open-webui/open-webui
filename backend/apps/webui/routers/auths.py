@@ -78,8 +78,7 @@ async def get_session_user(
 
 @router.post("/update/profile", response_model=UserResponse)
 async def update_profile(
-    form_data: UpdateProfileForm,
-    session_user=Depends(get_current_user)
+    form_data: UpdateProfileForm, session_user=Depends(get_current_user)
 ):
     if session_user:
         user = Users.update_user_by_id(
@@ -101,8 +100,7 @@ async def update_profile(
 
 @router.post("/update/password", response_model=bool)
 async def update_password(
-    form_data: UpdatePasswordForm,
-    session_user=Depends(get_current_user)
+    form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
 ):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
@@ -269,9 +267,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 
 @router.post("/add", response_model=SigninResponse)
-async def add_user(
-    form_data: AddUserForm, user=Depends(get_admin_user)
-):
+async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
 
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
@@ -316,9 +312,7 @@ async def add_user(
 
 
 @router.get("/admin/details")
-async def get_admin_details(
-    request: Request, user=Depends(get_current_user)
-):
+async def get_admin_details(request: Request, user=Depends(get_current_user)):
     if request.app.state.config.SHOW_ADMIN_DETAILS:
         admin_email = request.app.state.config.ADMIN_EMAIL
         admin_name = None

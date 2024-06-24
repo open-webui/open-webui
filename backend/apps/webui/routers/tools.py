@@ -180,9 +180,7 @@ async def update_toolkit_by_id(
 
 
 @router.delete("/id/{id}/delete", response_model=bool)
-async def delete_toolkit_by_id(
-    request: Request, id: str, user=Depends(get_admin_user)
-):
+async def delete_toolkit_by_id(request: Request, id: str, user=Depends(get_admin_user)):
     result = Tools.delete_tool_by_id(id)
 
     if result:

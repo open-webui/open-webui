@@ -79,9 +79,7 @@ class ChatTagsResponse(BaseModel):
 
 class TagTable:
 
-    def insert_new_tag(
-        self, name: str, user_id: str
-    ) -> Optional[TagModel]:
+    def insert_new_tag(self, name: str, user_id: str) -> Optional[TagModel]:
         id = str(uuid.uuid4())
         tag = TagModel(**{"id": id, "user_id": user_id, "name": name})
         try:
@@ -201,11 +199,13 @@ class TagTable:
         self, tag_name: str, user_id: str
     ) -> int:
         with get_session() as db:
-            return db.query(ChatIdTag).filter_by(tag_name=tag_name, user_id=user_id).count()
+            return (
+                db.query(ChatIdTag)
+                .filter_by(tag_name=tag_name, user_id=user_id)
+                .count()
+            )
 
-    def delete_tag_by_tag_name_and_user_id(
-        self, tag_name: str, user_id: str
-    ) -> bool:
+    def delete_tag_by_tag_name_and_user_id(self, tag_name: str, user_id: str) -> bool:
         try:
             with get_session() as db:
                 res = (
@@ -252,9 +252,7 @@ class TagTable:
             log.error(f"delete_tag: {e}")
             return False
 
-    def delete_tags_by_chat_id_and_user_id(
-        self, chat_id: str, user_id: str
-    ) -> bool:
+    def delete_tags_by_chat_id_and_user_id(self, chat_id: str, user_id: str) -> bool:
         tags = self.get_tags_by_chat_id_and_user_id(chat_id, user_id)
 
         for tag in tags:

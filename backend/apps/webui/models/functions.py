@@ -142,9 +142,9 @@ class FunctionsTable:
             with get_session() as db:
                 return [
                     FunctionModel.model_validate(function)
-                    for function in db.query(Function).filter_by(
-                        type=type, is_active=True
-                    ).all()
+                    for function in db.query(Function)
+                    .filter_by(type=type, is_active=True)
+                    .all()
                 ]
         else:
             with get_session() as db:
@@ -220,10 +220,12 @@ class FunctionsTable:
     def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:
         try:
             with get_session() as db:
-                db.query(Function).filter_by(id=id).update({
-                    **updated,
-                    "updated_at": int(time.time()),
-                })
+                db.query(Function).filter_by(id=id).update(
+                    {
+                        **updated,
+                        "updated_at": int(time.time()),
+                    }
+                )
                 db.commit()
                 return self.get_function_by_id(id)
         except:
@@ -232,10 +234,12 @@ class FunctionsTable:
     def deactivate_all_functions(self) -> Optional[bool]:
         try:
             with get_session() as db:
-                db.query(Function).update({
-                    "is_active": False,
-                    "updated_at": int(time.time()),
-                })
+                db.query(Function).update(
+                    {
+                        "is_active": False,
+                        "updated_at": int(time.time()),
+                    }
+                )
                 db.commit()
             return True
         except:

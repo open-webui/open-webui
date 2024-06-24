@@ -106,7 +106,9 @@ class DocumentsTable:
 
     def get_docs(self) -> List[DocumentModel]:
         with get_session() as db:
-            return [DocumentModel.model_validate(doc) for doc in db.query(Document).all()]
+            return [
+                DocumentModel.model_validate(doc) for doc in db.query(Document).all()
+            ]
 
     def update_doc_by_name(
         self, name: str, form_data: DocumentUpdateForm
