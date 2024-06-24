@@ -140,7 +140,9 @@ class ModelsTable:
             return None
 
     def get_all_models(self) -> List[ModelModel]:
-        return [ModelModel.model_validate(model) for model in Session.query(Model).all()]
+        return [
+            ModelModel.model_validate(model) for model in Session.query(Model).all()
+        ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:

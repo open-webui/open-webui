@@ -91,6 +91,7 @@ class TestChats(AbstractPostgresTest):
     def test_get_user_archived_chats(self):
         self.chats.archive_all_chats_by_user_id("2")
         from apps.webui.internal.db import Session
+
         Session.commit()
         with mock_webui_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/all/archived"))

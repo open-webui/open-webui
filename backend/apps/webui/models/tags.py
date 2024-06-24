@@ -207,9 +207,7 @@ class TagTable:
             log.debug(f"res: {res}")
             Session.commit()
 
-            tag_count = self.count_chat_ids_by_tag_name_and_user_id(
-                tag_name, user_id
-            )
+            tag_count = self.count_chat_ids_by_tag_name_and_user_id(tag_name, user_id)
             if tag_count == 0:
                 # Remove tag item from Tag col as well
                 Session.query(Tag).filter_by(name=tag_name, user_id=user_id).delete()
@@ -230,9 +228,7 @@ class TagTable:
             log.debug(f"res: {res}")
             Session.commit()
 
-            tag_count = self.count_chat_ids_by_tag_name_and_user_id(
-                tag_name, user_id
-            )
+            tag_count = self.count_chat_ids_by_tag_name_and_user_id(tag_name, user_id)
             if tag_count == 0:
                 # Remove tag item from Tag col as well
                 Session.query(Tag).filter_by(name=tag_name, user_id=user_id).delete()

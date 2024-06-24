@@ -85,9 +85,7 @@ class ChatTable:
                 "id": id,
                 "user_id": user_id,
                 "title": (
-                    form_data.chat["title"]
-                    if "title" in form_data.chat
-                    else "New Chat"
+                    form_data.chat["title"] if "title" in form_data.chat else "New Chat"
                 ),
                 "chat": json.dumps(form_data.chat),
                 "created_at": int(time.time()),
@@ -197,14 +195,14 @@ class ChatTable:
     def get_archived_chat_list_by_user_id(
         self, user_id: str, skip: int = 0, limit: int = 50
     ) -> List[ChatModel]:
-            all_chats = (
-                Session.query(Chat)
-                .filter_by(user_id=user_id, archived=True)
-                .order_by(Chat.updated_at.desc())
-                # .limit(limit).offset(skip)
-                .all()
-            )
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+        all_chats = (
+            Session.query(Chat)
+            .filter_by(user_id=user_id, archived=True)
+            .order_by(Chat.updated_at.desc())
+            # .limit(limit).offset(skip)
+            .all()
+        )
+        return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chat_list_by_user_id(
         self,

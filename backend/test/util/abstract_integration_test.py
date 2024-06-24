@@ -110,6 +110,7 @@ class AbstractPostgresTest(AbstractIntegrationTest):
 
     def _check_db_connection(self):
         from apps.webui.internal.db import Session
+
         retries = 10
         while retries > 0:
             try:
@@ -133,6 +134,7 @@ class AbstractPostgresTest(AbstractIntegrationTest):
 
     def teardown_method(self):
         from apps.webui.internal.db import Session
+
         # rollback everything not yet committed
         Session.commit()
 

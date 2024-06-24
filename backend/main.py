@@ -793,6 +793,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.middleware("http")
 async def commit_session_after_request(request: Request, call_next):
     response = await call_next(request)

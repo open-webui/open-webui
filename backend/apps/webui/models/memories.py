@@ -115,9 +115,7 @@ class MemoriesTable:
         except:
             return False
 
-    def delete_memory_by_id_and_user_id(
-        self, id: str, user_id: str
-    ) -> bool:
+    def delete_memory_by_id_and_user_id(self, id: str, user_id: str) -> bool:
         try:
             Session.query(Memory).filter_by(id=id, user_id=user_id).delete()
             return True
