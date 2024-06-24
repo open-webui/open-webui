@@ -5,7 +5,7 @@ import json
 import uuid
 import time
 
-from sqlalchemy import Column, String, BigInteger, Boolean
+from sqlalchemy import Column, String, BigInteger, Boolean, Text
 
 from apps.webui.internal.db import Base, Session
 
@@ -20,13 +20,13 @@ class Chat(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
-    title = Column(String)
-    chat = Column(String)  # Save Chat JSON as Text
+    title = Column(Text)
+    chat = Column(Text)  # Save Chat JSON as Text
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
-    share_id = Column(String, unique=True, nullable=True)
+    share_id = Column(Text, unique=True, nullable=True)
     archived = Column(Boolean, default=False)
 
 

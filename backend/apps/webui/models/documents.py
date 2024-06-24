@@ -3,7 +3,7 @@ from typing import List, Optional
 import time
 import logging
 
-from sqlalchemy import String, Column, BigInteger
+from sqlalchemy import String, Column, BigInteger, Text
 
 from apps.webui.internal.db import Base, Session
 
@@ -24,9 +24,9 @@ class Document(Base):
 
     collection_name = Column(String, primary_key=True)
     name = Column(String, unique=True)
-    title = Column(String)
-    filename = Column(String)
-    content = Column(String, nullable=True)
+    title = Column(Text)
+    filename = Column(Text)
+    content = Column(Text, nullable=True)
     user_id = Column(String)
     timestamp = Column(BigInteger)
 

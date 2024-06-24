@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import String, Column, BigInteger
+from sqlalchemy import String, Column, BigInteger, Text
 
 from apps.webui.internal.db import Base, JSONField, Session
 
@@ -46,18 +46,18 @@ class ModelMeta(BaseModel):
 class Model(Base):
     __tablename__ = "model"
 
-    id = Column(String, primary_key=True)
+    id = Column(Text, primary_key=True)
     """
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
-    user_id = Column(String)
+    user_id = Column(Text)
 
-    base_model_id = Column(String, nullable=True)
+    base_model_id = Column(Text, nullable=True)
     """
         An optional pointer to the actual model that should be used when proxying requests.
     """
 
-    name = Column(String)
+    name = Column(Text)
     """
         The human-readable display name of the model.
     """

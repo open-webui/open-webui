@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 import time
 import logging
-from sqlalchemy import String, Column, BigInteger
+from sqlalchemy import String, Column, BigInteger, Text
 
 from apps.webui.internal.db import Base, JSONField, Session
 from apps.webui.models.users import Users
@@ -26,8 +26,8 @@ class Tool(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
-    name = Column(String)
-    content = Column(String)
+    name = Column(Text)
+    content = Column(Text)
     specs = Column(JSONField)
     meta = Column(JSONField)
     valves = Column(JSONField)

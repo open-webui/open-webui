@@ -3,7 +3,7 @@ from typing import List, Union, Optional
 import time
 import logging
 
-from sqlalchemy import Column, String, BigInteger
+from sqlalchemy import Column, String, BigInteger, Text
 
 from apps.webui.internal.db import JSONField, Base, Session
 
@@ -24,7 +24,7 @@ class File(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
-    filename = Column(String)
+    filename = Column(Text)
     meta = Column(JSONField)
     created_at = Column(BigInteger)
 

@@ -6,7 +6,7 @@ import uuid
 import time
 import logging
 
-from sqlalchemy import String, Column, BigInteger
+from sqlalchemy import String, Column, BigInteger, Text
 
 from apps.webui.internal.db import Base, Session
 
@@ -26,7 +26,7 @@ class Tag(Base):
     id = Column(String, primary_key=True)
     name = Column(String)
     user_id = Column(String)
-    data = Column(String, nullable=True)
+    data = Column(Text, nullable=True)
 
 
 class ChatIdTag(Base):

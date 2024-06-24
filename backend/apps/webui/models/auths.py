@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 import uuid
 import logging
-from sqlalchemy import String, Column, Boolean
+from sqlalchemy import String, Column, Boolean, Text
 
 from apps.webui.models.users import UserModel, Users
 from utils.utils import verify_password
@@ -24,7 +24,7 @@ class Auth(Base):
 
     id = Column(String, primary_key=True)
     email = Column(String)
-    password = Column(String)
+    password = Column(Text)
     active = Column(Boolean)
 
 

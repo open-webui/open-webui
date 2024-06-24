@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 import time
 
-from sqlalchemy import String, Column, BigInteger
+from sqlalchemy import String, Column, BigInteger, Text
 
 from apps.webui.internal.db import Base, Session
 
@@ -18,8 +18,8 @@ class Prompt(Base):
 
     command = Column(String, primary_key=True)
     user_id = Column(String)
-    title = Column(String)
-    content = Column(String)
+    title = Column(Text)
+    content = Column(Text)
     timestamp = Column(BigInteger)
 
 

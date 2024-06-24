@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from typing import List, Union, Optional
 
-from sqlalchemy import Column, String, BigInteger
+from sqlalchemy import Column, String, BigInteger, Text
 
 from apps.webui.internal.db import Base, Session
 
@@ -18,7 +18,7 @@ class Memory(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
-    content = Column(String)
+    content = Column(Text)
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
