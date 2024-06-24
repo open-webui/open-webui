@@ -164,9 +164,9 @@ async def get_toolkit_valves_spec_by_id(
             toolkit_module = load_toolkit_module_by_id(id)
             request.app.state.TOOLS[id] = toolkit_module
 
-        if hasattr(toolkit_module, "UserValves"):
-            UserValves = toolkit_module.UserValves
-            return UserValves.schema()
+        if hasattr(toolkit_module, "Valves"):
+            Valves = toolkit_module.Valves
+            return Valves.schema()
         return None
     else:
         raise HTTPException(
