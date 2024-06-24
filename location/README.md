@@ -4,7 +4,7 @@ Contributors: Dinesh B, Loren H
 
 TO DO: Document how to edit in our [Projects repo fork of open-webui](https://github.com/modelearth/projects) when using Docker. Is that doable?
 
-TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [Super Evaporation](../../evaporation-kits/) page and related articles
+TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [superthermal evaporation](../../evaporation-kits/) page and related articles.
 
 <!--Pinecone -->
 <br>
