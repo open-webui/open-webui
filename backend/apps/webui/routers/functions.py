@@ -191,6 +191,7 @@ async def update_function_valves_by_id(
             Valves = function_module.Valves
 
             try:
+                form_data = {k: v for k, v in form_data.items() if v is not None}
                 valves = Valves(**form_data)
                 Functions.update_function_valves_by_id(id, valves.model_dump())
                 return valves.model_dump()
@@ -277,6 +278,7 @@ async def update_function_user_valves_by_id(
             UserValves = function_module.UserValves
 
             try:
+                form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
                 Functions.update_user_valves_by_id_and_user_id(
                     id, user.id, user_valves.model_dump()
