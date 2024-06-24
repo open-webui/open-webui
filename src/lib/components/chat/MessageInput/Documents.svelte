@@ -65,7 +65,7 @@
 	const findByName = (obj: ObjectWithName, prompt: string) => {
 		const name = obj.name.toLowerCase();
 		return name.includes(prompt.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '');
-	}
+	};
 
 	export const selectUp = () => {
 		selectedIdx = Math.max(0, selectedIdx - 1);
