@@ -4,9 +4,8 @@ import time
 import logging
 
 from sqlalchemy import String, Column, BigInteger
-from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import Base, get_session
+from apps.webui.internal.db import Base, Session
 
 import json
 
@@ -84,46 +83,42 @@ class DocumentsTable:
         )
 
         try:
-            with get_session() as db:
-                result = Document(**document.model_dump())
-                db.add(result)
-                db.commit()
-                db.refresh(result)
-                if result:
-                    return DocumentModel.model_validate(result)
-                else:
-                    return None
+            result = Document(**document.model_dump())
+            Session.add(result)
+            Session.commit()
+            Session.refresh(result)
+            if result:
+                return DocumentModel.model_validate(result)
+            else:
+                return None
         except:
             return None
 
     def get_doc_by_name(self, name: str) -> Optional[DocumentModel]:
         try:
-            with get_session() as db:
-                document = db.query(Document).filter_by(name=name).first()
-                return DocumentModel.model_validate(document) if document else None
+            document = Session.query(Document).filter_by(name=name).first()
+            return DocumentModel.model_validate(document) if document else None
         except:
             return None
 
     def get_docs(self) -> List[DocumentModel]:
-        with get_session() as db:
-            return [
-                DocumentModel.model_validate(doc) for doc in db.query(Document).all()
-            ]
+        return [
+            DocumentModel.model_validate(doc) for doc in Session.query(Document).all()
+        ]
 
     def update_doc_by_name(
         self, name: str, form_data: DocumentUpdateForm
     ) -> Optional[DocumentModel]:
         try:
-            with get_session() as db:
-                db.query(Document).filter_by(name=name).update(
-                    {
-                        "title": form_data.title,
-                        "name": form_data.name,
-                        "timestamp": int(time.time()),
-                    }
-                )
-                db.commit()
-                return self.get_doc_by_name(form_data.name)
+            Session.query(Document).filter_by(name=name).update(
+                {
+                    "title": form_data.title,
+                    "name": form_data.name,
+                    "timestamp": int(time.time()),
+                }
+            )
+            Session.commit()
+            return self.get_doc_by_name(form_data.name)
         except Exception as e:
             log.exception(e)
             return None
@@ -132,27 +127,25 @@ class DocumentsTable:
         self, name: str, updated: dict
     ) -> Optional[DocumentModel]:
         try:
-            with get_session() as db:
-                doc = self.get_doc_by_name(name)
-                doc_content = json.loads(doc.content if doc.content else "{}")
-                doc_content = {**doc_content, **updated}
+            doc = self.get_doc_by_name(name)
+            doc_content = json.loads(doc.content if doc.content else "{}")
+            doc_content = {**doc_content, **updated}
 
-                db.query(Document).filter_by(name=name).update(
-                    {
-                        "content": json.dumps(doc_content),
-                        "timestamp": int(time.time()),
-                    }
-                )
-                db.commit()
-                return self.get_doc_by_name(name)
+            Session.query(Document).filter_by(name=name).update(
+                {
+                    "content": json.dumps(doc_content),
+                    "timestamp": int(time.time()),
+                }
+            )
+            Session.commit()
+            return self.get_doc_by_name(name)
         except Exception as e:
             log.exception(e)
             return None
 
     def delete_doc_by_name(self, name: str) -> bool:
         try:
-            with get_session() as db:
-                db.query(Document).filter_by(name=name).delete()
+            Session.query(Document).filter_by(name=name).delete()
             return True
         except:
             return False

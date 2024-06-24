@@ -2,10 +2,8 @@ from pydantic import BaseModel, ConfigDict
 from typing import List, Union, Optional
 
 from sqlalchemy import Column, String, BigInteger
-from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import Base, get_session
-from apps.webui.models.chats import Chats
+from apps.webui.internal.db import Base, Session
 
 import time
 import uuid
@@ -58,15 +56,14 @@ class MemoriesTable:
                 "updated_at": int(time.time()),
             }
         )
-        with get_session() as db:
-            result = Memory(**memory.model_dump())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
-            if result:
-                return MemoryModel.model_validate(result)
-            else:
-                return None
+        result = Memory(**memory.model_dump())
+        Session.add(result)
+        Session.commit()
+        Session.refresh(result)
+        if result:
+            return MemoryModel.model_validate(result)
+        else:
+            return None
 
     def update_memory_by_id(
         self,
@@ -74,62 +71,55 @@ class MemoriesTable:
         content: str,
     ) -> Optional[MemoryModel]:
         try:
-            with get_session() as db:
-                db.query(Memory).filter_by(id=id).update(
-                    {"content": content, "updated_at": int(time.time())}
-                )
-                db.commit()
-                return self.get_memory_by_id(id)
+            Session.query(Memory).filter_by(id=id).update(
+                {"content": content, "updated_at": int(time.time())}
+            )
+            Session.commit()
+            return self.get_memory_by_id(id)
         except:
             return None
 
     def get_memories(self) -> List[MemoryModel]:
         try:
-            with get_session() as db:
-                memories = db.query(Memory).all()
-                return [MemoryModel.model_validate(memory) for memory in memories]
+            memories = Session.query(Memory).all()
+            return [MemoryModel.model_validate(memory) for memory in memories]
         except:
             return None
 
     def get_memories_by_user_id(self, user_id: str) -> List[MemoryModel]:
         try:
-            with get_session() as db:
-                memories = db.query(Memory).filter_by(user_id=user_id).all()
-                return [MemoryModel.model_validate(memory) for memory in memories]
+            memories = Session.query(Memory).filter_by(user_id=user_id).all()
+            return [MemoryModel.model_validate(memory) for memory in memories]
         except:
             return None
 
     def get_memory_by_id(self, id: str) -> Optional[MemoryModel]:
         try:
-            with get_session() as db:
-                memory = db.get(Memory, id)
-                return MemoryModel.model_validate(memory)
+            memory = Session.get(Memory, id)
+            return MemoryModel.model_validate(memory)
         except:
             return None
 
     def delete_memory_by_id(self, id: str) -> bool:
         try:
-            with get_session() as db:
-                db.query(Memory).filter_by(id=id).delete()
+            Session.query(Memory).filter_by(id=id).delete()
             return True
 
         except:
             return False
 
-    def delete_memories_by_user_id(self, db: Session, user_id: str) -> bool:
+    def delete_memories_by_user_id(self, user_id: str) -> bool:
         try:
-            with get_session() as db:
-                db.query(Memory).filter_by(user_id=user_id).delete()
+            Session.query(Memory).filter_by(user_id=user_id).delete()
             return True
         except:
             return False
 
     def delete_memory_by_id_and_user_id(
-        self, db: Session, id: str, user_id: str
+        self, id: str, user_id: str
     ) -> bool:
         try:
-            with get_session() as db:
-                db.query(Memory).filter_by(id=id, user_id=user_id).delete()
+            Session.query(Memory).filter_by(id=id, user_id=user_id).delete()
             return True
         except:
             return False

@@ -4,9 +4,8 @@ import time
 import logging
 
 from sqlalchemy import Column, String, Text, BigInteger, Boolean
-from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import JSONField, Base, get_session
+from apps.webui.internal.db import JSONField, Base, Session
 from apps.webui.models.users import Users
 
 import json
@@ -100,64 +99,57 @@ class FunctionsTable:
         )
 
         try:
-            with get_session() as db:
-                result = Function(**function.model_dump())
-                db.add(result)
-                db.commit()
-                db.refresh(result)
-                if result:
-                    return FunctionModel.model_validate(result)
-                else:
-                    return None
+            result = Function(**function.model_dump())
+            Session.add(result)
+            Session.commit()
+            Session.refresh(result)
+            if result:
+                return FunctionModel.model_validate(result)
+            else:
+                return None
         except Exception as e:
             print(f"Error creating tool: {e}")
             return None
 
     def get_function_by_id(self, id: str) -> Optional[FunctionModel]:
         try:
-            with get_session() as db:
-                function = db.get(Function, id)
-                return FunctionModel.model_validate(function)
+            function = Session.get(Function, id)
+            return FunctionModel.model_validate(function)
         except:
             return None
 
     def get_functions(self, active_only=False) -> List[FunctionModel]:
         if active_only:
-            with get_session() as db:
-                return [
-                    FunctionModel.model_validate(function)
-                    for function in db.query(Function).filter_by(is_active=True).all()
-                ]
+            return [
+                FunctionModel.model_validate(function)
+                for function in Session.query(Function).filter_by(is_active=True).all()
+            ]
         else:
-            with get_session() as db:
-                return [
-                    FunctionModel.model_validate(function)
-                    for function in db.query(Function).all()
-                ]
+            return [
+                FunctionModel.model_validate(function)
+                for function in Session.query(Function).all()
+            ]
 
     def get_functions_by_type(
         self, type: str, active_only=False
     ) -> List[FunctionModel]:
         if active_only:
-            with get_session() as db:
-                return [
-                    FunctionModel.model_validate(function)
-                    for function in db.query(Function)
-                    .filter_by(type=type, is_active=True)
-                    .all()
-                ]
+            return [
+                FunctionModel.model_validate(function)
+                for function in Session.query(Function)
+                .filter_by(type=type, is_active=True)
+                .all()
+            ]
         else:
-            with get_session() as db:
-                return [
-                    FunctionModel.model_validate(function)
-                    for function in db.query(Function).filter_by(type=type).all()
-                ]
+            return [
+                FunctionModel.model_validate(function)
+                for function in Session.query(Function).filter_by(type=type).all()
+            ]
 
     def get_function_valves_by_id(self, id: str) -> Optional[dict]:
         try:
-            with get_session() as db:
-                function = db.get(Function, id)
-                return function.valves if function.valves else {}
+            function = Session.get(Function, id)
+            return function.valves if function.valves else {}
         except Exception as e:
             print(f"An error occurred: {e}")
             return None
@@ -166,12 +158,12 @@ class FunctionsTable:
         self, id: str, valves: dict
     ) -> Optional[FunctionValves]:
         try:
-            with get_session() as db:
-                db.query(Function).filter_by(id=id).update(
-                    {"valves": valves, "updated_at": int(time.time())}
-                )
-                db.commit()
-                return self.get_function_by_id(id)
+            function = Session.get(Function, id)
+            function.valves = valves
+            function.updated_at = int(time.time())
+            Session.commit()
+            Session.refresh(function)
+            return self.get_function_by_id(id)
         except:
             return None
 
@@ -219,36 +211,33 @@ class FunctionsTable:
 
     def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:
         try:
-            with get_session() as db:
-                db.query(Function).filter_by(id=id).update(
-                    {
-                        **updated,
-                        "updated_at": int(time.time()),
-                    }
-                )
-                db.commit()
-                return self.get_function_by_id(id)
+            Session.query(Function).filter_by(id=id).update(
+                {
+                    **updated,
+                    "updated_at": int(time.time()),
+                }
+            )
+            Session.commit()
+            return self.get_function_by_id(id)
         except:
             return None
 
     def deactivate_all_functions(self) -> Optional[bool]:
         try:
-            with get_session() as db:
-                db.query(Function).update(
-                    {
-                        "is_active": False,
-                        "updated_at": int(time.time()),
-                    }
-                )
-                db.commit()
+            Session.query(Function).update(
+                {
+                    "is_active": False,
+                    "updated_at": int(time.time()),
+                }
+            )
+            Session.commit()
             return True
         except:
             return None
 
     def delete_function_by_id(self, id: str) -> bool:
         try:
-            with get_session() as db:
-                db.query(Function).filter_by(id=id).delete()
+            Session.query(Function).filter_by(id=id).delete()
             return True
         except:
             return False

@@ -3,9 +3,8 @@ from typing import List, Optional
 import time
 import logging
 from sqlalchemy import String, Column, BigInteger
-from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import Base, JSONField, get_session
+from apps.webui.internal.db import Base, JSONField, Session
 from apps.webui.models.users import Users
 
 import json
@@ -95,48 +94,43 @@ class ToolsTable:
         )
 
         try:
-            with get_session() as db:
-                result = Tool(**tool.model_dump())
-                db.add(result)
-                db.commit()
-                db.refresh(result)
-                if result:
-                    return ToolModel.model_validate(result)
-                else:
-                    return None
+            result = Tool(**tool.model_dump())
+            Session.add(result)
+            Session.commit()
+            Session.refresh(result)
+            if result:
+                return ToolModel.model_validate(result)
+            else:
+                return None
         except Exception as e:
             print(f"Error creating tool: {e}")
             return None
 
     def get_tool_by_id(self, id: str) -> Optional[ToolModel]:
         try:
-            with get_session() as db:
-                tool = db.get(Tool, id)
-                return ToolModel.model_validate(tool)
+            tool = Session.get(Tool, id)
+            return ToolModel.model_validate(tool)
         except:
             return None
 
     def get_tools(self) -> List[ToolModel]:
-        with get_session() as db:
-            return [ToolModel.model_validate(tool) for tool in db.query(Tool).all()]
+        return [ToolModel.model_validate(tool) for tool in Session.query(Tool).all()]
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:
-            with get_session() as db:
-                tool = db.get(Tool, id)
-                return tool.valves if tool.valves else {}
+            tool = Session.get(Tool, id)
+            return tool.valves if tool.valves else {}
         except Exception as e:
             print(f"An error occurred: {e}")
             return None
 
     def update_tool_valves_by_id(self, id: str, valves: dict) -> Optional[ToolValves]:
         try:
-            with get_session() as db:
-                db.query(Tool).filter_by(id=id).update(
-                    {"valves": valves, "updated_at": int(time.time())}
-                )
-                db.commit()
-                return self.get_tool_by_id(id)
+            Session.query(Tool).filter_by(id=id).update(
+                {"valves": valves, "updated_at": int(time.time())}
+            )
+            Session.commit()
+            return self.get_tool_by_id(id)
         except:
             return None
 
@@ -183,19 +177,18 @@ class ToolsTable:
 
     def update_tool_by_id(self, id: str, updated: dict) -> Optional[ToolModel]:
         try:
-            with get_session() as db:
-                db.query(Tool).filter_by(id=id).update(
-                    {**updated, "updated_at": int(time.time())}
-                )
-                db.commit()
-                return self.get_tool_by_id(id)
+            tool = Session.get(Tool, id)
+            tool.update(**updated)
+            tool.updated_at = int(time.time())
+            Session.commit()
+            Session.refresh(tool)
+            return ToolModel.model_validate(tool)
         except:
             return None
 
     def delete_tool_by_id(self, id: str) -> bool:
         try:
-            with get_session() as db:
-                db.query(Tool).filter_by(id=id).delete()
+            Session.query(Tool).filter_by(id=id).delete()
             return True
         except:
             return False

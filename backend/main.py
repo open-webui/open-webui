@@ -29,7 +29,6 @@ from fastapi import HTTPException
 from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -57,7 +56,7 @@ from apps.webui.main import (
     get_pipe_models,
     generate_function_chat_completion,
 )
-from apps.webui.internal.db import get_session, SessionLocal
+from apps.webui.internal.db import Session, SessionLocal
 
 
 from pydantic import BaseModel
@@ -793,6 +792,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def remove_session_after_request(request: Request, call_next):
+    response = await call_next(request)
+    log.debug("Removing session after request")
+    Session.commit()
+    Session.remove()
+    return response
 
 
 @app.middleware("http")
@@ -2034,8 +2041,7 @@ async def healthcheck():
 
 @app.get("/health/db")
 async def healthcheck_with_db():
-    with get_session() as db:
-        result = db.execute(text("SELECT 1;")).all()
+    Session.execute(text("SELECT 1;")).all()
     return {"status": True}
 
 

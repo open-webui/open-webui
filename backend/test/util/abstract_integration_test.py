@@ -9,6 +9,7 @@ from pytest_docker.plugin import get_docker_ip
 from fastapi.testclient import TestClient
 from sqlalchemy import text, create_engine
 
+
 log = logging.getLogger(__name__)
 
 
@@ -49,11 +50,6 @@ class AbstractIntegrationTest:
 class AbstractPostgresTest(AbstractIntegrationTest):
     DOCKER_CONTAINER_NAME = "postgres-test-container-will-get-deleted"
     docker_client: DockerClient
-
-    def get_db(self):
-        from apps.webui.internal.db import SessionLocal
-
-        return SessionLocal()
 
     @classmethod
     def _create_db_url(cls, env_vars_postgres: dict) -> str:
@@ -113,21 +109,21 @@ class AbstractPostgresTest(AbstractIntegrationTest):
             pytest.fail(f"Could not setup test environment: {ex}")
 
     def _check_db_connection(self):
+        from apps.webui.internal.db import Session
         retries = 10
         while retries > 0:
             try:
-                self.db_session.execute(text("SELECT 1"))
-                self.db_session.commit()
+                Session.execute(text("SELECT 1"))
+                Session.commit()
                 break
             except Exception as e:
-                self.db_session.rollback()
+                Session.rollback()
                 log.warning(e)
                 time.sleep(3)
                 retries -= 1
 
     def setup_method(self):
         super().setup_method()
-        self.db_session = self.get_db()
         self._check_db_connection()
 
     @classmethod
@@ -136,8 +132,9 @@ class AbstractPostgresTest(AbstractIntegrationTest):
         cls.docker_client.containers.get(cls.DOCKER_CONTAINER_NAME).remove(force=True)
 
     def teardown_method(self):
+        from apps.webui.internal.db import Session
         # rollback everything not yet committed
-        self.db_session.commit()
+        Session.commit()
 
         # truncate all tables
         tables = [
@@ -152,5 +149,5 @@ class AbstractPostgresTest(AbstractIntegrationTest):
             '"user"',
         ]
         for table in tables:
-            self.db_session.execute(text(f"TRUNCATE TABLE {table}"))
-        self.db_session.commit()
+            Session.execute(text(f"TRUNCATE TABLE {table}"))
+        Session.commit()

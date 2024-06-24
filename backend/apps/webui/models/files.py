@@ -4,9 +4,8 @@ import time
 import logging
 
 from sqlalchemy import Column, String, BigInteger
-from sqlalchemy.orm import Session
 
-from apps.webui.internal.db import JSONField, Base, get_session
+from apps.webui.internal.db import JSONField, Base, Session
 
 import json
 
@@ -71,45 +70,38 @@ class FilesTable:
         )
 
         try:
-            with get_session() as db:
-                result = File(**file.model_dump())
-                db.add(result)
-                db.commit()
-                db.refresh(result)
-                if result:
-                    return FileModel.model_validate(result)
-                else:
-                    return None
+            result = File(**file.model_dump())
+            Session.add(result)
+            Session.commit()
+            Session.refresh(result)
+            if result:
+                return FileModel.model_validate(result)
+            else:
+                return None
         except Exception as e:
             print(f"Error creating tool: {e}")
             return None
 
     def get_file_by_id(self, id: str) -> Optional[FileModel]:
         try:
-            with get_session() as db:
-                file = db.get(File, id)
-                return FileModel.model_validate(file)
+            file = Session.get(File, id)
+            return FileModel.model_validate(file)
         except:
             return None
 
     def get_files(self) -> List[FileModel]:
-        with get_session() as db:
-            return [FileModel.model_validate(file) for file in db.query(File).all()]
+        return [FileModel.model_validate(file) for file in Session.query(File).all()]
 
     def delete_file_by_id(self, id: str) -> bool:
         try:
-            with get_session() as db:
-                db.query(File).filter_by(id=id).delete()
-                db.commit()
+            Session.query(File).filter_by(id=id).delete()
             return True
         except:
             return False
 
     def delete_all_files(self) -> bool:
         try:
-            with get_session() as db:
-                db.query(File).delete()
-                db.commit()
+            Session.query(File).delete()
             return True
         except:
             return False

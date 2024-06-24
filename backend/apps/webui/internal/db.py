@@ -57,14 +57,4 @@ SessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
 )
 Base = declarative_base()
-
-
-@contextmanager
-def get_session():
-    session = scoped_session(SessionLocal)
-    try:
-        yield session
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        raise e
+Session = scoped_session(SessionLocal)
