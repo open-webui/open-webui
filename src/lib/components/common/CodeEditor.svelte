@@ -37,7 +37,7 @@
 					changes: [{ from: 0, to: codeEditor.state.doc.length, insert: formattedCode }]
 				});
 
-				toast.success('Code formatted successfully');
+				toast.success($i18n.t('Code formatted successfully'));
 				return true;
 			}
 			return false;

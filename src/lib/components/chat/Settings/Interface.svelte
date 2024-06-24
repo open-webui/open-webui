@@ -75,7 +75,7 @@
 
 			if (position) {
 				await updateUserInfo(localStorage.token, { location: position });
-				toast.success('User location successfully retrieved.');
+				toast.success($i18n.t('User location successfully retrieved.'));
 			} else {
 				userLocation = false;
 			}
@@ -111,7 +111,7 @@
 			saveSettings({ responseAutoCopy: responseAutoCopy });
 		} else {
 			toast.error(
-				'Clipboard write permission denied. Please check your browser settings to grant the necessary access.'
+				$i18n.t('Clipboard write permission denied. Please check your browser settings to grant the necessary access.')
 			);
 		}
 	};
