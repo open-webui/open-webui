@@ -221,6 +221,19 @@ class FunctionsTable:
         except:
             return None
 
+    def deactivate_all_functions(self) -> Optional[bool]:
+        try:
+            query = Function.update(
+                **{"is_active": False},
+                updated_at=int(time.time()),
+            )
+
+            query.execute()
+
+            return True
+        except:
+            return None
+
     def delete_function_by_id(self, id: str) -> bool:
         try:
             query = Function.delete().where((Function.id == id))

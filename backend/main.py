@@ -55,7 +55,6 @@ from apps.webui.models.functions import Functions
 
 from apps.webui.utils import load_toolkit_module_by_id, load_function_module_by_id
 
-
 from utils.utils import (
     get_admin_user,
     get_verified_user,
@@ -102,9 +101,15 @@ from config import (
     SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
     SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    SAFE_MODE,
     AppConfig,
 )
 from constants import ERROR_MESSAGES
+
+if SAFE_MODE:
+    print("SAFE MODE ENABLED")
+    Functions.deactivate_all_functions()
+
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
