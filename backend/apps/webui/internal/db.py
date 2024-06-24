@@ -7,7 +7,7 @@ from typing_extensions import Self
 
 from sqlalchemy import create_engine, types, Dialect
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.sql.type_api import _T
 
 from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL, BACKEND_DIR
@@ -61,10 +61,10 @@ Base = declarative_base()
 
 @contextmanager
 def get_session():
-    db = SessionLocal()
+    session = scoped_session(SessionLocal)
     try:
-        yield db
-        db.commit()
+        yield session
+        session.commit()
     except Exception as e:
-        db.rollback()
+        session.rollback()
         raise e
