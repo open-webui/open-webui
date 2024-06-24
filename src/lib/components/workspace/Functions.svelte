@@ -24,7 +24,9 @@
 	import FunctionMenu from './Functions/FunctionMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import Switch from '../common/Switch.svelte';
-	import ValvesModal from './ValvesModal.svelte';
+	import ValvesModal from './common/ValvesModal.svelte';
+	import ManifestModal from './common/ManifestModal.svelte';
+	import Heart from '../icons/Heart.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -34,6 +36,7 @@
 	let showConfirm = false;
 	let query = '';
 
+	let showManifestModal = false;
 	let showValvesModal = false;
 	let selectedFunction = null;
 
@@ -175,6 +178,21 @@
 				</div>
 			</a>
 			<div class="flex flex-row gap-0.5 self-center">
+				{#if func?.meta?.manifest?.funding_url ?? false}
+					<Tooltip content="Donate">
+						<button
+							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+							type="button"
+							on:click={() => {
+								selectedFunction = func;
+								showManifestModal = true;
+							}}
+						>
+							<Heart />
+						</button>
+					</Tooltip>
+				{/if}
+
 				<Tooltip content="Valves">
 					<button
 						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
@@ -360,6 +378,7 @@
 	</a>
 </div>
 
+<ManifestModal bind:show={showManifestModal} manifest={selectedFunction?.meta?.manifest ?? {}} />
 <ValvesModal bind:show={showValvesModal} type="function" id={selectedFunction?.id ?? null} />
 
 <ConfirmDialog

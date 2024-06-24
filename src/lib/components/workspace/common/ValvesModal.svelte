@@ -4,14 +4,14 @@
 	import { onMount, getContext } from 'svelte';
 	import { addUser } from '$lib/apis/auths';
 
-	import Modal from '../common/Modal.svelte';
+	import Modal from '../../common/Modal.svelte';
 	import {
 		getFunctionValvesById,
 		getFunctionValvesSpecById,
 		updateFunctionValvesById
 	} from '$lib/apis/functions';
 	import { getToolValvesById, getToolValvesSpecById, updateToolValvesById } from '$lib/apis/tools';
-	import Spinner from '../common/Spinner.svelte';
+	import Spinner from '../../common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
