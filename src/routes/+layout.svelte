@@ -50,33 +50,6 @@
 			}
 		};
 
-		window.addEventListener('message', (event) => {
-			if (event.origin === window.origin) {
-				// Replace with your iframe's origin
-				console.log('Message received from iframe:', event.data);
-				if (event.data.type === 'input:prompt') {
-					console.log(event.data.text);
-
-					const inputElement = document.getElementById('chat-textarea');
-
-					if (inputElement) {
-						inputElement.value = event.data.text;
-						inputElement.focus();
-					}
-				}
-
-				if (event.data.type === 'action:submit-prompt') {
-					console.log(event.data.text);
-
-					const submitButtonElement = document.getElementById('send-message-button');
-
-					if (submitButtonElement) {
-						submitButtonElement.click();
-					}
-				}
-			}
-		});
-
 		window.addEventListener('resize', onResize);
 
 		const setWakeLock = async () => {

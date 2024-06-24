@@ -127,6 +127,41 @@
 	}
 
 	onMount(async () => {
+		window.addEventListener('message', async (event) => {
+			if (event.origin === window.origin) {
+				// Replace with your iframe's origin
+				console.log('Message received from iframe:', event.data);
+				if (event.data.type === 'input:prompt') {
+					console.log(event.data.text);
+
+					const inputElement = document.getElementById('chat-textarea');
+
+					if (inputElement) {
+						prompt = event.data.text;
+						inputElement.focus();
+					}
+				}
+
+				if (event.data.type === 'action:submit') {
+					console.log(event.data.text);
+
+					if (prompt !== '') {
+						await tick();
+						submitPrompt(prompt);
+					}
+				}
+
+				if (event.data.type === 'input:prompt:submit') {
+					console.log(event.data.text);
+
+					if (prompt !== '') {
+						await tick();
+						submitPrompt(event.data.text);
+					}
+				}
+			}
+		});
+
 		if (!$chatId) {
 			chatId.subscribe(async (value) => {
 				if (!value) {
