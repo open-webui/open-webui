@@ -1883,17 +1883,19 @@ async def oauth_callback(provider: str, request: Request, response: Response):
     try:
         token = await client.authorize_access_token(request)
     except Exception as e:
-        log.error(f"OAuth callback error: {e}")
+        log.warning(f"OAuth callback error: {e}")
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
     user_data: UserInfo = token["userinfo"]
 
     sub = user_data.get("sub")
     if not sub:
+        log.warning(f"OAuth callback failed, sub is missing: {user_data}")
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
     provider_sub = f"{provider}@{sub}"
     email = user_data.get("email", "").lower()
     # We currently mandate that email addresses are provided
     if not email:
+        log.warning(f"OAuth callback failed, email is missing: {user_data}")
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
     # Check if the user exists
@@ -1958,7 +1960,9 @@ async def oauth_callback(provider: str, request: Request, response: Response):
                     },
                 )
         else:
-            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
+            )
 
     jwt_token = create_token(
         data={"id": user.id},
