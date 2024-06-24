@@ -60,10 +60,13 @@
 				console.log(err);
 			}
 
-			wakeLock.addEventListener('release', () => {
-				// the wake lock has been released
-				console.log('Wake Lock released');
-			});
+			if (wakeLock) {
+				// Add a listener to release the wake lock when the page is unloaded
+				wakeLock.addEventListener('release', () => {
+					// the wake lock has been released
+					console.log('Wake Lock released');
+				});
+			}
 		};
 
 		if ('wakeLock' in navigator) {
