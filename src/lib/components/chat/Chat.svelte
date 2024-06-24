@@ -591,7 +591,7 @@
 								: undefined
 						)}${
 							responseMessage?.userContext ?? null
-								? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
+								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 								: ''
 						}`
 				  }
@@ -932,7 +932,7 @@
 											: undefined
 									)}${
 										responseMessage?.userContext ?? null
-											? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
+											? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 											: ''
 									}`
 							  }
