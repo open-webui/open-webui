@@ -321,9 +321,9 @@
 		<div class="flex flex-col max-w-6xl px-2.5 md:px-6 w-full">
 			<div class="relative">
 				{#if autoScroll === false && messages.length > 0}
-					<div class=" absolute -top-12 left-0 right-0 flex justify-center z-30">
+					<div class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none">
 						<button
-							class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full"
+							class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
 							on:click={() => {
 								autoScroll = true;
 								scrollToBottom();
