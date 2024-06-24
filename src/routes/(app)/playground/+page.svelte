@@ -1,7 +1,7 @@
 <script>
 	import { showSidebar } from '$lib/stores';
 
-	import Playground from '$lib/components/workspace/Playground.svelte';
+	import Playground from '$lib/components/playground/Playground.svelte';
 </script>
 
 <div

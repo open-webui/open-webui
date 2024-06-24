@@ -122,7 +122,7 @@
 					</div>
 				</a>
 			</div>
-			<div class="flex flex-row space-x-1 self-center">
+			<div class="flex flex-row gap-0.5 self-center">
 				<a
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
