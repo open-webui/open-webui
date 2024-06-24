@@ -28,6 +28,8 @@ class Function(Model):
     type = TextField()
     content = TextField()
     meta = JSONField()
+    valves = JSONField()
+    is_active = BooleanField(default=False)
     updated_at = BigIntegerField()
     created_at = BigIntegerField()
 
@@ -46,6 +48,7 @@ class FunctionModel(BaseModel):
     type: str
     content: str
     meta: FunctionMeta
+    is_active: bool
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -61,6 +64,7 @@ class FunctionResponse(BaseModel):
     type: str
     name: str
     meta: FunctionMeta
+    is_active: bool
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -70,6 +74,10 @@ class FunctionForm(BaseModel):
     name: str
     content: str
     meta: FunctionMeta
+
+
+class FunctionValves(BaseModel):
+    valves: Optional[dict] = None
 
 
 class FunctionsTable:
