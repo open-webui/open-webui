@@ -9,7 +9,7 @@
 	const i18n = getContext('i18n');
 
 	onMount(async () => {
-		functions.set(await getFunctions(localStorage.token));
+		// functions.set(await getFunctions(localStorage.token));
 	});
 </script>
 

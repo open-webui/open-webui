@@ -37,6 +37,8 @@
 	let loaded = false;
 	const BREAKPOINT = 768;
 
+	let wakeLock = null;
+
 	onMount(async () => {
 		theme.set(localStorage.theme);
 
@@ -50,6 +52,31 @@
 		};
 
 		window.addEventListener('resize', onResize);
+
+		const setWakeLock = async () => {
+			try {
+				wakeLock = await navigator.wakeLock.request('screen');
+			} catch (err) {
+				// The Wake Lock request has failed - usually system related, such as battery.
+				console.log(err);
+			}
+
+			wakeLock.addEventListener('release', () => {
+				// the wake lock has been released
+				console.log('Wake Lock released');
+			});
+		};
+
+		if ('wakeLock' in navigator) {
+			await setWakeLock();
+
+			document.addEventListener('visibilitychange', async () => {
+				// Re-request the wake lock if the document becomes visible
+				if (wakeLock !== null && document.visibilityState === 'visible') {
+					await setWakeLock();
+				}
+			});
+		}
 
 		let backendConfig = null;
 		try {

@@ -19,7 +19,8 @@
 		'serper',
 		'serply',
 		'duckduckgo',
-		'tavily'
+		'tavily',
+		'jina'
 	];
 
 	let youtubeLanguage = 'en';

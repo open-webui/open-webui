@@ -538,7 +538,9 @@
 				documentsImportInputElement.click();
 			}}
 		>
-			<div class=" self-center mr-2 font-medium">{$i18n.t('Import Documents Mapping')}</div>
+			<div class=" self-center mr-2 font-medium line-clamp-1">
+				{$i18n.t('Import Documents Mapping')}
+			</div>
 
 			<div class=" self-center">
 				<svg
@@ -565,7 +567,9 @@
 				saveAs(blob, `documents-mapping-export-${Date.now()}.json`);
 			}}
 		>
-			<div class=" self-center mr-2 font-medium">{$i18n.t('Export Documents Mapping')}</div>
+			<div class=" self-center mr-2 font-medium line-clamp-1">
+				{$i18n.t('Export Documents Mapping')}
+			</div>
 
 			<div class=" self-center">
 				<svg

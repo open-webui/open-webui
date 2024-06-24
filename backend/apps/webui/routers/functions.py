@@ -69,7 +69,10 @@ async def create_new_function(
             with open(function_path, "w") as function_file:
                 function_file.write(form_data.content)
 
-            function_module, function_type = load_function_module_by_id(form_data.id)
+            function_module, function_type, frontmatter = load_function_module_by_id(
+                form_data.id
+            )
+            form_data.meta.manifest = frontmatter
 
             FUNCTIONS = request.app.state.FUNCTIONS
             FUNCTIONS[form_data.id] = function_module
@@ -118,12 +121,39 @@ async def get_function_by_id(id: str, user=Depends(get_admin_user)):
 
 
 ############################
+# ToggleFunctionById
+############################
+
+
+@router.post("/id/{id}/toggle", response_model=Optional[FunctionModel])
+async def toggle_function_by_id(id: str, user=Depends(get_admin_user)):
+    function = Functions.get_function_by_id(id)
+    if function:
+        function = Functions.update_function_by_id(
+            id, {"is_active": not function.is_active}
+        )
+
+        if function:
+            return function
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error updating function"),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
 # UpdateFunctionById
 ############################
 
 
 @router.post("/id/{id}/update", response_model=Optional[FunctionModel])
-async def update_toolkit_by_id(
+async def update_function_by_id(
     request: Request, id: str, form_data: FunctionForm, user=Depends(get_admin_user)
 ):
     function_path = os.path.join(FUNCTIONS_DIR, f"{id}.py")
@@ -132,7 +162,8 @@ async def update_toolkit_by_id(
         with open(function_path, "w") as function_file:
             function_file.write(form_data.content)
 
-        function_module, function_type = load_function_module_by_id(id)
+        function_module, function_type, frontmatter = load_function_module_by_id(id)
+        form_data.meta.manifest = frontmatter
 
         FUNCTIONS = request.app.state.FUNCTIONS
         FUNCTIONS[id] = function_module
@@ -178,3 +209,188 @@ async def delete_function_by_id(
         os.remove(function_path)
 
     return result
+
+
+############################
+# GetFunctionValves
+############################
+
+
+@router.get("/id/{id}/valves", response_model=Optional[dict])
+async def get_function_valves_by_id(id: str, user=Depends(get_admin_user)):
+    function = Functions.get_function_by_id(id)
+    if function:
+        try:
+            valves = Functions.get_function_valves_by_id(id)
+            return valves
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# GetFunctionValvesSpec
+############################
+
+
+@router.get("/id/{id}/valves/spec", response_model=Optional[dict])
+async def get_function_valves_spec_by_id(
+    request: Request, id: str, user=Depends(get_admin_user)
+):
+    function = Functions.get_function_by_id(id)
+    if function:
+        if id in request.app.state.FUNCTIONS:
+            function_module = request.app.state.FUNCTIONS[id]
+        else:
+            function_module, function_type, frontmatter = load_function_module_by_id(id)
+            request.app.state.FUNCTIONS[id] = function_module
+
+        if hasattr(function_module, "Valves"):
+            Valves = function_module.Valves
+            return Valves.schema()
+        return None
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# UpdateFunctionValves
+############################
+
+
+@router.post("/id/{id}/valves/update", response_model=Optional[dict])
+async def update_function_valves_by_id(
+    request: Request, id: str, form_data: dict, user=Depends(get_admin_user)
+):
+    function = Functions.get_function_by_id(id)
+    if function:
+
+        if id in request.app.state.FUNCTIONS:
+            function_module = request.app.state.FUNCTIONS[id]
+        else:
+            function_module, function_type, frontmatter = load_function_module_by_id(id)
+            request.app.state.FUNCTIONS[id] = function_module
+
+        if hasattr(function_module, "Valves"):
+            Valves = function_module.Valves
+
+            try:
+                form_data = {k: v for k, v in form_data.items() if v is not None}
+                valves = Valves(**form_data)
+                Functions.update_function_valves_by_id(id, valves.model_dump())
+                return valves.model_dump()
+            except Exception as e:
+                print(e)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(e),
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# FunctionUserValves
+############################
+
+
+@router.get("/id/{id}/valves/user", response_model=Optional[dict])
+async def get_function_user_valves_by_id(id: str, user=Depends(get_verified_user)):
+    function = Functions.get_function_by_id(id)
+    if function:
+        try:
+            user_valves = Functions.get_user_valves_by_id_and_user_id(id, user.id)
+            return user_valves
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+@router.get("/id/{id}/valves/user/spec", response_model=Optional[dict])
+async def get_function_user_valves_spec_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
+    function = Functions.get_function_by_id(id)
+    if function:
+        if id in request.app.state.FUNCTIONS:
+            function_module = request.app.state.FUNCTIONS[id]
+        else:
+            function_module, function_type, frontmatter = load_function_module_by_id(id)
+            request.app.state.FUNCTIONS[id] = function_module
+
+        if hasattr(function_module, "UserValves"):
+            UserValves = function_module.UserValves
+            return UserValves.schema()
+        return None
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+@router.post("/id/{id}/valves/user/update", response_model=Optional[dict])
+async def update_function_user_valves_by_id(
+    request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
+):
+    function = Functions.get_function_by_id(id)
+
+    if function:
+        if id in request.app.state.FUNCTIONS:
+            function_module = request.app.state.FUNCTIONS[id]
+        else:
+            function_module, function_type, frontmatter = load_function_module_by_id(id)
+            request.app.state.FUNCTIONS[id] = function_module
+
+        if hasattr(function_module, "UserValves"):
+            UserValves = function_module.UserValves
+
+            try:
+                form_data = {k: v for k, v in form_data.items() if v is not None}
+                user_valves = UserValves(**form_data)
+                Functions.update_user_valves_by_id_and_user_id(
+                    id, user.id, user_valves.model_dump()
+                )
+                return user_valves.model_dump()
+            except Exception as e:
+                print(e)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(e),
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )

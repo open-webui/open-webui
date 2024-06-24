@@ -5,8 +5,11 @@ from typing import List, Union, Optional
 import time
 import logging
 from apps.webui.internal.db import DB, JSONField
+from apps.webui.models.users import Users
 
 import json
+import copy
+
 
 from config import SRC_LOG_LEVELS
 
@@ -25,6 +28,8 @@ class Function(Model):
     type = TextField()
     content = TextField()
     meta = JSONField()
+    valves = JSONField()
+    is_active = BooleanField(default=False)
     updated_at = BigIntegerField()
     created_at = BigIntegerField()
 
@@ -34,6 +39,7 @@ class Function(Model):
 
 class FunctionMeta(BaseModel):
     description: Optional[str] = None
+    manifest: Optional[dict] = {}
 
 
 class FunctionModel(BaseModel):
@@ -43,6 +49,7 @@ class FunctionModel(BaseModel):
     type: str
     content: str
     meta: FunctionMeta
+    is_active: bool = False
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -58,6 +65,7 @@ class FunctionResponse(BaseModel):
     type: str
     name: str
     meta: FunctionMeta
+    is_active: bool
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -67,6 +75,10 @@ class FunctionForm(BaseModel):
     name: str
     content: str
     meta: FunctionMeta
+
+
+class FunctionValves(BaseModel):
+    valves: Optional[dict] = None
 
 
 class FunctionsTable:
@@ -104,16 +116,98 @@ class FunctionsTable:
         except:
             return None
 
-    def get_functions(self) -> List[FunctionModel]:
-        return [
-            FunctionModel(**model_to_dict(function)) for function in Function.select()
-        ]
+    def get_functions(self, active_only=False) -> List[FunctionModel]:
+        if active_only:
+            return [
+                FunctionModel(**model_to_dict(function))
+                for function in Function.select().where(Function.is_active == True)
+            ]
+        else:
+            return [
+                FunctionModel(**model_to_dict(function))
+                for function in Function.select()
+            ]
 
-    def get_functions_by_type(self, type: str) -> List[FunctionModel]:
-        return [
-            FunctionModel(**model_to_dict(function))
-            for function in Function.select().where(Function.type == type)
-        ]
+    def get_functions_by_type(
+        self, type: str, active_only=False
+    ) -> List[FunctionModel]:
+        if active_only:
+            return [
+                FunctionModel(**model_to_dict(function))
+                for function in Function.select().where(
+                    Function.type == type, Function.is_active == True
+                )
+            ]
+        else:
+            return [
+                FunctionModel(**model_to_dict(function))
+                for function in Function.select().where(Function.type == type)
+            ]
+
+    def get_function_valves_by_id(self, id: str) -> Optional[dict]:
+        try:
+            function = Function.get(Function.id == id)
+            return function.valves if function.valves else {}
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
+
+    def update_function_valves_by_id(
+        self, id: str, valves: dict
+    ) -> Optional[FunctionValves]:
+        try:
+            query = Function.update(
+                **{"valves": valves},
+                updated_at=int(time.time()),
+            ).where(Function.id == id)
+            query.execute()
+
+            function = Function.get(Function.id == id)
+            return FunctionValves(**model_to_dict(function))
+        except:
+            return None
+
+    def get_user_valves_by_id_and_user_id(
+        self, id: str, user_id: str
+    ) -> Optional[dict]:
+        try:
+            user = Users.get_user_by_id(user_id)
+            user_settings = user.settings.model_dump()
+
+            # Check if user has "functions" and "valves" settings
+            if "functions" not in user_settings:
+                user_settings["functions"] = {}
+            if "valves" not in user_settings["functions"]:
+                user_settings["functions"]["valves"] = {}
+
+            return user_settings["functions"]["valves"].get(id, {})
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
+
+    def update_user_valves_by_id_and_user_id(
+        self, id: str, user_id: str, valves: dict
+    ) -> Optional[dict]:
+        try:
+            user = Users.get_user_by_id(user_id)
+            user_settings = user.settings.model_dump()
+
+            # Check if user has "functions" and "valves" settings
+            if "functions" not in user_settings:
+                user_settings["functions"] = {}
+            if "valves" not in user_settings["functions"]:
+                user_settings["functions"]["valves"] = {}
+
+            user_settings["functions"]["valves"][id] = valves
+
+            # Update the user settings in the database
+            query = Users.update_user_by_id(user_id, {"settings": user_settings})
+            query.execute()
+
+            return user_settings["functions"]["valves"][id]
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
 
     def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:
         try:
@@ -125,6 +219,19 @@ class FunctionsTable:
 
             function = Function.get(Function.id == id)
             return FunctionModel(**model_to_dict(function))
+        except:
+            return None
+
+    def deactivate_all_functions(self) -> Optional[bool]:
+        try:
+            query = Function.update(
+                **{"is_active": False},
+                updated_at=int(time.time()),
+            )
+
+            query.execute()
+
+            return True
         except:
             return None
 

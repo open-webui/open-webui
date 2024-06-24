@@ -105,13 +105,15 @@ async def get_status():
 
 
 async def get_pipe_models():
-    pipes = Functions.get_functions_by_type("pipe")
+    pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
     for pipe in pipes:
         # Check if function is already loaded
         if pipe.id not in app.state.FUNCTIONS:
-            function_module, function_type = load_function_module_by_id(pipe.id)
+            function_module, function_type, frontmatter = load_function_module_by_id(
+                pipe.id
+            )
             app.state.FUNCTIONS[pipe.id] = function_module
         else:
             function_module = app.state.FUNCTIONS[pipe.id]
@@ -132,7 +134,9 @@ async def get_pipe_models():
                     manifold_pipe_name = p["name"]
 
                     if hasattr(function_module, "name"):
-                        manifold_pipe_name = f"{pipe.name}{manifold_pipe_name}"
+                        manifold_pipe_name = (
+                            f"{function_module.name}{manifold_pipe_name}"
+                        )
 
                     pipe_models.append(
                         {

@@ -127,6 +127,42 @@
 	}
 
 	onMount(async () => {
+		const onMessageHandler = async (event) => {
+			if (event.origin === window.origin) {
+				// Replace with your iframe's origin
+				console.log('Message received from iframe:', event.data);
+				if (event.data.type === 'input:prompt') {
+					console.log(event.data.text);
+
+					const inputElement = document.getElementById('chat-textarea');
+
+					if (inputElement) {
+						prompt = event.data.text;
+						inputElement.focus();
+					}
+				}
+
+				if (event.data.type === 'action:submit') {
+					console.log(event.data.text);
+
+					if (prompt !== '') {
+						await tick();
+						submitPrompt(prompt);
+					}
+				}
+
+				if (event.data.type === 'input:prompt:submit') {
+					console.log(event.data.text);
+
+					if (prompt !== '') {
+						await tick();
+						submitPrompt(event.data.text);
+					}
+				}
+			}
+		};
+		window.addEventListener('message', onMessageHandler);
+
 		if (!$chatId) {
 			chatId.subscribe(async (value) => {
 				if (!value) {
@@ -138,6 +174,10 @@
 				await goto('/');
 			}
 		}
+
+		return () => {
+			window.removeEventListener('message', onMessageHandler);
+		};
 	});
 
 	//////////////////////////
@@ -600,9 +640,13 @@
 			files = model.info.meta.knowledge;
 		}
 		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
+
 		files = [
 			...files,
 			...(lastUserMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? []),
+			...(responseMessage?.files?.filter((item) =>
 				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
 			) ?? [])
 		].filter(
@@ -843,6 +887,9 @@
 		files = [
 			...files,
 			...(lastUserMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? []),
+			...(responseMessage?.files?.filter((item) =>
 				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
 			) ?? [])
 		].filter(
@@ -1213,6 +1260,7 @@
 
 	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
 		const responseMessage = history.messages[responseId];
+		const userMessage = history.messages[parentId];
 
 		responseMessage.statusHistory = [
 			{
@@ -1223,7 +1271,7 @@
 		];
 		messages = messages;
 
-		const prompt = history.messages[parentId].content;
+		const prompt = userMessage.content;
 		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt).catch(
 			(error) => {
 				console.log(error);
