@@ -127,7 +127,7 @@
 	}
 
 	onMount(async () => {
-		window.addEventListener('message', async (event) => {
+		const onMessageHandler = async (event) => {
 			if (event.origin === window.origin) {
 				// Replace with your iframe's origin
 				console.log('Message received from iframe:', event.data);
@@ -160,7 +160,8 @@
 					}
 				}
 			}
-		});
+		};
+		window.addEventListener('message', onMessageHandler);
 
 		if (!$chatId) {
 			chatId.subscribe(async (value) => {
@@ -173,6 +174,10 @@
 				await goto('/');
 			}
 		}
+
+		return () => {
+			window.removeEventListener('message', onMessageHandler);
+		};
 	});
 
 	//////////////////////////
