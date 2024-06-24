@@ -1,7 +1,19 @@
+# Model.earth Open WebUI Projects
+
+Contributors: Dinesh B, Loren H
+
+TO DO: Document how to edit in our [Projects repo fork of open-webui](https://github.com/modelearth/projects) when using Docker. Is that doable?
+
+TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [Super Evaporation](../../evaporation-kits/) page and related articles
+
+<!--Pinecone -->
+<br>
+
 # Open WebUI Install
 
 If you already have an "open-webui" Docker container, the server may already be running at [localhost:3000](http://localhost:3000)
 
+Start with the [Open WebUI Documentation](https://docs.openwebui.com/)
 
 If you don't have Ollama installed yet, you can run the following in your local projects folder.  
 <!--(If you already have an "open-webui" container in Docker, delete or rename it.)-->
