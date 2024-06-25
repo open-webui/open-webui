@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends
 from fastapi.routing import APIRoute
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+
 from apps.webui.routers import (
     auths,
     users,

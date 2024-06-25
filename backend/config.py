@@ -306,6 +306,135 @@ JWT_EXPIRES_IN = PersistentConfig(
 )
 
 ####################################
+# OAuth config
+####################################
+
+ENABLE_OAUTH_SIGNUP = PersistentConfig(
+    "ENABLE_OAUTH_SIGNUP",
+    "oauth.enable_signup",
+    os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true",
+)
+
+OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
+    "OAUTH_MERGE_ACCOUNTS_BY_EMAIL",
+    "oauth.merge_accounts_by_email",
+    os.environ.get("OAUTH_MERGE_ACCOUNTS_BY_EMAIL", "False").lower() == "true",
+)
+
+OAUTH_PROVIDERS = {}
+
+GOOGLE_CLIENT_ID = PersistentConfig(
+    "GOOGLE_CLIENT_ID",
+    "oauth.google.client_id",
+    os.environ.get("GOOGLE_CLIENT_ID", ""),
+)
+
+GOOGLE_CLIENT_SECRET = PersistentConfig(
+    "GOOGLE_CLIENT_SECRET",
+    "oauth.google.client_secret",
+    os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+)
+
+GOOGLE_OAUTH_SCOPE = PersistentConfig(
+    "GOOGLE_OAUTH_SCOPE",
+    "oauth.google.scope",
+    os.environ.get("GOOGLE_OAUTH_SCOPE", "openid email profile"),
+)
+
+MICROSOFT_CLIENT_ID = PersistentConfig(
+    "MICROSOFT_CLIENT_ID",
+    "oauth.microsoft.client_id",
+    os.environ.get("MICROSOFT_CLIENT_ID", ""),
+)
+
+MICROSOFT_CLIENT_SECRET = PersistentConfig(
+    "MICROSOFT_CLIENT_SECRET",
+    "oauth.microsoft.client_secret",
+    os.environ.get("MICROSOFT_CLIENT_SECRET", ""),
+)
+
+MICROSOFT_CLIENT_TENANT_ID = PersistentConfig(
+    "MICROSOFT_CLIENT_TENANT_ID",
+    "oauth.microsoft.tenant_id",
+    os.environ.get("MICROSOFT_CLIENT_TENANT_ID", ""),
+)
+
+MICROSOFT_OAUTH_SCOPE = PersistentConfig(
+    "MICROSOFT_OAUTH_SCOPE",
+    "oauth.microsoft.scope",
+    os.environ.get("MICROSOFT_OAUTH_SCOPE", "openid email profile"),
+)
+
+OAUTH_CLIENT_ID = PersistentConfig(
+    "OAUTH_CLIENT_ID",
+    "oauth.oidc.client_id",
+    os.environ.get("OAUTH_CLIENT_ID", ""),
+)
+
+OAUTH_CLIENT_SECRET = PersistentConfig(
+    "OAUTH_CLIENT_SECRET",
+    "oauth.oidc.client_secret",
+    os.environ.get("OAUTH_CLIENT_SECRET", ""),
+)
+
+OPENID_PROVIDER_URL = PersistentConfig(
+    "OPENID_PROVIDER_URL",
+    "oauth.oidc.provider_url",
+    os.environ.get("OPENID_PROVIDER_URL", ""),
+)
+
+OAUTH_SCOPES = PersistentConfig(
+    "OAUTH_SCOPES",
+    "oauth.oidc.scopes",
+    os.environ.get("OAUTH_SCOPES", "openid email profile"),
+)
+
+OAUTH_PROVIDER_NAME = PersistentConfig(
+    "OAUTH_PROVIDER_NAME",
+    "oauth.oidc.provider_name",
+    os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
+)
+
+
+def load_oauth_providers():
+    OAUTH_PROVIDERS.clear()
+    if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
+        OAUTH_PROVIDERS["google"] = {
+            "client_id": GOOGLE_CLIENT_ID.value,
+            "client_secret": GOOGLE_CLIENT_SECRET.value,
+            "server_metadata_url": "https://accounts.google.com/.well-known/openid-configuration",
+            "scope": GOOGLE_OAUTH_SCOPE.value,
+        }
+
+    if (
+        MICROSOFT_CLIENT_ID.value
+        and MICROSOFT_CLIENT_SECRET.value
+        and MICROSOFT_CLIENT_TENANT_ID.value
+    ):
+        OAUTH_PROVIDERS["microsoft"] = {
+            "client_id": MICROSOFT_CLIENT_ID.value,
+            "client_secret": MICROSOFT_CLIENT_SECRET.value,
+            "server_metadata_url": f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration",
+            "scope": MICROSOFT_OAUTH_SCOPE.value,
+        }
+
+    if (
+        OAUTH_CLIENT_ID.value
+        and OAUTH_CLIENT_SECRET.value
+        and OPENID_PROVIDER_URL.value
+    ):
+        OAUTH_PROVIDERS["oidc"] = {
+            "client_id": OAUTH_CLIENT_ID.value,
+            "client_secret": OAUTH_CLIENT_SECRET.value,
+            "server_metadata_url": OPENID_PROVIDER_URL.value,
+            "scope": OAUTH_SCOPES.value,
+            "name": OAUTH_PROVIDER_NAME.value,
+        }
+
+
+load_oauth_providers()
+
+####################################
 # Static DIR
 ####################################
 
@@ -731,6 +860,16 @@ WEBUI_SECRET_KEY = os.environ.get(
     os.environ.get(
         "WEBUI_JWT_SECRET_KEY", "t0p-s3cr3t"
     ),  # DEPRECATED: remove at next major version
+)
+
+WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get(
+    "WEBUI_SESSION_COOKIE_SAME_SITE",
+    os.environ.get("WEBUI_SESSION_COOKIE_SAME_SITE", "lax"),
+)
+
+WEBUI_SESSION_COOKIE_SECURE = os.environ.get(
+    "WEBUI_SESSION_COOKIE_SECURE",
+    os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false").lower() == "true",
 )
 
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
