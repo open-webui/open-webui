@@ -279,7 +279,10 @@
 			</div>
 
 			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('AUTOMATIC1111 Api Auth String')}</div>
-			<SensitiveInput placeholder={$i18n.t('Enter api auth string (e.g. username:password)')} bind:value={AUTOMATIC1111_API_AUTH} />
+			<SensitiveInput
+				placeholder={$i18n.t('Enter api auth string (e.g. username:password)')}
+				bind:value={AUTOMATIC1111_API_AUTH}
+			/>
 
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 				{$i18n.t('Include `--api-auth` flag when running stable-diffusion-webui')}

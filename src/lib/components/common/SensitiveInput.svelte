@@ -1,6 +1,6 @@
 <script lang="ts">
 	export let value: string;
-	export let placeholder = "";
+	export let placeholder = '';
 	export let readOnly = false;
 	export let outerClassName = 'flex flex-1';
 	export let inputClassName =
