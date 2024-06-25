@@ -27,6 +27,7 @@
 	import ValvesModal from './common/ValvesModal.svelte';
 	import ManifestModal from './common/ManifestModal.svelte';
 	import Heart from '../icons/Heart.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -39,6 +40,8 @@
 	let showManifestModal = false;
 	let showValvesModal = false;
 	let selectedFunction = null;
+
+	let showDeleteConfirm = false;
 
 	const shareHandler = async (tool) => {
 		console.log(tool);
@@ -246,7 +249,8 @@
 						exportHandler(func);
 					}}
 					deleteHandler={async () => {
-						deleteHandler(func);
+						selectedFunction = func;
+						showDeleteConfirm = true;
 					}}
 					onClose={() => {}}
 				>
@@ -385,6 +389,18 @@
 		</div>
 	</a>
 </div>
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete function?')}
+	on:confirm={() => {
+		deleteHandler(selectedFunction);
+	}}
+>
+	<div class=" text-sm text-gray-500">
+		{$i18n.t('This will delete')} <span class="  font-semibold">{selectedFunction.name}</span>.
+	</div>
+</DeleteConfirmDialog>
 
 <ManifestModal bind:show={showManifestModal} manifest={selectedFunction?.meta?.manifest ?? {}} />
 <ValvesModal
