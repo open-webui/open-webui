@@ -191,10 +191,6 @@
 
 				if (Object.keys(sentencesAudio).length - 1 === idx) {
 					speaking = null;
-
-					if ($settings.conversationMode) {
-						document.getElementById('voice-input-button')?.click();
-					}
 				}
 
 				res(e);
