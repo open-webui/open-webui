@@ -92,9 +92,9 @@ def get_automatic1111_api_auth():
     if app.state.config.AUTOMATIC1111_API_AUTH == None:
         return ""
     else:
-        auth1111_byte_string = app.state.config.AUTOMATIC1111_API_AUTH.encode('utf-8')
+        auth1111_byte_string = app.state.config.AUTOMATIC1111_API_AUTH.encode("utf-8")
         auth1111_base64_encoded_bytes = base64.b64encode(auth1111_byte_string)
-        auth1111_base64_encoded_string = auth1111_base64_encoded_bytes.decode('utf-8')
+        auth1111_base64_encoded_string = auth1111_base64_encoded_bytes.decode("utf-8")
         return f"Basic {auth1111_base64_encoded_string}"
 
 
@@ -138,7 +138,7 @@ async def get_engine_url(user=Depends(get_admin_user)):
 
 @app.post("/url/update")
 async def update_engine_url(
-        form_data: EngineUrlUpdateForm, user=Depends(get_admin_user)
+    form_data: EngineUrlUpdateForm, user=Depends(get_admin_user)
 ):
     if form_data.AUTOMATIC1111_BASE_URL == None:
         app.state.config.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
@@ -189,7 +189,7 @@ async def get_openai_config(user=Depends(get_admin_user)):
 
 @app.post("/openai/config/update")
 async def update_openai_config(
-        form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user)
+    form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user)
 ):
     if form_data.key == "":
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
@@ -215,7 +215,7 @@ async def get_image_size(user=Depends(get_admin_user)):
 
 @app.post("/size/update")
 async def update_image_size(
-        form_data: ImageSizeUpdateForm, user=Depends(get_admin_user)
+    form_data: ImageSizeUpdateForm, user=Depends(get_admin_user)
 ):
     pattern = r"^\d+x\d+$"  # Regular expression pattern
     if re.match(pattern, form_data.size):
@@ -242,7 +242,7 @@ async def get_image_size(user=Depends(get_admin_user)):
 
 @app.post("/steps/update")
 async def update_image_size(
-        form_data: ImageStepsUpdateForm, user=Depends(get_admin_user)
+    form_data: ImageStepsUpdateForm, user=Depends(get_admin_user)
 ):
     if form_data.steps >= 0:
         app.state.config.IMAGE_STEPS = form_data.steps
@@ -280,7 +280,7 @@ def get_models(user=Depends(get_current_user)):
         else:
             r = requests.get(
                 url=f"{app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/sd-models",
-                headers={"authorization": get_automatic1111_api_auth()}
+                headers={"authorization": get_automatic1111_api_auth()},
             )
             models = r.json()
             return list(
@@ -308,7 +308,7 @@ async def get_default_model(user=Depends(get_admin_user)):
         else:
             r = requests.get(
                 url=f"{app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
-                headers={"authorization": get_automatic1111_api_auth()}
+                headers={"authorization": get_automatic1111_api_auth()},
             )
             options = r.json()
             return {"model": options["sd_model_checkpoint"]}
@@ -329,7 +329,7 @@ def set_model_handler(model: str):
         api_auth = get_automatic1111_api_auth()
         r = requests.get(
             url=f"{app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
-            headers={"authorization": api_auth}
+            headers={"authorization": api_auth},
         )
         options = r.json()
 
@@ -346,8 +346,8 @@ def set_model_handler(model: str):
 
 @app.post("/models/default/update")
 def update_default_model(
-        form_data: UpdateModelForm,
-        user=Depends(get_current_user),
+    form_data: UpdateModelForm,
+    user=Depends(get_current_user),
 ):
     return set_model_handler(form_data.model)
 
@@ -423,8 +423,8 @@ def save_url_image(url):
 
 @app.post("/generations")
 def generate_image(
-        form_data: GenerateImageForm,
-        user=Depends(get_current_user),
+    form_data: GenerateImageForm,
+    user=Depends(get_current_user),
 ):
     width, height = tuple(map(int, app.state.config.IMAGE_SIZE.split("x")))
 
