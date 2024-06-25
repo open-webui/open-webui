@@ -12,7 +12,7 @@
 	let filteredPromptCommands = [];
 
 	$: filteredPromptCommands = $prompts
-		.filter((p) => p.command.includes(prompt))
+		.filter((p) => p.command.toLowerCase().includes(prompt.toLowerCase()))
 		.sort((a, b) => a.title.localeCompare(b.title));
 
 	$: if (prompt) {
