@@ -401,7 +401,6 @@
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "哎呀！先前的回應發生錯誤。請重試或聯絡管理員",
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "哎呀！您正在使用不支援的方法（僅有前端）。請從後端提供 WebUI。",
 	"Open": "開啟",
-	"Open AI": "Open AI",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "開啟新聊天",
 	"OpenAI": "OpenAI",

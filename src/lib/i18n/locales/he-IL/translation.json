@@ -401,7 +401,6 @@
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "",
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "אופס! אתה משתמש בשיטה לא נתמכת (רק חזית). אנא שרת את ממשק המשתמש האינטרנטי מהשרת האחורי.",
 	"Open": "פתח",
-	"Open AI": "Open AI",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "פתח צ'אט חדש",
 	"OpenAI": "OpenAI",

@@ -401,7 +401,6 @@
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "",
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "¡Ups! Estás utilizando un método no compatible (solo frontend). Por favor ejecute la WebUI desde el backend.",
 	"Open": "Abrir",
-	"Open AI": "Abrir AI",
 	"Open AI (Dall-E)": "Abrir AI (Dall-E)",
 	"Open new chat": "Abrir nuevo chat",
 	"OpenAI": "OpenAI",

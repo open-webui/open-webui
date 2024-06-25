@@ -401,7 +401,6 @@
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "Ui! Hi ha hagut un error en la resposta anterior. Torna a provar-ho o contacta amb un administrador",
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ui! Estàs utilitzant un mètode no suportat (només frontend). Si us plau, serveix la WebUI des del backend.",
 	"Open": "Obre",
-	"Open AI": "Open AI",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "Obre un xat nou",
 	"OpenAI": "OpenAI",
