@@ -281,7 +281,7 @@
 
 	<a
 		class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2"
-		href="https://openwebui.com/"
+		href="https://openwebui.com/#open-webui-community"
 		target="_blank"
 	>
 		<div class=" self-center w-10 flex-shrink-0">
