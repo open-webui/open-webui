@@ -176,8 +176,10 @@ def upgrade() -> None:
             sa.Column("api_key", sa.String(), nullable=True),
             sa.Column("settings", apps.webui.internal.db.JSONField(), nullable=True),
             sa.Column("info", apps.webui.internal.db.JSONField(), nullable=True),
+            sa.Column('oauth_sub', sa.Text(), nullable=True),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("api_key"),
+            sa.UniqueConstraint("oauth_sub"),
         )
     # ### end Alembic commands ###
 
