@@ -3,7 +3,7 @@
 	"(Beta)": "(Beta)",
 	"(e.g. `sh webui.sh --api`)": "(p.ej. `sh webui.sh --api`)",
 	"(latest)": "(latest)",
-	"{{ models }}": "{{ modelos }}",
+	"{{ models }}": "{{ models }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: No se puede eliminar un modelo base",
 	"{{modelName}} is thinking...": "{{modelName}} está pensando...",
 	"{{user}}'s Chats": "{{user}}'s Chats",
