@@ -86,6 +86,12 @@
 		};
 	}, {});
 
+	$: (async () => {
+		if ($selectedChatEmbeddingIndex && $chatId) {
+			await updateChatById(localStorage.token, $chatId, {embedding_index_id: $selectedChatEmbeddingIndex})
+		}
+	})()
+
 	let params = new URL(document.location.toString()).searchParams;
 	chatType.set(params.get('type') || 'chat')
 	let currentChatType = $chatType

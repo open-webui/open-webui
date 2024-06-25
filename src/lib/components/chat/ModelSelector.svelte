@@ -16,7 +16,7 @@
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import {getEmbeddingIndex} from "$lib/apis/embedding";
+	import { getEmbeddingIndex, getPublicEmbeddingIndex } from '$lib/apis/embedding';
 	import Logo from "$lib/components/icons/Logo.svelte";
 
 	const i18n = getContext('i18n');
@@ -69,7 +69,11 @@
 		if (type !== 'chat_embedding') {
 			return []
 		}
-		const results = await getEmbeddingIndex()
+		const [indexes, publicIndexes] = await Promise.all([
+			getEmbeddingIndex(),
+			getPublicEmbeddingIndex()
+		])
+		const results = [...indexes, ...publicIndexes]
 		selectedChatEmbeddingIndex.set($selectedChatEmbeddingIndex || results?.[0]?.id || 0)
 		return results
 	}
@@ -172,6 +176,7 @@
 		<select class="ml-2 capitalize rounded-lg py-1 pl-4 pr-10 text-sm dark:text-gray-300 dark:bg-gray-850 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 				bind:value={$selectedChatEmbeddingIndex}
 		>
+			<option value="0">{$i18n.t('All')}</option>
 			{#each embeddingIndexs as info}
 				<option value="{info.id}">{info.name}</option>
 			{/each}

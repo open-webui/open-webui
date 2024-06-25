@@ -93,6 +93,12 @@
 		};
 	}, {});
 
+	$: (async () => {
+		if ($selectedChatEmbeddingIndex) {
+			await updateChatById(localStorage.token, $chatId, {embedding_index_id: $selectedChatEmbeddingIndex})
+		}
+	})()
+
 	let chat = null;
 	let tags = [];
 

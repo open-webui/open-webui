@@ -34,6 +34,28 @@
 		</div>
 	</div>
 
+	<div class="px-4 my-1">
+		<div
+			class="flex scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-xl bg-transparent/10 p-1"
+		>
+			<a
+				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname === '/embedding'
+						? 'bg-gray-50 dark:bg-gray-850'
+						: ''} transition"
+				href="/embedding">{$i18n.t('Personal Index')}</a
+			>
+
+			<a
+				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/embedding/public')
+						? 'bg-gray-50 dark:bg-gray-850'
+						: ''} transition"
+				href="/embedding/public"
+			>
+				{$i18n.t('Public Index')}
+			</a>
+		</div>
+	</div>
+
 	<hr class=" my-2 dark:border-gray-850" />
 
 	<div class=" py-1 px-5 flex-1 max-h-full overflow-y-auto">

@@ -4,10 +4,12 @@
 
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import CreateIndexModal from '$lib/components/embedding/CreateIndexModal.svelte';
-	import {getEmbeddingIndex} from "$lib/apis/embedding";
+	import { getEmbeddingIndex, getPublicEmbeddingIndex } from '$lib/apis/embedding';
 	import {goto} from "$app/navigation";
 	import TagList from "$lib/components/common/Tags/TagList.svelte";
 	import {getChatList} from "$lib/apis/chats";
+
+	export let isPublic = false;
 
 	const i18n = getContext('i18n');
 
@@ -25,7 +27,11 @@
 	// );
 
 	onMount(async () => {
-		listIndex = await getEmbeddingIndex()
+		if (isPublic) {
+			listIndex = await getPublicEmbeddingIndex()
+		} else {
+			listIndex = await getEmbeddingIndex()
+		}
 	});
 </script>
 
