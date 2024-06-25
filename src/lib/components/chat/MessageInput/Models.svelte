@@ -21,7 +21,7 @@
 	let filteredModels = [];
 
 	$: filteredModels = $models
-		.filter((p) => p.name.includes(prompt.split(' ')?.at(0)?.substring(1) ?? ''))
+		.filter((p) => p.name.toLowerCase().includes(prompt.toLowerCase().split(' ')?.at(0)?.substring(1) ?? ''))
 		.sort((a, b) => a.name.localeCompare(b.name));
 
 	$: if (prompt) {
