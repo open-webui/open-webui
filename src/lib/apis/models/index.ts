@@ -63,7 +63,10 @@ export const getModelInfos = async (token: string = '') => {
 export const getModelById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/${id}`, {
+	const searchParams = new URLSearchParams();
+	searchParams.append('id', id);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

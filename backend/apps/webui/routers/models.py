@@ -56,7 +56,7 @@ async def add_new_model(
 ############################
 
 
-@router.get("/{id}", response_model=Optional[ModelModel])
+@router.get("/", response_model=Optional[ModelModel])
 async def get_model_by_id(id: str, user=Depends(get_verified_user)):
     model = Models.get_model_by_id(id)
 
