@@ -43,11 +43,11 @@
 	];
 
 	$: filteredCollections = collections
-		.filter((collection) => collection.name.includes(prompt.split(' ')?.at(0)?.substring(1) ?? ''))
+		.filter((collection) => findByName(collection, prompt))
 		.sort((a, b) => a.name.localeCompare(b.name));
 
 	$: filteredDocs = $documents
-		.filter((doc) => doc.name.includes(prompt.split(' ')?.at(0)?.substring(1) ?? ''))
+		.filter((doc) => findByName(doc, prompt))
 		.sort((a, b) => a.title.localeCompare(b.title));
 
 	$: filteredItems = [...filteredCollections, ...filteredDocs];
@@ -57,6 +57,15 @@
 
 		console.log(filteredCollections);
 	}
+
+	type ObjectWithName = {
+		name: string;
+	};
+
+	const findByName = (obj: ObjectWithName, prompt: string) => {
+		const name = obj.name.toLowerCase();
+		return name.includes(prompt.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '');
+	};
 
 	export const selectUp = () => {
 		selectedIdx = Math.max(0, selectedIdx - 1);
