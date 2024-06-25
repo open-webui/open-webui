@@ -67,6 +67,28 @@ jobs:
           path: compose-logs.txt
           if-no-files-found: ignore
 
+  pytest:
+    name: Run backend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: pytest run
+        run: |
+          ls -al
+          cd backend
+          PYTHONPATH=. pytest . -o log_cli=true -o log_cli_level=INFO
+
   migration_test:
     name: Run Migration Tests
     runs-on: ubuntu-latest
