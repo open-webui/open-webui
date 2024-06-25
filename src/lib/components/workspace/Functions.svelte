@@ -41,9 +41,7 @@
 	let showValvesModal = false;
 	let selectedFunction = null;
 
-
 	let showDeleteConfirm = false;
-	let deleteFunction = null;
 
 	const shareHandler = async (tool) => {
 		console.log(tool);
@@ -250,8 +248,8 @@
 					exportHandler={() => {
 						exportHandler(func);
 					}}
-					deleteHandler={async () => {						
-						deleteFunction = func;
+					deleteHandler={async () => {
+						selectedFunction = func;
 						showDeleteConfirm = true;
 					}}
 					onClose={() => {}}
@@ -396,11 +394,11 @@
 	bind:show={showDeleteConfirm}
 	title={$i18n.t('Delete function?')}
 	on:confirm={() => {
-		deleteHandler(deleteFunction);
+		deleteHandler(selectedFunction);
 	}}
 >
 	<div class=" text-sm text-gray-500">
-		{$i18n.t('This will delete')} <span class="  font-semibold">{deleteFunction.name}</span>.
+		{$i18n.t('This will delete')} <span class="  font-semibold">{selectedFunction.name}</span>.
 	</div>
 </DeleteConfirmDialog>
 

@@ -158,7 +158,7 @@
 					exportHandler={() => {
 						exportHandler(prompt);
 					}}
-					deleteHandler={async () => {			
+					deleteHandler={async () => {
 						deletePrompt = prompt;
 						showDeleteConfirm = true;
 					}}

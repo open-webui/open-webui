@@ -38,7 +38,6 @@
 	let selectedTool = null;
 
 	let showDeleteConfirm = false;
-	let deleteTool = null;
 
 	const shareHandler = async (tool) => {
 		console.log(tool);
@@ -244,7 +243,7 @@
 						exportHandler(tool);
 					}}
 					deleteHandler={async () => {
-						deleteTool = tool;
+						selectedTool = tool;
 						showDeleteConfirm = true;
 					}}
 					onClose={() => {}}
@@ -379,11 +378,11 @@
 	bind:show={showDeleteConfirm}
 	title={$i18n.t('Delete tool?')}
 	on:confirm={() => {
-		deleteHandler(deleteTool);
+		deleteHandler(selectedTool);
 	}}
 >
 	<div class=" text-sm text-gray-500">
-		{$i18n.t('This will delete')} <span class="  font-semibold">{deleteTool.name}</span>.
+		{$i18n.t('This will delete')} <span class="  font-semibold">{selectedTool.name}</span>.
 	</div>
 </DeleteConfirmDialog>
 
