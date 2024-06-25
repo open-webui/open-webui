@@ -304,44 +304,44 @@
 				</div>
 			</div>
 		{:else if TTSEngine === 'openai'}
-			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
-				<div class="flex w-full">
-					<div class="flex-1">
-						<input
-							list="voice-list"
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={speaker}
-							placeholder="Select a voice"
-						/>
+<!--			<div>-->
+<!--				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>-->
+<!--				<div class="flex w-full">-->
+<!--					<div class="flex-1">-->
+<!--						<input-->
+<!--							list="voice-list"-->
+<!--							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"-->
+<!--							bind:value={speaker}-->
+<!--							placeholder="Select a voice"-->
+<!--						/>-->
 
-						<datalist id="voice-list">
-							{#each voices as voice}
-								<option value={voice.name} />
-							{/each}
-						</datalist>
-					</div>
-				</div>
-			</div>
-			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Model')}</div>
-				<div class="flex w-full">
-					<div class="flex-1">
-						<input
-							list="model-list"
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							bind:value={model}
-							placeholder="Select a model"
-						/>
+<!--						<datalist id="voice-list">-->
+<!--							{#each voices as voice}-->
+<!--								<option value={voice.name} />-->
+<!--							{/each}-->
+<!--						</datalist>-->
+<!--					</div>-->
+<!--				</div>-->
+<!--			</div>-->
+<!--			<div>-->
+<!--				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Model')}</div>-->
+<!--				<div class="flex w-full">-->
+<!--					<div class="flex-1">-->
+<!--						<input-->
+<!--							list="model-list"-->
+<!--							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"-->
+<!--							bind:value={model}-->
+<!--							placeholder="Select a model"-->
+<!--						/>-->
 
-						<datalist id="model-list">
-							{#each models as model}
-								<option value={model.name} />
-							{/each}
-						</datalist>
-					</div>
-				</div>
-			</div>
+<!--						<datalist id="model-list">-->
+<!--							{#each models as model}-->
+<!--								<option value={model.name} />-->
+<!--							{/each}-->
+<!--						</datalist>-->
+<!--					</div>-->
+<!--				</div>-->
+<!--			</div>-->
 		{/if}
 	</div>
 
