@@ -397,7 +397,6 @@
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "",
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "আপনি একটা আনসাপোর্টেড পদ্ধতি (শুধু ফ্রন্টএন্ড) ব্যবহার করছেন। দয়া করে WebUI ব্যাকএন্ড থেকে চালনা করুন।",
 	"Open": "খোলা",
-	"Open AI": "Open AI",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "নতুন চ্যাট খুলুন",
 	"OpenAI": "OpenAI",

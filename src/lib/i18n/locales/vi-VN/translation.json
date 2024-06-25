@@ -397,7 +397,6 @@
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "",
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Rất tiếc! Bạn đang sử dụng một phương thức không được hỗ trợ (chỉ dành cho frontend). Vui lòng cung cấp phương thức cho WebUI từ phía backend.",
 	"Open": "Mở",
-	"Open AI": "Open AI",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "Mở nội dung chat mới",
 	"OpenAI": "OpenAI",

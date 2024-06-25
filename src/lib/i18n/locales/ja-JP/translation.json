@@ -397,7 +397,6 @@
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "",
 	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "おっと！ サポートされていない方法 (フロントエンドのみ) を使用しています。バックエンドから WebUI を提供してください。",
 	"Open": "開く",
-	"Open AI": "Open AI",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "新しいチャットを開く",
 	"OpenAI": "OpenAI",
