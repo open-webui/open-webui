@@ -24,6 +24,10 @@ boto3==1.34.110
 
 argon2-cffi==23.1.0
 APScheduler==3.10.4
+
+# AI libraries
+openai
+anthropic
 google-generativeai==0.5.4
 
 langchain==0.2.0
