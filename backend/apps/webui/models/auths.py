@@ -113,7 +113,8 @@ class AuthsTable:
         Session.add(result)
 
         user = Users.insert_new_user(
-            id, name, email, profile_image_url, role, oauth_sub)
+            id, name, email, profile_image_url, role, oauth_sub
+        )
 
         Session.commit()
         Session.refresh(result)
