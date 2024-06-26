@@ -1500,11 +1500,11 @@ async def get_manifest_json():
         "name": WEBUI_NAME,
         "short_name": WEBUI_NAME,
         "start_url": "/",
-        "display": "fullscreen",
+        "display": "standalone",
         "background_color": "#343541",
         "theme_color": "#343541",
         "orientation": "portrait-primary",
-        "display_override": ["fullscreen", "minimal-ui"],
+        "display_override": ["standalone", "minimal-ui"],
         "icons": [
             {"src": "pwa-64x64.png", "sizes": "64x64", "type": "image/png"},
             {"src": "pwa-192x192.png", "sizes": "192x192", "type": "image/png"},
