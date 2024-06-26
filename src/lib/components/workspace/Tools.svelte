@@ -39,7 +39,12 @@
 
 	let showDeleteConfirm = false;
 
-	const shareHandler = async (item) => {
+	const shareHandler = async (tool) => {
+		const item = await getToolById(localStorage.token, tool.id).catch((error) => {
+			toast.error(error);
+			return null;
+		});
+
 		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
 		const url = 'https://openwebui.com';
