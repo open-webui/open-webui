@@ -39,8 +39,26 @@
 
 	let showDeleteConfirm = false;
 
-	const shareHandler = async (tool) => {
-		console.log(tool);
+	const shareHandler = async (item) => {
+		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+
+		const url = 'https://openwebui.com';
+
+		const tab = await window.open(`${url}/tools/create`, '_blank');
+
+		// Define the event handler function
+		const messageHandler = (event) => {
+			if (event.origin !== url) return;
+			if (event.data === 'loaded') {
+				tab.postMessage(JSON.stringify(item), '*');
+
+				// Remove the event listener after handling the message
+				window.removeEventListener('message', messageHandler);
+			}
+		};
+
+		window.addEventListener('message', messageHandler, false);
+		console.log(item);
 	};
 
 	const cloneHandler = async (tool) => {

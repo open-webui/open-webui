@@ -36,6 +36,18 @@
 	};
 
 	onMount(() => {
+		window.addEventListener('message', async (event) => {
+			if (
+				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
+					event.origin
+				)
+			)
+				return;
+
+			func = JSON.parse(event.data);
+			console.log(func);
+		});
+
 		if (sessionStorage.function) {
 			func = JSON.parse(sessionStorage.function);
 			sessionStorage.removeItem('function');
