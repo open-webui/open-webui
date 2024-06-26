@@ -703,3 +703,46 @@ export const getTimeRange = (timestamp) => {
 		return date.getFullYear().toString();
 	}
 };
+
+/**
+ * Extract frontmatter as a dictionary from the specified content string.
+ * @param content {string} - The content string with potential frontmatter.
+ * @returns {Object} - The extracted frontmatter as a dictionary.
+ */
+export const extractFrontmatter = (content) => {
+	const frontmatter = {};
+	let frontmatterStarted = false;
+	let frontmatterEnded = false;
+	const frontmatterPattern = /^\s*([a-z_]+):\s*(.*)\s*$/i;
+
+	// Split content into lines
+	const lines = content.split('\n');
+
+	// Check if the content starts with triple quotes
+	if (lines[0].trim() !== '"""') {
+		return {};
+	}
+
+	frontmatterStarted = true;
+
+	for (let i = 1; i < lines.length; i++) {
+		const line = lines[i];
+
+		if (line.includes('"""')) {
+			if (frontmatterStarted) {
+				frontmatterEnded = true;
+				break;
+			}
+		}
+
+		if (frontmatterStarted && !frontmatterEnded) {
+			const match = frontmatterPattern.exec(line);
+			if (match) {
+				const [, key, value] = match;
+				frontmatter[key.trim()] = value.trim();
+			}
+		}
+	}
+
+	return frontmatter;
+};
