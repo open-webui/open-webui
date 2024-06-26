@@ -1,10 +1,21 @@
 # Model.earth Open WebUI Projects
 
-Contributors: Dinesh B, Loren H
+Contributors: Dinesh B, Loren, Yifeng
 
-TO DO: Document how to edit in our [Projects repo fork of open-webui](https://github.com/modelearth/projects) when using Docker. Is that doable?
+Currently we're avoiding editing existing files to avoid merge conflicts.
+The "location" folder is our area to customize.
+
+TO DO: For Docker installs, document if it's possible to edit our [Projects repo fork of open-webui](https://github.com/modelearth/projects).
 
 TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [superthermal evaporation](../../evaporation-kits/) page and related articles.
+
+TO DO: Create an example of loading a Python util file that is also loaded by our [RealityStream](../../RealityStream/) app.
+
+TO DO: Include the localsite.js file to add our site header and navigation:
+
+	<link type="text/css" rel="stylesheet" href="https://model.earth/localsite/css/base.css" id="/localsite/css/base.css">
+
+TO DO: Add a script that moves a few pages into the locaion folder and merges with our customizations.
 
 <!--Pinecone -->
 <br>

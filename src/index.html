@@ -2,7 +2,6 @@
 <html lang="en-us">
 <head>
 <meta charset="utf-8">
-<base href="../">
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 <title>Open WebUI Projects</title>
 <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
@@ -14,8 +13,10 @@
 TO DO: Update our Readme to one that supports [NOTE], [WARNING], [TIP]
 -->
 
+<base href="../">
 <script>
 if(typeof param=='undefined'){ var param={}; }
+// From root since base href is set to ../ above
 loadMarkdown("location/README.md", "locationDiv", "_parent");
 loadMarkdown("README.md", "readmeDiv", "_parent");
 //loadMarkdown("README-better-layout.md", "readmeDiv", "_parent");
