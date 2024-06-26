@@ -48,7 +48,7 @@
 
 		const url = 'https://openwebui.com';
 
-		const tab = await window.open(`${url}/tools/create`, '_blank');
+		const tab = await window.open(`${url}/functions/create`, '_blank');
 
 		// Define the event handler function
 		const messageHandler = (event) => {
