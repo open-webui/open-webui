@@ -11,8 +11,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  FULL_IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
   build-main-image:
@@ -28,6 +26,15 @@ jobs:
           - linux/arm64
 
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
@@ -116,6 +123,15 @@ jobs:
           - linux/arm64
 
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
@@ -207,6 +223,15 @@ jobs:
           - linux/arm64
 
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
@@ -289,6 +314,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ build-main-image ]
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -335,6 +369,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ build-cuda-image ]
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -382,6 +425,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ build-ollama-image ]
     steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:

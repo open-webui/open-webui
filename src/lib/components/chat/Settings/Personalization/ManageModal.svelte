@@ -10,18 +10,24 @@
 	import { deleteMemoriesByUserId, deleteMemoryById, getMemories } from '$lib/apis/memories';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { error } from '@sveltejs/kit';
+	import EditMemoryModal from './EditMemoryModal.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let show = false;
 
 	let memories = [];
+	let loading = true;
 
 	let showAddMemoryModal = false;
+	let showEditMemoryModal = false;
 
-	$: if (show) {
+	let selectedMemory = null;
+
+	$: if (show && memories.length === 0 && loading) {
 		(async () => {
 			memories = await getMemories(localStorage.token);
+			loading = false;
 		})();
 	}
 </script>
@@ -62,7 +68,9 @@
 								>
 									<tr>
 										<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
-										<th scope="col" class="px-3 py-2 hidden md:flex"> {$i18n.t('Created At')} </th>
+										<th scope="col" class="px-3 py-2 hidden md:flex">
+											{$i18n.t('Last Modified')}
+										</th>
 										<th scope="col" class="px-3 py-2 text-right" />
 									</tr>
 								</thead>
@@ -76,11 +84,38 @@
 											</td>
 											<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
 												<div class="my-auto whitespace-nowrap">
-													{dayjs(memory.created_at * 1000).format($i18n.t('MMMM DD, YYYY'))}
+													{dayjs(memory.updated_at * 1000).format(
+														$i18n.t('MMMM DD, YYYY hh:mm:ss A')
+													)}
 												</div>
 											</td>
 											<td class="px-3 py-1">
 												<div class="flex justify-end w-full">
+													<Tooltip content="Edit">
+														<button
+															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+															on:click={() => {
+																selectedMemory = memory;
+																showEditMemoryModal = true;
+															}}
+														>
+															<svg
+																xmlns="http://www.w3.org/2000/svg"
+																fill="none"
+																viewBox="0 0 24 24"
+																stroke-width="1.5"
+																stroke="currentColor"
+																class="w-4 h-4 s-FoVA_WMOgxUD"
+																><path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+																	class="s-FoVA_WMOgxUD"
+																/></svg
+															>
+														</button>
+													</Tooltip>
+
 													<Tooltip content="Delete">
 														<button
 															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
@@ -159,6 +194,14 @@
 
 <AddMemoryModal
 	bind:show={showAddMemoryModal}
+	on:save={async () => {
+		memories = await getMemories(localStorage.token);
+	}}
+/>
+
+<EditMemoryModal
+	bind:show={showEditMemoryModal}
+	memory={selectedMemory}
 	on:save={async () => {
 		memories = await getMemories(localStorage.token);
 	}}

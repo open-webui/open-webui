@@ -30,6 +30,8 @@
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
+		extractSentencesForAudio,
+		getUserPosition,
 		promptTemplate,
 		splitStream
 	} from '$lib/utils';
@@ -49,7 +51,7 @@
 	import { runWebSearch } from '$lib/apis/rag';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
-	import { getUserSettings } from '$lib/apis/users';
+	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import { chatCompleted, generateTitle, generateSearchQuery } from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
@@ -63,6 +65,8 @@
 
 	export let chatIdProp = '';
 	let loaded = false;
+
+	const eventTarget = new EventTarget();
 
 	let stopResponseFlag = false;
 	let autoScroll = true;
@@ -108,7 +112,8 @@
 
 	$: if (chatIdProp) {
 		(async () => {
-			if (await loadChat()) {
+			console.log(chatIdProp);
+			if (chatIdProp && (await loadChat())) {
 				await tick();
 				loaded = true;
 
@@ -123,7 +128,11 @@
 
 	onMount(async () => {
 		if (!$chatId) {
-			await initNewChat();
+			chatId.subscribe(async (value) => {
+				if (!value) {
+					await initNewChat();
+				}
+			});
 		} else {
 			if (!($settings.saveChatHistory ?? true)) {
 				await goto('/');
@@ -300,7 +309,7 @@
 	// Chat functions
 	//////////////////////////
 
-	const submitPrompt = async (userPrompt, _user = null) => {
+	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		let _responses = [];
 		console.log('submitPrompt', $chatId);
 
@@ -344,7 +353,6 @@
 				parentId: messages.length !== 0 ? messages.at(-1).id : null,
 				childrenIds: [],
 				role: 'user',
-				user: _user ?? undefined,
 				content: userPrompt,
 				files: _files.length > 0 ? _files : undefined,
 				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
@@ -362,15 +370,13 @@
 
 			// Wait until history/message have been updated
 			await tick();
-
-			// Send prompt
-			_responses = await sendPrompt(userPrompt, userMessageId);
+			_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 		}
 
 		return _responses;
 	};
 
-	const sendPrompt = async (prompt, parentId, modelId = null, newChat = true) => {
+	const sendPrompt = async (prompt, parentId, { modelId = null, newChat = false } = {}) => {
 		let _responses = [];
 
 		// If modelId is provided, use it, else use selected model
@@ -490,7 +496,6 @@
 					responseMessage.userContext = userContext;
 
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
-
 					if (webSearchEnabled) {
 						await getWebSearchResults(model.id, parentId, responseMessageId);
 					}
@@ -503,8 +508,6 @@
 					}
 					_responses.push(_response);
 
-					console.log('chatEventEmitter', chatEventEmitter);
-
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
 					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
@@ -513,86 +516,7 @@
 		);
 
 		await chats.set(await getChatList(localStorage.token));
-
 		return _responses;
-	};
-
-	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
-		const responseMessage = history.messages[responseId];
-
-		responseMessage.statusHistory = [
-			{
-				done: false,
-				action: 'web_search',
-				description: $i18n.t('Generating search query')
-			}
-		];
-		messages = messages;
-
-		const prompt = history.messages[parentId].content;
-		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt).catch(
-			(error) => {
-				console.log(error);
-				return prompt;
-			}
-		);
-
-		if (!searchQuery) {
-			toast.warning($i18n.t('No search query generated'));
-			responseMessage.statusHistory.push({
-				done: true,
-				error: true,
-				action: 'web_search',
-				description: 'No search query generated'
-			});
-
-			messages = messages;
-		}
-
-		responseMessage.statusHistory.push({
-			done: false,
-			action: 'web_search',
-			description: $i18n.t(`Searching "{{searchQuery}}"`, { searchQuery })
-		});
-		messages = messages;
-
-		const results = await runWebSearch(localStorage.token, searchQuery).catch((error) => {
-			console.log(error);
-			toast.error(error);
-
-			return null;
-		});
-
-		if (results) {
-			responseMessage.statusHistory.push({
-				done: true,
-				action: 'web_search',
-				description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
-				query: searchQuery,
-				urls: results.filenames
-			});
-
-			if (responseMessage?.files ?? undefined === undefined) {
-				responseMessage.files = [];
-			}
-
-			responseMessage.files.push({
-				collection_name: results.collection_name,
-				name: searchQuery,
-				type: 'web_search_results',
-				urls: results.filenames
-			});
-
-			messages = messages;
-		} else {
-			responseMessage.statusHistory.push({
-				done: true,
-				error: true,
-				action: 'web_search',
-				description: 'No search results found'
-			});
-			messages = messages;
-		}
 	};
 
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
@@ -610,7 +534,13 @@
 			$settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
-						content: `${promptTemplate($settings?.system ?? '', $user.name)}${
+						content: `${promptTemplate(
+							$settings?.system ?? '',
+							$user.name,
+							$settings?.userLocation
+								? await getAndUpdateUserLocation(localStorage.token)
+								: undefined
+						)}${
 							responseMessage?.userContext ?? null
 								? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 								: ''
@@ -675,6 +605,16 @@
 			(item, index, array) =>
 				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
+
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:start', {
+				detail: {
+					id: responseMessageId
+				}
+			})
+		);
+
+		await tick();
 
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
 			model: model.id,
@@ -745,6 +685,23 @@
 									continue;
 								} else {
 									responseMessage.content += data.message.content;
+
+									const sentences = extractSentencesForAudio(responseMessage.content);
+									sentences.pop();
+
+									// dispatch only last sentence and make sure it hasn't been dispatched before
+									if (
+										sentences.length > 0 &&
+										sentences[sentences.length - 1] !== responseMessage.lastSentence
+									) {
+										responseMessage.lastSentence = sentences[sentences.length - 1];
+										eventTarget.dispatchEvent(
+											new CustomEvent('chat', {
+												detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
+											})
+										);
+									}
+
 									messages = messages;
 								}
 							} else {
@@ -771,21 +728,13 @@
 								messages = messages;
 
 								if ($settings.notificationEnabled && !document.hasFocus()) {
-									const notification = new Notification(
-										selectedModelfile
-											? `${
-													selectedModelfile.title.charAt(0).toUpperCase() +
-													selectedModelfile.title.slice(1)
-											  }`
-											: `${model.id}`,
-										{
-											body: responseMessage.content,
-											icon: selectedModelfile?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`
-										}
-									);
+									const notification = new Notification(`${model.id}`, {
+										body: responseMessage.content,
+										icon: `${WEBUI_BASE_URL}/static/favicon.png`
+									});
 								}
 
-								if ($settings.responseAutoCopy) {
+								if ($settings?.responseAutoCopy ?? false) {
 									copyToClipboard(responseMessage.content);
 								}
 
@@ -847,6 +796,23 @@
 		stopResponseFlag = false;
 		await tick();
 
+		let lastSentence = extractSentencesForAudio(responseMessage.content)?.at(-1) ?? '';
+		if (lastSentence) {
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: { id: responseMessageId, content: lastSentence }
+				})
+			);
+		}
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:finish', {
+				detail: {
+					id: responseMessageId,
+					content: responseMessage.content
+				}
+			})
+		);
+
 		if (autoScroll) {
 			scrollToBottom();
 		}
@@ -887,6 +853,15 @@
 
 		scrollToBottom();
 
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:start', {
+				detail: {
+					id: responseMessageId
+				}
+			})
+		);
+		await tick();
+
 		try {
 			const [res, controller] = await generateOpenAIChatCompletion(
 				localStorage.token,
@@ -903,7 +878,13 @@
 						$settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
-									content: `${promptTemplate($settings?.system ?? '', $user.name)}${
+									content: `${promptTemplate(
+										$settings?.system ?? '',
+										$user.name,
+										$settings?.userLocation
+											? await getAndUpdateUserLocation(localStorage.token)
+											: undefined
+									)}${
 										responseMessage?.userContext ?? null
 											? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
 											: ''
@@ -1007,6 +988,23 @@
 						continue;
 					} else {
 						responseMessage.content += value;
+
+						const sentences = extractSentencesForAudio(responseMessage.content);
+						sentences.pop();
+
+						// dispatch only last sentence and make sure it hasn't been dispatched before
+						if (
+							sentences.length > 0 &&
+							sentences[sentences.length - 1] !== responseMessage.lastSentence
+						) {
+							responseMessage.lastSentence = sentences[sentences.length - 1];
+							eventTarget.dispatchEvent(
+								new CustomEvent('chat', {
+									detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
+								})
+							);
+						}
+
 						messages = messages;
 					}
 
@@ -1056,6 +1054,24 @@
 
 		stopResponseFlag = false;
 		await tick();
+
+		let lastSentence = extractSentencesForAudio(responseMessage.content)?.at(-1) ?? '';
+		if (lastSentence) {
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: { id: responseMessageId, content: lastSentence }
+				})
+			);
+		}
+
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:finish', {
+				detail: {
+					id: responseMessageId,
+					content: responseMessage.content
+				}
+			})
+		);
 
 		if (autoScroll) {
 			scrollToBottom();
@@ -1123,9 +1139,12 @@
 			let userPrompt = userMessage.content;
 
 			if ((userMessage?.models ?? [...selectedModels]).length == 1) {
-				await sendPrompt(userPrompt, userMessage.id, undefined, false);
+				// If user message has only one model selected, sendPrompt automatically selects it for regeneration
+				await sendPrompt(userPrompt, userMessage.id);
 			} else {
-				await sendPrompt(userPrompt, userMessage.id, message.model, false);
+				// If there are multiple models selected, use the model of the response message for regeneration
+				// e.g. many model chat
+				await sendPrompt(userPrompt, userMessage.id, { modelId: message.model });
 			}
 		}
 	};
@@ -1191,6 +1210,84 @@
 		}
 	};
 
+	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
+		const responseMessage = history.messages[responseId];
+
+		responseMessage.statusHistory = [
+			{
+				done: false,
+				action: 'web_search',
+				description: $i18n.t('Generating search query')
+			}
+		];
+		messages = messages;
+
+		const prompt = history.messages[parentId].content;
+		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt).catch(
+			(error) => {
+				console.log(error);
+				return prompt;
+			}
+		);
+
+		if (!searchQuery) {
+			toast.warning($i18n.t('No search query generated'));
+			responseMessage.statusHistory.push({
+				done: true,
+				error: true,
+				action: 'web_search',
+				description: 'No search query generated'
+			});
+
+			messages = messages;
+		}
+
+		responseMessage.statusHistory.push({
+			done: false,
+			action: 'web_search',
+			description: $i18n.t(`Searching "{{searchQuery}}"`, { searchQuery })
+		});
+		messages = messages;
+
+		const results = await runWebSearch(localStorage.token, searchQuery).catch((error) => {
+			console.log(error);
+			toast.error(error);
+
+			return null;
+		});
+
+		if (results) {
+			responseMessage.statusHistory.push({
+				done: true,
+				action: 'web_search',
+				description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
+				query: searchQuery,
+				urls: results.filenames
+			});
+
+			if (responseMessage?.files ?? undefined === undefined) {
+				responseMessage.files = [];
+			}
+
+			responseMessage.files.push({
+				collection_name: results.collection_name,
+				name: searchQuery,
+				type: 'web_search_results',
+				urls: results.filenames
+			});
+
+			messages = messages;
+		} else {
+			responseMessage.statusHistory.push({
+				done: true,
+				error: true,
+				action: 'web_search',
+				description: 'No search results found'
+			});
+			messages = messages;
+		}
+	};
+
 	const getTags = async () => {
 		return await getTagsById(localStorage.token, $chatId).catch(async (error) => {
 			return [];
@@ -1206,7 +1303,18 @@
 	</title>
 </svelte:head>
 
-<CallOverlay {submitPrompt} bind:files />
+<audio id="audioElement" src="" style="display: none;" />
+
+{#if $showCallOverlay}
+	<CallOverlay
+		{submitPrompt}
+		{stopResponse}
+		bind:files
+		modelId={selectedModelIds?.at(0) ?? null}
+		chatId={$chatId}
+		{eventTarget}
+	/>
+{/if}
 
 {#if !chatIdProp || (loaded && chatIdProp)}
 	<div
