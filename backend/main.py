@@ -1500,11 +1500,22 @@ async def get_manifest_json():
         "name": WEBUI_NAME,
         "short_name": WEBUI_NAME,
         "start_url": "/",
-        "display": "standalone",
+        "display": "fullscreen",
         "background_color": "#343541",
         "theme_color": "#343541",
         "orientation": "portrait-primary",
-        "icons": [{"src": "/static/logo.png", "type": "image/png", "sizes": "500x500"}],
+        "display_override": ["fullscreen", "minimal-ui"],
+        "icons": [
+            {"src": "pwa-64x64.png", "sizes": "64x64", "type": "image/png"},
+            {"src": "pwa-192x192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "pwa-512x512.png", "sizes": "512x512", "type": "image/png"},
+            {
+                "src": "maskable-icon-512x512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "maskable",
+            },
+        ],
     }
 
 
