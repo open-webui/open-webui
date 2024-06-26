@@ -15,7 +15,13 @@ TO DO: Include the localsite.js file to add our site header and navigation:
 
 	<link type="text/css" rel="stylesheet" href="https://model.earth/localsite/css/base.css" id="/localsite/css/base.css">
 
-TO DO: Add a script that moves a few pages into the locaion folder and merges with our customizations.
+TO DO: Add a script that moves a few pages into the location folder and merges with our customizations.
+
+TO DO: Activate hosting using Cloudflare.
+
+TO DO: Provide a means to upload a list of members from a Google Sheet link.
+
+TO DO: Provide a button for admins to export the list of members as a CSV file.
 
 <!--Pinecone -->
 <br>
