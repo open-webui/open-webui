@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.3.6.dev1",
+	"version": "0.3.6",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
