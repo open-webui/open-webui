@@ -5,7 +5,7 @@ Contributors: Dinesh B, Loren, Yifeng
 Currently we're avoiding editing existing files to avoid merge conflicts.
 The "location" folder is our area to customize.
 
-TO DO: For Docker installs, document if it's possible to edit our [Projects repo fork of open-webui](https://github.com/modelearth/projects).
+TO DO: For Docker installs, document if it's possible to edit our [Projects repo fork of open-webui](https://github.com/modelearth/projects). - Dinesh B
 
 Or do we have to avoid Docker and instead install using these commands when editing locally (from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/))
 
