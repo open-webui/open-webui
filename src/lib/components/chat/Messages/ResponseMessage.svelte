@@ -234,35 +234,40 @@
 
 					console.log(sentences);
 
-					sentencesAudio = sentences.reduce((a, e, i, arr) => {
-						a[i] = null;
-						return a;
-					}, {});
+					if (sentences.length > 0) {
+						sentencesAudio = sentences.reduce((a, e, i, arr) => {
+							a[i] = null;
+							return a;
+						}, {});
 
-					let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+						let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
 
-					for (const [idx, sentence] of sentences.entries()) {
-						const res = await synthesizeOpenAISpeech(
-							localStorage.token,
-							$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
-							sentence
-						).catch((error) => {
-							toast.error(error);
+						for (const [idx, sentence] of sentences.entries()) {
+							const res = await synthesizeOpenAISpeech(
+								localStorage.token,
+								$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
+								sentence
+							).catch((error) => {
+								toast.error(error);
 
-							speaking = null;
-							loadingSpeech = false;
+								speaking = null;
+								loadingSpeech = false;
 
-							return null;
-						});
+								return null;
+							});
 
-						if (res) {
-							const blob = await res.blob();
-							const blobUrl = URL.createObjectURL(blob);
-							const audio = new Audio(blobUrl);
-							sentencesAudio[idx] = audio;
-							loadingSpeech = false;
-							lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+							if (res) {
+								const blob = await res.blob();
+								const blobUrl = URL.createObjectURL(blob);
+								const audio = new Audio(blobUrl);
+								sentencesAudio[idx] = audio;
+								loadingSpeech = false;
+								lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+							}
 						}
+					} else {
+						speaking = null;
+						loadingSpeech = false;
 					}
 				} else {
 					let voices = [];
