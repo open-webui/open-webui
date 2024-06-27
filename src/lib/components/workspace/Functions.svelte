@@ -286,13 +286,15 @@
 				</FunctionMenu>
 
 				<div class=" self-center mx-1">
-					<Switch
-						bind:state={func.is_active}
-						on:change={async (e) => {
-							toggleFunctionById(localStorage.token, func.id);
-							models.set(await getModels(localStorage.token));
-						}}
-					/>
+					<Tooltip content={func.is_active ? 'Enabled' : 'Disabled'}>
+						<Switch
+							bind:state={func.is_active}
+							on:change={async (e) => {
+								toggleFunctionById(localStorage.token, func.id);
+								models.set(await getModels(localStorage.token));
+							}}
+						/>
+					</Tooltip>
 				</div>
 			</div>
 		</div>

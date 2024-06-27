@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { settings, user, config, models, tools } from '$lib/stores';
+	import { settings, user, config, models, tools, functions } from '$lib/stores';
 
 	import TurndownService from 'turndown';
 
@@ -17,6 +17,7 @@
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 	import { stringify } from 'postcss';
 	import { parseFile } from '$lib/utils/characters';
+	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -61,6 +62,7 @@
 
 	let toolIds = [];
 	let knowledge = [];
+	let filterIds = [];
 
 	$: if (name) {
 		id = name
@@ -102,6 +104,14 @@
 		} else {
 			if (info.meta.toolIds) {
 				delete info.meta.toolIds;
+			}
+		}
+
+		if (filterIds.length > 0) {
+			info.meta.filterIds = filterIds;
+		} else {
+			if (info.meta.filterIds) {
+				delete info.meta.filterIds;
 			}
 		}
 
@@ -172,6 +182,10 @@
 
 		capabilities = { ...capabilities, ...(model?.info?.meta?.capabilities ?? {}) };
 		toolIds = model?.info?.meta?.toolIds ?? [];
+
+		if (model?.info?.meta?.filterIds) {
+			filterIds = [...model?.info?.meta?.filterIds];
+		}
 
 		info = {
 			...info,
@@ -602,6 +616,13 @@
 
 		<div class="my-2">
 			<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+		</div>
+
+		<div class="my-2">
+			<FiltersSelector
+				bind:selectedFilterIds={filterIds}
+				filters={$functions.filter((func) => func.type === 'filter')}
+			/>
 		</div>
 
 		<div class="my-1">
