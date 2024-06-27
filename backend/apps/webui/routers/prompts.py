@@ -8,7 +8,7 @@ import json
 
 from apps.webui.models.prompts import Prompts, PromptForm, PromptModel
 
-from utils.utils import get_current_user, get_admin_user
+from utils.utils import get_verified_user, get_admin_user
 from constants import ERROR_MESSAGES
 
 router = APIRouter()
@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[PromptModel])
-async def get_prompts(user=Depends(get_current_user)):
+async def get_prompts(user=Depends(get_verified_user)):
     return Prompts.get_prompts()
 
 
@@ -52,7 +52,7 @@ async def create_new_prompt(form_data: PromptForm, user=Depends(get_admin_user))
 
 
 @router.get("/command/{command}", response_model=Optional[PromptModel])
-async def get_prompt_by_command(command: str, user=Depends(get_current_user)):
+async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
     prompt = Prompts.get_prompt_by_command(f"/{command}")
 
     if prompt:

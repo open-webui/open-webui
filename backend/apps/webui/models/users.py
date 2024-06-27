@@ -28,6 +28,8 @@ class User(Model):
     settings = JSONField(null=True)
     info = JSONField(null=True)
 
+    oauth_sub = TextField(null=True, unique=True)
+
     class Meta:
         database = DB
 
@@ -52,6 +54,8 @@ class UserModel(BaseModel):
     api_key: Optional[str] = None
     settings: Optional[UserSettings] = None
     info: Optional[dict] = None
+
+    oauth_sub: Optional[str] = None
 
 
 ####################
@@ -83,6 +87,7 @@ class UsersTable:
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
+        oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         user = UserModel(
             **{
@@ -94,6 +99,7 @@ class UsersTable:
                 "last_active_at": int(time.time()),
                 "created_at": int(time.time()),
                 "updated_at": int(time.time()),
+                "oauth_sub": oauth_sub,
             }
         )
         result = User.create(**user.model_dump())
@@ -119,6 +125,13 @@ class UsersTable:
     def get_user_by_email(self, email: str) -> Optional[UserModel]:
         try:
             user = User.get(User.email == email)
+            return UserModel(**model_to_dict(user))
+        except:
+            return None
+
+    def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
+        try:
+            user = User.get(User.oauth_sub == sub)
             return UserModel(**model_to_dict(user))
         except:
             return None
@@ -167,6 +180,18 @@ class UsersTable:
     def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
             query = User.update(last_active_at=int(time.time())).where(User.id == id)
+            query.execute()
+
+            user = User.get(User.id == id)
+            return UserModel(**model_to_dict(user))
+        except:
+            return None
+
+    def update_user_oauth_sub_by_id(
+        self, id: str, oauth_sub: str
+    ) -> Optional[UserModel]:
+        try:
+            query = User.update(oauth_sub=oauth_sub).where(User.id == id)
             query.execute()
 
             user = User.get(User.id == id)

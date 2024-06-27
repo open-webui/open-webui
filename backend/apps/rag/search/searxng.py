@@ -1,9 +1,9 @@
 import logging
 import requests
 
-from typing import List
+from typing import List, Optional
 
-from apps.rag.search.main import SearchResult
+from apps.rag.search.main import SearchResult, get_filtered_results
 from config import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -11,7 +11,11 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_searxng(
-    query_url: str, query: str, count: int, **kwargs
+    query_url: str,
+    query: str,
+    count: int,
+    filter_list: Optional[List[str]] = None,
+    **kwargs,
 ) -> List[SearchResult]:
     """
     Search a SearXNG instance for a given query and return the results as a list of SearchResult objects.
@@ -78,6 +82,8 @@ def search_searxng(
     json_response = response.json()
     results = json_response.get("results", [])
     sorted_results = sorted(results, key=lambda x: x.get("score", 0), reverse=True)
+    if filter_list:
+        sorted_results = get_filtered_results(sorted_results, filter_list)
     return [
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("content")

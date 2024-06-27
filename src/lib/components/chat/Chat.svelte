@@ -127,6 +127,42 @@
 	}
 
 	onMount(async () => {
+		const onMessageHandler = async (event) => {
+			if (event.origin === window.origin) {
+				// Replace with your iframe's origin
+				console.log('Message received from iframe:', event.data);
+				if (event.data.type === 'input:prompt') {
+					console.log(event.data.text);
+
+					const inputElement = document.getElementById('chat-textarea');
+
+					if (inputElement) {
+						prompt = event.data.text;
+						inputElement.focus();
+					}
+				}
+
+				if (event.data.type === 'action:submit') {
+					console.log(event.data.text);
+
+					if (prompt !== '') {
+						await tick();
+						submitPrompt(prompt);
+					}
+				}
+
+				if (event.data.type === 'input:prompt:submit') {
+					console.log(event.data.text);
+
+					if (prompt !== '') {
+						await tick();
+						submitPrompt(event.data.text);
+					}
+				}
+			}
+		};
+		window.addEventListener('message', onMessageHandler);
+
 		if (!$chatId) {
 			chatId.subscribe(async (value) => {
 				if (!value) {
@@ -138,6 +174,10 @@
 				await goto('/');
 			}
 		}
+
+		return () => {
+			window.removeEventListener('message', onMessageHandler);
+		};
 	});
 
 	//////////////////////////
@@ -273,11 +313,14 @@
 				id: m.id,
 				role: m.role,
 				content: m.content,
+				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp
 			})),
 			chat_id: $chatId
 		}).catch((error) => {
-			console.error(error);
+			toast.error(error);
+			messages.at(-1).error = { content: error };
+
 			return null;
 		});
 
@@ -322,9 +365,16 @@
 		} else if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
 			console.log('wait');
+		} else if (messages.length != 0 && messages.at(-1).error) {
+			// Error in response
+			toast.error(
+				$i18n.t(
+					`Oops! There was an error in the previous response. Please try again or contact admin.`
+				)
+			);
 		} else if (
 			files.length > 0 &&
-			files.filter((file) => file.upload_status === false).length > 0
+			files.filter((file) => file.type !== 'image' && file.status !== 'processed').length > 0
 		) {
 			// Upload not done
 			toast.error(
@@ -479,14 +529,13 @@
 							});
 							if (res) {
 								if (res.documents[0].length > 0) {
-									userContext = res.documents.reduce((acc, doc, index) => {
-										const createdAtTimestamp = res.metadatas[index][0].created_at;
+									userContext = res.documents[0].reduce((acc, doc, index) => {
+										const createdAtTimestamp = res.metadatas[0][index].created_at;
 										const createdAtDate = new Date(createdAtTimestamp * 1000)
 											.toISOString()
 											.split('T')[0];
-										acc.push(`${index + 1}. [${createdAtDate}]. ${doc[0]}`);
-										return acc;
-									}, []);
+										return `${acc}${index + 1}. [${createdAtDate}]. ${doc}\n`;
+									}, '');
 								}
 
 								console.log(userContext);
@@ -542,7 +591,7 @@
 								: undefined
 						)}${
 							responseMessage?.userContext ?? null
-								? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
+								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 								: ''
 						}`
 				  }
@@ -585,23 +634,22 @@
 			}
 		});
 
-		let docs = [];
-
+		let files = [];
 		if (model?.info?.meta?.knowledge ?? false) {
-			docs = model.info.meta.knowledge;
+			files = model.info.meta.knowledge;
 		}
+		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
 
-		docs = [
-			...docs,
-			...messages
-				.filter((message) => message?.files ?? null)
-				.map((message) =>
-					message.files.filter((item) =>
-						['doc', 'collection', 'web_search_results'].includes(item.type)
-					)
-				)
-				.flat(1)
+		files = [
+			...files,
+			...(lastUserMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? []),
+			...(responseMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? [])
 		].filter(
+			// Remove duplicates
 			(item, index, array) =>
 				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
@@ -633,8 +681,8 @@
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
 			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-			docs: docs.length > 0 ? docs : undefined,
-			citations: docs.length > 0,
+			files: files.length > 0 ? files : undefined,
+			citations: files.length > 0 ? true : undefined,
 			chat_id: $chatId
 		});
 
@@ -830,23 +878,21 @@
 		let _response = null;
 		const responseMessage = history.messages[responseMessageId];
 
-		let docs = [];
-
+		let files = [];
 		if (model?.info?.meta?.knowledge ?? false) {
-			docs = model.info.meta.knowledge;
+			files = model.info.meta.knowledge;
 		}
-
-		docs = [
-			...docs,
-			...messages
-				.filter((message) => message?.files ?? null)
-				.map((message) =>
-					message.files.filter((item) =>
-						['doc', 'collection', 'web_search_results'].includes(item.type)
-					)
-				)
-				.flat(1)
+		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
+		files = [
+			...files,
+			...(lastUserMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? []),
+			...(responseMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? [])
 		].filter(
+			// Remove duplicates
 			(item, index, array) =>
 				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
@@ -886,7 +932,7 @@
 											: undefined
 									)}${
 										responseMessage?.userContext ?? null
-											? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
+											? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 											: ''
 									}`
 							  }
@@ -936,11 +982,12 @@
 					frequency_penalty: $settings?.params?.frequency_penalty ?? undefined,
 					max_tokens: $settings?.params?.max_tokens ?? undefined,
 					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-					docs: docs.length > 0 ? docs : undefined,
-					citations: docs.length > 0,
+					files: files.length > 0 ? files : undefined,
+					citations: files.length > 0 ? true : undefined,
+
 					chat_id: $chatId
 				},
-				`${OPENAI_API_BASE_URL}`
+				`${WEBUI_BASE_URL}/api`
 			);
 
 			// Wait until history/message have been updated
@@ -1212,6 +1259,7 @@
 
 	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
 		const responseMessage = history.messages[responseId];
+		const userMessage = history.messages[parentId];
 
 		responseMessage.statusHistory = [
 			{
@@ -1222,7 +1270,7 @@
 		];
 		messages = messages;
 
-		const prompt = history.messages[parentId].content;
+		const prompt = userMessage.content;
 		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt).catch(
 			(error) => {
 				console.log(error);
@@ -1322,6 +1370,19 @@
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} w-full max-w-full flex flex-col"
 	>
+		{#if $settings?.backgroundImageUrl ?? null}
+			<div
+				class="absolute {$showSidebar
+					? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
+					: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
+				style="background-image: url({$settings.backgroundImageUrl})  "
+			/>
+
+			<div
+				class="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-white to-white/85 dark:from-gray-900 dark:to-[#171717]/90 z-0"
+			/>
+		{/if}
+
 		<Navbar
 			{title}
 			bind:selectedModels
@@ -1333,7 +1394,9 @@
 
 		{#if $banners.length > 0 && messages.length === 0 && !$chatId && selectedModels.length <= 1}
 			<div
-				class="absolute top-[4.25rem] w-full {$showSidebar ? 'md:max-w-[calc(100%-260px)]' : ''}"
+				class="absolute top-[4.25rem] w-full {$showSidebar
+					? 'md:max-w-[calc(100%-260px)]'
+					: ''} z-20"
 			>
 				<div class=" flex flex-col gap-1 w-full">
 					{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
@@ -1358,9 +1421,9 @@
 			</div>
 		{/if}
 
-		<div class="flex flex-col flex-auto">
+		<div class="flex flex-col flex-auto z-10">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full"
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10"
 				id="messages-container"
 				bind:this={messagesContainerElement}
 				on:scroll={(e) => {
@@ -1399,6 +1462,7 @@
 					}
 					return a;
 				}, [])}
+				transparentBackground={$settings?.backgroundImageUrl ?? false}
 				{selectedModels}
 				{messages}
 				{submitPrompt}

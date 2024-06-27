@@ -5,6 +5,7 @@
 	import { toast } from 'svelte-sonner';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import { getBackendConfig } from '$lib/apis';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -72,7 +73,7 @@
 		});
 
 		if (res) {
-			toast.success('Audio settings updated successfully');
+			toast.success($i18n.t('Audio settings updated successfully'));
 
 			config.set(await getBackendConfig());
 		}
@@ -137,18 +138,13 @@
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="flex-1 w-full rounded-l-lg py-2 pl-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 								placeholder={$i18n.t('API Base URL')}
 								bind:value={STT_OPENAI_API_BASE_URL}
 								required
 							/>
 
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder={$i18n.t('API Key')}
-								bind:value={STT_OPENAI_API_KEY}
-								required
-							/>
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_OPENAI_API_KEY} />
 						</div>
 					</div>
 
@@ -198,7 +194,7 @@
 							}}
 						>
 							<option value="">{$i18n.t('Web API')}</option>
-							<option value="openai">{$i18n.t('Open AI')}</option>
+							<option value="openai">{$i18n.t('OpenAI')}</option>
 						</select>
 					</div>
 				</div>
@@ -207,18 +203,13 @@
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="flex-1 w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 								placeholder={$i18n.t('API Base URL')}
 								bind:value={TTS_OPENAI_API_BASE_URL}
 								required
 							/>
 
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder={$i18n.t('API Key')}
-								bind:value={TTS_OPENAI_API_KEY}
-								required
-							/>
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_OPENAI_API_KEY} />
 						</div>
 					</div>
 				{/if}

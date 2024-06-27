@@ -5,6 +5,7 @@
 	import { documents, models } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -19,7 +20,8 @@
 		'serper',
 		'serply',
 		'duckduckgo',
-		'tavily'
+		'tavily',
+		'jina'
 	];
 
 	let youtubeLanguage = 'en';
@@ -114,17 +116,10 @@
 									{$i18n.t('Google PSE API Key')}
 								</div>
 
-								<div class="flex w-full">
-									<div class="flex-1">
-										<input
-											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-											type="text"
-											placeholder={$i18n.t('Enter Google PSE API Key')}
-											bind:value={webConfig.search.google_pse_api_key}
-											autocomplete="off"
-										/>
-									</div>
-								</div>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Google PSE API Key')}
+									bind:value={webConfig.search.google_pse_api_key}
+								/>
 							</div>
 							<div class="mt-1.5">
 								<div class=" self-center text-xs font-medium mb-1">
@@ -149,17 +144,10 @@
 									{$i18n.t('Brave Search API Key')}
 								</div>
 
-								<div class="flex w-full">
-									<div class="flex-1">
-										<input
-											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-											type="text"
-											placeholder={$i18n.t('Enter Brave Search API Key')}
-											bind:value={webConfig.search.brave_search_api_key}
-											autocomplete="off"
-										/>
-									</div>
-								</div>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Brave Search API Key')}
+									bind:value={webConfig.search.brave_search_api_key}
+								/>
 							</div>
 						{:else if webConfig.search.engine === 'serpstack'}
 							<div>
@@ -167,17 +155,10 @@
 									{$i18n.t('Serpstack API Key')}
 								</div>
 
-								<div class="flex w-full">
-									<div class="flex-1">
-										<input
-											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-											type="text"
-											placeholder={$i18n.t('Enter Serpstack API Key')}
-											bind:value={webConfig.search.serpstack_api_key}
-											autocomplete="off"
-										/>
-									</div>
-								</div>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Serpstack API Key')}
+									bind:value={webConfig.search.serpstack_api_key}
+								/>
 							</div>
 						{:else if webConfig.search.engine === 'serper'}
 							<div>
@@ -185,17 +166,10 @@
 									{$i18n.t('Serper API Key')}
 								</div>
 
-								<div class="flex w-full">
-									<div class="flex-1">
-										<input
-											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-											type="text"
-											placeholder={$i18n.t('Enter Serper API Key')}
-											bind:value={webConfig.search.serper_api_key}
-											autocomplete="off"
-										/>
-									</div>
-								</div>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Serper API Key')}
+									bind:value={webConfig.search.serper_api_key}
+								/>
 							</div>
 						{:else if webConfig.search.engine === 'serply'}
 							<div>
@@ -203,17 +177,10 @@
 									{$i18n.t('Serply API Key')}
 								</div>
 
-								<div class="flex w-full">
-									<div class="flex-1">
-										<input
-											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-											type="text"
-											placeholder={$i18n.t('Enter Serply API Key')}
-											bind:value={webConfig.search.serply_api_key}
-											autocomplete="off"
-										/>
-									</div>
-								</div>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Serply API Key')}
+									bind:value={webConfig.search.serply_api_key}
+								/>
 							</div>
 						{:else if webConfig.search.engine === 'tavily'}
 							<div>
@@ -221,17 +188,10 @@
 									{$i18n.t('Tavily API Key')}
 								</div>
 
-								<div class="flex w-full">
-									<div class="flex-1">
-										<input
-											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-											type="text"
-											placeholder={$i18n.t('Enter Tavily API Key')}
-											bind:value={webConfig.search.tavily_api_key}
-											autocomplete="off"
-										/>
-									</div>
-								</div>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Tavily API Key')}
+									bind:value={webConfig.search.tavily_api_key}
+								/>
 							</div>
 						{/if}
 					</div>

@@ -101,6 +101,7 @@ async def update_memory_by_id(
 
 class QueryMemoryForm(BaseModel):
     content: str
+    k: Optional[int] = 1
 
 
 @router.post("/query")
@@ -112,7 +113,7 @@ async def query_memory(
 
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=1,  # how many results to return
+        n_results=form_data.k,  # how many results to return
     )
 
     return results
