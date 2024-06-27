@@ -13,9 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **📁 Files API**: Compatible with OpenAI, this feature allows for custom Retrieval-Augmented Generation (RAG) in conjunction with the Filter Function. More examples will be shared on our community platform and official documentation website.
 - **🛠️ Tool Enhancements**: Tools now support citations and "Valves". Documentation will be available shortly.
 - **🔗 Iframe Support via Files API**: Enables rendering HTML directly into your chat interface using functions and tools. Use cases include playing games like DOOM and Snake, displaying a weather applet, and implementing Anthropic "artifacts"-like features. Stay tuned for updates on our community platform and documentation.
-- **🔑 AUTOMATIC1111_API_AUTH Support**: Support for automated API authentication.
+- **🔒 Experimental OAuth Support**: New experimental OAuth support. Check our documentation for more details.
+- **🖼️ Custom Background Support**: Set a custom background from Settings > Interface to personalize your experience.
+- **🔑 AUTOMATIC1111_API_AUTH Support**: Enhanced security for the AUTOMATIC1111 API.
 - **🎨 Code Highlight Optimization**: Improved code highlighting features.
-- **🔒 Experimental OAuth Support**: Check our docs for more details on this new feature.
 - **🎙️ Voice Interruption Feature**: Reintroduced and now toggleable from Settings > Interface.
 - **💤 Wakelock API**: Now in use to prevent screen dimming during important tasks.
 - **🔐 API Key Privacy**: All API keys are now hidden by default for better security.
