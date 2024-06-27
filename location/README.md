@@ -7,7 +7,7 @@ The "location" folder is our area to customize.
 
 TO DO: For Docker installs, document if it's possible to edit our [Projects repo fork of open-webui](https://github.com/modelearth/projects).
 
-Or do we use these commands (from [Getting Started](https://docs.openwebui.com/getting-started/))
+Or do we have to avoid Docker and instead install using these commands when editing locally (from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/))
 
 	git clone https://github.com/open-webui/open-webui.git
 	cd open-webui/
