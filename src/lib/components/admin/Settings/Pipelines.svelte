@@ -60,13 +60,13 @@
 			});
 
 			if (res) {
-				toast.success('Valves updated successfully');
+				toast.success($i18n.t('Valves updated successfully'));
 				setPipelines();
 				models.set(await getModels(localStorage.token));
 				saveHandler();
 			}
 		} else {
-			toast.error('No valves to update');
+			toast.error($i18n.t('No valves to update'));
 		}
 	};
 
@@ -122,7 +122,7 @@
 		});
 
 		if (res) {
-			toast.success('Pipeline downloaded successfully');
+			toast.success($i18n.t('Pipeline downloaded successfully'));
 			setPipelines();
 			models.set(await getModels(localStorage.token));
 		}
@@ -147,12 +147,12 @@
 			);
 
 			if (res) {
-				toast.success('Pipeline downloaded successfully');
+				toast.success($i18n.t('Pipeline downloaded successfully'));
 				setPipelines();
 				models.set(await getModels(localStorage.token));
 			}
 		} else {
-			toast.error('No file selected');
+			toast.error($i18n.t('No file selected'));
 		}
 
 		pipelineFiles = null;
@@ -176,7 +176,7 @@
 		});
 
 		if (res) {
-			toast.success('Pipeline deleted successfully');
+			toast.success($i18n.t('Pipeline deleted successfully'));
 			setPipelines();
 			models.set(await getModels(localStorage.token));
 		}
@@ -509,7 +509,7 @@
 					</div>
 				{/if}
 			{:else}
-				<div>Pipelines Not Detected</div>
+				<div>{$i18n.t('Pipelines Not Detected')}</div>
 			{/if}
 		{:else}
 			<div class="flex justify-center h-full">
@@ -525,7 +525,7 @@
 			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			type="submit"
 		>
-			Save
+			{$i18n.t('Save')}
 		</button>
 	</div>
 </form>

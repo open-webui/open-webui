@@ -325,7 +325,7 @@ def transcribe(
             headers = {"Authorization": f"Bearer {app.state.config.STT_OPENAI_API_KEY}"}
 
             files = {"file": (filename, open(file_path, "rb"))}
-            data = {"model": "whisper-1"}
+            data = {"model": app.state.config.STT_MODEL}
 
             print(files, data)
 

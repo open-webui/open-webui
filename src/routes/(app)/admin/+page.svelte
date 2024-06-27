@@ -198,6 +198,18 @@
 					<th
 						scope="col"
 						class="px-3 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('oauth_sub')}
+					>
+						{$i18n.t('OAuth ID')}
+						{#if sortKey === 'oauth_sub'}
+							{sortOrder === 'asc' ? '▲' : '▼'}
+						{:else}
+							<span class="invisible">▲</span>
+						{/if}
+					</th>
+					<th
+						scope="col"
+						class="px-3 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('last_active_at')}
 					>
 						{$i18n.t('Last Active')}
@@ -282,6 +294,8 @@
 							</div>
 						</td>
 						<td class=" px-3 py-2"> {user.email} </td>
+
+						<td class=" px-3 py-2"> {user.oauth_sub ?? ''} </td>
 
 						<td class=" px-3 py-2">
 							{dayjs(user.last_active_at * 1000).fromNow()}

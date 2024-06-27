@@ -32,7 +32,9 @@
 			saveSettings({ notificationEnabled: notificationEnabled });
 		} else {
 			toast.error(
-				'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
+				$i18n.t(
+					'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
+				)
 			);
 		}
 	};

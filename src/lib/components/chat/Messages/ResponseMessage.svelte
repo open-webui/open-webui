@@ -15,12 +15,13 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings } from '$lib/stores';
+	import { config, models, settings, user } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		approximateToHumanReadable,
 		extractSentences,
+		replaceTokens,
 		revertSanitizedResponseContent,
 		sanitizeResponseContent
 	} from '$lib/utils';
@@ -74,7 +75,9 @@
 
 	let selectedCitation = null;
 
-	$: tokens = marked.lexer(sanitizeResponseContent(message?.content));
+	$: tokens = marked.lexer(
+		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
+	);
 
 	const renderer = new marked.Renderer();
 
@@ -188,10 +191,6 @@
 
 				if (Object.keys(sentencesAudio).length - 1 === idx) {
 					speaking = null;
-
-					if ($settings.conversationMode) {
-						document.getElementById('voice-input-button')?.click();
-					}
 				}
 
 				res(e);
@@ -235,35 +234,40 @@
 
 					console.log(sentences);
 
-					sentencesAudio = sentences.reduce((a, e, i, arr) => {
-						a[i] = null;
-						return a;
-					}, {});
+					if (sentences.length > 0) {
+						sentencesAudio = sentences.reduce((a, e, i, arr) => {
+							a[i] = null;
+							return a;
+						}, {});
 
-					let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+						let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
 
-					for (const [idx, sentence] of sentences.entries()) {
-						const res = await synthesizeOpenAISpeech(
-							localStorage.token,
-							$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
-							sentence
-						).catch((error) => {
-							toast.error(error);
+						for (const [idx, sentence] of sentences.entries()) {
+							const res = await synthesizeOpenAISpeech(
+								localStorage.token,
+								$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
+								sentence
+							).catch((error) => {
+								toast.error(error);
 
-							speaking = null;
-							loadingSpeech = false;
+								speaking = null;
+								loadingSpeech = false;
 
-							return null;
-						});
+								return null;
+							});
 
-						if (res) {
-							const blob = await res.blob();
-							const blobUrl = URL.createObjectURL(blob);
-							const audio = new Audio(blobUrl);
-							sentencesAudio[idx] = audio;
-							loadingSpeech = false;
-							lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+							if (res) {
+								const blob = await res.blob();
+								const blobUrl = URL.createObjectURL(blob);
+								const audio = new Audio(blobUrl);
+								sentencesAudio[idx] = audio;
+								loadingSpeech = false;
+								lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
+							}
 						}
+					} else {
+						speaking = null;
+						loadingSpeech = false;
 					}
 				} else {
 					let voices = [];
@@ -302,7 +306,7 @@
 					}, 100);
 				}
 			} else {
-				toast.error('No content to speak');
+				toast.error($i18n.t('No content to speak'));
 			}
 		}
 	};
@@ -459,6 +463,18 @@
 								on:input={(e) => {
 									e.target.style.height = '';
 									e.target.style.height = `${e.target.scrollHeight}px`;
+								}}
+								on:keydown={(e) => {
+									if (e.key === 'Escape') {
+										document.getElementById('close-edit-message-button')?.click();
+									}
+
+									const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
+									const isEnterPressed = e.key === 'Enter';
+
+									if (isCmdOrCtrlPressed && isEnterPressed) {
+										document.getElementById('save-edit-message-button')?.click();
+									}
 								}}
 							/>
 

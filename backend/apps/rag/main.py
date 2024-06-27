@@ -55,6 +55,9 @@ from apps.webui.models.documents import (
     DocumentForm,
     DocumentResponse,
 )
+from apps.webui.models.files import (
+    Files,
+)
 
 from apps.rag.utils import (
     get_model_path,
@@ -74,6 +77,7 @@ from apps.rag.search.serpstack import search_serpstack
 from apps.rag.search.serply import search_serply
 from apps.rag.search.duckduckgo import search_duckduckgo
 from apps.rag.search.tavily import search_tavily
+from apps.rag.search.jina_search import search_jina
 
 from utils.misc import (
     calculate_sha256,
@@ -81,7 +85,7 @@ from utils.misc import (
     sanitize_filename,
     extract_folders_after_data_docs,
 )
-from utils.utils import get_current_user, get_admin_user
+from utils.utils import get_verified_user, get_admin_user
 
 from config import (
     AppConfig,
@@ -112,6 +116,7 @@ from config import (
     YOUTUBE_LOADER_LANGUAGE,
     ENABLE_RAG_WEB_SEARCH,
     RAG_WEB_SEARCH_ENGINE,
+    RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
     SEARXNG_QUERY_URL,
     GOOGLE_PSE_API_KEY,
     GOOGLE_PSE_ENGINE_ID,
@@ -165,6 +170,7 @@ app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
+app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
 
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
@@ -523,7 +529,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
 
 
 @app.get("/template")
-async def get_rag_template(user=Depends(get_current_user)):
+async def get_rag_template(user=Depends(get_verified_user)):
     return {
         "status": True,
         "template": app.state.config.RAG_TEMPLATE,
@@ -580,7 +586,7 @@ class QueryDocForm(BaseModel):
 @app.post("/query/doc")
 def query_doc_handler(
     form_data: QueryDocForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     try:
         if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
@@ -620,7 +626,7 @@ class QueryCollectionsForm(BaseModel):
 @app.post("/query/collection")
 def query_collection_handler(
     form_data: QueryCollectionsForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     try:
         if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
@@ -651,7 +657,7 @@ def query_collection_handler(
 
 
 @app.post("/youtube")
-def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
+def store_youtube_video(form_data: UrlForm, user=Depends(get_verified_user)):
     try:
         loader = YoutubeLoader.from_youtube_url(
             form_data.url,
@@ -680,7 +686,7 @@ def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
 
 
 @app.post("/web")
-def store_web(form_data: UrlForm, user=Depends(get_current_user)):
+def store_web(form_data: UrlForm, user=Depends(get_verified_user)):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
     try:
         loader = get_web_loader(
@@ -775,6 +781,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SEARXNG_QUERY_URL,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
@@ -788,6 +795,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.GOOGLE_PSE_ENGINE_ID,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception(
@@ -799,6 +807,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.BRAVE_SEARCH_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
@@ -808,6 +817,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPSTACK_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
                 https_enabled=app.state.config.SERPSTACK_HTTPS,
             )
         else:
@@ -818,6 +828,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPER_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SERPER_API_KEY found in environment variables")
@@ -827,11 +838,16 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPLY_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
     elif engine == "duckduckgo":
-        return search_duckduckgo(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
+        return search_duckduckgo(
+            query,
+            app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     elif engine == "tavily":
         if app.state.config.TAVILY_API_KEY:
             return search_tavily(
@@ -841,12 +857,14 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No TAVILY_API_KEY found in environment variables")
+    elif engine == "jina":
+        return search_jina(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
     else:
         raise Exception("No search engine API key found in environment variables")
 
 
 @app.post("/web/search")
-def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
+def store_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
     try:
         logging.info(
             f"trying to web search with {app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
@@ -1066,7 +1084,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
 def store_doc(
     collection_name: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
 
@@ -1119,6 +1137,60 @@ def store_doc(
             )
 
 
+class ProcessDocForm(BaseModel):
+    file_id: str
+    collection_name: Optional[str] = None
+
+
+@app.post("/process/doc")
+def process_doc(
+    form_data: ProcessDocForm,
+    user=Depends(get_verified_user),
+):
+    try:
+        file = Files.get_file_by_id(form_data.file_id)
+        file_path = file.meta.get("path", f"{UPLOAD_DIR}/{file.filename}")
+
+        f = open(file_path, "rb")
+
+        collection_name = form_data.collection_name
+        if collection_name == None:
+            collection_name = calculate_sha256(f)[:63]
+        f.close()
+
+        loader, known_type = get_loader(
+            file.filename, file.meta.get("content_type"), file_path
+        )
+        data = loader.load()
+
+        try:
+            result = store_data_in_vector_db(data, collection_name)
+
+            if result:
+                return {
+                    "status": True,
+                    "collection_name": collection_name,
+                    "known_type": known_type,
+                }
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=e,
+            )
+    except Exception as e:
+        log.exception(e)
+        if "No pandoc was found" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
+
+
 class TextRAGForm(BaseModel):
     name: str
     content: str
@@ -1128,7 +1200,7 @@ class TextRAGForm(BaseModel):
 @app.post("/text")
 def store_text(
     form_data: TextRAGForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
 
     collection_name = form_data.collection_name

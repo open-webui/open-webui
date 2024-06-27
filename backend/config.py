@@ -168,6 +168,12 @@ CHANGELOG = changelog_json
 
 
 ####################################
+# SAFE_MODE
+####################################
+
+SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
+
+####################################
 # WEBUI_BUILD_HASH
 ####################################
 
@@ -300,6 +306,135 @@ JWT_EXPIRES_IN = PersistentConfig(
 )
 
 ####################################
+# OAuth config
+####################################
+
+ENABLE_OAUTH_SIGNUP = PersistentConfig(
+    "ENABLE_OAUTH_SIGNUP",
+    "oauth.enable_signup",
+    os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true",
+)
+
+OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
+    "OAUTH_MERGE_ACCOUNTS_BY_EMAIL",
+    "oauth.merge_accounts_by_email",
+    os.environ.get("OAUTH_MERGE_ACCOUNTS_BY_EMAIL", "False").lower() == "true",
+)
+
+OAUTH_PROVIDERS = {}
+
+GOOGLE_CLIENT_ID = PersistentConfig(
+    "GOOGLE_CLIENT_ID",
+    "oauth.google.client_id",
+    os.environ.get("GOOGLE_CLIENT_ID", ""),
+)
+
+GOOGLE_CLIENT_SECRET = PersistentConfig(
+    "GOOGLE_CLIENT_SECRET",
+    "oauth.google.client_secret",
+    os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+)
+
+GOOGLE_OAUTH_SCOPE = PersistentConfig(
+    "GOOGLE_OAUTH_SCOPE",
+    "oauth.google.scope",
+    os.environ.get("GOOGLE_OAUTH_SCOPE", "openid email profile"),
+)
+
+MICROSOFT_CLIENT_ID = PersistentConfig(
+    "MICROSOFT_CLIENT_ID",
+    "oauth.microsoft.client_id",
+    os.environ.get("MICROSOFT_CLIENT_ID", ""),
+)
+
+MICROSOFT_CLIENT_SECRET = PersistentConfig(
+    "MICROSOFT_CLIENT_SECRET",
+    "oauth.microsoft.client_secret",
+    os.environ.get("MICROSOFT_CLIENT_SECRET", ""),
+)
+
+MICROSOFT_CLIENT_TENANT_ID = PersistentConfig(
+    "MICROSOFT_CLIENT_TENANT_ID",
+    "oauth.microsoft.tenant_id",
+    os.environ.get("MICROSOFT_CLIENT_TENANT_ID", ""),
+)
+
+MICROSOFT_OAUTH_SCOPE = PersistentConfig(
+    "MICROSOFT_OAUTH_SCOPE",
+    "oauth.microsoft.scope",
+    os.environ.get("MICROSOFT_OAUTH_SCOPE", "openid email profile"),
+)
+
+OAUTH_CLIENT_ID = PersistentConfig(
+    "OAUTH_CLIENT_ID",
+    "oauth.oidc.client_id",
+    os.environ.get("OAUTH_CLIENT_ID", ""),
+)
+
+OAUTH_CLIENT_SECRET = PersistentConfig(
+    "OAUTH_CLIENT_SECRET",
+    "oauth.oidc.client_secret",
+    os.environ.get("OAUTH_CLIENT_SECRET", ""),
+)
+
+OPENID_PROVIDER_URL = PersistentConfig(
+    "OPENID_PROVIDER_URL",
+    "oauth.oidc.provider_url",
+    os.environ.get("OPENID_PROVIDER_URL", ""),
+)
+
+OAUTH_SCOPES = PersistentConfig(
+    "OAUTH_SCOPES",
+    "oauth.oidc.scopes",
+    os.environ.get("OAUTH_SCOPES", "openid email profile"),
+)
+
+OAUTH_PROVIDER_NAME = PersistentConfig(
+    "OAUTH_PROVIDER_NAME",
+    "oauth.oidc.provider_name",
+    os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
+)
+
+
+def load_oauth_providers():
+    OAUTH_PROVIDERS.clear()
+    if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
+        OAUTH_PROVIDERS["google"] = {
+            "client_id": GOOGLE_CLIENT_ID.value,
+            "client_secret": GOOGLE_CLIENT_SECRET.value,
+            "server_metadata_url": "https://accounts.google.com/.well-known/openid-configuration",
+            "scope": GOOGLE_OAUTH_SCOPE.value,
+        }
+
+    if (
+        MICROSOFT_CLIENT_ID.value
+        and MICROSOFT_CLIENT_SECRET.value
+        and MICROSOFT_CLIENT_TENANT_ID.value
+    ):
+        OAUTH_PROVIDERS["microsoft"] = {
+            "client_id": MICROSOFT_CLIENT_ID.value,
+            "client_secret": MICROSOFT_CLIENT_SECRET.value,
+            "server_metadata_url": f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration",
+            "scope": MICROSOFT_OAUTH_SCOPE.value,
+        }
+
+    if (
+        OAUTH_CLIENT_ID.value
+        and OAUTH_CLIENT_SECRET.value
+        and OPENID_PROVIDER_URL.value
+    ):
+        OAUTH_PROVIDERS["oidc"] = {
+            "client_id": OAUTH_CLIENT_ID.value,
+            "client_secret": OAUTH_CLIENT_SECRET.value,
+            "server_metadata_url": OPENID_PROVIDER_URL.value,
+            "scope": OAUTH_SCOPES.value,
+            "name": OAUTH_PROVIDER_NAME.value,
+        }
+
+
+load_oauth_providers()
+
+####################################
 # Static DIR
 ####################################
 
@@ -378,6 +513,14 @@ Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
 
 
 ####################################
+# Functions DIR
+####################################
+
+FUNCTIONS_DIR = os.getenv("FUNCTIONS_DIR", f"{DATA_DIR}/functions")
+Path(FUNCTIONS_DIR).mkdir(parents=True, exist_ok=True)
+
+
+####################################
 # LITELLM_CONFIG
 ####################################
 
@@ -426,12 +569,15 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
-AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "300")
+AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
 if AIOHTTP_CLIENT_TIMEOUT == "":
     AIOHTTP_CLIENT_TIMEOUT = None
 else:
-    AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
+    try:
+        AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
+    except:
+        AIOHTTP_CLIENT_TIMEOUT = 300
 
 
 K8S_FLAG = os.environ.get("K8S_FLAG", "")
@@ -719,6 +865,16 @@ WEBUI_SECRET_KEY = os.environ.get(
     ),  # DEPRECATED: remove at next major version
 )
 
+WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get(
+    "WEBUI_SESSION_COOKIE_SAME_SITE",
+    os.environ.get("WEBUI_SESSION_COOKIE_SAME_SITE", "lax"),
+)
+
+WEBUI_SESSION_COOKIE_SECURE = os.environ.get(
+    "WEBUI_SESSION_COOKIE_SECURE",
+    os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false").lower() == "true",
+)
+
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 
@@ -903,6 +1059,18 @@ RAG_WEB_SEARCH_ENGINE = PersistentConfig(
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
 )
 
+# You can provide a list of your own websites to filter after performing a web search.
+# This ensures the highest level of safety and reliability of the information sources.
+RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
+    "RAG_WEB_SEARCH_DOMAIN_FILTER_LIST",
+    "rag.rag.web.search.domain.filter_list",
+    [
+        # "wikipedia.com",
+        # "wikimedia.org",
+        # "wikidata.org",
+    ],
+)
+
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",
     "rag.web.search.searxng_query_url",
@@ -1000,6 +1168,11 @@ AUTOMATIC1111_BASE_URL = PersistentConfig(
     "AUTOMATIC1111_BASE_URL",
     "image_generation.automatic1111.base_url",
     os.getenv("AUTOMATIC1111_BASE_URL", ""),
+)
+AUTOMATIC1111_API_AUTH = PersistentConfig(
+    "AUTOMATIC1111_API_AUTH",
+    "image_generation.automatic1111.api_auth",
+    os.getenv("AUTOMATIC1111_API_AUTH", ""),
 )
 
 COMFYUI_BASE_URL = PersistentConfig(

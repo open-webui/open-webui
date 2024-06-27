@@ -153,7 +153,7 @@
 							type="button"
 							on:click={() => {
 								tab = '';
-							}}>Form</button
+							}}>{$i18n.t('Form')}</button
 						>
 
 						<button
@@ -161,7 +161,7 @@
 							type="button"
 							on:click={() => {
 								tab = 'import';
-							}}>CSV Import</button
+							}}>{$i18n.t('CSV Import')}</button
 						>
 					</div>
 					<div class="px-1">
@@ -176,9 +176,9 @@
 										placeholder={$i18n.t('Enter Your Role')}
 										required
 									>
-										<option value="pending"> pending </option>
-										<option value="user"> user </option>
-										<option value="admin"> admin </option>
+										<option value="pending"> {$i18n.t('pending')} </option>
+										<option value="user"> {$i18n.t('user')} </option>
+										<option value="admin"> {$i18n.t('admin')} </option>
 									</select>
 								</div>
 							</div>
@@ -262,7 +262,7 @@
 										class="underline dark:text-gray-200"
 										href="{WEBUI_BASE_URL}/static/user-import.csv"
 									>
-										Click here to download user import template file.
+										{$i18n.t('Click here to download user import template file.')}
 									</a>
 								</div>
 							</div>

@@ -1,12 +1,23 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
+import { WEBUI_BASE_URL } from '$lib/constants';
 
 //////////////////////////
 // Helper functions
 //////////////////////////
 
 export const sanitizeResponseContent = (content: string) => {
-	return content
+	// First, temporarily replace valid <video> tags with a placeholder
+	const videoTagRegex = /<video\s+src="([^"]+)"\s+controls><\/video>/gi;
+	const placeholders: string[] = [];
+	content = content.replace(videoTagRegex, (_, src) => {
+		const placeholder = `{{VIDEO_${placeholders.length}}}`;
+		placeholders.push(`<video src="${src}" controls></video>`);
+		return placeholder;
+	});
+
+	// Now apply the sanitization to the rest of the content
+	content = content
 		.replace(/<\|[a-z]*$/, '')
 		.replace(/<\|[a-z]+\|$/, '')
 		.replace(/<$/, '')
@@ -14,6 +25,44 @@ export const sanitizeResponseContent = (content: string) => {
 		.replaceAll('<', '&lt;')
 		.replaceAll('>', '&gt;')
 		.trim();
+
+	// Replace placeholders with original <video> tags
+	placeholders.forEach((placeholder, index) => {
+		content = content.replace(`{{VIDEO_${index}}}`, placeholder);
+	});
+
+	return content.trim();
+};
+
+export const replaceTokens = (content, char, user) => {
+	const charToken = /{{char}}/gi;
+	const userToken = /{{user}}/gi;
+	const videoIdToken = /{{VIDEO_FILE_ID_([a-f0-9-]+)}}/gi; // Regex to capture the video ID
+	const htmlIdToken = /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi; // Regex to capture the HTML ID
+
+	// Replace {{char}} if char is provided
+	if (char !== undefined && char !== null) {
+		content = content.replace(charToken, char);
+	}
+
+	// Replace {{user}} if user is provided
+	if (user !== undefined && user !== null) {
+		content = content.replace(userToken, user);
+	}
+
+	// Replace video ID tags with corresponding <video> elements
+	content = content.replace(videoIdToken, (match, fileId) => {
+		const videoUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`;
+		return `<video src="${videoUrl}" controls></video>`;
+	});
+
+	// Replace HTML ID tags with corresponding HTML content
+	content = content.replace(htmlIdToken, (match, fileId) => {
+		const htmlUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`;
+		return `<iframe src="${htmlUrl}" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`;
+	});
+
+	return content;
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
@@ -457,13 +506,36 @@ export const removeEmojis = (str) => {
 	return str.replace(emojiRegex, '');
 };
 
+export const removeFormattings = (str) => {
+	return str.replace(/(\*)(.*?)\1/g, '').replace(/(```)(.*?)\1/gs, '');
+};
+
 export const extractSentences = (text) => {
-	// Split the paragraph into sentences based on common punctuation marks
-	const sentences = text.split(/(?<=[.!?])\s+/);
+	// This regular expression matches code blocks marked by triple backticks
+	const codeBlockRegex = /```[\s\S]*?```/g;
+
+	let codeBlocks = [];
+	let index = 0;
+
+	// Temporarily replace code blocks with placeholders and store the blocks separately
+	text = text.replace(codeBlockRegex, (match) => {
+		let placeholder = `\u0000${index}\u0000`; // Use a unique placeholder
+		codeBlocks[index++] = match;
+		return placeholder;
+	});
+
+	// Split the modified text into sentences based on common punctuation marks, avoiding these blocks
+	let sentences = text.split(/(?<=[.!?])\s+/);
+
+	// Restore code blocks and process sentences
+	sentences = sentences.map((sentence) => {
+		// Check if the sentence includes a placeholder for a code block
+		return sentence.replace(/\u0000(\d+)\u0000/g, (_, idx) => codeBlocks[idx]);
+	});
 
 	return sentences
-		.map((sentence) => removeEmojis(sentence.trim()))
-		.filter((sentence) => sentence !== '');
+		.map((sentence) => removeFormattings(removeEmojis(sentence.trim())))
+		.filter((sentence) => sentence);
 };
 
 export const extractSentencesForAudio = (text) => {
@@ -630,4 +702,47 @@ export const getTimeRange = (timestamp) => {
 	} else {
 		return date.getFullYear().toString();
 	}
+};
+
+/**
+ * Extract frontmatter as a dictionary from the specified content string.
+ * @param content {string} - The content string with potential frontmatter.
+ * @returns {Object} - The extracted frontmatter as a dictionary.
+ */
+export const extractFrontmatter = (content) => {
+	const frontmatter = {};
+	let frontmatterStarted = false;
+	let frontmatterEnded = false;
+	const frontmatterPattern = /^\s*([a-z_]+):\s*(.*)\s*$/i;
+
+	// Split content into lines
+	const lines = content.split('\n');
+
+	// Check if the content starts with triple quotes
+	if (lines[0].trim() !== '"""') {
+		return {};
+	}
+
+	frontmatterStarted = true;
+
+	for (let i = 1; i < lines.length; i++) {
+		const line = lines[i];
+
+		if (line.includes('"""')) {
+			if (frontmatterStarted) {
+				frontmatterEnded = true;
+				break;
+			}
+		}
+
+		if (frontmatterStarted && !frontmatterEnded) {
+			const match = frontmatterPattern.exec(line);
+			if (match) {
+				const [, key, value] = match;
+				frontmatter[key.trim()] = value.trim();
+			}
+		}
+	}
+
+	return frontmatter;
 };

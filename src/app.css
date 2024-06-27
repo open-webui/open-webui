@@ -32,6 +32,10 @@ math {
 	@apply underline;
 }
 
+iframe {
+	@apply rounded-lg;
+}
+
 ol > li {
 	counter-increment: list-number;
 	display: block;

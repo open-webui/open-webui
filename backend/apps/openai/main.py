@@ -16,10 +16,12 @@ from apps.webui.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
     decode_token,
-    get_current_user,
+    get_verified_user,
     get_verified_user,
     get_admin_user,
 )
+from utils.task import prompt_template
+
 from config import (
     SRC_LOG_LEVELS,
     ENABLE_OPENAI_API,
@@ -294,7 +296,7 @@ async def get_all_models(raw: bool = False):
 
 @app.get("/models")
 @app.get("/models/{url_idx}")
-async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_user)):
+async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_user)):
     if url_idx == None:
         models = await get_all_models()
         if app.state.config.ENABLE_MODEL_FILTER:
@@ -392,22 +394,34 @@ async def generate_chat_completion(
                     else None
                 )
 
-        if model_info.params.get("system", None):
+        system = model_info.params.get("system", None)
+        if system:
+            system = prompt_template(
+                system,
+                **(
+                    {
+                        "user_name": user.name,
+                        "user_location": (
+                            user.info.get("location") if user.info else None
+                        ),
+                    }
+                    if user
+                    else {}
+                ),
+            )
             # Check if the payload already has a system message
             # If not, add a system message to the payload
             if payload.get("messages"):
                 for message in payload["messages"]:
                     if message.get("role") == "system":
-                        message["content"] = (
-                            model_info.params.get("system", None) + message["content"]
-                        )
+                        message["content"] = system + message["content"]
                         break
                 else:
                     payload["messages"].insert(
                         0,
                         {
                             "role": "system",
-                            "content": model_info.params.get("system", None),
+                            "content": system,
                         },
                     )
 
@@ -418,7 +432,12 @@ async def generate_chat_completion(
     idx = model["urlIdx"]
 
     if "pipeline" in model and model.get("pipeline"):
-        payload["user"] = {"name": user.name, "id": user.id}
+        payload["user"] = {
+            "name": user.name,
+            "id": user.id,
+            "email": user.email,
+            "role": user.role,
+        }
 
     # Check if the model is "gpt-4-vision-preview" and set "max_tokens" to 4000
     # This is a workaround until OpenAI fixes the issue with this model
