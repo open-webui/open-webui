@@ -7,6 +7,25 @@ The "location" folder is our area to customize.
 
 TO DO: For Docker installs, document if it's possible to edit our [Projects repo fork of open-webui](https://github.com/modelearth/projects).
 
+Or do we use these commands (from [Getting Started](https://docs.openwebui.com/getting-started/))
+
+	git clone https://github.com/open-webui/open-webui.git
+	cd open-webui/
+
+	# Copying required .env file
+	cp -RPp .env.example .env
+
+	# Building Frontend Using Node
+	npm i
+	npm run build
+
+	# Serving Frontend with the Backend
+	cd ./backend
+	pip install -r requirements.txt -U
+	bash start.sh
+
+You should have Open WebUI up and running at http://localhost:8080/. Enjoy!
+
 TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [superthermal evaporation](../../evaporation-kits/) page and related articles.
 
 TO DO: Create an example of loading a Python util file that is also loaded by our [RealityStream](../../RealityStream/) app.
