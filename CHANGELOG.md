@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **⏲️ AIOHTTP_CLIENT_TIMEOUT**: Now set to `None` by default for improved configuration flexibility.
+- **⏲️ AIOHTTP_CLIENT_TIMEOUT**: Now set to 'None' by default for improved configuration flexibility.
 - **📞 Voice Call Enhancements**: Improved by skipping code blocks and expressions during calls.
 - **🚫 Error Message Handling**: Disabled the continuation of operations with error messages.
 - **🗂️ Playground Relocation**: Moved the Playground from the workspace to the user menu for better user experience.
