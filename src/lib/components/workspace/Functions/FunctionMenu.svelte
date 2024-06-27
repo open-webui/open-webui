@@ -5,21 +5,24 @@
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
-	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Tags from '$lib/components/chat/Tags.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
-	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 
 	const i18n = getContext('i18n');
+
+	export let func;
 
 	export let editHandler: Function;
 	export let shareHandler: Function;
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
 	export let deleteHandler: Function;
+	export let toggleGlobalHandler: Function;
+
 	export let onClose: Function;
 
 	let show = false;
@@ -45,6 +48,24 @@
 			align="start"
 			transition={flyAndScale}
 		>
+			{#if func.type === 'filter'}
+				<div
+					class="flex gap-2 justify-between items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				>
+					<div class="flex gap-2 items-center">
+						<GlobeAlt />
+
+						<div class="flex items-center">{$i18n.t('Global')}</div>
+					</div>
+
+					<div>
+						<Switch on:change={toggleGlobalHandler} bind:state={func.is_global} />
+					</div>
+				</div>
+
+				<hr class="border-gray-100 dark:border-gray-800 my-1" />
+			{/if}
+
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
 				on:click={() => {

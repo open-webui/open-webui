@@ -30,6 +30,7 @@ class Function(Model):
     meta = JSONField()
     valves = JSONField()
     is_active = BooleanField(default=False)
+    is_global = BooleanField(default=False)
     updated_at = BigIntegerField()
     created_at = BigIntegerField()
 
@@ -50,6 +51,7 @@ class FunctionModel(BaseModel):
     content: str
     meta: FunctionMeta
     is_active: bool = False
+    is_global: bool = False
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -66,6 +68,7 @@ class FunctionResponse(BaseModel):
     name: str
     meta: FunctionMeta
     is_active: bool
+    is_global: bool
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -143,6 +146,16 @@ class FunctionsTable:
                 FunctionModel(**model_to_dict(function))
                 for function in Function.select().where(Function.type == type)
             ]
+
+    def get_global_filter_functions(self) -> List[FunctionModel]:
+        return [
+            FunctionModel(**model_to_dict(function))
+            for function in Function.select().where(
+                Function.type == "filter",
+                Function.is_active == True,
+                Function.is_global == True,
+            )
+        ]
 
     def get_function_valves_by_id(self, id: str) -> Optional[dict]:
         try:

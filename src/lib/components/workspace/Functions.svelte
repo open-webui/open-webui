@@ -14,7 +14,8 @@
 		exportFunctions,
 		getFunctionById,
 		getFunctions,
-		toggleFunctionById
+		toggleFunctionById,
+		toggleGlobalById
 	} from '$lib/apis/functions';
 
 	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
@@ -111,6 +112,22 @@
 
 			functions.set(await getFunctions(localStorage.token));
 			models.set(await getModels(localStorage.token));
+		}
+	};
+
+	const toggleGlobalHandler = async (func) => {
+		const res = await toggleGlobalById(localStorage.token, func.id).catch((error) => {
+			toast.error(error);
+		});
+
+		if (res) {
+			if (func.is_global) {
+				toast.success($i18n.t('Filter is now globally enabled'));
+			} else {
+				toast.success($i18n.t('Filter is now globally disabled'));
+			}
+
+			functions.set(await getFunctions(localStorage.token));
 		}
 	};
 </script>
@@ -259,6 +276,7 @@
 				</Tooltip>
 
 				<FunctionMenu
+					{func}
 					editHandler={() => {
 						goto(`/workspace/functions/edit?id=${encodeURIComponent(func.id)}`);
 					}}
@@ -274,6 +292,11 @@
 					deleteHandler={async () => {
 						selectedFunction = func;
 						showDeleteConfirm = true;
+					}}
+					toggleGlobalHandler={() => {
+						if (func.type === 'filter') {
+							toggleGlobalHandler(func);
+						}
 					}}
 					onClose={() => {}}
 				>

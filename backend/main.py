@@ -416,20 +416,22 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     )
                 return 0
 
-            filter_ids = []
+            filter_ids = [
+                function.id for function in Functions.get_global_filter_functions()
+            ]
             if "info" in model and "meta" in model["info"]:
-                enabled_filter_ids = [
-                    function.id
-                    for function in Functions.get_functions_by_type(
-                        "filter", active_only=True
-                    )
-                ]
-                filter_ids = [
-                    filter_id
-                    for filter_id in enabled_filter_ids
-                    if filter_id in model["info"]["meta"].get("filterIds", [])
-                ]
+                filter_ids.extend(model["info"]["meta"].get("filterIds", []))
                 filter_ids = list(set(filter_ids))
+
+            enabled_filter_ids = [
+                function.id
+                for function in Functions.get_functions_by_type(
+                    "filter", active_only=True
+                )
+            ]
+            filter_ids = [
+                filter_id for filter_id in filter_ids if filter_id in enabled_filter_ids
+            ]
 
             filter_ids.sort(key=get_priority)
             for filter_id in filter_ids:
@@ -919,7 +921,6 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
         )
 
     model = app.state.MODELS[model_id]
-    print(model)
 
     pipe = model.get("pipe")
     if pipe:
@@ -1010,20 +1011,18 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
             return (function.valves if function.valves else {}).get("priority", 0)
         return 0
 
-    filter_ids = []
+    filter_ids = [function.id for function in Functions.get_global_filter_functions()]
     if "info" in model and "meta" in model["info"]:
-        enabled_filter_ids = [
-            function.id
-            for function in Functions.get_functions_by_type(
-                "filter", active_only=True
-            )
-        ]
-        filter_ids = [
-            filter_id
-            for filter_id in enabled_filter_ids
-            if filter_id in model["info"]["meta"].get("filterIds", [])
-        ]
+        filter_ids.extend(model["info"]["meta"].get("filterIds", []))
         filter_ids = list(set(filter_ids))
+
+    enabled_filter_ids = [
+        function.id
+        for function in Functions.get_functions_by_type("filter", active_only=True)
+    ]
+    filter_ids = [
+        filter_id for filter_id in filter_ids if filter_id in enabled_filter_ids
+    ]
 
     # Sort filter_ids by priority, using the get_priority function
     filter_ids.sort(key=get_priority)
