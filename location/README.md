@@ -24,7 +24,9 @@ Or do we have to avoid Docker and instead install using these commands when edit
 	pip install -r requirements.txt -U
 	bash start.sh
 
-You should have Open WebUI up and running at http://localhost:8080/. Enjoy!
+You should have Open WebUI up and running at http://localhost:8080/.
+
+TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) and share some cool finding during our meetup.
 
 TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [superthermal evaporation](../../evaporation-kits/) page and related articles.
 
