@@ -45,6 +45,10 @@
 			console.log(tool);
 		});
 
+		if (window.opener ?? false) {
+			window.opener.postMessage('loaded', '*');
+		}
+
 		if (sessionStorage.tool) {
 			tool = JSON.parse(sessionStorage.tool);
 			sessionStorage.removeItem('tool');
@@ -58,14 +62,16 @@
 </script>
 
 {#if mounted}
-	<ToolkitEditor
-		id={tool?.id ?? ''}
-		name={tool?.name ?? ''}
-		meta={tool?.meta ?? { description: '' }}
-		content={tool?.content ?? ''}
-		{clone}
-		on:save={(e) => {
-			saveHandler(e.detail);
-		}}
-	/>
+	{#key tool?.content}
+		<ToolkitEditor
+			id={tool?.id ?? ''}
+			name={tool?.name ?? ''}
+			meta={tool?.meta ?? { description: '' }}
+			content={tool?.content ?? ''}
+			{clone}
+			on:save={(e) => {
+				saveHandler(e.detail);
+			}}
+		/>
+	{/key}
 {/if}
