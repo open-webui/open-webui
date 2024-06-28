@@ -1,5 +1,5 @@
 {
-	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s', 'm', 'h', 'd', 'w' oder '-1' für kein Ablaufzeit.",
+	"'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.": "'s', 'm', 'h', 'd', 'w' oder '-1' für keine Ablaufzeit.",
 	"(Beta)": "(Beta)",
 	"(e.g. `sh webui.sh --api --api-auth username_password`)": "(z. B. `sh webui.sh --api --api-auth username_password`)",
 	"(e.g. `sh webui.sh --api`)": "(z. B. `sh webui.sh --api`)",
