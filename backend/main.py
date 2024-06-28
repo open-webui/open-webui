@@ -1983,7 +1983,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
     # Set the cookie token
     response.set_cookie(
         key="token",
-        value=token,
+        value=jwt_token,
         httponly=True,  # Ensures the cookie is not accessible via JavaScript
     )
 
