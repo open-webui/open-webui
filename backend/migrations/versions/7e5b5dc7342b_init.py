@@ -96,6 +96,7 @@ def upgrade() -> None:
             sa.Column("meta", apps.webui.internal.db.JSONField(), nullable=True),
             sa.Column("valves", apps.webui.internal.db.JSONField(), nullable=True),
             sa.Column("is_active", sa.Boolean(), nullable=True),
+            sa.Column("is_global", sa.Boolean(), nullable=True),
             sa.Column("updated_at", sa.BigInteger(), nullable=True),
             sa.Column("created_at", sa.BigInteger(), nullable=True),
             sa.PrimaryKeyConstraint("id"),
