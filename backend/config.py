@@ -564,6 +564,12 @@ ENABLE_OLLAMA_API = PersistentConfig(
     os.environ.get("ENABLE_OLLAMA_API", "True").lower() == "true",
 )
 
+OLLAMA_API_TIMEOUT = PersistentConfig(
+    "OLLAMA_API_TIMEOUT",
+    "ollama.api_timeout",
+    os.environ.get("OLLAMA_API_TIMEOUT", "5.0"),
+)
+
 OLLAMA_API_BASE_URL = os.environ.get(
     "OLLAMA_API_BASE_URL", "http://localhost:11434/api"
 )

@@ -47,6 +47,7 @@ from config import (
     SRC_LOG_LEVELS,
     OLLAMA_BASE_URLS,
     ENABLE_OLLAMA_API,
+    OLLAMA_API_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
@@ -73,6 +74,7 @@ app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
+app.state.config.OLLAMA_API_TIMEOUT = OLLAMA_API_TIMEOUT
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.MODELS = {}
 
@@ -132,7 +134,8 @@ async def update_ollama_api_url(form_data: UrlUpdateForm, user=Depends(get_admin
 
 
 async def fetch_url(url):
-    timeout = aiohttp.ClientTimeout(total=5)
+    timeout_seconds = float(app.state.config.OLLAMA_API_TIMEOUT)
+    timeout = aiohttp.ClientTimeout(total=timeout_seconds)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(url) as response:
