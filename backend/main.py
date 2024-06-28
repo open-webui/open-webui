@@ -617,6 +617,8 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     return StreamingResponse(
                         self.ollama_stream_wrapper(response.body_iterator, data_items),
                     )
+
+                return response
             else:
                 return response
 
