@@ -154,6 +154,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
             await signup(
                 request,
+                response,
                 SignupForm(email=admin_email, password=admin_password, name="User"),
             )
 
