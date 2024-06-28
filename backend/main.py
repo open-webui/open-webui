@@ -1920,11 +1920,13 @@ async def oauth_callback(provider: str, request: Request, response: Response):
         # If the user does not exist, check if signups are enabled
         if ENABLE_OAUTH_SIGNUP.value:
             # Check if an existing user with the same email already exists
-            existing_user = Users.get_user_by_email(user_data.get("email", "").lower())
+            email_claim = webui_app.state.config.OAUTH_USERNAME_CLAIM
+            existing_user = Users.get_user_by_email(user_data.get(email_claim, "").lower())
             if existing_user:
                 raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
-            picture_url = user_data.get("picture", "")
+            picture_claim = webui_app.state.config.OAUTH_PICTURE_CLAIM
+            picture_url = user_data.get(picture_claim, "")
             if picture_url:
                 # Download the profile image into a base64 string
                 try:
