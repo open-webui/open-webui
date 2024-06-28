@@ -16,7 +16,7 @@ from faster_whisper import WhisperModel
 
 from constants import ERROR_MESSAGES
 from utils.utils import (
-    get_current_user,
+    get_verified_user,
     get_admin_user,
 )
 
@@ -258,7 +258,7 @@ async def update_image_size(
 
 
 @app.get("/models")
-def get_models(user=Depends(get_current_user)):
+def get_models(user=Depends(get_verified_user)):
     try:
         if app.state.config.ENGINE == "openai":
             return [
@@ -347,7 +347,7 @@ def set_model_handler(model: str):
 @app.post("/models/default/update")
 def update_default_model(
     form_data: UpdateModelForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     return set_model_handler(form_data.model)
 
@@ -424,7 +424,7 @@ def save_url_image(url):
 @app.post("/generations")
 def generate_image(
     form_data: GenerateImageForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     width, height = tuple(map(int, app.state.config.IMAGE_SIZE.split("x")))
 

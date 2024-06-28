@@ -16,7 +16,7 @@ from apps.webui.models.users import Users
 from constants import ERROR_MESSAGES
 from utils.utils import (
     decode_token,
-    get_current_user,
+    get_verified_user,
     get_verified_user,
     get_admin_user,
 )
@@ -296,7 +296,7 @@ async def get_all_models(raw: bool = False):
 
 @app.get("/models")
 @app.get("/models/{url_idx}")
-async def get_models(url_idx: Optional[int] = None, user=Depends(get_current_user)):
+async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_user)):
     if url_idx == None:
         models = await get_all_models()
         if app.state.config.ENABLE_MODEL_FILTER:

@@ -85,7 +85,7 @@ from utils.misc import (
     sanitize_filename,
     extract_folders_after_data_docs,
 )
-from utils.utils import get_current_user, get_admin_user
+from utils.utils import get_verified_user, get_admin_user
 
 from config import (
     AppConfig,
@@ -529,7 +529,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
 
 
 @app.get("/template")
-async def get_rag_template(user=Depends(get_current_user)):
+async def get_rag_template(user=Depends(get_verified_user)):
     return {
         "status": True,
         "template": app.state.config.RAG_TEMPLATE,
@@ -586,7 +586,7 @@ class QueryDocForm(BaseModel):
 @app.post("/query/doc")
 def query_doc_handler(
     form_data: QueryDocForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     try:
         if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
@@ -626,7 +626,7 @@ class QueryCollectionsForm(BaseModel):
 @app.post("/query/collection")
 def query_collection_handler(
     form_data: QueryCollectionsForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     try:
         if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
@@ -657,7 +657,7 @@ def query_collection_handler(
 
 
 @app.post("/youtube")
-def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
+def store_youtube_video(form_data: UrlForm, user=Depends(get_verified_user)):
     try:
         loader = YoutubeLoader.from_youtube_url(
             form_data.url,
@@ -686,7 +686,7 @@ def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
 
 
 @app.post("/web")
-def store_web(form_data: UrlForm, user=Depends(get_current_user)):
+def store_web(form_data: UrlForm, user=Depends(get_verified_user)):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
     try:
         loader = get_web_loader(
@@ -864,7 +864,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
 
 
 @app.post("/web/search")
-def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
+def store_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
     try:
         logging.info(
             f"trying to web search with {app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
@@ -1084,7 +1084,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
 def store_doc(
     collection_name: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
 
@@ -1145,7 +1145,7 @@ class ProcessDocForm(BaseModel):
 @app.post("/process/doc")
 def process_doc(
     form_data: ProcessDocForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     try:
         file = Files.get_file_by_id(form_data.file_id)
@@ -1200,7 +1200,7 @@ class TextRAGForm(BaseModel):
 @app.post("/text")
 def store_text(
     form_data: TextRAGForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
 
     collection_name = form_data.collection_name

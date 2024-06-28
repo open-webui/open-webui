@@ -1,5 +1,5 @@
 <script lang="ts">
-	export let value: string;
+	export let value: string = '';
 	export let placeholder = '';
 	export let readOnly = false;
 	export let outerClassName = 'flex flex-1';

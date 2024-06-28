@@ -230,7 +230,10 @@
 										{/if}
 									</div>
 
-									<SensitiveInput placeholder={$i18n.t('API Key')} value={OPENAI_API_KEYS[idx]} />
+									<SensitiveInput
+										placeholder={$i18n.t('API Key')}
+										bind:value={OPENAI_API_KEYS[idx]}
+									/>
 									<div class="self-center flex items-center">
 										{#if idx === 0}
 											<button

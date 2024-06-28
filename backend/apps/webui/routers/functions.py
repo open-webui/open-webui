@@ -148,6 +148,33 @@ async def toggle_function_by_id(id: str, user=Depends(get_admin_user)):
 
 
 ############################
+# ToggleGlobalById
+############################
+
+
+@router.post("/id/{id}/toggle/global", response_model=Optional[FunctionModel])
+async def toggle_global_by_id(id: str, user=Depends(get_admin_user)):
+    function = Functions.get_function_by_id(id)
+    if function:
+        function = Functions.update_function_by_id(
+            id, {"is_global": not function.is_global}
+        )
+
+        if function:
+            return function
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error updating function"),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
 # UpdateFunctionById
 ############################
 
