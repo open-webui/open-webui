@@ -1944,6 +1944,11 @@ async def oauth_callback(provider: str, request: Request, response: Response):
                     picture_url = ""
             if not picture_url:
                 picture_url = "/user.png"
+            role = (
+                "admin"
+                if Users.get_num_users() == 0
+                else webui_app.state.config.DEFAULT_USER_ROLE
+            )
             user = Auths.insert_new_auth(
                 email=email,
                 password=get_password_hash(
@@ -1951,7 +1956,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
                 ),  # Random password, not used
                 name=user_data.get("name", "User"),
                 profile_image_url=picture_url,
-                role=webui_app.state.config.DEFAULT_USER_ROLE,
+                role=role,
                 oauth_sub=provider_sub,
             )
 
