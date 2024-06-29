@@ -267,6 +267,10 @@
 .rose-pine-dawn .bg-transparent {
     background-color: #fffaf3;
 }
+
+.rose-pine-dawn .bg-gray-200 {
+    background-color: rgb(235 188 186);
+}
 /* .rose-pine-dawn .bg-white {
     --tw-bg-opacity: 1;
     background-color: rgb(235 188 186 / 39%);
