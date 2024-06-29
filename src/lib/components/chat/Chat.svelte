@@ -91,6 +91,7 @@
 	let prompt = '';
 	let files = [];
 	let messages = [];
+	let selectedText = '';
 	let history = {
 		messages: {},
 		currentId: null
@@ -1455,6 +1456,7 @@
 				bind:selectedToolIds
 				bind:webSearchEnabled
 				bind:atSelectedModel
+				bind:selectedText
 				availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
 					const model = $models.find((m) => m.id === e);
 					if (model?.info?.meta?.toolIds ?? false) {

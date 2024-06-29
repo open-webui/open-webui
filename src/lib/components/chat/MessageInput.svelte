@@ -52,6 +52,7 @@
 
 	export let atSelectedModel: Model | undefined;
 	export let selectedModels: [''];
+	export let selectedText: string;
 
 	let recording = false;
 
@@ -496,9 +497,59 @@
 						}}
 					>
 						<div
-							class="flex-1 flex flex-col relative w-full rounded-3xl px-1.5 bg-gray-50 dark:bg-gray-850 dark:text-gray-100"
+							class="flex-1 flex flex-col relative w-full rounded-3xl px-1.5 bg-gray-50 dark:bg-gray-850 dark:text-gray-100 py-1.5"
 							dir={$settings?.chatDirection ?? 'LTR'}
 						>
+							<div
+								class="flex flex-col divide-y divide-token-border-light overflow-hidden rounded-b-lg rounded-t-[20px] bg-token-main-surface-primary"
+							>
+								<div
+									class="flex items-start py-2.5 gap-4 pl-3 pr-1.5 text-sm text-token-text-secondary"
+								>
+									<span class="flex-shrink-0 mt-0.5 w-6 h-6 flex justify-center items-center"
+										><svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="24"
+											height="24"
+											fill="none"
+											viewBox="0 0 24 24"
+											class="icon-lg-heavy"
+											><path
+												fill="currentColor"
+												fill-rule="evenodd"
+												d="M5 6a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h9.586l-2.293-2.293a1 1 0 0 1 1.414-1.414l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L16.586 14H7a3 3 0 0 1-3-3V7a1 1 0 0 1 1-1"
+												clip-rule="evenodd"
+											/></svg
+										></span
+									><span class="flex-1 line-clamp-3 py-0.5"
+										>“* **Z-Index Context**: The `z-index` property works only on positioned
+										elements (those with `position: relative`, `absolute`, `fixed`, or `sticky`).
+										Make sure that your navbar, chatbox, and button have one of these position
+										properties set. * **Testing Different Viewports**: Check how these layers
+										interact on different devices and screen sizes to ensure consistent behavior
+										across your application. * **Dynamic Content**: If your application dynamically
+										adds components that might overlap, ensure that their `z-index` is managed
+										appropriately as part of their dynamic styling. This approach should help manage
+										the layering of your UI components more effectively without needing to
+										programmatically check for intersections or overlaps, providing a cl”</span
+									><button class="flex-shrink-0 text-token-text-secondary"
+										><svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="24"
+											height="24"
+											fill="none"
+											viewBox="0 0 24 24"
+											class="icon-lg"
+											><path
+												fill="currentColor"
+												fill-rule="evenodd"
+												d="M7.293 7.293a1 1 0 0 1 1.414 0L12 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414L13.414 12l3.293 3.293a1 1 0 0 1-1.414 1.414L12 13.414l-3.293 3.293a1 1 0 0 1-1.414-1.414L10.586 12 7.293 8.707a1 1 0 0 1 0-1.414"
+												clip-rule="evenodd"
+											/></svg
+										></button
+									>
+								</div>
+							</div>
 							{#if files.length > 0}
 								<div class="mx-2 mt-2 mb-1 flex flex-wrap gap-2">
 									{#each files as file, fileIdx}
@@ -1035,5 +1086,8 @@
 	}
 	.scrollbar-hidden::-webkit-scrollbar-thumb {
 		visibility: hidden;
+	}
+	.bg-token-main-surface-primary {
+		background-color: #212121;
 	}
 </style>

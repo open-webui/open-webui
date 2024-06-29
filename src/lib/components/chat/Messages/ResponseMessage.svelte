@@ -590,6 +590,7 @@
 									{/if}
 								{/each}
 								{#if showButton}
+								<Tooltip content={$i18n.t('Reply')}>
 									<button
 										class="absolute bg-white dark:bg-gray-800 border light:border-gray-300 dark:border-gray-600 rounded-xl p-1 w-12 shadow-md text-gray-800 dark:text-white flex items-center justify-center z-0"
 										style={buttonStyle}
@@ -615,6 +616,7 @@
 											</g>
 										</svg>
 									</button>
+								</Tooltip>
 								{/if}
 							{/if}
 
