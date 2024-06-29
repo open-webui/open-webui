@@ -56,6 +56,10 @@
 	export let regenerateResponse: Function;
 
 	let model = null;
+	let selectedText = '';
+	let showButton = false;
+	let buttonStyle = ''; // Style for positioning the button
+
 	$: model = $models.find((m) => m.id === message.model);
 
 	let edit = false;
@@ -100,6 +104,40 @@
 
 	$: if (message) {
 		renderStyling();
+	}
+	// function getSelectedText() {
+	// 	if (window.getSelection) {
+	// 		const selection = window.getSelection();
+	// 		selectedText = selection.toString();
+	// 		showButton = selectedText.length > 0;
+	// 		if (showButton && selection.rangeCount > 0) {
+	// 			const range = selection.getRangeAt(0).getBoundingClientRect();
+	// 			const top = range.top - 40; // Position above the selection
+	// 			const left = (range.left + range.right) / 2; // Centered above the selection
+	// 			buttonStyle = `top: ${top}px; left: ${left}px;`; // Update button style
+	// 		}
+	// 	}
+	// }
+	function logSelectedText() {
+		console.log(selectedText);
+		showButton = false;
+	}
+	function updateButtonPosition() {
+		const selection = window.getSelection();
+		if (!selection.rangeCount) return;
+		const range = selection.getRangeAt(0).getBoundingClientRect();
+		const top = range.top - 40 + window.scrollY; // Adjust for vertical scroll
+		const left = (range.left + range.right) / 2 + window.scrollX; // Adjust for horizontal scroll
+		buttonStyle = `position: absolute; top: ${top}px; left: ${left}px;`; // Update button style
+	}
+
+	function getSelectedText() {
+		const selection = window.getSelection();
+		selectedText = selection.toString();
+		showButton = selectedText.length > 0;
+		if (showButton) {
+			updateButtonPosition();
+		}
 	}
 
 	const renderStyling = async () => {
@@ -372,13 +410,31 @@
 		})();
 	}
 
-	onMount(async () => {
-		await tick();
-		renderStyling();
+	function handleClickOutside(event) {
+		if (!event.target.closest('.text-display-area')) {
+			showButton = false;
+		}
+	}
+	onMount(() => {
+		// Handle async operations without affecting the cleanup function
+		async function init() {
+			await tick();
+			renderStyling();
+			mermaid.run({
+				querySelector: '.mermaid'
+			});
+		}
 
-		await mermaid.run({
-			querySelector: '.mermaid'
-		});
+		init();
+
+		// Event listener setup
+		document.addEventListener('click', handleClickOutside);
+		document.addEventListener('scroll', updateButtonPosition, true); // Listen to scroll events
+
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+			document.removeEventListener('scroll', updateButtonPosition, true);
+		};
 	});
 </script>
 
@@ -501,7 +557,13 @@
 							</div>
 						</div>
 					{:else}
-						<div class="w-full">
+						<div
+							class="w-full text-display-area"
+							on:mouseup={getSelectedText}
+							on:keyup={getSelectedText}
+							role="textbox"
+							tabindex="0"
+						>
 							{#if message.content === '' && !message.error}
 								<Skeleton />
 							{:else if message.content && message.error !== true}
@@ -527,6 +589,33 @@
 										})}
 									{/if}
 								{/each}
+								{#if showButton}
+									<button
+										class="absolute bg-white dark:bg-gray-800 border light:border-gray-300 dark:border-gray-600 rounded-xl p-1 w-12 shadow-md text-gray-800 dark:text-white flex items-center justify-center z-0"
+										style={buttonStyle}
+										on:click={logSelectedText}
+									>
+										<svg
+											height="16px"
+											width="16px"
+											viewBox="0 0 46.195 46.195"
+											class="fill-current"
+										>
+											<g>
+												<path
+													d="M35.765,8.264c-5.898,0-10.555,4.782-10.555,10.68s4.844,10.68,10.742,10.68
+										c0.059,0,0.148-0.008,0.207-0.009c-2.332,1.857-5.261,2.976-8.467,2.976c-1.475,0-2.662,1.196-2.662,2.67s0.949,2.67,2.424,2.67
+										c10.469-0.001,18.741-8.518,18.741-18.987c0-0.002,0-0.004,0-0.007C46.195,13.042,41.661,8.264,35.765,8.264z"
+												/>
+												<path
+													d="M10.75,8.264c-5.898,0-10.563,4.782-10.563,10.68s4.84,10.68,10.739,10.68
+										c0.059,0,0.146-0.008,0.205-0.009c-2.332,1.857-5.262,2.976-8.468,2.976C1.188,32.591,0,33.787,0,35.261s0.964,2.67,2.439,2.67
+										c10.469-0.001,18.756-8.518,18.756-18.987c0-0.002,0-0.004,0-0.007C21.195,13.042,16.646,8.264,10.75,8.264z"
+												/>
+											</g>
+										</svg>
+									</button>
+								{/if}
 							{/if}
 
 							{#if message.error}
