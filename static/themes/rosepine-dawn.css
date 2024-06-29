@@ -33,7 +33,7 @@
 }
 
 .rose-pine-dawn #chat-textarea {
-    background: #fffaf3;
+    background: #ffffff;
     margin: 0.3rem;
     padding: 0.5rem;
 }
@@ -257,11 +257,6 @@
 .rose-pine-dawn .bg-green-500 {
     --tw-bg-opacity: 1;
     background-color: rgb(215 130 126);
-}
-
-.rose-pine-dawn .text-gray-600 {
-    --tw-text-opacity: 1;
-    color: rgb(215 130 126);
 }
 
 .rose-pine-dawn .bg-transparent {
