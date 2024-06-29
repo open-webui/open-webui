@@ -52,15 +52,16 @@
 				{#each mergedDocuments as document, documentIdx}
 					<div class="flex flex-col w-full">
 						<div class="text-sm font-medium dark:text-gray-300">
-							{$i18n.t('Source')}
+							<strong>🤖 {$i18n.t('Source')} {documentIdx + 1}</strong>
 						</div>
 						<div class="text-sm dark:text-gray-400">
 							{document.source?.name ?? $i18n.t('No source available')}
 						</div>
 					</div>
+					<br>
 					<div class="flex flex-col w-full">
 						<div class=" text-sm font-medium dark:text-gray-300">
-							{$i18n.t('Content')}
+							<strong>📖 {$i18n.t('Content')}</strong>
 						</div>
 						<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
 							{document.document}
