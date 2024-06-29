@@ -136,6 +136,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         if not Users.get_user_by_email(trusted_email.lower()):
             await signup(
                 request,
+                response,
                 SignupForm(
                     email=trusted_email, password=str(uuid.uuid4()), name=trusted_name
                 ),
@@ -153,6 +154,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
             await signup(
                 request,
+                response,
                 SignupForm(email=admin_email, password=admin_password, name="User"),
             )
 
