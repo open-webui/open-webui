@@ -33,9 +33,9 @@
 }
 
 .rose-pine-dawn #chat-textarea {
-	background: #ffffff;
-	margin: 0.3rem;
-	padding: 0.5rem;
+    background: #fffaf3;
+    margin: 0.3rem;
+    padding: 0.5rem;
 }
 
 .rose-pine-dawn .bg-gradient-to-t.from-white.dark\:from-gray-800.from-40\%.pb-2 {
@@ -247,6 +247,25 @@
 
 .rose-pine-dawn .size-4 {
     color: #cf9191;
+}
+
+.rose-pine-dawn .bg-green-400 {
+    --tw-bg-opacity: 1;
+    background-color: rgb(215 130 126);
+}
+
+.rose-pine-dawn .bg-green-500 {
+    --tw-bg-opacity: 1;
+    background-color: rgb(215 130 126);
+}
+
+.rose-pine-dawn .text-gray-600 {
+    --tw-text-opacity: 1;
+    color: rgb(215 130 126);
+}
+
+.rose-pine-dawn .bg-transparent {
+    background-color: #fffaf3;
 }
 /* .rose-pine-dawn .bg-white {
     --tw-bg-opacity: 1;
