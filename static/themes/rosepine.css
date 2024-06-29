@@ -6,10 +6,6 @@
 	background-color: #1f1d2e !important;
 }
 
-.rose-pine #nav {
-	background-color: #191724;
-}
-
 .rose-pine .py-2\.5.my-auto.flex.flex-col.justify-between.h-screen {
 	background: #191724;
 }
@@ -28,7 +24,6 @@
 }
 
 .rose-pine #chat-textarea {
-	background: #393552;
 	margin: 0.3rem;
 	padding: 0.5rem;
 }
@@ -147,4 +142,16 @@
 .rose-pine .rounded-r-xl {
 	border-radius: 0 0.75rem 0.75rem 0;
 }
+
+.rose-pine .bg-green-400 {
+    --tw-bg-opacity: 1;
+	background-color: rgb(155 135 176);
+}
+
+.rose-pine .bg-green-500 {
+    --tw-bg-opacity: 1;
+	background-color: rgb(155 135 176);
+}
+
+
 
