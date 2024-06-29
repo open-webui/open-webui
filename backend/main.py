@@ -106,7 +106,6 @@ from config import (
     ENABLE_OLLAMA_API,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
-    ADMIN_MODEL_FILTER_LIST,
     GLOBAL_LOG_LEVEL,
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
@@ -1784,7 +1783,6 @@ async def update_model_filter_config(
 ):
     app.state.config.ENABLE_MODEL_FILTER = form_data.enabled
     app.state.config.MODEL_FILTER_LIST = form_data.models
-    app.state.config.ADMIN_MODEL_FILTER_LIST = form_data.models
 
     return {
         "enabled": app.state.config.ENABLE_MODEL_FILTER,

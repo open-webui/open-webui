@@ -50,7 +50,6 @@ from config import (
     AIOHTTP_CLIENT_TIMEOUT,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
-    ADMIN_MODEL_FILTER_LIST,
     UPLOAD_DIR,
     AppConfig,
 )
@@ -72,7 +71,6 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-app.state.config.ADMIN_MODEL_FILTER_LIST = ADMIN_MODEL_FILTER_LIST
 
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
@@ -244,15 +242,6 @@ async def get_ollama_tags(
                         models["models"],
                     )
                 )
-            elif user.role == "admin":
-                models["models"] = list(
-                    filter(
-                        lambda model: model["name"] 
-                        in app.state.config.ADMIN_MODEL_FILTER_LIST,
-                        models["models"],
-                    )
-                )
-            return models
         return models
     else:
         url = app.state.config.OLLAMA_BASE_URLS[url_idx]

@@ -30,7 +30,6 @@ from config import (
     CACHE_DIR,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
-    ADMIN_MODEL_FILTER_LIST,
     AppConfig,
 )
 from typing import List, Optional
@@ -55,7 +54,6 @@ app.state.config = AppConfig()
 
 app.state.config.ENABLE_MODEL_FILTER = ENABLE_MODEL_FILTER
 app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
-app.state.config.ADMIN_MODEL_FILTER_LIST = ADMIN_MODEL_FILTER_LIST
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
@@ -308,15 +306,6 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
                         models["data"],
                     )
                 )
-            elif user.role == "admin":
-                models["data"] = list(
-                    filter(
-                        lambda model: model["id"] 
-                        in app.state.config.ADMIN_MODEL_FILTER_LIST,
-                        models["data"],
-                    )
-                )
-            return models
         return models
     else:
         url = app.state.config.OPENAI_API_BASE_URLS[url_idx]

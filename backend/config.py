@@ -739,13 +739,6 @@ MODEL_FILTER_LIST = PersistentConfig(
     [model.strip() for model in MODEL_FILTER_LIST.split(";")],
 )
 
-ADMIN_MODEL_FILTER_LIST = os.environ.get("ADMIN_MODEL_FILTER_LIST", "")
-ADMIN_MODEL_FILTER_LIST = PersistentConfig(
-    "ADMIN_MODEL_FILTER_LIST",
-    "admin_model_filter.list",
-    [model.strip() for model in ADMIN_MODEL_FILTER_LIST.split(";")],
-)
-
 WEBHOOK_URL = PersistentConfig(
     "WEBHOOK_URL", "webhook_url", os.environ.get("WEBHOOK_URL", "")
 )
