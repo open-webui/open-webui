@@ -96,8 +96,14 @@
 		const browserLanguages = navigator.languages
 			? navigator.languages
 			: [navigator.language || navigator.userLanguage];
+		const lang = backendConfig.default_locale
+			? backendConfig.default_locale
+			: bestMatchingLanguage(languages, browserLanguages, 'en-US');
 
-		initI18n(bestMatchingLanguage(languages, browserLanguages, backendConfig.default_locale));
+		initI18n();
+		if (!localStorage.locale) {
+			$i18n.changeLanguage(lang);
+		}
 
 		if (backendConfig) {
 			// Save Backend Status to Store

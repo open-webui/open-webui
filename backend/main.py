@@ -99,8 +99,10 @@ from config import (
     CHANGELOG,
     FRONTEND_BUILD_DIR,
     UPLOAD_DIR,
+    
     CACHE_DIR,
     STATIC_DIR,
+    DEFAULT_LOCALE,
     ENABLE_OPENAI_API,
     ENABLE_OLLAMA_API,
     ENABLE_MODEL_FILTER,
@@ -1722,18 +1724,11 @@ async def update_pipeline_valves(
 
 @app.get("/api/config")
 async def get_app_config():
-    # Checking and Handling the Absence of 'ui' in CONFIG_DATA
-
-    default_locale = "en-US"
-    if "ui" in CONFIG_DATA:
-        default_locale = CONFIG_DATA["ui"].get("default_locale", "en-US")
-
-    # The Rest of the Function Now Uses the Variables Defined Above
     return {
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
-        "default_locale": default_locale,
+        "default_locale": str(DEFAULT_LOCALE),
         "default_models": webui_app.state.config.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
         "features": {
