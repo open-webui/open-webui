@@ -879,6 +879,22 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 
 ####################################
+# RAG document text extraction
+####################################
+
+DOCUMENT_USE_TIKA = PersistentConfig(
+    "DOCUMENT_USE_TIKA",
+    "rag.document_use_tika",
+    os.environ.get("DOCUMENT_USE_TIKA", "false").lower() == "true"
+)
+
+TIKA_SERVER_URL = PersistentConfig(
+    "TIKA_SERVER_URL",
+    "rag.tika_server_url",
+    os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
+)
+
+####################################
 # RAG
 ####################################
 

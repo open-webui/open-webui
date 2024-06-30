@@ -93,6 +93,8 @@ from config import (
     SRC_LOG_LEVELS,
     UPLOAD_DIR,
     DOCS_DIR,
+    DOCUMENT_USE_TIKA,
+    TIKA_SERVER_URL,
     RAG_TOP_K,
     RAG_RELEVANCE_THRESHOLD,
     RAG_EMBEDDING_ENGINE,
@@ -985,6 +987,41 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
         return False
 
 
+class TikaLoader:
+    def __init__(self, file_path, mime_type=None):
+        self.file_path = file_path
+        self.mime_type = mime_type
+
+    def load(self) -> List[Document]:
+        with (open(self.file_path, "rb") as f):
+            data = f.read()
+
+        if self.mime_type is not None:
+            headers = {"Content-Type": self.mime_type}
+        else:
+            headers = {}
+
+        endpoint = str(TIKA_SERVER_URL)
+        if not endpoint.endswith("/"):
+            endpoint += "/"
+        endpoint += "tika/text"
+
+        r = requests.put(endpoint, data=data, headers=headers)
+
+        if r.ok:
+            raw_metadata = r.json()
+            text = raw_metadata.get("X-TIKA:content", "<No text content found>")
+
+            if "Content-Type" in raw_metadata:
+                headers["Content-Type"] = raw_metadata["Content-Type"]
+
+            log.info("Tika extracted text: %s", text)
+
+            return [Document(page_content=text, metadata=headers)]
+        else:
+            raise Exception(f"Error calling Tika: {r.reason}")
+
+
 def get_loader(filename: str, file_content_type: str, file_path: str):
     file_ext = filename.split(".")[-1].lower()
     known_type = True
@@ -1035,47 +1072,57 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         "msg",
     ]
 
-    if file_ext == "pdf":
-        loader = PyPDFLoader(
-            file_path, extract_images=app.state.config.PDF_EXTRACT_IMAGES
-        )
-    elif file_ext == "csv":
-        loader = CSVLoader(file_path)
-    elif file_ext == "rst":
-        loader = UnstructuredRSTLoader(file_path, mode="elements")
-    elif file_ext == "xml":
-        loader = UnstructuredXMLLoader(file_path)
-    elif file_ext in ["htm", "html"]:
-        loader = BSHTMLLoader(file_path, open_encoding="unicode_escape")
-    elif file_ext == "md":
-        loader = UnstructuredMarkdownLoader(file_path)
-    elif file_content_type == "application/epub+zip":
-        loader = UnstructuredEPubLoader(file_path)
-    elif (
-        file_content_type
-        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        or file_ext in ["doc", "docx"]
-    ):
-        loader = Docx2txtLoader(file_path)
-    elif file_content_type in [
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ] or file_ext in ["xls", "xlsx"]:
-        loader = UnstructuredExcelLoader(file_path)
-    elif file_content_type in [
-        "application/vnd.ms-powerpoint",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    ] or file_ext in ["ppt", "pptx"]:
-        loader = UnstructuredPowerPointLoader(file_path)
-    elif file_ext == "msg":
-        loader = OutlookMessageLoader(file_path)
-    elif file_ext in known_source_ext or (
-        file_content_type and file_content_type.find("text/") >= 0
-    ):
-        loader = TextLoader(file_path, autodetect_encoding=True)
+    log.warning("Use tika: %s, server URL: %s", DOCUMENT_USE_TIKA, TIKA_SERVER_URL)
+
+    if DOCUMENT_USE_TIKA and TIKA_SERVER_URL:
+        if file_ext in known_source_ext or (
+                file_content_type and file_content_type.find("text/") >= 0
+        ):
+            loader = TextLoader(file_path, autodetect_encoding=True)
+        else:
+            loader = TikaLoader(file_path, file_content_type)
     else:
-        loader = TextLoader(file_path, autodetect_encoding=True)
-        known_type = False
+        if file_ext == "pdf":
+            loader = PyPDFLoader(
+                file_path, extract_images=app.state.config.PDF_EXTRACT_IMAGES
+            )
+        elif file_ext == "csv":
+            loader = CSVLoader(file_path)
+        elif file_ext == "rst":
+            loader = UnstructuredRSTLoader(file_path, mode="elements")
+        elif file_ext == "xml":
+            loader = UnstructuredXMLLoader(file_path)
+        elif file_ext in ["htm", "html"]:
+            loader = BSHTMLLoader(file_path, open_encoding="unicode_escape")
+        elif file_ext == "md":
+            loader = UnstructuredMarkdownLoader(file_path)
+        elif file_content_type == "application/epub+zip":
+            loader = UnstructuredEPubLoader(file_path)
+        elif (
+            file_content_type
+            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            or file_ext in ["doc", "docx"]
+        ):
+            loader = Docx2txtLoader(file_path)
+        elif file_content_type in [
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ] or file_ext in ["xls", "xlsx"]:
+            loader = UnstructuredExcelLoader(file_path)
+        elif file_content_type in [
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ] or file_ext in ["ppt", "pptx"]:
+            loader = UnstructuredPowerPointLoader(file_path)
+        elif file_ext == "msg":
+            loader = OutlookMessageLoader(file_path)
+        elif file_ext in known_source_ext or (
+            file_content_type and file_content_type.find("text/") >= 0
+        ):
+            loader = TextLoader(file_path, autodetect_encoding=True)
+        else:
+            loader = TextLoader(file_path, autodetect_encoding=True)
+            known_type = False
 
     return loader, known_type
 
