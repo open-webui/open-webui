@@ -6,7 +6,7 @@ python-multipart==0.0.9
 Flask==3.0.3
 Flask-Cors==4.0.1
 
-python-socketio==5.11.2
+python-socketio==5.11.3
 python-jose==3.3.0
 passlib[bcrypt]==1.7.4
 
@@ -32,10 +32,10 @@ google-generativeai==0.5.4
 
 langchain==0.2.0
 langchain-community==0.2.0
-langchain-chroma==0.1.1
+langchain-chroma==0.1.2
 
 fake-useragent==1.5.1
-chromadb==0.5.0
+chromadb==0.5.3
 sentence-transformers==2.7.0
 pypdf==4.2.0
 docx2txt==0.8
@@ -67,4 +67,4 @@ pytube==15.0.0
 
 extract_msg
 pydub
-duckduckgo-search~=6.1.5
+duckduckgo-search~=6.1.7
