@@ -1,11 +1,16 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 
-	import { WEBUI_NAME, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, showSidebar, functions } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { page } from '$app/stores';
+	import { getFunctions } from '$lib/apis/functions';
 
 	const i18n = getContext('i18n');
+
+	onMount(async () => {
+		// functions.set(await getFunctions(localStorage.token));
+	});
 </script>
 
 <svelte:head>
@@ -14,7 +19,11 @@
 	</title>
 </svelte:head>
 
-<div class=" flex flex-col w-full min-h-screen max-h-screen">
+<div
+	class=" flex flex-col w-full min-h-screen max-h-screen {$showSidebar
+		? 'md:max-w-[calc(100%-260px)]'
+		: ''}"
+>
 	<div class=" px-4 pt-3 mt-0.5 mb-1">
 		<div class=" flex items-center gap-1">
 			<div class="{$showSidebar ? 'md:hidden' : ''} mr-1 self-start flex flex-none items-center">
@@ -62,11 +71,22 @@
 			</a>
 
 			<a
-				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/playground')
+				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/tools')
 					? 'bg-gray-50 dark:bg-gray-850'
 					: ''} transition"
-				href="/workspace/playground">{$i18n.t('Playground')}</a
+				href="/workspace/tools"
 			>
+				{$i18n.t('Tools')}
+			</a>
+
+			<a
+				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/functions')
+					? 'bg-gray-50 dark:bg-gray-850'
+					: ''} transition"
+				href="/workspace/functions"
+			>
+				{$i18n.t('Functions')}
+			</a>
 		</div>
 	</div>
 

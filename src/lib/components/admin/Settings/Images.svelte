@@ -19,11 +19,10 @@
 		updateOpenAIConfig
 	} from '$lib/apis/images';
 	import { getBackendConfig } from '$lib/apis';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
-
-	export let saveSettings: Function;
 
 	let loading = false;
 
@@ -31,6 +30,7 @@
 	let enableImageGeneration = false;
 
 	let AUTOMATIC1111_BASE_URL = '';
+	let AUTOMATIC1111_API_AUTH = '';
 	let COMFYUI_BASE_URL = '';
 
 	let OPENAI_API_BASE_URL = '';
@@ -76,7 +76,8 @@
 			}
 		} else {
 			const res = await updateImageGenerationEngineUrls(localStorage.token, {
-				AUTOMATIC1111_BASE_URL: AUTOMATIC1111_BASE_URL
+				AUTOMATIC1111_BASE_URL: AUTOMATIC1111_BASE_URL,
+				AUTOMATIC1111_API_AUTH: AUTOMATIC1111_API_AUTH
 			}).catch((error) => {
 				toast.error(error);
 				return null;
@@ -84,6 +85,7 @@
 
 			if (res) {
 				AUTOMATIC1111_BASE_URL = res.AUTOMATIC1111_BASE_URL;
+				AUTOMATIC1111_API_AUTH = res.AUTOMATIC1111_API_AUTH;
 
 				await getModels();
 
@@ -91,7 +93,9 @@
 					toast.success($i18n.t('Server connection verified'));
 				}
 			} else {
-				({ AUTOMATIC1111_BASE_URL } = await getImageGenerationEngineUrls(localStorage.token));
+				({ AUTOMATIC1111_BASE_URL, AUTOMATIC1111_API_AUTH } = await getImageGenerationEngineUrls(
+					localStorage.token
+				));
 			}
 		}
 	};
@@ -130,6 +134,7 @@
 			const URLS = await getImageGenerationEngineUrls(localStorage.token);
 
 			AUTOMATIC1111_BASE_URL = URLS.AUTOMATIC1111_BASE_URL;
+			AUTOMATIC1111_API_AUTH = URLS.AUTOMATIC1111_API_AUTH;
 			COMFYUI_BASE_URL = URLS.COMFYUI_BASE_URL;
 
 			const config = await getOpenAIConfig(localStorage.token);
@@ -171,7 +176,7 @@
 		loading = false;
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-[24rem]">
+	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden">
 		<div>
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
 
@@ -228,7 +233,7 @@
 				</div>
 			</div>
 		</div>
-		<hr class=" dark:border-gray-700" />
+		<hr class=" dark:border-gray-850" />
 
 		{#if imageGenerationEngine === ''}
 			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('AUTOMATIC1111 Base URL')}</div>
@@ -272,6 +277,23 @@
 					{$i18n.t('(e.g. `sh webui.sh --api`)')}
 				</a>
 			</div>
+
+			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('AUTOMATIC1111 Api Auth String')}</div>
+			<SensitiveInput
+				placeholder={$i18n.t('Enter api auth string (e.g. username:password)')}
+				bind:value={AUTOMATIC1111_API_AUTH}
+			/>
+
+			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+				{$i18n.t('Include `--api-auth` flag when running stable-diffusion-webui')}
+				<a
+					class=" text-gray-300 font-medium"
+					href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/13993"
+					target="_blank"
+				>
+					{$i18n.t('(e.g. `sh webui.sh --api --api-auth username_password`)').replace('_', ':')}
+				</a>
+			</div>
 		{:else if imageGenerationEngine === 'comfyui'}
 			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('ComfyUI Base URL')}</div>
 			<div class="flex w-full">
@@ -309,24 +331,19 @@
 
 				<div class="flex gap-2 mb-1">
 					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="flex-1 w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 						placeholder={$i18n.t('API Base URL')}
 						bind:value={OPENAI_API_BASE_URL}
 						required
 					/>
 
-					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						placeholder={$i18n.t('API Key')}
-						bind:value={OPENAI_API_KEY}
-						required
-					/>
+					<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OPENAI_API_KEY} />
 				</div>
 			</div>
 		{/if}
 
 		{#if enableImageGeneration}
-			<hr class=" dark:border-gray-700" />
+			<hr class=" dark:border-gray-850" />
 
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Default Model')}</div>

@@ -1,9 +1,9 @@
 import logging
 import requests
 
-from typing import List
+from typing import List, Optional
 
-from apps.rag.search.main import SearchResult
+from apps.rag.search.main import SearchResult, get_filtered_results
 from config import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -11,7 +11,11 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_searxng(
-    query_url: str, query: str, count: int, **kwargs
+    query_url: str,
+    query: str,
+    count: int,
+    filter_list: Optional[List[str]] = None,
+    **kwargs,
 ) -> List[SearchResult]:
     """
     Search a SearXNG instance for a given query and return the results as a list of SearchResult objects.
@@ -25,6 +29,7 @@ def search_searxng(
 
     Keyword Args:
         language (str): Language filter for the search results; e.g., "en-US". Defaults to an empty string.
+        safesearch (int): Safe search filter for safer web results; 0 = off, 1 = moderate, 2 = strict. Defaults to 1 (moderate).
         time_range (str): Time range for filtering results by date; e.g., "2023-04-05..today" or "all-time". Defaults to ''.
         categories: (Optional[List[str]]): Specific categories within which the search should be performed, defaulting to an empty string if not provided.
 
@@ -37,6 +42,7 @@ def search_searxng(
 
     # Default values for optional parameters are provided as empty strings or None when not specified.
     language = kwargs.get("language", "en-US")
+    safesearch = kwargs.get("safesearch", "1")
     time_range = kwargs.get("time_range", "")
     categories = "".join(kwargs.get("categories", []))
 
@@ -44,6 +50,7 @@ def search_searxng(
         "q": query,
         "format": "json",
         "pageno": 1,
+        "safesearch": safesearch,
         "language": language,
         "time_range": time_range,
         "categories": categories,
@@ -75,6 +82,8 @@ def search_searxng(
     json_response = response.json()
     results = json_response.get("results", [])
     sorted_results = sorted(results, key=lambda x: x.get("score", 0), reverse=True)
+    if filter_list:
+        sorted_results = get_filtered_results(sorted_results, filter_list)
     return [
         SearchResult(
             link=result["url"], title=result.get("title"), snippet=result.get("content")

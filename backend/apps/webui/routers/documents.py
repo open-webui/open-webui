@@ -14,7 +14,7 @@ from apps.webui.models.documents import (
     DocumentResponse,
 )
 
-from utils.utils import get_current_user, get_admin_user
+from utils.utils import get_verified_user, get_admin_user
 from constants import ERROR_MESSAGES
 
 router = APIRouter()
@@ -25,7 +25,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[DocumentResponse])
-async def get_documents(user=Depends(get_current_user)):
+async def get_documents(user=Depends(get_verified_user)):
     docs = [
         DocumentResponse(
             **{
@@ -73,8 +73,8 @@ async def create_new_doc(form_data: DocumentForm, user=Depends(get_admin_user)):
 ############################
 
 
-@router.get("/name/{name}", response_model=Optional[DocumentResponse])
-async def get_doc_by_name(name: str, user=Depends(get_current_user)):
+@router.get("/doc", response_model=Optional[DocumentResponse])
+async def get_doc_by_name(name: str, user=Depends(get_verified_user)):
     doc = Documents.get_doc_by_name(name)
 
     if doc:
@@ -105,8 +105,8 @@ class TagDocumentForm(BaseModel):
     tags: List[dict]
 
 
-@router.post("/name/{name}/tags", response_model=Optional[DocumentResponse])
-async def tag_doc_by_name(form_data: TagDocumentForm, user=Depends(get_current_user)):
+@router.post("/doc/tags", response_model=Optional[DocumentResponse])
+async def tag_doc_by_name(form_data: TagDocumentForm, user=Depends(get_verified_user)):
     doc = Documents.update_doc_content_by_name(form_data.name, {"tags": form_data.tags})
 
     if doc:
@@ -128,7 +128,7 @@ async def tag_doc_by_name(form_data: TagDocumentForm, user=Depends(get_current_u
 ############################
 
 
-@router.post("/name/{name}/update", response_model=Optional[DocumentResponse])
+@router.post("/doc/update", response_model=Optional[DocumentResponse])
 async def update_doc_by_name(
     name: str, form_data: DocumentUpdateForm, user=Depends(get_admin_user)
 ):
@@ -152,7 +152,7 @@ async def update_doc_by_name(
 ############################
 
 
-@router.delete("/name/{name}/delete", response_model=bool)
+@router.delete("/doc/delete", response_model=bool)
 async def delete_doc_by_name(name: str, user=Depends(get_admin_user)):
     result = Documents.delete_doc_by_name(name)
     return result
