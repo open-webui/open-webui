@@ -83,7 +83,7 @@ jobs:
             latest=false
 
       - name: Build Docker image (latest)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         id: build
         with:
           context: .
@@ -182,7 +182,7 @@ jobs:
             latest=false
 
       - name: Build Docker image (cuda)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         id: build
         with:
           context: .
@@ -282,7 +282,7 @@ jobs:
             latest=false
 
       - name: Build Docker image (ollama)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         id: build
         with:
           context: .
