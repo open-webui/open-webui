@@ -8,7 +8,7 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 
 **Chose one to fork and install locally**
 - [Open WebUI (Projects)](src) with Python and [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/) - TO DO (everyone)
-- [Earthscape for Chatbot AI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/) - TO DO (everyone)
+- [Earthscape for Chatbot UI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/) - TO DO (everyone)
 
 **Charts, SQL, Vite, Supabase, AI Chat**
 - [Food Nutrition Labels](/data-commons/docs/food) - Shali and Wenwei (Stella)
