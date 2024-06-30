@@ -31,6 +31,7 @@
 
 	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import i18n, { initI18n, getLanguages } from '$lib/i18n';
+	import { bestMatchingLanguage } from '$lib/utils';
 
 	setContext('i18n', i18n);
 
@@ -92,12 +93,11 @@
 		// so `/error` can show something that's not `undefined`.
 
 		const languages = await getLanguages();
+		const browserLanguages = navigator.languages
+			? navigator.languages
+			: [navigator.language || navigator.userLanguage];
 
-		const browserLanguage = navigator.languages
-			? navigator.languages[0]
-			: navigator.language || navigator.userLanguage;
-
-		initI18n(languages.includes(browserLanguage) ? browserLanguage : backendConfig?.default_locale);
+		initI18n(bestMatchingLanguage(languages, browserLanguages, backendConfig.default_locale));
 
 		if (backendConfig) {
 			// Save Backend Status to Store

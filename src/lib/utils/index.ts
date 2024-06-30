@@ -746,3 +746,10 @@ export const extractFrontmatter = (content) => {
 
 	return frontmatter;
 };
+
+// Function to determine the best matching language
+export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, defaultLocale) => {
+	const languages = supportedLanguages.map((lang) => lang.code);
+	const match = preferredLanguages.find((lang) => languages.includes(lang));
+	return match || defaultLocale;
+};

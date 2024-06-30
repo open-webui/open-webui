@@ -617,6 +617,8 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     return StreamingResponse(
                         self.ollama_stream_wrapper(response.body_iterator, data_items),
                     )
+
+                return response
             else:
                 return response
 
@@ -1944,6 +1946,11 @@ async def oauth_callback(provider: str, request: Request, response: Response):
                     picture_url = ""
             if not picture_url:
                 picture_url = "/user.png"
+            role = (
+                "admin"
+                if Users.get_num_users() == 0
+                else webui_app.state.config.DEFAULT_USER_ROLE
+            )
             user = Auths.insert_new_auth(
                 email=email,
                 password=get_password_hash(
@@ -1951,7 +1958,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
                 ),  # Random password, not used
                 name=user_data.get("name", "User"),
                 profile_image_url=picture_url,
-                role=webui_app.state.config.DEFAULT_USER_ROLE,
+                role=role,
                 oauth_sub=provider_sub,
             )
 
@@ -1978,7 +1985,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
     # Set the cookie token
     response.set_cookie(
         key="token",
-        value=token,
+        value=jwt_token,
         httponly=True,  # Ensures the cookie is not accessible via JavaScript
     )
 
