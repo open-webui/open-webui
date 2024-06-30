@@ -35,7 +35,7 @@ langchain-community==0.2.0
 langchain-chroma==0.1.1
 
 fake-useragent==1.5.1
-chromadb==0.5.0
+chromadb==0.5.3
 sentence-transformers==2.7.0
 pypdf==4.2.0
 docx2txt==0.8
