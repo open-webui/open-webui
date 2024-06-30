@@ -99,7 +99,6 @@ from config import (
     CHANGELOG,
     FRONTEND_BUILD_DIR,
     UPLOAD_DIR,
-    
     CACHE_DIR,
     STATIC_DIR,
     DEFAULT_LOCALE,
