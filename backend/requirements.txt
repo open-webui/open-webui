@@ -6,7 +6,7 @@ python-multipart==0.0.9
 Flask==3.0.3
 Flask-Cors==4.0.1
 
-python-socketio==5.11.2
+python-socketio==5.11.3
 python-jose==3.3.0
 passlib[bcrypt]==1.7.4
 
