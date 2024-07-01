@@ -1920,7 +1920,8 @@ async def oauth_callback(provider: str, request: Request, response: Response):
             if existing_user:
                 raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
-            picture_url = user_data.get("picture", "")
+            picture_claim = webui_app.state.config.OAUTH_PICTURE_CLAIM
+            picture_url = user_data.get(picture_claim, "")
             if picture_url:
                 # Download the profile image into a base64 string
                 try:
