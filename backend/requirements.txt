@@ -44,7 +44,7 @@ unstructured==0.14.0
 Markdown==3.6
 pypandoc==1.13
 pandas==2.2.2
-openpyxl==3.1.2
+openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.1
 validators==0.28.1
