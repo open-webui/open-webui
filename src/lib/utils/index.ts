@@ -525,7 +525,7 @@ export const extractSentences = (text) => {
 	});
 
 	// Split the modified text into sentences based on common punctuation marks, avoiding these blocks
-	let sentences = text.match(/[^.?!]+[.!?]+[\])'"`’”]*|.+/g);
+	let sentences = text.split(/(?<=[.!?])\s+/);
 
 	// Restore code blocks and process sentences
 	sentences = sentences.map((sentence) => {
