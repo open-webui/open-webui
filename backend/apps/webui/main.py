@@ -40,7 +40,7 @@ from config import (
     ENABLE_COMMUNITY_SHARING,
     AppConfig,
     OAUTH_USERNAME_CLAIM,
-    OAUTH_PICTURE_CLAIM
+    OAUTH_PICTURE_CLAIM,
 )
 
 import inspect
