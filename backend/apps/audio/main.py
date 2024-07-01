@@ -14,7 +14,6 @@ from fastapi import (
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 
 from fastapi.middleware.cors import CORSMiddleware
-from faster_whisper import WhisperModel
 from pydantic import BaseModel
 
 import uuid
@@ -277,6 +276,8 @@ def transcribe(
             f.close()
 
         if app.state.config.STT_ENGINE == "":
+            from faster_whisper import WhisperModel
+
             whisper_kwargs = {
                 "model_size_or_path": WHISPER_MODEL,
                 "device": whisper_device_type,
