@@ -259,6 +259,9 @@ async def generate_function_chat_completion(form_data, user):
                         if isinstance(line, BaseModel):
                             line = line.model_dump_json()
                             line = f"data: {line}"
+                        if isinstance(line, dict):
+                            line = f"data: {json.dumps(line)}"
+
                         try:
                             line = line.decode("utf-8")
                         except:

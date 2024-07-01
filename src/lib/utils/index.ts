@@ -525,7 +525,7 @@ export const extractSentences = (text) => {
 	});
 
 	// Split the modified text into sentences based on common punctuation marks, avoiding these blocks
-	let sentences = text.split(/(?<=[.!?])\s+/);
+	let sentences = text.match(/[^.?!]+[.!?]+[\])'"`’”]*|.+/g);
 
 	// Restore code blocks and process sentences
 	sentences = sentences.map((sentence) => {
@@ -745,4 +745,16 @@ export const extractFrontmatter = (content) => {
 	}
 
 	return frontmatter;
+};
+
+// Function to determine the best matching language
+export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, defaultLocale) => {
+	const languages = supportedLanguages.map((lang) => lang.code);
+
+	const match = preferredLanguages
+		.map((prefLang) => languages.find((lang) => lang.startsWith(prefLang)))
+		.find(Boolean);
+
+	console.log(languages, preferredLanguages, match, defaultLocale);
+	return match || defaultLocale;
 };

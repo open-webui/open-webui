@@ -153,7 +153,7 @@ async def cleanup_response(
         await session.close()
 
 
-async def post_streaming_url(url: str, payload: str):
+async def post_streaming_url(url: str, payload: str, stream: bool = True):
     r = None
     try:
         session = aiohttp.ClientSession(
@@ -162,12 +162,20 @@ async def post_streaming_url(url: str, payload: str):
         r = await session.post(url, data=payload)
         r.raise_for_status()
 
-        return StreamingResponse(
-            r.content,
-            status_code=r.status,
-            headers=dict(r.headers),
-            background=BackgroundTask(cleanup_response, response=r, session=session),
-        )
+        if stream:
+            return StreamingResponse(
+                r.content,
+                status_code=r.status,
+                headers=dict(r.headers),
+                background=BackgroundTask(
+                    cleanup_response, response=r, session=session
+                ),
+            )
+        else:
+            res = await r.json()
+            await cleanup_response(r, session)
+            return res
+
     except Exception as e:
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
@@ -963,7 +971,11 @@ async def generate_openai_chat_completion(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    return await post_streaming_url(f"{url}/v1/chat/completions", json.dumps(payload))
+    return await post_streaming_url(
+        f"{url}/v1/chat/completions",
+        json.dumps(payload),
+        stream=payload.get("stream", False),
+    )
 
 
 @app.get("/v1/models")

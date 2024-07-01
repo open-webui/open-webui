@@ -12,7 +12,6 @@ from fastapi import (
     Form,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from faster_whisper import WhisperModel
 
 from constants import ERROR_MESSAGES
 from utils.utils import (
