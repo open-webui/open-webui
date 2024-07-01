@@ -13,6 +13,7 @@ import sys
 import logging
 import aiohttp
 import requests
+import socket
 import mimetypes
 import shutil
 import os
@@ -166,6 +167,30 @@ https://github.com/open-webui/open-webui
 """
 )
 
+
+def get_local_network_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't matter if the address is reachable
+        s.connect(('10.254.254.254', 1))
+        local_ip = s.getsockname()[0]
+    except Exception:
+        local_ip = '127.0.0.1'
+    finally:
+        s.close()
+    return local_ip
+
+def get_port_from_args():
+    for i, arg in enumerate(sys.argv):
+        if arg == "--port" and i + 1 < len(sys.argv):
+            return sys.argv[i + 1]
+    return 8080
+local_ip = get_local_network_ip()
+port = get_port_from_args()
+
+print("\033[92m" + "="*50)
+print(f"\nServer running at \033[1mhttp://{local_ip}:{port}/ \n")
+print("="*50 + "\n\n\033[0m")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
