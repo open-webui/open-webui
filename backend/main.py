@@ -492,6 +492,12 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                                     "__id__": filter_id,
                                 }
 
+                            if "__model__" in sig.parameters:
+                                params = {
+                                    **params,
+                                    "__model__": model,
+                                }
+
                             if inspect.iscoroutinefunction(inlet):
                                 data = await inlet(**params)
                             else:
@@ -1081,6 +1087,12 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                         params = {
                             **params,
                             "__id__": filter_id,
+                        }
+
+                    if "__model__" in sig.parameters:
+                        params = {
+                            **params,
+                            "__model__": model,
                         }
 
                     if inspect.iscoroutinefunction(outlet):
