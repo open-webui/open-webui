@@ -409,6 +409,7 @@
 	"Open": "Отвори",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "Отвори нов чат",
+	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API Config",

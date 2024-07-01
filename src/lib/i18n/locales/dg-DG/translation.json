@@ -409,6 +409,7 @@
 	"Open": "Open",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "Open new bark",
+	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "",

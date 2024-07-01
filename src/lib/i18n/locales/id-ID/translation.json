@@ -409,6 +409,7 @@
 	"Open": "Buka",
 	"Open AI (Dall-E)": "Buka AI (Dall-E)",
 	"Open new chat": "Buka obrolan baru",
+	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "API OpenAI",
 	"OpenAI API Config": "Konfigurasi API OpenAI",

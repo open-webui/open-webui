@@ -409,6 +409,7 @@
 	"Open": "খোলা",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "নতুন চ্যাট খুলুন",
+	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI এপিআই",
 	"OpenAI API Config": "OpenAI এপিআই কনফিগ",

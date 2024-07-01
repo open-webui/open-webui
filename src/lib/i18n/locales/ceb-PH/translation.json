@@ -409,6 +409,7 @@
 	"Open": "Bukas",
 	"Open AI (Dall-E)": "Buksan ang AI (Dall-E)",
 	"Open new chat": "Ablihi ang bag-ong diskusyon",
+	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "",

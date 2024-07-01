@@ -409,6 +409,7 @@
 	"Open": "Avaa",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "Avaa uusi keskustelu",
+	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API -asetukset",

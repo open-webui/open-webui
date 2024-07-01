@@ -409,6 +409,7 @@
 	"Open": "열기",
 	"Open AI (Dall-E)": "OpenAI(Dall-E)",
 	"Open new chat": "새 채팅 열기",
+	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API 설정",

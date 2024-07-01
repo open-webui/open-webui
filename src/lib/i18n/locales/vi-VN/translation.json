@@ -409,6 +409,7 @@
 	"Open": "Mở",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "Mở nội dung chat mới",
+	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "API OpenAI",
 	"OpenAI API Config": "Cấu hình API OpenAI",

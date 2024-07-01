@@ -409,6 +409,7 @@
 	"Open": "ਖੋਲ੍ਹੋ",
 	"Open AI (Dall-E)": "ਓਪਨ ਏਆਈ (ਡਾਲ-ਈ)",
 	"Open new chat": "ਨਵੀਂ ਗੱਲਬਾਤ ਖੋਲ੍ਹੋ",
+	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "",
 	"OpenAI": "ਓਪਨਏਆਈ",
 	"OpenAI API": "ਓਪਨਏਆਈ API",
 	"OpenAI API Config": "ਓਪਨਏਆਈ API ਕਨਫਿਗ",
