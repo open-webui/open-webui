@@ -28,12 +28,8 @@
 		"title": "Cebuano (Filipino)"
 	},
 	{
-		"code": "de-DE-formal",
-		"title": "German (Deutsch - Sie)"
-	},
-	{
-		"code": "de-DE-informal",
-		"title": "German (Deutsch - Du)"
+		"code": "de-DE",
+		"title": "German (Deutsch)"
 	},
 	{
 		"code": "es-ES",
