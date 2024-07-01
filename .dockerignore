@@ -11,6 +11,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 __pycache__
 .idea
+venv
 _old
 uploads
 .ipynb_checkpoints

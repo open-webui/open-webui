@@ -882,10 +882,10 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
 # RAG document text extraction
 ####################################
 
-DOCUMENT_USE_TIKA = PersistentConfig(
-    "DOCUMENT_USE_TIKA",
-    "rag.document_use_tika",
-    os.environ.get("DOCUMENT_USE_TIKA", "false").lower() == "true"
+TEXT_EXTRACTION_ENGINE = PersistentConfig(
+    "TEXT_EXTRACTION_ENGINE",
+    "rag.text_extraction_engine",
+    os.environ.get("TEXT_EXTRACTION_ENGINE", "").lower()
 )
 
 TIKA_SERVER_URL = PersistentConfig(

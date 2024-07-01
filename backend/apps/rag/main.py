@@ -93,7 +93,7 @@ from config import (
     SRC_LOG_LEVELS,
     UPLOAD_DIR,
     DOCS_DIR,
-    DOCUMENT_USE_TIKA,
+    TEXT_EXTRACTION_ENGINE,
     TIKA_SERVER_URL,
     RAG_TOP_K,
     RAG_RELEVANCE_THRESHOLD,
@@ -149,6 +149,9 @@ app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
 app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
 )
+
+app.state.config.TEXT_EXTRACTION_ENGINE = TEXT_EXTRACTION_ENGINE
+app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
 
 app.state.config.CHUNK_SIZE = CHUNK_SIZE
 app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
@@ -390,6 +393,10 @@ async def get_rag_config(user=Depends(get_admin_user)):
     return {
         "status": True,
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
+        "text_extraction": {
+            "engine": app.state.config.TEXT_EXTRACTION_ENGINE,
+            "tika_server_url": app.state.config.TIKA_SERVER_URL,
+        },
         "chunk": {
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
@@ -417,6 +424,11 @@ async def get_rag_config(user=Depends(get_admin_user)):
             },
         },
     }
+
+
+class TextExtractionConfig(BaseModel):
+    engine: str = ""
+    tika_server_url: Optional[str] = None
 
 
 class ChunkParamUpdateForm(BaseModel):
@@ -452,6 +464,7 @@ class WebConfig(BaseModel):
 
 class ConfigUpdateForm(BaseModel):
     pdf_extract_images: Optional[bool] = None
+    text_extraction: Optional[TextExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
     youtube: Optional[YoutubeLoaderConfig] = None
     web: Optional[WebConfig] = None
@@ -464,6 +477,11 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         if form_data.pdf_extract_images is not None
         else app.state.config.PDF_EXTRACT_IMAGES
     )
+
+    if form_data.text_extraction is not None:
+        log.info(f"Updating text settings: {form_data.text_extraction}")
+        app.state.config.TEXT_EXTRACTION_ENGINE = form_data.text_extraction.engine
+        app.state.config.TIKA_SERVER_URL = form_data.text_extraction.tika_server_url
 
     if form_data.chunk is not None:
         app.state.config.CHUNK_SIZE = form_data.chunk.chunk_size
@@ -501,6 +519,10 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
     return {
         "status": True,
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
+        "text_extraction": {
+            "engine": app.state.config.TEXT_EXTRACTION_ENGINE,
+            "tika_server_url": app.state.config.TIKA_SERVER_URL,
+        },
         "chunk": {
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
@@ -1001,7 +1023,7 @@ class TikaLoader:
         else:
             headers = {}
 
-        endpoint = str(TIKA_SERVER_URL)
+        endpoint = app.state.config.TIKA_SERVER_URL
         if not endpoint.endswith("/"):
             endpoint += "/"
         endpoint += "tika/text"
@@ -1072,9 +1094,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         "msg",
     ]
 
-    log.warning("Use tika: %s, server URL: %s", DOCUMENT_USE_TIKA, TIKA_SERVER_URL)
-
-    if DOCUMENT_USE_TIKA and TIKA_SERVER_URL:
+    if app.state.config.TEXT_EXTRACTION_ENGINE == "tika" and app.state.config.TIKA_SERVER_URL:
         if file_ext in known_source_ext or (
                 file_content_type and file_content_type.find("text/") >= 0
         ):
