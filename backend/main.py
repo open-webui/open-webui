@@ -101,6 +101,7 @@ from config import (
     UPLOAD_DIR,
     CACHE_DIR,
     STATIC_DIR,
+    DEFAULT_LOCALE,
     ENABLE_OPENAI_API,
     ENABLE_OLLAMA_API,
     ENABLE_MODEL_FILTER,
@@ -617,6 +618,8 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     return StreamingResponse(
                         self.ollama_stream_wrapper(response.body_iterator, data_items),
                     )
+
+                return response
             else:
                 return response
 
@@ -1720,18 +1723,11 @@ async def update_pipeline_valves(
 
 @app.get("/api/config")
 async def get_app_config():
-    # Checking and Handling the Absence of 'ui' in CONFIG_DATA
-
-    default_locale = "en-US"
-    if "ui" in CONFIG_DATA:
-        default_locale = CONFIG_DATA["ui"].get("default_locale", "en-US")
-
-    # The Rest of the Function Now Uses the Variables Defined Above
     return {
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
-        "default_locale": default_locale,
+        "default_locale": str(DEFAULT_LOCALE),
         "default_models": webui_app.state.config.DEFAULT_MODELS,
         "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
         "features": {
@@ -1924,8 +1920,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
             if existing_user:
                 raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
-            picture_claim = webui_app.state.config.OAUTH_PICTURE_CLAIM
-            picture_url = user_data.get(picture_claim, "")
+            picture_url = user_data.get("picture", "")
             if picture_url:
                 # Download the profile image into a base64 string
                 try:
@@ -1946,6 +1941,11 @@ async def oauth_callback(provider: str, request: Request, response: Response):
             if not picture_url:
                 picture_url = "/user.png"
             username_claim = webui_app.state.config.OAUTH_USERNAME_CLAIM
+            role = (
+                "admin"
+                if Users.get_num_users() == 0
+                else webui_app.state.config.DEFAULT_USER_ROLE
+            )
             user = Auths.insert_new_auth(
                 email=email,
                 password=get_password_hash(
@@ -1953,7 +1953,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
                 ),  # Random password, not used
                 name=user_data.get(username_claim, "User"),
                 profile_image_url=picture_url,
-                role=webui_app.state.config.DEFAULT_USER_ROLE,
+                role=role,
                 oauth_sub=provider_sub,
             )
 
@@ -1980,7 +1980,7 @@ async def oauth_callback(provider: str, request: Request, response: Response):
     # Set the cookie token
     response.set_cookie(
         key="token",
-        value=token,
+        value=jwt_token,
         httponly=True,  # Ensures the cookie is not accessible via JavaScript
     )
 
