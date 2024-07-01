@@ -10,7 +10,7 @@ python-socketio==5.11.3
 python-jose==3.3.0
 passlib[bcrypt]==1.7.4
 
-requests==2.32.2
+requests==2.32.3
 aiohttp==3.9.5
 peewee==3.17.5
 peewee-migrate==1.12.2
