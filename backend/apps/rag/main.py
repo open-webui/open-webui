@@ -48,8 +48,6 @@ import mimetypes
 import uuid
 import json
 
-import sentence_transformers
-
 from apps.webui.models.documents import (
     Documents,
     DocumentForm,
@@ -190,6 +188,8 @@ def update_embedding_model(
     update_model: bool = False,
 ):
     if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
+        import sentence_transformers
+
         app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
             get_model_path(embedding_model, update_model),
             device=DEVICE_TYPE,
@@ -204,6 +204,8 @@ def update_reranking_model(
     update_model: bool = False,
 ):
     if reranking_model:
+        import sentence_transformers
+
         app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
             get_model_path(reranking_model, update_model),
             device=DEVICE_TYPE,

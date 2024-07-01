@@ -442,8 +442,6 @@ from langchain_core.documents import BaseDocumentCompressor, Document
 from langchain_core.callbacks import Callbacks
 from langchain_core.pydantic_v1 import Extra
 
-from sentence_transformers import util
-
 
 class RerankCompressor(BaseDocumentCompressor):
     embedding_function: Any
@@ -468,6 +466,8 @@ class RerankCompressor(BaseDocumentCompressor):
                 [(query, doc.page_content) for doc in documents]
             )
         else:
+            from sentence_transformers import util
+
             query_embedding = self.embedding_function(query)
             document_embedding = self.embedding_function(
                 [doc.page_content for doc in documents]
