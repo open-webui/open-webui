@@ -32,7 +32,7 @@ type ChunkConfigForm = {
 	chunk_overlap: number;
 };
 
-type TextExtractConfigForm = {
+type ContentExtractConfigForm = {
 	engine: string;
 	tika_server_url: string | null;
 };
@@ -45,7 +45,7 @@ type YoutubeConfigForm = {
 type RAGConfigForm = {
 	pdf_extract_images?: boolean;
 	chunk?: ChunkConfigForm;
-	text_extraction?: TextExtractConfigForm;
+	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;
 	youtube?: YoutubeConfigForm;
 };

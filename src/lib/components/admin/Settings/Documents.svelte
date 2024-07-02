@@ -37,7 +37,7 @@
 	let embeddingModel = '';
 	let rerankingModel = '';
 
-	let textExtractionEngine = 'default';
+	let contentExtractionEngine = 'default';
 	let tikaServerUrl = '';
 	let showTikaServerUrl = false;
 
@@ -167,7 +167,7 @@
 			rerankingModelUpdateHandler();
 		}
 
-		if (textExtractionEngine === 'tika' && tikaServerUrl === '') {
+		if (contentExtractionEngine === 'tika' && tikaServerUrl === '') {
 			toast.error($i18n.t('Tika Server URL required.'));
 			return;
 		}
@@ -178,8 +178,8 @@
 				chunk_overlap: chunkOverlap,
 				chunk_size: chunkSize
 			},
-			text_extraction: {
-				engine: textExtractionEngine,
+			content_extraction: {
+				engine: contentExtractionEngine,
 				tika_server_url: tikaServerUrl
 			}
 		});
@@ -227,9 +227,9 @@
 			chunkSize = res.chunk.chunk_size;
 			chunkOverlap = res.chunk.chunk_overlap;
 
-			textExtractionEngine = res.text_extraction.engine;
-			tikaServerUrl = res.text_extraction.tika_server_url;
-			showTikaServerUrl = textExtractionEngine === 'tika';
+			contentExtractionEngine = res.content_extraction.engine;
+			tikaServerUrl = res.content_extraction.tika_server_url;
+			showTikaServerUrl = contentExtractionEngine === 'tika';
 		}
 	});
 </script>
@@ -414,11 +414,11 @@
 				<div class="self-center text-xs font-medium">{$i18n.t('Engine')}</div>
 				<div class="flex items-center relative">
 					<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
-							bind:value={textExtractionEngine}
-							on:change={(e) => {
-								showTikaServerUrl = (e.target.value === 'tika');
-							}}
+						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+						bind:value={contentExtractionEngine}
+						on:change={(e) => {
+							showTikaServerUrl = e.target.value === 'tika';
+						}}
 					>
 						<option value="default">{$i18n.t('Default')}</option>
 						<option value="tika">{$i18n.t('Tika')}</option>
@@ -430,9 +430,9 @@
 				<div class="flex w-full mt-2">
 					<div class="flex-1 mr-2">
 						<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder={$i18n.t('Enter Tika Server URL')}
-								bind:value={tikaServerUrl}
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('Enter Tika Server URL')}
+							bind:value={tikaServerUrl}
 						/>
 					</div>
 				</div>

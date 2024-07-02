@@ -886,13 +886,13 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 
 ####################################
-# RAG document text extraction
+# RAG document content extraction
 ####################################
 
-TEXT_EXTRACTION_ENGINE = PersistentConfig(
-    "TEXT_EXTRACTION_ENGINE",
-    "rag.text_extraction_engine",
-    os.environ.get("TEXT_EXTRACTION_ENGINE", "").lower()
+CONTENT_EXTRACTION_ENGINE = PersistentConfig(
+    "CONTENT_EXTRACTION_ENGINE",
+    "rag.CONTENT_EXTRACTION_ENGINE",
+    os.environ.get("CONTENT_EXTRACTION_ENGINE", "").lower(),
 )
 
 TIKA_SERVER_URL = PersistentConfig(
