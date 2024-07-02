@@ -407,39 +407,6 @@
 
 		<hr class="dark:border-gray-850" />
 
-		<div class="">
-			<div class="text-sm font-medium">{$i18n.t('Text Extraction')}</div>
-
-			<div class="flex w-full justify-between mt-2">
-				<div class="self-center text-xs font-medium">{$i18n.t('Engine')}</div>
-				<div class="flex items-center relative">
-					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
-						bind:value={contentExtractionEngine}
-						on:change={(e) => {
-							showTikaServerUrl = e.target.value === 'tika';
-						}}
-					>
-						<option value="default">{$i18n.t('Default')}</option>
-						<option value="tika">{$i18n.t('Tika')}</option>
-					</select>
-				</div>
-			</div>
-
-			{#if showTikaServerUrl}
-				<div class="flex w-full mt-2">
-					<div class="flex-1 mr-2">
-						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t('Enter Tika Server URL')}
-							bind:value={tikaServerUrl}
-						/>
-					</div>
-				</div>
-			{/if}
-		</div>
-		<hr class=" dark:border-gray-850 my-1" />
-
 		<div class="space-y-2" />
 		<div>
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('Embedding Model')}</div>
@@ -610,6 +577,39 @@
 			{/if}
 		</div>
 
+		<hr class=" dark:border-gray-850" />
+
+		<div class="">
+			<div class="text-sm font-medium">{$i18n.t('Content Extraction')}</div>
+
+			<div class="flex w-full justify-between mt-2">
+				<div class="self-center text-xs font-medium">{$i18n.t('Engine')}</div>
+				<div class="flex items-center relative">
+					<select
+						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+						bind:value={contentExtractionEngine}
+						on:change={(e) => {
+							showTikaServerUrl = e.target.value === 'tika';
+						}}
+					>
+						<option value="">{$i18n.t('Default')} </option>
+						<option value="tika">{$i18n.t('Tika')}</option>
+					</select>
+				</div>
+			</div>
+
+			{#if showTikaServerUrl}
+				<div class="flex w-full mt-2">
+					<div class="flex-1 mr-2">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('Enter Tika Server URL')}
+							bind:value={tikaServerUrl}
+						/>
+					</div>
+				</div>
+			{/if}
+		</div>
 		<hr class=" dark:border-gray-850" />
 
 		<div class=" ">
