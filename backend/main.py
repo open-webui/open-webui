@@ -311,6 +311,7 @@ async def get_function_call_response(
             {"role": "user", "content": f"Query: {prompt}"},
         ],
         "stream": False,
+        "function": True,
     }
 
     try:
