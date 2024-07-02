@@ -833,7 +833,10 @@ def filter_pipeline(payload, user):
             else:
                 pass
 
-    if "pipeline" not in app.state.MODELS[model_id]:
+    keep_extras = (
+        "pipeline" in app.state.MODELS[model_id] or "pipe" in app.state.MODELS[model_id]
+    )
+    if not keep_extras:
         for key in ["title", "task", "function"]:
             if key in payload:
                 del payload[key]
