@@ -2,13 +2,10 @@ import json
 import logging
 from typing import Optional
 
-import peewee as pw
-from peewee import *
-
-from playhouse.shortcuts import model_to_dict
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy import String, Column, BigInteger, Text
 
-from apps.webui.internal.db import DB, JSONField
+from apps.webui.internal.db import Base, JSONField, Session
 
 from typing import List, Union, Optional
 from config import SRC_LOG_LEVELS
@@ -46,38 +43,37 @@ class ModelMeta(BaseModel):
     pass
 
 
-class Model(pw.Model):
-    id = pw.TextField(unique=True)
+class Model(Base):
+    __tablename__ = "model"
+
+    id = Column(Text, primary_key=True)
     """
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
-    user_id = pw.TextField()
+    user_id = Column(Text)
 
-    base_model_id = pw.TextField(null=True)
+    base_model_id = Column(Text, nullable=True)
     """
         An optional pointer to the actual model that should be used when proxying requests.
     """
 
-    name = pw.TextField()
+    name = Column(Text)
     """
         The human-readable display name of the model.
     """
 
-    params = JSONField()
+    params = Column(JSONField)
     """
         Holds a JSON encoded blob of parameters, see `ModelParams`.
     """
 
-    meta = JSONField()
+    meta = Column(JSONField)
     """
         Holds a JSON encoded blob of metadata, see `ModelMeta`.
     """
 
-    updated_at = BigIntegerField()
-    created_at = BigIntegerField()
-
-    class Meta:
-        database = DB
+    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)
 
 
 class ModelModel(BaseModel):
@@ -91,6 +87,8 @@ class ModelModel(BaseModel):
 
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 ####################
@@ -115,12 +113,6 @@ class ModelForm(BaseModel):
 
 
 class ModelsTable:
-    def __init__(
-        self,
-        db: pw.SqliteDatabase | pw.PostgresqlDatabase,
-    ):
-        self.db = db
-        self.db.create_tables([Model])
 
     def insert_new_model(
         self, form_data: ModelForm, user_id: str
@@ -134,10 +126,13 @@ class ModelsTable:
             }
         )
         try:
-            result = Model.create(**model.model_dump())
+            result = Model(**model.model_dump())
+            Session.add(result)
+            Session.commit()
+            Session.refresh(result)
 
             if result:
-                return model
+                return ModelModel.model_validate(result)
             else:
                 return None
         except Exception as e:
@@ -145,23 +140,25 @@ class ModelsTable:
             return None
 
     def get_all_models(self) -> List[ModelModel]:
-        return [ModelModel(**model_to_dict(model)) for model in Model.select()]
+        return [
+            ModelModel.model_validate(model) for model in Session.query(Model).all()
+        ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
-            model = Model.get(Model.id == id)
-            return ModelModel(**model_to_dict(model))
+            model = Session.get(Model, id)
+            return ModelModel.model_validate(model)
         except:
             return None
 
     def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
         try:
             # update only the fields that are present in the model
-            query = Model.update(**model.model_dump()).where(Model.id == id)
-            query.execute()
-
-            model = Model.get(Model.id == id)
-            return ModelModel(**model_to_dict(model))
+            model = Session.query(Model).get(id)
+            model.update(**model.model_dump())
+            Session.commit()
+            Session.refresh(model)
+            return ModelModel.model_validate(model)
         except Exception as e:
             print(e)
 
@@ -169,11 +166,10 @@ class ModelsTable:
 
     def delete_model_by_id(self, id: str) -> bool:
         try:
-            query = Model.delete().where(Model.id == id)
-            query.execute()
+            Session.query(Model).filter_by(id=id).delete()
             return True
         except:
             return False
 
 
-Models = ModelsTable(DB)
+Models = ModelsTable()

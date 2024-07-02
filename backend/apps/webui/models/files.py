@@ -1,10 +1,11 @@
-from pydantic import BaseModel
-from peewee import *
-from playhouse.shortcuts import model_to_dict
+from pydantic import BaseModel, ConfigDict
 from typing import List, Union, Optional
 import time
 import logging
-from apps.webui.internal.db import DB, JSONField
+
+from sqlalchemy import Column, String, BigInteger, Text
+
+from apps.webui.internal.db import JSONField, Base, Session
 
 import json
 
@@ -18,15 +19,14 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 ####################
 
 
-class File(Model):
-    id = CharField(unique=True)
-    user_id = CharField()
-    filename = TextField()
-    meta = JSONField()
-    created_at = BigIntegerField()
+class File(Base):
+    __tablename__ = "file"
 
-    class Meta:
-        database = DB
+    id = Column(String, primary_key=True)
+    user_id = Column(String)
+    filename = Column(Text)
+    meta = Column(JSONField)
+    created_at = Column(BigInteger)
 
 
 class FileModel(BaseModel):
@@ -35,6 +35,8 @@ class FileModel(BaseModel):
     filename: str
     meta: dict
     created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 ####################
@@ -57,9 +59,6 @@ class FileForm(BaseModel):
 
 
 class FilesTable:
-    def __init__(self, db):
-        self.db = db
-        self.db.create_tables([File])
 
     def insert_new_file(self, user_id: str, form_data: FileForm) -> Optional[FileModel]:
         file = FileModel(
@@ -71,9 +70,12 @@ class FilesTable:
         )
 
         try:
-            result = File.create(**file.model_dump())
+            result = File(**file.model_dump())
+            Session.add(result)
+            Session.commit()
+            Session.refresh(result)
             if result:
-                return file
+                return FileModel.model_validate(result)
             else:
                 return None
         except Exception as e:
@@ -82,31 +84,27 @@ class FilesTable:
 
     def get_file_by_id(self, id: str) -> Optional[FileModel]:
         try:
-            file = File.get(File.id == id)
-            return FileModel(**model_to_dict(file))
+            file = Session.get(File, id)
+            return FileModel.model_validate(file)
         except:
             return None
 
     def get_files(self) -> List[FileModel]:
-        return [FileModel(**model_to_dict(file)) for file in File.select()]
+        return [FileModel.model_validate(file) for file in Session.query(File).all()]
 
     def delete_file_by_id(self, id: str) -> bool:
         try:
-            query = File.delete().where((File.id == id))
-            query.execute()  # Remove the rows, return number of rows removed.
-
+            Session.query(File).filter_by(id=id).delete()
             return True
         except:
             return False
 
     def delete_all_files(self) -> bool:
         try:
-            query = File.delete()
-            query.execute()  # Remove the rows, return number of rows removed.
-
+            Session.query(File).delete()
             return True
         except:
             return False
 
 
-Files = FilesTable(DB)
+Files = FilesTable()

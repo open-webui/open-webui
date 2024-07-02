@@ -50,10 +50,7 @@ router = APIRouter()
 
 
 @router.post("/")
-def upload_file(
-    file: UploadFile = File(...),
-    user=Depends(get_verified_user),
-):
+def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
     log.info(f"file.content_type: {file.content_type}")
     try:
         unsanitized_filename = file.filename

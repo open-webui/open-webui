@@ -76,7 +76,10 @@ async def delete_all_user_chats(request: Request, user=Depends(get_verified_user
 
 @router.get("/list/user/{user_id}", response_model=List[ChatTitleIdResponse])
 async def get_user_chat_list_by_user_id(
-    user_id: str, user=Depends(get_admin_user), skip: int = 0, limit: int = 50
+    user_id: str,
+    user=Depends(get_admin_user),
+    skip: int = 0,
+    limit: int = 50,
 ):
     return Chats.get_chat_list_by_user_id(
         user_id, include_archived=True, skip=skip, limit=limit
@@ -119,7 +122,7 @@ async def get_user_chats(user=Depends(get_verified_user)):
 
 
 @router.get("/all/archived", response_model=List[ChatResponse])
-async def get_user_chats(user=Depends(get_verified_user)):
+async def get_user_archived_chats(user=Depends(get_verified_user)):
     return [
         ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
         for chat in Chats.get_archived_chats_by_user_id(user.id)

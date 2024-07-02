@@ -3,7 +3,7 @@ from fastapi.routing import APIRoute
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-
+from sqlalchemy.orm import Session
 from apps.webui.routers import (
     auths,
     users,
