@@ -766,6 +766,7 @@ class BannerModel(BaseModel):
     dismissible: bool
     timestamp: int
 
+
 try:
     banners = json.loads(os.environ.get("WEBUI_BANNERS", "[]"))
     banners = [BannerModel(**banner) for banner in banners]
