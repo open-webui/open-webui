@@ -163,6 +163,10 @@
 		};
 		window.addEventListener('message', onMessageHandler);
 
+		$socket.on('chat-events', async (data) => {
+			console.log(data);
+		});
+
 		if (!$chatId) {
 			chatId.subscribe(async (value) => {
 				if (!value) {
@@ -177,6 +181,8 @@
 
 		return () => {
 			window.removeEventListener('message', onMessageHandler);
+
+			$socket.off('chat-events');
 		};
 	});
 
@@ -683,6 +689,7 @@
 			keep_alive: $settings.keepAlive ?? undefined,
 			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 			files: files.length > 0 ? files : undefined,
+			session_id: $socket?.id,
 			chat_id: $chatId,
 			id: responseMessageId
 		});
@@ -984,6 +991,7 @@
 					max_tokens: $settings?.params?.max_tokens ?? undefined,
 					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 					files: files.length > 0 ? files : undefined,
+					session_id: $socket?.id,
 					chat_id: $chatId,
 					id: responseMessageId
 				},
