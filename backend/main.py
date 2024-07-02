@@ -311,6 +311,7 @@ async def get_function_call_response(
             {"role": "user", "content": f"Query: {prompt}"},
         ],
         "stream": False,
+        "function": True,
     }
 
     try:
@@ -832,12 +833,13 @@ def filter_pipeline(payload, user):
             else:
                 pass
 
-    if "pipeline" not in app.state.MODELS[model_id]:
-        if "title" in payload:
-            del payload["title"]
-
-        if "task" in payload:
-            del payload["task"]
+    keep_extras = (
+        "pipeline" in app.state.MODELS[model_id] or "pipe" in app.state.MODELS[model_id]
+    )
+    if not keep_extras:
+        for key in ["title", "task", "function"]:
+            if key in payload:
+                del payload[key]
 
     return payload
 
