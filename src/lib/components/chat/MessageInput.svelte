@@ -613,7 +613,7 @@
 														<div class=" text-gray-500 text-sm">{$i18n.t('Document')}</div>
 													</div>
 												</div>
-											{:else if file.type === 'collection'}
+											{:else if file.type === 'all_documents' || file.type === 'tag'}
 												<div
 													class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
 												>

@@ -20,6 +20,7 @@ from langchain.retrievers import (
 
 from typing import Optional
 
+from apps.webui.models.documents import Documents
 from utils.misc import get_last_user_message, add_or_update_system_message
 from config import SRC_LOG_LEVELS, CHROMA_CLIENT
 
@@ -236,6 +237,21 @@ def get_embedding_function(
         return lambda query: generate_multiple(query, func)
 
 
+def _extract_collection_names(file):
+    if file["type"] == "collection":
+        # keep for backward compatibility
+        return file["collection_names"]
+    elif file["type"] == "all_documents":
+        return [document.collection_name for document in Documents.get_docs()]
+    elif file["type"] == "tag":
+        return [
+            document.collection_name
+            for document in Documents.get_docs_by_tag(file["name"])
+        ]
+    else:
+        return [file["collection_name"]]
+
+
 def get_rag_context(
     files,
     messages,
@@ -254,11 +270,7 @@ def get_rag_context(
     for file in files:
         context = None
 
-        collection_names = (
-            file["collection_names"]
-            if file["type"] == "collection"
-            else [file["collection_name"]]
-        )
+        collection_names = _extract_collection_names(file)
 
         collection_names = set(collection_names).difference(extracted_collections)
         if not collection_names:
