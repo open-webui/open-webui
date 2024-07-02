@@ -60,7 +60,8 @@
 		</script>
 
 		<title>Open WebUI</title>
-
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-icon-180.png">
+		<meta name="apple-mobile-web-app-capable" content="yes">
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
@@ -141,6 +142,16 @@
 				Footer content
 			</span> -->
 		</div>
+		<script>
+			if ('serviceWorker' in navigator) {
+				navigator.serviceWorker.register('%sveltekit.assets%/service-worker.js')
+				.then((registration) => {
+					console.log('Service Worker registered with scope:', registration.scope);
+				}).catch((error) => {
+					console.error('Service Worker registration failed:', error);
+				});
+			}
+		</script>
 	</body>
 </html>
 
