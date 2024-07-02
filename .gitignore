@@ -306,3 +306,4 @@ dist
 # cypress artifacts
 cypress/videos
 cypress/screenshots
+.vscode/settings.json

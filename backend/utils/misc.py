@@ -8,14 +8,22 @@ import uuid
 import time
 
 
-def get_last_user_message(messages: List[dict]) -> str:
+def get_last_user_message_item(messages: List[dict]) -> str:
     for message in reversed(messages):
         if message["role"] == "user":
-            if isinstance(message["content"], list):
-                for item in message["content"]:
-                    if item["type"] == "text":
-                        return item["text"]
-            return message["content"]
+            return message
+    return None
+
+
+def get_last_user_message(messages: List[dict]) -> str:
+    message = get_last_user_message_item(messages)
+
+    if message is not None:
+        if isinstance(message["content"], list):
+            for item in message["content"]:
+                if item["type"] == "text":
+                    return item["text"]
+        return message["content"]
     return None
 
 

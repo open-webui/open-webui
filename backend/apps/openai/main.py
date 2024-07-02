@@ -25,6 +25,7 @@ from utils.task import prompt_template
 from config import (
     SRC_LOG_LEVELS,
     ENABLE_OPENAI_API,
+    AIOHTTP_CLIENT_TIMEOUT,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     CACHE_DIR,
@@ -463,7 +464,9 @@ async def generate_chat_completion(
     streaming = False
 
     try:
-        session = aiohttp.ClientSession(trust_env=True)
+        session = aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        )
         r = await session.request(
             method="POST",
             url=f"{url}/chat/completions",

@@ -294,14 +294,16 @@ def get_rag_context(
 
         extracted_collections.extend(collection_names)
 
-    context_string = ""
-
+    contexts = []
     citations = []
+
     for context in relevant_contexts:
         try:
             if "documents" in context:
-                context_string += "\n\n".join(
-                    [text for text in context["documents"][0] if text is not None]
+                contexts.append(
+                    "\n\n".join(
+                        [text for text in context["documents"][0] if text is not None]
+                    )
                 )
 
                 if "metadatas" in context:
@@ -315,9 +317,7 @@ def get_rag_context(
         except Exception as e:
             log.exception(e)
 
-    context_string = context_string.strip()
-
-    return context_string, citations
+    return contexts, citations
 
 
 def get_model_path(model: str, update_model: bool = False):
@@ -442,8 +442,6 @@ from langchain_core.documents import BaseDocumentCompressor, Document
 from langchain_core.callbacks import Callbacks
 from langchain_core.pydantic_v1 import Extra
 
-from sentence_transformers import util
-
 
 class RerankCompressor(BaseDocumentCompressor):
     embedding_function: Any
@@ -468,6 +466,8 @@ class RerankCompressor(BaseDocumentCompressor):
                 [(query, doc.page_content) for doc in documents]
             )
         else:
+            from sentence_transformers import util
+
             query_embedding = self.embedding_function(query)
             document_embedding = self.embedding_function(
                 [doc.page_content for doc in documents]

@@ -170,8 +170,7 @@ class ToolsTable:
             user_settings["tools"]["valves"][id] = valves
 
             # Update the user settings in the database
-            query = Users.update_user_by_id(user_id, {"settings": user_settings})
-            query.execute()
+            Users.update_user_by_id(user_id, {"settings": user_settings})
 
             return user_settings["tools"]["valves"][id]
         except Exception as e:
