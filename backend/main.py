@@ -1123,6 +1123,17 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
             else:
                 pass
 
+    async def __event_emitter__(data):
+        await sio.emit(
+            "chat-events",
+            {
+                "chat_id": data["chat_id"],
+                "message_id": data["id"],
+                "data": data,
+            },
+            to=data["session_id"],
+        )
+
     def get_priority(function_id):
         function = Functions.get_function_by_id(function_id)
         if function is not None and hasattr(function, "valves"):
@@ -1202,6 +1213,12 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                         params = {
                             **params,
                             "__model__": model,
+                        }
+
+                    if "__event_emitter__" in sig.parameters:
+                        params = {
+                            **params,
+                            "__event_emitter__": __event_emitter__,
                         }
 
                     if inspect.iscoroutinefunction(outlet):
