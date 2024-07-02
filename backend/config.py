@@ -8,7 +8,6 @@ from chromadb import Settings
 from bs4 import BeautifulSoup
 from typing import TypeVar, Generic
 from pydantic import BaseModel
-from pydantic.error_wrappers import ValidationError
 from typing import Optional
 
 from pathlib import Path
@@ -770,7 +769,7 @@ class BannerModel(BaseModel):
 try:
     banners = json.loads(os.environ.get("WEBUI_BANNERS", "[]"))
     banners = [BannerModel(**banner) for banner in banners]
-except ValidationError as e:
+except Exception as e:
     print(f"Error loading WEBUI_BANNERS: {e}")
     banners = []
 
