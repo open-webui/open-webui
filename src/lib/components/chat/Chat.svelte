@@ -126,6 +126,27 @@
 		})();
 	}
 
+	const chatEventHandler = async (data) => {
+		if (data.chat_id === $chatId) {
+			await tick();
+			console.log(data);
+			let message = history.messages[data.message_id];
+
+			const status = {
+				done: data?.data?.done ?? null,
+				description: data?.data?.status ?? null
+			};
+
+			if (message.statusHistory) {
+				message.statusHistory.push(status);
+			} else {
+				message.statusHistory = [status];
+			}
+
+			messages = messages;
+		}
+	};
+
 	onMount(async () => {
 		const onMessageHandler = async (event) => {
 			if (event.origin === window.origin) {
@@ -163,9 +184,7 @@
 		};
 		window.addEventListener('message', onMessageHandler);
 
-		$socket.on('chat-events', async (data) => {
-			console.log(data);
-		});
+		$socket.on('chat-events', chatEventHandler);
 
 		if (!$chatId) {
 			chatId.subscribe(async (value) => {
