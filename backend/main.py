@@ -425,7 +425,7 @@ async def get_function_call_response(
                         # Call the function with the '__event_emitter__' parameter included
                         params = {
                             **params,
-                            "__event_emitter__": model,
+                            "__event_emitter__": __event_emitter__,
                         }
 
                     if inspect.iscoroutinefunction(function):
