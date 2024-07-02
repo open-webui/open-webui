@@ -39,6 +39,8 @@ from config import (
     WEBUI_BANNERS,
     ENABLE_COMMUNITY_SHARING,
     AppConfig,
+    OAUTH_USERNAME_CLAIM,
+    OAUTH_PICTURE_CLAIM,
 )
 
 import inspect
@@ -73,6 +75,9 @@ app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
 
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
+
+app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
+app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 
 app.state.MODELS = {}
 app.state.TOOLS = {}
