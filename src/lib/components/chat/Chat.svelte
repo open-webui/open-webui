@@ -665,6 +665,7 @@
 		await tick();
 
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
+			stream: true,
 			model: model.id,
 			messages: messagesBody,
 			options: {
@@ -682,8 +683,8 @@
 			keep_alive: $settings.keepAlive ?? undefined,
 			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 			files: files.length > 0 ? files : undefined,
-			citations: files.length > 0 ? true : undefined,
-			chat_id: $chatId
+			chat_id: $chatId,
+			id: responseMessageId
 		});
 
 		if (res && res.ok) {
@@ -912,8 +913,8 @@
 			const [res, controller] = await generateOpenAIChatCompletion(
 				localStorage.token,
 				{
-					model: model.id,
 					stream: true,
+					model: model.id,
 					stream_options:
 						model.info?.meta?.capabilities?.usage ?? false
 							? {
@@ -983,9 +984,8 @@
 					max_tokens: $settings?.params?.max_tokens ?? undefined,
 					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 					files: files.length > 0 ? files : undefined,
-					citations: files.length > 0 ? true : undefined,
-
-					chat_id: $chatId
+					chat_id: $chatId,
+					id: responseMessageId
 				},
 				`${WEBUI_BASE_URL}/api`
 			);
