@@ -5,10 +5,10 @@ import importlib.metadata
 import pkgutil
 import chromadb
 from chromadb import Settings
-from base64 import b64encode
 from bs4 import BeautifulSoup
-from typing import TypeVar, Generic, Union
+from typing import TypeVar, Generic
 from pydantic import BaseModel
+from pydantic.error_wrappers import ValidationError
 from typing import Optional
 
 from pathlib import Path
@@ -19,7 +19,6 @@ import markdown
 import requests
 import shutil
 
-from secrets import token_bytes
 from constants import ERROR_MESSAGES
 
 ####################################
@@ -768,12 +767,14 @@ class BannerModel(BaseModel):
     dismissible: bool
     timestamp: int
 
+try:
+    banners = json.loads(os.environ.get("WEBUI_BANNERS", "[]"))
+    banners = [BannerModel(**banner) for banner in banners]
+except ValidationError as e:
+    print(f"Error loading WEBUI_BANNERS: {e}")
+    banners = []
 
-WEBUI_BANNERS = PersistentConfig(
-    "WEBUI_BANNERS",
-    "ui.banners",
-    [BannerModel(**banner) for banner in json.loads("[]")],
-)
+WEBUI_BANNERS = PersistentConfig("WEBUI_BANNERS", "ui.banners", banners)
 
 
 SHOW_ADMIN_DETAILS = PersistentConfig(
