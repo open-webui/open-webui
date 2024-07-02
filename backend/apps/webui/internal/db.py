@@ -1,18 +1,35 @@
 import os
 import logging
 import json
+from contextlib import contextmanager
+from typing import Optional, Any
+from typing_extensions import Self
 
-from peewee import *
-from peewee_migrate import Router
+from sqlalchemy import create_engine, types, Dialect
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.sql.type_api import _T
 
-from apps.webui.internal.wrappers import register_connection
 from config import SRC_LOG_LEVELS, DATA_DIR, DATABASE_URL, BACKEND_DIR
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])
 
 
-class JSONField(TextField):
+class JSONField(types.TypeDecorator):
+    impl = types.Text
+    cache_ok = True
+
+    def process_bind_param(self, value: Optional[_T], dialect: Dialect) -> Any:
+        return json.dumps(value)
+
+    def process_result_value(self, value: Optional[_T], dialect: Dialect) -> Any:
+        if value is not None:
+            return json.loads(value)
+
+    def copy(self, **kw: Any) -> Self:
+        return JSONField(self.impl.length)
+
     def db_value(self, value):
         return json.dumps(value)
 
@@ -29,26 +46,15 @@ if os.path.exists(f"{DATA_DIR}/ollama.db"):
 else:
     pass
 
-
-# The `register_connection` function encapsulates the logic for setting up
-# the database connection based on the connection string, while `connect`
-# is a Peewee-specific method to manage the connection state and avoid errors
-# when a connection is already open.
-try:
-    DB = register_connection(DATABASE_URL)
-    log.info(f"Connected to a {DB.__class__.__name__} database.")
-except Exception as e:
-    log.error(f"Failed to initialize the database connection: {e}")
-    raise
-
-router = Router(
-    DB,
-    migrate_dir=BACKEND_DIR / "apps" / "webui" / "internal" / "migrations",
-    logger=log,
+SQLALCHEMY_DATABASE_URL = DATABASE_URL
+if "sqlite" in SQLALCHEMY_DATABASE_URL:
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    )
+else:
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
+SessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
 )
-router.run()
-try:
-    DB.connect(reuse_if_open=True)
-except OperationalError as e:
-    log.info(f"Failed to connect to database again due to: {e}")
-    pass
+Base = declarative_base()
+Session = scoped_session(SessionLocal)

@@ -138,7 +138,7 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user)):
 
 
 @router.post("/user/info/update", response_model=Optional[dict])
-async def update_user_settings_by_session_user(
+async def update_user_info_by_session_user(
     form_data: dict, user=Depends(get_verified_user)
 ):
     user = Users.get_user_by_id(user.id)
@@ -205,7 +205,9 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
 
 @router.post("/{user_id}/update", response_model=Optional[UserModel])
 async def update_user_by_id(
-    user_id: str, form_data: UserUpdateForm, session_user=Depends(get_admin_user)
+    user_id: str,
+    form_data: UserUpdateForm,
+    session_user=Depends(get_admin_user),
 ):
     user = Users.get_user_by_id(user_id)
 

@@ -1,14 +1,13 @@
 from pydantic import BaseModel
-from typing import List, Union, Optional
-import time
+from typing import Optional
 import uuid
 import logging
-from peewee import *
+from sqlalchemy import String, Column, Boolean, Text
 
 from apps.webui.models.users import UserModel, Users
 from utils.utils import verify_password
 
-from apps.webui.internal.db import DB
+from apps.webui.internal.db import Base, Session
 
 from config import SRC_LOG_LEVELS
 
@@ -20,14 +19,13 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 ####################
 
 
-class Auth(Model):
-    id = CharField(unique=True)
-    email = CharField()
-    password = TextField()
-    active = BooleanField()
+class Auth(Base):
+    __tablename__ = "auth"
 
-    class Meta:
-        database = DB
+    id = Column(String, primary_key=True)
+    email = Column(String)
+    password = Column(Text)
+    active = Column(Boolean)
 
 
 class AuthModel(BaseModel):
@@ -94,9 +92,6 @@ class AddUserForm(SignupForm):
 
 
 class AuthsTable:
-    def __init__(self, db):
-        self.db = db
-        self.db.create_tables([Auth])
 
     def insert_new_auth(
         self,
@@ -114,11 +109,15 @@ class AuthsTable:
         auth = AuthModel(
             **{"id": id, "email": email, "password": password, "active": True}
         )
-        result = Auth.create(**auth.model_dump())
+        result = Auth(**auth.model_dump())
+        Session.add(result)
 
         user = Users.insert_new_user(
             id, name, email, profile_image_url, role, oauth_sub
         )
+
+        Session.commit()
+        Session.refresh(result)
 
         if result and user:
             return user
@@ -128,7 +127,7 @@ class AuthsTable:
     def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
         log.info(f"authenticate_user: {email}")
         try:
-            auth = Auth.get(Auth.email == email, Auth.active == True)
+            auth = Session.query(Auth).filter_by(email=email, active=True).first()
             if auth:
                 if verify_password(password, auth.password):
                     user = Users.get_user_by_id(auth.id)
@@ -155,7 +154,7 @@ class AuthsTable:
     def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_trusted_header: {email}")
         try:
-            auth = Auth.get(Auth.email == email, Auth.active == True)
+            auth = Session.query(Auth).filter(email=email, active=True).first()
             if auth:
                 user = Users.get_user_by_id(auth.id)
                 return user
@@ -164,18 +163,16 @@ class AuthsTable:
 
     def update_user_password_by_id(self, id: str, new_password: str) -> bool:
         try:
-            query = Auth.update(password=new_password).where(Auth.id == id)
-            result = query.execute()
-
+            result = (
+                Session.query(Auth).filter_by(id=id).update({"password": new_password})
+            )
             return True if result == 1 else False
         except:
             return False
 
     def update_email_by_id(self, id: str, email: str) -> bool:
         try:
-            query = Auth.update(email=email).where(Auth.id == id)
-            result = query.execute()
-
+            result = Session.query(Auth).filter_by(id=id).update({"email": email})
             return True if result == 1 else False
         except:
             return False
@@ -186,9 +183,7 @@ class AuthsTable:
             result = Users.delete_user_by_id(id)
 
             if result:
-                # Delete Auth
-                query = Auth.delete().where(Auth.id == id)
-                query.execute()  # Remove the rows, return number of rows removed.
+                Session.query(Auth).filter_by(id=id).delete()
 
                 return True
             else:
@@ -197,4 +192,4 @@ class AuthsTable:
             return False
 
 
-Auths = AuthsTable(DB)
+Auths = AuthsTable()

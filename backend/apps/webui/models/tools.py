@@ -1,10 +1,10 @@
-from pydantic import BaseModel
-from peewee import *
-from playhouse.shortcuts import model_to_dict
-from typing import List, Union, Optional
+from pydantic import BaseModel, ConfigDict
+from typing import List, Optional
 import time
 import logging
-from apps.webui.internal.db import DB, JSONField
+from sqlalchemy import String, Column, BigInteger, Text
+
+from apps.webui.internal.db import Base, JSONField, Session
 from apps.webui.models.users import Users
 
 import json
@@ -21,19 +21,18 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 ####################
 
 
-class Tool(Model):
-    id = CharField(unique=True)
-    user_id = CharField()
-    name = TextField()
-    content = TextField()
-    specs = JSONField()
-    meta = JSONField()
-    valves = JSONField()
-    updated_at = BigIntegerField()
-    created_at = BigIntegerField()
+class Tool(Base):
+    __tablename__ = "tool"
 
-    class Meta:
-        database = DB
+    id = Column(String, primary_key=True)
+    user_id = Column(String)
+    name = Column(Text)
+    content = Column(Text)
+    specs = Column(JSONField)
+    meta = Column(JSONField)
+    valves = Column(JSONField)
+    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)
 
 
 class ToolMeta(BaseModel):
@@ -50,6 +49,8 @@ class ToolModel(BaseModel):
     meta: ToolMeta
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 ####################
@@ -78,9 +79,6 @@ class ToolValves(BaseModel):
 
 
 class ToolsTable:
-    def __init__(self, db):
-        self.db = db
-        self.db.create_tables([Tool])
 
     def insert_new_tool(
         self, user_id: str, form_data: ToolForm, specs: List[dict]
@@ -96,9 +94,12 @@ class ToolsTable:
         )
 
         try:
-            result = Tool.create(**tool.model_dump())
+            result = Tool(**tool.model_dump())
+            Session.add(result)
+            Session.commit()
+            Session.refresh(result)
             if result:
-                return tool
+                return ToolModel.model_validate(result)
             else:
                 return None
         except Exception as e:
@@ -107,17 +108,17 @@ class ToolsTable:
 
     def get_tool_by_id(self, id: str) -> Optional[ToolModel]:
         try:
-            tool = Tool.get(Tool.id == id)
-            return ToolModel(**model_to_dict(tool))
+            tool = Session.get(Tool, id)
+            return ToolModel.model_validate(tool)
         except:
             return None
 
     def get_tools(self) -> List[ToolModel]:
-        return [ToolModel(**model_to_dict(tool)) for tool in Tool.select()]
+        return [ToolModel.model_validate(tool) for tool in Session.query(Tool).all()]
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:
-            tool = Tool.get(Tool.id == id)
+            tool = Session.get(Tool, id)
             return tool.valves if tool.valves else {}
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -125,14 +126,11 @@ class ToolsTable:
 
     def update_tool_valves_by_id(self, id: str, valves: dict) -> Optional[ToolValves]:
         try:
-            query = Tool.update(
-                **{"valves": valves},
-                updated_at=int(time.time()),
-            ).where(Tool.id == id)
-            query.execute()
-
-            tool = Tool.get(Tool.id == id)
-            return ToolValves(**model_to_dict(tool))
+            Session.query(Tool).filter_by(id=id).update(
+                {"valves": valves, "updated_at": int(time.time())}
+            )
+            Session.commit()
+            return self.get_tool_by_id(id)
         except:
             return None
 
@@ -179,25 +177,21 @@ class ToolsTable:
 
     def update_tool_by_id(self, id: str, updated: dict) -> Optional[ToolModel]:
         try:
-            query = Tool.update(
-                **updated,
-                updated_at=int(time.time()),
-            ).where(Tool.id == id)
-            query.execute()
-
-            tool = Tool.get(Tool.id == id)
-            return ToolModel(**model_to_dict(tool))
+            tool = Session.get(Tool, id)
+            tool.update(**updated)
+            tool.updated_at = int(time.time())
+            Session.commit()
+            Session.refresh(tool)
+            return ToolModel.model_validate(tool)
         except:
             return None
 
     def delete_tool_by_id(self, id: str) -> bool:
         try:
-            query = Tool.delete().where((Tool.id == id))
-            query.execute()  # Remove the rows, return number of rows removed.
-
+            Session.query(Tool).filter_by(id=id).delete()
             return True
         except:
             return False
 
 
-Tools = ToolsTable(DB)
+Tools = ToolsTable()

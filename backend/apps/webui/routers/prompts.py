@@ -71,7 +71,9 @@ async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
 
 @router.post("/command/{command}/update", response_model=Optional[PromptModel])
 async def update_prompt_by_command(
-    command: str, form_data: PromptForm, user=Depends(get_admin_user)
+    command: str,
+    form_data: PromptForm,
+    user=Depends(get_admin_user),
 ):
     prompt = Prompts.update_prompt_by_command(f"/{command}", form_data)
     if prompt:
