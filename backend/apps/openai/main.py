@@ -365,6 +365,26 @@ async def generate_chat_completion(
     idx = 0
     payload = {**form_data}
 
+    if payload.get("messages") and ENABLE_MESSAGE_FILTER:
+        search = WordsSearch()
+        search.SetKeywords(CHAT_FILTER_WORDS.split(','))
+        start_time = time.time()
+        for message in payload["messages"]:
+            if message.get("role") == "user":
+                content = message.get("content")
+                if not isinstance(content, list):
+                    if IS_REPLACE_FILTER_WORDS:
+                        filter_condition = search.FindFirst(content)
+                        if filter_condition:
+                            filter_word = filter_condition[0]["Keyword"]
+                            raise HTTPException(status_code=503, detail=f"Open WebUI: YOUR MESSAGE CONTAINS "
+                                                                        f"INAPPROPRIATE WORDS (`{filter_word}`)"
+                                                                        f" AND CANNOT BE SENT.")
+                        else:
+                            message["content"] = search.Replace(content)
+                            logging.error(f"Replace content: {message['content']}")
+        logging.info(f"Replace time 花费时间: {time.time() - start_time}s")
+
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
@@ -427,22 +447,7 @@ async def generate_chat_completion(
                     if message.get("role") == "system":
                         message["content"] = system + message["content"]
                         break
-                    elif message.get("role") == "user" and ENABLE_MESSAGE_FILTER:
-                        content = message.get("content")
-                        if not isinstance(content, list):
-                            if IS_REPLACE_FILTER_WORDS:
-                                filter_condition = search.FindFirst(content)
-                                if filter_condition:
-                                    filter_word = filter_condition[0]["Keyword"]
-                                    raise HTTPException(status_code=503, detail=f"Open WebUI: YOUR MESSAGE CONTAINS "
-                                                                                f"INAPPROPRIATE WORDS (`{filter_word}`)"
-                                                                                f" AND CANNOT BE SENT.")
-                                else:
-                                    message["content"] = search.Replace(content)
-                                    logging.error(f"Replace content: {message['content']}")
-
                 else:
-                    logging.info(f"花费时间: {time.time() - start_time}s")
                     payload["messages"].insert(
                         0,
                         {
@@ -450,9 +455,8 @@ async def generate_chat_completion(
                             "content": system,
                         },
                     )
-                logging.info(f"Replace time 花费时间: {time.time() - start_time}s")
-
     else:
+
         pass
 
     model = app.state.MODELS[payload.get("model")]
