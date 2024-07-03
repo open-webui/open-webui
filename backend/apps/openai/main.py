@@ -388,7 +388,7 @@ async def generate_chat_completion(
                             message["content"] = search.Replace(content)
                             logging.error(f"Replace content: {message['content']}")
                     break
-        logging.info(f"Replace time 花费时间: {time.time() - start_time}s")
+        logging.info("Replace time: %.6fs", time.time() - start_time)
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
