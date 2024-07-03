@@ -102,7 +102,7 @@ origins = ["*"]
 class RAGMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.method == "POST" and (
-            "/api/chat" in request.url.path or "/chat/completions" in request.url.path
+            "/ollama/api/chat" in request.url.path or "/chat/completions" in request.url.path
         ):
             log.debug(f"request.url.path: {request.url.path}")
 
