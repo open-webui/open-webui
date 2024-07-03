@@ -171,12 +171,16 @@ class RAGMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
         log.info(f"response of chat: {response}")
-        if data_items != []:
-            for item in data_items:
-                yield f"{json.dumps(item)}\n"
+        # Check if there are data items to yield
+        if data_items:
+            async def response_body_with_citations():
+                for item in data_items:
+                    yield json.dumps(item).encode("utf-8") + b'\n'
 
-            async for data in response.body_iterator:
-                yield data
+                async for data in response.body_iterator:
+                    yield data
+
+            response.body_iterator = response_body_with_citations()
 
         return response
 
