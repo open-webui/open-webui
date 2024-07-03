@@ -56,6 +56,7 @@ from config import (
     ENABLE_ADMIN_EXPORT,
 )
 from constants import ERROR_MESSAGES
+from apps.rag.utils import get_rag_context
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -112,10 +113,26 @@ class RAGMiddleware(BaseHTTPMiddleware):
             # Parse string to JSON
             data = json.loads(body_str) if body_str else {}
 
-            # Example: Add a new key-value pair or modify existing ones
-            # data["modified"] = True  # Example modification
             if "docs" in data:
                 data = {**data}
+                
+                # Get RAG context and citations
+                context_string, citations = get_rag_context(
+                    files=data["docs"],
+                    messages=data["messages"],
+                    embedding_function=rag_app.state.EMBEDDING_FUNCTION,
+                    k=rag_app.state.TOP_K,
+                    reranking_function=rag_app.state.sentence_transformer_rf,
+                    r=rag_app.state.RELEVANCE_THRESHOLD,
+                    hybrid_search=rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
+                )
+
+                if context_string:
+                    context += ("\n" if context != "" else "") + context_string
+
+                log.debug(f"context_string: {context_string}, citations: {citations}")
+                
+                # Update messages with RAG context
                 data["messages"] = rag_messages(
                     docs=data["docs"],
                     messages=data["messages"],
@@ -126,6 +143,10 @@ class RAGMiddleware(BaseHTTPMiddleware):
                     r=rag_app.state.RELEVANCE_THRESHOLD,
                     hybrid_search=rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
                 )
+
+                # Add citations to the response
+                data["citations"] = citations
+                
                 del data["docs"]
 
                 log.debug(f"data['messages']: {data['messages']}")
