@@ -127,7 +127,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
                     hybrid_search=rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
                 )
 
-                log.debug(f"context_string: {context_string}, citations: {citations}")
+                log.info(f"context_string: {context_string}, citations: {citations}")
                 
                 # Update messages with RAG context
                 data["messages"] = rag_messages(
@@ -164,6 +164,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
             ]
 
         response = await call_next(request)
+        log.info(f"response of chat: {response}")
         return response
 
     async def _receive(self, body: bytes):
