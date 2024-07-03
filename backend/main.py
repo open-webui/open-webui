@@ -15,6 +15,7 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import StreamingResponse
 
 
 from apps.ollama.main import app as ollama_app
@@ -113,6 +114,8 @@ class RAGMiddleware(BaseHTTPMiddleware):
             # Parse string to JSON
             data = json.loads(body_str) if body_str else {}
 
+            data_items = []
+
             if "docs" in data:
                 data = {**data}
                 
@@ -128,6 +131,9 @@ class RAGMiddleware(BaseHTTPMiddleware):
                 )
 
                 log.info(f"context_string: {context_string}, citations: {citations}")
+
+                if len(citations) > 0:
+                    data_items.append({"citations": citations})
                 
                 # Update messages with RAG context
                 data["messages"] = rag_messages(
@@ -165,10 +171,31 @@ class RAGMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
         log.info(f"response of chat: {response}")
-        return response
+        if isinstance(response, StreamingResponse):
+            # If it's a streaming response, inject it as SSE event or NDJSON line
+            content_type = response.headers.get("Content-Type")
+            if "text/event-stream" in content_type:
+                return StreamingResponse(
+                    self.openai_stream_wrapper(response.body_iterator, data_items),
+                )
+            if "application/x-ndjson" in content_type:
+                return StreamingResponse(
+                    self.ollama_stream_wrapper(response.body_iterator, data_items),
+                )
+
+            return response
+        else:
+            return response
 
     async def _receive(self, body: bytes):
         return {"type": "http.request", "body": body, "more_body": False}
+    
+    async def ollama_stream_wrapper(self, original_generator, data_items):
+        for item in data_items:
+            yield f"{json.dumps(item)}\n"
+
+        async for data in original_generator:
+            yield data
 
 
 app.add_middleware(RAGMiddleware)
