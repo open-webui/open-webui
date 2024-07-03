@@ -1331,7 +1331,7 @@ AUDIO_TTS_VOICE = PersistentConfig(
 ENABLE_MESSAGE_FILTER = PersistentConfig(
     "ENABLE_MESSAGE_FILTER",
     "message_filter.enable",
-    os.environ.get("ENABLE_MESSAGE_FILTER", "False").lower() == "true",
+    os.environ.get("ENABLE_MESSAGE_FILTER", "").lower() == "true",
 )
 
 CHAT_FILTER_WORDS = PersistentConfig(
@@ -1340,12 +1340,17 @@ CHAT_FILTER_WORDS = PersistentConfig(
     os.getenv("CHAT_FILTER_WORDS", ""),
 )
 
-IS_REPLACE_FILTER_WORDS = PersistentConfig(
-    "IS_REPLACE_FILTER_WORDS",
+ENABLE_REPLACE_FILTER_WORDS = PersistentConfig(
+    "ENABLE_REPLACE_FILTER_WORDS",
     "message_filter.replace",
-    os.environ.get("IS_REPLACE_FILTER_WORDS", "False").lower() == "true",
+    os.environ.get("ENABLE_REPLACE_FILTER_WORDS", "").lower() == "true",
 )
 
+REPLACE_FILTER_WORDS = PersistentConfig(
+    "REPLACE_FILTER_WORDS",
+    "message_filter.replace_words",
+    os.getenv("REPLACE_FILTER_WORDS", "*"),
+)
 
 ####################################
 # Database

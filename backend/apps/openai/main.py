@@ -35,7 +35,8 @@ from config import (
     MODEL_FILTER_LIST,
     ENABLE_MESSAGE_FILTER,
     CHAT_FILTER_WORDS,
-    IS_REPLACE_FILTER_WORDS,
+    ENABLE_REPLACE_FILTER_WORDS,
+    REPLACE_FILTER_WORDS,
     AppConfig,
 )
 from typing import List, Optional
@@ -70,7 +71,8 @@ app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 
 app.state.config.ENABLE_MESSAGE_FILTER = ENABLE_MESSAGE_FILTER
 app.state.config.CHAT_FILTER_WORDS = CHAT_FILTER_WORDS
-app.state.config.IS_REPLACE_FILTER_WORDS = IS_REPLACE_FILTER_WORDS
+app.state.config.ENABLE_REPLACE_FILTER_WORDS = ENABLE_REPLACE_FILTER_WORDS
+app.state.config.REPLACE_FILTER_WORDS = REPLACE_FILTER_WORDS
 
 app.state.MODELS = {}
 
@@ -379,13 +381,15 @@ async def generate_chat_completion(
                 if not isinstance(content, list):
                     filter_condition = search.FindFirst(content)
                     if filter_condition:
-                        if not app.state.config.IS_REPLACE_FILTER_WORDS:
+                        if not app.state.config.ENABLE_REPLACE_FILTER_WORDS:
                             filter_word = filter_condition["Keyword"]
-                            raise HTTPException(status_code=503, detail=f"Open WebUI: YOUR MESSAGE CONTAINS "
-                                                                        f"INAPPROPRIATE WORDS (`{filter_word}`)"
-                                                                        f" AND CANNOT BE SENT.")
+                            detail_message = (
+                                f"Open WebUI: Your message contains inappropriate words (`{filter_word}`) "
+                                "and cannot be sent. Please create a new topic and try again."
+                            )
+                            raise HTTPException(status_code=503, detail=detail_message)
                         else:
-                            message["content"] = search.Replace(content)
+                            message["content"] = search.Replace(content, app.state.config.REPLACE_FILTER_WORDS)
                             logging.error(f"Replace content: {message['content']}")
                     break
         logging.info("Replace time: %.6fs", time.time() - start_time)
