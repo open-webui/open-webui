@@ -107,7 +107,7 @@ class FunctionsTable:
             Session.commit()
             Session.refresh(result)
             if result:
-                return FunctionModel.model_validate(result)
+                return FunctionModel(**result.model_dump())
             else:
                 return None
         except Exception as e:
@@ -117,20 +117,19 @@ class FunctionsTable:
     def get_function_by_id(self, id: str) -> Optional[FunctionModel]:
         try:
             function = Session.get(Function, id)
-            return FunctionModel.model_validate(function)
+            return FunctionModel(**function)
         except:
             return None
 
     def get_functions(self, active_only=False) -> List[FunctionModel]:
         if active_only:
             return [
-                FunctionModel.model_validate(function)
+                FunctionModel(**function)
                 for function in Session.query(Function).filter_by(is_active=True).all()
             ]
         else:
             return [
-                FunctionModel.model_validate(function)
-                for function in Session.query(Function).all()
+                FunctionModel(**function) for function in Session.query(Function).all()
             ]
 
     def get_functions_by_type(
@@ -138,25 +137,23 @@ class FunctionsTable:
     ) -> List[FunctionModel]:
         if active_only:
             return [
-                FunctionModel.model_validate(function)
+                FunctionModel(**function)
                 for function in Session.query(Function)
                 .filter_by(type=type, is_active=True)
                 .all()
             ]
         else:
             return [
-                FunctionModel.model_validate(function)
+                FunctionModel(**function)
                 for function in Session.query(Function).filter_by(type=type).all()
             ]
 
     def get_global_filter_functions(self) -> List[FunctionModel]:
         return [
-            FunctionModel(**model_to_dict(function))
-            for function in Function.select().where(
-                Function.type == "filter",
-                Function.is_active == True,
-                Function.is_global == True,
-            )
+            FunctionModel(**function)
+            for function in Session.query(Function)
+            .filter_by(type="filter", is_active=True, is_global=True)
+            .all()
         ]
 
     def get_function_valves_by_id(self, id: str) -> Optional[dict]:
