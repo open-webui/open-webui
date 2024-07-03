@@ -132,15 +132,33 @@
 			console.log(data);
 			let message = history.messages[data.message_id];
 
-			const status = {
-				done: data?.data?.done ?? null,
-				description: data?.data?.status ?? null
-			};
+			const type = data?.data?.type ?? null;
+			if (type === "status") {
+				const status = {
+					done: data?.data?.done ?? null,
+					description: data?.data?.status ?? null
+				};
 
-			if (message.statusHistory) {
-				message.statusHistory.push(status);
+				if (message.statusHistory) {
+					message.statusHistory.push(status);
+				} else {
+					message.statusHistory = [status];
+				}
+			} else if (type === "citation") {
+				console.log(data);
+				const citation = {
+					document: data?.data?.document ?? null,
+					metadata: data?.data?.metadata ?? null,
+					source: data?.data?.source ?? null
+				};
+
+				if (message.citations) {
+					message.citations.push(citation);
+				} else {
+					message.citations = [citation];
+				}
 			} else {
-				message.statusHistory = [status];
+				console.log("Unknown message type", data);
 			}
 
 			messages = messages;
