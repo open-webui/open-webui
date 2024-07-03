@@ -54,7 +54,7 @@ from apps.webui.main import (
     get_pipe_models,
     generate_function_chat_completion,
 )
-
+from apps.filter.main import app as filter_app
 
 from pydantic import BaseModel
 from typing import List, Optional, Iterator, Generator, Union
@@ -928,6 +928,7 @@ app.mount("/ollama", ollama_app)
 app.mount("/openai", openai_app)
 
 app.mount("/images/api/v1", images_app)
+app.mount("/filter/api/v1", filter_app)
 app.mount("/audio/api/v1", audio_app)
 app.mount("/rag/api/v1", rag_app)
 
