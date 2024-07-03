@@ -10,7 +10,8 @@
 		tags,
 		showSidebar,
 		mobile,
-		showArchivedChats
+		showArchivedChats,
+		pinnedChats
 	} from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
@@ -46,6 +47,7 @@
 
 	let showDeleteConfirm = false;
 	let showDropdown = false;
+
 	let filteredChatList = [];
 
 	$: filteredChatList = $chats.filter((chat) => {
@@ -80,6 +82,8 @@
 		});
 
 		showSidebar.set(window.innerWidth > BREAKPOINT);
+
+		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		await chats.set(await getChatList(localStorage.token));
 
 		let touchstart;
@@ -412,7 +416,7 @@
 				</div>
 			</div>
 
-			{#if $tags.length > 0}
+			{#if $tags.filter((t) => t.name !== 'pinned').length > 0}
 				<div class="px-2.5 mb-2 flex gap-1 flex-wrap">
 					<button
 						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
@@ -422,7 +426,7 @@
 					>
 						{$i18n.t('all')}
 					</button>
-					{#each $tags as tag}
+					{#each $tags.filter((t) => t.name !== 'pinned') as tag}
 						<button
 							class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 							on:click={async () => {
@@ -437,6 +441,38 @@
 							{tag.name}
 						</button>
 					{/each}
+				</div>
+			{/if}
+
+			{#if $pinnedChats.length > 0}
+				<div class="pl-2 py-2 flex flex-col space-y-1">
+					<div class="">
+						<div class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium pb-1.5">
+							{$i18n.t('Pinned')}
+						</div>
+
+						{#each $pinnedChats as chat, idx}
+							<ChatItem
+								{chat}
+								{shiftKey}
+								selected={selectedChatId === chat.id}
+								on:select={() => {
+									selectedChatId = chat.id;
+								}}
+								on:unselect={() => {
+									selectedChatId = null;
+								}}
+								on:delete={(e) => {
+									if ((e?.detail ?? '') === 'shift') {
+										deleteChatHandler(chat.id);
+									} else {
+										deleteChat = chat;
+										showDeleteConfirm = true;
+									}
+								}}
+							/>
+						{/each}
+					</div>
 				</div>
 			{/if}
 
