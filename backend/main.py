@@ -171,31 +171,18 @@ class RAGMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
         log.info(f"response of chat: {response}")
-        if isinstance(response, StreamingResponse):
-            # If it's a streaming response, inject it as SSE event or NDJSON line
-            content_type = response.headers.get("Content-Type")
-            if "text/event-stream" in content_type:
-                return StreamingResponse(
-                    self.openai_stream_wrapper(response.body_iterator, data_items),
-                )
-            if "application/x-ndjson" in content_type:
-                return StreamingResponse(
-                    self.ollama_stream_wrapper(response.body_iterator, data_items),
-                )
+        if data_items != []:
+            for item in data_items:
+                yield f"{json.dumps(item)}\n"
 
-            return response
-        else:
-            return response
+            async for data in response.body_iterator:
+                yield data
+
+        return response
 
     async def _receive(self, body: bytes):
         return {"type": "http.request", "body": body, "more_body": False}
     
-    async def ollama_stream_wrapper(self, original_generator, data_items):
-        for item in data_items:
-            yield f"{json.dumps(item)}\n"
-
-        async for data in original_generator:
-            yield data
 
 
 app.add_middleware(RAGMiddleware)
