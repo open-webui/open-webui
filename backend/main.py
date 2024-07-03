@@ -127,9 +127,6 @@ class RAGMiddleware(BaseHTTPMiddleware):
                     hybrid_search=rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
                 )
 
-                if context_string:
-                    context += ("\n" if context != "" else "") + context_string
-
                 log.debug(f"context_string: {context_string}, citations: {citations}")
                 
                 # Update messages with RAG context
