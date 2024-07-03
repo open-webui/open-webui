@@ -373,7 +373,7 @@ async def generate_chat_completion(
         search = WordsSearch()
         search.SetKeywords(str(app.state.config.CHAT_FILTER_WORDS).split(","))
         start_time = time.time()
-        for message in payload["messages"]:
+        for message in reversed(payload["messages"]):
             if message.get("role") == "user":
                 content = message.get("content")
                 if not isinstance(content, list):
@@ -387,6 +387,7 @@ async def generate_chat_completion(
                         else:
                             message["content"] = search.Replace(content)
                             logging.error(f"Replace content: {message['content']}")
+                    break
         logging.info(f"Replace time 花费时间: {time.time() - start_time}s")
 
     model_id = form_data.get("model")
