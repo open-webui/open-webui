@@ -182,10 +182,8 @@
 				});
 			});
 
-			// Mettre à jour bulkTags
 			bulkTags = bulkTags.filter((tag) => tag.name !== tagName);
 
-			// Vérifier si le tag doit être supprimé des tags globaux
 			const tagStillExists = $documents.some((doc) =>
 				doc.content?.tags?.some((tag) => tag.name === tagName)
 			);
