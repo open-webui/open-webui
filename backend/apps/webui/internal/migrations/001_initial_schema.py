@@ -101,6 +101,7 @@ def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
         tag_name = pw.CharField(max_length=255, unique=True)
         user_id = pw.CharField(max_length=255)
         modelfile = pw.TextField()
+        tts_voice = pw.CharField(max_length=255, null=True)
         timestamp = pw.BigIntegerField()
 
         class Meta:

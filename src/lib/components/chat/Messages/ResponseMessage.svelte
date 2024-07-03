@@ -213,6 +213,11 @@
 			if ((message?.content ?? '').trim() !== '') {
 				speaking = true;
 
+				const ttsVoice =
+					model?.info?.meta?.tts_voice ??
+					$settings?.audio?.tts?.voice ??
+					$config?.audio?.tts?.voice;
+
 				if ($config.audio.tts.engine === 'openai') {
 					loadingSpeech = true;
 
@@ -240,12 +245,12 @@
 							return a;
 						}, {});
 
-						let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+						let lastPlayedAudioPromise = Promise.resolve();
 
 						for (const [idx, sentence] of sentences.entries()) {
 							const res = await synthesizeOpenAISpeech(
 								localStorage.token,
-								$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
+								ttsVoice,
 								sentence
 							).catch((error) => {
 								toast.error(error);
@@ -276,13 +281,7 @@
 						if (voices.length > 0) {
 							clearInterval(getVoicesLoop);
 
-							const voice =
-								voices
-									?.filter(
-										(v) =>
-											v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-									)
-									?.at(0) ?? undefined;
+							const voice = voices?.filter((v) => v.voiceURI === ttsVoice)?.at(0) ?? undefined;
 
 							console.log(voice);
 

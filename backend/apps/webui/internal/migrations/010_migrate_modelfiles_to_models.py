@@ -63,6 +63,7 @@ def migrate_modelfile_to_model(migrator: Migrator, database: pw.Database):
                 "suggestion_prompts": modelfile.modelfile.get("suggestionPrompts"),
                 "categories": modelfile.modelfile.get("categories"),
                 "user": {**modelfile.modelfile.get("user", {}), "community": True},
+                "tts_voice": modelfile.tts_voice,
             }
         )
 

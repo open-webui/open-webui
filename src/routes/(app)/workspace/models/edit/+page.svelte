@@ -96,6 +96,15 @@
 			}
 		}
 
+		if (info.meta.tts_voice) {
+			info.meta.tts_voice = info.meta.tts_voice.trim();
+			if (info.meta.tts_voice === '') {
+				delete info.meta.tts_voice;
+			}
+		} else {
+			delete info.meta.tts_voice;
+		}
+
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
@@ -133,7 +142,7 @@
 								: {
 										id: model.id,
 										name: model.name
-								  }
+									}
 						)
 					)
 				};
@@ -146,7 +155,7 @@
 				params.stop = params?.stop
 					? (typeof params.stop === 'string' ? params.stop.split(',') : params?.stop ?? []).join(
 							','
-					  )
+						)
 					: null;
 
 				if (model?.info?.meta?.knowledge) {
@@ -168,6 +177,11 @@
 				if (model?.info?.meta?.capabilities) {
 					capabilities = { ...capabilities, ...model?.info?.meta?.capabilities };
 				}
+
+				info.meta = {
+					...info.meta,
+					tts_voice: model?.info?.meta?.tts_voice || ''
+				};
 
 				console.log(model);
 			} else {
@@ -575,6 +589,24 @@
 						</div>
 					{/each}
 				</div>
+			</div>
+
+			<div class="my-2">
+				<div class="flex w-full justify-between mb-1">
+					<div class="self-center text-sm font-semibold">{$i18n.t('TTS Voice')}</div>
+				</div>
+				<select
+					bind:value={info.meta.tts_voice}
+					class="w-full px-3 py-2 text-sm bg-transparent border dark:border-gray-600 outline-none rounded-lg"
+				>
+					<option value="">{$i18n.t('Default')}</option>
+					<option value="alloy">Alloy</option>
+					<option value="echo">Echo</option>
+					<option value="fable">Fable</option>
+					<option value="onyx">Onyx</option>
+					<option value="nova">Nova</option>
+					<option value="shimmer">Shimmer</option>
+				</select>
 			</div>
 
 			<div class="my-1">
