@@ -380,7 +380,7 @@ async def generate_chat_completion(
                     filter_condition = search.FindFirst(content)
                     if filter_condition:
                         if not app.state.config.IS_REPLACE_FILTER_WORDS:
-                            filter_word = filter_condition[0]["Keyword"]
+                            filter_word = filter_condition["Keyword"]
                             raise HTTPException(status_code=503, detail=f"Open WebUI: YOUR MESSAGE CONTAINS "
                                                                         f"INAPPROPRIATE WORDS (`{filter_word}`)"
                                                                         f" AND CANNOT BE SENT.")
