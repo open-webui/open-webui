@@ -106,7 +106,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
         if request.method == "POST" and (
             "/ollama/api/chat" in request.url.path or "/chat/completions" in request.url.path
         ):
-            log.debug(f"request.url.path: {request.url.path}")
+            log.info(f"request.url.path: {request.url.path}")
 
             # Read the original request body
             body = await request.body()
@@ -146,8 +146,8 @@ class RAGMiddleware(BaseHTTPMiddleware):
                     hybrid_search=rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
                 )
 
-                # Add citations to the response
-                data["citations"] = citations
+                # Add citations to the request
+                # data["citations"] = citations
                 
                 del data["docs"]
 
@@ -169,7 +169,6 @@ class RAGMiddleware(BaseHTTPMiddleware):
             ]
 
         response = await call_next(request)
-        log.info(f"response of chat: {response}")
         # Buffer the response body
         response_body = []
         async for chunk in response.body_iterator:
