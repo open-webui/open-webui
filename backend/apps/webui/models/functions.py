@@ -107,7 +107,7 @@ class FunctionsTable:
             Session.commit()
             Session.refresh(result)
             if result:
-                return FunctionModel(**result.model_dump())
+                return FunctionModel(**result.__dict__)
             else:
                 return None
         except Exception as e:
@@ -117,19 +117,20 @@ class FunctionsTable:
     def get_function_by_id(self, id: str) -> Optional[FunctionModel]:
         try:
             function = Session.get(Function, id)
-            return FunctionModel(**function)
+            return FunctionModel(**function.__dict__)
         except:
             return None
 
     def get_functions(self, active_only=False) -> List[FunctionModel]:
         if active_only:
             return [
-                FunctionModel(**function)
+                FunctionModel(**function.__dict__)
                 for function in Session.query(Function).filter_by(is_active=True).all()
             ]
         else:
             return [
-                FunctionModel(**function) for function in Session.query(Function).all()
+                FunctionModel(**function.__dict__)
+                for function in Session.query(Function).all()
             ]
 
     def get_functions_by_type(
@@ -137,20 +138,20 @@ class FunctionsTable:
     ) -> List[FunctionModel]:
         if active_only:
             return [
-                FunctionModel(**function)
+                FunctionModel(**function.__dict__)
                 for function in Session.query(Function)
                 .filter_by(type=type, is_active=True)
                 .all()
             ]
         else:
             return [
-                FunctionModel(**function)
+                FunctionModel(**function.__dict__)
                 for function in Session.query(Function).filter_by(type=type).all()
             ]
 
     def get_global_filter_functions(self) -> List[FunctionModel]:
         return [
-            FunctionModel(**function)
+            FunctionModel(**function.__dict__)
             for function in Session.query(Function)
             .filter_by(type="filter", is_active=True, is_global=True)
             .all()
