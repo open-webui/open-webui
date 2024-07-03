@@ -1,5 +1,5 @@
-from backend.apps.filter.TrieNode import TrieNode
-from backend.apps.filter.TrieNode2 import TrieNode2
+from apps.filter.TrieNode import TrieNode
+from apps.filter.TrieNode2 import TrieNode2
 
 
 class WordsSearch:

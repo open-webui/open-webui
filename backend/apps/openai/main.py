@@ -44,7 +44,7 @@ from typing import List, Optional
 import hashlib
 from pathlib import Path
 
-from backend.apps.filter.WordsSearch import WordsSearch
+from apps.filter.WordsSearch import WordsSearch
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
