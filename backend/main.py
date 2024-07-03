@@ -102,6 +102,7 @@ origins = ["*"]
 
 class RAGMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        data_items = []
         if request.method == "POST" and (
             "/ollama/api/chat" in request.url.path or "/chat/completions" in request.url.path
         ):
@@ -113,8 +114,6 @@ class RAGMiddleware(BaseHTTPMiddleware):
             body_str = body.decode("utf-8")
             # Parse string to JSON
             data = json.loads(body_str) if body_str else {}
-
-            data_items = []
 
             if "docs" in data:
                 data = {**data}
