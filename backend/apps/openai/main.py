@@ -449,9 +449,6 @@ async def generate_chat_completion(
             # Check if the payload already has a system message
             # If not, add a system message to the payload
             if payload.get("messages"):
-                search = WordsSearch()
-                search.SetKeywords(CHAT_FILTER_WORDS.split(','))
-                start_time = time.time()
                 for message in payload["messages"]:
                     if message.get("role") == "system":
                         message["content"] = system + message["content"]
