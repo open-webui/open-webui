@@ -66,6 +66,7 @@ log_sources = [
     "OPENAI",
     "RAG",
     "WEBHOOK",
+    "FILTER",
 ]
 
 SRC_LOG_LEVELS = {}
@@ -1295,6 +1296,39 @@ AUDIO_TTS_VOICE = PersistentConfig(
     os.getenv("AUDIO_TTS_VOICE", "alloy"),
 )
 
+####################################
+# MESSAGE_FILTER
+####################################
+
+ENABLE_MESSAGE_FILTER = PersistentConfig(
+    "ENABLE_MESSAGE_FILTER",
+    "message_filter.enable",
+    os.environ.get("ENABLE_MESSAGE_FILTER", "").lower() == "true",
+)
+
+CHAT_FILTER_WORDS_FILE = PersistentConfig(
+    "CHAT_FILTER_WORDS_FIle",
+    "message_filter.words_file",
+    os.getenv("CHAT_FILTER_WORDS_FILE", ""),
+)
+
+CHAT_FILTER_WORDS = PersistentConfig(
+    "CHAT_FILTER_WORDS",
+    "message_filter.words",
+    "",
+)
+
+ENABLE_REPLACE_FILTER_WORDS = PersistentConfig(
+    "ENABLE_REPLACE_FILTER_WORDS",
+    "message_filter.replace",
+    os.environ.get("ENABLE_REPLACE_FILTER_WORDS", "").lower() == "true",
+)
+
+REPLACE_FILTER_WORDS = PersistentConfig(
+    "REPLACE_FILTER_WORDS",
+    "message_filter.replace_words",
+    os.getenv("REPLACE_FILTER_WORDS", "*"),
+)
 
 ####################################
 # Database

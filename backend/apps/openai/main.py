@@ -1,27 +1,14 @@
-from fastapi import FastAPI, Request, Response, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
-
-import requests
-import aiohttp
 import asyncio
+import hashlib
 import json
 import logging
+from pathlib import Path
+from typing import List, Optional
 
-from pydantic import BaseModel
-from starlette.background import BackgroundTask
+import aiohttp
+import requests
 
 from apps.webui.models.models import Models
-from apps.webui.models.users import Users
-from constants import ERROR_MESSAGES
-from utils.utils import (
-    decode_token,
-    get_verified_user,
-    get_verified_user,
-    get_admin_user,
-)
-from utils.task import prompt_template
-
 from config import (
     SRC_LOG_LEVELS,
     ENABLE_OPENAI_API,
@@ -32,11 +19,19 @@ from config import (
     MODEL_FILTER_LIST,
     AppConfig,
 )
-from typing import List, Optional
+from constants import ERROR_MESSAGES
+from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, FileResponse
+from pydantic import BaseModel
+from starlette.background import BackgroundTask
+from utils.task import prompt_template
+from utils.utils import (
+    get_verified_user,
+    get_admin_user,
+)
 
-
-import hashlib
-from pathlib import Path
+from apps.filter.main import filter_message
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
@@ -355,6 +350,11 @@ async def generate_chat_completion(
     idx = 0
     payload = {**form_data}
 
+    try:
+        filter_message(payload)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
@@ -422,7 +422,6 @@ async def generate_chat_completion(
                             "content": system,
                         },
                     )
-
     else:
         pass
 
@@ -491,7 +490,6 @@ async def generate_chat_completion(
         if r is not None:
             try:
                 res = await r.json()
-                print(res)
                 if "error" in res:
                     error_detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
             except:
@@ -554,7 +552,6 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         if r is not None:
             try:
                 res = await r.json()
-                print(res)
                 if "error" in res:
                     error_detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
             except:
