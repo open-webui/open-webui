@@ -1337,7 +1337,7 @@ ENABLE_MESSAGE_FILTER = PersistentConfig(
 CHAT_FILTER_WORDS = PersistentConfig(
     "CHAT_FILTER_WORDS",
     "message_filter.words",
-    os.environ.get("CHAT_FILTER_WORDS", ""),
+    os.getenv("CHAT_FILTER_WORDS", ""),
 )
 
 IS_REPLACE_FILTER_WORDS = PersistentConfig(

@@ -68,6 +68,10 @@ app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 
+app.state.config.ENABLE_MESSAGE_FILTER = ENABLE_MESSAGE_FILTER
+app.state.config.CHAT_FILTER_WORDS = CHAT_FILTER_WORDS
+app.state.config.IS_REPLACE_FILTER_WORDS = IS_REPLACE_FILTER_WORDS
+
 app.state.MODELS = {}
 
 
@@ -365,17 +369,17 @@ async def generate_chat_completion(
     idx = 0
     payload = {**form_data}
 
-    if payload.get("messages") and ENABLE_MESSAGE_FILTER:
+    if payload.get("messages") and app.state.config.ENABLE_MESSAGE_FILTER:
         search = WordsSearch()
-        search.SetKeywords(CHAT_FILTER_WORDS.split(','))
+        search.SetKeywords(str(app.state.config.CHAT_FILTER_WORDS).split(","))
         start_time = time.time()
         for message in payload["messages"]:
             if message.get("role") == "user":
                 content = message.get("content")
                 if not isinstance(content, list):
-                    if IS_REPLACE_FILTER_WORDS:
-                        filter_condition = search.FindFirst(content)
-                        if filter_condition:
+                    filter_condition = search.FindFirst(content)
+                    if filter_condition:
+                        if app.state.config.IS_REPLACE_FILTER_WORDS:
                             filter_word = filter_condition[0]["Keyword"]
                             raise HTTPException(status_code=503, detail=f"Open WebUI: YOUR MESSAGE CONTAINS "
                                                                         f"INAPPROPRIATE WORDS (`{filter_word}`)"
