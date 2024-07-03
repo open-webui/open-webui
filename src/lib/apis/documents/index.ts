@@ -196,6 +196,39 @@ export const tagDocByName = async (token: string, name: string, form: TagDocForm
 	return res;
 };
 
+export const bulkTagDocuments = async (token: string, docNames: string[], tags: string[], action: 'add' | 'remove') => {
+    let error = null;
+
+    const res = await fetch(`${WEBUI_API_BASE_URL}/documents/bulk_tag`, {
+        method: 'POST',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            doc_names: docNames,
+            tags: tags,
+            action: action
+        })
+    })
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            error = err.detail;
+            console.log(err);
+            return null;
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    return res;
+};
+
 export const deleteDocByName = async (token: string, name: string) => {
 	let error = null;
 

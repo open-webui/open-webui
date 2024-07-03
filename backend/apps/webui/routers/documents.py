@@ -146,6 +146,45 @@ async def update_doc_by_name(
             detail=ERROR_MESSAGES.NAME_TAG_TAKEN,
         )
 
+############################
+# BulkTagDocuments
+############################
+
+class BulkTagForm(BaseModel):
+    doc_names: List[str]
+    tags: List[str]
+    action: str  # 'add' or 'remove'
+
+@router.post("/bulk_tag", response_model=List[DocumentResponse])
+async def bulk_tag_documents(form_data: BulkTagForm, user=Depends(get_verified_user)):
+    updated_docs = []
+    for doc_name in form_data.doc_names:
+        doc = Documents.get_doc_by_name(doc_name)
+        if doc:
+            current_content = json.loads(doc.content) if doc.content else {}
+            current_tags = current_content.get('tags', [])
+            
+            if form_data.action == 'add':
+                existing_tag_names = {tag["name"] for tag in current_tags}
+                for new_tag in form_data.tags:
+                    if new_tag not in existing_tag_names:
+                        current_tags.append({"name": new_tag})
+            elif form_data.action == 'remove':
+                current_tags = [tag for tag in current_tags if tag["name"] not in form_data.tags]
+            else:
+                raise HTTPException(status_code=400, detail="Invalid action")
+            
+            current_content['tags'] = current_tags
+            updated_doc = Documents.update_doc_content_by_name(doc_name, current_content)
+            if updated_doc:
+                updated_docs.append(DocumentResponse(
+                    **{
+                        **updated_doc.model_dump(),
+                        "content": json.loads(updated_doc.content if updated_doc.content else "{}"),
+                    }
+                ))
+    
+    return updated_docs
 
 ############################
 # DeleteDocByName

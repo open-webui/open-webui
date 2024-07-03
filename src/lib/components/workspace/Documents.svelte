@@ -4,8 +4,9 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, documents, showSidebar } from '$lib/stores';
-	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
+	import { WEBUI_NAME, documents, showSidebar, tags as _tags } from '$lib/stores';
+	import { createNewDoc, deleteDocByName, getDocs, bulkTagDocuments } from '$lib/apis/documents';
+	import Tags from '../common/Tags.svelte';
 
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
 	import { uploadDocToVectorDB } from '$lib/apis/rag';
@@ -16,6 +17,7 @@
 	import EditDocModal from '$lib/components/documents/EditDocModal.svelte';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 	import AddDocModal from '$lib/components/documents/AddDocModal.svelte';
+	import TagInput from '../common/Tags/TagInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -31,6 +33,10 @@
 	let showEditDocModal = false;
 	let selectedDoc;
 	let selectedTag = '';
+	let bulkTagInput = '';
+	let selectedDocs = [];
+	let bulkTags = [];
+	let commonTags = [];
 
 	let dragged = false;
 
@@ -139,14 +145,71 @@
 		};
 	});
 
-	let filteredDocs;
-
 	$: filteredDocs = $documents.filter(
 		(doc) =>
 			(selectedTag === '' ||
 				(doc?.content?.tags ?? []).map((tag) => tag.name).includes(selectedTag)) &&
 			(query === '' || doc.name.includes(query))
 	);
+
+	const addBulkTag = async (tagName) => {
+		const docNames = selectedDocs.map((doc) => doc.name);
+		const updatedDocs = await bulkTagDocuments(localStorage.token, docNames, [tagName], 'add');
+
+		if (updatedDocs) {
+			documents.update((docs) => {
+				return docs.map((doc) => {
+					const updatedDoc = updatedDocs.find((d) => d.name === doc.name);
+					return updatedDoc ? { ...doc, ...updatedDoc } : doc;
+				});
+			});
+
+			_tags.update((tags) => [...new Set([...tags, tagName])]);
+
+			bulkTags = [...bulkTags, { name: tagName }];
+		}
+	};
+
+	const deleteBulkTag = async (tagName) => {
+		const docNames = selectedDocs.map((doc) => doc.name);
+		const updatedDocs = await bulkTagDocuments(localStorage.token, docNames, [tagName], 'remove');
+
+		if (updatedDocs) {
+			documents.update((docs) => {
+				return docs.map((doc) => {
+					const updatedDoc = updatedDocs.find((d) => d.name === doc.name);
+					return updatedDoc ? { ...doc, ...updatedDoc } : doc;
+				});
+			});
+
+			// Mettre à jour bulkTags
+			bulkTags = bulkTags.filter((tag) => tag.name !== tagName);
+
+			// Vérifier si le tag doit être supprimé des tags globaux
+			const tagStillExists = $documents.some((doc) =>
+				doc.content?.tags?.some((tag) => tag.name === tagName)
+			);
+			if (!tagStillExists) {
+				_tags.update((tags) => tags.filter((tag) => tag !== tagName));
+			}
+		}
+	};
+
+	$: {
+		selectedDocs = filteredDocs.filter((doc) => doc.selected === 'checked');
+		updateCommonTags();
+	}
+
+	function updateCommonTags() {
+		if (selectedDocs.length === 0) {
+			commonTags = [];
+		} else {
+			const allTags = selectedDocs.map((doc) => doc.content?.tags || []);
+			commonTags = allTags.reduce((common, tags) =>
+				common.filter((tag) => tags.some((t) => t.name === tag.name))
+			);
+		}
+	}
 </script>
 
 <svelte:head>
@@ -302,28 +365,16 @@
 		{:else}
 			<div class="flex-1 flex w-full justify-between items-center">
 				<div class="text-xs font-medium py-0.5 self-center mr-1">
-					{filteredDocs.filter((doc) => doc?.selected === 'checked').length} Selected
+					{selectedDocs.length} Selected
 				</div>
 
 				<div class="flex gap-1">
-					<!-- <button
-                        class="px-2 py-0.5 space-x-1 flex h-fit items-center rounded-full transition bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:text-white"
-                        on:click={async () => {
-                            selectedTag = '';
-                            // await chats.set(await getChatListByTagName(localStorage.token, tag.name));
-                        }}
-                    >
-                        <div class=" text-xs font-medium self-center line-clamp-1">add tags</div>
-                    </button> -->
-
+					<Tags tags={commonTags} addTag={addBulkTag} deleteTag={deleteBulkTag} />
 					<button
 						class="px-2 py-0.5 space-x-1 flex h-fit items-center rounded-full transition bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:text-white"
-						on:click={async () => {
-							deleteDocs(filteredDocs.filter((doc) => doc.selected === 'checked'));
-							// await chats.set(await getChatListByTagName(localStorage.token, tag.name));
-						}}
+						on:click={() => deleteDocs(selectedDocs)}
 					>
-						<div class=" text-xs font-medium self-center line-clamp-1">
+						<div class="text-xs font-medium self-center line-clamp-1">
 							{$i18n.t('delete')}
 						</div>
 					</button>
