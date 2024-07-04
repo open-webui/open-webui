@@ -1341,7 +1341,7 @@ CHAT_FILTER_WORDS_FILE = PersistentConfig(
 )
 
 file_dir = DATA_DIR
-file_path = os.path.join(DATA_DIR, CHAT_FILTER_WORDS_FILE)
+file_path = os.path.join(DATA_DIR, str(CHAT_FILTER_WORDS_FILE))
 
 CHAT_FILTER_WORDS = None
 if os.path.exists(file_dir):
