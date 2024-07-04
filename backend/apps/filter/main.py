@@ -17,7 +17,7 @@ from utils.utils import (
     get_admin_user,
 )
 
-from backend.config import SRC_LOG_LEVELS, DATA_DIR, PersistentConfig
+from config import SRC_LOG_LEVELS, DATA_DIR, PersistentConfig
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["FILTER"])
