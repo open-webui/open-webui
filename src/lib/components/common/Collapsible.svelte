@@ -1,21 +1,19 @@
 <script lang="ts">
-	import { afterUpdate } from 'svelte';
-
 	export let open = false;
 	export let className = '';
 
 	// Manage the max-height of the collapsible content for snappy transitions
 	let contentElement: HTMLElement;
 	let maxHeight = '0px'; // Initial max-height
-	// After any state update, adjust the max-height for the transition
-	afterUpdate(() => {
+
+	$: if (contentElement?.scrollHeight) {
 		if (open) {
 			// Ensure the element is visible before measuring
 			maxHeight = `${contentElement.scrollHeight}px`;
 		} else {
 			maxHeight = '0px';
 		}
-	});
+	}
 </script>
 
 <div class={className}>
