@@ -158,12 +158,14 @@
 			return;
 		}
 
-		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, '0').catch(
-			(error) => {
-				toast.error(error);
-				return null;
-			}
-		);
+		const [res, controller] = await pullModel(
+			localStorage.token,
+			sanitizedModelTag,
+			selectedOllamaUrlIdx
+		).catch((error) => {
+			toast.error(error);
+			return null;
+		});
 
 		if (res) {
 			const reader = res.body
