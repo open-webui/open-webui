@@ -84,11 +84,16 @@ async def get_filter_config(user=Depends(get_admin_user)):
 async def update_filter_config(
         form_data: FILTERConfigForm, user=Depends(get_admin_user)
 ):
+    global search
     app.state.config.ENABLE_MESSAGE_FILTER = form_data.ENABLE_MESSAGE_FILTER
     app.state.config.CHAT_FILTER_WORDS = form_data.CHAT_FILTER_WORDS
     app.state.config.CHAT_FILTER_WORDS_FILE = form_data.CHAT_FILTER_WORDS_FILE
     app.state.config.ENABLE_REPLACE_FILTER_WORDS = form_data.ENABLE_REPLACE_FILTER_WORDS
     app.state.config.REPLACE_FILTER_WORDS = form_data.REPLACE_FILTER_WORDS
+
+    if app.state.config.ENABLE_MESSAGE_FILTER and app.state.config.CHAT_FILTER_WORDS:
+        search = WordsSearch()
+        search.SetKeywords(str(app.state.config.CHAT_FILTER_WORDS).split(","))
 
     return {
         "ENABLE_MESSAGE_FILTER": app.state.config.ENABLE_MESSAGE_FILTER,
