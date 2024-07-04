@@ -1346,22 +1346,6 @@ CHAT_FILTER_WORDS = PersistentConfig(
     "",
 )
 
-file_dir = DATA_DIR
-file_path = os.path.join(DATA_DIR, str(CHAT_FILTER_WORDS_FILE.env_value))
-if os.path.exists(file_dir):
-    if os.path.isfile(file_path):
-        with open(file_path, 'r', encoding='utf-8') as file:
-            lines = file.readlines()
-            joined_text = ','.join(line.strip() for line in lines)
-            CHAT_FILTER_WORDS = PersistentConfig(
-                "CHAT_FILTER_WORDS",
-                "message_filter.words",
-                joined_text if joined_text else "",
-            )
-    else:
-        with open(file_path, 'w', encoding='utf-8') as file:
-            file.write('')
-
 ENABLE_REPLACE_FILTER_WORDS = PersistentConfig(
     "ENABLE_REPLACE_FILTER_WORDS",
     "message_filter.replace",

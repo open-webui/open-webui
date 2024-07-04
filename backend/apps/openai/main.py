@@ -1,29 +1,14 @@
-import time
-
-from fastapi import FastAPI, Request, Response, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
-
-import requests
-import aiohttp
 import asyncio
+import hashlib
 import json
 import logging
+from pathlib import Path
+from typing import List, Optional
 
-from pydantic import BaseModel
-from starlette.background import BackgroundTask
-
+import aiohttp
+import requests
+from apps.filter.WordsSearch import WordsSearch
 from apps.webui.models.models import Models
-from apps.webui.models.users import Users
-from constants import ERROR_MESSAGES
-from utils.utils import (
-    decode_token,
-    get_verified_user,
-    get_verified_user,
-    get_admin_user,
-)
-from utils.task import prompt_template
-
 from config import (
     SRC_LOG_LEVELS,
     ENABLE_OPENAI_API,
@@ -33,19 +18,21 @@ from config import (
     CACHE_DIR,
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
-    ENABLE_MESSAGE_FILTER,
-    CHAT_FILTER_WORDS,
-    ENABLE_REPLACE_FILTER_WORDS,
-    REPLACE_FILTER_WORDS,
     AppConfig,
 )
-from typing import List, Optional
+from constants import ERROR_MESSAGES
+from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, FileResponse
+from pydantic import BaseModel
+from starlette.background import BackgroundTask
+from utils.task import prompt_template
+from utils.utils import (
+    get_verified_user,
+    get_admin_user,
+)
 
-
-import hashlib
-from pathlib import Path
-
-from apps.filter.WordsSearch import WordsSearch
+from backend.apps.filter.main import filter_message
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
@@ -68,16 +55,6 @@ app.state.config.MODEL_FILTER_LIST = MODEL_FILTER_LIST
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
-
-app.state.config.ENABLE_MESSAGE_FILTER = ENABLE_MESSAGE_FILTER
-app.state.config.CHAT_FILTER_WORDS = CHAT_FILTER_WORDS
-app.state.config.ENABLE_REPLACE_FILTER_WORDS = ENABLE_REPLACE_FILTER_WORDS
-app.state.config.REPLACE_FILTER_WORDS = REPLACE_FILTER_WORDS
-
-search = None
-if app.state.config.ENABLE_MESSAGE_FILTER and app.state.config.CHAT_FILTER_WORDS:
-    search = WordsSearch()
-    search.SetKeywords(str(app.state.config.CHAT_FILTER_WORDS).split(","))
 
 app.state.MODELS = {}
 
@@ -217,8 +194,8 @@ async def fetch_url(url, key):
 
 
 async def cleanup_response(
-    response: Optional[aiohttp.ClientResponse],
-    session: Optional[aiohttp.ClientSession],
+        response: Optional[aiohttp.ClientResponse],
+        session: Optional[aiohttp.ClientSession],
 ):
     if response:
         response.close()
@@ -243,8 +220,8 @@ def merge_models_lists(model_lists):
                     }
                     for model in models
                     if "api.openai.com"
-                    not in app.state.config.OPENAI_API_BASE_URLS[idx]
-                    or "gpt" in model["id"]
+                       not in app.state.config.OPENAI_API_BASE_URLS[idx]
+                       or "gpt" in model["id"]
                 ]
             )
 
@@ -255,22 +232,22 @@ async def get_all_models(raw: bool = False):
     log.info("get_all_models()")
 
     if (
-        len(app.state.config.OPENAI_API_KEYS) == 1
-        and app.state.config.OPENAI_API_KEYS[0] == ""
+            len(app.state.config.OPENAI_API_KEYS) == 1
+            and app.state.config.OPENAI_API_KEYS[0] == ""
     ) or not app.state.config.ENABLE_OPENAI_API:
         models = {"data": []}
     else:
         # Check if API KEYS length is same than API URLS length
         if len(app.state.config.OPENAI_API_KEYS) != len(
-            app.state.config.OPENAI_API_BASE_URLS
+                app.state.config.OPENAI_API_BASE_URLS
         ):
             # if there are more keys than urls, remove the extra keys
             if len(app.state.config.OPENAI_API_KEYS) > len(
-                app.state.config.OPENAI_API_BASE_URLS
+                    app.state.config.OPENAI_API_BASE_URLS
             ):
                 app.state.config.OPENAI_API_KEYS = app.state.config.OPENAI_API_KEYS[
-                    : len(app.state.config.OPENAI_API_BASE_URLS)
-                ]
+                                                   : len(app.state.config.OPENAI_API_BASE_URLS)
+                                                   ]
             # if there are more urls than keys, add empty keys
             else:
                 app.state.config.OPENAI_API_KEYS += [
@@ -369,34 +346,17 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
 @app.post("/chat/completions")
 @app.post("/chat/completions/{url_idx}")
 async def generate_chat_completion(
-    form_data: dict,
-    url_idx: Optional[int] = None,
-    user=Depends(get_verified_user),
+        form_data: dict,
+        url_idx: Optional[int] = None,
+        user=Depends(get_verified_user),
 ):
     idx = 0
     payload = {**form_data}
 
-    if payload.get("messages") and search:
-        start_time = time.time()
-        for message in reversed(payload["messages"]):
-            if message.get("role") == "user":
-                content = message.get("content")
-                if not isinstance(content, list):
-                    filter_condition = search.FindFirst(content)
-                    if filter_condition:
-                        if not app.state.config.ENABLE_REPLACE_FILTER_WORDS:
-                            filter_word = filter_condition["Keyword"]
-                            detail_message = (
-                                f"Open WebUI: Your message contains inappropriate words (`{filter_word}`) "
-                                "and cannot be sent. Please create a new topic and try again."
-                            )
-                            log.info("The time taken to check the filter words: %.6fs", time.time() - start_time)
-                            raise HTTPException(status_code=503, detail=detail_message)
-                        else:
-                            message["content"] = search.Replace(content, app.state.config.REPLACE_FILTER_WORDS)
-                            log.info(f"Replace filter words in content: {message['content']}")
-                    break
-        log.info("The time taken to check the filter words: %.6fs", time.time() - start_time)
+    try:
+        filter_message(payload)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
@@ -466,7 +426,6 @@ async def generate_chat_completion(
                         },
                     )
     else:
-
         pass
 
     model = app.state.MODELS[payload.get("model")]
