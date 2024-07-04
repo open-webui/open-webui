@@ -1,4 +1,4 @@
-"""Peewee migrations -- 009_add_models.py.
+"""Peewee migrations -- 002_add_local_sharing.py.
 
 Some examples (model - class or model name)::
 
@@ -35,27 +35,19 @@ with suppress(ImportError):
 
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
-    """Write your migrations here."""
-
     @migrator.create_model
-    class Model(pw.Model):
-        id = pw.TextField(unique=True)
-        user_id = pw.TextField()
-        base_model_id = pw.TextField(null=True)
-
-        name = pw.TextField()
-
-        meta = pw.TextField()
-        params = pw.TextField()
-
-        created_at = pw.BigIntegerField(null=False)
+    class Memory(pw.Model):
+        id = pw.CharField(max_length=255, unique=True)
+        user_id = pw.CharField(max_length=255)
+        content = pw.TextField(null=False)
         updated_at = pw.BigIntegerField(null=False)
+        created_at = pw.BigIntegerField(null=False)
 
         class Meta:
-            table_name = "model"
+            table_name = "memory"
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
-    migrator.remove_model("model")
+    migrator.remove_model("memory")

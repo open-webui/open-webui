@@ -1,4 +1,4 @@
-"""Peewee migrations -- 009_add_models.py.
+"""Peewee migrations -- 002_add_local_sharing.py.
 
 Some examples (model - class or model name)::
 
@@ -37,25 +37,43 @@ with suppress(ImportError):
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
-    @migrator.create_model
-    class Model(pw.Model):
-        id = pw.TextField(unique=True)
-        user_id = pw.TextField()
-        base_model_id = pw.TextField(null=True)
+    # Adding fields created_at and updated_at to the 'user' table
+    migrator.add_fields(
+        "user",
+        created_at=pw.BigIntegerField(null=True),  # Allow null for transition
+        updated_at=pw.BigIntegerField(null=True),  # Allow null for transition
+        last_active_at=pw.BigIntegerField(null=True),  # Allow null for transition
+    )
 
-        name = pw.TextField()
+    # Populate the new fields from an existing 'timestamp' field
+    migrator.sql(
+        'UPDATE "user" SET created_at = timestamp, updated_at = timestamp, last_active_at = timestamp WHERE timestamp IS NOT NULL'
+    )
 
-        meta = pw.TextField()
-        params = pw.TextField()
+    # Now that the data has been copied, remove the original 'timestamp' field
+    migrator.remove_fields("user", "timestamp")
 
-        created_at = pw.BigIntegerField(null=False)
-        updated_at = pw.BigIntegerField(null=False)
-
-        class Meta:
-            table_name = "model"
+    # Update the fields to be not null now that they are populated
+    migrator.change_fields(
+        "user",
+        created_at=pw.BigIntegerField(null=False),
+        updated_at=pw.BigIntegerField(null=False),
+        last_active_at=pw.BigIntegerField(null=False),
+    )
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
-    migrator.remove_model("model")
+    # Recreate the timestamp field initially allowing null values for safe transition
+    migrator.add_fields("user", timestamp=pw.BigIntegerField(null=True))
+
+    # Copy the earliest created_at date back into the new timestamp field
+    # This assumes created_at was originally a copy of timestamp
+    migrator.sql('UPDATE "user" SET timestamp = created_at')
+
+    # Remove the created_at and updated_at fields
+    migrator.remove_fields("user", "created_at", "updated_at", "last_active_at")
+
+    # Finally, alter the timestamp field to not allow nulls if that was the original setting
+    migrator.change_fields("user", timestamp=pw.BigIntegerField(null=False))
