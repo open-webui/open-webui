@@ -84,7 +84,7 @@ WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
 
-WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+WEBUI_FAVICON_URL = ""
 
 
 ####################################
@@ -455,28 +455,28 @@ else:
 
 CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
 
-if CUSTOM_NAME:
-    try:
-        r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
-        data = r.json()
-        if r.ok:
-            if "logo" in data:
-                WEBUI_FAVICON_URL = url = (
-                    f"https://api.openwebui.com{data['logo']}"
-                    if data["logo"][0] == "/"
-                    else data["logo"]
-                )
+# if CUSTOM_NAME:
+#     try:
+#         r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
+#         data = r.json()
+#         if r.ok:
+#             if "logo" in data:
+#                 WEBUI_FAVICON_URL = url = (
+#                     f"https://api.openwebui.com{data['logo']}"
+#                     if data["logo"][0] == "/"
+#                     else data["logo"]
+#                 )
 
-                r = requests.get(url, stream=True)
-                if r.status_code == 200:
-                    with open(f"{STATIC_DIR}/favicon.png", "wb") as f:
-                        r.raw.decode_content = True
-                        shutil.copyfileobj(r.raw, f)
+#                 r = requests.get(url, stream=True)
+#                 if r.status_code == 200:
+#                     with open(f"{STATIC_DIR}/favicon.png", "wb") as f:
+#                         r.raw.decode_content = True
+#                         shutil.copyfileobj(r.raw, f)
 
-            WEBUI_NAME = data["name"]
-    except Exception as e:
-        log.exception(e)
-        pass
+#             WEBUI_NAME = data["name"]
+#     except Exception as e:
+#         log.exception(e)
+#         pass
 
 MODEL_STATUS = os.environ.get("MODEL_STATUS", "")
 

@@ -1,7 +1,7 @@
 import { browser, dev } from '$app/environment';
 // import { version } from '../../package.json';
 
-export const APP_NAME = 'YUBB UI';
+export const APP_NAME = 'Yubb Chat';
 
 // 获取当前的协议和主机名
 const protocol = browser ? window.location.protocol : '';
