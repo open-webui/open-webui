@@ -393,6 +393,18 @@ OAUTH_PROVIDER_NAME = PersistentConfig(
     os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
 )
 
+OAUTH_USERNAME_CLAIM = PersistentConfig(
+    "OAUTH_USERNAME_CLAIM",
+    "oauth.oidc.username_claim",
+    os.environ.get("OAUTH_USERNAME_CLAIM", "name"),
+)
+
+OAUTH_PICTURE_CLAIM = PersistentConfig(
+    "OAUTH_USERNAME_CLAIM",
+    "oauth.oidc.avatar_claim",
+    os.environ.get("OAUTH_PICTURE_CLAIM", "picture"),
+)
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
