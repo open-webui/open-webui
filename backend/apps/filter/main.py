@@ -80,7 +80,7 @@ async def get_filter_config(user=Depends(get_admin_user)):
 
 
 @app.post("/config/update")
-async def update_audio_config(
+async def update_filter_config(
         form_data: FILTERConfigForm, user=Depends(get_admin_user)
 ):
     app.state.config.ENABLE_MESSAGE_FILTER = form_data.ENABLE_MESSAGE_FILTER
