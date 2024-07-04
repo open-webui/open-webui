@@ -35,16 +35,16 @@ file_dir = DATA_DIR
 file_path = os.path.join(DATA_DIR, str(CHAT_FILTER_WORDS_FILE.env_value))
 if os.path.exists(file_dir):
     if os.path.isfile(file_path):
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             lines = file.readlines()
-            joined_text = ','.join(line.strip() for line in lines)
+            joined_text = ",".join(line.strip() for line in lines)
             CHAT_FILTER_WORDS = PersistentConfig(
                 "CHAT_FILTER_WORDS",
                 "message_filter.words",
                 joined_text if joined_text else "",
             )
     else:
-        with open(file_path, 'w', encoding='utf-8') as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             file.write('')
 
 app.state.config = AppConfig()
@@ -82,7 +82,7 @@ async def get_filter_config(user=Depends(get_admin_user)):
 
 @app.post("/config/update")
 async def update_filter_config(
-        form_data: FILTERConfigForm, user=Depends(get_admin_user)
+    form_data: FILTERConfigForm, user=Depends(get_admin_user)
 ):
     global search
     app.state.config.ENABLE_MESSAGE_FILTER = form_data.ENABLE_MESSAGE_FILTER
@@ -120,10 +120,22 @@ def filter_message(payload: dict):
                                     f"Open WebUI: Your message contains inappropriate words (`{filter_word}`) "
                                     "and cannot be sent. Please create a new topic and try again."
                                 )
-                                log.info("The time taken to check the filter words: %.6fs", time.time() - start_time)
-                                raise HTTPException(status_code=503, detail=detail_message)
+                                log.info(
+                                    "The time taken to check the filter words: %.6fs",
+                                    time.time() - start_time
+                                )
+                                raise HTTPException(
+                                    status_code=503, detail=detail_message
+                                )
                             else:
-                                message["content"] = search.Replace(content, app.state.config.REPLACE_FILTER_WORDS)
-                                log.info(f"Replace filter words in content: {message['content']}")
+                                message["content"] = search.Replace(
+                                    content, app.state.config.REPLACE_FILTER_WORDS
+                                )
+                                log.info(
+                                    f"Replace filter words in content: {message['content']}"
+                                )
                         break
-            log.info("The time taken to check the filter words: %.6fs", time.time() - start_time)
+            log.info(
+                "The time taken to check the filter words: %.6fs",
+                time.time() - start_time
+            )

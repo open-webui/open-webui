@@ -194,8 +194,8 @@ async def fetch_url(url, key):
 
 
 async def cleanup_response(
-        response: Optional[aiohttp.ClientResponse],
-        session: Optional[aiohttp.ClientSession],
+    response: Optional[aiohttp.ClientResponse],
+    session: Optional[aiohttp.ClientSession],
 ):
     if response:
         response.close()
@@ -220,8 +220,8 @@ def merge_models_lists(model_lists):
                     }
                     for model in models
                     if "api.openai.com"
-                       not in app.state.config.OPENAI_API_BASE_URLS[idx]
-                       or "gpt" in model["id"]
+                    not in app.state.config.OPENAI_API_BASE_URLS[idx]
+                    or "gpt" in model["id"]
                 ]
             )
 
@@ -232,22 +232,22 @@ async def get_all_models(raw: bool = False):
     log.info("get_all_models()")
 
     if (
-            len(app.state.config.OPENAI_API_KEYS) == 1
-            and app.state.config.OPENAI_API_KEYS[0] == ""
+        len(app.state.config.OPENAI_API_KEYS) == 1
+        and app.state.config.OPENAI_API_KEYS[0] == ""
     ) or not app.state.config.ENABLE_OPENAI_API:
         models = {"data": []}
     else:
         # Check if API KEYS length is same than API URLS length
         if len(app.state.config.OPENAI_API_KEYS) != len(
-                app.state.config.OPENAI_API_BASE_URLS
+            app.state.config.OPENAI_API_BASE_URLS
         ):
             # if there are more keys than urls, remove the extra keys
             if len(app.state.config.OPENAI_API_KEYS) > len(
-                    app.state.config.OPENAI_API_BASE_URLS
+                app.state.config.OPENAI_API_BASE_URLS
             ):
                 app.state.config.OPENAI_API_KEYS = app.state.config.OPENAI_API_KEYS[
-                                                   : len(app.state.config.OPENAI_API_BASE_URLS)
-                                                   ]
+                    : len(app.state.config.OPENAI_API_BASE_URLS)
+                ]
             # if there are more urls than keys, add empty keys
             else:
                 app.state.config.OPENAI_API_KEYS += [
@@ -346,9 +346,9 @@ async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_us
 @app.post("/chat/completions")
 @app.post("/chat/completions/{url_idx}")
 async def generate_chat_completion(
-        form_data: dict,
-        url_idx: Optional[int] = None,
-        user=Depends(get_verified_user),
+    form_data: dict,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
 ):
     idx = 0
     payload = {**form_data}

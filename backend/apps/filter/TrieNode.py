@@ -4,7 +4,7 @@ class TrieNode():
         self.Index = 0
         self.Layer = 0
         self.End = False
-        self.Char = ''
+        self.Char = ""
         self.Results = []
         self.m_values = {}
         self.Failure = None

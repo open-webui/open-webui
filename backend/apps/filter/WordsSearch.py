@@ -98,8 +98,13 @@ class WordsSearch:
                 if tn.End:
                     item = tn.Results[0]
                     keyword = self._keywords[item]
-                    return {"Keyword": keyword, "Success": True, "End": index, "Start": index + 1 - len(keyword),
-                            "Index": self._indexs[item]}
+                    return {
+                        "Keyword": keyword,
+                        "Success": True,
+                        "End": index,
+                        "Start": index + 1 - len(keyword),
+                        "Index": self._indexs[item]
+                    }
             ptr = tn
         return None
 
@@ -119,12 +124,18 @@ class WordsSearch:
 
             if tn is not None:
                 if tn.End:
-                    for j in range(len(tn.Results)):  # for (j = 0; j < tn.Results.length; j++)
+                    for j in range(len(tn.Results)):
                         item = tn.Results[j]
                         keyword = self._keywords[item]
                         key_list.append(
-                            {"Keyword": keyword, "Success": True, "End": index, "Start": index + 1 - len(keyword),
-                             "Index": self._indexs[item]})
+                            {
+                                "Keyword": keyword,
+                                "Success": True,
+                                "End": index,
+                                "Start": index + 1 - len(keyword),
+                                "Index": self._indexs[item]
+                            }
+                        )
             ptr = tn
         return key_list
 
@@ -146,7 +157,7 @@ class WordsSearch:
             ptr = tn
         return False
 
-    def Replace(self, text, replaceChar='*'):
+    def Replace(self, text, replaceChar="*"):
         result = list(text)
 
         ptr = None
@@ -167,4 +178,4 @@ class WordsSearch:
                     for j in range(start, i + 1):
                         result[j] = replaceChar
             ptr = tn
-        return ''.join(result)
+        return "".join(result)

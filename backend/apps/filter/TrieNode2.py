@@ -3,7 +3,7 @@ class TrieNode2():
         self.End = False
         self.Results = []
         self.m_values = {}
-        self.min_flag = 0xffff
+        self.min_flag = 0xFFFF
         self.max_flag = 0
 
     def Add(self, c, node3):
