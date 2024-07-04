@@ -86,7 +86,7 @@ async def update_filter_config(
 ):
     app.state.config.ENABLE_MESSAGE_FILTER = form_data.ENABLE_MESSAGE_FILTER
     app.state.config.CHAT_FILTER_WORDS = form_data.CHAT_FILTER_WORDS
-    app.state.config.CHAT_FILTER_WORDS_FILE = form_data.CHAT_FILTER_WORDS
+    app.state.config.CHAT_FILTER_WORDS_FILE = form_data.CHAT_FILTER_WORDS_FILE
     app.state.config.ENABLE_REPLACE_FILTER_WORDS = form_data.ENABLE_REPLACE_FILTER_WORDS
     app.state.config.REPLACE_FILTER_WORDS = form_data.REPLACE_FILTER_WORDS
 
