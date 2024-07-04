@@ -139,7 +139,7 @@
 				return;
 			}
 			const status_keys = ["done", "description"];
-			const citation_keys = ["document", "metadata", "source"];
+			const citation_keys = ["document", "url", "title"];
 			if (type === "status" && status_keys.every(key => key in payload)) {
 				if (message.statusHistory) {
 					message.statusHistory.push(payload);
@@ -147,10 +147,15 @@
 					message.statusHistory = [payload];
 				}
 			} else if (type === "citation" && citation_keys.every(key => key in payload)) {
+				const citation = {
+					document: [payload.document],
+					metadata: [{source: payload.url}],
+					source: {name: payload.title}
+				};
 				if (message.citations) {
-					message.citations.push(payload);
+					message.citations.push(citation);
 				} else {
-					message.citations = [payload];
+					message.citations = [citation];
 				}
 			} else {
 				console.log("Unknown message type", data);
