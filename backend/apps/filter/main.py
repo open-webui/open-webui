@@ -105,24 +105,25 @@ async def update_filter_config(
 
 
 def filter_message(payload: dict):
-    if payload.get("messages") and search:
-        start_time = time.time()
-        for message in reversed(payload["messages"]):
-            if message.get("role") == "user":
-                content = message.get("content")
-                if not isinstance(content, list):
-                    filter_condition = search.FindFirst(content)
-                    if filter_condition:
-                        if not app.state.config.ENABLE_REPLACE_FILTER_WORDS:
-                            filter_word = filter_condition["Keyword"]
-                            detail_message = (
-                                f"Open WebUI: Your message contains inappropriate words (`{filter_word}`) "
-                                "and cannot be sent. Please create a new topic and try again."
-                            )
-                            log.info("The time taken to check the filter words: %.6fs", time.time() - start_time)
-                            raise HTTPException(status_code=503, detail=detail_message)
-                        else:
-                            message["content"] = search.Replace(content, app.state.config.REPLACE_FILTER_WORDS)
-                            log.info(f"Replace filter words in content: {message['content']}")
-                    break
-        log.info("The time taken to check the filter words: %.6fs", time.time() - start_time)
+    if app.state.config.ENABLE_MESSAGE_FILTER and search:
+        if payload.get("messages") and search:
+            start_time = time.time()
+            for message in reversed(payload["messages"]):
+                if message.get("role") == "user":
+                    content = message.get("content")
+                    if not isinstance(content, list):
+                        filter_condition = search.FindFirst(content)
+                        if filter_condition:
+                            if not app.state.config.ENABLE_REPLACE_FILTER_WORDS:
+                                filter_word = filter_condition["Keyword"]
+                                detail_message = (
+                                    f"Open WebUI: Your message contains inappropriate words (`{filter_word}`) "
+                                    "and cannot be sent. Please create a new topic and try again."
+                                )
+                                log.info("The time taken to check the filter words: %.6fs", time.time() - start_time)
+                                raise HTTPException(status_code=503, detail=detail_message)
+                            else:
+                                message["content"] = search.Replace(content, app.state.config.REPLACE_FILTER_WORDS)
+                                log.info(f"Replace filter words in content: {message['content']}")
+                        break
+            log.info("The time taken to check the filter words: %.6fs", time.time() - start_time)
