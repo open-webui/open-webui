@@ -20,7 +20,11 @@
 	<button on:click={() => (open = !open)}>
 		<slot name="head" />
 	</button>
-	<div bind:this={contentElement} class={`collapsible-content ${open ? 'mt-1' : '!mt-0'}`} style="max-height: {maxHeight};">
+	<div
+		bind:this={contentElement}
+		class={`collapsible-content ${open ? 'mt-1' : '!mt-0'}`}
+		style="max-height: {maxHeight};"
+	>
 		<slot name="content" />
 	</div>
 </div>
