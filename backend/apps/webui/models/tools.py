@@ -119,7 +119,8 @@ class ToolsTable:
             return None
 
     def get_tools(self) -> List[ToolModel]:
-        return [ToolModel.model_validate(tool) for tool in db.query(Tool).all()]
+        with get_db() as db:
+            return [ToolModel.model_validate(tool) for tool in db.query(Tool).all()]
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:

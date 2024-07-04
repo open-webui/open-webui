@@ -62,10 +62,16 @@ Base = declarative_base()
 Session = scoped_session(SessionLocal)
 
 
+from contextlib import contextmanager
+
+
 # Dependency
-def get_db():
+def get_session():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+
+get_db = contextmanager(get_session)
