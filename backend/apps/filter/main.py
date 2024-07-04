@@ -83,13 +83,12 @@ async def get_filter_config(user=Depends(get_admin_user)):
 
 @app.post("/config/update")
 async def update_filter_config(
-        form_data: FILTERConfigForm, user=Depends(get_admin_user)
+    form_data: FILTERConfigForm, user=Depends(get_admin_user)
 ):
     global search
     global file_path
 
     app.state.config.ENABLE_MESSAGE_FILTER = form_data.ENABLE_MESSAGE_FILTER
-    app.state.config.CHAT_FILTER_WORDS = form_data.CHAT_FILTER_WORDS
     app.state.config.CHAT_FILTER_WORDS_FILE = form_data.CHAT_FILTER_WORDS_FILE
     app.state.config.ENABLE_REPLACE_FILTER_WORDS = form_data.ENABLE_REPLACE_FILTER_WORDS
     app.state.config.REPLACE_FILTER_WORDS = form_data.REPLACE_FILTER_WORDS
@@ -97,11 +96,13 @@ async def update_filter_config(
     request_file_path = os.path.join(DATA_DIR, app.state.config.CHAT_FILTER_WORDS_FILE)
 
     if request_file_path != file_path:
+        app.state.config.CHAT_FILTER_WORDS = form_data.CHAT_FILTER_WORDS
         file_path = request_file_path
         init_file()
 
     else:
         if app.state.config.CHAT_FILTER_WORDS != form_data.CHAT_FILTER_WORDS:
+            app.state.config.CHAT_FILTER_WORDS = form_data.CHAT_FILTER_WORDS
             write_words_to_file()
 
     search = wordsSearch()
