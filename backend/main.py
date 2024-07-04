@@ -169,26 +169,24 @@ class RAGMiddleware(BaseHTTPMiddleware):
             ]
 
         response = await call_next(request)
-        # Buffer the response body
-        response_body = []
-        async for chunk in response.body_iterator:
-            response_body.append(chunk)
-
-        # Prepare a new body iterator with citations and the original response body
-        async def response_body_with_citations():
-            for item in data_items:
-                yield json.dumps(item).encode("utf-8") + b'\n'
-            for chunk in response_body:
-                yield chunk
-
-        response.body_iterator = response_body_with_citations()
+        if data_items:    
+            if isinstance(response, StreamingResponse):
+                # If it's a streaming response, inject it as SSE event or NDJSON line
+                content_type = response.headers.get("Content-Type")
+                if "application/x-ndjson" in content_type:
+                    return StreamingResponse(
+                        self.ollama_stream_wrapper(response.body_iterator, citations),
+                    )
 
         return response
 
     async def _receive(self, body: bytes):
         return {"type": "http.request", "body": body, "more_body": False}
-    
 
+    async def ollama_stream_wrapper(self, original_generator, citations):
+        yield f"{json.dumps({'citations': citations})}\n"
+        async for data in original_generator:
+            yield data
 
 app.add_middleware(RAGMiddleware)
 
