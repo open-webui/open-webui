@@ -98,6 +98,8 @@
 					</button>
 				</div>
 
+				<div class=" py-0.5 flex w-full justify-between" />
+
 				<div class=" flex gap-2">
 					<div class="w-full">
 						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Banwords File')}</div>
