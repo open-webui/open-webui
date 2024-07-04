@@ -141,7 +141,6 @@ def filter_message(payload: dict):
                                 log.info(
                                     f"Replace bad words in content: {message['content']}"
                                 )
-                        break
             log.info(
                 "The time taken to check the bad words: %.6fs",
                 time.time() - start_time,
