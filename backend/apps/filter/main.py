@@ -61,9 +61,10 @@ if app.state.config.ENABLE_MESSAGE_FILTER and app.state.config.CHAT_FILTER_WORDS
     search.SetKeywords(str(app.state.config.CHAT_FILTER_WORDS).split(","))
 
 
-class FILTERConfigForm:
+class FILTERConfigForm(BaseModel):
     ENABLE_MESSAGE_FILTER: bool
     CHAT_FILTER_WORDS: str
+    CHAT_FILTER_WORDS_FILE: str
     ENABLE_REPLACE_FILTER_WORDS: bool
     REPLACE_FILTER_WORDS: str
 
