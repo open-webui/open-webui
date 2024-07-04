@@ -1,7 +1,10 @@
-"""Peewee migrations -- 017_add_user_oauth_sub.py.
+"""Peewee migrations -- 009_add_models.py.
+
 Some examples (model - class or model name)::
+
     > Model = migrator.orm['table_name']            # Return model in current state by name
     > Model = migrator.ModelClass                   # Return model in current state by name
+
     > migrator.sql(sql)                             # Run custom SQL
     > migrator.run(func, *args, **kwargs)           # Run python function with the given args
     > migrator.create_model(Model)                  # Create a model (could be used as decorator)
@@ -18,6 +21,7 @@ Some examples (model - class or model name)::
     > migrator.drop_index(model, *col_names)
     > migrator.drop_not_null(model, *field_names)
     > migrator.drop_constraints(model, *constraints)
+
 """
 
 from contextlib import suppress
@@ -33,13 +37,14 @@ with suppress(ImportError):
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
-    migrator.add_fields(
-        "user",
-        oauth_sub=pw.TextField(null=True, unique=True),
-    )
+    migrator.add_fields("tool", valves=pw.TextField(null=True))
+    migrator.add_fields("function", valves=pw.TextField(null=True))
+    migrator.add_fields("function", is_active=pw.BooleanField(default=False))
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
-    migrator.remove_fields("user", "oauth_sub")
+    migrator.remove_fields("tool", "valves")
+    migrator.remove_fields("function", "valves")
+    migrator.remove_fields("function", "is_active")
