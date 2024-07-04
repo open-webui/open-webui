@@ -7,7 +7,7 @@ from sqlalchemy import String, Column, Boolean, Text
 from apps.webui.models.users import UserModel, Users
 from utils.utils import verify_password
 
-from apps.webui.internal.db import Base, Session
+from apps.webui.internal.db import Base, get_db
 
 from config import SRC_LOG_LEVELS
 
@@ -110,14 +110,14 @@ class AuthsTable:
             **{"id": id, "email": email, "password": password, "active": True}
         )
         result = Auth(**auth.model_dump())
-        Session.add(result)
+        db.add(result)
 
         user = Users.insert_new_user(
             id, name, email, profile_image_url, role, oauth_sub
         )
 
-        Session.commit()
-        Session.refresh(result)
+        db.commit()
+        db.refresh(result)
 
         if result and user:
             return user
@@ -127,7 +127,7 @@ class AuthsTable:
     def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
         log.info(f"authenticate_user: {email}")
         try:
-            auth = Session.query(Auth).filter_by(email=email, active=True).first()
+            auth = db.query(Auth).filter_by(email=email, active=True).first()
             if auth:
                 if verify_password(password, auth.password):
                     user = Users.get_user_by_id(auth.id)
@@ -154,7 +154,7 @@ class AuthsTable:
     def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_trusted_header: {email}")
         try:
-            auth = Session.query(Auth).filter(email=email, active=True).first()
+            auth = db.query(Auth).filter(email=email, active=True).first()
             if auth:
                 user = Users.get_user_by_id(auth.id)
                 return user
@@ -163,16 +163,14 @@ class AuthsTable:
 
     def update_user_password_by_id(self, id: str, new_password: str) -> bool:
         try:
-            result = (
-                Session.query(Auth).filter_by(id=id).update({"password": new_password})
-            )
+            result = db.query(Auth).filter_by(id=id).update({"password": new_password})
             return True if result == 1 else False
         except:
             return False
 
     def update_email_by_id(self, id: str, email: str) -> bool:
         try:
-            result = Session.query(Auth).filter_by(id=id).update({"email": email})
+            result = db.query(Auth).filter_by(id=id).update({"email": email})
             return True if result == 1 else False
         except:
             return False
@@ -183,7 +181,7 @@ class AuthsTable:
             result = Users.delete_user_by_id(id)
 
             if result:
-                Session.query(Auth).filter_by(id=id).delete()
+                db.query(Auth).filter_by(id=id).delete()
 
                 return True
             else:

@@ -5,7 +5,7 @@ import logging
 
 from sqlalchemy import Column, String, BigInteger, Text
 
-from apps.webui.internal.db import JSONField, Base, Session
+from apps.webui.internal.db import JSONField, Base, get_db
 
 import json
 
@@ -61,50 +61,62 @@ class FileForm(BaseModel):
 class FilesTable:
 
     def insert_new_file(self, user_id: str, form_data: FileForm) -> Optional[FileModel]:
-        file = FileModel(
-            **{
-                **form_data.model_dump(),
-                "user_id": user_id,
-                "created_at": int(time.time()),
-            }
-        )
+        with get_db() as db:
 
-        try:
-            result = File(**file.model_dump())
-            Session.add(result)
-            Session.commit()
-            Session.refresh(result)
-            if result:
-                return FileModel.model_validate(result)
-            else:
+            file = FileModel(
+                **{
+                    **form_data.model_dump(),
+                    "user_id": user_id,
+                    "created_at": int(time.time()),
+                }
+            )
+
+            try:
+                result = File(**file.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return FileModel.model_validate(result)
+                else:
+                    return None
+            except Exception as e:
+                print(f"Error creating tool: {e}")
                 return None
-        except Exception as e:
-            print(f"Error creating tool: {e}")
-            return None
 
     def get_file_by_id(self, id: str) -> Optional[FileModel]:
-        try:
-            file = Session.get(File, id)
-            return FileModel.model_validate(file)
-        except:
-            return None
+        with get_db() as db:
+
+            try:
+                file = db.get(File, id)
+                return FileModel.model_validate(file)
+            except:
+                return None
 
     def get_files(self) -> List[FileModel]:
-        return [FileModel.model_validate(file) for file in Session.query(File).all()]
+        with get_db() as db:
+
+            return [FileModel.model_validate(file) for file in db.query(File).all()]
 
     def delete_file_by_id(self, id: str) -> bool:
-        try:
-            Session.query(File).filter_by(id=id).delete()
-            return True
-        except:
-            return False
+
+        with get_db() as db:
+
+            try:
+                db.query(File).filter_by(id=id).delete()
+                return True
+            except:
+                return False
 
     def delete_all_files(self) -> bool:
-        try:
-            Session.query(File).delete()
-            return True
-        except:
-            return False
+
+        with get_db() as db:
+
+            try:
+                db.query(File).delete()
+                return True
+            except:
+                return False
 
 
 Files = FilesTable()

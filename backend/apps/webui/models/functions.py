@@ -5,7 +5,7 @@ import logging
 
 from sqlalchemy import Column, String, Text, BigInteger, Boolean
 
-from apps.webui.internal.db import JSONField, Base, Session
+from apps.webui.internal.db import JSONField, Base, get_db
 from apps.webui.models.users import Users
 
 import json
@@ -91,6 +91,7 @@ class FunctionsTable:
     def insert_new_function(
         self, user_id: str, type: str, form_data: FunctionForm
     ) -> Optional[FunctionModel]:
+
         function = FunctionModel(
             **{
                 **form_data.model_dump(),
@@ -102,85 +103,99 @@ class FunctionsTable:
         )
 
         try:
-            result = Function(**function.model_dump())
-            Session.add(result)
-            Session.commit()
-            Session.refresh(result)
-            if result:
-                return FunctionModel.model_validate(result)
-            else:
-                return None
+            with get_db() as db:
+                result = Function(**function.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return FunctionModel.model_validate(result)
+                else:
+                    return None
         except Exception as e:
             print(f"Error creating tool: {e}")
             return None
 
     def get_function_by_id(self, id: str) -> Optional[FunctionModel]:
         try:
-            function = Session.get(Function, id)
-            return FunctionModel.model_validate(function)
+            with get_db() as db:
+
+                function = db.get(Function, id)
+                return FunctionModel.model_validate(function)
         except:
             return None
 
     def get_functions(self, active_only=False) -> List[FunctionModel]:
-        if active_only:
-            return [
-                FunctionModel.model_validate(function)
-                for function in Session.query(Function).filter_by(is_active=True).all()
-            ]
-        else:
-            return [
-                FunctionModel.model_validate(function)
-                for function in Session.query(Function).all()
-            ]
+        with get_db() as db:
+
+            if active_only:
+                return [
+                    FunctionModel.model_validate(function)
+                    for function in db.query(Function).filter_by(is_active=True).all()
+                ]
+            else:
+                return [
+                    FunctionModel.model_validate(function)
+                    for function in db.query(Function).all()
+                ]
 
     def get_functions_by_type(
         self, type: str, active_only=False
     ) -> List[FunctionModel]:
-        if active_only:
-            return [
-                FunctionModel.model_validate(function)
-                for function in Session.query(Function)
-                .filter_by(type=type, is_active=True)
-                .all()
-            ]
-        else:
-            return [
-                FunctionModel.model_validate(function)
-                for function in Session.query(Function).filter_by(type=type).all()
-            ]
+        with get_db() as db:
+
+            if active_only:
+                return [
+                    FunctionModel.model_validate(function)
+                    for function in db.query(Function)
+                    .filter_by(type=type, is_active=True)
+                    .all()
+                ]
+            else:
+                return [
+                    FunctionModel.model_validate(function)
+                    for function in db.query(Function).filter_by(type=type).all()
+                ]
 
     def get_global_filter_functions(self) -> List[FunctionModel]:
-        return [
-            FunctionModel.model_validate(function)
-            for function in Session.query(Function)
-            .filter_by(type="filter", is_active=True, is_global=True)
-            .all()
-        ]
+        with get_db() as db:
+
+            return [
+                FunctionModel.model_validate(function)
+                for function in db.query(Function)
+                .filter_by(type="filter", is_active=True, is_global=True)
+                .all()
+            ]
 
     def get_function_valves_by_id(self, id: str) -> Optional[dict]:
-        try:
-            function = Session.get(Function, id)
-            return function.valves if function.valves else {}
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            return None
+        with get_db() as db:
+
+            try:
+                function = db.get(Function, id)
+                return function.valves if function.valves else {}
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                return None
 
     def update_function_valves_by_id(
         self, id: str, valves: dict
     ) -> Optional[FunctionValves]:
-        try:
-            function = Session.get(Function, id)
-            function.valves = valves
-            function.updated_at = int(time.time())
-            Session.commit()
-            Session.refresh(function)
-            return self.get_function_by_id(id)
-        except:
-            return None
+        with get_db() as db:
+
+            try:
+                function = db.get(Function, id)
+                function.valves = valves
+                function.updated_at = int(time.time())
+                db.commit()
+                db.refresh(function)
+                return self.get_function_by_id(id)
+            except:
+                return None
 
     def get_user_valves_by_id_and_user_id(
         self, id: str, user_id: str
     ) -> Optional[dict]:
+
         try:
             user = Users.get_user_by_id(user_id)
             user_settings = user.settings.model_dump()
@@ -199,6 +214,7 @@ class FunctionsTable:
     def update_user_valves_by_id_and_user_id(
         self, id: str, user_id: str, valves: dict
     ) -> Optional[dict]:
+
         try:
             user = Users.get_user_by_id(user_id)
             user_settings = user.settings.model_dump()
@@ -220,37 +236,43 @@ class FunctionsTable:
             return None
 
     def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:
-        try:
-            Session.query(Function).filter_by(id=id).update(
-                {
-                    **updated,
-                    "updated_at": int(time.time()),
-                }
-            )
-            Session.commit()
-            return self.get_function_by_id(id)
-        except:
-            return None
+        with get_db() as db:
+
+            try:
+                db.query(Function).filter_by(id=id).update(
+                    {
+                        **updated,
+                        "updated_at": int(time.time()),
+                    }
+                )
+                db.commit()
+                return self.get_function_by_id(id)
+            except:
+                return None
 
     def deactivate_all_functions(self) -> Optional[bool]:
-        try:
-            Session.query(Function).update(
-                {
-                    "is_active": False,
-                    "updated_at": int(time.time()),
-                }
-            )
-            Session.commit()
-            return True
-        except:
-            return None
+        with get_db() as db:
+
+            try:
+                db.query(Function).update(
+                    {
+                        "is_active": False,
+                        "updated_at": int(time.time()),
+                    }
+                )
+                db.commit()
+                return True
+            except:
+                return None
 
     def delete_function_by_id(self, id: str) -> bool:
-        try:
-            Session.query(Function).filter_by(id=id).delete()
-            return True
-        except:
-            return False
+        with get_db() as db:
+
+            try:
+                db.query(Function).filter_by(id=id).delete()
+                return True
+            except:
+                return False
 
 
 Functions = FunctionsTable()

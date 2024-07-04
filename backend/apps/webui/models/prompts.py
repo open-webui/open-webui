@@ -4,7 +4,7 @@ import time
 
 from sqlalchemy import String, Column, BigInteger, Text
 
-from apps.webui.internal.db import Base, Session
+from apps.webui.internal.db import Base, get_db
 
 import json
 
@@ -60,46 +60,56 @@ class PromptsTable:
         )
 
         try:
-            result = Prompt(**prompt.dict())
-            Session.add(result)
-            Session.commit()
-            Session.refresh(result)
-            if result:
-                return PromptModel.model_validate(result)
-            else:
-                return None
+            with get_db() as db:
+
+                result = Prompt(**prompt.dict())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return PromptModel.model_validate(result)
+                else:
+                    return None
         except Exception as e:
             return None
 
     def get_prompt_by_command(self, command: str) -> Optional[PromptModel]:
         try:
-            prompt = Session.query(Prompt).filter_by(command=command).first()
-            return PromptModel.model_validate(prompt)
+            with get_db() as db:
+
+                prompt = db.query(Prompt).filter_by(command=command).first()
+                return PromptModel.model_validate(prompt)
         except:
             return None
 
     def get_prompts(self) -> List[PromptModel]:
-        return [
-            PromptModel.model_validate(prompt) for prompt in Session.query(Prompt).all()
-        ]
+        with get_db() as db:
+
+            return [
+                PromptModel.model_validate(prompt) for prompt in db.query(Prompt).all()
+            ]
 
     def update_prompt_by_command(
         self, command: str, form_data: PromptForm
     ) -> Optional[PromptModel]:
         try:
-            prompt = Session.query(Prompt).filter_by(command=command).first()
-            prompt.title = form_data.title
-            prompt.content = form_data.content
-            prompt.timestamp = int(time.time())
-            Session.commit()
-            return PromptModel.model_validate(prompt)
+            with get_db() as db:
+
+                prompt = db.query(Prompt).filter_by(command=command).first()
+                prompt.title = form_data.title
+                prompt.content = form_data.content
+                prompt.timestamp = int(time.time())
+                db.commit()
+                return PromptModel.model_validate(prompt)
         except:
             return None
 
     def delete_prompt_by_command(self, command: str) -> bool:
         try:
-            Session.query(Prompt).filter_by(command=command).delete()
-            return True
+            with get_db() as db:
+
+                db.query(Prompt).filter_by(command=command).delete()
+                return True
         except:
             return False
 
