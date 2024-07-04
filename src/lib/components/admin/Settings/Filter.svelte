@@ -64,8 +64,12 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-3">
 			<div>
+				<div class=" mb-1 text-sm font-medium">{$i18n.t('Message Filter Settings')}</div>
+
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Message Filter Enable')}</div>
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Message Filter Enable')}
+					</div>
 
 					<button
 						class=" text-xs font-medium text-gray-500"
@@ -77,7 +81,9 @@
 					</button>
 				</div>
 
-				<div class=" flex w-full justify-between">
+				<div class=" py-0.5 flex w-full justify-between" />
+
+				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Enable Message Filter Replace Content')}
 					</div>
@@ -123,18 +129,18 @@
 					<textarea
 						bind:value={CHAT_FILTER_WORDS}
 						class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-						rows="20"
+						rows="25"
 					/>
 				</div>
 			</div>
 		</div>
-		<div class="flex justify-end pt-3 text-sm font-medium">
-			<button
-				class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
-				type="submit"
-			>
-				{$i18n.t('Save')}
-			</button>
-		</div>
+	</div>
+	<div class="flex justify-end pt-3 text-sm font-medium">
+		<button
+			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+			type="submit"
+		>
+			{$i18n.t('Save')}
+		</button>
 	</div>
 </form>
