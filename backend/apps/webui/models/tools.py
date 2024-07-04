@@ -141,7 +141,7 @@ class ToolsTable:
     ) -> Optional[dict]:
         try:
             user = Users.get_user_by_id(user_id)
-            user_settings = user.settings.model_dump()
+            user_settings = user.settings.model_dump() if user.settings else {}
 
             # Check if user has "tools" and "valves" settings
             if "tools" not in user_settings:
@@ -159,7 +159,7 @@ class ToolsTable:
     ) -> Optional[dict]:
         try:
             user = Users.get_user_by_id(user_id)
-            user_settings = user.settings.model_dump()
+            user_settings = user.settings.model_dump() if user.settings else {}
 
             # Check if user has "tools" and "valves" settings
             if "tools" not in user_settings:
