@@ -557,7 +557,7 @@
 	"Sign up": "Registrati",
 	"Signing in": "Accesso in corso",
 	"Source": "Fonte",
-	"Speech recognition error: {{error}}": "Errore di riconoscimento vocale: {{error}}",
+	"Speech recognition error: {{error}}": "Erreur de reconnaissance vocale\u00a0: {{error}}",
 	"Speech-to-Text Engine": "Motore da voce a testo",
 	"Stop Sequence": "Sequenza di arresto",
 	"STT Model": "",
