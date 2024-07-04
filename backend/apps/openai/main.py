@@ -32,7 +32,7 @@ from utils.utils import (
     get_admin_user,
 )
 
-from backend.apps.filter.main import filter_message
+from apps.filter.main import filter_message
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
