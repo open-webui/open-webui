@@ -32,21 +32,22 @@ app.add_middleware(
 )
 
 file_dir = DATA_DIR
-file_path = os.path.join(DATA_DIR, str(CHAT_FILTER_WORDS_FILE.env_value))
-if os.path.exists(file_dir):
-    if os.path.isfile(file_path):
-        with open(file_path, "r", encoding="utf-8") as file:
-            lines = file.readlines()
-            unique_lines = set(line.strip() for line in lines)
-            joined_text = ",".join(unique_lines)
-            CHAT_FILTER_WORDS = PersistentConfig(
-                "CHAT_FILTER_WORDS",
-                "message_filter.words",
-                joined_text if joined_text else "",
-            )
-    else:
-        with open(file_path, "w", encoding="utf-8") as file:
-            file.write("")
+if str(CHAT_FILTER_WORDS_FILE.env_value):
+    file_path = os.path.join(DATA_DIR, str(CHAT_FILTER_WORDS_FILE.env_value))
+    if os.path.exists(file_dir):
+        if os.path.isfile(file_path):
+            with open(file_path, "r", encoding="utf-8") as file:
+                lines = file.readlines()
+                unique_lines = set(line.strip() for line in lines)
+                joined_text = ",".join(unique_lines)
+                CHAT_FILTER_WORDS = PersistentConfig(
+                    "CHAT_FILTER_WORDS",
+                    "message_filter.words",
+                    joined_text if joined_text else "",
+                )
+        else:
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write("")
 
 app.state.config = AppConfig()
 
@@ -88,9 +89,14 @@ async def update_filter_config(
     global search
 
     if app.state.config.CHAT_FILTER_WORDS != form_data.CHAT_FILTER_WORDS:
-        new_bad_words = set(word.strip() for word in form_data.CHAT_FILTER_WORDS.split(","))
+        new_bad_words = set(
+            word.strip() for word in form_data.CHAT_FILTER_WORDS.split(",")
+        )
         app.state.config.CHAT_FILTER_WORDS = ",".join(sorted(new_bad_words))
-        if app.state.config.ENABLE_MESSAGE_FILTER and app.state.config.CHAT_FILTER_WORDS:
+        if (
+            app.state.config.ENABLE_MESSAGE_FILTER
+            and app.state.config.CHAT_FILTER_WORDS
+        ):
             search = wordsSearch()
             search.SetKeywords(str(app.state.config.CHAT_FILTER_WORDS).split(","))
 

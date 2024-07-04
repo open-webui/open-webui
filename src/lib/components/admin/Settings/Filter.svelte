@@ -35,7 +35,7 @@
 		});
 
 		if (res) {
-			toast.success($i18n.t('Filter settings updated successfully'));
+			toast.success($i18n.t('Bad words filter settings updated successfully'));
 			config.set(await getBackendConfig());
 		}
 	};
@@ -124,8 +124,8 @@
 						</div>
 					</div>
 				</div>
-                
-                <div class=" py-0.5 flex w-full justify-between" />
+
+				<div class=" py-0.5 flex w-full justify-between" />
 
 				<div>
 					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Bad words Template')}</div>

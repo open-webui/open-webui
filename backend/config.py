@@ -779,6 +779,7 @@ class BannerModel(BaseModel):
     dismissible: bool
     timestamp: int
 
+
 try:
     banners = json.loads(os.environ.get("WEBUI_BANNERS", "[]"))
     banners = [BannerModel(**banner) for banner in banners]
@@ -1338,7 +1339,7 @@ ENABLE_MESSAGE_FILTER = PersistentConfig(
 CHAT_FILTER_WORDS_FILE = PersistentConfig(
     "CHAT_FILTER_WORDS_FIle",
     "message_filter.words_file",
-    os.getenv("CHAT_FILTER_WORDS_FILE", ""),
+    os.getenv("CHAT_FILTER_WORDS_FILE", "badWords.txt"),
 )
 
 CHAT_FILTER_WORDS = PersistentConfig(
