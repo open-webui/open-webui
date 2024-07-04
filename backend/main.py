@@ -104,7 +104,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         data_items = []
         if request.method == "POST" and (
-            "/ollama/api/chat" in request.url.path or "/chat/completions" in request.url.path
+            "/api/chat" in request.url.path or "/chat/completions" in request.url.path
         ):
             log.info(f"request.url.path: {request.url.path}")
 
@@ -147,7 +147,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
                 )
 
                 # Add citations to the request
-                # data["citations"] = citations
+                data["citations"] = citations
                 
                 del data["docs"]
 
