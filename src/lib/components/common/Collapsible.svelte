@@ -2,11 +2,11 @@
 	import { afterUpdate } from 'svelte';
 
 	export let open = false;
-
+	export let className = '';
 
 	// Manage the max-height of the collapsible content for snappy transitions
 	let contentElement: HTMLElement;
-  	let maxHeight = '0px'; // Initial max-height
+	let maxHeight = '0px'; // Initial max-height
 	// After any state update, adjust the max-height for the transition
 	afterUpdate(() => {
 		if (open) {
@@ -15,23 +15,22 @@
 		} else {
 			maxHeight = '0px';
 		}
-  	});
-
+	});
 </script>
+
+<div class={className}>
+	<button on:click={() => (open = !open)}>
+		<slot name="head" />
+	</button>
+	<div bind:this={contentElement} class="collapsible-content" style="max-height: {maxHeight};">
+		<slot name="content" />
+	</div>
+</div>
 
 <style>
 	.collapsible-content {
-	  overflow: hidden;
-	  transition: max-height 0.3s ease-out;
-	  max-height: 0;
+		overflow: hidden;
+		transition: max-height 0.3s ease-out;
+		max-height: 0;
 	}
 </style>
-
-<div>
-	<button on:click={() => open = !open}>
-		<slot name="head"></slot>
-	</button>
-	<div bind:this={contentElement} class="collapsible-content" style="max-height: {maxHeight};">
-		<slot name="content"></slot>
-	</div>
-</div>
