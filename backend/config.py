@@ -1347,7 +1347,7 @@ CHAT_FILTER_WORDS = PersistentConfig(
 )
 
 file_dir = DATA_DIR
-file_path = os.path.join(DATA_DIR, str(CHAT_FILTER_WORDS_FILE))
+file_path = os.path.join(DATA_DIR, str(CHAT_FILTER_WORDS_FILE.env_value))
 if os.path.exists(file_dir):
     if os.path.isfile(file_path):
         with open(file_path, 'r', encoding='utf-8') as file:
