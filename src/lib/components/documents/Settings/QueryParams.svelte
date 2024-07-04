@@ -95,7 +95,7 @@
 					)}
 				</div>
 
-				<hr class=" dark:border-gray-700 my-3" />
+				<hr class=" dark:border-gray-850 my-3" />
 			{/if}
 
 			<div>

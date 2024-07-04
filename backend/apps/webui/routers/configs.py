@@ -14,7 +14,7 @@ from apps.webui.models.users import Users
 
 from utils.utils import (
     get_password_hash,
-    get_current_user,
+    get_verified_user,
     get_admin_user,
     create_token,
 )
@@ -84,6 +84,6 @@ async def set_banners(
 @router.get("/banners", response_model=List[BannerModel])
 async def get_banners(
     request: Request,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS

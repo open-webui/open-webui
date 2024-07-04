@@ -2,13 +2,12 @@
 	import { createEventDispatcher, getContext } from 'svelte';
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { addNewMemory } from '$lib/apis/memories';
+	import { addNewMemory, updateMemoryById } from '$lib/apis/memories';
 	import { toast } from 'svelte-sonner';
 
 	const dispatch = createEventDispatcher();
 
 	export let show;
-
 	const i18n = getContext('i18n');
 
 	let loading = false;
@@ -25,7 +24,7 @@
 
 		if (res) {
 			console.log(res);
-			toast.success('Memory added successfully');
+			toast.success($i18n.t('Memory added successfully'));
 			content = '';
 			show = false;
 			dispatch('save');
@@ -38,7 +37,9 @@
 <Modal bind:show size="sm">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Add Memory')}</div>
+			<div class=" text-lg font-medium self-center">
+				{$i18n.t('Add Memory')}
+			</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -75,7 +76,7 @@
 						/>
 
 						<div class="text-xs text-gray-500">
-							ⓘ Refer to yourself as "User" (e.g., "User is learning Spanish")
+							ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}
 						</div>
 					</div>
 

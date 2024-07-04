@@ -30,7 +30,7 @@
 		saveHandler();
 	}}
 >
-	<div class=" space-y-3 pr-1.5 overflow-y-scroll max-h-80">
+	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div>
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('Database')}</div>
 
@@ -126,7 +126,9 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center text-sm font-medium">Export LiteLLM config.yaml</div>
+					<div class=" self-center text-sm font-medium">
+						{$i18n.t('Export LiteLLM config.yaml')}
+					</div>
 				</button>
 			</div>
 		</div>
@@ -137,7 +139,7 @@
 			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			type="submit"
 		>
-			Save
+			{$i18n.t('Save')}
 		</button>
 
 	</div> -->

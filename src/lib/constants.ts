@@ -89,7 +89,8 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 	'xls',
 	'xlsx',
 	'pptx',
-	'ppt'
+	'ppt',
+	'msg'
 ];
 
 // Source: https://kit.svelte.dev/docs/modules#$env-static-public
