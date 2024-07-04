@@ -133,29 +133,24 @@
 			let message = history.messages[data.message_id];
 
 			const type = data?.data?.type ?? null;
-			if (type === "status") {
-				const status = {
-					done: data?.data?.done ?? null,
-					description: data?.data?.status ?? null
-				};
-
+			const payload = data?.data?.data ?? null;
+			if (!type || !payload) {
+				console.log("Data and type fields must be provided.", data);
+				return;
+			}
+			const status_keys = ["done", "description"];
+			const citation_keys = ["document", "metadata", "source"];
+			if (type === "status" && status_keys.every(key => key in payload)) {
 				if (message.statusHistory) {
-					message.statusHistory.push(status);
+					message.statusHistory.push(payload);
 				} else {
-					message.statusHistory = [status];
+					message.statusHistory = [payload];
 				}
-			} else if (type === "citation") {
-				console.log(data);
-				const citation = {
-					document: data?.data?.document ?? null,
-					metadata: data?.data?.metadata ?? null,
-					source: data?.data?.source ?? null
-				};
-
+			} else if (type === "citation" && citation_keys.every(key => key in payload)) {
 				if (message.citations) {
-					message.citations.push(citation);
+					message.citations.push(payload);
 				} else {
-					message.citations = [citation];
+					message.citations = [payload];
 				}
 			} else {
 				console.log("Unknown message type", data);
