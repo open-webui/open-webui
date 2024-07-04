@@ -64,25 +64,22 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-3">
 			<div>
-				<div class=" text-sm font-medium">{$i18n.t('Message Fliter Params')}</div>
-
-                <div class=" py-0.5 flex w-full justify-between">
-					<div class="flex justify-between items-center text-xs">
-						<div class=" text-xs font-medium">{$i18n.t('Message Filter Enable')}</div>
+				<div class=" flex w-full justify-between">
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Message Filter Enable')}</div>
 
 						<button
 							class=" text-xs font-medium text-gray-500"
 							type="button"
 							on:click={() => {
 								ENABLE_MESSAGE_FILTER = !ENABLE_MESSAGE_FILTER;
-							}}>{ENABLE_MESSAGE_FILTER ? $i18n.t('On') : $i18n.t('Off')}</button
-						>
+							}}
+							>{ENABLE_MESSAGE_FILTER ? $i18n.t('On') : $i18n.t('Off')}
+						</button>
 					</div>
-                </div>
 
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class="flex justify-between items-center text-xs">
-						<div class=" text-xs font-medium">
+					<div class=" flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Enable Message Filter Replace Content')}
 						</div>
 
@@ -91,54 +88,55 @@
 							type="button"
 							on:click={() => {
 								ENABLE_REPLACE_FILTER_WORDS = !ENABLE_REPLACE_FILTER_WORDS;
-							}}>{ENABLE_REPLACE_FILTER_WORDS ? $i18n.t('On') : $i18n.t('Off')}</button
-						>
+							}}
+							>{ENABLE_REPLACE_FILTER_WORDS ? $i18n.t('On') : $i18n.t('Off')}
+						</button>
 					</div>
-				</div>
 
-				<div class=" flex gap-2">
-					<div class="w-full">
-						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Banwords File')}</div>
-						<div class="flex w-full">
-							<div class="flex-1">
-								<input
-									list="voice-list"
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-									bind:value={CHAT_FILTER_WORDS_FILE}
-								/>
+					<div class=" flex gap-2">
+						<div class="w-full">
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Banwords File')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										list="voice-list"
+										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										bind:value={CHAT_FILTER_WORDS_FILE}
+									/>
+								</div>
+							</div>
+						</div>
+						<div class="w-full">
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Replace Words')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										list="model-list"
+										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										bind:value={REPLACE_FILTER_WORDS}
+									/>
+								</div>
 							</div>
 						</div>
 					</div>
-					<div class="w-full">
-						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Replace Words')}</div>
-						<div class="flex w-full">
-							<div class="flex-1">
-								<input
-									list="model-list"
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-									bind:value={REPLACE_FILTER_WORDS}
-								/>
-							</div>
-						</div>
+					<div>
+						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Banwords Template')}</div>
+						<textarea
+							bind:value={CHAT_FILTER_WORDS}
+							class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+							rows="20"
+						/>
 					</div>
-				</div>
-				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Banwords Template')}</div>
-					<textarea
-						bind:value={CHAT_FILTER_WORDS}
-						class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-						rows="20"
-					/>
 				</div>
 			</div>
 		</div>
-	</div>
-	<div class="flex justify-end pt-3 text-sm font-medium">
-		<button
-			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
-			type="submit"
-		>
-			{$i18n.t('Save')}
-		</button>
+		<div class="flex justify-end pt-3 text-sm font-medium">
+			<button
+				class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
+				type="submit"
+			>
+				{$i18n.t('Save')}
+			</button>
+		</div>
 	</div>
 </form>
