@@ -1334,11 +1334,26 @@ ENABLE_MESSAGE_FILTER = PersistentConfig(
     os.environ.get("ENABLE_MESSAGE_FILTER", "").lower() == "true",
 )
 
-CHAT_FILTER_WORDS = PersistentConfig(
-    "CHAT_FILTER_WORDS",
-    "message_filter.words",
-    os.getenv("CHAT_FILTER_WORDS", ""),
+CHAT_FILTER_WORDS_FILE = PersistentConfig(
+    "CHAT_FILTER_WORDS_FIle",
+    "message_filter.words_file",
+    os.getenv("CHAT_FILTER_WORDS_FILE", ""),
 )
+
+file_dir = DATA_DIR
+file_path = os.path.join(DATA_DIR, CHAT_FILTER_WORDS_FILE)
+
+CHAT_FILTER_WORDS = None
+if os.path.exists(file_dir):
+    if os.path.isfile(file_path):
+        with open(file_path, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
+            joined_text = ','.join(line.strip() for line in lines)
+            CHAT_FILTER_WORDS = joined_text if joined_text else None
+    else:
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write('')
+        CHAT_FILTER_WORDS = None
 
 ENABLE_REPLACE_FILTER_WORDS = PersistentConfig(
     "ENABLE_REPLACE_FILTER_WORDS",

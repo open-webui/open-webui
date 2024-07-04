@@ -74,6 +74,11 @@ app.state.config.CHAT_FILTER_WORDS = CHAT_FILTER_WORDS
 app.state.config.ENABLE_REPLACE_FILTER_WORDS = ENABLE_REPLACE_FILTER_WORDS
 app.state.config.REPLACE_FILTER_WORDS = REPLACE_FILTER_WORDS
 
+search = None
+if app.state.config.ENABLE_MESSAGE_FILTER and app.state.config.CHAT_FILTER_WORDS:
+    search = WordsSearch()
+    search.SetKeywords(str(app.state.config.CHAT_FILTER_WORDS).split(","))
+
 app.state.MODELS = {}
 
 
@@ -371,9 +376,7 @@ async def generate_chat_completion(
     idx = 0
     payload = {**form_data}
 
-    if payload.get("messages") and app.state.config.ENABLE_MESSAGE_FILTER:
-        search = WordsSearch()
-        search.SetKeywords(str(app.state.config.CHAT_FILTER_WORDS).split(","))
+    if payload.get("messages") and search:
         start_time = time.time()
         for message in reversed(payload["messages"]):
             if message.get("role") == "user":
