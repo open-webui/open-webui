@@ -58,7 +58,9 @@
 							{document.source?.name ?? $i18n.t('No source available')}
 						</div>
 					</div>
-					<br>
+
+					<div class=" py-0.5 flex w-full justify-between" />
+					
 					<div class="flex flex-col w-full">
 						<div class=" text-sm font-medium dark:text-gray-300">
 							<strong>📖 {$i18n.t('Content')}</strong>
