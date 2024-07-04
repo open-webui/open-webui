@@ -14,8 +14,8 @@ requests==2.32.3
 aiohttp==3.9.5
 sqlalchemy==2.0.30
 alembic==1.13.1
-# peewee==3.17.5
-# peewee-migrate==1.12.2
+peewee==3.17.5
+peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
 PyMySQL==1.1.1
 bcrypt==4.1.3
