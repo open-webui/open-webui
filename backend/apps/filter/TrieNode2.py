@@ -3,14 +3,14 @@ class TrieNode2():
         self.End = False
         self.Results = []
         self.m_values = {}
-        self.minflag = 0xffff
-        self.maxflag = 0
+        self.min_flag = 0xffff
+        self.max_flag = 0
 
     def Add(self, c, node3):
-        if self.minflag > c:
-            self.minflag = c
-        if self.maxflag < c:
-            self.maxflag = c
+        if self.min_flag > c:
+            self.min_flag = c
+        if self.max_flag < c:
+            self.max_flag = c
         self.m_values[c] = node3
 
     def SetResults(self, index):
@@ -23,7 +23,7 @@ class TrieNode2():
         return c in self.m_values
 
     def TryGetValue(self, c):
-        if self.minflag <= c <= self.maxflag:
+        if self.min_flag <= c <= self.max_flag:
             if c in self.m_values:
                 return self.m_values[c]
         return None
