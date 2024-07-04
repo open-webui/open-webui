@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from utils.utils import (
     get_admin_user,
 )
-
+from pydantic import BaseModel
 from config import SRC_LOG_LEVELS, DATA_DIR, PersistentConfig
 
 log = logging.getLogger(__name__)
