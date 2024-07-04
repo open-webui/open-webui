@@ -415,7 +415,7 @@
 	"Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.": "Oups ! Un instant ! Vos fichiers sont toujours en train d'être traités. Nous les perfectionnons pour vous. Veuillez patienter, nous vous informerons dès qu'ils seront prêts.",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Oups ! Il semble que l'URL soit invalide. Veuillez vérifier à nouveau et réessayer.",
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "Oops ! Il y a eu une erreur dans la réponse précédente. Veuillez réessayer ou contacter l'administrateur.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Oups ! Vous utilisez une méthode non prise en charge (frontend uniquement). Veuillez servir l'interface Web à partir du backend.",
+	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Oups\u00a0! Vous utilisez une méthode non prise en charge (frontend uniquement). Veuillez servir l'interface Web à partir du backend.",
 	"Open": "Ouvrez",
 	"Open AI (Dall-E)": "Open AI (Dall-E)",
 	"Open new chat": "Ouvrir une nouvelle discussion",
