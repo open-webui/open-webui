@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, afterUpdate } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { models, settings, user } from '$lib/stores';
 
@@ -34,6 +34,32 @@
 	};
 
 	let selectedTab = 'general';
+
+	// Function to handle sideways scrolling
+	const handleSidewaysScroll = (event) => {
+		const settingsTabsContainer = document.getElementById('settings-tabs-container');
+		if (settingsTabsContainer) {
+		event.preventDefault(); // Prevent default vertical scrolling
+		settingsTabsContainer.scrollLeft += event.deltaY; // Scroll sideways
+		}
+	};
+
+	// Use afterUpdate to add the event listener after the modal is confirmed to be visible
+	// and remove it when the modal is closed
+	afterUpdate(() => {
+		if (show) {
+			const settingsTabsContainer = document.getElementById('settings-tabs-container');
+			if (settingsTabsContainer) {
+				settingsTabsContainer.addEventListener('wheel', handleSidewaysScroll);
+			}
+		} else {
+			const settingsTabsContainer = document.getElementById('settings-tabs-container');
+			if (settingsTabsContainer) {
+				settingsTabsContainer.removeEventListener('wheel', handleSidewaysScroll);
+			}
+		}
+	});
+
 </script>
 
 <Modal bind:show>
@@ -61,6 +87,7 @@
 
 		<div class="flex flex-col md:flex-row w-full p-4 md:space-x-4">
 			<div
+				id="settings-tabs-container"
 				class="tabs flex flex-row overflow-x-auto space-x-1 md:space-x-0 md:space-y-1 md:flex-col flex-1 md:flex-none md:w-40 dark:text-gray-200 text-xs text-left mb-3 md:mb-0"
 			>
 				<button

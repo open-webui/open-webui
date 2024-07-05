@@ -1,5 +1,5 @@
 <script>
-	import { getContext, tick } from 'svelte';
+	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import Database from './Settings/Database.svelte';
@@ -21,11 +21,24 @@
 	const i18n = getContext('i18n');
 
 	let selectedTab = 'general';
+
+	onMount(() => {
+		const containerElement = document.getElementById('admin-settings-tabs-container');
+
+		if (containerElement) {
+			containerElement.addEventListener('wheel', function (event) {
+				if (event.deltaY !== 0) {
+					// Adjust horizontal scroll position based on vertical scroll
+					containerElement.scrollLeft += event.deltaY;
+				}
+			});
+		}
+	});
 </script>
 
 <div class="flex flex-col lg:flex-row w-full h-full py-2 lg:space-x-4">
 	<div
-		class="tabs flex flex-row overflow-x-auto space-x-1 max-w-full lg:space-x-0 lg:space-y-1 lg:flex-col lg:flex-none lg:w-44 dark:text-gray-200 text-xs text-left scrollbar-none"
+		id="admin-settings-tabs-container" class="tabs flex flex-row overflow-x-auto space-x-1 max-w-full lg:space-x-0 lg:space-y-1 lg:flex-col lg:flex-none lg:w-44 dark:text-gray-200 text-xs text-left scrollbar-none"
 	>
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
