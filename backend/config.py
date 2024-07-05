@@ -674,6 +674,13 @@ ENABLE_SIGNUP = PersistentConfig(
         else os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
     ),
 )
+
+DEFAULT_LOCALE = PersistentConfig(
+    "DEFAULT_LOCALE",
+    "ui.default_locale",
+    os.environ.get("DEFAULT_LOCALE", ""),
+)
+
 DEFAULT_MODELS = PersistentConfig(
     "DEFAULT_MODELS", "ui.default_models", os.environ.get("DEFAULT_MODELS", None)
 )
