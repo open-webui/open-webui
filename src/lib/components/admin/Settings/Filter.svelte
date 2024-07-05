@@ -104,7 +104,6 @@
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
-									list="voice-list"
 									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={CHAT_FILTER_WORDS_FILE}
 								/>
@@ -116,7 +115,6 @@
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
-									list="model-list"
 									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={REPLACE_FILTER_WORDS}
 								/>

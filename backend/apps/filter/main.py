@@ -50,7 +50,7 @@ def init_file():
                     lines = file.readlines()
                     unique_lines = set(line.strip() for line in lines)
                     joined_text = ",".join(unique_lines)
-                    app.state.config.CHAT_FILTER_WORDS = joined_text if joined_text else "",
+                    app.state.config.CHAT_FILTER_WORDS = joined_text if joined_text else ""
             else:
                 write_words_to_file()
 
@@ -59,7 +59,7 @@ init_file()
 search = None
 if app.state.config.ENABLE_MESSAGE_FILTER and app.state.config.CHAT_FILTER_WORDS:
     search = wordsSearch()
-    search.SetKeywords(str(app.state.config.CHAT_FILTER_WORDS).split(","))
+    search.SetKeywords(app.state.config.CHAT_FILTER_WORDS.split(","))
 
 
 class FILTERConfigForm(BaseModel):
@@ -106,7 +106,7 @@ async def update_filter_config(
             write_words_to_file()
 
     search = wordsSearch()
-    search.SetKeywords(str(app.state.config.CHAT_FILTER_WORDS).split(","))
+    search.SetKeywords(app.state.config.CHAT_FILTER_WORDS.split(","))
 
     return {
         "ENABLE_MESSAGE_FILTER": app.state.config.ENABLE_MESSAGE_FILTER,
