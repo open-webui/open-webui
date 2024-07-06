@@ -978,9 +978,10 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
 
         return True
     except Exception as e:
-        log.exception(e)
         if e.__class__.__name__ == "UniqueConstraintError":
             return True
+
+        log.exception(e)
 
         return False
 
