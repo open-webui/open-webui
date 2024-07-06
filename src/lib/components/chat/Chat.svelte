@@ -126,21 +126,29 @@
 		})();
 	}
 
-	const chatEventHandler = async (data) => {
-		if (data.chat_id === $chatId) {
+	const chatEventHandler = async (event) => {
+		if (event.chat_id === $chatId) {
 			await tick();
-			console.log(data);
-			let message = history.messages[data.message_id];
+			console.log(event);
+			let message = history.messages[event.message_id];
 
-			const status = {
-				done: data?.data?.done ?? null,
-				description: data?.data?.status ?? null
-			};
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
 
-			if (message.statusHistory) {
-				message.statusHistory.push(status);
+			if (type === 'status') {
+				if (message.statusHistory) {
+					message.statusHistory.push(data);
+				} else {
+					message.statusHistory = [data];
+				}
+			} else if (type === 'citation') {
+				if (message.citations) {
+					message.citations.push(data);
+				} else {
+					message.citations = [data];
+				}
 			} else {
-				message.statusHistory = [status];
+				console.log('Unknown message type', data);
 			}
 
 			messages = messages;

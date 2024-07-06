@@ -198,7 +198,7 @@ class FunctionsTable:
 
         try:
             user = Users.get_user_by_id(user_id)
-            user_settings = user.settings.model_dump()
+            user_settings = user.settings.model_dump() if user.settings else {}
 
             # Check if user has "functions" and "valves" settings
             if "functions" not in user_settings:
@@ -217,7 +217,7 @@ class FunctionsTable:
 
         try:
             user = Users.get_user_by_id(user_id)
-            user_settings = user.settings.model_dump()
+            user_settings = user.settings.model_dump() if user.settings else {}
 
             # Check if user has "functions" and "valves" settings
             if "functions" not in user_settings:

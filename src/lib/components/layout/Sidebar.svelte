@@ -186,6 +186,7 @@
 				goto('/');
 			}
 			await chats.set(await getChatList(localStorage.token));
+			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
 </script>
