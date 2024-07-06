@@ -55,7 +55,13 @@
 							{$i18n.t('Source')}
 						</div>
 						<div class="text-sm dark:text-gray-400">
-							{document.source?.name ?? $i18n.t('No source available')}
+							{#if document.source?.name.startsWith('http://') || document.source?.name.startsWith('https://')}
+								<a href={document.source?.name} class="underline" target="_blank">
+									{document.source?.name}
+								</a>
+							{:else}
+								{document.source?.name ?? $i18n.t('No source available')}
+							{/if}
 						</div>
 					</div>
 					<div class="flex flex-col w-full">
