@@ -61,3 +61,6 @@ pytube==15.0.0
 extract_msg
 pydub
 duckduckgo-search~=6.1.5
+
+Flask==2.0.2
+google-cloud-storage==2.1.0

@@ -1,0 +1,25 @@
+name: Build and Push Docker Image
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+      
+    - name: Build and Tag Docker image
+      run: docker build -t cmoslem/my-open-ai-ui .
+      
+    - name: Log in to Docker Hub
+      run: docker login --username ${DOCKER_HUB_USERNAME} --password ${DOCKER_HUB_PASSWORD}
+      
+    - name: Push Docker image to Docker Hub
+      run: docker push votre-utilisateur/votre-image:latest
