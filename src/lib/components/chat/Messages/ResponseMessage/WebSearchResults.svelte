@@ -11,7 +11,6 @@
 <Collapsible bind:open={state} className="w-full space-y-1">
 	<div
 		class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
-		slot="head"
 	>
 		<slot />
 
