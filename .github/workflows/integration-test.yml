@@ -148,11 +148,11 @@ jobs:
           cd backend
           uvicorn main:app --port "8080" --forwarded-allow-ips '*' &
           UVICORN_PID=$!
-          # Wait up to 20 seconds for the server to start
-          for i in {1..20}; do
+          # Wait up to 40 seconds for the server to start
+          for i in {1..40}; do
               curl -s http://localhost:8080/api/config > /dev/null && break
               sleep 1
-              if [ $i -eq 20 ]; then
+              if [ $i -eq 40 ]; then
                   echo "Server failed to start"
                   kill -9 $UVICORN_PID
                   exit 1
