@@ -126,39 +126,29 @@
 		})();
 	}
 
-	const chatEventHandler = async (data) => {
-		if (data.chat_id === $chatId) {
+	const chatEventHandler = async (event) => {
+		if (event.chat_id === $chatId) {
 			await tick();
-			console.log(data);
-			let message = history.messages[data.message_id];
+			console.log(event);
+			let message = history.messages[event.message_id];
 
-			const type = data?.data?.type ?? null;
-			const payload = data?.data?.data ?? null;
-			if (!type || !payload) {
-				console.log("Data and type fields must be provided.", data);
-				return;
-			}
-			const status_keys = ["done", "description"];
-			const citation_keys = ["document", "url", "title"];
-			if (type === "status" && status_keys.every(key => key in payload)) {
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'status') {
 				if (message.statusHistory) {
-					message.statusHistory.push(payload);
+					message.statusHistory.push(data);
 				} else {
-					message.statusHistory = [payload];
+					message.statusHistory = [data];
 				}
-			} else if (type === "citation" && citation_keys.every(key => key in payload)) {
-				const citation = {
-					document: [payload.document],
-					metadata: [{source: payload.url}],
-					source: {name: payload.title}
-				};
+			} else if (type === 'citation') {
 				if (message.citations) {
-					message.citations.push(citation);
+					message.citations.push(data);
 				} else {
-					message.citations = [citation];
+					message.citations = [data];
 				}
 			} else {
-				console.log("Unknown message type", data);
+				console.log('Unknown message type', data);
 			}
 
 			messages = messages;
