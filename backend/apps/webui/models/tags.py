@@ -8,7 +8,7 @@ import logging
 
 from sqlalchemy import String, Column, BigInteger, Text
 
-from apps.webui.internal.db import Base, Session
+from apps.webui.internal.db import Base, get_db
 
 from config import SRC_LOG_LEVELS
 
@@ -79,26 +79,29 @@ class ChatTagsResponse(BaseModel):
 class TagTable:
 
     def insert_new_tag(self, name: str, user_id: str) -> Optional[TagModel]:
-        id = str(uuid.uuid4())
-        tag = TagModel(**{"id": id, "user_id": user_id, "name": name})
-        try:
-            result = Tag(**tag.model_dump())
-            Session.add(result)
-            Session.commit()
-            Session.refresh(result)
-            if result:
-                return TagModel.model_validate(result)
-            else:
+        with get_db() as db:
+
+            id = str(uuid.uuid4())
+            tag = TagModel(**{"id": id, "user_id": user_id, "name": name})
+            try:
+                result = Tag(**tag.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return TagModel.model_validate(result)
+                else:
+                    return None
+            except Exception as e:
                 return None
-        except Exception as e:
-            return None
 
     def get_tag_by_name_and_user_id(
         self, name: str, user_id: str
     ) -> Optional[TagModel]:
         try:
-            tag = Session.query(Tag).filter(name=name, user_id=user_id).first()
-            return TagModel.model_validate(tag)
+            with get_db() as db:
+                tag = db.query(Tag).filter(name=name, user_id=user_id).first()
+                return TagModel.model_validate(tag)
         except Exception as e:
             return None
 
@@ -120,98 +123,109 @@ class TagTable:
             }
         )
         try:
-            result = ChatIdTag(**chatIdTag.model_dump())
-            Session.add(result)
-            Session.commit()
-            Session.refresh(result)
-            if result:
-                return ChatIdTagModel.model_validate(result)
-            else:
-                return None
+            with get_db() as db:
+                result = ChatIdTag(**chatIdTag.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return ChatIdTagModel.model_validate(result)
+                else:
+                    return None
         except:
             return None
 
     def get_tags_by_user_id(self, user_id: str) -> List[TagModel]:
-        tag_names = [
-            chat_id_tag.tag_name
-            for chat_id_tag in (
-                Session.query(ChatIdTag)
-                .filter_by(user_id=user_id)
-                .order_by(ChatIdTag.timestamp.desc())
-                .all()
-            )
-        ]
+        with get_db() as db:
+            tag_names = [
+                chat_id_tag.tag_name
+                for chat_id_tag in (
+                    db.query(ChatIdTag)
+                    .filter_by(user_id=user_id)
+                    .order_by(ChatIdTag.timestamp.desc())
+                    .all()
+                )
+            ]
 
-        return [
-            TagModel.model_validate(tag)
-            for tag in (
-                Session.query(Tag)
-                .filter_by(user_id=user_id)
-                .filter(Tag.name.in_(tag_names))
-                .all()
-            )
-        ]
+            return [
+                TagModel.model_validate(tag)
+                for tag in (
+                    db.query(Tag)
+                    .filter_by(user_id=user_id)
+                    .filter(Tag.name.in_(tag_names))
+                    .all()
+                )
+            ]
 
     def get_tags_by_chat_id_and_user_id(
         self, chat_id: str, user_id: str
     ) -> List[TagModel]:
-        tag_names = [
-            chat_id_tag.tag_name
-            for chat_id_tag in (
-                Session.query(ChatIdTag)
-                .filter_by(user_id=user_id, chat_id=chat_id)
-                .order_by(ChatIdTag.timestamp.desc())
-                .all()
-            )
-        ]
+        with get_db() as db:
 
-        return [
-            TagModel.model_validate(tag)
-            for tag in (
-                Session.query(Tag)
-                .filter_by(user_id=user_id)
-                .filter(Tag.name.in_(tag_names))
-                .all()
-            )
-        ]
+            tag_names = [
+                chat_id_tag.tag_name
+                for chat_id_tag in (
+                    db.query(ChatIdTag)
+                    .filter_by(user_id=user_id, chat_id=chat_id)
+                    .order_by(ChatIdTag.timestamp.desc())
+                    .all()
+                )
+            ]
+
+            return [
+                TagModel.model_validate(tag)
+                for tag in (
+                    db.query(Tag)
+                    .filter_by(user_id=user_id)
+                    .filter(Tag.name.in_(tag_names))
+                    .all()
+                )
+            ]
 
     def get_chat_ids_by_tag_name_and_user_id(
         self, tag_name: str, user_id: str
     ) -> List[ChatIdTagModel]:
-        return [
-            ChatIdTagModel.model_validate(chat_id_tag)
-            for chat_id_tag in (
-                Session.query(ChatIdTag)
-                .filter_by(user_id=user_id, tag_name=tag_name)
-                .order_by(ChatIdTag.timestamp.desc())
-                .all()
-            )
-        ]
+        with get_db() as db:
+
+            return [
+                ChatIdTagModel.model_validate(chat_id_tag)
+                for chat_id_tag in (
+                    db.query(ChatIdTag)
+                    .filter_by(user_id=user_id, tag_name=tag_name)
+                    .order_by(ChatIdTag.timestamp.desc())
+                    .all()
+                )
+            ]
 
     def count_chat_ids_by_tag_name_and_user_id(
         self, tag_name: str, user_id: str
     ) -> int:
-        return (
-            Session.query(ChatIdTag)
-            .filter_by(tag_name=tag_name, user_id=user_id)
-            .count()
-        )
+        with get_db() as db:
+
+            return (
+                db.query(ChatIdTag)
+                .filter_by(tag_name=tag_name, user_id=user_id)
+                .count()
+            )
 
     def delete_tag_by_tag_name_and_user_id(self, tag_name: str, user_id: str) -> bool:
         try:
-            res = (
-                Session.query(ChatIdTag)
-                .filter_by(tag_name=tag_name, user_id=user_id)
-                .delete()
-            )
-            log.debug(f"res: {res}")
-            Session.commit()
+            with get_db() as db:
+                res = (
+                    db.query(ChatIdTag)
+                    .filter_by(tag_name=tag_name, user_id=user_id)
+                    .delete()
+                )
+                log.debug(f"res: {res}")
+                db.commit()
 
-            tag_count = self.count_chat_ids_by_tag_name_and_user_id(tag_name, user_id)
-            if tag_count == 0:
-                # Remove tag item from Tag col as well
-                Session.query(Tag).filter_by(name=tag_name, user_id=user_id).delete()
-            return True
+                tag_count = self.count_chat_ids_by_tag_name_and_user_id(
+                    tag_name, user_id
+                )
+                if tag_count == 0:
+                    # Remove tag item from Tag col as well
+                    db.query(Tag).filter_by(name=tag_name, user_id=user_id).delete()
+                return True
         except Exception as e:
             log.error(f"delete_tag: {e}")
             return False
@@ -220,20 +234,24 @@ class TagTable:
         self, tag_name: str, chat_id: str, user_id: str
     ) -> bool:
         try:
-            res = (
-                Session.query(ChatIdTag)
-                .filter_by(tag_name=tag_name, chat_id=chat_id, user_id=user_id)
-                .delete()
-            )
-            log.debug(f"res: {res}")
-            Session.commit()
+            with get_db() as db:
 
-            tag_count = self.count_chat_ids_by_tag_name_and_user_id(tag_name, user_id)
-            if tag_count == 0:
-                # Remove tag item from Tag col as well
-                Session.query(Tag).filter_by(name=tag_name, user_id=user_id).delete()
+                res = (
+                    db.query(ChatIdTag)
+                    .filter_by(tag_name=tag_name, chat_id=chat_id, user_id=user_id)
+                    .delete()
+                )
+                log.debug(f"res: {res}")
+                db.commit()
 
-            return True
+                tag_count = self.count_chat_ids_by_tag_name_and_user_id(
+                    tag_name, user_id
+                )
+                if tag_count == 0:
+                    # Remove tag item from Tag col as well
+                    db.query(Tag).filter_by(name=tag_name, user_id=user_id).delete()
+
+                return True
         except Exception as e:
             log.error(f"delete_tag: {e}")
             return False

@@ -5,7 +5,7 @@ import logging
 
 from sqlalchemy import String, Column, BigInteger, Text
 
-from apps.webui.internal.db import Base, Session
+from apps.webui.internal.db import Base, get_db
 
 import json
 
@@ -74,51 +74,59 @@ class DocumentsTable:
     def insert_new_doc(
         self, user_id: str, form_data: DocumentForm
     ) -> Optional[DocumentModel]:
-        document = DocumentModel(
-            **{
-                **form_data.model_dump(),
-                "user_id": user_id,
-                "timestamp": int(time.time()),
-            }
-        )
+        with get_db() as db:
 
-        try:
-            result = Document(**document.model_dump())
-            Session.add(result)
-            Session.commit()
-            Session.refresh(result)
-            if result:
-                return DocumentModel.model_validate(result)
-            else:
+            document = DocumentModel(
+                **{
+                    **form_data.model_dump(),
+                    "user_id": user_id,
+                    "timestamp": int(time.time()),
+                }
+            )
+
+            try:
+                result = Document(**document.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return DocumentModel.model_validate(result)
+                else:
+                    return None
+            except:
                 return None
-        except:
-            return None
 
     def get_doc_by_name(self, name: str) -> Optional[DocumentModel]:
         try:
-            document = Session.query(Document).filter_by(name=name).first()
-            return DocumentModel.model_validate(document) if document else None
+            with get_db() as db:
+
+                document = db.query(Document).filter_by(name=name).first()
+                return DocumentModel.model_validate(document) if document else None
         except:
             return None
 
     def get_docs(self) -> List[DocumentModel]:
-        return [
-            DocumentModel.model_validate(doc) for doc in Session.query(Document).all()
-        ]
+        with get_db() as db:
+
+            return [
+                DocumentModel.model_validate(doc) for doc in db.query(Document).all()
+            ]
 
     def update_doc_by_name(
         self, name: str, form_data: DocumentUpdateForm
     ) -> Optional[DocumentModel]:
         try:
-            Session.query(Document).filter_by(name=name).update(
-                {
-                    "title": form_data.title,
-                    "name": form_data.name,
-                    "timestamp": int(time.time()),
-                }
-            )
-            Session.commit()
-            return self.get_doc_by_name(form_data.name)
+            with get_db() as db:
+
+                db.query(Document).filter_by(name=name).update(
+                    {
+                        "title": form_data.title,
+                        "name": form_data.name,
+                        "timestamp": int(time.time()),
+                    }
+                )
+                db.commit()
+                return self.get_doc_by_name(form_data.name)
         except Exception as e:
             log.exception(e)
             return None
@@ -131,22 +139,26 @@ class DocumentsTable:
             doc_content = json.loads(doc.content if doc.content else "{}")
             doc_content = {**doc_content, **updated}
 
-            Session.query(Document).filter_by(name=name).update(
-                {
-                    "content": json.dumps(doc_content),
-                    "timestamp": int(time.time()),
-                }
-            )
-            Session.commit()
-            return self.get_doc_by_name(name)
+            with get_db() as db:
+
+                db.query(Document).filter_by(name=name).update(
+                    {
+                        "content": json.dumps(doc_content),
+                        "timestamp": int(time.time()),
+                    }
+                )
+                db.commit()
+                return self.get_doc_by_name(name)
         except Exception as e:
             log.exception(e)
             return None
 
     def delete_doc_by_name(self, name: str) -> bool:
         try:
-            Session.query(Document).filter_by(name=name).delete()
-            return True
+            with get_db() as db:
+
+                db.query(Document).filter_by(name=name).delete()
+                return True
         except:
             return False
 

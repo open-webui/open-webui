@@ -4,7 +4,7 @@ import time
 import logging
 from sqlalchemy import String, Column, BigInteger, Text
 
-from apps.webui.internal.db import Base, JSONField, Session
+from apps.webui.internal.db import Base, JSONField, get_db
 from apps.webui.models.users import Users
 
 import json
@@ -83,54 +83,64 @@ class ToolsTable:
     def insert_new_tool(
         self, user_id: str, form_data: ToolForm, specs: List[dict]
     ) -> Optional[ToolModel]:
-        tool = ToolModel(
-            **{
-                **form_data.model_dump(),
-                "specs": specs,
-                "user_id": user_id,
-                "updated_at": int(time.time()),
-                "created_at": int(time.time()),
-            }
-        )
 
-        try:
-            result = Tool(**tool.model_dump())
-            Session.add(result)
-            Session.commit()
-            Session.refresh(result)
-            if result:
-                return ToolModel.model_validate(result)
-            else:
+        with get_db() as db:
+
+            tool = ToolModel(
+                **{
+                    **form_data.model_dump(),
+                    "specs": specs,
+                    "user_id": user_id,
+                    "updated_at": int(time.time()),
+                    "created_at": int(time.time()),
+                }
+            )
+
+            try:
+                result = Tool(**tool.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return ToolModel.model_validate(result)
+                else:
+                    return None
+            except Exception as e:
+                print(f"Error creating tool: {e}")
                 return None
-        except Exception as e:
-            print(f"Error creating tool: {e}")
-            return None
 
     def get_tool_by_id(self, id: str) -> Optional[ToolModel]:
         try:
-            tool = Session.get(Tool, id)
-            return ToolModel.model_validate(tool)
+            with get_db() as db:
+
+                tool = db.get(Tool, id)
+                return ToolModel.model_validate(tool)
         except:
             return None
 
     def get_tools(self) -> List[ToolModel]:
-        return [ToolModel.model_validate(tool) for tool in Session.query(Tool).all()]
+        with get_db() as db:
+            return [ToolModel.model_validate(tool) for tool in db.query(Tool).all()]
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:
-            tool = Session.get(Tool, id)
-            return tool.valves if tool.valves else {}
+            with get_db() as db:
+
+                tool = db.get(Tool, id)
+                return tool.valves if tool.valves else {}
         except Exception as e:
             print(f"An error occurred: {e}")
             return None
 
     def update_tool_valves_by_id(self, id: str, valves: dict) -> Optional[ToolValves]:
         try:
-            Session.query(Tool).filter_by(id=id).update(
-                {"valves": valves, "updated_at": int(time.time())}
-            )
-            Session.commit()
-            return self.get_tool_by_id(id)
+            with get_db() as db:
+
+                db.query(Tool).filter_by(id=id).update(
+                    {"valves": valves, "updated_at": int(time.time())}
+                )
+                db.commit()
+                return self.get_tool_by_id(id)
         except:
             return None
 
@@ -139,7 +149,7 @@ class ToolsTable:
     ) -> Optional[dict]:
         try:
             user = Users.get_user_by_id(user_id)
-            user_settings = user.settings.model_dump()
+            user_settings = user.settings.model_dump() if user.settings else {}
 
             # Check if user has "tools" and "valves" settings
             if "tools" not in user_settings:
@@ -157,7 +167,7 @@ class ToolsTable:
     ) -> Optional[dict]:
         try:
             user = Users.get_user_by_id(user_id)
-            user_settings = user.settings.model_dump()
+            user_settings = user.settings.model_dump() if user.settings else {}
 
             # Check if user has "tools" and "valves" settings
             if "tools" not in user_settings:
@@ -177,19 +187,21 @@ class ToolsTable:
 
     def update_tool_by_id(self, id: str, updated: dict) -> Optional[ToolModel]:
         try:
-            tool = Session.get(Tool, id)
-            tool.update(**updated)
-            tool.updated_at = int(time.time())
-            Session.commit()
-            Session.refresh(tool)
-            return ToolModel.model_validate(tool)
+            with get_db() as db:
+                tool = db.get(Tool, id)
+                tool.update(**updated)
+                tool.updated_at = int(time.time())
+                db.commit()
+                db.refresh(tool)
+                return ToolModel.model_validate(tool)
         except:
             return None
 
     def delete_tool_by_id(self, id: str) -> bool:
         try:
-            Session.query(Tool).filter_by(id=id).delete()
-            return True
+            with get_db() as db:
+                db.query(Tool).filter_by(id=id).delete()
+                return True
         except:
             return False
 

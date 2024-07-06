@@ -2,32 +2,25 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import MagnifyingGlass from '$lib/components/icons/MagnifyingGlass.svelte';
-	import { Collapsible } from 'bits-ui';
-	import { slide } from 'svelte/transition';
+	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
 	export let status = { urls: [], query: '' };
 	let state = false;
 </script>
 
-<Collapsible.Root class="w-full space-y-1" bind:open={state}>
-	<Collapsible.Trigger>
-		<div
-			class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
-		>
-			<slot />
-
-			{#if state}
-				<ChevronUp strokeWidth="3.5" className="size-3.5 " />
-			{:else}
-				<ChevronDown strokeWidth="3.5" className="size-3.5 " />
-			{/if}
-		</div>
-	</Collapsible.Trigger>
-
-	<Collapsible.Content
-		class=" text-sm border border-gray-300/30 dark:border-gray-700/50 rounded-xl"
-		transition={slide}
+<Collapsible bind:open={state} className="w-full space-y-1">
+	<div
+		class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
 	>
+		<slot />
+
+		{#if state}
+			<ChevronUp strokeWidth="3.5" className="size-3.5 " />
+		{:else}
+			<ChevronDown strokeWidth="3.5" className="size-3.5 " />
+		{/if}
+	</div>
+	<div class="text-sm border border-gray-300/30 dark:border-gray-700/50 rounded-xl" slot="content">
 		{#if status?.query}
 			<a
 				href="https://www.google.com/search?q={status.query}"
@@ -93,5 +86,5 @@
 				</div>
 			</a>
 		{/each}
-	</Collapsible.Content>
-</Collapsible.Root>
+	</div>
+</Collapsible>

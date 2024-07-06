@@ -999,12 +999,16 @@ async def get_all_models():
                     model["info"] = custom_model.model_dump()
         else:
             owned_by = "openai"
+            pipe = None
+
             for model in models:
                 if (
                     custom_model.base_model_id == model["id"]
                     or custom_model.base_model_id == model["id"].split(":")[0]
                 ):
                     owned_by = model["owned_by"]
+                    if "pipe" in model:
+                        pipe = model["pipe"]
                     break
 
             models.append(
@@ -1016,11 +1020,11 @@ async def get_all_models():
                     "owned_by": owned_by,
                     "info": custom_model.model_dump(),
                     "preset": True,
+                    **({"pipe": pipe} if pipe is not None else {}),
                 }
             )
 
     app.state.MODELS = {model["id"]: model for model in models}
-
     webui_app.state.MODELS = app.state.MODELS
 
     return models

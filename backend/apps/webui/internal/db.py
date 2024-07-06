@@ -2,6 +2,10 @@ import os
 import logging
 import json
 from contextlib import contextmanager
+
+from peewee_migrate import Router
+from apps.webui.internal.wrappers import register_connection
+
 from typing import Optional, Any
 from typing_extensions import Self
 
@@ -46,6 +50,35 @@ if os.path.exists(f"{DATA_DIR}/ollama.db"):
 else:
     pass
 
+
+# Workaround to handle the peewee migration
+# This is required to ensure the peewee migration is handled before the alembic migration
+def handle_peewee_migration():
+    try:
+        db = register_connection(DATABASE_URL)
+        migrate_dir = BACKEND_DIR / "apps" / "webui" / "internal" / "migrations"
+        router = Router(db, logger=log, migrate_dir=migrate_dir)
+        router.run()
+        db.close()
+
+        # check if db connection has been closed
+
+    except Exception as e:
+        log.error(f"Failed to initialize the database connection: {e}")
+        raise
+
+    finally:
+        # Properly closing the database connection
+        if db and not db.is_closed():
+            db.close()
+
+        # Assert if db connection has been closed
+        assert db.is_closed(), "Database connection is still open."
+
+
+handle_peewee_migration()
+
+
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
@@ -53,8 +86,22 @@ if "sqlite" in SQLALCHEMY_DATABASE_URL:
     )
 else:
     engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
+
+
 SessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
 )
 Base = declarative_base()
 Session = scoped_session(SessionLocal)
+
+
+# Dependency
+def get_session():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+get_db = contextmanager(get_session)
