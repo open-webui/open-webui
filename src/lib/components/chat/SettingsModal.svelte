@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { getContext, afterUpdate } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { models, settings, user } from '$lib/stores';
-
+	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
+	import { goto } from '$app/navigation';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -14,8 +15,6 @@
 	import Chats from './Settings/Chats.svelte';
 	import User from '../icons/User.svelte';
 	import Personalization from './Settings/Personalization.svelte';
-	import { updateUserSettings } from '$lib/apis/users';
-	import { goto } from '$app/navigation';
 	import Valves from './Settings/Valves.svelte';
 
 	const i18n = getContext('i18n');
@@ -36,30 +35,35 @@
 	let selectedTab = 'general';
 
 	// Function to handle sideways scrolling
-	const handleSidewaysScroll = (event) => {
+	const scrollHandler = (event) => {
 		const settingsTabsContainer = document.getElementById('settings-tabs-container');
 		if (settingsTabsContainer) {
-		event.preventDefault(); // Prevent default vertical scrolling
-		settingsTabsContainer.scrollLeft += event.deltaY; // Scroll sideways
+			event.preventDefault(); // Prevent default vertical scrolling
+			settingsTabsContainer.scrollLeft += event.deltaY; // Scroll sideways
 		}
 	};
 
-	// Use afterUpdate to add the event listener after the modal is confirmed to be visible
-	// and remove it when the modal is closed
-	afterUpdate(() => {
-		if (show) {
-			const settingsTabsContainer = document.getElementById('settings-tabs-container');
-			if (settingsTabsContainer) {
-				settingsTabsContainer.addEventListener('wheel', handleSidewaysScroll);
-			}
-		} else {
-			const settingsTabsContainer = document.getElementById('settings-tabs-container');
-			if (settingsTabsContainer) {
-				settingsTabsContainer.removeEventListener('wheel', handleSidewaysScroll);
-			}
+	const addScrollListener = async () => {
+		await tick();
+		const settingsTabsContainer = document.getElementById('settings-tabs-container');
+		if (settingsTabsContainer) {
+			settingsTabsContainer.addEventListener('wheel', scrollHandler);
 		}
-	});
+	};
 
+	const removeScrollListener = async () => {
+		await tick();
+		const settingsTabsContainer = document.getElementById('settings-tabs-container');
+		if (settingsTabsContainer) {
+			settingsTabsContainer.removeEventListener('wheel', scrollHandler);
+		}
+	};
+
+	$: if (show) {
+		addScrollListener();
+	} else {
+		removeScrollListener();
+	}
 </script>
 
 <Modal bind:show>
