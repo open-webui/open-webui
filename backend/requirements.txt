@@ -12,6 +12,8 @@ passlib[bcrypt]==1.7.4
 
 requests==2.32.3
 aiohttp==3.9.5
+sqlalchemy==2.0.30
+alembic==1.13.1
 peewee==3.17.5
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
@@ -68,3 +70,8 @@ pytube==15.0.0
 extract_msg
 pydub
 duckduckgo-search~=6.1.7
+
+## Tests
+docker~=7.1.0
+pytest~=8.2.1
+pytest-docker~=3.1.1
