@@ -225,6 +225,7 @@ class TagTable:
                 if tag_count == 0:
                     # Remove tag item from Tag col as well
                     db.query(Tag).filter_by(name=tag_name, user_id=user_id).delete()
+                    db.commit()
                 return True
         except Exception as e:
             log.error(f"delete_tag: {e}")
@@ -250,6 +251,7 @@ class TagTable:
                 if tag_count == 0:
                     # Remove tag item from Tag col as well
                     db.query(Tag).filter_by(name=tag_name, user_id=user_id).delete()
+                    db.commit()
 
                 return True
         except Exception as e:

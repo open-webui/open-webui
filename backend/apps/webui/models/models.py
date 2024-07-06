@@ -176,6 +176,8 @@ class ModelsTable:
             with get_db() as db:
 
                 db.query(Model).filter_by(id=id).delete()
+                db.commit()
+
                 return True
         except:
             return False

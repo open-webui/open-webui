@@ -195,6 +195,7 @@ class AuthsTable:
 
                 if result:
                     db.query(Auth).filter_by(id=id).delete()
+                    db.commit()
 
                     return True
                 else:

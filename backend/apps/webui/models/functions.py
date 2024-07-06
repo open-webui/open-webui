@@ -267,9 +267,10 @@ class FunctionsTable:
 
     def delete_function_by_id(self, id: str) -> bool:
         with get_db() as db:
-
             try:
                 db.query(Function).filter_by(id=id).delete()
+                db.commit()
+
                 return True
             except:
                 return False

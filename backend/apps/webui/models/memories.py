@@ -115,6 +115,8 @@ class MemoriesTable:
 
             try:
                 db.query(Memory).filter_by(id=id).delete()
+                db.commit()
+
                 return True
 
             except:
@@ -125,6 +127,8 @@ class MemoriesTable:
 
             try:
                 db.query(Memory).filter_by(user_id=user_id).delete()
+                db.commit()
+
                 return True
             except:
                 return False
@@ -134,6 +138,8 @@ class MemoriesTable:
 
             try:
                 db.query(Memory).filter_by(id=id, user_id=user_id).delete()
+                db.commit()
+
                 return True
             except:
                 return False

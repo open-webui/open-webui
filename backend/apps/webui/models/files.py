@@ -104,6 +104,8 @@ class FilesTable:
 
             try:
                 db.query(File).filter_by(id=id).delete()
+                db.commit()
+
                 return True
             except:
                 return False
@@ -114,6 +116,8 @@ class FilesTable:
 
             try:
                 db.query(File).delete()
+                db.commit()
+
                 return True
             except:
                 return False

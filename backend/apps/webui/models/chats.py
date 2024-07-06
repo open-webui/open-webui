@@ -171,6 +171,8 @@ class ChatTable:
             with get_db() as db:
 
                 db.query(Chat).filter_by(user_id=f"shared-{chat_id}").delete()
+                db.commit()
+
                 return True
         except:
             return False
@@ -323,6 +325,7 @@ class ChatTable:
             with get_db() as db:
 
                 db.query(Chat).filter_by(id=id).delete()
+                db.commit()
 
                 return True and self.delete_shared_chat_by_chat_id(id)
         except:
@@ -333,6 +336,7 @@ class ChatTable:
             with get_db() as db:
 
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
+                db.commit()
 
                 return True and self.delete_shared_chat_by_chat_id(id)
         except:
@@ -346,6 +350,8 @@ class ChatTable:
                 self.delete_shared_chats_by_user_id(user_id)
 
                 db.query(Chat).filter_by(user_id=user_id).delete()
+                db.commit()
+
                 return True
         except:
             return False
@@ -359,6 +365,7 @@ class ChatTable:
                 shared_chat_ids = [f"shared-{chat.id}" for chat in chats_by_user]
 
                 db.query(Chat).filter(Chat.user_id.in_(shared_chat_ids)).delete()
+                db.commit()
 
                 return True
         except:

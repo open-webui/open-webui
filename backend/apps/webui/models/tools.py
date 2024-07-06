@@ -201,6 +201,8 @@ class ToolsTable:
         try:
             with get_db() as db:
                 db.query(Tool).filter_by(id=id).delete()
+                db.commit()
+
                 return True
         except:
             return False

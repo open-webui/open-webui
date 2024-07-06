@@ -109,6 +109,8 @@ class PromptsTable:
             with get_db() as db:
 
                 db.query(Prompt).filter_by(command=command).delete()
+                db.commit()
+
                 return True
         except:
             return False
