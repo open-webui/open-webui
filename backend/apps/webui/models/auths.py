@@ -182,6 +182,7 @@ class AuthsTable:
             with get_db() as db:
 
                 result = db.query(Auth).filter_by(id=id).update({"email": email})
+                db.commit()
                 return True if result == 1 else False
         except:
             return False
