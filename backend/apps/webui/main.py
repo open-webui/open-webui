@@ -139,7 +139,6 @@ async def get_pipe_models():
             function_module = app.state.FUNCTIONS[pipe.id]
 
         if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-            print(f"Getting valves for {pipe.id}")
             valves = Functions.get_function_valves_by_id(pipe.id)
             function_module.valves = function_module.Valves(
                 **(valves if valves else {})
