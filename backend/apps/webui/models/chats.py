@@ -248,9 +248,7 @@ class ChatTable:
     def get_chat_list_by_chat_ids(
         self, chat_ids: List[str], skip: int = 0, limit: int = 50
     ) -> List[ChatModel]:
-
         with get_db() as db:
-
             all_chats = (
                 db.query(Chat)
                 .filter(Chat.id.in_(chat_ids))

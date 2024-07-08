@@ -53,9 +53,12 @@ else:
 
 # Workaround to handle the peewee migration
 # This is required to ensure the peewee migration is handled before the alembic migration
-def handle_peewee_migration():
+def handle_peewee_migration(DATABASE_URL):
     try:
-        db = register_connection(DATABASE_URL)
+        # Replace the postgresql:// with postgres:// and %40 with @ in the DATABASE_URL
+        db = register_connection(
+            DATABASE_URL.replace("postgresql://", "postgres://").replace("%40", "@")
+        )
         migrate_dir = BACKEND_DIR / "apps" / "webui" / "internal" / "migrations"
         router = Router(db, logger=log, migrate_dir=migrate_dir)
         router.run()
@@ -76,11 +79,10 @@ def handle_peewee_migration():
         assert db.is_closed(), "Database connection is still open."
 
 
-handle_peewee_migration()
+handle_peewee_migration(DATABASE_URL)
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
-
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
