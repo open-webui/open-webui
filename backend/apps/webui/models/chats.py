@@ -141,13 +141,14 @@ class ChatTable:
             db.add(shared_result)
             db.commit()
             db.refresh(shared_result)
+
             # Update the original chat with the share_id
             result = (
                 db.query(Chat)
                 .filter_by(id=chat_id)
                 .update({"share_id": shared_chat.id})
             )
-
+            db.commit()
             return shared_chat if (shared_result and result) else None
 
     def update_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
@@ -206,8 +207,8 @@ class ChatTable:
     def archive_all_chats_by_user_id(self, user_id: str) -> bool:
         try:
             with get_db() as db:
-
                 db.query(Chat).filter_by(user_id=user_id).update({"archived": True})
+                db.commit()
                 return True
         except:
             return False

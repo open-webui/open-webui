@@ -169,7 +169,6 @@ class AuthsTable:
     def update_user_password_by_id(self, id: str, new_password: str) -> bool:
         try:
             with get_db() as db:
-
                 result = (
                     db.query(Auth).filter_by(id=id).update({"password": new_password})
                 )
@@ -181,7 +180,6 @@ class AuthsTable:
     def update_email_by_id(self, id: str, email: str) -> bool:
         try:
             with get_db() as db:
-
                 result = db.query(Auth).filter_by(id=id).update({"email": email})
                 db.commit()
                 return True if result == 1 else False
