@@ -49,6 +49,9 @@ if DB_URL:
     config.set_main_option("sqlalchemy.url", DB_URL)
 
 
+print("DB_URL", DB_URL)
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 

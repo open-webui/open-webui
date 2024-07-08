@@ -81,12 +81,6 @@ handle_peewee_migration()
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
 
-# Replace the postgres:// with postgresql://
-if "postgres://" in SQLALCHEMY_DATABASE_URL:
-    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace(
-        "postgres://", "postgresql://"
-    )
-
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
