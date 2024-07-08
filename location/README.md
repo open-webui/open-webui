@@ -9,20 +9,29 @@ Replaced open-webui/open-webui with modelearth/projects
 Replaced open-webui-container with projects-container
 -->
 
-1. Pull the docker image: docker pull ghcr.io/modelearth/projects:main
-2. Create a container: docker create --name projects-container ghcr.io/modelearth/projects:main
-3. Run the docker container: docker start projects-container
-4. We can cd into the container using: docker exec -it projects-container /bin/bash
-5. Copy the files from the container to local. (If you aleady have a projects folder, rename it.)
+https://github.com/orgs/open-webui/packages?repo_name=open-webui
 
-On a Mac:
+The following is NOT ready to use yet since  
+we haven't built a package for our "projects" fork.
 
-		docker cp projects-container:/app/backend "~/Documents/webroot/projects"
+Not available yet:  
+https://github.com/orgs/modelearth/packages?repo_name=projects
 
-On a PC:
+We will implement the [package setup provided by ChatGPT](https://chatgpt.com/share/2200ae05-4f33-4b1c-a1f9-57be4d18257b)
 
-		docker cp projects-container:/app/backend "C:/All Files/webroot/projects"
+1.) Pull the docker image
+2.) Create a container called projects-container
+3.) Run the docker container
+4.) cd into the container
 
+	docker pull ghcr.io/modelearth/projects:main
+	docker create --name projects-container ghcr.io/modelearth/projects:main
+	docker start projects-container
+	docker exec -it projects-container /bin/bash
+
+5.) Copy the files from the container to local. (If you aleady have a projects folder, rename it.) The ~ works in powershell on a PC.
+
+	docker cp projects-container:/app/backend "~/Documents/webroot/projects"
 
 ## Contribute to our Open WebUI "projects" repo
 
