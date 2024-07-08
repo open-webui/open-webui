@@ -168,6 +168,7 @@ async def delete_doc_by_name(name: str, user=Depends(get_admin_user)):
 # Download document
 ############################
 
+
 @router.get("/doc/download")
 def download_doc_by_name(name: str, user=Depends(get_verified_user)):
     doc = Documents.get_doc_by_name(name)
@@ -182,9 +183,12 @@ def download_doc_by_name(name: str, user=Depends(get_verified_user)):
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
         from starlette.responses import Response
-        return Response(content=file_content, media_type="application/octet-stream", headers={
-            "Content-Disposition": f'attachment; filename="{doc.filename}"'
-        })
+
+        return Response(
+            content=file_content,
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": f'attachment; filename="{doc.filename}"'},
+        )
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -194,6 +198,7 @@ def download_doc_by_name(name: str, user=Depends(get_verified_user)):
 
 def _find_file_path_by_name(doc: DocumentModel) -> str | None:
     from config import DATA_DIR
+
     content = json.loads(doc.content if doc.content else "{}")
     if "file_path" in content:
         file_path = f"{DATA_DIR}/{content['file_path']}"

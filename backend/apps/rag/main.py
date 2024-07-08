@@ -1192,7 +1192,7 @@ def store_doc(
                     "collection_name": collection_name,
                     "filename": filename,
                     "known_type": known_type,
-                    "file_path": get_relative_data_path(file_path)
+                    "file_path": get_relative_data_path(file_path),
                 }
         except Exception as e:
             raise HTTPException(
@@ -1341,11 +1341,19 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                                                             tags,
                                                         )
                                                     ),
-                                                    "file_path": get_relative_data_path(str(path))
+                                                    "file_path": get_relative_data_path(
+                                                        str(path)
+                                                    ),
                                                 }
                                             )
                                             if len(tags)
-                                            else json.dumps({"file_path": get_relative_data_path(str(path))})
+                                            else json.dumps(
+                                                {
+                                                    "file_path": get_relative_data_path(
+                                                        str(path)
+                                                    )
+                                                }
+                                            )
                                         ),
                                     }
                                 ),

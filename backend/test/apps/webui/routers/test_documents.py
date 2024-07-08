@@ -30,7 +30,7 @@ class TestDocuments(AbstractPostgresTest):
                 "/rag/api/v1/doc",
                 files={
                     "file": ("doc_name.txt", b"test", "text/plain"),
-                }
+                },
             )
         assert response.status_code == 200
 
@@ -113,7 +113,9 @@ class TestDocuments(AbstractPostgresTest):
 
         # Download the first document
         with mock_webui_user(id="2"):
-            response = self.fast_api_client.get(self.create_url("/doc/download?name=doc_name rework"))
+            response = self.fast_api_client.get(
+                self.create_url("/doc/download?name=doc_name rework")
+            )
         assert response.status_code == 200
         assert response.content == b"test"
 
