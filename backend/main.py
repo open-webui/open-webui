@@ -17,7 +17,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import StreamingResponse
 
-
 from apps.ollama.main import app as ollama_app
 from apps.openai.main import app as openai_app
 
@@ -26,6 +25,8 @@ from apps.litellm.main import (
     start_litellm_background,
     shutdown_litellm_background,
 )
+
+
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
 from apps.rag.main import app as rag_app
@@ -57,7 +58,6 @@ from config import (
     ENABLE_ADMIN_EXPORT,
 )
 from constants import ERROR_MESSAGES
-from apps.rag.utils import get_rag_context
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ class SPAStaticFiles(StaticFiles):
 
 
 print(
-    f"""
+    rf"""
   ___                    __        __   _     _   _ ___ 
  / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
 | | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || | 
@@ -102,11 +102,12 @@ origins = ["*"]
 
 class RAGMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        data_items = []
+        return_citations = False
+
         if request.method == "POST" and (
             "/api/chat" in request.url.path or "/chat/completions" in request.url.path
         ):
-            log.info(f"request.url.path: {request.url.path}")
+            log.debug(f"request.url.path: {request.url.path}")
 
             # Read the original request body
             body = await request.body()
@@ -115,27 +116,15 @@ class RAGMiddleware(BaseHTTPMiddleware):
             # Parse string to JSON
             data = json.loads(body_str) if body_str else {}
 
+            return_citations = data.get("citations", False)
+            if "citations" in data:
+                del data["citations"]
+
+            # Example: Add a new key-value pair or modify existing ones
+            # data["modified"] = True  # Example modification
             if "docs" in data:
                 data = {**data}
-                
-                # Get RAG context and citations
-                context_string, citations = get_rag_context(
-                    files=data["docs"],
-                    messages=data["messages"],
-                    embedding_function=rag_app.state.EMBEDDING_FUNCTION,
-                    k=rag_app.state.TOP_K,
-                    reranking_function=rag_app.state.sentence_transformer_rf,
-                    r=rag_app.state.RELEVANCE_THRESHOLD,
-                    hybrid_search=rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
-                )
-
-                log.info(f"context_string: {context_string}, citations: {citations}")
-
-                if len(citations) > 0:
-                    data_items.append({"citations": citations})
-                
-                # Update messages with RAG context
-                data["messages"] = rag_messages(
+                data["messages"], citations = rag_messages(
                     docs=data["docs"],
                     messages=data["messages"],
                     template=rag_app.state.RAG_TEMPLATE,
@@ -145,13 +134,11 @@ class RAGMiddleware(BaseHTTPMiddleware):
                     r=rag_app.state.RELEVANCE_THRESHOLD,
                     hybrid_search=rag_app.state.ENABLE_RAG_HYBRID_SEARCH,
                 )
-
-                # Add citations to the request
-                data["citations"] = citations
-                
                 del data["docs"]
 
-                log.debug(f"data['messages']: {data['messages']}")
+                log.debug(
+                    f"data['messages']: {data['messages']}, citations: {citations}"
+                )
 
             modified_body_bytes = json.dumps(data).encode("utf-8")
 
@@ -169,10 +156,16 @@ class RAGMiddleware(BaseHTTPMiddleware):
             ]
 
         response = await call_next(request)
-        if data_items:    
+
+        if return_citations:
+            # Inject the citations into the response
             if isinstance(response, StreamingResponse):
                 # If it's a streaming response, inject it as SSE event or NDJSON line
                 content_type = response.headers.get("Content-Type")
+                if "text/event-stream" in content_type:
+                    return StreamingResponse(
+                        self.openai_stream_wrapper(response.body_iterator, citations),
+                    )
                 if "application/x-ndjson" in content_type:
                     return StreamingResponse(
                         self.ollama_stream_wrapper(response.body_iterator, citations),
@@ -183,10 +176,16 @@ class RAGMiddleware(BaseHTTPMiddleware):
     async def _receive(self, body: bytes):
         return {"type": "http.request", "body": body, "more_body": False}
 
+    async def openai_stream_wrapper(self, original_generator, citations):
+        yield f"data: {json.dumps({'citations': citations})}\n\n"
+        async for data in original_generator:
+            yield data
+
     async def ollama_stream_wrapper(self, original_generator, citations):
         yield f"{json.dumps({'citations': citations})}\n"
         async for data in original_generator:
             yield data
+
 
 app.add_middleware(RAGMiddleware)
 
