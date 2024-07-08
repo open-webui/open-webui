@@ -459,14 +459,14 @@
 							class="p-1 text-xs flex rounded transition"
 							type="button"
 							on:click={() => {
-								if (info.meta.suggestion_prompts === null) {
+								if ((info?.meta?.suggestion_prompts ?? null) === null) {
 									info.meta.suggestion_prompts = [{ content: '' }];
 								} else {
 									info.meta.suggestion_prompts = null;
 								}
 							}}
 						>
-							{#if info.meta.suggestion_prompts === null}
+							{#if (info?.meta?.suggestion_prompts ?? null) === null}
 								<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 							{:else}
 								<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
@@ -474,7 +474,7 @@
 						</button>
 					</div>
 
-					{#if info.meta.suggestion_prompts !== null}
+					{#if (info?.meta?.suggestion_prompts ?? null) !== null}
 						<button
 							class="p-1 px-2 text-xs flex rounded transition"
 							type="button"
@@ -501,7 +501,7 @@
 					{/if}
 				</div>
 
-				{#if info.meta.suggestion_prompts}
+				{#if info?.meta?.suggestion_prompts}
 					<div class="flex flex-col space-y-1 mt-2">
 						{#if info.meta.suggestion_prompts.length > 0}
 							{#each info.meta.suggestion_prompts as prompt, promptIdx}
