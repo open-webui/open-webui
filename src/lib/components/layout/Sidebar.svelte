@@ -512,6 +512,8 @@
 								showDropdown = !showDropdown;
 							}}
 						>
+							<img style="padding: 10px" src="{WEBUI_BASE_URL}/static/bannerlogo.png" />
+							<!--
 							<div class=" self-center mr-3">
 								<img
 									src={$user.profile_image_url}
@@ -520,6 +522,7 @@
 								/>
 							</div>
 							<div class=" self-center font-semibold">{$user.name}</div>
+							-->
 						</button>
 					</UserMenu>
 				{/if}
