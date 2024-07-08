@@ -9,10 +9,9 @@ Replaced open-webui/open-webui with modelearth/projects
 Replaced open-webui-container with projects-container
 -->
 
-https://github.com/orgs/open-webui/packages?repo_name=open-webui
+[https://github.com/orgs/open-webui/packages?repo_name=open-webui](https://github.com/orgs/open-webui/packages?repo_name=open-webui)
 
-The following is NOT ready to use yet since  
-we haven't built a package for our "projects" fork.
+The following is NOT ready to use yet since we haven't built a package for our "[projects](https://github.com/modelearth/projects)" fork.
 
 Not available yet:  
 https://github.com/orgs/modelearth/packages?repo_name=projects
@@ -33,7 +32,7 @@ We will implement the [package setup provided by ChatGPT](https://chatgpt.com/sh
 
 	docker cp projects-container:/app/backend "~/Documents/webroot/projects"
 
-## Contribute to our Open WebUI "projects" repo
+## Edit our Open WebUI "projects" repo
 
 Our edits to open-webui reside only in the "projects/locations" folder (plus in index.html and active.md in the root) 
 
@@ -42,9 +41,12 @@ Contributors: Dinesh B, Loren, Yifeng
 Currently we're avoiding editing existing files to avoid merge conflicts.
 The "location" folder is our area to customize.
 
-TO DO: For Docker installs, document if it's possible to edit our [Projects repo fork of open-webui](https://github.com/modelearth/projects). - Dinesh B
 
-To edit without Docker, you can install using these commands when editing locally (from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/))
+## Build Locally
+
+We'll run the following to setup our Docker instance.  See ChatGPT link above.
+
+To build for our Docker container, we can install using these commands from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/)
 
 	git clone https://github.com/modelearth/projects.git
 	cd projects/
