@@ -5,6 +5,12 @@
 }
 
 @font-face {
+	font-family: 'Archivo';
+	src: url('/assets/fonts/Archivo-Variable.ttf');
+	font-display: swap;
+}
+
+@font-face {
 	font-family: 'Mona Sans';
 	src: url('/assets/fonts/Mona-Sans.woff2');
 	font-display: swap;
@@ -30,6 +36,10 @@ math {
 
 .markdown a {
 	@apply underline;
+}
+
+.font-primary {
+	font-family: 'Archivo', sans-serif;
 }
 
 iframe {
