@@ -13,6 +13,7 @@ from apps.webui.models.documents import (
     DocumentModel,
     DocumentResponse,
 )
+from apps.webui.models.files import Files
 
 from utils.utils import get_verified_user, get_admin_user
 from constants import ERROR_MESSAGES
@@ -156,5 +157,9 @@ async def update_doc_by_name(
 
 @router.delete("/doc/delete", response_model=bool)
 async def delete_doc_by_name(name: str, user=Depends(get_admin_user)):
+    doc = Documents.get_doc_by_name(name)
+    file_id = json.loads(doc.content if doc.content else "{}").get("file_id", None)
     result = Documents.delete_doc_by_name(name)
+    if file_id:
+        Files.delete_file_by_id(file_id)
     return result

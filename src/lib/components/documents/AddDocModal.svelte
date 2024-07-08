@@ -41,9 +41,10 @@
 				res.filename,
 				tags.length > 0
 					? {
-							tags: tags
+							tags: tags,
+							file_id: res.file_id
 					  }
-					: null
+					: { file_id: res.file_id }
 			).catch((error) => {
 				toast.error(error);
 				return null;

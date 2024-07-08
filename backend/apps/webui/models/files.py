@@ -3,7 +3,7 @@ from typing import List, Union, Optional
 import time
 import logging
 
-from sqlalchemy import Column, String, BigInteger, Text
+from sqlalchemy import Column, String, BigInteger, Text, type_coerce
 
 from apps.webui.internal.db import JSONField, Base, get_db
 
@@ -89,6 +89,19 @@ class FilesTable:
 
             try:
                 file = db.get(File, id)
+                return FileModel.model_validate(file)
+            except:
+                return None
+
+    def get_file_by_path(self, path: str) -> Optional[FileModel]:
+        with get_db() as db:
+
+            try:
+                file = (
+                    db.query(File)
+                    .where(type_coerce(File.meta, String).like(f'%"path": "{path}"%'))
+                    .first()
+                )
                 return FileModel.model_validate(file)
             except:
                 return None

@@ -1,5 +1,8 @@
+import io
+import json
+
 from test.util.abstract_integration_test import AbstractPostgresTest
-from test.util.mock_user import mock_webui_user
+from test.util.mock_user import mock_webui_user, mock_rag_user
 
 
 class TestDocuments(AbstractPostgresTest):
@@ -20,6 +23,19 @@ class TestDocuments(AbstractPostgresTest):
         assert response.status_code == 200
         assert len(response.json()) == 0
 
+        # Upload document
+        with mock_rag_user(id="2"):
+            file = io.BytesIO()
+            file.write(b"test")
+            response = self.fast_api_client.post(
+                "/rag/api/v1/doc",
+                files={
+                    "file": ("doc_name.txt", b"test", "text/plain"),
+                },
+            )
+        assert response.status_code == 200
+        file_id = response.json()["file_id"]
+
         # Create a new document
         with mock_webui_user(id="2"):
             response = self.fast_api_client.post(
@@ -29,7 +45,7 @@ class TestDocuments(AbstractPostgresTest):
                     "title": "doc title",
                     "collection_name": "custom collection",
                     "filename": "doc_name.pdf",
-                    "content": "",
+                    "content": json.dumps({"file_id": file_id}),
                 },
             )
         assert response.status_code == 200
@@ -45,7 +61,7 @@ class TestDocuments(AbstractPostgresTest):
         assert data["name"] == "doc_name"
         assert data["title"] == "doc title"
         assert data["filename"] == "doc_name.pdf"
-        assert data["content"] == {}
+        assert data["content"] == {"file_id": file_id}
 
         # Create another document
         with mock_webui_user(id="2"):
@@ -93,9 +109,18 @@ class TestDocuments(AbstractPostgresTest):
         data = response.json()
         assert data["name"] == "doc_name rework"
         assert data["content"] == {
-            "tags": [{"name": "testing-tag"}, {"name": "another-tag"}]
+            "tags": [{"name": "testing-tag"}, {"name": "another-tag"}],
+            "file_id": file_id,
         }
         assert len(self.documents.get_docs()) == 2
+
+        # Download the first document
+        with mock_webui_user(id="2"):
+            response = self.fast_api_client.get(
+                f"/api/v1/files/{file_id}/content"
+            )
+        assert response.status_code == 200
+        assert response.content == b"test"
 
         # Delete the first document
         with mock_webui_user(id="2"):

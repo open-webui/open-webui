@@ -64,6 +64,7 @@ from apps.rag.utils import (
     query_doc_with_hybrid_search,
     query_collection,
     query_collection_with_hybrid_search,
+    get_or_create_file,
 )
 
 from apps.rag.search.brave import search_brave
@@ -1183,6 +1184,7 @@ def store_doc(
 
         try:
             result = store_data_in_vector_db(data, collection_name)
+            file_id = get_or_create_file(user, Path(file_path))
 
             if result:
                 return {
@@ -1190,6 +1192,7 @@ def store_doc(
                     "collection_name": collection_name,
                     "filename": filename,
                     "known_type": known_type,
+                    "file_id": file_id,
                 }
         except Exception as e:
             raise HTTPException(
@@ -1321,6 +1324,7 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                         doc = Documents.get_doc_by_name(sanitized_filename)
 
                         if doc == None:
+                            file_id = get_or_create_file(user, path)
                             doc = Documents.insert_new_doc(
                                 user.id,
                                 DocumentForm(
@@ -1337,7 +1341,8 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                                                             lambda name: {"name": name},
                                                             tags,
                                                         )
-                                                    )
+                                                    ),
+                                                    "file_id": file_id,
                                                 }
                                             )
                                             if len(tags)

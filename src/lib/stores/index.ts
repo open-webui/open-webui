@@ -132,6 +132,7 @@ type Document = {
 	filename: string;
 	name: string;
 	title: string;
+	file_id: string;
 };
 
 type Config = {

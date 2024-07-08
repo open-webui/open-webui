@@ -4,12 +4,15 @@ import json
 from contextlib import contextmanager
 
 from peewee_migrate import Router
+from sqlalchemy.sql import operators
+from sqlalchemy.sql.operators import OperatorType
+
 from apps.webui.internal.wrappers import register_connection
 
 from typing import Optional, Any
 from typing_extensions import Self
 
-from sqlalchemy import create_engine, types, Dialect
+from sqlalchemy import create_engine, types, Dialect, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.sql.type_api import _T
@@ -23,6 +26,12 @@ log.setLevel(SRC_LOG_LEVELS["DB"])
 class JSONField(types.TypeDecorator):
     impl = types.Text
     cache_ok = True
+
+    def coerce_compared_value(self, op: Optional[OperatorType], value: Any) -> Any:
+        if op in (operators.like_op, operators.notlike_op):
+            return String()
+        else:
+            return self
 
     def process_bind_param(self, value: Optional[_T], dialect: Dialect) -> Any:
         return json.dumps(value)

@@ -1,5 +1,9 @@
+import mimetypes
 import os
 import logging
+import uuid
+from pathlib import Path
+
 import requests
 
 from typing import List, Union
@@ -20,6 +24,7 @@ from langchain.retrievers import (
 
 from typing import Optional
 
+from apps.webui.models.files import Files, FileForm
 from utils.misc import get_last_user_message, add_or_update_system_message
 from config import SRC_LOG_LEVELS, CHROMA_CLIENT
 
@@ -491,3 +496,24 @@ class RerankCompressor(BaseDocumentCompressor):
             )
             final_results.append(doc)
         return final_results
+
+
+def get_or_create_file(user, path: Path):
+    file = Files.get_file_by_path(str(path))
+    if not file:
+        file_id = str(uuid.uuid4())
+        # create file
+        file_data = FileForm(
+            **{
+                "id": file_id,
+                "filename": path.name,
+                "meta": {
+                    "content_type": mimetypes.guess_type(path)[0],
+                    "size": os.path.getsize(path),
+                    "path": str(path),
+                },
+            }
+        )
+
+        file = Files.insert_new_file(user.id, file_data)
+    return file.id
