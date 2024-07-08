@@ -120,7 +120,7 @@
 		<!-- <div class="hidden lg:flex lg:flex-1 px-10 md:px-16 w-full bg-yellow-50 justify-center">
 			<div class=" my-auto pb-16 text-left">
 				<div>
-					<div class=" font-bold text-yellow-600 text-4xl">
+					<div class=" font-semibold text-yellow-600 text-4xl">
 						Get up and running with <br />large language models, locally.
 					</div>
 

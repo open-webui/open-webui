@@ -260,7 +260,7 @@
 								<div class="flex gap-0.5 self-start h-full mb-0.5 -translate-x-1">
 									{#each item.model?.info?.meta.tags as tag}
 										<div
-											class=" text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+											class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
 											{tag.name}
 										</div>
@@ -299,7 +299,7 @@
 									<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
 										{#each item.model?.info?.meta.tags as tag}
 											<div
-												class=" text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+												class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 											>
 												{tag.name}
 											</div>
