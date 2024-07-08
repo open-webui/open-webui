@@ -34,7 +34,7 @@
 	}
 </script>
 
-<div class="flex flex-col w-full items-center md:items-start">
+<div class="flex flex-col w-full items-start">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">

@@ -60,14 +60,15 @@
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import CallOverlay from './MessageInput/CallOverlay.svelte';
 	import { error } from '@sveltejs/kit';
+	import ChatControls from './ChatControls.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	export let chatIdProp = '';
 	let loaded = false;
-
 	const eventTarget = new EventTarget();
 
+	let showControls = false;
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
@@ -1424,6 +1425,7 @@
 			{title}
 			bind:selectedModels
 			bind:showModelSelector
+			bind:showControls
 			shareEnabled={messages.length > 0}
 			{chat}
 			{initNewChat}
@@ -1460,7 +1462,9 @@
 
 		<div class="flex flex-col flex-auto z-10">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10"
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden {showControls
+					? 'lg:pr-[28rem]'
+					: ''} "
 				id="messages-container"
 				bind:this={messagesContainerElement}
 				on:scroll={(e) => {
@@ -1485,26 +1489,31 @@
 					/>
 				</div>
 			</div>
-			<MessageInput
-				bind:files
-				bind:prompt
-				bind:autoScroll
-				bind:selectedToolIds
-				bind:webSearchEnabled
-				bind:atSelectedModel
-				availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-					const model = $models.find((m) => m.id === e);
-					if (model?.info?.meta?.toolIds ?? false) {
-						return [...new Set([...a, ...model.info.meta.toolIds])];
-					}
-					return a;
-				}, [])}
-				transparentBackground={$settings?.backgroundImageUrl ?? false}
-				{selectedModels}
-				{messages}
-				{submitPrompt}
-				{stopResponse}
-			/>
+
+			<div class={showControls ? 'lg:pr-[28rem]' : ''}>
+				<MessageInput
+					bind:files
+					bind:prompt
+					bind:autoScroll
+					bind:selectedToolIds
+					bind:webSearchEnabled
+					bind:atSelectedModel
+					availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
+						const model = $models.find((m) => m.id === e);
+						if (model?.info?.meta?.toolIds ?? false) {
+							return [...new Set([...a, ...model.info.meta.toolIds])];
+						}
+						return a;
+					}, [])}
+					transparentBackground={$settings?.backgroundImageUrl ?? false}
+					{selectedModels}
+					{messages}
+					{submitPrompt}
+					{stopResponse}
+				/>
+			</div>
 		</div>
+
+		<ChatControls bind:show={showControls} />
 	</div>
 {/if}
