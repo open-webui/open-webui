@@ -26,6 +26,13 @@
 		content: null
 	};
 
+	const createContent = (tags, filePath) => {
+		return {
+			file_path: filePath,
+			...(tags.length && { tags: tags })
+		};
+	};
+
 	const uploadDoc = async (file) => {
 		const res = await uploadDocToVectorDB(localStorage.token, '', file).catch((error) => {
 			toast.error(error);
@@ -39,11 +46,7 @@
 				res.filename,
 				transformFileName(res.filename),
 				res.filename,
-				tags.length > 0
-					? {
-							tags: tags
-					  }
-					: null
+				createContent(tags, res.file_path)
 			).catch((error) => {
 				toast.error(error);
 				return null;

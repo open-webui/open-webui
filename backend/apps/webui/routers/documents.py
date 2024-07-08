@@ -1,3 +1,6 @@
+import glob
+import os.path
+
 from fastapi import Depends, FastAPI, HTTPException, status
 from datetime import datetime, timedelta
 from typing import List, Union, Optional
@@ -13,6 +16,7 @@ from apps.webui.models.documents import (
     DocumentModel,
     DocumentResponse,
 )
+from config import DATA_DIR
 
 from utils.utils import get_verified_user, get_admin_user
 from constants import ERROR_MESSAGES
@@ -158,3 +162,49 @@ async def update_doc_by_name(
 async def delete_doc_by_name(name: str, user=Depends(get_admin_user)):
     result = Documents.delete_doc_by_name(name)
     return result
+
+
+############################
+# Download document
+############################
+
+@router.get("/doc/download")
+def download_doc_by_name(name: str, user=Depends(get_verified_user)):
+    doc = Documents.get_doc_by_name(name)
+    if doc:
+        file_path = _find_file_path_by_name(doc)
+        if file_path:
+            with open(file_path, "rb") as f:
+                file_content = f.read()
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+        from starlette.responses import Response
+        return Response(content=file_content, media_type="application/octet-stream", headers={
+            "Content-Disposition": f'attachment; filename="{doc.filename}"'
+        })
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+def _find_file_path_by_name(doc: DocumentModel) -> str | None:
+    from config import DATA_DIR
+    content = json.loads(doc.content if doc.content else "{}")
+    if "file_path" in content:
+        file_path = f"{DATA_DIR}/{content['file_path']}"
+    else:
+        # search for the file in data directory
+        file_path = None
+        for possible_file in glob.glob(f"{DATA_DIR}/**/{doc.filename}", recursive=True):
+            if os.path.isfile(possible_file):
+                file_path = possible_file
+                break
+
+    if file_path and os.path.exists(file_path):
+        return file_path
+    return None

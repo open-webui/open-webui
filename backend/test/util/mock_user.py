@@ -12,6 +12,14 @@ def mock_webui_user(**kwargs):
 
 
 @contextmanager
+def mock_rag_user(**kwargs):
+    from apps.rag.main import app
+
+    with mock_user(app, **kwargs):
+        yield
+
+
+@contextmanager
 def mock_user(app: FastAPI, **kwargs):
     from utils.utils import (
         get_current_user,

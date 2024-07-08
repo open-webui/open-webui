@@ -1,5 +1,7 @@
+import io
+
 from test.util.abstract_integration_test import AbstractPostgresTest
-from test.util.mock_user import mock_webui_user
+from test.util.mock_user import mock_webui_user, mock_rag_user
 
 
 class TestDocuments(AbstractPostgresTest):
@@ -19,6 +21,18 @@ class TestDocuments(AbstractPostgresTest):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 0
+
+        # Upload document
+        with mock_rag_user(id="2"):
+            file = io.BytesIO()
+            file.write(b"test")
+            response = self.fast_api_client.post(
+                "/rag/api/v1/doc",
+                files={
+                    "file": ("doc_name.txt", b"test", "text/plain"),
+                }
+            )
+        assert response.status_code == 200
 
         # Create a new document
         with mock_webui_user(id="2"):
@@ -96,6 +110,12 @@ class TestDocuments(AbstractPostgresTest):
             "tags": [{"name": "testing-tag"}, {"name": "another-tag"}]
         }
         assert len(self.documents.get_docs()) == 2
+
+        # Download the first document
+        with mock_webui_user(id="2"):
+            response = self.fast_api_client.get(self.create_url("/doc/download?name=doc_name rework"))
+        assert response.status_code == 200
+        assert response.content == b"test"
 
         # Delete the first document
         with mock_webui_user(id="2"):

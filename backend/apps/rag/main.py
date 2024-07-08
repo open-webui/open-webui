@@ -133,6 +133,8 @@ from config import (
 
 from constants import ERROR_MESSAGES
 
+from utils.path import get_relative_data_path
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -1190,6 +1192,7 @@ def store_doc(
                     "collection_name": collection_name,
                     "filename": filename,
                     "known_type": known_type,
+                    "file_path": get_relative_data_path(file_path)
                 }
         except Exception as e:
             raise HTTPException(
@@ -1337,11 +1340,12 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                                                             lambda name: {"name": name},
                                                             tags,
                                                         )
-                                                    )
+                                                    ),
+                                                    "file_path": get_relative_data_path(str(path))
                                                 }
                                             )
                                             if len(tags)
-                                            else "{}"
+                                            else json.dumps({"file_path": get_relative_data_path(str(path))})
                                         ),
                                     }
                                 ),
