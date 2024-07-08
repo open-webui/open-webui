@@ -43,7 +43,7 @@ target_metadata = Auth.metadata
 DB_URL = DATABASE_URL
 
 if DB_URL:
-    config.set_main_option("sqlalchemy.url", DB_URL)
+    config.set_main_option("sqlalchemy.url", DB_URL.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:

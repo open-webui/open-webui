@@ -173,11 +173,14 @@ https://github.com/open-webui/open-webui
 
 
 def run_migrations():
-    from alembic.config import Config
-    from alembic import command
+    try:
+        from alembic.config import Config
+        from alembic import command
 
-    alembic_cfg = Config("alembic.ini")
-    command.upgrade(alembic_cfg, "head")
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+    except Exception as e:
+        print(f"Error: {e}")
 
 
 @asynccontextmanager
