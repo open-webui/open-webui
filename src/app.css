@@ -150,3 +150,7 @@ input[type='number'] {
 .cm-editor.cm-focused {
 	outline: none;
 }
+
+.tippy-box[data-theme~='dark'] {
+	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+}
