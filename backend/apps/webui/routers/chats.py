@@ -210,7 +210,6 @@ async def get_user_chat_list_by_tag_name(
     form_data: TagNameForm, user=Depends(get_verified_user)
 ):
 
-    print(form_data)
     chat_ids = [
         chat_id_tag.chat_id
         for chat_id_tag in Tags.get_chat_ids_by_tag_name_and_user_id(
