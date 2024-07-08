@@ -1,5 +1,27 @@
 # Model.earth Open WebUI Projects
 
+You'll have our Open WebUI "projects" fork running at [http://localhost:3000](http://localhost:3000/).
+Use the Docker install below so you can send Pull Requests to our "projects" fork.
+
+TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) and share some cool finding during our meetup.
+
+TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [superthermal evaporation](../../evaporation-kits/) page and related articles.
+
+TO DO: Create an example of loading a Python util file that is also loaded by our [RealityStream](../../RealityStream/) app.
+
+TO DO: Include the localsite.js file to add our site header and navigation:
+
+	<link type="text/css" rel="stylesheet" href="https://model.earth/localsite/css/base.css" id="/localsite/css/base.css">
+
+TO DO: Add a script that moves a few pages into the "locations" folder and merges with our customizations.
+
+TO DO: Activate hosting using Cloudflare.
+
+TO DO: Provide a means to upload a list of members from a Google Sheet link.
+
+TO DO: Provide a button for admins to export the list of members as a CSV file.
+
+
 ## Edit your local files pulled down with Docker
 
 **ghcr.io** stands for GitHub Container Registry, which is a service provided by GitHub for hosting and managing container images.
@@ -9,14 +31,19 @@ Replaced open-webui/open-webui with modelearth/projects
 Replaced open-webui-container with projects-container
 -->
 
+Here's a package created from our "[projects](https://github.com/modelearth/projects)" fork.
+
+[https://github.com/modelearth/projects/pkgs/container/projects](https://github.com/modelearth/projects/pkgs/container/projects)
+
+<!--
+The main Open WebUI container is at:
 [https://github.com/orgs/open-webui/packages?repo_name=open-webui](https://github.com/orgs/open-webui/packages?repo_name=open-webui)
 
-The following is NOT ready to use yet since we haven't built a package for our "[projects](https://github.com/modelearth/projects)" fork.
-
-Not available yet:  
+We're not an org, so this was not our URL: 
 [https://github.com/orgs/modelearth/packages?repo_name=projects](https://github.com/orgs/modelearth/packages?repo_name=projects)
+-->
 
-We will implement the [package setup provided by ChatGPT](https://chatgpt.com/share/2200ae05-4f33-4b1c-a1f9-57be4d18257b)
+**Run the following four lines to:**
 
 1.) Pull the docker image
 2.) Create a container called projects-container
@@ -28,22 +55,28 @@ We will implement the [package setup provided by ChatGPT](https://chatgpt.com/sh
 	docker start projects-container
 	docker exec -it projects-container /bin/bash
 
-5.) Copy the files from the container to local. (If you aleady have a projects folder, rename it.) The ~ works in powershell on a PC.
+5.) Copy the files from the container to local. If you aleady have a projects folder in your webroot, rename it.
+
+The ~ in the command works for the user folder on all machines. Use powershell on a PC.
 
 	docker cp projects-container:/app/backend "~/Documents/webroot/projects"
 
+Docker set-up contributors: Dinesh B, Loren, Yifeng
+
 ## Edit our Open WebUI "projects" repo
 
-Our edits to open-webui reside only in the "projects/locations" folder (plus in index.html and active.md in the root) 
+The "locations" folder is our area to customize so we don't have sync issues with open-webui.
 
-Contributors: Dinesh B, Loren, Yifeng
+We also edit index.html and active.md in the repo root.
 
-Currently we're avoiding editing existing files to avoid merge conflicts.
-The "location" folder is our area to customize.
 
-## Create Docker on GitHub
 
-This only needs to be done once by your site admin.  
+
+## We created a Docker "projects" container on GitHub
+
+Advice on [package setup provided by ChatGPT](https://chatgpt.com/share/2200ae05-4f33-4b1c-a1f9-57be4d18257b)
+
+This only needed to be done once by our site admin.  (You can skip this.)  
 Settings > Developer settings > Personal access tokens > Tokens (classic)
 
 Generate new token button and in the note put CR_PAT for Container Registry Personal Access Token.  
@@ -54,10 +87,13 @@ Run the following command to log in to the GitHub Container Registry using your 
 	echo your_personal_access_token | docker login ghcr.io -u your_github_username --password-stdin
 
 Now you can build and push your Docker image:
+<!-- the first command took about 10 minutes for the build -->
+<!-- http://localhost:3000/ probably works before running since Docker starts on startup. -->
 
 	docker build -t ghcr.io/modelearth/projects:main .
 	docker push ghcr.io/modelearth/projects:main
 
+Our container then appeared at: [https://github.com/modelearth/projects/pkgs/container/projects](projects/pkgs/container/projects)
 
 ## Build Locally
 
@@ -80,30 +116,16 @@ To build for our Docker container, we can install using these commands from [Ope
 	pip install -r requirements.txt -U
 	bash start.sh
 
-You should have Open WebUI up and running at http://localhost:8080/.
 
-TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) and share some cool finding during our meetup.
-
-TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [superthermal evaporation](../../evaporation-kits/) page and related articles.
-
-TO DO: Create an example of loading a Python util file that is also loaded by our [RealityStream](../../RealityStream/) app.
-
-TO DO: Include the localsite.js file to add our site header and navigation:
-
-	<link type="text/css" rel="stylesheet" href="https://model.earth/localsite/css/base.css" id="/localsite/css/base.css">
-
-TO DO: Add a script that moves a few pages into the location folder and merges with our customizations.
-
-TO DO: Activate hosting using Cloudflare.
-
-TO DO: Provide a means to upload a list of members from a Google Sheet link.
-
-TO DO: Provide a button for admins to export the list of members as a CSV file.
 
 <!--Pinecone -->
 <br>
 
 # Open WebUI Install
+
+We're installing from our [Gihub "projects" Docker container](https://github.com/modelearth/projects/pkgs/container/projects) instead.
+
+You can probably ignore this, or use it to inform your install from our fork.
 
 If you already have an "open-webui" Docker container, the server may already be running at [localhost:3000](http://localhost:3000)
 
