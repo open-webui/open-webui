@@ -1,18 +1,32 @@
 # Model.earth Open WebUI Projects
 
+## Edit your local files pulled down with Docker
 
-### Edit your local files pulled down with Docker
+**ghcr.io** stands for GitHub Container Registry, which is a service provided by GitHub for hosting and managing container images.
 
-1. Pull the docker image: docker pull ghcr.io/open-webui/open-webui:main
-2. Create a container: docker create --name open-webui-container ghcr.io/open-webui/open-webui:main
-3. Run the docker container: docker start open-webui-container
-4. We can cd into the container using: docker exec -it open-webui-container /bin/bash
-5. Copy the files from the container to local: >docker cp open-webui-container:/app/backend "C:/All Files/Dream Studio/Openui"
-6. I believe from here we should be able to edit the contents
+<!--
+Replaced open-webui/open-webui with modelearth/projects
+Replaced open-webui-container with projects-container
+-->
 
-TO DO: How we do push back to Docker
+1. Pull the docker image: docker pull ghcr.io/modelearth/projects:main
+2. Create a container: docker create --name projects-container ghcr.io/modelearth/projects:main
+3. Run the docker container: docker start projects-container
+4. We can cd into the container using: docker exec -it projects-container /bin/bash
+5. Copy the files from the container to local. (If you aleady have a projects folder, rename it.)
 
----
+On a Mac:
+
+		docker cp projects-container:/app/backend "~/Documents/webroot/projects"
+
+On a PC:
+
+		docker cp projects-container:/app/backend "C:/All Files/webroot/projects"
+
+
+## Contribute to our Open WebUI "projects" repo
+
+Our edits to open-webui reside only in the "projects/locations" folder (plus in index.html and active.md in the root) 
 
 Contributors: Dinesh B, Loren, Yifeng
 
@@ -21,10 +35,10 @@ The "location" folder is our area to customize.
 
 TO DO: For Docker installs, document if it's possible to edit our [Projects repo fork of open-webui](https://github.com/modelearth/projects). - Dinesh B
 
-Or do we have to avoid Docker and instead install using these commands when editing locally (from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/))
+To edit without Docker, you can install using these commands when editing locally (from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/))
 
-	git clone https://github.com/open-webui/open-webui.git
-	cd open-webui/
+	git clone https://github.com/modelearth/projects.git
+	cd projects/
 
 	# Copying required .env file
 	cp -RPp .env.example .env
