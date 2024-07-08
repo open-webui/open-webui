@@ -188,10 +188,12 @@ class ToolsTable:
     def update_tool_by_id(self, id: str, updated: dict) -> Optional[ToolModel]:
         try:
             with get_db() as db:
-                tool = db.get(Tool, id)
-                tool.update(**updated)
-                tool.updated_at = int(time.time())
+                db.query(Tool).filter_by(id=id).update(
+                    {**updated, "updated_at": int(time.time())}
+                )
                 db.commit()
+
+                tool = db.query(Tool).get(id)
                 db.refresh(tool)
                 return ToolModel.model_validate(tool)
         except:
