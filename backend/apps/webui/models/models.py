@@ -159,11 +159,15 @@ class ModelsTable:
     def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
         try:
             with get_db() as db:
-
                 # update only the fields that are present in the model
-                model = db.query(Model).get(id)
-                model.update(**model.model_dump())
+                result = (
+                    db.query(Model)
+                    .filter_by(id=id)
+                    .update(model.model_dump(exclude={"id"}, exclude_none=True))
+                )
                 db.commit()
+
+                model = db.get(Model, id)
                 db.refresh(model)
                 return ModelModel.model_validate(model)
         except Exception as e:
