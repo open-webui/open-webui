@@ -2,6 +2,7 @@
 
 You'll have our Open WebUI "projects" fork running at [http://localhost:3000](http://localhost:3000/).
 Use the Docker install below so you can send Pull Requests to our "projects" fork.
+Our Docker package resides at [https://github.com/modelearth/projects/pkgs/container/projects](https://github.com/modelearth/projects/pkgs/container/projects)
 
 TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) and share some cool finding during our meetup.
 
@@ -31,7 +32,7 @@ Replaced open-webui/open-webui with modelearth/projects
 Replaced open-webui-container with projects-container
 -->
 
-Here's a package created from our "[projects](https://github.com/modelearth/projects)" fork.
+Here's the package created from our "[projects](https://github.com/modelearth/projects)" fork.
 
 [https://github.com/modelearth/projects/pkgs/container/projects](https://github.com/modelearth/projects/pkgs/container/projects)
 
