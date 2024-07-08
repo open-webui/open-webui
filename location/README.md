@@ -14,7 +14,7 @@ Replaced open-webui-container with projects-container
 The following is NOT ready to use yet since we haven't built a package for our "[projects](https://github.com/modelearth/projects)" fork.
 
 Not available yet:  
-https://github.com/orgs/modelearth/packages?repo_name=projects
+[https://github.com/orgs/modelearth/packages?repo_name=projects](https://github.com/orgs/modelearth/packages?repo_name=projects)
 
 We will implement the [package setup provided by ChatGPT](https://chatgpt.com/share/2200ae05-4f33-4b1c-a1f9-57be4d18257b)
 
@@ -41,10 +41,27 @@ Contributors: Dinesh B, Loren, Yifeng
 Currently we're avoiding editing existing files to avoid merge conflicts.
 The "location" folder is our area to customize.
 
+## Create Docker on GitHub
+
+This only needs to be done once by your site admin.  
+Settings > Developer settings > Personal access tokens > Tokens (classic)
+
+Generate new token button and in the note put CR_PAT for Container Registry Personal Access Token.  
+Choose write:packages (chooses read:packages) and delete:packages
+
+Run the following command to log in to the GitHub Container Registry using your personal access token (starts with ghp_):
+
+	echo your_personal_access_token | docker login ghcr.io -u your_github_username --password-stdin
+
+Now you can build and push your Docker image:
+
+	docker build -t ghcr.io/modelearth/projects:main .
+	docker push ghcr.io/modelearth/projects:main
+
 
 ## Build Locally
 
-We'll run the following to setup our Docker instance.  See ChatGPT link above.
+We did NOT need to run the following to setup our Docker instance.  
 
 To build for our Docker container, we can install using these commands from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/)
 
