@@ -1,5 +1,19 @@
 # Model.earth Open WebUI Projects
 
+
+### Edit your local files pulled down with Docker
+
+1. Pull the docker image: docker pull ghcr.io/open-webui/open-webui:main
+2. Create a container: docker create --name open-webui-container ghcr.io/open-webui/open-webui:main
+3. Run the docker container: docker start open-webui-container
+4. We can cd into the container using: docker exec -it open-webui-container /bin/bash
+5. Copy the files from the container to local: >docker cp open-webui-container:/app/backend "C:/All Files/Dream Studio/Openui"
+6. I believe from here we should be able to edit the contents
+
+TO DO: How we do push back to Docker
+
+---
+
 Contributors: Dinesh B, Loren, Yifeng
 
 Currently we're avoiding editing existing files to avoid merge conflicts.
