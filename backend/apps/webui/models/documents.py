@@ -158,6 +158,7 @@ class DocumentsTable:
             with get_db() as db:
 
                 db.query(Document).filter_by(name=name).delete()
+                db.commit()
                 return True
         except:
             return False
