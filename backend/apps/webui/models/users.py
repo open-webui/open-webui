@@ -212,6 +212,7 @@ class UsersTable:
         try:
             with get_db() as db:
                 db.query(User).filter_by(id=id).update({"oauth_sub": oauth_sub})
+                db.commit()
 
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)

@@ -18,6 +18,8 @@ from apps.webui.models.users import User
 from apps.webui.models.files import File
 from apps.webui.models.functions import Function
 
+from config import DATABASE_URL
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -38,9 +40,16 @@ target_metadata = Auth.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-database_url = os.getenv("DATABASE_URL", None)
-if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+DB_URL = DATABASE_URL
+# Replace the postgres:// with postgresql://
+if "postgres://" in DB_URL:
+    DB_URL = DB_URL.replace("postgres://", "postgresql://")
+
+if DB_URL:
+    config.set_main_option("sqlalchemy.url", DB_URL)
+
+
+print("DB_URL", DB_URL)
 
 
 def run_migrations_offline() -> None:

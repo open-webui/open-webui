@@ -173,13 +173,11 @@ https://github.com/open-webui/open-webui
 
 
 def run_migrations():
-    env = os.environ.copy()
-    env["DATABASE_URL"] = DATABASE_URL
-    migration_task = subprocess.run(
-        ["alembic", f"-c{BACKEND_DIR}/alembic.ini", "upgrade", "head"], env=env
-    )
-    if migration_task.returncode > 0:
-        raise ValueError("Error running migrations")
+    from alembic.config import Config
+    from alembic import command
+
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
 
 
 @asynccontextmanager
