@@ -11,9 +11,10 @@
 	let name = ''
 	let category = ''
 	let geographic = ''
+	let isAppendSummary = false
 
 	const handleCreateIndex = async () => {
-		const embeddingIndex = await createNewIndex(name, category, geographic)
+		const embeddingIndex = await createNewIndex(name, category, geographic, isAppendSummary)
 		onClose?.(embeddingIndex)
 	}
 </script>
@@ -68,6 +69,11 @@
 							placeholder={$i18n.t("Thông tin khác")}
 							bind:value={geographic}
 					/>
+				</div>
+
+				<div class="mt-4 flex items-center">
+					<input id="is_append_summary" type="checkbox" bind:checked={isAppendSummary}>
+					<label for="is_append_summary" class="ml-2">{$i18n.t('Append doc summary to chunk')}</label>
 				</div>
 
 				<div class="flex justify-end pt-5 mr-2 text-sm font-medium">

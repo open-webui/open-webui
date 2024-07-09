@@ -1,6 +1,6 @@
 import {HATTO_LLM_API_BASE_URL} from '$lib/constants';
 
-export const createNewIndex = async (name: string, category: string, geographic: string) => {
+export const createNewIndex = async (name: string, category: string, geographic: string, is_append_summary: boolean = false) => {
   let error = null;
 
   const res = await fetch(`${HATTO_LLM_API_BASE_URL}/embedding/index/`, {
@@ -11,7 +11,8 @@ export const createNewIndex = async (name: string, category: string, geographic:
       authorization: `Bearer ${localStorage.token}`
     },
     body: JSON.stringify({
-      name, category, geographic
+      name, category, geographic,
+      is_append_summary_to_chunk: is_append_summary
     })
   })
     .then(async (res) => {
