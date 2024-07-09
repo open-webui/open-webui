@@ -289,7 +289,6 @@ async def get_function_call_response(
     template,
     task_model_id,
     user,
-    model,
     __event_emitter__=None,
     __event_call__=None,
 ):
@@ -525,7 +524,7 @@ async def chat_completion_functions_handler(
 
 
 async def chat_completion_tools_handler(
-    body, model, user, __event_emitter__, __event_call__
+    body, user, __event_emitter__, __event_call__
 ):
     skip_files = None
 
@@ -547,7 +546,6 @@ async def chat_completion_tools_handler(
                     template=app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
                     task_model_id=task_model_id,
                     user=user,
-                    model=model,
                     __event_emitter__=__event_emitter__,
                     __event_call__=__event_call__,
                 )
@@ -674,7 +672,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
 
             try:
                 body, flags = await chat_completion_tools_handler(
-                    body, model, user, __event_emitter__, __event_call__
+                    body, user, __event_emitter__, __event_call__
                 )
 
                 contexts.extend(flags.get("contexts", []))
