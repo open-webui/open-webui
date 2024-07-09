@@ -6,8 +6,10 @@
 
 	export let show = false;
 
-	let largeScreen = false;
+	export let chatId = null;
+	export let params = {};
 
+	let largeScreen = false;
 	onMount(() => {
 		// listen to resize 1024px
 		const mediaQuery = window.matchMedia('(min-width: 1024px)');
@@ -35,12 +37,13 @@
 		<div class=" absolute bottom-0 right-0 z-20 h-full pointer-events-none">
 			<div class="pr-4 pt-14 pb-8 w-[24rem] h-full" in:slide={{ duration: 200, axis: 'x' }}>
 				<div
-					class="w-full h-full px-5 py-4 dark:bg-gray-850 border border-gray-100 dark:border-gray-800 rounded-xl shadow-lg z-50 pointer-events-auto"
+					class="w-full h-full px-5 py-4 shadow-lg dark:bg-gray-850 border border-gray-50 dark:border-gray-800 rounded-xl z-50 pointer-events-auto overflow-y-auto scrollbar-hidden"
 				>
 					<Controls
 						on:close={() => {
 							show = false;
 						}}
+						bind:params
 					/>
 				</div>
 			</div>
@@ -48,11 +51,12 @@
 	{/if}
 {:else}
 	<Modal bind:show>
-		<div class="  px-5 py-4 h-full">
+		<div class="  px-6 py-4 h-full">
 			<Controls
 				on:close={() => {
 					show = false;
 				}}
+				bind:params
 			/>
 		</div>
 	</Modal>
