@@ -61,6 +61,7 @@
 	import CallOverlay from './MessageInput/CallOverlay.svelte';
 	import { error } from '@sveltejs/kit';
 	import ChatControls from './ChatControls.svelte';
+	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -73,6 +74,11 @@
 	let autoScroll = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
+
+	let showEventConfirmation = false;
+	let eventConfirmationTitle = '';
+	let eventConfirmationMessage = '';
+	let eventCallback = null;
 
 	let showModelSelector = true;
 
@@ -129,7 +135,7 @@
 		})();
 	}
 
-	const chatEventHandler = async (event) => {
+	const chatEventHandler = async (event, cb) => {
 		if (event.chat_id === $chatId) {
 			await tick();
 			console.log(event);
@@ -139,17 +145,23 @@
 			const data = event?.data?.data ?? null;
 
 			if (type === 'status') {
-				if (message.statusHistory) {
+				if (message?.statusHistory) {
 					message.statusHistory.push(data);
 				} else {
 					message.statusHistory = [data];
 				}
 			} else if (type === 'citation') {
-				if (message.citations) {
+				if (message?.citations) {
 					message.citations.push(data);
 				} else {
 					message.citations = [data];
 				}
+			} else if (type === 'confirmation') {
+				eventCallback = cb;
+				showEventConfirmation = true;
+
+				eventConfirmationTitle = data.title;
+				eventConfirmationMessage = data.message;
 			} else {
 				console.log('Unknown message type', data);
 			}
@@ -1391,6 +1403,18 @@
 </svelte:head>
 
 <audio id="audioElement" src="" style="display: none;" />
+
+<EventConfirmDialog
+	bind:show={showEventConfirmation}
+	title={eventConfirmationTitle}
+	message={eventConfirmationMessage}
+	on:confirm={(e) => {
+		eventCallback(true);
+	}}
+	on:cancel={() => {
+		eventCallback(false);
+	}}
+/>
 
 {#if $showCallOverlay}
 	<CallOverlay
