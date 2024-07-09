@@ -4,7 +4,7 @@ You'll have our Open WebUI "projects" fork running at [http://localhost:3000](ht
 Use the Docker install below so you can send Pull Requests to our "projects" fork.
 Our Docker package resides at [https://github.com/modelearth/projects/pkgs/container/projects](https://github.com/modelearth/projects/pkgs/container/projects)
 
-TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) and share some cool finding during our meetup.
+TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) and share some cool findings during our meetup.
 
 TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [superthermal evaporation](../../evaporation-kits/) page and related articles.
 
@@ -12,7 +12,7 @@ TO DO: Create an example of loading a Python util file that is also loaded by ou
 
 TO DO: Include the localsite.js file to add our site header and navigation:
 
-	<link type="text/css" rel="stylesheet" href="https://model.earth/localsite/css/base.css" id="/localsite/css/base.css">
+	<script type="text/javascript" src="https://model.earth/localsite/js/localsite.js?showheader=true&showsearch=true"></script>
 
 TO DO: Add a script that moves a few pages into the "locations" folder and merges with our customizations.
 
