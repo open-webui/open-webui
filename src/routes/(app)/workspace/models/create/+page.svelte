@@ -136,7 +136,7 @@
 				...info,
 				meta: {
 					...info.meta,
-					profile_image_url: info.meta.profile_image_url ?? '/favicon.png',
+					profile_image_url: info.meta.profile_image_url ?? '/static/favicon.png',
 					suggestion_prompts: info.meta.suggestion_prompts
 						? info.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
 						: null

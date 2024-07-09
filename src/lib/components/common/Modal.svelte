@@ -63,7 +63,7 @@
 		<div
 			class=" m-auto rounded-2xl max-w-full {sizeToWidth(
 				size
-			)} mx-2 bg-gray-50 dark:bg-gray-900 shadow-3xl"
+			)} mx-2 bg-gray-50 dark:bg-gray-900 shadow-3xl max-h-[100dvh] overflow-y-auto scrollbar-hidden"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();

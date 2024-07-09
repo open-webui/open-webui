@@ -138,7 +138,7 @@
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
 							<input
-								class="flex-1 w-full rounded-l-lg py-2 pl-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="flex-1 w-full rounded-l-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 								placeholder={$i18n.t('API Base URL')}
 								bind:value={STT_OPENAI_API_BASE_URL}
 								required
@@ -156,7 +156,7 @@
 							<div class="flex-1">
 								<input
 									list="model-list"
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={STT_MODEL}
 									placeholder="Select a model"
 								/>
@@ -203,7 +203,7 @@
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
 							<input
-								class="flex-1 w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 								placeholder={$i18n.t('API Base URL')}
 								bind:value={TTS_OPENAI_API_BASE_URL}
 								required
@@ -222,7 +222,7 @@
 						<div class="flex w-full">
 							<div class="flex-1">
 								<select
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={TTS_VOICE}
 								>
 									<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
@@ -245,7 +245,7 @@
 								<div class="flex-1">
 									<input
 										list="voice-list"
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={TTS_VOICE}
 										placeholder="Select a voice"
 									/>
@@ -264,7 +264,7 @@
 								<div class="flex-1">
 									<input
 										list="model-list"
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={TTS_MODEL}
 										placeholder="Select a model"
 									/>
