@@ -51,7 +51,10 @@
 			>
 				{#each mergedDocuments as document, documentIdx}
 					<div class="flex flex-col w-full">
-						<div class="text-sm font-medium dark:text-gray-300">
+						<div
+							class="text-md font-bold dark:text-gray-300 rounded-lg bg-blue-100 px-2 mb-2"
+							style="width: fit-content"
+						>
 							{$i18n.t('Source')}
 						</div>
 						<div class="text-sm dark:text-gray-400">
@@ -59,7 +62,10 @@
 						</div>
 					</div>
 					<div class="flex flex-col w-full">
-						<div class=" text-sm font-medium dark:text-gray-300">
+						<div
+							class="text-md font-bold dark:text-gray-300 rounded-lg bg-blue-100 px-2 my-2"
+							style="width: fit-content"
+						>
 							{$i18n.t('Content')}
 						</div>
 						<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
