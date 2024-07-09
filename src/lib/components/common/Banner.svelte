@@ -110,13 +110,13 @@
 					</div>
 				</div>
 			{/if}
-			<div class="flex self-start">
+			<div class="flex self-center">
 				{#if banner.dismissible}
 					<button
 						on:click={() => {
 							dismiss(banner.id);
 						}}
-						class=" -mt-[3px] ml-1.5 mr-1 text-gray-400 dark:hover:text-white h-1">&times;</button
+						class=" -my-2 ml-1.5 mr-1 text-gray-400 dark:hover:text-white">&times;</button
 					>
 				{/if}
 			</div>
