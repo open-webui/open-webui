@@ -203,8 +203,18 @@ __builtins__.input = input`);
 		};
 	};
 
+	let debounceTimeout;
 	$: if (code) {
-		highlightedCode = hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value || code;
+		// Function to perform the code highlighting
+		const highlightCode = () => {
+			highlightedCode = hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value || code;
+		};
+
+		// Clear the previous timeout if it exists
+		clearTimeout(debounceTimeout);
+
+		// Set a new timeout to debounce the code highlighting
+		debounceTimeout = setTimeout(highlightCode, 10);
 	}
 </script>
 

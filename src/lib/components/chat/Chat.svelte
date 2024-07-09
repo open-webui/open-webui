@@ -30,6 +30,8 @@
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
+		extractSentencesForAudio,
+		getUserPosition,
 		promptTemplate,
 		splitStream
 	} from '$lib/utils';
@@ -49,7 +51,7 @@
 	import { runWebSearch } from '$lib/apis/rag';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
-	import { getUserSettings } from '$lib/apis/users';
+	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import { chatCompleted, generateTitle, generateSearchQuery } from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
@@ -63,6 +65,8 @@
 
 	export let chatIdProp = '';
 	let loaded = false;
+
+	const eventTarget = new EventTarget();
 
 	let stopResponseFlag = false;
 	let autoScroll = true;
@@ -108,7 +112,8 @@
 
 	$: if (chatIdProp) {
 		(async () => {
-			if (await loadChat()) {
+			console.log(chatIdProp);
+			if (chatIdProp && (await loadChat())) {
 				await tick();
 				loaded = true;
 
@@ -122,13 +127,57 @@
 	}
 
 	onMount(async () => {
+		const onMessageHandler = async (event) => {
+			if (event.origin === window.origin) {
+				// Replace with your iframe's origin
+				console.log('Message received from iframe:', event.data);
+				if (event.data.type === 'input:prompt') {
+					console.log(event.data.text);
+
+					const inputElement = document.getElementById('chat-textarea');
+
+					if (inputElement) {
+						prompt = event.data.text;
+						inputElement.focus();
+					}
+				}
+
+				if (event.data.type === 'action:submit') {
+					console.log(event.data.text);
+
+					if (prompt !== '') {
+						await tick();
+						submitPrompt(prompt);
+					}
+				}
+
+				if (event.data.type === 'input:prompt:submit') {
+					console.log(event.data.text);
+
+					if (prompt !== '') {
+						await tick();
+						submitPrompt(event.data.text);
+					}
+				}
+			}
+		};
+		window.addEventListener('message', onMessageHandler);
+
 		if (!$chatId) {
-			await initNewChat();
+			chatId.subscribe(async (value) => {
+				if (!value) {
+					await initNewChat();
+				}
+			});
 		} else {
 			if (!($settings.saveChatHistory ?? true)) {
 				await goto('/');
 			}
 		}
+
+		return () => {
+			window.removeEventListener('message', onMessageHandler);
+		};
 	});
 
 	//////////////////////////
@@ -264,11 +313,14 @@
 				id: m.id,
 				role: m.role,
 				content: m.content,
+				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp
 			})),
 			chat_id: $chatId
 		}).catch((error) => {
-			console.error(error);
+			toast.error(error);
+			messages.at(-1).error = { content: error };
+
 			return null;
 		});
 
@@ -300,7 +352,7 @@
 	// Chat functions
 	//////////////////////////
 
-	const submitPrompt = async (userPrompt, _user = null) => {
+	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		let _responses = [];
 		console.log('submitPrompt', $chatId);
 
@@ -313,9 +365,16 @@
 		} else if (messages.length != 0 && messages.at(-1).done != true) {
 			// Response not done
 			console.log('wait');
+		} else if (messages.length != 0 && messages.at(-1).error) {
+			// Error in response
+			toast.error(
+				$i18n.t(
+					`Oops! There was an error in the previous response. Please try again or contact admin.`
+				)
+			);
 		} else if (
 			files.length > 0 &&
-			files.filter((file) => file.upload_status === false).length > 0
+			files.filter((file) => file.type !== 'image' && file.status !== 'processed').length > 0
 		) {
 			// Upload not done
 			toast.error(
@@ -344,7 +403,6 @@
 				parentId: messages.length !== 0 ? messages.at(-1).id : null,
 				childrenIds: [],
 				role: 'user',
-				user: _user ?? undefined,
 				content: userPrompt,
 				files: _files.length > 0 ? _files : undefined,
 				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
@@ -362,15 +420,13 @@
 
 			// Wait until history/message have been updated
 			await tick();
-
-			// Send prompt
-			_responses = await sendPrompt(userPrompt, userMessageId);
+			_responses = await sendPrompt(userPrompt, userMessageId, { newChat: true });
 		}
 
 		return _responses;
 	};
 
-	const sendPrompt = async (prompt, parentId, modelId = null, newChat = true) => {
+	const sendPrompt = async (prompt, parentId, { modelId = null, newChat = false } = {}) => {
 		let _responses = [];
 
 		// If modelId is provided, use it, else use selected model
@@ -473,14 +529,13 @@
 							});
 							if (res) {
 								if (res.documents[0].length > 0) {
-									userContext = res.documents.reduce((acc, doc, index) => {
-										const createdAtTimestamp = res.metadatas[index][0].created_at;
+									userContext = res.documents[0].reduce((acc, doc, index) => {
+										const createdAtTimestamp = res.metadatas[0][index].created_at;
 										const createdAtDate = new Date(createdAtTimestamp * 1000)
 											.toISOString()
 											.split('T')[0];
-										acc.push(`${index + 1}. [${createdAtDate}]. ${doc[0]}`);
-										return acc;
-									}, []);
+										return `${acc}${index + 1}. [${createdAtDate}]. ${doc}\n`;
+									}, '');
 								}
 
 								console.log(userContext);
@@ -490,7 +545,6 @@
 					responseMessage.userContext = userContext;
 
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
-
 					if (webSearchEnabled) {
 						await getWebSearchResults(model.id, parentId, responseMessageId);
 					}
@@ -503,8 +557,6 @@
 					}
 					_responses.push(_response);
 
-					console.log('chatEventEmitter', chatEventEmitter);
-
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
 					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
@@ -513,86 +565,7 @@
 		);
 
 		await chats.set(await getChatList(localStorage.token));
-
 		return _responses;
-	};
-
-	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
-		const responseMessage = history.messages[responseId];
-
-		responseMessage.statusHistory = [
-			{
-				done: false,
-				action: 'web_search',
-				description: $i18n.t('Generating search query')
-			}
-		];
-		messages = messages;
-
-		const prompt = history.messages[parentId].content;
-		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt).catch(
-			(error) => {
-				console.log(error);
-				return prompt;
-			}
-		);
-
-		if (!searchQuery) {
-			toast.warning($i18n.t('No search query generated'));
-			responseMessage.statusHistory.push({
-				done: true,
-				error: true,
-				action: 'web_search',
-				description: 'No search query generated'
-			});
-
-			messages = messages;
-		}
-
-		responseMessage.statusHistory.push({
-			done: false,
-			action: 'web_search',
-			description: $i18n.t(`Searching "{{searchQuery}}"`, { searchQuery })
-		});
-		messages = messages;
-
-		const results = await runWebSearch(localStorage.token, searchQuery).catch((error) => {
-			console.log(error);
-			toast.error(error);
-
-			return null;
-		});
-
-		if (results) {
-			responseMessage.statusHistory.push({
-				done: true,
-				action: 'web_search',
-				description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
-				query: searchQuery,
-				urls: results.filenames
-			});
-
-			if (responseMessage?.files ?? undefined === undefined) {
-				responseMessage.files = [];
-			}
-
-			responseMessage.files.push({
-				collection_name: results.collection_name,
-				name: searchQuery,
-				type: 'web_search_results',
-				urls: results.filenames
-			});
-
-			messages = messages;
-		} else {
-			responseMessage.statusHistory.push({
-				done: true,
-				error: true,
-				action: 'web_search',
-				description: 'No search results found'
-			});
-			messages = messages;
-		}
 	};
 
 	const sendPromptOllama = async (model, userPrompt, responseMessageId, _chatId) => {
@@ -610,9 +583,15 @@
 			$settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
-						content: `${promptTemplate($settings?.system ?? '', $user.name)}${
+						content: `${promptTemplate(
+							$settings?.system ?? '',
+							$user.name,
+							$settings?.userLocation
+								? await getAndUpdateUserLocation(localStorage.token)
+								: undefined
+						)}${
 							responseMessage?.userContext ?? null
-								? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
+								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 								: ''
 						}`
 				  }
@@ -655,26 +634,35 @@
 			}
 		});
 
-		let docs = [];
-
+		let files = [];
 		if (model?.info?.meta?.knowledge ?? false) {
-			docs = model.info.meta.knowledge;
+			files = model.info.meta.knowledge;
 		}
+		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
 
-		docs = [
-			...docs,
-			...messages
-				.filter((message) => message?.files ?? null)
-				.map((message) =>
-					message.files.filter((item) =>
-						['doc', 'collection', 'web_search_results'].includes(item.type)
-					)
-				)
-				.flat(1)
+		files = [
+			...files,
+			...(lastUserMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? []),
+			...(responseMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? [])
 		].filter(
+			// Remove duplicates
 			(item, index, array) =>
 				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
+
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:start', {
+				detail: {
+					id: responseMessageId
+				}
+			})
+		);
+
+		await tick();
 
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
 			model: model.id,
@@ -693,8 +681,8 @@
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
 			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-			docs: docs.length > 0 ? docs : undefined,
-			citations: docs.length > 0,
+			files: files.length > 0 ? files : undefined,
+			citations: files.length > 0 ? true : undefined,
 			chat_id: $chatId
 		});
 
@@ -745,6 +733,23 @@
 									continue;
 								} else {
 									responseMessage.content += data.message.content;
+
+									const sentences = extractSentencesForAudio(responseMessage.content);
+									sentences.pop();
+
+									// dispatch only last sentence and make sure it hasn't been dispatched before
+									if (
+										sentences.length > 0 &&
+										sentences[sentences.length - 1] !== responseMessage.lastSentence
+									) {
+										responseMessage.lastSentence = sentences[sentences.length - 1];
+										eventTarget.dispatchEvent(
+											new CustomEvent('chat', {
+												detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
+											})
+										);
+									}
+
 									messages = messages;
 								}
 							} else {
@@ -771,21 +776,13 @@
 								messages = messages;
 
 								if ($settings.notificationEnabled && !document.hasFocus()) {
-									const notification = new Notification(
-										selectedModelfile
-											? `${
-													selectedModelfile.title.charAt(0).toUpperCase() +
-													selectedModelfile.title.slice(1)
-											  }`
-											: `${model.id}`,
-										{
-											body: responseMessage.content,
-											icon: selectedModelfile?.imageUrl ?? `${WEBUI_BASE_URL}/static/favicon.png`
-										}
-									);
+									const notification = new Notification(`${model.id}`, {
+										body: responseMessage.content,
+										icon: `${WEBUI_BASE_URL}/static/favicon.png`
+									});
 								}
 
-								if ($settings.responseAutoCopy) {
+								if ($settings?.responseAutoCopy ?? false) {
 									copyToClipboard(responseMessage.content);
 								}
 
@@ -847,6 +844,23 @@
 		stopResponseFlag = false;
 		await tick();
 
+		let lastSentence = extractSentencesForAudio(responseMessage.content)?.at(-1) ?? '';
+		if (lastSentence) {
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: { id: responseMessageId, content: lastSentence }
+				})
+			);
+		}
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:finish', {
+				detail: {
+					id: responseMessageId,
+					content: responseMessage.content
+				}
+			})
+		);
+
 		if (autoScroll) {
 			scrollToBottom();
 		}
@@ -864,28 +878,35 @@
 		let _response = null;
 		const responseMessage = history.messages[responseMessageId];
 
-		let docs = [];
-
+		let files = [];
 		if (model?.info?.meta?.knowledge ?? false) {
-			docs = model.info.meta.knowledge;
+			files = model.info.meta.knowledge;
 		}
-
-		docs = [
-			...docs,
-			...messages
-				.filter((message) => message?.files ?? null)
-				.map((message) =>
-					message.files.filter((item) =>
-						['doc', 'collection', 'web_search_results'].includes(item.type)
-					)
-				)
-				.flat(1)
+		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
+		files = [
+			...files,
+			...(lastUserMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? []),
+			...(responseMessage?.files?.filter((item) =>
+				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
+			) ?? [])
 		].filter(
+			// Remove duplicates
 			(item, index, array) =>
 				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
 
 		scrollToBottom();
+
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:start', {
+				detail: {
+					id: responseMessageId
+				}
+			})
+		);
+		await tick();
 
 		try {
 			const [res, controller] = await generateOpenAIChatCompletion(
@@ -903,9 +924,15 @@
 						$settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
-									content: `${promptTemplate($settings?.system ?? '', $user.name)}${
+									content: `${promptTemplate(
+										$settings?.system ?? '',
+										$user.name,
+										$settings?.userLocation
+											? await getAndUpdateUserLocation(localStorage.token)
+											: undefined
+									)}${
 										responseMessage?.userContext ?? null
-											? `\n\nUser Context:\n${(responseMessage?.userContext ?? []).join('\n')}`
+											? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 											: ''
 									}`
 							  }
@@ -955,11 +982,12 @@
 					frequency_penalty: $settings?.params?.frequency_penalty ?? undefined,
 					max_tokens: $settings?.params?.max_tokens ?? undefined,
 					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-					docs: docs.length > 0 ? docs : undefined,
-					citations: docs.length > 0,
+					files: files.length > 0 ? files : undefined,
+					citations: files.length > 0 ? true : undefined,
+
 					chat_id: $chatId
 				},
-				`${OPENAI_API_BASE_URL}`
+				`${WEBUI_BASE_URL}/api`
 			);
 
 			// Wait until history/message have been updated
@@ -1007,6 +1035,23 @@
 						continue;
 					} else {
 						responseMessage.content += value;
+
+						const sentences = extractSentencesForAudio(responseMessage.content);
+						sentences.pop();
+
+						// dispatch only last sentence and make sure it hasn't been dispatched before
+						if (
+							sentences.length > 0 &&
+							sentences[sentences.length - 1] !== responseMessage.lastSentence
+						) {
+							responseMessage.lastSentence = sentences[sentences.length - 1];
+							eventTarget.dispatchEvent(
+								new CustomEvent('chat', {
+									detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
+								})
+							);
+						}
+
 						messages = messages;
 					}
 
@@ -1056,6 +1101,24 @@
 
 		stopResponseFlag = false;
 		await tick();
+
+		let lastSentence = extractSentencesForAudio(responseMessage.content)?.at(-1) ?? '';
+		if (lastSentence) {
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: { id: responseMessageId, content: lastSentence }
+				})
+			);
+		}
+
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:finish', {
+				detail: {
+					id: responseMessageId,
+					content: responseMessage.content
+				}
+			})
+		);
 
 		if (autoScroll) {
 			scrollToBottom();
@@ -1123,9 +1186,12 @@
 			let userPrompt = userMessage.content;
 
 			if ((userMessage?.models ?? [...selectedModels]).length == 1) {
-				await sendPrompt(userPrompt, userMessage.id, undefined, false);
+				// If user message has only one model selected, sendPrompt automatically selects it for regeneration
+				await sendPrompt(userPrompt, userMessage.id);
 			} else {
-				await sendPrompt(userPrompt, userMessage.id, message.model, false);
+				// If there are multiple models selected, use the model of the response message for regeneration
+				// e.g. many model chat
+				await sendPrompt(userPrompt, userMessage.id, { modelId: message.model });
 			}
 		}
 	};
@@ -1191,6 +1257,85 @@
 		}
 	};
 
+	const getWebSearchResults = async (model: string, parentId: string, responseId: string) => {
+		const responseMessage = history.messages[responseId];
+		const userMessage = history.messages[parentId];
+
+		responseMessage.statusHistory = [
+			{
+				done: false,
+				action: 'web_search',
+				description: $i18n.t('Generating search query')
+			}
+		];
+		messages = messages;
+
+		const prompt = userMessage.content;
+		let searchQuery = await generateSearchQuery(localStorage.token, model, messages, prompt).catch(
+			(error) => {
+				console.log(error);
+				return prompt;
+			}
+		);
+
+		if (!searchQuery) {
+			toast.warning($i18n.t('No search query generated'));
+			responseMessage.statusHistory.push({
+				done: true,
+				error: true,
+				action: 'web_search',
+				description: 'No search query generated'
+			});
+
+			messages = messages;
+		}
+
+		responseMessage.statusHistory.push({
+			done: false,
+			action: 'web_search',
+			description: $i18n.t(`Searching "{{searchQuery}}"`, { searchQuery })
+		});
+		messages = messages;
+
+		const results = await runWebSearch(localStorage.token, searchQuery).catch((error) => {
+			console.log(error);
+			toast.error(error);
+
+			return null;
+		});
+
+		if (results) {
+			responseMessage.statusHistory.push({
+				done: true,
+				action: 'web_search',
+				description: $i18n.t('Searched {{count}} sites', { count: results.filenames.length }),
+				query: searchQuery,
+				urls: results.filenames
+			});
+
+			if (responseMessage?.files ?? undefined === undefined) {
+				responseMessage.files = [];
+			}
+
+			responseMessage.files.push({
+				collection_name: results.collection_name,
+				name: searchQuery,
+				type: 'web_search_results',
+				urls: results.filenames
+			});
+
+			messages = messages;
+		} else {
+			responseMessage.statusHistory.push({
+				done: true,
+				error: true,
+				action: 'web_search',
+				description: 'No search results found'
+			});
+			messages = messages;
+		}
+	};
+
 	const getTags = async () => {
 		return await getTagsById(localStorage.token, $chatId).catch(async (error) => {
 			return [];
@@ -1206,7 +1351,18 @@
 	</title>
 </svelte:head>
 
-<CallOverlay {submitPrompt} bind:files />
+<audio id="audioElement" src="" style="display: none;" />
+
+{#if $showCallOverlay}
+	<CallOverlay
+		{submitPrompt}
+		{stopResponse}
+		bind:files
+		modelId={selectedModelIds?.at(0) ?? null}
+		chatId={$chatId}
+		{eventTarget}
+	/>
+{/if}
 
 {#if !chatIdProp || (loaded && chatIdProp)}
 	<div
@@ -1214,6 +1370,19 @@
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} w-full max-w-full flex flex-col"
 	>
+		{#if $settings?.backgroundImageUrl ?? null}
+			<div
+				class="absolute {$showSidebar
+					? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
+					: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
+				style="background-image: url({$settings.backgroundImageUrl})  "
+			/>
+
+			<div
+				class="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-white to-white/85 dark:from-gray-900 dark:to-[#171717]/90 z-0"
+			/>
+		{/if}
+
 		<Navbar
 			{title}
 			bind:selectedModels
@@ -1225,7 +1394,9 @@
 
 		{#if $banners.length > 0 && messages.length === 0 && !$chatId && selectedModels.length <= 1}
 			<div
-				class="absolute top-[4.25rem] w-full {$showSidebar ? 'md:max-w-[calc(100%-260px)]' : ''}"
+				class="absolute top-[4.25rem] w-full {$showSidebar
+					? 'md:max-w-[calc(100%-260px)]'
+					: ''} z-20"
 			>
 				<div class=" flex flex-col gap-1 w-full">
 					{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
@@ -1250,9 +1421,9 @@
 			</div>
 		{/if}
 
-		<div class="flex flex-col flex-auto">
+		<div class="flex flex-col flex-auto z-10">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full"
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10"
 				id="messages-container"
 				bind:this={messagesContainerElement}
 				on:scroll={(e) => {
@@ -1291,6 +1462,7 @@
 					}
 					return a;
 				}, [])}
+				transparentBackground={$settings?.backgroundImageUrl ?? false}
 				{selectedModels}
 				{messages}
 				{submitPrompt}

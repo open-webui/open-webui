@@ -27,7 +27,9 @@ export const tags = writable([]);
 export const models: Writable<Model[]> = writable([]);
 export const prompts: Writable<Prompt[]> = writable([]);
 export const documents: Writable<Document[]> = writable([]);
+
 export const tools = writable([]);
+export const functions = writable([]);
 
 export const banners: Writable<Banner[]> = writable([]);
 
@@ -92,6 +94,8 @@ type Settings = {
 	top_k?: string;
 	top_p?: string;
 	num_ctx?: string;
+	num_batch?: string;
+	num_keep?: string;
 	options?: ModelOptions;
 };
 
@@ -144,6 +148,11 @@ type Config = {
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
 		enable_community_sharing: boolean;
+	};
+	oauth: {
+		providers: {
+			[key: string]: string;
+		};
 	};
 };
 

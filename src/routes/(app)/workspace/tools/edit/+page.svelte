@@ -5,8 +5,10 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
 	import { tools } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+
+	const i18n = getContext('i18n');
 
 	let tool = null;
 
@@ -23,7 +25,7 @@
 		});
 
 		if (res) {
-			toast.success('Tool updated successfully');
+			toast.success($i18n.t('Tool updated successfully'));
 			tools.set(await getTools(localStorage.token));
 
 			// await goto('/workspace/tools');
