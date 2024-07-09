@@ -59,6 +59,9 @@
 						</div>
 						<div class="text-sm dark:text-gray-400">
 							{document.source?.name ?? $i18n.t('No source available')}
+							{#if document.metadata?.page !== undefined}
+								<span>- Page {document.metadata?.page}</span>
+							{/if}
 						</div>
 					</div>
 					<div class="flex flex-col w-full">
