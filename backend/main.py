@@ -523,9 +523,7 @@ async def chat_completion_functions_handler(
     return body, {}
 
 
-async def chat_completion_tools_handler(
-    body, user, __event_emitter__, __event_call__
-):
+async def chat_completion_tools_handler(body, user, __event_emitter__, __event_call__):
     skip_files = None
 
     contexts = []
