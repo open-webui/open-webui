@@ -71,7 +71,7 @@
 
 	let useModelName = false;
 
-	$: useModelName = localStorage.useModelName == 'true'
+	$: useModelName = localStorage.useModelName == 'true';
 
 	$: tokens = marked.lexer(sanitizeResponseContent(message.content));
 
@@ -464,9 +464,9 @@
 												// Check if ID looks like a URL
 												if (id.startsWith('http://') || id.startsWith('https://')) {
 													source = { name: id };
-												} else if (id.includes('.pdf')) {
-													let subpaths = id.split('/')
-													source = { name: subpaths[subpaths.length-1] }
+												} else if (id !== 'N/A') {
+													let subpaths = id.split('/');
+													source = { name: subpaths[subpaths.length - 1] };
 												}
 
 												const existingSource = acc.find((item) => item.id === id);
