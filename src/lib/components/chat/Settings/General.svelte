@@ -120,8 +120,8 @@
 		theme.set(_theme);
 		localStorage.setItem('theme', _theme);
 		if (_theme.includes('oled')) {
-			document.documentElement.style.setProperty('--color-gray-800', '#171717');
-			document.documentElement.style.setProperty('--color-gray-850', '#0d0d0d');
+			document.documentElement.style.setProperty('--color-gray-800', '#101010');
+			document.documentElement.style.setProperty('--color-gray-850', '#050505');
 			document.documentElement.style.setProperty('--color-gray-900', '#000000');
 			document.documentElement.style.setProperty('--color-gray-950', '#000000');
 			document.documentElement.classList.add('dark');
