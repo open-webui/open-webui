@@ -480,6 +480,8 @@ CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
 
 MODEL_STATUS = os.environ.get("MODEL_STATUS", "")
 
+LOBECHAT_URL = os.environ.get("LOBECHAT_URL", "")
+
 ####################################
 # File Upload DIR
 ####################################
