@@ -273,24 +273,26 @@
 				</div>
 				<div class="grid lg:grid-cols-2 flex-col gap-1.5">
 					{#each promptSuggestions as prompt, promptIdx}
-						<div class=" flex dark:bg-gray-850 rounded-xl py-1.5">
+						<div
+							class=" flex border border-gray-100 dark:border-none dark:bg-gray-850 rounded-xl py-1.5"
+						>
 							<div class="flex flex-col flex-1 pl-1">
-								<div class="flex border-b dark:border-gray-800 w-full">
+								<div class="flex border-b border-gray-100 dark:border-gray-800 w-full">
 									<input
-										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-800"
+										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
 										placeholder={$i18n.t('Title (e.g. Tell me a fun fact)')}
 										bind:value={prompt.title[0]}
 									/>
 
 									<input
-										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-800"
+										class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
 										placeholder={$i18n.t('Subtitle (e.g. about the Roman Empire)')}
 										bind:value={prompt.title[1]}
 									/>
 								</div>
 
 								<input
-									class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r dark:border-gray-800"
+									class="px-3 py-1.5 text-xs w-full bg-transparent outline-none border-r border-gray-100 dark:border-gray-800"
 									placeholder={$i18n.t('Prompt (e.g. Tell me a fun fact about the Roman Empire)')}
 									bind:value={prompt.content}
 								/>

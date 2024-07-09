@@ -44,8 +44,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 			'general'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'general';
 			}}
@@ -70,8 +70,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'users'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'users';
 			}}
@@ -94,8 +94,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'connections'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'connections';
 			}}
@@ -118,8 +118,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'models'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'models';
 			}}
@@ -144,8 +144,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'documents'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'documents';
 			}}
@@ -174,8 +174,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'web'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'web';
 			}}
@@ -198,8 +198,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'interface'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'interface';
 			}}
@@ -224,8 +224,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'audio'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'audio';
 			}}
@@ -251,8 +251,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'images'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'images';
 			}}
@@ -277,8 +277,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'pipelines'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'pipelines';
 			}}
@@ -307,8 +307,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'db'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'db';
 			}}
