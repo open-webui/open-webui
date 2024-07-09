@@ -232,7 +232,7 @@ export const getDefaultParams = (chatType: string) => {
         temperature: 0.0,
         top_p: 0.95,
         top_k: 20,
-        repetition_penalty: 1.1,
+        repetition_penalty: 1.08,
       }
     case 'chat_law':
     case 'chat_buddhism':
@@ -240,14 +240,14 @@ export const getDefaultParams = (chatType: string) => {
         temperature: 0.0,
         top_p: 0.95,
         top_k: 10,
-        repetition_penalty: 1.1,
+        repetition_penalty: 1.08,
       }
     case 'chat_embedding':
       return {
         temperature: 0.0,
         top_p: 0.95,
         top_k: 20,
-        repetition_penalty: 1.1,
+        repetition_penalty: 1.08,
       }
     case 'translate':
     case 'translate_coding':
@@ -256,7 +256,7 @@ export const getDefaultParams = (chatType: string) => {
         temperature: 0.0,
         top_p: 0.95,
         top_k: 20,
-        repetition_penalty: 1.1,
+        repetition_penalty: 0.15,
       }
     case 'summary':
     case 'summary_emphasis':
@@ -274,7 +274,7 @@ export const getDefaultParams = (chatType: string) => {
         temperature: 0.0,
         top_p: 0.95,
         top_k: 20,
-        repetition_penalty: 1.1,
+        repetition_penalty: 1.08,
       }
     case 'long_summary':
     case 'long_summary_emphasis':
@@ -292,7 +292,7 @@ export const getDefaultParams = (chatType: string) => {
         temperature: 0.0,
         top_p: 0.95,
         top_k: 10,
-        repetition_penalty: 1.1,
+        repetition_penalty: 1.08,
       }
   }
 }
