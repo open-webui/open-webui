@@ -226,7 +226,7 @@ async def get_body_and_model_and_user(request):
 
     model_id = body["model"]
     if model_id not in app.state.MODELS:
-        raise "Model not found"
+        raise Exception("Model not found")
     model = app.state.MODELS[model_id]
 
     user = get_current_user(
@@ -1107,21 +1107,21 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
             else:
                 pass
 
-    async def __event_emitter__(data):
+    async def __event_emitter__(event_data):
         await sio.emit(
             "chat-events",
             {
                 "chat_id": data["chat_id"],
                 "message_id": data["id"],
-                "data": data,
+                "data": event_data,
             },
             to=data["session_id"],
         )
 
-    async def __event_call__(data):
+    async def __event_call__(event_data):
         response = await sio.call(
             "chat-events",
-            {"chat_id": data["chat_id"], "message_id": data["id"], "data": data},
+            {"chat_id": data["chat_id"], "message_id": data["id"], "data": event_data},
             to=data["session_id"],
         )
         return response
