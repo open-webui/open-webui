@@ -116,11 +116,11 @@
 		</div>
 	</div>
 
-	<div class=" bg-white dark:bg-gray-950 min-h-screen w-full flex justify-center font-mona">
+	<div class=" bg-white dark:bg-gray-950 min-h-screen w-full flex justify-center font-primary">
 		<!-- <div class="hidden lg:flex lg:flex-1 px-10 md:px-16 w-full bg-yellow-50 justify-center">
 			<div class=" my-auto pb-16 text-left">
 				<div>
-					<div class=" font-bold text-yellow-600 text-4xl">
+					<div class=" font-semibold text-yellow-600 text-4xl">
 						Get up and running with <br />large language models, locally.
 					</div>
 
@@ -135,7 +135,7 @@
 			{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 				<div class=" my-auto pb-10 w-full">
 					<div
-						class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-medium dark:text-gray-200"
+						class="flex items-center justify-center gap-3 text-xl sm:text-2xl text-center font-semibold dark:text-gray-200"
 					>
 						<div>
 							{$i18n.t('Signing in')}
@@ -346,7 +346,7 @@
 
 <style>
 	.font-mona {
-		font-family: 'Mona Sans', -apple-system, 'Arimo', ui-sans-serif, system-ui, 'Segoe UI', Roboto,
+		font-family: 'Mona Sans', -apple-system, 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto,
 			Ubuntu, Cantarell, 'Noto Sans', sans-serif, 'Helvetica Neue', Arial, 'Apple Color Emoji',
 			'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 	}

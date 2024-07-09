@@ -119,7 +119,7 @@
 							<div class="flex items-center">
 								<div class="flex flex-col">
 									<div
-										class=" w-fit text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+										class=" w-fit text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 									>
 										{item?.type ?? 'Document'}
 									</div>

@@ -1,6 +1,12 @@
 @font-face {
-	font-family: 'Arimo';
-	src: url('/assets/fonts/Arimo-Variable.ttf');
+	font-family: 'Inter';
+	src: url('/assets/fonts/Inter-Variable.ttf');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Archivo';
+	src: url('/assets/fonts/Archivo-Variable.ttf');
 	font-display: swap;
 }
 
@@ -30,6 +36,10 @@ math {
 
 .markdown a {
 	@apply underline;
+}
+
+.font-primary {
+	font-family: 'Archivo', sans-serif;
 }
 
 iframe {
@@ -139,4 +149,8 @@ input[type='number'] {
 
 .cm-editor.cm-focused {
 	outline: none;
+}
+
+.tippy-box[data-theme~='dark'] {
+	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
 }

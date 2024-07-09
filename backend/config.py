@@ -393,6 +393,18 @@ OAUTH_PROVIDER_NAME = PersistentConfig(
     os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
 )
 
+OAUTH_USERNAME_CLAIM = PersistentConfig(
+    "OAUTH_USERNAME_CLAIM",
+    "oauth.oidc.username_claim",
+    os.environ.get("OAUTH_USERNAME_CLAIM", "name"),
+)
+
+OAUTH_PICTURE_CLAIM = PersistentConfig(
+    "OAUTH_USERNAME_CLAIM",
+    "oauth.oidc.avatar_claim",
+    os.environ.get("OAUTH_PICTURE_CLAIM", "picture"),
+)
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
@@ -438,15 +450,26 @@ load_oauth_providers()
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", BACKEND_DIR / "static")).resolve()
 
-frontend_favicon = FRONTEND_BUILD_DIR / "favicon.png"
+frontend_favicon = FRONTEND_BUILD_DIR / "static" / "favicon.png"
+
 if frontend_favicon.exists():
     try:
         shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon.png")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
-
 else:
     logging.warning(f"Frontend favicon not found at {frontend_favicon}")
+
+frontend_splash = FRONTEND_BUILD_DIR / "static" / "splash.png"
+
+if frontend_splash.exists():
+    try:
+        shutil.copyfile(frontend_splash, STATIC_DIR / "splash.png")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+else:
+    logging.warning(f"Frontend splash not found at {frontend_splash}")
+
 
 ####################################
 # CUSTOM_NAME
@@ -469,6 +492,19 @@ if CUSTOM_NAME:
                 r = requests.get(url, stream=True)
                 if r.status_code == 200:
                     with open(f"{STATIC_DIR}/favicon.png", "wb") as f:
+                        r.raw.decode_content = True
+                        shutil.copyfileobj(r.raw, f)
+
+            if "splash" in data:
+                url = (
+                    f"https://api.openwebui.com{data['splash']}"
+                    if data["splash"][0] == "/"
+                    else data["splash"]
+                )
+
+                r = requests.get(url, stream=True)
+                if r.status_code == 200:
+                    with open(f"{STATIC_DIR}/splash.png", "wb") as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
 
@@ -765,6 +801,7 @@ class BannerModel(BaseModel):
     content: str
     dismissible: bool
     timestamp: int
+
 
 try:
     banners = json.loads(os.environ.get("WEBUI_BANNERS", "[]"))
@@ -1318,3 +1355,7 @@ AUDIO_TTS_VOICE = PersistentConfig(
 ####################################
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+
+# Replace the postgres:// with postgresql://
+if "postgres://" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")

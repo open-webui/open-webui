@@ -2,13 +2,10 @@ import json
 import logging
 from typing import Optional
 
-import peewee as pw
-from peewee import *
-
-from playhouse.shortcuts import model_to_dict
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy import String, Column, BigInteger, Text
 
-from apps.webui.internal.db import DB, JSONField
+from apps.webui.internal.db import Base, JSONField, get_db
 
 from typing import List, Union, Optional
 from config import SRC_LOG_LEVELS
@@ -32,7 +29,7 @@ class ModelParams(BaseModel):
 
 # ModelMeta is a model for the data stored in the meta field of the Model table
 class ModelMeta(BaseModel):
-    profile_image_url: Optional[str] = "/favicon.png"
+    profile_image_url: Optional[str] = "/static/favicon.png"
 
     description: Optional[str] = None
     """
@@ -46,38 +43,37 @@ class ModelMeta(BaseModel):
     pass
 
 
-class Model(pw.Model):
-    id = pw.TextField(unique=True)
+class Model(Base):
+    __tablename__ = "model"
+
+    id = Column(Text, primary_key=True)
     """
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
-    user_id = pw.TextField()
+    user_id = Column(Text)
 
-    base_model_id = pw.TextField(null=True)
+    base_model_id = Column(Text, nullable=True)
     """
         An optional pointer to the actual model that should be used when proxying requests.
     """
 
-    name = pw.TextField()
+    name = Column(Text)
     """
         The human-readable display name of the model.
     """
 
-    params = JSONField()
+    params = Column(JSONField)
     """
         Holds a JSON encoded blob of parameters, see `ModelParams`.
     """
 
-    meta = JSONField()
+    meta = Column(JSONField)
     """
         Holds a JSON encoded blob of metadata, see `ModelMeta`.
     """
 
-    updated_at = BigIntegerField()
-    created_at = BigIntegerField()
-
-    class Meta:
-        database = DB
+    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)
 
 
 class ModelModel(BaseModel):
@@ -91,6 +87,8 @@ class ModelModel(BaseModel):
 
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 ####################
@@ -115,12 +113,6 @@ class ModelForm(BaseModel):
 
 
 class ModelsTable:
-    def __init__(
-        self,
-        db: pw.SqliteDatabase | pw.PostgresqlDatabase,
-    ):
-        self.db = db
-        self.db.create_tables([Model])
 
     def insert_new_model(
         self, form_data: ModelForm, user_id: str
@@ -134,34 +126,50 @@ class ModelsTable:
             }
         )
         try:
-            result = Model.create(**model.model_dump())
 
-            if result:
-                return model
-            else:
-                return None
+            with get_db() as db:
+
+                result = Model(**model.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+
+                if result:
+                    return ModelModel.model_validate(result)
+                else:
+                    return None
         except Exception as e:
             print(e)
             return None
 
     def get_all_models(self) -> List[ModelModel]:
-        return [ModelModel(**model_to_dict(model)) for model in Model.select()]
+        with get_db() as db:
+
+            return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
-            model = Model.get(Model.id == id)
-            return ModelModel(**model_to_dict(model))
+            with get_db() as db:
+
+                model = db.get(Model, id)
+                return ModelModel.model_validate(model)
         except:
             return None
 
     def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
         try:
-            # update only the fields that are present in the model
-            query = Model.update(**model.model_dump()).where(Model.id == id)
-            query.execute()
+            with get_db() as db:
+                # update only the fields that are present in the model
+                result = (
+                    db.query(Model)
+                    .filter_by(id=id)
+                    .update(model.model_dump(exclude={"id"}, exclude_none=True))
+                )
+                db.commit()
 
-            model = Model.get(Model.id == id)
-            return ModelModel(**model_to_dict(model))
+                model = db.get(Model, id)
+                db.refresh(model)
+                return ModelModel.model_validate(model)
         except Exception as e:
             print(e)
 
@@ -169,11 +177,14 @@ class ModelsTable:
 
     def delete_model_by_id(self, id: str) -> bool:
         try:
-            query = Model.delete().where(Model.id == id)
-            query.execute()
-            return True
+            with get_db() as db:
+
+                db.query(Model).filter_by(id=id).delete()
+                db.commit()
+
+                return True
         except:
             return False
 
 
-Models = ModelsTable(DB)
+Models = ModelsTable()
