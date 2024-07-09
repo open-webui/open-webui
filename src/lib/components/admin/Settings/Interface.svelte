@@ -88,7 +88,7 @@
 				<div class="flex-1">
 					<div class=" text-xs mb-1">{$i18n.t('Local Models')}</div>
 					<select
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 						bind:value={taskConfig.TASK_MODEL}
 						placeholder={$i18n.t('Select a model')}
 					>
@@ -104,7 +104,7 @@
 				<div class="flex-1">
 					<div class=" text-xs mb-1">{$i18n.t('External Models')}</div>
 					<select
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 						bind:value={taskConfig.TASK_MODEL_EXTERNAL}
 						placeholder={$i18n.t('Select a model')}
 					>
@@ -122,7 +122,7 @@
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Title Generation Prompt')}</div>
 				<textarea
 					bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
-					class="w-full rounded-lg py-3 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					class="w-full rounded-lg py-3 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
 					rows="6"
 				/>
 			</div>
@@ -131,7 +131,7 @@
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Search Query Generation Prompt')}</div>
 				<textarea
 					bind:value={taskConfig.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE}
-					class="w-full rounded-lg py-3 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					class="w-full rounded-lg py-3 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
 					rows="6"
 				/>
 			</div>
@@ -142,7 +142,7 @@
 				</div>
 				<input
 					bind:value={taskConfig.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD}
-					class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
 					type="number"
 				/>
 			</div>

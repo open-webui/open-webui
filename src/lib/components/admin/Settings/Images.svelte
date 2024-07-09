@@ -240,13 +240,13 @@
 			<div class="flex w-full">
 				<div class="flex-1 mr-2">
 					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 						placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
 						bind:value={AUTOMATIC1111_BASE_URL}
 					/>
 				</div>
 				<button
-					class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+					class="px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 					type="button"
 					on:click={() => {
 						updateUrlHandler();
@@ -299,13 +299,13 @@
 			<div class="flex w-full">
 				<div class="flex-1 mr-2">
 					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 						placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
 						bind:value={COMFYUI_BASE_URL}
 					/>
 				</div>
 				<button
-					class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+					class="px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 					type="button"
 					on:click={() => {
 						updateUrlHandler();
@@ -331,7 +331,7 @@
 
 				<div class="flex gap-2 mb-1">
 					<input
-						class="flex-1 w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 						placeholder={$i18n.t('API Base URL')}
 						bind:value={OPENAI_API_BASE_URL}
 						required
@@ -354,7 +354,7 @@
 								<div class="flex-1">
 									<input
 										list="model-list"
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={selectedModel}
 										placeholder="Select a model"
 									/>
@@ -368,7 +368,7 @@
 							</div>
 						{:else}
 							<select
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 								bind:value={selectedModel}
 								placeholder={$i18n.t('Select a model')}
 								required
@@ -391,7 +391,7 @@
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
 							bind:value={imageSize}
 						/>
@@ -404,7 +404,7 @@
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
 							bind:value={steps}
 						/>
