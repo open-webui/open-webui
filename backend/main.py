@@ -465,51 +465,53 @@ async def chat_completion_functions_handler(
                 **(valves if valves else {})
             )
 
+        if not hasattr(function_module, "inlet"):
+            continue
+
         try:
-            if hasattr(function_module, "inlet"):
-                inlet = function_module.inlet
+            inlet = function_module.inlet
 
-                # Get the signature of the function
-                sig = inspect.signature(inlet)
-                params = {"body": body}
+            # Get the signature of the function
+            sig = inspect.signature(inlet)
+            params = {"body": body}
 
-                # Extra parameters to be passed to the function
-                extra_params = {
-                    "__model__": model,
-                    "__id__": filter_id,
-                    "__event_emitter__": __event_emitter__,
-                    "__event_call__": __event_call__,
+            # Extra parameters to be passed to the function
+            extra_params = {
+                "__model__": model,
+                "__id__": filter_id,
+                "__event_emitter__": __event_emitter__,
+                "__event_call__": __event_call__,
+            }
+
+            # Add extra params in contained in function signature
+            for key, value in extra_params.items():
+                if key in sig.parameters:
+                    params[key] = value
+
+            if "__user__" in sig.parameters:
+                __user__ = {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
+                    "role": user.role,
                 }
 
-                # Add extra params in contained in function signature
-                for key, value in extra_params.items():
-                    if key in sig.parameters:
-                        params[key] = value
-
-                if "__user__" in sig.parameters:
-                    __user__ = {
-                        "id": user.id,
-                        "email": user.email,
-                        "name": user.name,
-                        "role": user.role,
-                    }
-
-                    try:
-                        if hasattr(function_module, "UserValves"):
-                            __user__["valves"] = function_module.UserValves(
-                                **Functions.get_user_valves_by_id_and_user_id(
-                                    filter_id, user.id
-                                )
+                try:
+                    if hasattr(function_module, "UserValves"):
+                        __user__["valves"] = function_module.UserValves(
+                            **Functions.get_user_valves_by_id_and_user_id(
+                                filter_id, user.id
                             )
-                    except Exception as e:
-                        print(e)
+                        )
+                except Exception as e:
+                    print(e)
 
-                    params = {**params, "__user__": __user__}
+                params = {**params, "__user__": __user__}
 
-                if inspect.iscoroutinefunction(inlet):
-                    body = await inlet(**params)
-                else:
-                    body = inlet(**params)
+            if inspect.iscoroutinefunction(inlet):
+                body = await inlet(**params)
+            else:
+                body = inlet(**params)
 
         except Exception as e:
             print(f"Error: {e}")
@@ -1184,51 +1186,52 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                 **(valves if valves else {})
             )
 
+        if not hasattr(function_module, "outlet"):
+            continue
         try:
-            if hasattr(function_module, "outlet"):
-                outlet = function_module.outlet
+            outlet = function_module.outlet
 
-                # Get the signature of the function
-                sig = inspect.signature(outlet)
-                params = {"body": data}
+            # Get the signature of the function
+            sig = inspect.signature(outlet)
+            params = {"body": data}
 
-                # Extra parameters to be passed to the function
-                extra_params = {
-                    "__model__": model,
-                    "__id__": filter_id,
-                    "__event_emitter__": __event_emitter__,
-                    "__event_call__": __event_call__,
+            # Extra parameters to be passed to the function
+            extra_params = {
+                "__model__": model,
+                "__id__": filter_id,
+                "__event_emitter__": __event_emitter__,
+                "__event_call__": __event_call__,
+            }
+
+            # Add extra params in contained in function signature
+            for key, value in extra_params.items():
+                if key in sig.parameters:
+                    params[key] = value
+
+            if "__user__" in sig.parameters:
+                __user__ = {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
+                    "role": user.role,
                 }
 
-                # Add extra params in contained in function signature
-                for key, value in extra_params.items():
-                    if key in sig.parameters:
-                        params[key] = value
-
-                if "__user__" in sig.parameters:
-                    __user__ = {
-                        "id": user.id,
-                        "email": user.email,
-                        "name": user.name,
-                        "role": user.role,
-                    }
-
-                    try:
-                        if hasattr(function_module, "UserValves"):
-                            __user__["valves"] = function_module.UserValves(
-                                **Functions.get_user_valves_by_id_and_user_id(
-                                    filter_id, user.id
-                                )
+                try:
+                    if hasattr(function_module, "UserValves"):
+                        __user__["valves"] = function_module.UserValves(
+                            **Functions.get_user_valves_by_id_and_user_id(
+                                filter_id, user.id
                             )
-                    except Exception as e:
-                        print(e)
+                        )
+                except Exception as e:
+                    print(e)
 
-                    params = {**params, "__user__": __user__}
+                params = {**params, "__user__": __user__}
 
-                if inspect.iscoroutinefunction(outlet):
-                    data = await outlet(**params)
-                else:
-                    data = outlet(**params)
+            if inspect.iscoroutinefunction(outlet):
+                data = await outlet(**params)
+            else:
+                data = outlet(**params)
 
         except Exception as e:
             print(f"Error: {e}")
