@@ -29,14 +29,14 @@
 			<div>
 				<textarea
 					bind:value={params.system}
-					class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 border dark:border-gray-800 outline-none resize-none"
+					class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 border border-gray-100 dark:border-gray-800 outline-none resize-none"
 					rows="3"
 					placeholder="Enter system prompt"
 				/>
 			</div>
 		</div>
 
-		<hr class="my-2 dark:border-gray-800" />
+		<hr class="my-2 border-gray-100 dark:border-gray-800" />
 
 		<div>
 			<div class="mb-1.5 font-medium">Advanced Params</div>
