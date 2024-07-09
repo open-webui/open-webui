@@ -32,6 +32,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
+	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
 
 	export let modelfiles = [];
 	export let message;
@@ -64,6 +65,9 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
+
+	let showCitationModal = false;
+	let selectedCitation = null;
 
 	let useModelName = false;
 
@@ -328,6 +332,7 @@
 	});
 </script>
 
+<CitationsModal bind:show={showCitationModal} citation={selectedCitation} />
 {#key message.id}
 	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
 		<ProfileImage
@@ -448,6 +453,51 @@
 										{/if}
 									{/each}
 									<!-- {@html marked(message.content.replaceAll('\\', '\\\\'))} -->
+								{/if}
+								{#if message.citations}
+									<div class="mt-1 mb-2 w-full flex gap-1 items-center flex-wrap">
+										{#each message.citations.reduce((acc, citation) => {
+											citation.document.forEach((document, index) => {
+												const metadata = citation.metadata?.[index];
+												const id = metadata?.source ?? 'N/A';
+												let source = citation?.source;
+												// Check if ID looks like a URL
+												if (id.startsWith('http://') || id.startsWith('https://')) {
+													source = { name: id };
+												} else if (id.includes('.pdf')) {
+													let subpaths = id.split('/')
+													source = { name: subpaths[subpaths.length-1] }
+												}
+
+												const existingSource = acc.find((item) => item.id === id);
+
+												if (existingSource) {
+													existingSource.document.push(document);
+													existingSource.metadata.push(metadata);
+												} else {
+													acc.push( { id: id, source: source, document: [document], metadata: metadata ? [metadata] : [] } );
+												}
+											});
+											return acc;
+										}, []) as citation, idx}
+											<div class="flex gap-1 text-xs font-semibold">
+												<button
+													class="flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl"
+													on:click={() => {
+														showCitationModal = true;
+														selectedCitation = citation;
+													}}
+												>
+													<div class="bg-white dark:bg-gray-700 rounded-full size-4">
+														{idx + 1}
+													</div>
+													<div class="flex-1 mx-2 line-clamp-1">
+														{citation.source.name}
+													</div>
+												</button>
+											</div>
+										{/each}
+									</div>
 								{/if}
 
 								{#if message.done}

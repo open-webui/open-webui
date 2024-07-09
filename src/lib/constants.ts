@@ -4,7 +4,7 @@ import { dev } from '$app/environment';
 export const APP_NAME = 'MBZUAI ServiceDesk Chatbot';
 // export const WEBUI_BASE_URL = dev ? `http://${location.hostname}:8080` : ``;
 // temp backend server
-export const WEBUI_BASE_URL = dev ? `http://10.127.110.178:31032` : ``;
+export const WEBUI_BASE_URL = dev ? `http://10.127.110.178:31031` : ``;
 
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 
