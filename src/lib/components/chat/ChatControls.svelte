@@ -37,7 +37,7 @@
 		<div class=" absolute bottom-0 right-0 z-20 h-full pointer-events-none">
 			<div class="pr-4 pt-14 pb-8 w-[24rem] h-full" in:slide={{ duration: 200, axis: 'x' }}>
 				<div
-					class="w-full h-full px-5 py-4 dark:shadow-lg dark:bg-gray-850 border border-gray-50 dark:border-gray-800 rounded-xl z-50 pointer-events-auto overflow-y-auto scrollbar-hidden"
+					class="w-full h-full px-5 py-4 bg-white dark:shadow-lg dark:bg-gray-850 border border-gray-50 dark:border-gray-800 rounded-xl z-50 pointer-events-auto overflow-y-auto scrollbar-hidden"
 				>
 					<Controls
 						on:close={() => {
