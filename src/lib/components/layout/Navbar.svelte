@@ -107,7 +107,6 @@
 
 				<Tooltip content={$i18n.t('Controls')}>
 					<button
-						id="new-chat-button"
 						class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 						on:click={() => {
 							showControls = !showControls;

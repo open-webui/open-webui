@@ -31,23 +31,21 @@
 </script>
 
 {#if largeScreen}
-	<div
-		class="fixed h-screen max-h-[100dvh] min-h-screen z-50 top-0 right-0 {show
-			? 'w-[28rem]'
-			: 'w-0 translate-x-[28rem] '} transition"
-	>
-		<div class="px-6 pt-14 pb-8 h-full">
-			<div
-				class=" px-5 py-4 h-full dark:bg-gray-850 border border-gray-100 dark:border-gray-800 rounded-xl shadow-lg"
-			>
-				<Controls
-					on:close={() => {
-						show = false;
-					}}
-				/>
+	{#if show}
+		<div class=" absolute bottom-0 right-0 z-20 h-full pointer-events-none">
+			<div class="pr-4 pt-14 pb-8 w-[24rem] h-full" in:slide={{ duration: 200, axis: 'x' }}>
+				<div
+					class="w-full h-full px-5 py-4 dark:bg-gray-850 border border-gray-100 dark:border-gray-800 rounded-xl shadow-lg z-50 pointer-events-auto"
+				>
+					<Controls
+						on:close={() => {
+							show = false;
+						}}
+					/>
+				</div>
 			</div>
 		</div>
-	</div>
+	{/if}
 {:else}
 	<Modal bind:show>
 		<div class="  px-5 py-4 h-full">

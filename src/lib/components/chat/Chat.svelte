@@ -1460,11 +1460,9 @@
 			</div>
 		{/if}
 
-		<div class="flex flex-col flex-auto z-10">
+		<div class="flex flex-col flex-auto z-10 {showControls ? 'lg:pr-[24rem]' : ''}">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden {showControls
-					? 'lg:pr-[28rem]'
-					: ''} "
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 				id="messages-container"
 				bind:this={messagesContainerElement}
 				on:scroll={(e) => {
@@ -1490,7 +1488,7 @@
 				</div>
 			</div>
 
-			<div class={showControls ? 'lg:pr-[28rem]' : ''}>
+			<div class="">
 				<MessageInput
 					bind:files
 					bind:prompt
@@ -1513,7 +1511,6 @@
 				/>
 			</div>
 		</div>
-
 		<ChatControls bind:show={showControls} />
 	</div>
 {/if}

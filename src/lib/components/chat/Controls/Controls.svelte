@@ -7,7 +7,7 @@
 
 <div class=" dark:text-white">
 	<div class="mb-2 flex justify-between items-center">
-		<div class=" text-xl font-medium font-primary">Chat Controls</div>
+		<div class=" text-lg font-medium font-primary">Chat Controls</div>
 
 		<div>
 			<button
