@@ -1,13 +1,17 @@
 <script lang="ts">
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import { fade } from 'svelte/transition';
+	const i18n = getContext('i18n');
 
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	const dispatch = createEventDispatcher();
 
-	export let title = 'Confirm your action';
-	export let message = 'This action cannot be undone. Do you wish to continue?';
+	export let title = $i18n.t('Confirm your action');
+	export let message = $i18n.t('This action cannot be undone. Do you wish to continue?');
+
+	export let cancelLabel = $i18n.t('Cancel');
+	export let confirmLabel = $i18n.t('Confirm');
 
 	export let show = false;
 	let modalElement = null;
@@ -70,7 +74,7 @@
 						}}
 						type="button"
 					>
-						Cancel
+						{cancelLabel}
 					</button>
 					<button
 						class="bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2.5 rounded-lg transition"
@@ -80,7 +84,7 @@
 						}}
 						type="button"
 					>
-						Confirm
+						{confirmLabel}
 					</button>
 				</div>
 			</div>

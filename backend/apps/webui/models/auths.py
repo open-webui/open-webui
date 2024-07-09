@@ -105,6 +105,7 @@ class AuthsTable:
         name: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
+        oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         log.info("insert_new_auth")
 
@@ -115,7 +116,9 @@ class AuthsTable:
         )
         result = Auth.create(**auth.model_dump())
 
-        user = Users.insert_new_user(id, name, email, profile_image_url, role)
+        user = Users.insert_new_user(
+            id, name, email, profile_image_url, role, oauth_sub
+        )
 
         if result and user:
             return user

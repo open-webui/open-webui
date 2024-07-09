@@ -10,11 +10,12 @@
 	import { python } from '@codemirror/lang-python';
 	import { oneDark } from '@codemirror/theme-one-dark';
 
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount, createEventDispatcher, getContext } from 'svelte';
 	import { formatPythonCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
 
 	const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
 
 	export let boilerplate = '';
 	export let value = '';
@@ -37,7 +38,7 @@
 					changes: [{ from: 0, to: codeEditor.state.doc.length, insert: formattedCode }]
 				});
 
-				toast.success('Code formatted successfully');
+				toast.success($i18n.t('Code formatted successfully'));
 				return true;
 			}
 			return false;

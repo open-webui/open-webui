@@ -2,7 +2,9 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { settings, user, config, models, tools } from '$lib/stores';
+	import { settings, user, config, models, tools, functions } from '$lib/stores';
+
+	import TurndownService from 'turndown';
 
 	import { onMount, tick, getContext } from 'svelte';
 	import { addNewModel, getModelById, getModelInfos } from '$lib/apis/models';
@@ -14,6 +16,8 @@
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 	import { stringify } from 'postcss';
+	import { parseFile } from '$lib/utils/characters';
+	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -58,9 +62,13 @@
 
 	let toolIds = [];
 	let knowledge = [];
+	let filterIds = [];
 
 	$: if (name) {
-		id = name.replace(/\s+/g, '-').toLowerCase();
+		id = name
+			.replace(/\s+/g, '-')
+			.replace(/[^a-zA-Z0-9-]/g, '')
+			.toLowerCase();
 	}
 
 	const addUsage = (base_model_id) => {
@@ -99,6 +107,14 @@
 			}
 		}
 
+		if (filterIds.length > 0) {
+			info.meta.filterIds = filterIds;
+		} else {
+			if (info.meta.filterIds) {
+				delete info.meta.filterIds;
+			}
+		}
+
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
@@ -130,7 +146,7 @@
 
 			if (res) {
 				await models.set(await getModels(localStorage.token));
-				toast.success('Model created successfully!');
+				toast.success($i18n.t('Model created successfully!'));
 				await goto('/workspace/models');
 			}
 		}
@@ -166,6 +182,10 @@
 
 		capabilities = { ...capabilities, ...(model?.info?.meta?.capabilities ?? {}) };
 		toolIds = model?.info?.meta?.toolIds ?? [];
+
+		if (model?.info?.meta?.filterIds) {
+			filterIds = [...model?.info?.meta?.filterIds];
+		}
 
 		info = {
 			...info,
@@ -213,8 +233,35 @@
 		accept="image/*"
 		on:change={() => {
 			let reader = new FileReader();
-			reader.onload = (event) => {
+			reader.onload = async (event) => {
 				let originalImageUrl = `${event.target.result}`;
+
+				let character = await parseFile(inputFiles[0]).catch((error) => {
+					return null;
+				});
+
+				console.log(character);
+
+				if (character && character.character) {
+					character = character.character;
+					console.log(character);
+
+					name = character.name;
+
+					const pattern = /<\/?[a-z][\s\S]*>/i;
+					if (character.summary.match(pattern)) {
+						const turndownService = new TurndownService();
+						info.meta.description = turndownService.turndown(character.summary);
+					} else {
+						info.meta.description = character.summary;
+					}
+
+					info.params.system = `Personality: ${character.personality}${
+						character?.scenario ? `\nScenario: ${character.scenario}` : ''
+					}${character?.greeting ? `\First Message: ${character.greeting}` : ''}${
+						character?.examples ? `\nExamples: ${character.examples}` : ''
+					}`;
+				}
 
 				const img = new Image();
 				img.src = originalImageUrl;
@@ -229,20 +276,20 @@
 					// Calculate the new width and height to fit within 100x100
 					let newWidth, newHeight;
 					if (aspectRatio > 1) {
-						newWidth = 100 * aspectRatio;
-						newHeight = 100;
+						newWidth = 250 * aspectRatio;
+						newHeight = 250;
 					} else {
-						newWidth = 100;
-						newHeight = 100 / aspectRatio;
+						newWidth = 250;
+						newHeight = 250 / aspectRatio;
 					}
 
 					// Set the canvas size
-					canvas.width = 100;
-					canvas.height = 100;
+					canvas.width = 250;
+					canvas.height = 250;
 
 					// Calculate the position to center the image
-					const offsetX = (100 - newWidth) / 2;
-					const offsetY = (100 - newHeight) / 2;
+					const offsetX = (250 - newWidth) / 2;
+					const offsetY = (250 - newHeight) / 2;
 
 					// Draw the image on the canvas
 					ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
@@ -408,10 +455,11 @@
 			</div>
 
 			{#if info.meta.description !== null}
-				<input
+				<textarea
 					class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg"
 					placeholder={$i18n.t('Add a short description about what this model does')}
 					bind:value={info.meta.description}
+					row="3"
 				/>
 			{/if}
 		</div>
@@ -568,6 +616,13 @@
 
 		<div class="my-2">
 			<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+		</div>
+
+		<div class="my-2">
+			<FiltersSelector
+				bind:selectedFilterIds={filterIds}
+				filters={$functions.filter((func) => func.type === 'filter')}
+			/>
 		</div>
 
 		<div class="my-1">
