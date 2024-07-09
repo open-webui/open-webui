@@ -10,15 +10,11 @@
 <link rel="stylesheet" href="https://model.earth/localsite/css/base.css" id="/localsite/css/base.css" />
 <script type="text/javascript" src="https://model.earth/localsite/js/localsite.js?showheader=true"></script>
 
-<!--
-TO DO: Update our Readme to one that supports [NOTE], [WARNING], [TIP]
--->
-
 <base href="../">
 <script>
 if(typeof param=='undefined'){ var param={}; }
 // From root since base href is set to ../ above
-loadMarkdown("location/README.md", "locationDiv", "_parent");
+loadMarkdown("src/README.md", "locationDiv", "_parent");
 loadMarkdown("README.md", "readmeDiv", "_parent");
 //loadMarkdown("README-better-layout.md", "readmeDiv", "_parent");
 </script>
@@ -37,8 +33,8 @@ img {
 <body>
 
 <div class="content contentpadding">
-  <a href="./">Active Projects</a> - 
-  <a href="https://github.com/modelearth/projects/">Our GitHub Fork</a>
+  <a href="./">Active Projects</a>
+  <a href="https://github.com/modelearth/projects/" style="float:right">Our GitHub Fork</a>
 
   <div id="locationDiv"></div>
   <hr>
