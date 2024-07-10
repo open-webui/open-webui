@@ -595,7 +595,7 @@ async def update_query_settings(
     app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )
-    app.state.config.ENABLE_RAG = form_data.enableBase64 if form_data.enableBase64 else False
+    app.state.config.ENABLE_BASE64 = form_data.enableBase64 if form_data.enableBase64 else False
     return {
         "status": True,
         "template": app.state.config.RAG_TEMPLATE,
