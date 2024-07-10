@@ -573,6 +573,7 @@ async def get_query_settings(user=Depends(get_admin_user)):
         "k": app.state.config.TOP_K,
         "r": app.state.config.RELEVANCE_THRESHOLD,
         "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        "enableBase64": app.state.config.ENABLE_BASE64,
     }
 
 
@@ -1242,9 +1243,8 @@ def process_doc(
         loader, known_type = get_loader(
             file.filename, file.meta.get("content_type"), file_path
         )
-        data = loader.load()
-
         try:
+            data = loader.load()
             if not app.state.config.ENABLE_BASE64:
                 result = store_data_in_vector_db(data, collection_name)
 
