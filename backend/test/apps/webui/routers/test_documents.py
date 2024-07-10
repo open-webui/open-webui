@@ -116,9 +116,7 @@ class TestDocuments(AbstractPostgresTest):
 
         # Download the first document
         with mock_webui_user(id="2"):
-            response = self.fast_api_client.get(
-                f"/api/v1/files/{file_id}/content"
-            )
+            response = self.fast_api_client.get(f"/api/v1/files/{file_id}/content")
         assert response.status_code == 200
         assert response.content == b"test"
 

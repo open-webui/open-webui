@@ -64,7 +64,7 @@
 				res.filename,
 				transformFileName(res.filename),
 				res.filename,
-				{"file_id": res.file_id}
+				{ file_id: res.file_id }
 			).catch((error) => {
 				toast.error(error);
 				return null;
@@ -447,7 +447,7 @@
 					<a
 						href="{WEBUI_API_BASE_URL}/files/{doc.content.file_id}/content"
 						target="_blank"
-						download="{doc.filename}"
+						download={doc.filename}
 						class="self-center w-fit text-sm z-20 px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl download-document"
 						type="button"
 						on:click={() => {
