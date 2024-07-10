@@ -338,7 +338,7 @@
 						return sendPrompt(prompt, userMessageId, null, citations);
 					}))
 
-					if (!history.messages[userMessageId].childrenIds?.length) {
+					if (!history.messages[userMessageId]?.childrenIds?.length) {
 						await addNotFoundResponseMessage(userMessageId)
 					}
 				}
@@ -754,14 +754,20 @@
 							break;
 						}
 						if (done || stopResponseFlag || _chatId !== $chatId) {
-							if ($chatType === 'chat_embedding' && responseMessage.content.includes('Đoạn văn này không có nội dung bạn muốn tìm')) {
-								delete history.messages[responseMessageId];
-								if (responseMessage.parentId !== null) {
+							if (
+								$chatType === 'chat_embedding' &&
+								responseMessage.content.includes('Đoạn văn này không có nội dung bạn muốn tìm')
+							) {
+								if (responseMessage.parentId && history.messages[responseMessage.parentId]?.childrenIds.length > 1) {
+									delete history.messages[responseMessageId];
 									history.messages[responseMessage.parentId].childrenIds = history.messages[responseMessage.parentId].childrenIds.filter(_id => _id !== responseMessageId);
-									history.currentId = history.messages[responseMessage.parentId].childrenIds[history.messages[responseMessage.parentId].childrenIds.length - 1]
+									const l = history.messages[responseMessage.parentId].childrenIds.length;
+									history.currentId = history.messages[responseMessage.parentId].childrenIds[l - 1]
+									messages = messages;
+									break
+								} else {
+									responseMessage.content = 'Không có dữ liệu nào liên quan câu hỏi này.'
 								}
-								messages = messages;
-								break
 							}
 
 							// responseMessage.done = true;
