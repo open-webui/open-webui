@@ -316,7 +316,7 @@
 	</div>
 {/if}
 
-<div class="w-full">
+<div class="w-full font-primary">
 	<div class=" -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
 		<div class="flex flex-col max-w-6xl px-2.5 md:px-6 w-full">
 			<div class="relative">

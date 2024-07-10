@@ -22,6 +22,7 @@ export const theme = writable('system');
 export const chatId = writable('');
 
 export const chats = writable([]);
+export const pinnedChats = writable([]);
 export const tags = writable([]);
 
 export const models: Writable<Model[]> = writable([]);

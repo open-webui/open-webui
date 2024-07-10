@@ -37,6 +37,10 @@
 	let embeddingModel = '';
 	let rerankingModel = '';
 
+	let contentExtractionEngine = 'default';
+	let tikaServerUrl = '';
+	let showTikaServerUrl = false;
+
 	let chunkSize = 0;
 	let chunkOverlap = 0;
 	let pdfExtractImages = true;
@@ -163,11 +167,20 @@
 			rerankingModelUpdateHandler();
 		}
 
+		if (contentExtractionEngine === 'tika' && tikaServerUrl === '') {
+			toast.error($i18n.t('Tika Server URL required.'));
+			return;
+		}
+
 		const res = await updateRAGConfig(localStorage.token, {
 			pdf_extract_images: pdfExtractImages,
 			chunk: {
 				chunk_overlap: chunkOverlap,
 				chunk_size: chunkSize
+			},
+			content_extraction: {
+				engine: contentExtractionEngine,
+				tika_server_url: tikaServerUrl
 			}
 		});
 
@@ -213,6 +226,10 @@
 
 			chunkSize = res.chunk.chunk_size;
 			chunkOverlap = res.chunk.chunk_overlap;
+
+			contentExtractionEngine = res.content_extraction.engine;
+			tikaServerUrl = res.content_extraction.tika_server_url;
+			showTikaServerUrl = contentExtractionEngine === 'tika';
 		}
 	});
 </script>
@@ -262,7 +279,7 @@
 				</div>
 
 				<button
-					class=" self-center text-xs p-1 px-3 bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg flex flex-row space-x-1 items-center {scanDirLoading
+					class=" self-center text-xs p-1 px-3 bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg flex flex-row space-x-1 items-center {scanDirLoading
 						? ' cursor-not-allowed'
 						: ''}"
 					on:click={() => {
@@ -335,7 +352,7 @@
 			{#if embeddingEngine === 'openai'}
 				<div class="my-0.5 flex gap-2">
 					<input
-						class="flex-1 w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 						placeholder={$i18n.t('API Base URL')}
 						bind:value={OpenAIUrl}
 						required
@@ -388,7 +405,7 @@
 			</div>
 		</div>
 
-		<hr class=" dark:border-gray-850 my-1" />
+		<hr class="dark:border-gray-850" />
 
 		<div class="space-y-2" />
 		<div>
@@ -398,7 +415,7 @@
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<select
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							bind:value={embeddingModel}
 							placeholder={$i18n.t('Select a model')}
 							required
@@ -407,7 +424,7 @@
 								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 							{/if}
 							{#each $models.filter((m) => m.id && m.ollama && !(m?.preset ?? false)) as model}
-								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option>
+								<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
 							{/each}
 						</select>
 					</div>
@@ -416,7 +433,7 @@
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							placeholder={$i18n.t('Set embedding model (e.g. {{model}})', {
 								model: embeddingModel.slice(-40)
 							})}
@@ -426,7 +443,7 @@
 
 					{#if embeddingEngine === ''}
 						<button
-							class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+							class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 							on:click={() => {
 								embeddingModelUpdateHandler();
 							}}
@@ -495,7 +512,7 @@
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 								placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
 									model: 'BAAI/bge-reranker-v2-m3'
 								})}
@@ -503,7 +520,7 @@
 							/>
 						</div>
 						<button
-							class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+							class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 							on:click={() => {
 								rerankingModelUpdateHandler();
 							}}
@@ -562,6 +579,39 @@
 
 		<hr class=" dark:border-gray-850" />
 
+		<div class="">
+			<div class="text-sm font-medium">{$i18n.t('Content Extraction')}</div>
+
+			<div class="flex w-full justify-between mt-2">
+				<div class="self-center text-xs font-medium">{$i18n.t('Engine')}</div>
+				<div class="flex items-center relative">
+					<select
+						class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+						bind:value={contentExtractionEngine}
+						on:change={(e) => {
+							showTikaServerUrl = e.target.value === 'tika';
+						}}
+					>
+						<option value="">{$i18n.t('Default')} </option>
+						<option value="tika">{$i18n.t('Tika')}</option>
+					</select>
+				</div>
+			</div>
+
+			{#if showTikaServerUrl}
+				<div class="flex w-full mt-2">
+					<div class="flex-1 mr-2">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							placeholder={$i18n.t('Enter Tika Server URL')}
+							bind:value={tikaServerUrl}
+						/>
+					</div>
+				</div>
+			{/if}
+		</div>
+		<hr class=" dark:border-gray-850" />
+
 		<div class=" ">
 			<div class=" text-sm font-medium">{$i18n.t('Query Params')}</div>
 
@@ -571,7 +621,7 @@
 
 					<div class="self-center p-3">
 						<input
-							class=" w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="number"
 							placeholder={$i18n.t('Enter Top K')}
 							bind:value={querySettings.k}
@@ -589,7 +639,7 @@
 
 						<div class="self-center p-3">
 							<input
-								class=" w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 								type="number"
 								step="0.01"
 								placeholder={$i18n.t('Enter Score')}
@@ -617,7 +667,7 @@
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('RAG Template')}</div>
 				<textarea
 					bind:value={querySettings.template}
-					class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+					class="w-full rounded-lg px-4 py-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
 					rows="4"
 				/>
 			</div>
@@ -633,7 +683,7 @@
 					<div class="self-center text-xs font-medium min-w-fit mb-1">{$i18n.t('Chunk Size')}</div>
 					<div class="self-center">
 						<input
-							class=" w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="number"
 							placeholder={$i18n.t('Enter Chunk Size')}
 							bind:value={chunkSize}
@@ -650,7 +700,7 @@
 
 					<div class="self-center">
 						<input
-							class="w-full rounded-lg py-1.5 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="number"
 							placeholder={$i18n.t('Enter Chunk Overlap')}
 							bind:value={chunkOverlap}

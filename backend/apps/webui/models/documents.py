@@ -1,14 +1,11 @@
-from pydantic import BaseModel
-from peewee import *
-from playhouse.shortcuts import model_to_dict
-from typing import List, Union, Optional
+from pydantic import BaseModel, ConfigDict
+from typing import List, Optional
 import time
 import logging
 
-from utils.utils import decode_token
-from utils.misc import get_gravatar_url
+from sqlalchemy import String, Column, BigInteger, Text
 
-from apps.webui.internal.db import DB
+from apps.webui.internal.db import Base, get_db
 
 import json
 
@@ -22,20 +19,21 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 ####################
 
 
-class Document(Model):
-    collection_name = CharField(unique=True)
-    name = CharField(unique=True)
-    title = TextField()
-    filename = TextField()
-    content = TextField(null=True)
-    user_id = CharField()
-    timestamp = BigIntegerField()
+class Document(Base):
+    __tablename__ = "document"
 
-    class Meta:
-        database = DB
+    collection_name = Column(String, primary_key=True)
+    name = Column(String, unique=True)
+    title = Column(Text)
+    filename = Column(Text)
+    content = Column(Text, nullable=True)
+    user_id = Column(String)
+    timestamp = Column(BigInteger)
 
 
 class DocumentModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     collection_name: str
     name: str
     title: str
@@ -72,57 +70,63 @@ class DocumentForm(DocumentUpdateForm):
 
 
 class DocumentsTable:
-    def __init__(self, db):
-        self.db = db
-        self.db.create_tables([Document])
 
     def insert_new_doc(
         self, user_id: str, form_data: DocumentForm
     ) -> Optional[DocumentModel]:
-        document = DocumentModel(
-            **{
-                **form_data.model_dump(),
-                "user_id": user_id,
-                "timestamp": int(time.time()),
-            }
-        )
+        with get_db() as db:
 
-        try:
-            result = Document.create(**document.model_dump())
-            if result:
-                return document
-            else:
+            document = DocumentModel(
+                **{
+                    **form_data.model_dump(),
+                    "user_id": user_id,
+                    "timestamp": int(time.time()),
+                }
+            )
+
+            try:
+                result = Document(**document.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return DocumentModel.model_validate(result)
+                else:
+                    return None
+            except:
                 return None
-        except:
-            return None
 
     def get_doc_by_name(self, name: str) -> Optional[DocumentModel]:
         try:
-            document = Document.get(Document.name == name)
-            return DocumentModel(**model_to_dict(document))
+            with get_db() as db:
+
+                document = db.query(Document).filter_by(name=name).first()
+                return DocumentModel.model_validate(document) if document else None
         except:
             return None
 
     def get_docs(self) -> List[DocumentModel]:
-        return [
-            DocumentModel(**model_to_dict(doc))
-            for doc in Document.select()
-            # .limit(limit).offset(skip)
-        ]
+        with get_db() as db:
+
+            return [
+                DocumentModel.model_validate(doc) for doc in db.query(Document).all()
+            ]
 
     def update_doc_by_name(
         self, name: str, form_data: DocumentUpdateForm
     ) -> Optional[DocumentModel]:
         try:
-            query = Document.update(
-                title=form_data.title,
-                name=form_data.name,
-                timestamp=int(time.time()),
-            ).where(Document.name == name)
-            query.execute()
+            with get_db() as db:
 
-            doc = Document.get(Document.name == form_data.name)
-            return DocumentModel(**model_to_dict(doc))
+                db.query(Document).filter_by(name=name).update(
+                    {
+                        "title": form_data.title,
+                        "name": form_data.name,
+                        "timestamp": int(time.time()),
+                    }
+                )
+                db.commit()
+                return self.get_doc_by_name(form_data.name)
         except Exception as e:
             log.exception(e)
             return None
@@ -135,26 +139,29 @@ class DocumentsTable:
             doc_content = json.loads(doc.content if doc.content else "{}")
             doc_content = {**doc_content, **updated}
 
-            query = Document.update(
-                content=json.dumps(doc_content),
-                timestamp=int(time.time()),
-            ).where(Document.name == name)
-            query.execute()
+            with get_db() as db:
 
-            doc = Document.get(Document.name == name)
-            return DocumentModel(**model_to_dict(doc))
+                db.query(Document).filter_by(name=name).update(
+                    {
+                        "content": json.dumps(doc_content),
+                        "timestamp": int(time.time()),
+                    }
+                )
+                db.commit()
+                return self.get_doc_by_name(name)
         except Exception as e:
             log.exception(e)
             return None
 
     def delete_doc_by_name(self, name: str) -> bool:
         try:
-            query = Document.delete().where((Document.name == name))
-            query.execute()  # Remove the rows, return number of rows removed.
+            with get_db() as db:
 
-            return True
+                db.query(Document).filter_by(name=name).delete()
+                db.commit()
+                return True
         except:
             return False
 
 
-Documents = DocumentsTable(DB)
+Documents = DocumentsTable()

@@ -34,15 +34,7 @@
 	}
 </script>
 
-<style>
-    .max-w-fit {
-        max-width: -moz-fit-content;
-        max-width: fit-content;
-        margin-right: auto;
-    }
-</style>
-
-<div class="flex flex-col w-full items-center md:items-start">
+<div class="flex flex-col w-full items-start">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">
@@ -111,7 +103,7 @@
 </div>
 
 {#if showSetDefault && !$mobile}
-	<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500">
+	<div class="text-left mt-0.5 ml-1 text-[0.7rem] text-gray-500 font-primary">
 		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
 {/if}

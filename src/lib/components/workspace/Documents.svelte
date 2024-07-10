@@ -407,7 +407,7 @@
 						{/if}
 					</div>
 					<div class=" self-center flex-1">
-						<div class=" font-bold line-clamp-1">#{doc.name} ({doc.filename})</div>
+						<div class=" font-semibold line-clamp-1">#{doc.name} ({doc.filename})</div>
 						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 							{doc.title}
 						</div>
