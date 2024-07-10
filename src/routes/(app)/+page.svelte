@@ -764,10 +764,10 @@
 									const l = history.messages[responseMessage.parentId].childrenIds.length;
 									history.currentId = history.messages[responseMessage.parentId].childrenIds[l - 1]
 									messages = messages;
-									break
 								} else {
 									responseMessage.content = 'Không có dữ liệu nào liên quan câu hỏi này.'
 								}
+								break
 							}
 
 							// responseMessage.done = true;
