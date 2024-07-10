@@ -11,9 +11,10 @@
 		cloneChatById,
 		deleteChatById,
 		getChatList,
+		getChatListByTagName,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { chatId, chats, mobile, showSidebar } from '$lib/stores';
+	import { chatId, chats, mobile, pinnedChats, showSidebar } from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
@@ -40,6 +41,7 @@
 				title: _title
 			});
 			await chats.set(await getChatList(localStorage.token));
+			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
 
@@ -52,12 +54,14 @@
 		if (res) {
 			goto(`/c/${res.id}`);
 			await chats.set(await getChatList(localStorage.token));
+			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
 
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
 		await chats.set(await getChatList(localStorage.token));
+		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 	};
 
 	const focusEdit = async (node: HTMLInputElement) => {
@@ -126,7 +130,7 @@
 			: selected
 			? 'from-gray-100 dark:from-gray-950'
 			: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
-            absolute right-[10px] top-[10px] pr-2 pl-5 bg-gradient-to-l from-80%
+            absolute right-[10px] top-[6px] py-1 pr-2 pl-5 bg-gradient-to-l from-80%
 
               to-transparent"
 		on:mouseenter={(e) => {
@@ -138,7 +142,7 @@
 	>
 		{#if confirmEdit}
 			<div class="flex self-center space-x-1.5 z-10">
-				<Tooltip content="Confirm">
+				<Tooltip content={$i18n.t('Confirm')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
@@ -162,7 +166,7 @@
 					</button>
 				</Tooltip>
 
-				<Tooltip content="Cancel">
+				<Tooltip content={$i18n.t('Cancel')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
@@ -185,7 +189,7 @@
 			</div>
 		{:else if shiftKey && mouseOver}
 			<div class=" flex items-center self-center space-x-1.5">
-				<Tooltip content="Archive" className="flex items-center">
+				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
@@ -197,7 +201,7 @@
 					</button>
 				</Tooltip>
 
-				<Tooltip content="Delete">
+				<Tooltip content={$i18n.t('Delete')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
 						on:click={() => {
@@ -232,6 +236,9 @@
 					}}
 					onClose={() => {
 						dispatch('unselect');
+					}}
+					on:change={async () => {
+						await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 					}}
 				>
 					<button

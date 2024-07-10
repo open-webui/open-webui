@@ -7,6 +7,7 @@
 #   all-features: false
 #   with-sources: false
 #   generate-hashes: false
+#   universal: false
 
 -e file:.
 aiohttp==3.9.5
@@ -31,6 +32,8 @@ asgiref==3.8.1
     # via opentelemetry-instrumentation-asgi
 attrs==23.2.0
     # via aiohttp
+authlib==1.3.1
+    # via open-webui
 av==11.0.0
     # via faster-whisper
 backoff==2.2.1
@@ -93,6 +96,7 @@ coloredlogs==15.0.1
 compressed-rtf==1.0.6
     # via extract-msg
 cryptography==42.0.7
+    # via authlib
     # via msoffcrypto-tool
     # via pyjwt
 ctranslate2==4.2.1

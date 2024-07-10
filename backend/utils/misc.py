@@ -3,17 +3,27 @@ import hashlib
 import json
 import re
 from datetime import timedelta
-from typing import Optional, List
+from typing import Optional, List, Tuple
+import uuid
+import time
+
+
+def get_last_user_message_item(messages: List[dict]) -> str:
+    for message in reversed(messages):
+        if message["role"] == "user":
+            return message
+    return None
 
 
 def get_last_user_message(messages: List[dict]) -> str:
-    for message in reversed(messages):
-        if message["role"] == "user":
-            if isinstance(message["content"], list):
-                for item in message["content"]:
-                    if item["type"] == "text":
-                        return item["text"]
-            return message["content"]
+    message = get_last_user_message_item(messages)
+
+    if message is not None:
+        if isinstance(message["content"], list):
+            for item in message["content"]:
+                if item["type"] == "text":
+                    return item["text"]
+        return message["content"]
     return None
 
 
@@ -26,6 +36,21 @@ def get_last_assistant_message(messages: List[dict]) -> str:
                         return item["text"]
             return message["content"]
     return None
+
+
+def get_system_message(messages: List[dict]) -> dict:
+    for message in messages:
+        if message["role"] == "system":
+            return message
+    return None
+
+
+def remove_system_message(messages: List[dict]) -> List[dict]:
+    return [message for message in messages if message["role"] != "system"]
+
+
+def pop_system_message(messages: List[dict]) -> Tuple[dict, List[dict]]:
+    return get_system_message(messages), remove_system_message(messages)
 
 
 def add_or_update_system_message(content: str, messages: List[dict]):
@@ -45,6 +70,23 @@ def add_or_update_system_message(content: str, messages: List[dict]):
         messages.insert(0, {"role": "system", "content": content})
 
     return messages
+
+
+def stream_message_template(model: str, message: str):
+    return {
+        "id": f"{model}-{str(uuid.uuid4())}",
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [
+            {
+                "index": 0,
+                "delta": {"content": message},
+                "logprobs": None,
+                "finish_reason": None,
+            }
+        ],
+    }
 
 
 def get_gravatar_url(email):

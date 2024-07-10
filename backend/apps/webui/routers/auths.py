@@ -2,13 +2,13 @@ import logging
 
 from fastapi import Request, UploadFile, File
 from fastapi import Depends, HTTPException, status
+from fastapi.responses import Response
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 import re
 import uuid
 import csv
-
 
 from apps.webui.models.auths import (
     SigninForm,
@@ -47,7 +47,21 @@ router = APIRouter()
 
 
 @router.get("/", response_model=UserResponse)
-async def get_session_user(user=Depends(get_current_user)):
+async def get_session_user(
+    request: Request, response: Response, user=Depends(get_current_user)
+):
+    token = create_token(
+        data={"id": user.id},
+        expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
+    )
+
+    # Set the cookie token
+    response.set_cookie(
+        key="token",
+        value=token,
+        httponly=True,  # Ensures the cookie is not accessible via JavaScript
+    )
+
     return {
         "id": user.id,
         "email": user.email,
@@ -108,7 +122,7 @@ async def update_password(
 
 
 @router.post("/signin", response_model=SigninResponse)
-async def signin(request: Request, form_data: SigninForm):
+async def signin(request: Request, response: Response, form_data: SigninForm):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
@@ -122,6 +136,7 @@ async def signin(request: Request, form_data: SigninForm):
         if not Users.get_user_by_email(trusted_email.lower()):
             await signup(
                 request,
+                response,
                 SignupForm(
                     email=trusted_email, password=str(uuid.uuid4()), name=trusted_name
                 ),
@@ -139,6 +154,7 @@ async def signin(request: Request, form_data: SigninForm):
 
             await signup(
                 request,
+                response,
                 SignupForm(email=admin_email, password=admin_password, name="User"),
             )
 
@@ -150,6 +166,13 @@ async def signin(request: Request, form_data: SigninForm):
         token = create_token(
             data={"id": user.id},
             expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
+        )
+
+        # Set the cookie token
+        response.set_cookie(
+            key="token",
+            value=token,
+            httponly=True,  # Ensures the cookie is not accessible via JavaScript
         )
 
         return {
@@ -171,7 +194,7 @@ async def signin(request: Request, form_data: SigninForm):
 
 
 @router.post("/signup", response_model=SigninResponse)
-async def signup(request: Request, form_data: SignupForm):
+async def signup(request: Request, response: Response, form_data: SignupForm):
     if not request.app.state.config.ENABLE_SIGNUP and WEBUI_AUTH:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
@@ -206,6 +229,13 @@ async def signup(request: Request, form_data: SignupForm):
                 expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
             )
             # response.set_cookie(key='token', value=token, httponly=True)
+
+            # Set the cookie token
+            response.set_cookie(
+                key="token",
+                value=token,
+                httponly=True,  # Ensures the cookie is not accessible via JavaScript
+            )
 
             if request.app.state.config.WEBHOOK_URL:
                 post_webhook(

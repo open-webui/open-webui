@@ -31,7 +31,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="  pr-1.5 overflow-y-scroll max-h-[25rem]">
+	<div class="  pr-1.5 py-1 overflow-y-scroll max-h-[25rem]">
 		<div>
 			<div class="flex items-center justify-between mb-1">
 				<Tooltip
@@ -46,7 +46,7 @@
 					</div>
 				</Tooltip>
 
-				<div class="mt-1">
+				<div class="">
 					<Switch
 						bind:state={enableMemory}
 						on:change={async () => {

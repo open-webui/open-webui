@@ -9,6 +9,7 @@
 
 	import Suggestions from '../MessageInput/Suggestions.svelte';
 	import { sanitizeResponseContent } from '$lib/utils';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -32,7 +33,7 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-6xl px-8 lg:px-24 pb-10">
+	<div class="m-auto w-full max-w-6xl px-8 lg:px-20 pb-10">
 		<div class="flex justify-start">
 			<div class="flex -space-x-4 mb-1" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
@@ -41,21 +42,30 @@
 							selectedModelIdx = modelIdx;
 						}}
 					>
-						<img
-							crossorigin="anonymous"
-							src={model?.info?.meta?.profile_image_url ??
-								($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
-							class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
-							alt="logo"
-							draggable="false"
-						/>
+						<Tooltip
+							content={marked.parse(
+								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
+							)}
+							placement="right"
+						>
+							<img
+								crossorigin="anonymous"
+								src={model?.info?.meta?.profile_image_url ??
+									($i18n.language === 'dg-DG'
+										? `/doge.png`
+										: `${WEBUI_BASE_URL}/static/favicon.png`)}
+								class=" size-[2.7rem] rounded-full border-[1px] border-gray-200 dark:border-none"
+								alt="logo"
+								draggable="false"
+							/>
+						</Tooltip>
 					</button>
 				{/each}
 			</div>
 		</div>
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4"
+			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-semibold text-left flex items-center gap-4 font-primary"
 		>
 			<div>
 				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
@@ -92,7 +102,7 @@
 							</div>
 						{/if}
 					{:else}
-						<div class=" font-medium text-gray-400 dark:text-gray-500 line-clamp-1">
+						<div class=" font-medium text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}
@@ -100,7 +110,7 @@
 			</div>
 		</div>
 
-		<div class=" w-full" in:fade={{ duration: 200, delay: 300 }}>
+		<div class=" w-full font-primary" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions
 				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config.default_prompt_suggestions}

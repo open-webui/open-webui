@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { models, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
+
 	const dispatch = createEventDispatcher();
 
 	import {
@@ -24,6 +25,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { getModels as _getModels } from '$lib/apis';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -198,7 +200,7 @@
 										<input
 											class="w-full rounded-lg py-2 px-4 {pipelineUrls[url]
 												? 'pr-8'
-												: ''} text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+												: ''} text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={url}
 											autocomplete="off"
@@ -228,14 +230,10 @@
 										{/if}
 									</div>
 
-									<div class="flex-1">
-										<input
-											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-											placeholder={$i18n.t('API Key')}
-											bind:value={OPENAI_API_KEYS[idx]}
-											autocomplete="off"
-										/>
-									</div>
+									<SensitiveInput
+										placeholder={$i18n.t('API Key')}
+										bind:value={OPENAI_API_KEYS[idx]}
+									/>
 									<div class="self-center flex items-center">
 										{#if idx === 0}
 											<button
@@ -340,7 +338,7 @@
 							{#each OLLAMA_BASE_URLS as url, idx}
 								<div class="flex gap-1.5">
 									<input
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
 										bind:value={url}
 									/>

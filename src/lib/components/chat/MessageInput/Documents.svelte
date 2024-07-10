@@ -43,11 +43,11 @@
 	];
 
 	$: filteredCollections = collections
-		.filter((collection) => collection.name.includes(prompt.split(' ')?.at(0)?.substring(1) ?? ''))
+		.filter((collection) => findByName(collection, prompt))
 		.sort((a, b) => a.name.localeCompare(b.name));
 
 	$: filteredDocs = $documents
-		.filter((doc) => doc.name.includes(prompt.split(' ')?.at(0)?.substring(1) ?? ''))
+		.filter((doc) => findByName(doc, prompt))
 		.sort((a, b) => a.title.localeCompare(b.title));
 
 	$: filteredItems = [...filteredCollections, ...filteredDocs];
@@ -57,6 +57,15 @@
 
 		console.log(filteredCollections);
 	}
+
+	type ObjectWithName = {
+		name: string;
+	};
+
+	const findByName = (obj: ObjectWithName, prompt: string) => {
+		const name = obj.name.toLowerCase();
+		return name.includes(prompt.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '');
+	};
 
 	export const selectUp = () => {
 		selectedIdx = Math.max(0, selectedIdx - 1);
@@ -101,7 +110,7 @@
 </script>
 
 {#if filteredItems.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
-	<div class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0">
+	<div class="pl-1 pr-12 mb-3 text-left w-full absolute bottom-0 left-0 right-0 z-10">
 		<div class="flex w-full dark:border dark:border-gray-850 rounded-lg">
 			<div class=" bg-gray-50 dark:bg-gray-850 w-10 rounded-l-lg text-center">
 				<div class=" text-lg font-semibold mt-2">#</div>
@@ -153,7 +162,7 @@
 									.substring(1)
 									.startsWith('https://youtu.be'))}
 						<button
-							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-100 selected-command-option-button"
+							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button"
 							type="button"
 							on:click={() => {
 								const url = prompt.split(' ')?.at(0)?.substring(1);
@@ -168,7 +177,7 @@
 								}
 							}}
 						>
-							<div class=" font-medium text-black line-clamp-1">
+							<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
 								{prompt.split(' ')?.at(0)?.substring(1)}
 							</div>
 
@@ -176,7 +185,7 @@
 						</button>
 					{:else if prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
 						<button
-							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-100 selected-command-option-button"
+							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button"
 							type="button"
 							on:click={() => {
 								const url = prompt.split(' ')?.at(0)?.substring(1);
@@ -191,7 +200,7 @@
 								}
 							}}
 						>
-							<div class=" font-medium text-black line-clamp-1">
+							<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
 								{prompt.split(' ')?.at(0)?.substring(1)}
 							</div>
 

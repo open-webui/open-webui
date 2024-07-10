@@ -48,12 +48,13 @@ import mimetypes
 import uuid
 import json
 
-import sentence_transformers
-
 from apps.webui.models.documents import (
     Documents,
     DocumentForm,
     DocumentResponse,
+)
+from apps.webui.models.files import (
+    Files,
 )
 
 from apps.rag.utils import (
@@ -74,6 +75,7 @@ from apps.rag.search.serpstack import search_serpstack
 from apps.rag.search.serply import search_serply
 from apps.rag.search.duckduckgo import search_duckduckgo
 from apps.rag.search.tavily import search_tavily
+from apps.rag.search.jina_search import search_jina
 
 from utils.misc import (
     calculate_sha256,
@@ -81,7 +83,7 @@ from utils.misc import (
     sanitize_filename,
     extract_folders_after_data_docs,
 )
-from utils.utils import get_current_user, get_admin_user
+from utils.utils import get_verified_user, get_admin_user
 
 from config import (
     AppConfig,
@@ -89,6 +91,8 @@ from config import (
     SRC_LOG_LEVELS,
     UPLOAD_DIR,
     DOCS_DIR,
+    CONTENT_EXTRACTION_ENGINE,
+    TIKA_SERVER_URL,
     RAG_TOP_K,
     RAG_RELEVANCE_THRESHOLD,
     RAG_EMBEDDING_ENGINE,
@@ -112,6 +116,7 @@ from config import (
     YOUTUBE_LOADER_LANGUAGE,
     ENABLE_RAG_WEB_SEARCH,
     RAG_WEB_SEARCH_ENGINE,
+    RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
     SEARXNG_QUERY_URL,
     GOOGLE_PSE_API_KEY,
     GOOGLE_PSE_ENGINE_ID,
@@ -143,6 +148,9 @@ app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
 )
 
+app.state.config.CONTENT_EXTRACTION_ENGINE = CONTENT_EXTRACTION_ENGINE
+app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
+
 app.state.config.CHUNK_SIZE = CHUNK_SIZE
 app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
 
@@ -165,6 +173,7 @@ app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
+app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
 
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
@@ -184,6 +193,8 @@ def update_embedding_model(
     update_model: bool = False,
 ):
     if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
+        import sentence_transformers
+
         app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
             get_model_path(embedding_model, update_model),
             device=DEVICE_TYPE,
@@ -198,6 +209,8 @@ def update_reranking_model(
     update_model: bool = False,
 ):
     if reranking_model:
+        import sentence_transformers
+
         app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
             get_model_path(reranking_model, update_model),
             device=DEVICE_TYPE,
@@ -382,6 +395,10 @@ async def get_rag_config(user=Depends(get_admin_user)):
     return {
         "status": True,
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
+        "content_extraction": {
+            "engine": app.state.config.CONTENT_EXTRACTION_ENGINE,
+            "tika_server_url": app.state.config.TIKA_SERVER_URL,
+        },
         "chunk": {
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
@@ -409,6 +426,11 @@ async def get_rag_config(user=Depends(get_admin_user)):
             },
         },
     }
+
+
+class ContentExtractionConfig(BaseModel):
+    engine: str = ""
+    tika_server_url: Optional[str] = None
 
 
 class ChunkParamUpdateForm(BaseModel):
@@ -444,6 +466,7 @@ class WebConfig(BaseModel):
 
 class ConfigUpdateForm(BaseModel):
     pdf_extract_images: Optional[bool] = None
+    content_extraction: Optional[ContentExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
     youtube: Optional[YoutubeLoaderConfig] = None
     web: Optional[WebConfig] = None
@@ -456,6 +479,11 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         if form_data.pdf_extract_images is not None
         else app.state.config.PDF_EXTRACT_IMAGES
     )
+
+    if form_data.content_extraction is not None:
+        log.info(f"Updating text settings: {form_data.content_extraction}")
+        app.state.config.CONTENT_EXTRACTION_ENGINE = form_data.content_extraction.engine
+        app.state.config.TIKA_SERVER_URL = form_data.content_extraction.tika_server_url
 
     if form_data.chunk is not None:
         app.state.config.CHUNK_SIZE = form_data.chunk.chunk_size
@@ -493,6 +521,10 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
     return {
         "status": True,
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
+        "content_extraction": {
+            "engine": app.state.config.CONTENT_EXTRACTION_ENGINE,
+            "tika_server_url": app.state.config.TIKA_SERVER_URL,
+        },
         "chunk": {
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
@@ -523,7 +555,7 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
 
 
 @app.get("/template")
-async def get_rag_template(user=Depends(get_current_user)):
+async def get_rag_template(user=Depends(get_verified_user)):
     return {
         "status": True,
         "template": app.state.config.RAG_TEMPLATE,
@@ -580,7 +612,7 @@ class QueryDocForm(BaseModel):
 @app.post("/query/doc")
 def query_doc_handler(
     form_data: QueryDocForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     try:
         if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
@@ -620,7 +652,7 @@ class QueryCollectionsForm(BaseModel):
 @app.post("/query/collection")
 def query_collection_handler(
     form_data: QueryCollectionsForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     try:
         if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
@@ -651,7 +683,7 @@ def query_collection_handler(
 
 
 @app.post("/youtube")
-def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
+def store_youtube_video(form_data: UrlForm, user=Depends(get_verified_user)):
     try:
         loader = YoutubeLoader.from_youtube_url(
             form_data.url,
@@ -680,7 +712,7 @@ def store_youtube_video(form_data: UrlForm, user=Depends(get_current_user)):
 
 
 @app.post("/web")
-def store_web(form_data: UrlForm, user=Depends(get_current_user)):
+def store_web(form_data: UrlForm, user=Depends(get_verified_user)):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
     try:
         loader = get_web_loader(
@@ -775,6 +807,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SEARXNG_QUERY_URL,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
@@ -788,6 +821,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.GOOGLE_PSE_ENGINE_ID,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception(
@@ -799,6 +833,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.BRAVE_SEARCH_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
@@ -808,6 +843,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPSTACK_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
                 https_enabled=app.state.config.SERPSTACK_HTTPS,
             )
         else:
@@ -818,6 +854,7 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPER_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SERPER_API_KEY found in environment variables")
@@ -827,11 +864,16 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
                 app.state.config.SERPLY_API_KEY,
                 query,
                 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
     elif engine == "duckduckgo":
-        return search_duckduckgo(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
+        return search_duckduckgo(
+            query,
+            app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     elif engine == "tavily":
         if app.state.config.TAVILY_API_KEY:
             return search_tavily(
@@ -841,12 +883,14 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No TAVILY_API_KEY found in environment variables")
+    elif engine == "jina":
+        return search_jina(query, app.state.config.RAG_WEB_SEARCH_RESULT_COUNT)
     else:
         raise Exception("No search engine API key found in environment variables")
 
 
 @app.post("/web/search")
-def store_web_search(form_data: SearchForm, user=Depends(get_current_user)):
+def store_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
     try:
         logging.info(
             f"trying to web search with {app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
@@ -960,11 +1004,47 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
 
         return True
     except Exception as e:
-        log.exception(e)
         if e.__class__.__name__ == "UniqueConstraintError":
             return True
 
+        log.exception(e)
+
         return False
+
+
+class TikaLoader:
+    def __init__(self, file_path, mime_type=None):
+        self.file_path = file_path
+        self.mime_type = mime_type
+
+    def load(self) -> List[Document]:
+        with open(self.file_path, "rb") as f:
+            data = f.read()
+
+        if self.mime_type is not None:
+            headers = {"Content-Type": self.mime_type}
+        else:
+            headers = {}
+
+        endpoint = app.state.config.TIKA_SERVER_URL
+        if not endpoint.endswith("/"):
+            endpoint += "/"
+        endpoint += "tika/text"
+
+        r = requests.put(endpoint, data=data, headers=headers)
+
+        if r.ok:
+            raw_metadata = r.json()
+            text = raw_metadata.get("X-TIKA:content", "<No text content found>")
+
+            if "Content-Type" in raw_metadata:
+                headers["Content-Type"] = raw_metadata["Content-Type"]
+
+            log.info("Tika extracted text: %s", text)
+
+            return [Document(page_content=text, metadata=headers)]
+        else:
+            raise Exception(f"Error calling Tika: {r.reason}")
 
 
 def get_loader(filename: str, file_content_type: str, file_path: str):
@@ -1017,47 +1097,58 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         "msg",
     ]
 
-    if file_ext == "pdf":
-        loader = PyPDFLoader(
-            file_path, extract_images=app.state.config.PDF_EXTRACT_IMAGES
-        )
-    elif file_ext == "csv":
-        loader = CSVLoader(file_path)
-    elif file_ext == "rst":
-        loader = UnstructuredRSTLoader(file_path, mode="elements")
-    elif file_ext == "xml":
-        loader = UnstructuredXMLLoader(file_path)
-    elif file_ext in ["htm", "html"]:
-        loader = BSHTMLLoader(file_path, open_encoding="unicode_escape")
-    elif file_ext == "md":
-        loader = UnstructuredMarkdownLoader(file_path)
-    elif file_content_type == "application/epub+zip":
-        loader = UnstructuredEPubLoader(file_path)
-    elif (
-        file_content_type
-        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        or file_ext in ["doc", "docx"]
+    if (
+        app.state.config.CONTENT_EXTRACTION_ENGINE == "tika"
+        and app.state.config.TIKA_SERVER_URL
     ):
-        loader = Docx2txtLoader(file_path)
-    elif file_content_type in [
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ] or file_ext in ["xls", "xlsx"]:
-        loader = UnstructuredExcelLoader(file_path)
-    elif file_content_type in [
-        "application/vnd.ms-powerpoint",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    ] or file_ext in ["ppt", "pptx"]:
-        loader = UnstructuredPowerPointLoader(file_path)
-    elif file_ext == "msg":
-        loader = OutlookMessageLoader(file_path)
-    elif file_ext in known_source_ext or (
-        file_content_type and file_content_type.find("text/") >= 0
-    ):
-        loader = TextLoader(file_path, autodetect_encoding=True)
+        if file_ext in known_source_ext or (
+            file_content_type and file_content_type.find("text/") >= 0
+        ):
+            loader = TextLoader(file_path, autodetect_encoding=True)
+        else:
+            loader = TikaLoader(file_path, file_content_type)
     else:
-        loader = TextLoader(file_path, autodetect_encoding=True)
-        known_type = False
+        if file_ext == "pdf":
+            loader = PyPDFLoader(
+                file_path, extract_images=app.state.config.PDF_EXTRACT_IMAGES
+            )
+        elif file_ext == "csv":
+            loader = CSVLoader(file_path)
+        elif file_ext == "rst":
+            loader = UnstructuredRSTLoader(file_path, mode="elements")
+        elif file_ext == "xml":
+            loader = UnstructuredXMLLoader(file_path)
+        elif file_ext in ["htm", "html"]:
+            loader = BSHTMLLoader(file_path, open_encoding="unicode_escape")
+        elif file_ext == "md":
+            loader = UnstructuredMarkdownLoader(file_path)
+        elif file_content_type == "application/epub+zip":
+            loader = UnstructuredEPubLoader(file_path)
+        elif (
+            file_content_type
+            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            or file_ext in ["doc", "docx"]
+        ):
+            loader = Docx2txtLoader(file_path)
+        elif file_content_type in [
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ] or file_ext in ["xls", "xlsx"]:
+            loader = UnstructuredExcelLoader(file_path)
+        elif file_content_type in [
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ] or file_ext in ["ppt", "pptx"]:
+            loader = UnstructuredPowerPointLoader(file_path)
+        elif file_ext == "msg":
+            loader = OutlookMessageLoader(file_path)
+        elif file_ext in known_source_ext or (
+            file_content_type and file_content_type.find("text/") >= 0
+        ):
+            loader = TextLoader(file_path, autodetect_encoding=True)
+        else:
+            loader = TextLoader(file_path, autodetect_encoding=True)
+            known_type = False
 
     return loader, known_type
 
@@ -1066,7 +1157,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
 def store_doc(
     collection_name: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
 
@@ -1119,6 +1210,60 @@ def store_doc(
             )
 
 
+class ProcessDocForm(BaseModel):
+    file_id: str
+    collection_name: Optional[str] = None
+
+
+@app.post("/process/doc")
+def process_doc(
+    form_data: ProcessDocForm,
+    user=Depends(get_verified_user),
+):
+    try:
+        file = Files.get_file_by_id(form_data.file_id)
+        file_path = file.meta.get("path", f"{UPLOAD_DIR}/{file.filename}")
+
+        f = open(file_path, "rb")
+
+        collection_name = form_data.collection_name
+        if collection_name == None:
+            collection_name = calculate_sha256(f)[:63]
+        f.close()
+
+        loader, known_type = get_loader(
+            file.filename, file.meta.get("content_type"), file_path
+        )
+        data = loader.load()
+
+        try:
+            result = store_data_in_vector_db(data, collection_name)
+
+            if result:
+                return {
+                    "status": True,
+                    "collection_name": collection_name,
+                    "known_type": known_type,
+                }
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=e,
+            )
+    except Exception as e:
+        log.exception(e)
+        if "No pandoc was found" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(e),
+            )
+
+
 class TextRAGForm(BaseModel):
     name: str
     content: str
@@ -1128,7 +1273,7 @@ class TextRAGForm(BaseModel):
 @app.post("/text")
 def store_text(
     form_data: TextRAGForm,
-    user=Depends(get_current_user),
+    user=Depends(get_verified_user),
 ):
 
     collection_name = form_data.collection_name

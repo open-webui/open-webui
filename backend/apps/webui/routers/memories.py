@@ -50,7 +50,9 @@ class MemoryUpdateModel(BaseModel):
 
 @router.post("/add", response_model=Optional[MemoryModel])
 async def add_memory(
-    request: Request, form_data: AddMemoryForm, user=Depends(get_verified_user)
+    request: Request,
+    form_data: AddMemoryForm,
+    user=Depends(get_verified_user),
 ):
     memory = Memories.insert_new_memory(user.id, form_data.content)
     memory_embedding = request.app.state.EMBEDDING_FUNCTION(memory.content)
@@ -101,6 +103,7 @@ async def update_memory_by_id(
 
 class QueryMemoryForm(BaseModel):
     content: str
+    k: Optional[int] = 1
 
 
 @router.post("/query")
@@ -112,7 +115,7 @@ async def query_memory(
 
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=1,  # how many results to return
+        n_results=form_data.k,  # how many results to return
     )
 
     return results

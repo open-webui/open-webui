@@ -407,7 +407,7 @@
 						{/if}
 					</div>
 					<div class=" self-center flex-1">
-						<div class=" font-bold line-clamp-1">#{doc.name} ({doc.filename})</div>
+						<div class=" font-semibold line-clamp-1">#{doc.name} ({doc.filename})</div>
 						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 							{doc.title}
 						</div>
@@ -538,7 +538,9 @@
 				documentsImportInputElement.click();
 			}}
 		>
-			<div class=" self-center mr-2 font-medium">{$i18n.t('Import Documents Mapping')}</div>
+			<div class=" self-center mr-2 font-medium line-clamp-1">
+				{$i18n.t('Import Documents Mapping')}
+			</div>
 
 			<div class=" self-center">
 				<svg
@@ -565,7 +567,9 @@
 				saveAs(blob, `documents-mapping-export-${Date.now()}.json`);
 			}}
 		>
-			<div class=" self-center mr-2 font-medium">{$i18n.t('Export Documents Mapping')}</div>
+			<div class=" self-center mr-2 font-medium line-clamp-1">
+				{$i18n.t('Export Documents Mapping')}
+			</div>
 
 			<div class=" self-center">
 				<svg

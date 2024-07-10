@@ -24,10 +24,16 @@ def prompt_template(
     if user_name:
         # Replace {{USER_NAME}} in the template with the user's name
         template = template.replace("{{USER_NAME}}", user_name)
+    else:
+        # Replace {{USER_NAME}} in the template with "Unknown"
+        template = template.replace("{{USER_NAME}}", "Unknown")
 
     if user_location:
         # Replace {{USER_LOCATION}} in the template with the current location
         template = template.replace("{{USER_LOCATION}}", user_location)
+    else:
+        # Replace {{USER_LOCATION}} in the template with "Unknown"
+        template = template.replace("{{USER_LOCATION}}", "Unknown")
 
     return template
 

@@ -33,9 +33,9 @@
 
 	<div class="flex flex-col">
 		{#if tools.length > 0}
-			<div class=" flex items-center gap-2 mt-2">
+			<div class=" flex items-center mt-2 flex-wrap">
 				{#each Object.keys(_tools) as tool, toolIdx}
-					<div class=" flex items-center gap-2">
+					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
 								state={_tools[tool].selected ? 'checked' : 'unchecked'}

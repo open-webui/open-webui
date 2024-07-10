@@ -22,7 +22,7 @@
 	};
 </script>
 
-<div class="flex {showTagInput ? 'flex-row-reverse' : ''}">
+<div class="px-0.5 flex {showTagInput ? 'flex-row-reverse' : ''}">
 	{#if showTagInput}
 		<div class="flex items-center">
 			<input

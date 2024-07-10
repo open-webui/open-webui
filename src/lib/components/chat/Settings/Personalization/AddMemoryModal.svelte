@@ -24,7 +24,7 @@
 
 		if (res) {
 			console.log(res);
-			toast.success('Memory added successfully');
+			toast.success($i18n.t('Memory added successfully'));
 			content = '';
 			show = false;
 			dispatch('save');
