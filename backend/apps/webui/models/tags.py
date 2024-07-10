@@ -100,7 +100,7 @@ class TagTable:
     ) -> Optional[TagModel]:
         try:
             with get_db() as db:
-                tag = db.query(Tag).filter(name=name, user_id=user_id).first()
+                tag = db.query(Tag).filter_by(name=name, user_id=user_id).first()
                 return TagModel.model_validate(tag)
         except Exception as e:
             return None
