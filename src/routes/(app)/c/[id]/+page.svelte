@@ -754,10 +754,11 @@
 									history.messages[responseMessage.parentId].childrenIds = history.messages[responseMessage.parentId].childrenIds.filter(_id => _id !== responseMessageId);
 									const l = history.messages[responseMessage.parentId].childrenIds.length
 									history.currentId = history.messages[responseMessage.parentId].childrenIds[l - 1]
-									messages = messages;
 								} else {
 									responseMessage.content = 'Không có dữ liệu nào liên quan câu hỏi này.'
+									responseMessage.citations = null
 								}
+								messages = messages;
 								break
 							}
 
