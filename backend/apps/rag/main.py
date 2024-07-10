@@ -1230,6 +1230,7 @@ def process_doc(
     user=Depends(get_verified_user),
 ):
     try:
+        known_type = True
         file = Files.get_file_by_id(form_data.file_id)
         file_path = file.meta.get("path", f"{UPLOAD_DIR}/{file.filename}")
 
@@ -1239,13 +1240,12 @@ def process_doc(
         if collection_name == None:
             collection_name = calculate_sha256(f)[:63]
         f.close()
-
-        loader, known_type = get_loader(
-            file.filename, file.meta.get("content_type"), file_path
-        )
         try:
-            data = loader.load()
             if not app.state.config.ENABLE_BASE64:
+                loader, known_type = get_loader(
+                    file.filename, file.meta.get("content_type"), file_path
+                )
+                data = loader.load()
                 result = store_data_in_vector_db(data, collection_name)
 
                 if result:
