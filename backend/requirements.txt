@@ -51,7 +51,7 @@ openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.1
 validators==0.28.1
-psutil==5.9.7
+psutil
 
 opencv-python-headless==4.10.0.84
 rapidocr-onnxruntime==1.3.22
