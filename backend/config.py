@@ -975,6 +975,12 @@ ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
 )
 
+ENABLE_BASE64 = PersistentConfig(
+    "ENABLE_BASE64",
+    "rag.enable_base64",
+    os.environ.get("ENABLE_BASE64", "").lower() == "true",
+)
+
 ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
     "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION",
     "rag.enable_web_loader_ssl_verification",

@@ -100,6 +100,7 @@ from config import (
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     ENABLE_RAG_HYBRID_SEARCH,
+    ENABLE_BASE64,
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     RAG_RERANKING_MODEL,
     PDF_EXTRACT_IMAGES,
@@ -145,6 +146,7 @@ app.state.config.TOP_K = RAG_TOP_K
 app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 
 app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
+app.state.config.ENABLE_BASE64 = ENABLE_BASE64
 app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
 )
@@ -593,12 +595,14 @@ async def update_query_settings(
     app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )
+    app.state.config.ENABLE_RAG = form_data.enableBase64 if form_data.enableBase64 else False
     return {
         "status": True,
         "template": app.state.config.RAG_TEMPLATE,
         "k": app.state.config.TOP_K,
         "r": app.state.config.RELEVANCE_THRESHOLD,
         "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        "enableBase64": app.state.config.ENABLE_BASE64,
     }
 
 
@@ -1238,14 +1242,22 @@ def process_doc(
         data = loader.load()
 
         try:
-            result = store_data_in_vector_db(data, collection_name)
+            if not app.state.config.ENABLE_BASE64:
+                result = store_data_in_vector_db(data, collection_name)
 
-            if result:
+                if result:
+                    return {
+                        "status": True,
+                        "collection_name": collection_name,
+                        "known_type": known_type,
+                    }
+            else:
                 return {
                     "status": True,
                     "collection_name": collection_name,
                     "known_type": known_type,
                 }
+            
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

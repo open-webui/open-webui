@@ -138,6 +138,8 @@ type QuerySettings = {
 	k: number | null;
 	r: number | null;
 	template: string | null;
+	hybrid: boolean;
+	enableBase64: boolean;
 };
 
 export const updateQuerySettings = async (token: string, settings: QuerySettings) => {
