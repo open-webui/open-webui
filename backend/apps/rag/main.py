@@ -581,6 +581,7 @@ class QuerySettingsForm(BaseModel):
     r: Optional[float] = None
     template: Optional[str] = None
     hybrid: Optional[bool] = None
+    enableBase64: Optional[bool] = None
 
 
 @app.post("/query/settings/update")
@@ -612,6 +613,7 @@ class QueryDocForm(BaseModel):
     k: Optional[int] = None
     r: Optional[float] = None
     hybrid: Optional[bool] = None
+    enableBase64: Optional[bool] = None
 
 
 @app.post("/query/doc")
@@ -652,6 +654,7 @@ class QueryCollectionsForm(BaseModel):
     k: Optional[int] = None
     r: Optional[float] = None
     hybrid: Optional[bool] = None
+    enableBase64: Optional[bool] = None
 
 
 @app.post("/query/collection")
