@@ -589,7 +589,7 @@
 	"Title Auto-Generation": "Automatinis pavadinimų generavimas",
 	"Title cannot be an empty string.": "Pavadinimas negali būti tuščias",
 	"Title Generation Prompt": "Pavadinimo generavimo užklausa",
-	"to": "kam",
+	"to": "➡️",
 	"To access the available model names for downloading,": "Tam, kad prieiti prie galimų parsisiųsti modelių",
 	"To access the GGUF models available for downloading,": "Tam, kad prieiti prie galimų parsisiųsti GGUF,",
 	"To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.": "",
