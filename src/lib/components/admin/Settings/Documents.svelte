@@ -420,7 +420,7 @@
 					}}
 					type="button"
 				>
-					{#if querySettings.hybrid === true}
+					{#if querySettings.enableBase64 === true}
 						<span class="ml-2 self-center">{$i18n.t('On')}</span>
 					{:else}
 						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
