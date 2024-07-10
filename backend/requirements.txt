@@ -31,6 +31,7 @@ APScheduler==3.10.4
 openai
 anthropic
 google-generativeai==0.5.4
+tiktoken
 
 langchain==0.2.6
 langchain-community==0.2.6
