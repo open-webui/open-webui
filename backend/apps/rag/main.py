@@ -133,6 +133,9 @@ from config import (
     RAG_EMBEDDING_OPENAI_BATCH_SIZE,
 )
 
+from apps.webui.models.users import (
+    Users,
+)
 from constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
@@ -1230,6 +1233,13 @@ def process_doc(
     user=Depends(get_verified_user),
 ):
     try:
+        user = Users.update_user_by_id(user.id, {"settings": form_data.model_dump()})
+        enableFileUpdateBase64 = False
+
+        if user:
+            user_settings = user.settings
+            enableFileUpdateBase64 = user_settings.get("ui").get("enableFileUpdateBase64", False)
+
         known_type = True
         file = Files.get_file_by_id(form_data.file_id)
         file_path = file.meta.get("path", f"{UPLOAD_DIR}/{file.filename}")
@@ -1240,8 +1250,9 @@ def process_doc(
         if collection_name == None:
             collection_name = calculate_sha256(f)[:63]
         f.close()
+        
         try:
-            if not app.state.config.ENABLE_BASE64:
+            if not enableFileUpdateBase64:
                 loader, known_type = get_loader(
                     file.filename, file.meta.get("content_type"), file_path
                 )

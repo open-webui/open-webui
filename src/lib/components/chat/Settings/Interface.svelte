@@ -23,6 +23,7 @@
 	let widescreenMode = false;
 	let splitLargeChunks = false;
 	let userLocation = false;
+	let enableFileUpdateBase64 = false;
 
 	// Interface
 	let defaultModelId = '';
@@ -94,6 +95,11 @@
 		});
 	};
 
+	const toggleEnableFileUpdateBase64 = async () => {
+		enableFileUpdateBase64 = !enableFileUpdateBase64;
+		saveSettings({ enableFileUpdateBase64: enableFileUpdateBase64 });
+	};
+
 	const toggleResponseAutoCopy = async () => {
 		const permission = await navigator.clipboard
 			.readText()
@@ -143,6 +149,7 @@
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
 		chatDirection = $settings.chatDirection ?? 'LTR';
 		userLocation = $settings.userLocation ?? false;
+		enableFileUpdateBase64 = $settings.enableFileUpdateBase64 ?? false;
 
 		defaultModelId = ($settings?.models ?? ['']).at(0);
 
@@ -343,6 +350,26 @@
 			</div>
 
 			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Chat')}</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Enable FIle-Update Base64')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleEnableFileUpdateBase64();
+						}}
+						type="button"
+					>
+						{#if enableFileUpdateBase64 === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

@@ -85,6 +85,7 @@ type Settings = {
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
 	chatDirection: 'LTR' | 'RTL';
+	enableFileUpdateBase64?: boolean;
 
 	system?: string;
 	requestFormat?: string;
