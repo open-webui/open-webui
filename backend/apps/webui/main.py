@@ -165,6 +165,10 @@ async def get_pipe_models():
                             f"{function_module.name}{manifold_pipe_name}"
                         )
 
+                    pipe_flag = {"type": pipe.type}
+                    if hasattr(function_module, "ChatValves"):
+                        pipe_flag["valves_spec"] = function_module.ChatValves.schema()
+
                     pipe_models.append(
                         {
                             "id": manifold_pipe_id,
@@ -172,10 +176,14 @@ async def get_pipe_models():
                             "object": "model",
                             "created": pipe.created_at,
                             "owned_by": "openai",
-                            "pipe": {"type": pipe.type},
+                            "pipe": pipe_flag,
                         }
                     )
         else:
+            pipe_flag = {"type": "pipe"}
+            if hasattr(function_module, "ChatValves"):
+                pipe_flag["valves_spec"] = function_module.ChatValves.schema()
+
             pipe_models.append(
                 {
                     "id": pipe.id,
@@ -183,7 +191,7 @@ async def get_pipe_models():
                     "object": "model",
                     "created": pipe.created_at,
                     "owned_by": "openai",
-                    "pipe": {"type": "pipe"},
+                    "pipe": pipe_flag,
                 }
             )
 
