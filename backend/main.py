@@ -56,6 +56,7 @@ from config import (
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
+    MAX_CITATION_DISTANCE
 )
 from constants import ERROR_MESSAGES
 
@@ -158,6 +159,27 @@ class RAGMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         if return_citations:
+          
+            log.info(f"check score: {citations}")
+
+            # Function to remove indices from a list if it is not None
+            def remove_indices(lst, indices):
+                return [item for i, item in enumerate(lst) if i not in indices]
+
+            # Get the indices where distances are greater than 1
+            indices_to_remove = [i for i, distance in enumerate(citations[0]['distances']) if distance > MAX_CITATION_DISTANCE]
+
+            # List of keys to check and filter
+            keys_to_filter = ['metadata', 'document']
+
+            # Loop through each key and remove indices if the list is not None
+            for key in keys_to_filter:
+                if citations[0][key] is not None:
+                    if isinstance(citations[0][key], list):
+                        citations[0][key] = remove_indices(citations[0][key], indices_to_remove)
+
+            log.info(f"query_doc:citations {citations}")
+
             # Inject the citations into the response
             if isinstance(response, StreamingResponse):
                 # If it's a streaming response, inject it as SSE event or NDJSON line

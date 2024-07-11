@@ -40,24 +40,6 @@ def query_doc(
             query_embeddings=[query_embeddings],
             n_results=k,
         )
-
-        # Function to remove indices from a list if it is not None
-        def remove_indices(lst, indices):
-            return [item for i, item in enumerate(lst) if i not in indices]
-
-        # Get the indices where distances are greater than 1
-        indices_to_remove = [i for i, distance in enumerate(result['distances'][0]) if distance > 1]
-
-        # List of keys to check and filter
-        keys_to_filter = ['ids', 'distances', 'metadatas', 'documents', 'embeddings', 'uris', 'data']
-
-        # Loop through each key and remove indices if the list is not None
-        for key in keys_to_filter:
-            if result[key] is not None:
-                if isinstance(result[key], list) and len(result[key]) > 0 and isinstance(result[key][0], list):
-                    result[key][0] = remove_indices(result[key][0], indices_to_remove)
-
-        log.info(f"query_doc:result {result}")
         return result
     except Exception as e:
         raise e
@@ -326,7 +308,6 @@ def rag_messages(
             relevant_contexts.append({**context, "source": doc})
 
         extracted_collections.extend(collection_names)
-    log.info(f"check score: {relevant_contexts}")
     context_string = ""
 
     citations = []
@@ -343,6 +324,7 @@ def rag_messages(
                             "source": context["source"],
                             "document": context["documents"][0],
                             "metadata": context["metadatas"][0],
+                            "distances": context["distances"][0],
                         }
                     )
         except Exception as e:
