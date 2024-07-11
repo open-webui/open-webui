@@ -295,6 +295,7 @@ async def generate_function_chat_completion(form_data, user):
                 "email": user.email,
                 "name": user.name,
                 "role": user.role,
+                "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False),
             }
 
             try:

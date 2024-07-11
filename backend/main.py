@@ -1031,40 +1031,10 @@ async def get_models(user=Depends(get_verified_user)):
 
     return {"data": models}
 
-
-def file_toBase64(file_path: str):
-    if os.path.isfile(file_path):
-        try:
-            with open(file_path, "rb") as file:
-                image_data = file.read()
-                base64_image = base64.b64encode(image_data).decode("utf-8")
-                # 获取文件的MIME类型
-                mime_type, _ = mimetypes.guess_type(file_path, strict=False)
-                if mime_type is None:
-                    if file_path.endswith(".docx"):
-                        mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    else:
-                        mime_type = "application/octet-stream"
-                print(f"File Path: {file_path}")
-                print(f"File MIME Type: {mime_type}")
-                base64_image = f"data:{mime_type};base64,{base64_image}"
-                return base64_image
-        except Exception as e:
-            print(f"Error load file: {e}")
-            return None
-    else:
-        print(f"FIle is not exist: {file_path}")
-        return None
         
 @app.post("/api/chat/completions")
 async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user)):
     model_id = form_data["model"]
-    user = Users.get_user_by_id(user.id)
-    enableFileUpdateBase64 = False
-
-    if user:
-        user_settings = user.settings
-        enableFileUpdateBase64 = user_settings.ui.get("enableFileUpdateBase64", False)
 
     if model_id not in app.state.MODELS:
         raise HTTPException(
@@ -1073,32 +1043,6 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
         )
 
     model = app.state.MODELS[model_id]
-
-    messages = form_data.get("messages", [])
-    files = form_data.get("files", [])
-    files_Base64 = []
-
-    if enableFileUpdateBase64:
-        if files:
-            for file in files[-6:]:
-                file_path = file["file"]["meta"]["path"]
-                files_Base64.append(file_toBase64(file_path))
-
-            for message in reversed(messages):
-                if message.get("role") == "user":
-                    content = message.get("content")
-                    message["content"] = [{"type": "text", "text": content}]
-                    for file_Base64 in files_Base64:
-                        if file_Base64:
-                            message["content"].append(
-                                {
-                                    "type": "image_url",
-                                    "image_url": {"url": file_Base64},
-                                }
-                            )
-
-            form_data.pop("files", None)
-            # print(f"message:body:{body}")
 
     pipe = model.get("pipe")
     if pipe:
