@@ -43,7 +43,7 @@ from apps.openai.main import (
 
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
-from apps.rag.main import app as rag_app
+from apps.rag.main import app as rag_app, All_ENABLE_BASE64
 from apps.webui.main import (
     app as webui_app,
     get_pipe_models,
@@ -405,7 +405,7 @@ async def get_function_call_response(
                     "email": user.email,
                     "name": user.name,
                     "role": user.role,
-                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False),
+                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False) and All_ENABLE_BASE64,
                 }
 
                 try:
@@ -497,7 +497,7 @@ async def chat_completion_functions_handler(
                     "email": user.email,
                     "name": user.name,
                     "role": user.role,
-                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False),
+                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False) and All_ENABLE_BASE64,
                 }
 
                 try:
@@ -1200,7 +1200,7 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                     "email": user.email,
                     "name": user.name,
                     "role": user.role,
-                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False),
+                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False) and All_ENABLE_BASE64,
                 }
 
                 try:
