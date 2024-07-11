@@ -357,6 +357,8 @@ async def generate_chat_completion(
 ):
     idx = 0
     payload = {**form_data}
+    if "metadata" in payload:
+        del payload["metadata"]
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)

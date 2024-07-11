@@ -20,7 +20,6 @@ from apps.webui.routers import (
 )
 from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
-
 from apps.webui.utils import load_function_module_by_id
 
 from utils.misc import stream_message_template
@@ -53,7 +52,7 @@ import uuid
 import time
 import json
 
-from typing import Iterator, Generator
+from typing import Iterator, Generator, Optional
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -192,6 +191,14 @@ async def get_pipe_models():
 async def generate_function_chat_completion(form_data, user):
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
+
+    metadata = None
+    if "metadata" in form_data:
+        metadata = form_data["metadata"]
+        del form_data["metadata"]
+
+    if metadata:
+        print(metadata)
 
     if model_info:
         if model_info.base_model_id:
