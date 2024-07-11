@@ -150,9 +150,10 @@ app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 
 app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
 
-All_ENABLE_BASE64 = ENABLE_BASE64
-
 app.state.config.ENABLE_BASE64 = ENABLE_BASE64
+
+All_ENABLE_BASE64 = app.state.config.ENABLE_BASE64
+
 app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
 )
@@ -604,8 +605,8 @@ async def update_query_settings(
     app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )
-    All_ENABLE_BASE64 = form_data.enableBase64 if form_data.enableBase64 else False
     app.state.config.ENABLE_BASE64 = form_data.enableBase64 if form_data.enableBase64 else False
+    All_ENABLE_BASE64 = app.state.config.ENABLE_BASE64
     return {
         "status": True,
         "template": app.state.config.RAG_TEMPLATE,
