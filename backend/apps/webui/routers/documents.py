@@ -130,7 +130,9 @@ async def tag_doc_by_name(form_data: TagDocumentForm, user=Depends(get_verified_
 
 @router.post("/doc/update", response_model=Optional[DocumentResponse])
 async def update_doc_by_name(
-    name: str, form_data: DocumentUpdateForm, user=Depends(get_admin_user)
+    name: str,
+    form_data: DocumentUpdateForm,
+    user=Depends(get_admin_user),
 ):
     doc = Documents.update_doc_by_name(name, form_data)
     if doc:

@@ -3,7 +3,7 @@ from fastapi.routing import APIRoute
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-
+from sqlalchemy.orm import Session
 from apps.webui.routers import (
     auths,
     users,
@@ -19,8 +19,13 @@ from apps.webui.routers import (
     functions,
 )
 from apps.webui.models.functions import Functions
+from apps.webui.models.models import Models
+
 from apps.webui.utils import load_function_module_by_id
+
 from utils.misc import stream_message_template
+from utils.task import prompt_template
+
 
 from config import (
     WEBUI_BUILD_HASH,
@@ -39,6 +44,8 @@ from config import (
     WEBUI_BANNERS,
     ENABLE_COMMUNITY_SHARING,
     AppConfig,
+    OAUTH_USERNAME_CLAIM,
+    OAUTH_PICTURE_CLAIM,
 )
 
 import inspect
@@ -73,6 +80,9 @@ app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
 
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
+
+app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
+app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 
 app.state.MODELS = {}
 app.state.TOOLS = {}
@@ -129,7 +139,6 @@ async def get_pipe_models():
             function_module = app.state.FUNCTIONS[pipe.id]
 
         if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-            print(f"Getting valves for {pipe.id}")
             valves = Functions.get_function_valves_by_id(pipe.id)
             function_module.valves = function_module.Valves(
                 **(valves if valves else {})
@@ -181,6 +190,77 @@ async def get_pipe_models():
 
 
 async def generate_function_chat_completion(form_data, user):
+    model_id = form_data.get("model")
+    model_info = Models.get_model_by_id(model_id)
+
+    if model_info:
+        if model_info.base_model_id:
+            form_data["model"] = model_info.base_model_id
+
+        model_info.params = model_info.params.model_dump()
+
+        if model_info.params:
+            if model_info.params.get("temperature", None) is not None:
+                form_data["temperature"] = float(model_info.params.get("temperature"))
+
+            if model_info.params.get("top_p", None):
+                form_data["top_p"] = int(model_info.params.get("top_p", None))
+
+            if model_info.params.get("max_tokens", None):
+                form_data["max_tokens"] = int(model_info.params.get("max_tokens", None))
+
+            if model_info.params.get("frequency_penalty", None):
+                form_data["frequency_penalty"] = int(
+                    model_info.params.get("frequency_penalty", None)
+                )
+
+            if model_info.params.get("seed", None):
+                form_data["seed"] = model_info.params.get("seed", None)
+
+            if model_info.params.get("stop", None):
+                form_data["stop"] = (
+                    [
+                        bytes(stop, "utf-8").decode("unicode_escape")
+                        for stop in model_info.params["stop"]
+                    ]
+                    if model_info.params.get("stop", None)
+                    else None
+                )
+
+        system = model_info.params.get("system", None)
+        if system:
+            system = prompt_template(
+                system,
+                **(
+                    {
+                        "user_name": user.name,
+                        "user_location": (
+                            user.info.get("location") if user.info else None
+                        ),
+                    }
+                    if user
+                    else {}
+                ),
+            )
+            # Check if the payload already has a system message
+            # If not, add a system message to the payload
+            if form_data.get("messages"):
+                for message in form_data["messages"]:
+                    if message.get("role") == "system":
+                        message["content"] = system + message["content"]
+                        break
+                else:
+                    form_data["messages"].insert(
+                        0,
+                        {
+                            "role": "system",
+                            "content": system,
+                        },
+                    )
+
+    else:
+        pass
+
     async def job():
         pipe_id = form_data["model"]
         if "." in pipe_id:
@@ -259,6 +339,9 @@ async def generate_function_chat_completion(form_data, user):
                         if isinstance(line, BaseModel):
                             line = line.model_dump_json()
                             line = f"data: {line}"
+                        if isinstance(line, dict):
+                            line = f"data: {json.dumps(line)}"
+
                         try:
                             line = line.decode("utf-8")
                         except:

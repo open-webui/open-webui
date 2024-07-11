@@ -60,18 +60,25 @@
 	import Navbar from '$lib/components/layout/Navbar.svelte';
 	import CallOverlay from './MessageInput/CallOverlay.svelte';
 	import { error } from '@sveltejs/kit';
+	import ChatControls from './ChatControls.svelte';
+	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	export let chatIdProp = '';
 	let loaded = false;
-
 	const eventTarget = new EventTarget();
 
+	let showControls = false;
 	let stopResponseFlag = false;
 	let autoScroll = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
+
+	let showEventConfirmation = false;
+	let eventConfirmationTitle = '';
+	let eventConfirmationMessage = '';
+	let eventCallback = null;
 
 	let showModelSelector = true;
 
@@ -95,6 +102,8 @@
 		messages: {},
 		currentId: null
 	};
+
+	let params = {};
 
 	$: if (history.currentId !== null) {
 		let _messages = [];
@@ -125,6 +134,41 @@
 			}
 		})();
 	}
+
+	const chatEventHandler = async (event, cb) => {
+		if (event.chat_id === $chatId) {
+			await tick();
+			console.log(event);
+			let message = history.messages[event.message_id];
+
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
+
+			if (type === 'status') {
+				if (message?.statusHistory) {
+					message.statusHistory.push(data);
+				} else {
+					message.statusHistory = [data];
+				}
+			} else if (type === 'citation') {
+				if (message?.citations) {
+					message.citations.push(data);
+				} else {
+					message.citations = [data];
+				}
+			} else if (type === 'confirmation') {
+				eventCallback = cb;
+				showEventConfirmation = true;
+
+				eventConfirmationTitle = data.title;
+				eventConfirmationMessage = data.message;
+			} else {
+				console.log('Unknown message type', data);
+			}
+
+			messages = messages;
+		}
+	};
 
 	onMount(async () => {
 		const onMessageHandler = async (event) => {
@@ -163,6 +207,8 @@
 		};
 		window.addEventListener('message', onMessageHandler);
 
+		$socket.on('chat-events', chatEventHandler);
+
 		if (!$chatId) {
 			chatId.subscribe(async (value) => {
 				if (!value) {
@@ -177,6 +223,8 @@
 
 		return () => {
 			window.removeEventListener('message', onMessageHandler);
+
+			$socket.off('chat-events');
 		};
 	});
 
@@ -196,6 +244,7 @@
 			messages: {},
 			currentId: null
 		};
+		params = {};
 
 		if ($page.url.searchParams.get('models')) {
 			selectedModels = $page.url.searchParams.get('models')?.split(',');
@@ -265,11 +314,7 @@
 					await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 				}
 
-				await settings.set({
-					...$settings,
-					system: chatContent.system ?? $settings.system,
-					params: chatContent.options ?? $settings.params
-				});
+				params = chatContent?.params ?? {};
 
 				autoScroll = true;
 				await tick();
@@ -302,7 +347,7 @@
 		}
 	};
 
-	const chatCompletedHandler = async (modelId, messages) => {
+	const chatCompletedHandler = async (modelId, responseMessageId, messages) => {
 		await mermaid.run({
 			querySelector: '.mermaid'
 		});
@@ -316,7 +361,9 @@
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp
 			})),
-			chat_id: $chatId
+			chat_id: $chatId,
+			session_id: $socket?.id,
+			id: responseMessageId
 		}).catch((error) => {
 			toast.error(error);
 			messages.at(-1).error = { content: error };
@@ -480,9 +527,7 @@
 					title: $i18n.t('New Chat'),
 					models: selectedModels,
 					system: $settings.system ?? undefined,
-					options: {
-						...($settings.params ?? {})
-					},
+					params: params,
 					messages: messages,
 					history: history,
 					tags: [],
@@ -580,11 +625,11 @@
 		scrollToBottom();
 
 		const messagesBody = [
-			$settings.system || (responseMessage?.userContext ?? null)
+			params?.system || $settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
 						content: `${promptTemplate(
-							$settings?.system ?? '',
+							params?.system ?? $settings?.system ?? '',
 							$user.name,
 							$settings?.userLocation
 								? await getAndUpdateUserLocation(localStorage.token)
@@ -665,25 +710,28 @@
 		await tick();
 
 		const [res, controller] = await generateChatCompletion(localStorage.token, {
+			stream: true,
 			model: model.id,
 			messages: messagesBody,
 			options: {
-				...($settings.params ?? {}),
+				...(params ?? $settings.params ?? {}),
 				stop:
-					$settings?.params?.stop ?? undefined
-						? $settings.params.stop.map((str) =>
+					params?.stop ?? $settings?.params?.stop ?? undefined
+						? (params?.stop ?? $settings.params.stop).map((str) =>
 								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
 						  )
 						: undefined,
-				num_predict: $settings?.params?.max_tokens ?? undefined,
-				repeat_penalty: $settings?.params?.frequency_penalty ?? undefined
+				num_predict: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
+				repeat_penalty:
+					params?.frequency_penalty ?? $settings?.params?.frequency_penalty ?? undefined
 			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
 			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 			files: files.length > 0 ? files : undefined,
-			citations: files.length > 0 ? true : undefined,
-			chat_id: $chatId
+			session_id: $socket?.id,
+			chat_id: $chatId,
+			id: responseMessageId
 		});
 
 		if (res && res.ok) {
@@ -704,7 +752,7 @@
 						controller.abort('User: Stop Response');
 					} else {
 						const messages = createMessagesList(responseMessageId);
-						await chatCompletedHandler(model.id, messages);
+						await chatCompletedHandler(model.id, responseMessageId, messages);
 					}
 
 					_response = responseMessage.content;
@@ -811,7 +859,8 @@
 					chat = await updateChatById(localStorage.token, _chatId, {
 						messages: messages,
 						history: history,
-						models: selectedModels
+						models: selectedModels,
+						params: params
 					});
 					await chats.set(await getChatList(localStorage.token));
 				}
@@ -912,8 +961,8 @@
 			const [res, controller] = await generateOpenAIChatCompletion(
 				localStorage.token,
 				{
-					model: model.id,
 					stream: true,
+					model: model.id,
 					stream_options:
 						model.info?.meta?.capabilities?.usage ?? false
 							? {
@@ -921,11 +970,11 @@
 							  }
 							: undefined,
 					messages: [
-						$settings.system || (responseMessage?.userContext ?? null)
+						params?.system || $settings.system || (responseMessage?.userContext ?? null)
 							? {
 									role: 'system',
 									content: `${promptTemplate(
-										$settings?.system ?? '',
+										params?.system ?? $settings?.system ?? '',
 										$user.name,
 										$settings?.userLocation
 											? await getAndUpdateUserLocation(localStorage.token)
@@ -970,22 +1019,23 @@
 												: message?.raContent ?? message.content
 								  })
 						})),
-					seed: $settings?.params?.seed ?? undefined,
+					seed: params?.seed ?? $settings?.params?.seed ?? undefined,
 					stop:
-						$settings?.params?.stop ?? undefined
-							? $settings.params.stop.map((str) =>
+						params?.stop ?? $settings?.params?.stop ?? undefined
+							? (params?.stop ?? $settings.params.stop).map((str) =>
 									decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
 							  )
 							: undefined,
-					temperature: $settings?.params?.temperature ?? undefined,
-					top_p: $settings?.params?.top_p ?? undefined,
-					frequency_penalty: $settings?.params?.frequency_penalty ?? undefined,
-					max_tokens: $settings?.params?.max_tokens ?? undefined,
+					temperature: params?.temperature ?? $settings?.params?.temperature ?? undefined,
+					top_p: params?.top_p ?? $settings?.params?.top_p ?? undefined,
+					frequency_penalty:
+						params?.frequency_penalty ?? $settings?.params?.frequency_penalty ?? undefined,
+					max_tokens: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
 					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 					files: files.length > 0 ? files : undefined,
-					citations: files.length > 0 ? true : undefined,
-
-					chat_id: $chatId
+					session_id: $socket?.id,
+					chat_id: $chatId,
+					id: responseMessageId
 				},
 				`${WEBUI_BASE_URL}/api`
 			);
@@ -1014,7 +1064,7 @@
 						} else {
 							const messages = createMessagesList(responseMessageId);
 
-							await chatCompletedHandler(model.id, messages);
+							await chatCompletedHandler(model.id, responseMessageId, messages);
 						}
 
 						_response = responseMessage.content;
@@ -1086,7 +1136,8 @@
 						chat = await updateChatById(localStorage.token, _chatId, {
 							models: selectedModels,
 							messages: messages,
-							history: history
+							history: history,
+							params: params
 						});
 						await chats.set(await getChatList(localStorage.token));
 					}
@@ -1353,6 +1404,18 @@
 
 <audio id="audioElement" src="" style="display: none;" />
 
+<EventConfirmDialog
+	bind:show={showEventConfirmation}
+	title={eventConfirmationTitle}
+	message={eventConfirmationMessage}
+	on:confirm={(e) => {
+		eventCallback(true);
+	}}
+	on:cancel={() => {
+		eventCallback(false);
+	}}
+/>
+
 {#if $showCallOverlay}
 	<CallOverlay
 		{submitPrompt}
@@ -1387,6 +1450,7 @@
 			{title}
 			bind:selectedModels
 			bind:showModelSelector
+			bind:showControls
 			shareEnabled={messages.length > 0}
 			{chat}
 			{initNewChat}
@@ -1396,7 +1460,7 @@
 			<div
 				class="absolute top-[4.25rem] w-full {$showSidebar
 					? 'md:max-w-[calc(100%-260px)]'
-					: ''} z-20"
+					: ''} {showControls ? 'lg:pr-[24rem]' : ''} z-20"
 			>
 				<div class=" flex flex-col gap-1 w-full">
 					{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
@@ -1423,7 +1487,9 @@
 
 		<div class="flex flex-col flex-auto z-10">
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10"
+				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden {showControls
+					? 'lg:pr-[24rem]'
+					: ''}"
 				id="messages-container"
 				bind:this={messagesContainerElement}
 				on:scroll={(e) => {
@@ -1448,26 +1514,31 @@
 					/>
 				</div>
 			</div>
-			<MessageInput
-				bind:files
-				bind:prompt
-				bind:autoScroll
-				bind:selectedToolIds
-				bind:webSearchEnabled
-				bind:atSelectedModel
-				availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
-					const model = $models.find((m) => m.id === e);
-					if (model?.info?.meta?.toolIds ?? false) {
-						return [...new Set([...a, ...model.info.meta.toolIds])];
-					}
-					return a;
-				}, [])}
-				transparentBackground={$settings?.backgroundImageUrl ?? false}
-				{selectedModels}
-				{messages}
-				{submitPrompt}
-				{stopResponse}
-			/>
+
+			<div class={showControls ? 'lg:pr-[24rem]' : ''}>
+				<MessageInput
+					bind:files
+					bind:prompt
+					bind:autoScroll
+					bind:selectedToolIds
+					bind:webSearchEnabled
+					bind:atSelectedModel
+					availableToolIds={selectedModelIds.reduce((a, e, i, arr) => {
+						const model = $models.find((m) => m.id === e);
+						if (model?.info?.meta?.toolIds ?? false) {
+							return [...new Set([...a, ...model.info.meta.toolIds])];
+						}
+						return a;
+					}, [])}
+					transparentBackground={$settings?.backgroundImageUrl ?? false}
+					{selectedModels}
+					{messages}
+					{submitPrompt}
+					{stopResponse}
+				/>
+			</div>
 		</div>
+
+		<ChatControls bind:show={showControls} bind:params />
 	</div>
 {/if}

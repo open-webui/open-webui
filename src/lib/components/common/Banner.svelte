@@ -45,7 +45,7 @@
 			<div class=" flex flex-col md:flex-row md:items-center flex-1 text-sm w-fit gap-1.5">
 				<div class="flex justify-between self-start">
 					<div
-						class=" text-xs font-black {classNames[banner.type] ??
+						class=" text-xs font-bold {classNames[banner.type] ??
 							classNames['info']}  w-fit px-2 rounded uppercase line-clamp-1 mr-0.5"
 					>
 						{banner.type}
@@ -54,7 +54,7 @@
 					{#if banner.url}
 						<div class="flex md:hidden group w-fit md:items-center">
 							<a
-								class="text-gray-700 dark:text-white text-xs font-bold underline"
+								class="text-gray-700 dark:text-white text-xs font-semibold underline"
 								href="/assets/files/whitepaper.pdf"
 								target="_blank">Learn More</a
 							>
@@ -88,7 +88,7 @@
 			{#if banner.url}
 				<div class="hidden md:flex group w-fit md:items-center">
 					<a
-						class="text-gray-700 dark:text-white text-xs font-bold underline"
+						class="text-gray-700 dark:text-white text-xs font-semibold underline"
 						href="/"
 						target="_blank">Learn More</a
 					>
@@ -116,7 +116,8 @@
 						on:click={() => {
 							dismiss(banner.id);
 						}}
-						class=" -mt-[3px] ml-1.5 mr-1 text-gray-400 dark:hover:text-white h-1">&times;</button
+						class="  -mt-1 -mb-2 -translate-y-[1px] ml-1.5 mr-1 text-gray-400 dark:hover:text-white"
+						>&times;</button
 					>
 				{/if}
 			</div>

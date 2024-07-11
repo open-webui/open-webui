@@ -206,7 +206,7 @@
 	}}
 	closeFocus={false}
 >
-	<DropdownMenu.Trigger class="relative w-full" aria-label={placeholder}>
+	<DropdownMenu.Trigger class="relative w-full font-primary" aria-label={placeholder}>
 		<div
 			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate text-lg font-semibold placeholder-gray-400 focus:outline-none"
 		>
@@ -222,7 +222,7 @@
 	<DropdownMenu.Content
 		class=" z-40 {$mobile
 			? `w-full`
-			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-850/50  outline-none "
+			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/40  outline-none"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={4}
@@ -260,7 +260,7 @@
 								<div class="flex gap-0.5 self-start h-full mb-0.5 -translate-x-1">
 									{#each item.model?.info?.meta.tags as tag}
 										<div
-											class=" text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+											class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
 											{tag.name}
 										</div>
@@ -299,7 +299,7 @@
 									<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
 										{#each item.model?.info?.meta.tags as tag}
 											<div
-												class=" text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+												class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 											>
 												{tag.name}
 											</div>

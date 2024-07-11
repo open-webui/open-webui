@@ -48,8 +48,6 @@ import mimetypes
 import uuid
 import json
 
-import sentence_transformers
-
 from apps.webui.models.documents import (
     Documents,
     DocumentForm,
@@ -93,6 +91,8 @@ from config import (
     SRC_LOG_LEVELS,
     UPLOAD_DIR,
     DOCS_DIR,
+    CONTENT_EXTRACTION_ENGINE,
+    TIKA_SERVER_URL,
     RAG_TOP_K,
     RAG_RELEVANCE_THRESHOLD,
     RAG_EMBEDDING_ENGINE,
@@ -148,6 +148,9 @@ app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
 )
 
+app.state.config.CONTENT_EXTRACTION_ENGINE = CONTENT_EXTRACTION_ENGINE
+app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
+
 app.state.config.CHUNK_SIZE = CHUNK_SIZE
 app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
 
@@ -190,6 +193,8 @@ def update_embedding_model(
     update_model: bool = False,
 ):
     if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
+        import sentence_transformers
+
         app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
             get_model_path(embedding_model, update_model),
             device=DEVICE_TYPE,
@@ -204,6 +209,8 @@ def update_reranking_model(
     update_model: bool = False,
 ):
     if reranking_model:
+        import sentence_transformers
+
         app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
             get_model_path(reranking_model, update_model),
             device=DEVICE_TYPE,
@@ -388,6 +395,10 @@ async def get_rag_config(user=Depends(get_admin_user)):
     return {
         "status": True,
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
+        "content_extraction": {
+            "engine": app.state.config.CONTENT_EXTRACTION_ENGINE,
+            "tika_server_url": app.state.config.TIKA_SERVER_URL,
+        },
         "chunk": {
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
@@ -415,6 +426,11 @@ async def get_rag_config(user=Depends(get_admin_user)):
             },
         },
     }
+
+
+class ContentExtractionConfig(BaseModel):
+    engine: str = ""
+    tika_server_url: Optional[str] = None
 
 
 class ChunkParamUpdateForm(BaseModel):
@@ -450,6 +466,7 @@ class WebConfig(BaseModel):
 
 class ConfigUpdateForm(BaseModel):
     pdf_extract_images: Optional[bool] = None
+    content_extraction: Optional[ContentExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
     youtube: Optional[YoutubeLoaderConfig] = None
     web: Optional[WebConfig] = None
@@ -462,6 +479,11 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
         if form_data.pdf_extract_images is not None
         else app.state.config.PDF_EXTRACT_IMAGES
     )
+
+    if form_data.content_extraction is not None:
+        log.info(f"Updating text settings: {form_data.content_extraction}")
+        app.state.config.CONTENT_EXTRACTION_ENGINE = form_data.content_extraction.engine
+        app.state.config.TIKA_SERVER_URL = form_data.content_extraction.tika_server_url
 
     if form_data.chunk is not None:
         app.state.config.CHUNK_SIZE = form_data.chunk.chunk_size
@@ -499,6 +521,10 @@ async def update_rag_config(form_data: ConfigUpdateForm, user=Depends(get_admin_
     return {
         "status": True,
         "pdf_extract_images": app.state.config.PDF_EXTRACT_IMAGES,
+        "content_extraction": {
+            "engine": app.state.config.CONTENT_EXTRACTION_ENGINE,
+            "tika_server_url": app.state.config.TIKA_SERVER_URL,
+        },
         "chunk": {
             "chunk_size": app.state.config.CHUNK_SIZE,
             "chunk_overlap": app.state.config.CHUNK_OVERLAP,
@@ -978,11 +1004,47 @@ def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> b
 
         return True
     except Exception as e:
-        log.exception(e)
         if e.__class__.__name__ == "UniqueConstraintError":
             return True
 
+        log.exception(e)
+
         return False
+
+
+class TikaLoader:
+    def __init__(self, file_path, mime_type=None):
+        self.file_path = file_path
+        self.mime_type = mime_type
+
+    def load(self) -> List[Document]:
+        with open(self.file_path, "rb") as f:
+            data = f.read()
+
+        if self.mime_type is not None:
+            headers = {"Content-Type": self.mime_type}
+        else:
+            headers = {}
+
+        endpoint = app.state.config.TIKA_SERVER_URL
+        if not endpoint.endswith("/"):
+            endpoint += "/"
+        endpoint += "tika/text"
+
+        r = requests.put(endpoint, data=data, headers=headers)
+
+        if r.ok:
+            raw_metadata = r.json()
+            text = raw_metadata.get("X-TIKA:content", "<No text content found>")
+
+            if "Content-Type" in raw_metadata:
+                headers["Content-Type"] = raw_metadata["Content-Type"]
+
+            log.info("Tika extracted text: %s", text)
+
+            return [Document(page_content=text, metadata=headers)]
+        else:
+            raise Exception(f"Error calling Tika: {r.reason}")
 
 
 def get_loader(filename: str, file_content_type: str, file_path: str):
@@ -1035,47 +1097,58 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         "msg",
     ]
 
-    if file_ext == "pdf":
-        loader = PyPDFLoader(
-            file_path, extract_images=app.state.config.PDF_EXTRACT_IMAGES
-        )
-    elif file_ext == "csv":
-        loader = CSVLoader(file_path)
-    elif file_ext == "rst":
-        loader = UnstructuredRSTLoader(file_path, mode="elements")
-    elif file_ext == "xml":
-        loader = UnstructuredXMLLoader(file_path)
-    elif file_ext in ["htm", "html"]:
-        loader = BSHTMLLoader(file_path, open_encoding="unicode_escape")
-    elif file_ext == "md":
-        loader = UnstructuredMarkdownLoader(file_path)
-    elif file_content_type == "application/epub+zip":
-        loader = UnstructuredEPubLoader(file_path)
-    elif (
-        file_content_type
-        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        or file_ext in ["doc", "docx"]
+    if (
+        app.state.config.CONTENT_EXTRACTION_ENGINE == "tika"
+        and app.state.config.TIKA_SERVER_URL
     ):
-        loader = Docx2txtLoader(file_path)
-    elif file_content_type in [
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ] or file_ext in ["xls", "xlsx"]:
-        loader = UnstructuredExcelLoader(file_path)
-    elif file_content_type in [
-        "application/vnd.ms-powerpoint",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    ] or file_ext in ["ppt", "pptx"]:
-        loader = UnstructuredPowerPointLoader(file_path)
-    elif file_ext == "msg":
-        loader = OutlookMessageLoader(file_path)
-    elif file_ext in known_source_ext or (
-        file_content_type and file_content_type.find("text/") >= 0
-    ):
-        loader = TextLoader(file_path, autodetect_encoding=True)
+        if file_ext in known_source_ext or (
+            file_content_type and file_content_type.find("text/") >= 0
+        ):
+            loader = TextLoader(file_path, autodetect_encoding=True)
+        else:
+            loader = TikaLoader(file_path, file_content_type)
     else:
-        loader = TextLoader(file_path, autodetect_encoding=True)
-        known_type = False
+        if file_ext == "pdf":
+            loader = PyPDFLoader(
+                file_path, extract_images=app.state.config.PDF_EXTRACT_IMAGES
+            )
+        elif file_ext == "csv":
+            loader = CSVLoader(file_path)
+        elif file_ext == "rst":
+            loader = UnstructuredRSTLoader(file_path, mode="elements")
+        elif file_ext == "xml":
+            loader = UnstructuredXMLLoader(file_path)
+        elif file_ext in ["htm", "html"]:
+            loader = BSHTMLLoader(file_path, open_encoding="unicode_escape")
+        elif file_ext == "md":
+            loader = UnstructuredMarkdownLoader(file_path)
+        elif file_content_type == "application/epub+zip":
+            loader = UnstructuredEPubLoader(file_path)
+        elif (
+            file_content_type
+            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            or file_ext in ["doc", "docx"]
+        ):
+            loader = Docx2txtLoader(file_path)
+        elif file_content_type in [
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ] or file_ext in ["xls", "xlsx"]:
+            loader = UnstructuredExcelLoader(file_path)
+        elif file_content_type in [
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ] or file_ext in ["ppt", "pptx"]:
+            loader = UnstructuredPowerPointLoader(file_path)
+        elif file_ext == "msg":
+            loader = OutlookMessageLoader(file_path)
+        elif file_ext in known_source_ext or (
+            file_content_type and file_content_type.find("text/") >= 0
+        ):
+            loader = TextLoader(file_path, autodetect_encoding=True)
+        else:
+            loader = TextLoader(file_path, autodetect_encoding=True)
+            known_type = False
 
     return loader, known_type
 

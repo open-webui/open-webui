@@ -1,13 +1,10 @@
-from pydantic import BaseModel
-from peewee import *
-from playhouse.shortcuts import model_to_dict
-from typing import List, Union, Optional
+from pydantic import BaseModel, ConfigDict
+from typing import List, Optional
 import time
 
-from utils.utils import decode_token
-from utils.misc import get_gravatar_url
+from sqlalchemy import String, Column, BigInteger, Text
 
-from apps.webui.internal.db import DB
+from apps.webui.internal.db import Base, get_db
 
 import json
 
@@ -16,15 +13,14 @@ import json
 ####################
 
 
-class Prompt(Model):
-    command = CharField(unique=True)
-    user_id = CharField()
-    title = TextField()
-    content = TextField()
-    timestamp = BigIntegerField()
+class Prompt(Base):
+    __tablename__ = "prompt"
 
-    class Meta:
-        database = DB
+    command = Column(String, primary_key=True)
+    user_id = Column(String)
+    title = Column(Text)
+    content = Column(Text)
+    timestamp = Column(BigInteger)
 
 
 class PromptModel(BaseModel):
@@ -33,6 +29,8 @@ class PromptModel(BaseModel):
     title: str
     content: str
     timestamp: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 ####################
@@ -48,10 +46,6 @@ class PromptForm(BaseModel):
 
 class PromptsTable:
 
-    def __init__(self, db):
-        self.db = db
-        self.db.create_tables([Prompt])
-
     def insert_new_prompt(
         self, user_id: str, form_data: PromptForm
     ) -> Optional[PromptModel]:
@@ -66,53 +60,60 @@ class PromptsTable:
         )
 
         try:
-            result = Prompt.create(**prompt.model_dump())
-            if result:
-                return prompt
-            else:
-                return None
-        except:
+            with get_db() as db:
+
+                result = Prompt(**prompt.dict())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return PromptModel.model_validate(result)
+                else:
+                    return None
+        except Exception as e:
             return None
 
     def get_prompt_by_command(self, command: str) -> Optional[PromptModel]:
         try:
-            prompt = Prompt.get(Prompt.command == command)
-            return PromptModel(**model_to_dict(prompt))
+            with get_db() as db:
+
+                prompt = db.query(Prompt).filter_by(command=command).first()
+                return PromptModel.model_validate(prompt)
         except:
             return None
 
     def get_prompts(self) -> List[PromptModel]:
-        return [
-            PromptModel(**model_to_dict(prompt))
-            for prompt in Prompt.select()
-            # .limit(limit).offset(skip)
-        ]
+        with get_db() as db:
+
+            return [
+                PromptModel.model_validate(prompt) for prompt in db.query(Prompt).all()
+            ]
 
     def update_prompt_by_command(
         self, command: str, form_data: PromptForm
     ) -> Optional[PromptModel]:
         try:
-            query = Prompt.update(
-                title=form_data.title,
-                content=form_data.content,
-                timestamp=int(time.time()),
-            ).where(Prompt.command == command)
+            with get_db() as db:
 
-            query.execute()
-
-            prompt = Prompt.get(Prompt.command == command)
-            return PromptModel(**model_to_dict(prompt))
+                prompt = db.query(Prompt).filter_by(command=command).first()
+                prompt.title = form_data.title
+                prompt.content = form_data.content
+                prompt.timestamp = int(time.time())
+                db.commit()
+                return PromptModel.model_validate(prompt)
         except:
             return None
 
     def delete_prompt_by_command(self, command: str) -> bool:
         try:
-            query = Prompt.delete().where((Prompt.command == command))
-            query.execute()  # Remove the rows, return number of rows removed.
+            with get_db() as db:
 
-            return True
+                db.query(Prompt).filter_by(command=command).delete()
+                db.commit()
+
+                return True
         except:
             return False
 
 
-Prompts = PromptsTable(DB)
+Prompts = PromptsTable()

@@ -1,11 +1,12 @@
-from pydantic import BaseModel, ConfigDict
-from peewee import *
-from playhouse.shortcuts import model_to_dict
+from pydantic import BaseModel, ConfigDict, parse_obj_as
 from typing import List, Union, Optional
 import time
+
+from sqlalchemy import String, Column, BigInteger, Text
+
 from utils.misc import get_gravatar_url
 
-from apps.webui.internal.db import DB, JSONField
+from apps.webui.internal.db import Base, JSONField, Session, get_db
 from apps.webui.models.chats import Chats
 
 ####################
@@ -13,25 +14,24 @@ from apps.webui.models.chats import Chats
 ####################
 
 
-class User(Model):
-    id = CharField(unique=True)
-    name = CharField()
-    email = CharField()
-    role = CharField()
-    profile_image_url = TextField()
+class User(Base):
+    __tablename__ = "user"
 
-    last_active_at = BigIntegerField()
-    updated_at = BigIntegerField()
-    created_at = BigIntegerField()
+    id = Column(String, primary_key=True)
+    name = Column(String)
+    email = Column(String)
+    role = Column(String)
+    profile_image_url = Column(Text)
 
-    api_key = CharField(null=True, unique=True)
-    settings = JSONField(null=True)
-    info = JSONField(null=True)
+    last_active_at = Column(BigInteger)
+    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)
 
-    oauth_sub = TextField(null=True, unique=True)
+    api_key = Column(String, nullable=True, unique=True)
+    settings = Column(JSONField, nullable=True)
+    info = Column(JSONField, nullable=True)
 
-    class Meta:
-        database = DB
+    oauth_sub = Column(Text, unique=True)
 
 
 class UserSettings(BaseModel):
@@ -57,6 +57,8 @@ class UserModel(BaseModel):
 
     oauth_sub: Optional[str] = None
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 ####################
 # Forms
@@ -76,9 +78,6 @@ class UserUpdateForm(BaseModel):
 
 
 class UsersTable:
-    def __init__(self, db):
-        self.db = db
-        self.db.create_tables([User])
 
     def insert_new_user(
         self,
@@ -89,77 +88,92 @@ class UsersTable:
         role: str = "pending",
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
-        user = UserModel(
-            **{
-                "id": id,
-                "name": name,
-                "email": email,
-                "role": role,
-                "profile_image_url": profile_image_url,
-                "last_active_at": int(time.time()),
-                "created_at": int(time.time()),
-                "updated_at": int(time.time()),
-                "oauth_sub": oauth_sub,
-            }
-        )
-        result = User.create(**user.model_dump())
-        if result:
-            return user
-        else:
-            return None
+        with get_db() as db:
+            user = UserModel(
+                **{
+                    "id": id,
+                    "name": name,
+                    "email": email,
+                    "role": role,
+                    "profile_image_url": profile_image_url,
+                    "last_active_at": int(time.time()),
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
+                    "oauth_sub": oauth_sub,
+                }
+            )
+            result = User(**user.model_dump())
+            db.add(result)
+            db.commit()
+            db.refresh(result)
+            if result:
+                return user
+            else:
+                return None
 
     def get_user_by_id(self, id: str) -> Optional[UserModel]:
         try:
-            user = User.get(User.id == id)
-            return UserModel(**model_to_dict(user))
-        except:
+            with get_db() as db:
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
+        except Exception as e:
             return None
 
     def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
         try:
-            user = User.get(User.api_key == api_key)
-            return UserModel(**model_to_dict(user))
+            with get_db() as db:
+
+                user = db.query(User).filter_by(api_key=api_key).first()
+                return UserModel.model_validate(user)
         except:
             return None
 
     def get_user_by_email(self, email: str) -> Optional[UserModel]:
         try:
-            user = User.get(User.email == email)
-            return UserModel(**model_to_dict(user))
+            with get_db() as db:
+
+                user = db.query(User).filter_by(email=email).first()
+                return UserModel.model_validate(user)
         except:
             return None
 
     def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
         try:
-            user = User.get(User.oauth_sub == sub)
-            return UserModel(**model_to_dict(user))
+            with get_db() as db:
+
+                user = db.query(User).filter_by(oauth_sub=sub).first()
+                return UserModel.model_validate(user)
         except:
             return None
 
     def get_users(self, skip: int = 0, limit: int = 50) -> List[UserModel]:
-        return [
-            UserModel(**model_to_dict(user))
-            for user in User.select()
-            # .limit(limit).offset(skip)
-        ]
+        with get_db() as db:
+            users = (
+                db.query(User)
+                # .offset(skip).limit(limit)
+                .all()
+            )
+            return [UserModel.model_validate(user) for user in users]
 
     def get_num_users(self) -> Optional[int]:
-        return User.select().count()
+        with get_db() as db:
+            return db.query(User).count()
 
     def get_first_user(self) -> UserModel:
         try:
-            user = User.select().order_by(User.created_at).first()
-            return UserModel(**model_to_dict(user))
+            with get_db() as db:
+                user = db.query(User).order_by(User.created_at).first()
+                return UserModel.model_validate(user)
         except:
             return None
 
     def update_user_role_by_id(self, id: str, role: str) -> Optional[UserModel]:
         try:
-            query = User.update(role=role).where(User.id == id)
-            query.execute()
-
-            user = User.get(User.id == id)
-            return UserModel(**model_to_dict(user))
+            with get_db() as db:
+                db.query(User).filter_by(id=id).update({"role": role})
+                db.commit()
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
         except:
             return None
 
@@ -167,23 +181,28 @@ class UsersTable:
         self, id: str, profile_image_url: str
     ) -> Optional[UserModel]:
         try:
-            query = User.update(profile_image_url=profile_image_url).where(
-                User.id == id
-            )
-            query.execute()
+            with get_db() as db:
+                db.query(User).filter_by(id=id).update(
+                    {"profile_image_url": profile_image_url}
+                )
+                db.commit()
 
-            user = User.get(User.id == id)
-            return UserModel(**model_to_dict(user))
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
         except:
             return None
 
     def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
-            query = User.update(last_active_at=int(time.time())).where(User.id == id)
-            query.execute()
+            with get_db() as db:
 
-            user = User.get(User.id == id)
-            return UserModel(**model_to_dict(user))
+                db.query(User).filter_by(id=id).update(
+                    {"last_active_at": int(time.time())}
+                )
+                db.commit()
+
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
         except:
             return None
 
@@ -191,22 +210,25 @@ class UsersTable:
         self, id: str, oauth_sub: str
     ) -> Optional[UserModel]:
         try:
-            query = User.update(oauth_sub=oauth_sub).where(User.id == id)
-            query.execute()
+            with get_db() as db:
+                db.query(User).filter_by(id=id).update({"oauth_sub": oauth_sub})
+                db.commit()
 
-            user = User.get(User.id == id)
-            return UserModel(**model_to_dict(user))
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
         except:
             return None
 
     def update_user_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
         try:
-            query = User.update(**updated).where(User.id == id)
-            query.execute()
+            with get_db() as db:
+                db.query(User).filter_by(id=id).update(updated)
+                db.commit()
 
-            user = User.get(User.id == id)
-            return UserModel(**model_to_dict(user))
-        except:
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
+                # return UserModel(**user.dict())
+        except Exception as e:
             return None
 
     def delete_user_by_id(self, id: str) -> bool:
@@ -215,9 +237,10 @@ class UsersTable:
             result = Chats.delete_chats_by_user_id(id)
 
             if result:
-                # Delete User
-                query = User.delete().where(User.id == id)
-                query.execute()  # Remove the rows, return number of rows removed.
+                with get_db() as db:
+                    # Delete User
+                    db.query(User).filter_by(id=id).delete()
+                    db.commit()
 
                 return True
             else:
@@ -227,19 +250,20 @@ class UsersTable:
 
     def update_user_api_key_by_id(self, id: str, api_key: str) -> str:
         try:
-            query = User.update(api_key=api_key).where(User.id == id)
-            result = query.execute()
-
-            return True if result == 1 else False
+            with get_db() as db:
+                result = db.query(User).filter_by(id=id).update({"api_key": api_key})
+                db.commit()
+                return True if result == 1 else False
         except:
             return False
 
     def get_user_api_key_by_id(self, id: str) -> Optional[str]:
         try:
-            user = User.get(User.id == id)
-            return user.api_key
-        except:
+            with get_db() as db:
+                user = db.query(User).filter_by(id=id).first()
+                return user.api_key
+        except Exception as e:
             return None
 
 
-Users = UsersTable(DB)
+Users = UsersTable()
