@@ -1233,7 +1233,7 @@ def process_doc(
     user=Depends(get_verified_user),
 ):
     try:
-        user = Users.update_user_by_id(user.id, {"settings": form_data.model_dump()})
+        user = Users.get_user_by_id(user.id)
         enableFileUpdateBase64 = False
 
         if user:
