@@ -40,7 +40,6 @@ def query_doc(
             query_embeddings=[query_embeddings],
             n_results=k,
         )
-
         return result
     except Exception as e:
         raise e

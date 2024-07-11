@@ -159,6 +159,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         if return_citations:
+          
             log.info(f"check score: {citations}")
 
             # Function to remove indices from a list if it is not None
@@ -178,7 +179,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
                         citations[0][key] = remove_indices(citations[0][key], indices_to_remove)
 
             log.info(f"query_doc:citations {citations}")
-            
+
             # Inject the citations into the response
             if isinstance(response, StreamingResponse):
                 # If it's a streaming response, inject it as SSE event or NDJSON line
