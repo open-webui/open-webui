@@ -156,6 +156,8 @@
 				} else {
 					message.citations = [data];
 				}
+			} else if (type === 'message') {
+				message.content += data.content;
 			} else if (type === 'confirmation') {
 				eventCallback = cb;
 				showEventConfirmation = true;
