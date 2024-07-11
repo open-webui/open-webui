@@ -151,10 +151,7 @@
 		userLocation = $settings.userLocation ?? false;
 		enableFileUpdateBase64 = $settings.enableFileUpdateBase64 ?? false;
 
-		defaultModelId = $settings?.models?.at(0) ?? '';
-		if ($config?.default_models) {
-			defaultModelId = $config.default_models.split(',')[0];
-		}
+		defaultModelId = ($settings?.models ?? ['']).at(0);
 
 		backgroundImageUrl = $settings.backgroundImageUrl ?? null;
 	});
