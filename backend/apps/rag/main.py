@@ -1238,7 +1238,7 @@ def process_doc(
 
         if user:
             user_settings = user.settings
-            enableFileUpdateBase64 = user_settings.get("ui").get("enableFileUpdateBase64", False)
+            enableFileUpdateBase64 = user_settings.ui.get("enableFileUpdateBase64", False)
 
         known_type = True
         file = Files.get_file_by_id(form_data.file_id)
@@ -1250,7 +1250,7 @@ def process_doc(
         if collection_name == None:
             collection_name = calculate_sha256(f)[:63]
         f.close()
-        
+
         try:
             if not enableFileUpdateBase64:
                 loader, known_type = get_loader(
