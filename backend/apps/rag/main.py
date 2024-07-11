@@ -1239,6 +1239,8 @@ def process_doc(
         if user:
             user_settings = user.settings
             enableFileUpdateBase64 = user_settings.ui.get("enableFileUpdateBase64", False)
+            logging.error(f"user_settings: {user_settings}")
+            logging.error(f"enableFileUpdateBase64: {enableFileUpdateBase64}")
 
         known_type = True
         file = Files.get_file_by_id(form_data.file_id)
