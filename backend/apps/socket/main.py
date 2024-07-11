@@ -145,7 +145,7 @@ async def get_event_emitter(request_info):
             "chat-events",
             {
                 "chat_id": request_info["chat_id"],
-                "message_id": request_info["id"],
+                "message_id": request_info["message_id"],
                 "data": event_data,
             },
             to=request_info["session_id"],
@@ -160,7 +160,7 @@ async def get_event_call(request_info):
             "chat-events",
             {
                 "chat_id": request_info["chat_id"],
-                "message_id": request_info["id"],
+                "message_id": request_info["message_id"],
                 "data": event_data,
             },
             to=request_info["session_id"],
