@@ -56,7 +56,7 @@ import json
 from typing import Iterator, Generator
 from pydantic import BaseModel
 
-from apps.rag.main import All_ENABLE_BASE64
+from apps.rag.main import app as rag_app
 
 app = FastAPI()
 
@@ -297,7 +297,7 @@ async def generate_function_chat_completion(form_data, user):
                 "email": user.email,
                 "name": user.name,
                 "role": user.role,
-                "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False) and All_ENABLE_BASE64,
+                "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False) and rag_app.state.config.ENABLE_BASE64,
             }
 
             try:

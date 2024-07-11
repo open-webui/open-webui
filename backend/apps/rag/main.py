@@ -152,8 +152,6 @@ app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
 
 app.state.config.ENABLE_BASE64 = ENABLE_BASE64
 
-All_ENABLE_BASE64 = app.state.config.ENABLE_BASE64
-
 app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
 )
@@ -596,7 +594,6 @@ class QuerySettingsForm(BaseModel):
 async def update_query_settings(
     form_data: QuerySettingsForm, user=Depends(get_admin_user)
 ):
-    global All_ENABLE_BASE64
     app.state.config.RAG_TEMPLATE = (
         form_data.template if form_data.template else RAG_TEMPLATE
     )
@@ -606,7 +603,6 @@ async def update_query_settings(
         form_data.hybrid if form_data.hybrid else False
     )
     app.state.config.ENABLE_BASE64 = form_data.enableBase64 if form_data.enableBase64 else False
-    All_ENABLE_BASE64 = app.state.config.ENABLE_BASE64
 
     return {
         "status": True,
@@ -1261,7 +1257,7 @@ def process_doc(
         f.close()
 
         try:
-            if not enableFileUpdateBase64 or not All_ENABLE_BASE64:
+            if not enableFileUpdateBase64 or not app.state.config.ENABLE_BASE64:
                 loader, known_type = get_loader(
                     file.filename, file.meta.get("content_type"), file_path
                 )
