@@ -29,7 +29,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import StreamingResponse, Response, RedirectResponse
 
 
-from apps.socket.main import sio, app as socket_app
+from apps.socket.main import sio, app as socket_app, get_event_emitter, get_event_call
 from apps.ollama.main import (
     app as ollama_app,
     get_all_models as get_ollama_models,
@@ -632,24 +632,12 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 message_id = body["id"]
                 del body["id"]
 
-            async def __event_emitter__(data):
-                await sio.emit(
-                    "chat-events",
-                    {
-                        "chat_id": chat_id,
-                        "message_id": message_id,
-                        "data": data,
-                    },
-                    to=session_id,
-                )
-
-            async def __event_call__(data):
-                response = await sio.call(
-                    "chat-events",
-                    {"chat_id": chat_id, "message_id": message_id, "data": data},
-                    to=session_id,
-                )
-                return response
+            __event_emitter__ = await get_event_emitter(
+                {"chat_id": chat_id, "message_id": message_id, "session_id": session_id}
+            )
+            __event_call__ = await get_event_call(
+                {"chat_id": chat_id, "message_id": message_id, "session_id": session_id}
+            )
 
             # Initialize data_items to store additional data to be sent to the client
             data_items = []
@@ -1107,24 +1095,21 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
             else:
                 pass
 
-    async def __event_emitter__(event_data):
-        await sio.emit(
-            "chat-events",
-            {
-                "chat_id": data["chat_id"],
-                "message_id": data["id"],
-                "data": event_data,
-            },
-            to=data["session_id"],
-        )
+    __event_emitter__ = await get_event_emitter(
+        {
+            "chat_id": data["chat_id"],
+            "message_id": data["id"],
+            "session_id": data["session_id"],
+        }
+    )
 
-    async def __event_call__(event_data):
-        response = await sio.call(
-            "chat-events",
-            {"chat_id": data["chat_id"], "message_id": data["id"], "data": event_data},
-            to=data["session_id"],
-        )
-        return response
+    __event_call__ = await get_event_call(
+        {
+            "chat_id": data["chat_id"],
+            "message_id": data["id"],
+            "session_id": data["session_id"],
+        }
+    )
 
     def get_priority(function_id):
         function = Functions.get_function_by_id(function_id)
