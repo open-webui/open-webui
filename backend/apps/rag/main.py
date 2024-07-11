@@ -607,6 +607,7 @@ async def update_query_settings(
     )
     app.state.config.ENABLE_BASE64 = form_data.enableBase64 if form_data.enableBase64 else False
     All_ENABLE_BASE64 = app.state.config.ENABLE_BASE64
+
     return {
         "status": True,
         "template": app.state.config.RAG_TEMPLATE,
@@ -1260,7 +1261,7 @@ def process_doc(
         f.close()
 
         try:
-            if not enableFileUpdateBase64 and All_ENABLE_BASE64:
+            if not enableFileUpdateBase64 or not All_ENABLE_BASE64:
                 loader, known_type = get_loader(
                     file.filename, file.meta.get("content_type"), file_path
                 )
