@@ -895,8 +895,8 @@ async def generate_openai_chat_completion(
     user=Depends(get_verified_user),
 ):
     form_data = OpenAIChatCompletionForm(**form_data)
+    payload = {**form_data.model_dump(exclude_none=True, exclude=["metadata"])}
 
-    payload = {**form_data}
     if "metadata" in payload:
         del payload["metadata"]
 
