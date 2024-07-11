@@ -214,6 +214,7 @@
 	"Embedding Model": "嵌入模型",
 	"Embedding Model Engine": "嵌入模型引擎",
 	"Embedding model set to \"{{embedding_model}}\"": "嵌入模型已設定為 \"{{embedding_model}}\"",
+	"Enable File-Update Base64" : "啟用Base64上傳檔案",
 	"Enable Chat History": "啟用聊天紀錄",
 	"Enable Community Sharing": "啟用社群分享",
 	"Enable message bad Words replacement": "",
