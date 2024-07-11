@@ -405,6 +405,7 @@ async def get_function_call_response(
                     "email": user.email,
                     "name": user.name,
                     "role": user.role,
+                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False),
                 }
 
                 try:
@@ -496,6 +497,7 @@ async def chat_completion_functions_handler(
                     "email": user.email,
                     "name": user.name,
                     "role": user.role,
+                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False),
                 }
 
                 try:
@@ -1198,6 +1200,7 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                     "email": user.email,
                     "name": user.name,
                     "role": user.role,
+                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False),
                 }
 
                 try:
