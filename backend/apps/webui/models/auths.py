@@ -159,7 +159,7 @@ class AuthsTable:
         log.info(f"authenticate_user_by_trusted_header: {email}")
         try:
             with get_db() as db:
-                auth = db.query(Auth).filter(email=email, active=True).first()
+                auth = db.query(Auth).filter_by(email=email, active=True).first()
                 if auth:
                     user = Users.get_user_by_id(auth.id)
                     return user
