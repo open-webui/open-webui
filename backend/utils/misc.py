@@ -2,7 +2,17 @@ from pathlib import Path
 import hashlib
 import re
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, List
+
+def get_last_user_message(messages: List[dict]) -> str:
+    for message in reversed(messages):
+        if message["role"] == "user":
+            if isinstance(message["content"], list):
+                for item in message["content"]:
+                    if item["type"] == "text":
+                        return item["text"]
+            return message["content"]
+    return None
 
 
 def get_gravatar_url(email):

@@ -41,6 +41,22 @@ def query_doc(
             n_results=k,
         )
 
+        # Function to remove indices from a list if it is not None
+        def remove_indices(lst, indices):
+            return [item for i, item in enumerate(lst) if i not in indices]
+
+        # Get the indices where distances are greater than 1
+        indices_to_remove = [i for i, distance in enumerate(result['distances'][0]) if distance > 1]
+
+        # List of keys to check and filter
+        keys_to_filter = ['ids', 'distances', 'metadatas', 'documents', 'embeddings', 'uris', 'data']
+
+        # Loop through each key and remove indices if the list is not None
+        for key in keys_to_filter:
+            if result[key] is not None:
+                if isinstance(result[key], list) and len(result[key]) > 0 and isinstance(result[key][0], list):
+                    result[key][0] = remove_indices(result[key][0], indices_to_remove)
+
         log.info(f"query_doc:result {result}")
         return result
     except Exception as e:
@@ -271,14 +287,14 @@ def rag_messages(
     for doc in docs:
         context = None
 
-        collection = doc.get("collection_name")
-        if collection:
-            collection = [collection]
-        else:
-            collection = doc.get("collection_names", [])
+        collection_names = (
+            doc["collection_names"]
+            if doc["type"] == "collection"
+            else [doc["collection_name"]]
+        )
 
-        collection = set(collection).difference(extracted_collections)
-        if not collection:
+        collection_names = set(collection_names).difference(extracted_collections)
+        if not collection_names:
             log.debug(f"skipping {doc} as it has already been extracted")
             continue
 
@@ -288,11 +304,7 @@ def rag_messages(
             else:
                 if hybrid_search:
                     context = query_collection_with_hybrid_search(
-                        collection_names=(
-                            doc["collection_names"]
-                            if doc["type"] == "collection"
-                            else [doc["collection_name"]]
-                        ),
+                        collection_names=collection_names,
                         query=query,
                         embedding_function=embedding_function,
                         k=k,
@@ -301,11 +313,7 @@ def rag_messages(
                     )
                 else:
                     context = query_collection(
-                        collection_names=(
-                            doc["collection_names"]
-                            if doc["type"] == "collection"
-                            else [doc["collection_name"]]
-                        ),
+                        collection_names=collection_names,
                         query=query,
                         embedding_function=embedding_function,
                         k=k,
@@ -315,18 +323,31 @@ def rag_messages(
             context = None
 
         if context:
-            relevant_contexts.append(context)
+            relevant_contexts.append({**context, "source": doc})
 
-        extracted_collections.extend(collection)
-
+        extracted_collections.extend(collection_names)
+    log.info(f"check score: {relevant_contexts}")
     context_string = ""
+
+    citations = []
     for context in relevant_contexts:
         try:
             if "documents" in context:
-                items = [item for item in context["documents"][0] if item is not None]
-                context_string += "\n\n".join(items)
+                context_string += "\n\n".join(
+                    [text for text in context["documents"][0] if text is not None]
+                )
+
+                if "metadatas" in context:
+                    citations.append(
+                        {
+                            "source": context["source"],
+                            "document": context["documents"][0],
+                            "metadata": context["metadatas"][0],
+                        }
+                    )
         except Exception as e:
             log.exception(e)
+
     context_string = context_string.strip()
 
     ra_content = rag_template(
@@ -355,7 +376,7 @@ def rag_messages(
 
     messages[last_user_message_idx] = new_user_message
 
-    return messages
+    return messages, citations
 
 
 def get_model_path(model: str, update_model: bool = False):
