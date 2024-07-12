@@ -122,12 +122,17 @@
 
 		if (res) {
 			if (func.is_global) {
-				toast.success($i18n.t('Filter is now globally enabled'));
+				func.type === 'filter'
+					? toast.success($i18n.t('Filter is now globally enabled'))
+					: toast.success($i18n.t('Function is now globally enabled'));
 			} else {
-				toast.success($i18n.t('Filter is now globally disabled'));
+				func.type === 'filter'
+					? toast.success($i18n.t('Filter is now globally disabled'))
+					: toast.success($i18n.t('Function is now globally disabled'));
 			}
 
 			functions.set(await getFunctions(localStorage.token));
+			models.set(await getModels(localStorage.token));
 		}
 	};
 </script>
@@ -294,7 +299,7 @@
 						showDeleteConfirm = true;
 					}}
 					toggleGlobalHandler={() => {
-						if (func.type === 'filter') {
+						if (['filter', 'action'].includes(func.type)) {
 							toggleGlobalHandler(func);
 						}
 					}}
