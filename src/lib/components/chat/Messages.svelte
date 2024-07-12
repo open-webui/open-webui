@@ -336,7 +336,9 @@
 										copyToClipboard={copyToClipboardWithToast}
 										{continueGeneration}
 										{regenerateResponse}
-										{chatActionHandler}
+										on:action={async (e) => {
+											await chatActionHandler(chatId, e.detail, message.model, message.id);
+										}}
 										on:save={async (e) => {
 											console.log('save', e);
 

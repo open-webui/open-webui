@@ -363,7 +363,7 @@
 		}
 	};
 
-	const chatCompletedHandler = async (modelId, responseMessageId, messages) => {
+	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
 		await mermaid.run({
 			querySelector: '.mermaid'
 		});
@@ -377,7 +377,7 @@
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp
 			})),
-			chat_id: $chatId,
+			chat_id: chatId,
 			session_id: $socket?.id,
 			id: responseMessageId
 		}).catch((error) => {
@@ -399,9 +399,21 @@
 				};
 			}
 		}
+
+		if ($chatId == chatId) {
+			if ($settings.saveChatHistory ?? true) {
+				chat = await updateChatById(localStorage.token, chatId, {
+					models: selectedModels,
+					messages: messages,
+					history: history,
+					params: params
+				});
+				await chats.set(await getChatList(localStorage.token));
+			}
+		}
 	};
 
-	const chatActionHandler = async (actionId, modelId, responseMessageId) => {
+	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId) => {
 		const res = await chatAction(localStorage.token, actionId, {
 			model: modelId,
 			messages: messages.map((m) => ({
@@ -411,7 +423,7 @@
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp
 			})),
-			chat_id: $chatId,
+			chat_id: chatId,
 			session_id: $socket?.id,
 			id: responseMessageId
 		}).catch((error) => {
@@ -430,6 +442,18 @@
 						: {}),
 					...message
 				};
+			}
+		}
+
+		if ($chatId == chatId) {
+			if ($settings.saveChatHistory ?? true) {
+				chat = await updateChatById(localStorage.token, chatId, {
+					models: selectedModels,
+					messages: messages,
+					history: history,
+					params: params
+				});
+				await chats.set(await getChatList(localStorage.token));
 			}
 		}
 	};
@@ -801,7 +825,7 @@
 						controller.abort('User: Stop Response');
 					} else {
 						const messages = createMessagesList(responseMessageId);
-						await chatCompletedHandler(model.id, responseMessageId, messages);
+						await chatCompletedHandler(_chatId, model.id, responseMessageId, messages);
 					}
 
 					_response = responseMessage.content;
@@ -1113,7 +1137,7 @@
 						} else {
 							const messages = createMessagesList(responseMessageId);
 
-							await chatCompletedHandler(model.id, responseMessageId, messages);
+							await chatCompletedHandler(_chatId, model.id, responseMessageId, messages);
 						}
 
 						_response = responseMessage.content;

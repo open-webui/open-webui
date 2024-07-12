@@ -1285,7 +1285,7 @@ async def chat_completed(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Action not found",
         )
-    
+
     data = form_data
     model_id = data["model"]
     if model_id not in app.state.MODELS:

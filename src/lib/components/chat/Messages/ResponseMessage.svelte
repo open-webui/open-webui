@@ -1031,8 +1031,7 @@
 																? 'visible'
 																: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 															on:click={() => {
-																chatActionHandler(action.id, message.model, message.id);
-																console.log('action');
+																dispatch('action', action.id);
 															}}
 														>
 															<Sparkles strokeWidth="2.1" className="size-4" />
