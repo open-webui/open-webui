@@ -104,6 +104,7 @@
 	};
 
 	let params = {};
+	let valves = {};
 
 	$: if (history.currentId !== null) {
 		let _messages = [];
@@ -1541,6 +1542,18 @@
 			</div>
 		</div>
 
-		<ChatControls bind:show={showControls} bind:params />
+		<ChatControls
+			models={selectedModelIds.reduce((a, e, i, arr) => {
+				const model = $models.find((m) => m.id === e);
+
+				if (model) {
+					return [...a, model];
+				}
+				return a;
+			}, [])}
+			bind:show={showControls}
+			bind:params
+			bind:valves
+		/>
 	</div>
 {/if}

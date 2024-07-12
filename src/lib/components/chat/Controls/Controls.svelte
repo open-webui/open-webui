@@ -5,7 +5,10 @@
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import AdvancedParams from '../Settings/Advanced/AdvancedParams.svelte';
+	import Valves from '$lib/components/common/Valves.svelte';
 
+	export let models = [];
+	export let valves = {};
 	export let params = {};
 </script>
 
@@ -23,6 +26,18 @@
 	</div>
 
 	<div class=" dark:text-gray-200 text-sm font-primary">
+		{#if models.length === 1 && models[0]?.pipe?.valves_spec}
+			<div>
+				<div class=" font-medium">Valves</div>
+
+				<div>
+					<Valves valvesSpec={models[0]?.pipe?.valves_spec} bind:valves />
+				</div>
+			</div>
+
+			<hr class="my-2 border-gray-100 dark:border-gray-800" />
+		{/if}
+
 		<div>
 			<div class="mb-1.5 font-medium">System Prompt</div>
 
