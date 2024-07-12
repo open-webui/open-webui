@@ -52,7 +52,7 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
-	import { chatCompleted, generateTitle, generateSearchQuery } from '$lib/apis';
+	import { chatCompleted, generateTitle, generateSearchQuery, chatAction } from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -384,6 +384,39 @@
 			toast.error(error);
 			messages.at(-1).error = { content: error };
 
+			return null;
+		});
+
+		if (res !== null) {
+			// Update chat history with the new messages
+			for (const message of res.messages) {
+				history.messages[message.id] = {
+					...history.messages[message.id],
+					...(history.messages[message.id].content !== message.content
+						? { originalContent: history.messages[message.id].content }
+						: {}),
+					...message
+				};
+			}
+		}
+	};
+
+	const chatActionHandler = async (actionId, modelId, responseMessageId) => {
+		const res = await chatAction(localStorage.token, actionId, {
+			model: modelId,
+			messages: messages.map((m) => ({
+				id: m.id,
+				role: m.role,
+				content: m.content,
+				info: m.info ? m.info : undefined,
+				timestamp: m.timestamp
+			})),
+			chat_id: $chatId,
+			session_id: $socket?.id,
+			id: responseMessageId
+		}).catch((error) => {
+			toast.error(error);
+			messages.at(-1).error = { content: error };
 			return null;
 		});
 
@@ -1533,6 +1566,7 @@
 						{sendPrompt}
 						{continueGeneration}
 						{regenerateResponse}
+						{chatActionHandler}
 					/>
 				</div>
 			</div>
