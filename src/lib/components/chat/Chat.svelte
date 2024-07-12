@@ -161,6 +161,8 @@
 				}
 			} else if (type === 'message') {
 				message.content += data.content;
+		  } else if (type === 'replace') {
+		    message.content = data.content;
 			} else if (type === 'confirmation') {
 				eventCallback = cb;
 
