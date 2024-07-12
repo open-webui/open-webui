@@ -78,6 +78,8 @@
 	let showEventConfirmation = false;
 	let eventConfirmationTitle = '';
 	let eventConfirmationMessage = '';
+	let eventConfirmationInput = false;
+	let eventConfirmationInputPlaceholder = '';
 	let eventCallback = null;
 
 	let showModelSelector = true;
@@ -161,10 +163,21 @@
 				message.content += data.content;
 			} else if (type === 'confirmation') {
 				eventCallback = cb;
+
+				eventConfirmationInput = false;
 				showEventConfirmation = true;
 
 				eventConfirmationTitle = data.title;
 				eventConfirmationMessage = data.message;
+			} else if (type === 'input') {
+				eventCallback = cb;
+
+				eventConfirmationInput = true;
+				showEventConfirmation = true;
+
+				eventConfirmationTitle = data.title;
+				eventConfirmationMessage = data.message;
+				eventConfirmationInputPlaceholder = data.placeholder;
 			} else {
 				console.log('Unknown message type', data);
 			}
@@ -1411,8 +1424,14 @@
 	bind:show={showEventConfirmation}
 	title={eventConfirmationTitle}
 	message={eventConfirmationMessage}
+	input={eventConfirmationInput}
+	inputPlaceholder={eventConfirmationInputPlaceholder}
 	on:confirm={(e) => {
-		eventCallback(true);
+		if (e.detail) {
+			eventCallback(e.detail);
+		} else {
+			eventCallback(true);
+		}
 	}}
 	on:cancel={() => {
 		eventCallback(false);
@@ -1545,7 +1564,6 @@
 		<ChatControls
 			models={selectedModelIds.reduce((a, e, i, arr) => {
 				const model = $models.find((m) => m.id === e);
-
 				if (model) {
 					return [...a, model];
 				}
