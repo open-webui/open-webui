@@ -9,15 +9,15 @@ TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs
 
 TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [superthermal evaporation](../../evaporation-kits/) page and related articles.
 
-TO DO: Figure out how to call our "location" folder rather then "src". Copy needed pages from "src" into "location". We'll create a script to merge the files into "location" when running build.
+TO DO: Figure out how to call our "src-merged" folder rather then "src". Copy needed pages 
 
-TO DO: Create an example of loading a Python util file that is also loaded by our [RealityStream](../../RealityStream/) app.
-
-TO DO: Include the localsite.js file to add our site header and navigation:
+DONE: Manually placed localsite.js include in src-merged/app.html to add our location navigation:
 
 	<script type="text/javascript" src="https://model.earth/localsite/js/localsite.js?showheader=true&showsearch=true"></script>
 
-TO DO: Add a script that moves a few pages into "src/location" folder and merges with our customizations.
+TO DO: Create a script to merge files from "location" into "src" and send to "src-merged"
+
+TO DO: Create an example of loading a Python util file that is also loaded by our [RealityStream](../../RealityStream/) app.
 
 TO DO: Activate hosting using Cloudflare.
 
