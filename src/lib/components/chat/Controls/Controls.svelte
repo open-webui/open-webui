@@ -39,14 +39,14 @@
 		{/if}
 
 		<div>
-			<div class="mb-1.5 font-medium">System Prompt</div>
+			<div class="mb-1.5 font-medium">{$i18n.t('System Prompt')}</div>
 
 			<div>
 				<textarea
 					bind:value={params.system}
 					class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 border border-gray-100 dark:border-gray-800 outline-none resize-none"
 					rows="3"
-					placeholder="Enter system prompt"
+					placeholder={$i18n.t('Enter system prompt')}
 				/>
 			</div>
 		</div>
@@ -54,7 +54,7 @@
 		<hr class="my-2 border-gray-100 dark:border-gray-800" />
 
 		<div>
-			<div class="mb-1.5 font-medium">Advanced Params</div>
+			<div class="mb-1.5 font-medium">{$i18n.t('Advanced Params')}</div>
 
 			<div>
 				<AdvancedParams bind:params />
