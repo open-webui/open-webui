@@ -1,7 +1,8 @@
+# Location Setup
 
 ## Edit your local files pulled down with Docker
 
-Once you get the following installed, see our [TO DOs for Open WebUI](../location).
+Once you get the following installed, see our [Location Projects for Open WebUI](../).
 
 **ghcr.io** stands for GitHub Container Registry, which is a service provided by GitHub for hosting and managing container images.
 
@@ -141,3 +142,5 @@ Create 8 categories that all news stories fall in, and calculate the percentage 
 <!-- npm run preview didn't have an api. flower -->
 
 [Open WebUI Documentation](https://docs.openwebui.com/)
+
+[Location Projects for Open WebUI](../)
