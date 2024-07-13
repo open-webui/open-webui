@@ -9,7 +9,7 @@ TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs
 
 TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [superthermal evaporation](../../evaporation-kits/) page and related articles.
 
-TO DO: Figure out how to call our "src-merged" folder rather then "src". Copy needed pages 
+TO DO: Figure out how to call our "src-merged" folder during build rather then "src". 
 
 DONE: Manually placed localsite.js include in src-merged/app.html to add our location navigation:
 
