@@ -45,7 +45,7 @@ Docker set-up contributors: Dinesh B, Loren, Yifeng
 
 ## Edit our Open WebUI "projects" repo
 
-The "locations" folder is our area to customize so we don't have sync issues with open-webui.
+The "location" folder is where we'll edit enhancements to the "src" folder. We'll merge our enhancments into "src-merged" so we don't have sync issues with open-webui.
 
 We also edit index.html and active.md in the repo root.
 
