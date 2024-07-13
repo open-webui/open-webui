@@ -263,7 +263,7 @@ def apply_params(params_to_add, old_params):
     if params_to_add.get("temperature", None) is not None:
         result["temperature"] = params_to_add.get("temperature", None)
 
-    if params_to_add.get("seed", None):
+    if params_to_add.get("seed", None) is not None:
         result["seed"] = params_to_add.get("seed", None)
 
     if params_to_add.get("stop", None):
