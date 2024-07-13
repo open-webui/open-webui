@@ -233,6 +233,72 @@ async def get_all_models():
     return models
 
 
+def apply_params(params_to_add, old_params):
+    result = old_params
+    if params_to_add.get("mirostat", None):
+        result["mirostat"] = params_to_add.get("mirostat", None)
+
+    if params_to_add.get("mirostat_eta", None):
+        result["mirostat_eta"] = params_to_add.get("mirostat_eta", None)
+
+    if params_to_add.get("mirostat_tau", None):
+
+        result["mirostat_tau"] = params_to_add.get("mirostat_tau", None)
+
+    if params_to_add.get("num_ctx", None):
+        result["num_ctx"] = params_to_add.get("num_ctx", None)
+
+    if params_to_add.get("num_batch", None):
+        result["num_batch"] = params_to_add.get("num_batch", None)
+
+    if params_to_add.get("num_keep", None):
+        result["num_keep"] = params_to_add.get("num_keep", None)
+
+    if params_to_add.get("repeat_last_n", None):
+        result["repeat_last_n"] = params_to_add.get("repeat_last_n", None)
+
+    if params_to_add.get("frequency_penalty", None):
+        result["repeat_penalty"] = params_to_add.get("frequency_penalty", None)
+
+    if params_to_add.get("temperature", None) is not None:
+        result["temperature"] = params_to_add.get("temperature", None)
+
+    if params_to_add.get("seed", None):
+        result["seed"] = params_to_add.get("seed", None)
+
+    if params_to_add.get("stop", None):
+        result["stop"] = (
+            [
+                bytes(stop, "utf-8").decode("unicode_escape")
+                for stop in params_to_add["stop"]
+            ]
+            if params_to_add.get("stop", None)
+            else None
+        )
+
+    if params_to_add.get("tfs_z", None):
+        result["tfs_z"] = params_to_add.get("tfs_z", None)
+
+    if params_to_add.get("max_tokens", None):
+        result["num_predict"] = params_to_add.get("max_tokens", None)
+
+    if params_to_add.get("top_k", None):
+        result["top_k"] = params_to_add.get("top_k", None)
+
+    if params_to_add.get("top_p", None):
+        result["top_p"] = params_to_add.get("top_p", None)
+
+    if params_to_add.get("use_mmap", None):
+        result["use_mmap"] = params_to_add.get("use_mmap", None)
+
+    if params_to_add.get("use_mlock", None):
+        result["use_mlock"] = params_to_add.get("use_mlock", None)
+
+    if params_to_add.get("num_thread", None):
+        result["num_thread"] = params_to_add.get("num_thread", None)
+    return result
+
+
 @app.get("/api/tags")
 @app.get("/api/tags/{url_idx}")
 async def get_ollama_tags(
@@ -742,88 +808,19 @@ async def generate_chat_completion(
 
         model_info.params = model_info.params.model_dump()
 
+        chat_settings_params = copy.deepcopy(payload["options"])
+        payload["options"] = {}
+
         if model_info.params:
-            payload["options"] = {}
+            payload["options"] = apply_params(model_info.params, payload["options"])
 
-            if model_info.params.get("mirostat", None):
-                payload["options"]["mirostat"] = model_info.params.get("mirostat", None)
+        if user.settings.ui["params"]:
+            payload["options"] = apply_params(
+                user.settings.ui["params"], payload["options"]
+            )
 
-            if model_info.params.get("mirostat_eta", None):
-                payload["options"]["mirostat_eta"] = model_info.params.get(
-                    "mirostat_eta", None
-                )
-
-            if model_info.params.get("mirostat_tau", None):
-
-                payload["options"]["mirostat_tau"] = model_info.params.get(
-                    "mirostat_tau", None
-                )
-
-            if model_info.params.get("num_ctx", None):
-                payload["options"]["num_ctx"] = model_info.params.get("num_ctx", None)
-
-            if model_info.params.get("num_batch", None):
-                payload["options"]["num_batch"] = model_info.params.get(
-                    "num_batch", None
-                )
-
-            if model_info.params.get("num_keep", None):
-                payload["options"]["num_keep"] = model_info.params.get("num_keep", None)
-
-            if model_info.params.get("repeat_last_n", None):
-                payload["options"]["repeat_last_n"] = model_info.params.get(
-                    "repeat_last_n", None
-                )
-
-            if model_info.params.get("frequency_penalty", None):
-                payload["options"]["repeat_penalty"] = model_info.params.get(
-                    "frequency_penalty", None
-                )
-
-            if model_info.params.get("temperature", None) is not None:
-                payload["options"]["temperature"] = model_info.params.get(
-                    "temperature", None
-                )
-
-            if model_info.params.get("seed", None):
-                payload["options"]["seed"] = model_info.params.get("seed", None)
-
-            if model_info.params.get("stop", None):
-                payload["options"]["stop"] = (
-                    [
-                        bytes(stop, "utf-8").decode("unicode_escape")
-                        for stop in model_info.params["stop"]
-                    ]
-                    if model_info.params.get("stop", None)
-                    else None
-                )
-
-            if model_info.params.get("tfs_z", None):
-                payload["options"]["tfs_z"] = model_info.params.get("tfs_z", None)
-
-            if model_info.params.get("max_tokens", None):
-                payload["options"]["num_predict"] = model_info.params.get(
-                    "max_tokens", None
-                )
-
-            if model_info.params.get("top_k", None):
-                payload["options"]["top_k"] = model_info.params.get("top_k", None)
-
-            if model_info.params.get("top_p", None):
-                payload["options"]["top_p"] = model_info.params.get("top_p", None)
-
-            if model_info.params.get("use_mmap", None):
-                payload["options"]["use_mmap"] = model_info.params.get("use_mmap", None)
-
-            if model_info.params.get("use_mlock", None):
-                payload["options"]["use_mlock"] = model_info.params.get(
-                    "use_mlock", None
-                )
-
-            if model_info.params.get("num_thread", None):
-                payload["options"]["num_thread"] = model_info.params.get(
-                    "num_thread", None
-                )
+        if chat_settings_params:
+            payload["options"] = apply_params(chat_settings_params, payload["options"])
 
         system = model_info.params.get("system", None)
         if system:
