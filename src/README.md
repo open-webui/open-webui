@@ -1,7 +1,7 @@
 
 ## Edit your local files pulled down with Docker
 
-Once you get the following installed, see our [ModelEarth Location TO DOs for Open WebUI](../location).
+Once you get the following installed, see our [TO DOs for Open WebUI](../location).
 
 **ghcr.io** stands for GitHub Container Registry, which is a service provided by GitHub for hosting and managing container images.
 
