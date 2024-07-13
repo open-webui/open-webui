@@ -1,0 +1,156 @@
+@font-face {
+	font-family: 'Inter';
+	src: url('/assets/fonts/Inter-Variable.ttf');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Archivo';
+	src: url('/assets/fonts/Archivo-Variable.ttf');
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Mona Sans';
+	src: url('/assets/fonts/Mona-Sans.woff2');
+	font-display: swap;
+}
+
+html {
+	word-break: break-word;
+}
+
+code {
+	/* white-space-collapse: preserve !important; */
+	overflow-x: auto;
+	width: auto;
+}
+
+math {
+	margin-top: 1rem;
+}
+
+.hljs {
+	@apply rounded-lg;
+}
+
+.markdown a {
+	@apply underline;
+}
+
+.font-primary {
+	font-family: 'Archivo', sans-serif;
+}
+
+iframe {
+	@apply rounded-lg;
+}
+
+ol > li {
+	counter-increment: list-number;
+	display: block;
+	margin-bottom: 0;
+	margin-top: 0;
+	min-height: 28px;
+}
+
+.prose ol > li::before {
+	content: counters(list-number, '.') '.';
+	padding-right: 0.5rem;
+	color: var(--tw-prose-counters);
+	font-weight: 400;
+}
+
+li p {
+	display: inline;
+}
+
+::-webkit-scrollbar-thumb {
+	--tw-border-opacity: 1;
+	background-color: rgba(217, 217, 227, 0.8);
+	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+	border-radius: 9999px;
+	border-width: 1px;
+}
+
+::-webkit-scrollbar {
+	height: 0.4rem;
+	width: 0.4rem;
+}
+
+::-webkit-scrollbar-track {
+	background-color: transparent;
+	border-radius: 9999px;
+}
+
+select {
+	background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+	background-position: right 0.5rem center;
+	background-repeat: no-repeat;
+	background-size: 1.5em 1.5em;
+	padding-right: 2.5rem;
+	-webkit-print-color-adjust: exact;
+	print-color-adjust: exact;
+	/* for Firefox */
+	-moz-appearance: none;
+	/* for Chrome */
+	-webkit-appearance: none;
+}
+
+.katex-mathml {
+	display: none;
+}
+
+.scrollbar-hidden:active::-webkit-scrollbar-thumb,
+.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
+.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
+	visibility: visible;
+}
+.scrollbar-hidden::-webkit-scrollbar-thumb {
+	visibility: hidden;
+}
+
+.scrollbar-hidden::-webkit-scrollbar-corner {
+	display: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+	display: none; /* for Chrome, Safari and Opera */
+}
+
+.scrollbar-none::-webkit-scrollbar-corner {
+	display: none;
+}
+
+.scrollbar-none {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+	/* display: none; <- Crashes Chrome on hover */
+	-webkit-appearance: none;
+	margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+}
+
+input[type='number'] {
+	-moz-appearance: textfield; /* Firefox */
+}
+
+.cm-editor {
+	height: 100%;
+	width: 100%;
+}
+
+.cm-scroller {
+	@apply scrollbar-hidden;
+}
+
+.cm-editor.cm-focused {
+	outline: none;
+}
+
+.tippy-box[data-theme~='dark'] {
+	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<title>Open WebUI Projects</title>
+<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" href="https://model.earth/localsite/css/base.css" id="/localsite/css/base.css" />
+<script type="text/javascript" src="https://model.earth/localsite/js/localsite.js?showheader=true"></script>
+
+<base href="../">
+<script>
+if(typeof param=='undefined'){ var param={}; }
+// From root since base href is set to ../ above
+loadMarkdown("src/README.md", "locationDiv", "_parent");
+loadMarkdown("README.md", "readmeDiv", "_parent");
+//loadMarkdown("README-better-layout.md", "readmeDiv", "_parent");
+</script>
+
+<style>
+ul {
+  list-style-type: none;
+}
+img {
+  max-width: 100%;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="content contentpadding">
+  <a href="./">Active Projects</a>
+  <a href="https://github.com/modelearth/projects/" style="float:right">Our GitHub Fork</a>
+
+  <div id="locationDiv"></div>
+  <hr>
+  <div id="readmeDiv"></div>
+</div>
+
+</body>
+</html>
