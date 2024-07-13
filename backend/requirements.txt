@@ -10,9 +10,11 @@ python-socketio==5.11.3
 python-jose==3.3.0
 passlib[bcrypt]==1.7.4
 
-requests==2.32.2
+requests==2.32.3
 aiohttp==3.9.5
-peewee==3.17.5
+sqlalchemy==2.0.30
+alembic==1.13.2
+peewee==3.17.6
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
 PyMySQL==1.1.1
@@ -29,27 +31,29 @@ APScheduler==3.10.4
 openai
 anthropic
 google-generativeai==0.5.4
+tiktoken
 
-langchain==0.2.0
-langchain-community==0.2.0
+langchain==0.2.6
+langchain-community==0.2.6
 langchain-chroma==0.1.2
 
 fake-useragent==1.5.1
 chromadb==0.5.3
-sentence-transformers==2.7.0
+sentence-transformers==3.0.1
 pypdf==4.2.0
 docx2txt==0.8
 python-pptx==0.6.23
-unstructured==0.14.0
+unstructured==0.14.9
 Markdown==3.6
 pypandoc==1.13
 pandas==2.2.2
-openpyxl==3.1.2
+openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.1
 validators==0.28.1
+psutil
 
-opencv-python-headless==4.9.0.80
+opencv-python-headless==4.10.0.84
 rapidocr-onnxruntime==1.3.22
 
 fpdf2==2.7.9
@@ -61,10 +65,15 @@ PyJWT[crypto]==2.8.0
 authlib==1.3.1
 
 black==24.4.2
-langfuse==2.33.0
+langfuse==2.38.0
 youtube-transcript-api==0.6.2
 pytube==15.0.0
 
 extract_msg
 pydub
 duckduckgo-search~=6.1.7
+
+## Tests
+docker~=7.1.0
+pytest~=8.2.2
+pytest-docker~=3.1.1

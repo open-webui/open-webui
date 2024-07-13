@@ -30,7 +30,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
+			class="w-full {className} text-sm rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow font-primary"
 			sideOffset={8}
 			side="bottom"
 			align="start"

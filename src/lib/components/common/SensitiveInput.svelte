@@ -4,8 +4,8 @@
 	export let readOnly = false;
 	export let outerClassName = 'flex flex-1';
 	export let inputClassName =
-		'w-full rounded-l-lg py-2 pl-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none';
-	export let showButtonClassName = 'px-2 transition rounded-r-lg bg-white dark:bg-gray-850';
+		'w-full rounded-l-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none';
+	export let showButtonClassName = 'px-2 transition rounded-r-lg bg-gray-50 dark:bg-gray-850';
 
 	let show = false;
 </script>

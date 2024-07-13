@@ -152,7 +152,10 @@
 			}
 			tooltipInstance = tippy(`#info-${message.id}`, {
 				content: `<span class="text-xs" id="tooltip-${message.id}">${tooltipContent}</span>`,
-				allowHTML: true
+				allowHTML: true,
+				theme: 'dark',
+				arrow: false,
+				offset: [0, 4]
 			});
 		}
 	};
