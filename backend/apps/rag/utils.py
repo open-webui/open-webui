@@ -326,22 +326,25 @@ def get_model_path(model: str, update_model: bool = False):
 
     local_files_only = not update_model
 
+    local_model_path = os.path.join(cache_dir, model)
+
     snapshot_kwargs = {
         "cache_dir": cache_dir,
         "local_files_only": local_files_only,
     }
 
     log.debug(f"model: {model}")
+    log.debug(f"local_model_path: {local_model_path}")
     log.debug(f"snapshot_kwargs: {snapshot_kwargs}")
 
     # Inspiration from upstream sentence_transformers
     if (
-        os.path.exists(model)
+        os.path.exists(local_model_path)
         or ("\\" in model or model.count("/") > 1)
         and local_files_only
     ):
         # If fully qualified path exists, return input, else set repo_id
-        return model
+        return local_model_path
     elif "/" not in model:
         # Set valid repo_id for model short-name
         model = "sentence-transformers" + "/" + model
@@ -355,7 +358,7 @@ def get_model_path(model: str, update_model: bool = False):
         return model_repo_path
     except Exception as e:
         log.exception(f"Cannot determine model snapshot path: {e}")
-        return model
+        return local_model_path
 
 
 def generate_openai_embeddings(
