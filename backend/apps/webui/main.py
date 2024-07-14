@@ -17,6 +17,7 @@ from apps.webui.routers import (
     utils,
     files,
     functions,
+    scripts,
 )
 from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
@@ -110,6 +111,7 @@ app.include_router(memories.router, prefix="/memories", tags=["memories"])
 app.include_router(files.router, prefix="/files", tags=["files"])
 app.include_router(tools.router, prefix="/tools", tags=["tools"])
 app.include_router(functions.router, prefix="/functions", tags=["functions"])
+app.include_router(scripts.router, prefix="/scripts", tags=["scripts"])
 
 app.include_router(utils.router, prefix="/utils", tags=["utils"])
 

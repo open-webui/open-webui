@@ -17,6 +17,7 @@ from apps.webui.models.tools import Tool
 from apps.webui.models.users import User
 from apps.webui.models.files import File
 from apps.webui.models.functions import Function
+from apps.webui.models.scripts import Script
 
 from config import DATABASE_URL
 

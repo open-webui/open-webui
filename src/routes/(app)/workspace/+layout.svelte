@@ -87,6 +87,15 @@
 			>
 				{$i18n.t('Functions')}
 			</a>
+
+			<a
+				class="min-w-fit rounded-lg p-1.5 px-3 {$page.url.pathname.includes('/workspace/scripts')
+					? 'bg-gray-50 dark:bg-gray-850'
+					: ''} transition"
+				href="/workspace/scripts"
+			>
+				{$i18n.t('Python Scripts')}
+			</a>
 		</div>
 	</div>
 
