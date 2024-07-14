@@ -39,6 +39,21 @@
 		saveAs(blob, `chat-${_chat.title}.txt`);
 	};
 
+	const downloadMd = async () => {
+		const _chat = chat.chat;
+		console.log('download', chat);
+
+		const chatText = _chat.messages.reduce((a, message, i, arr) => {
+			return `${a}## ${message.role.toUpperCase()}\n${message.content}\n\n`;
+		}, '');
+
+		const blob = new Blob([chatText], {
+			type: 'text/markdown' 
+		});
+
+		saveAs(blob, `chat-${_chat.title}.md`);
+	};
+
 	const downloadPdf = async () => {
 		const _chat = chat.chat;
 		console.log('download', chat);
@@ -178,6 +193,7 @@
 					>
 						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
 					</DropdownMenu.Item>
+
 					<DropdownMenu.Item
 						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
@@ -185,6 +201,15 @@
 						}}
 					>
 						<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
+					</DropdownMenu.Item>
+
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						on:click={() => {
+							downloadMd();
+						}}
+					>
+						<div class="flex items-center line-clamp-1">{$i18n.t('Plain markdown (.md)')}</div>
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item
