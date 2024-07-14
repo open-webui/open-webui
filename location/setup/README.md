@@ -1,4 +1,4 @@
-# Location Setup
+# Docker Setup
 
 ## Edit your local files pulled down with Docker
 
