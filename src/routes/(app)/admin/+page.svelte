@@ -78,7 +78,7 @@
 			users = await getUsers(localStorage.token);
 			if (users.length > 0) {
 				firstUser = await getFirstUser({ users });
-				isProAdmin = firstUser?.id !== $user?.id;
+				isProAdmin = firstUser?.id === $user?.id;
 			}
 		}
 		loaded = true;
