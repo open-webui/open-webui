@@ -66,7 +66,6 @@
 								class="underline text-blue-400 hover:text-blue-300">{manifest.funding_url}</a
 							>
 						</div>
-
 					</div>
 
 					<div class="flex justify-end pt-3 text-sm font-medium">
