@@ -116,6 +116,8 @@ export const getUsers = async (token: string) => {
 	return res ? res : [];
 };
 
+export const getFirstUser = async ({ users = [] }) => users.length ? users[0] : null;
+
 export const getUserSettings = async (token: string) => {
 	let error = null;
 	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings`, {

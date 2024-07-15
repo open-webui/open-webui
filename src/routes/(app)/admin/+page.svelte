@@ -10,7 +10,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
+	import { updateUserRole, getUsers, deleteUserById, getFirstUser } from '$lib/apis/users';
 
 	import EditUserModal from '$lib/components/admin/EditUserModal.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
@@ -25,9 +25,11 @@
 	let loaded = false;
 	let tab = '';
 	let users = [];
+	let firstUser = null;
 
 	let search = '';
 	let selectedUser = null;
+	let isProAdmin = false;
 
 	let page = 1;
 
@@ -74,6 +76,10 @@
 			await goto('/');
 		} else {
 			users = await getUsers(localStorage.token);
+			if (users.length > 0) {
+				firstUser = await getFirstUser({ users });
+				isProAdmin = firstUser?.id !== $user?.id;
+			}
 		}
 		loaded = true;
 	});
@@ -307,7 +313,7 @@
 
 						<td class="px-3 py-2 text-right">
 							<div class="flex justify-end w-full">
-								{#if user.role !== 'admin'}
+								{#if isProAdmin}
 									<Tooltip content={$i18n.t('Chats')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
