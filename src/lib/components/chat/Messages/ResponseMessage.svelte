@@ -1034,7 +1034,16 @@
 																dispatch('action', action.id);
 															}}
 														>
-															<Sparkles strokeWidth="2.1" className="size-4" />
+															{#if action.icon_url}
+																<img
+																	src={action.icon_url}
+																	class="w-4 h-4 dark:invert-[80%]"
+																	style="fill: currentColor;"
+																	alt={action.name}
+																/>
+															{:else}
+																<Sparkles strokeWidth="2.1" className="size-4" />
+															{/if}
 														</button>
 													</Tooltip>
 												{/each}
