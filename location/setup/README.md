@@ -1,5 +1,11 @@
 # Docker Setup
 
+## Installing git while creation of docker image
+
+To be able to run git commands inside a docker container the following command has been used:
+
+	apt-get install -y --no-install-recommends curl jq git
+
 ## Edit your local files pulled down with Docker
 
 Once you get the following installed, see our [Location Projects for Open WebUI](../).
