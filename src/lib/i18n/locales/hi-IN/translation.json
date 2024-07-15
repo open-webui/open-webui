@@ -576,6 +576,7 @@
 	"Successfully updated.": "सफलतापूर्वक उत्परिवर्तित।",
 	"Suggested": "सुझावी",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "सिस्टम",
 	"System Prompt": "सिस्टम प्रॉम्प्ट",
 	"Tags": "टैग",
@@ -588,6 +589,7 @@
 	"Text-to-Speech Engine": "टेक्स्ट-टू-स्पीच इंजन",
 	"Tfs Z": "टफ्स Z",
 	"Thanks for your feedback!": "आपकी प्रतिक्रिया के लिए धन्यवाद!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "स्कोर का मान 0.0 (0%) और 1.0 (100%) के बीच होना चाहिए।",
 	"Theme": "थीम",
 	"Thinking...": "",
@@ -696,6 +698,7 @@
 	"You're a helpful assistant.": "आप एक सहायक सहायक हैं",
 	"You're now logged in.": "अब आप लॉग इन हो गए हैं",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "यूट्यूब लोडर सेटिंग्स"
 }

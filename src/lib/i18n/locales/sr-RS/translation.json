@@ -577,6 +577,7 @@
 	"Successfully updated.": "Успешно ажурирано.",
 	"Suggested": "Предложено",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "Систем",
 	"System Prompt": "Системски упит",
 	"Tags": "Ознаке",
@@ -589,6 +590,7 @@
 	"Text-to-Speech Engine": "Мотор за текст у говор",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "Хвала на вашем коментару!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "Резултат треба да буде вредност између 0.0 (0%) и 1.0 (100%).",
 	"Theme": "Тема",
 	"Thinking...": "",
@@ -697,6 +699,7 @@
 	"You're a helpful assistant.": "Ти си користан помоћник.",
 	"You're now logged in.": "Сада сте пријављени.",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Јутјуб",
 	"Youtube Loader Settings": "Подешавања Јутјуб учитавача"
 }

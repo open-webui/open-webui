@@ -45,19 +45,21 @@
 				>
 					<div class="px-1 text-sm">
 						<div class=" my-2">
-							The developers behind this plugin are passionate volunteers from the community. If you
-							find this plugin helpful, please consider contributing to its development.
+							{$i18n.t(
+								'The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.'
+							)} 
 						</div>
 
 						<div class=" my-2">
-							Your entire contribution will go directly to the plugin developer; Open WebUI does not
-							take any percentage. However, the chosen funding platform might have its own fees.
+							{$i18n.t(
+								'Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.'
+							)}
 						</div>
 
 						<hr class=" dark:border-gray-800 my-3" />
 
 						<div class="my-2">
-							Support this plugin: <a
+							{$i18n.t('Support this plugin:')} <a
 								href={manifest.funding_url}
 								target="_blank"
 								class=" underline text-blue-400 hover:text-blue-300">{manifest.funding_url}</a

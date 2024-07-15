@@ -575,6 +575,7 @@
 	"Successfully updated.": "成功更新。",
 	"Suggested": "建议",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "系统",
 	"System Prompt": "系统提示词 (System Prompt)",
 	"Tags": "标签",
@@ -587,6 +588,7 @@
 	"Text-to-Speech Engine": "文本转语音引擎",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "感谢您的反馈！",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "分值应介于 0.0（0%）和 1.0（100%）之间。",
 	"Theme": "主题",
 	"Thinking...": "正在思考...",
@@ -695,6 +697,7 @@
 	"You're a helpful assistant.": "你是一个有帮助的助手。",
 	"You're now logged in.": "已登录。",
 	"Your account status is currently pending activation.": "您的账号当前状态为待激活。",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "YouTube 爬取设置"
 }

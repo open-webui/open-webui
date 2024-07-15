@@ -576,6 +576,7 @@
 	"Successfully updated.": "সফলভাবে আপডেট হয়েছে",
 	"Suggested": "প্রস্তাবিত",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "সিস্টেম",
 	"System Prompt": "সিস্টেম প্রম্পট",
 	"Tags": "ট্যাগসমূহ",
@@ -588,6 +589,7 @@
 	"Text-to-Speech Engine": "টেক্সট-টু-স্পিচ ইঞ্জিন",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "আপনার মতামত ধন্যবাদ!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "স্কোর একটি 0.0 (0%) এবং 1.0 (100%) এর মধ্যে একটি মান হওয়া উচিত।",
 	"Theme": "থিম",
 	"Thinking...": "",
@@ -696,6 +698,7 @@
 	"You're a helpful assistant.": "আপনি একজন উপকারী এসিস্ট্যান্ট",
 	"You're now logged in.": "আপনি এখন লগইন করা অবস্থায় আছেন",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "YouTube লোডার সেটিংস"
 }

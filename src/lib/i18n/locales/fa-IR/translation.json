@@ -576,6 +576,7 @@
 	"Successfully updated.": "با موفقیت به روز شد",
 	"Suggested": "پیشنهادی",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "سیستم",
 	"System Prompt": "پرامپت سیستم",
 	"Tags": "تگ\u200cها",
@@ -588,6 +589,7 @@
 	"Text-to-Speech Engine": "موتور تبدیل متن به گفتار",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "با تشکر از بازخورد شما!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "امتیاز باید یک مقدار بین 0.0 (0%) و 1.0 (100%) باشد.",
 	"Theme": "قالب",
 	"Thinking...": "",
@@ -696,6 +698,7 @@
 	"You're a helpful assistant.": "تو یک دستیار سودمند هستی.",
 	"You're now logged in.": "شما اکنون وارد شده\u200cاید.",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "یوتیوب",
 	"Youtube Loader Settings": "تنظیمات لودر یوتیوب"
 }

@@ -576,6 +576,7 @@
 	"Successfully updated.": "წარმატებით განახლდა",
 	"Suggested": "პირდაპირ პოპულარული",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "სისტემა",
 	"System Prompt": "სისტემური მოთხოვნა",
 	"Tags": "ტეგები",
@@ -588,6 +589,7 @@
 	"Text-to-Speech Engine": "ტექსტურ-ხმოვანი ძრავი",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "მადლობა გამოხმაურებისთვის!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "ქულა 0.0 (0%) და 1.0 (100%) ჩაშენებული უნდა იყოს.",
 	"Theme": "თემა",
 	"Thinking...": "",
@@ -696,6 +698,7 @@
 	"You're a helpful assistant.": "თქვენ სასარგებლო ასისტენტი ხართ.",
 	"You're now logged in.": "თქვენ შესული ხართ.",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Youtube Loader Settings"
 }

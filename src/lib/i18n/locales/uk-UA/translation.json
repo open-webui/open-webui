@@ -578,6 +578,7 @@
 	"Successfully updated.": "Успішно оновлено.",
 	"Suggested": "Запропоновано",
 	"Support": "Підтримати",
+	"Support this plugin:": "",
 	"System": "Система",
 	"System Prompt": "Системний промт",
 	"Tags": "Теги",
@@ -590,6 +591,7 @@
 	"Text-to-Speech Engine": "Система синтезу мови",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "Дякуємо за ваш відгук!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "Оцінка повинна бути в діапазоні від 0.0 (0%) до 1.0 (100%).",
 	"Theme": "Тема",
 	"Thinking...": "Думаю...",
@@ -698,6 +700,7 @@
 	"You're a helpful assistant.": "Ви корисний асистент.",
 	"You're now logged in.": "Ви увійшли в систему.",
 	"Your account status is currently pending activation.": "Статус вашого облікового запису наразі очікує на активацію.",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Налаштування завантажувача Youtube"
 }

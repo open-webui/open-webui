@@ -578,6 +578,7 @@
 	"Successfully updated.": "Sėkmingai atnaujinta.",
 	"Suggested": "Siūloma",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "Sistema",
 	"System Prompt": "Sistemos užklausa",
 	"Tags": "Žymos",
@@ -590,6 +591,7 @@
 	"Text-to-Speech Engine": "Balso sintezės modelis",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "Ačiū už atsiliepimus",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "Rezultatas turėtų būti tarp 0.0 (0%) ir 1.0 (100%)",
 	"Theme": "Tema",
 	"Thinking...": "",
@@ -698,6 +700,7 @@
 	"You're a helpful assistant.": "Esi asistentas.",
 	"You're now logged in.": "Esate prisijungę.",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Youtube krovimo nustatymai"
 }

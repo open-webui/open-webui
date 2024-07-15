@@ -576,6 +576,7 @@
 	"Successfully updated.": "Päivitetty onnistuneesti.",
 	"Suggested": "Suositeltu",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "Järjestelmä",
 	"System Prompt": "Järjestelmäkehote",
 	"Tags": "Tagit",
@@ -588,6 +589,7 @@
 	"Text-to-Speech Engine": "Puhemoottori",
 	"Tfs Z": "TFS Z",
 	"Thanks for your feedback!": "Kiitos palautteestasi!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "Pisteytyksen tulee olla arvo välillä 0.0 (0%) ja 1.0 (100%).",
 	"Theme": "Teema",
 	"Thinking...": "",
@@ -696,6 +698,7 @@
 	"You're a helpful assistant.": "Olet avulias apulainen.",
 	"You're now logged in.": "Olet nyt kirjautunut sisään.",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Youtube Loader-asetukset"
 }

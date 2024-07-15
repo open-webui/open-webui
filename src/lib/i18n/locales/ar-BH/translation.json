@@ -580,6 +580,7 @@
 	"Successfully updated.": "تم التحديث بنجاح",
 	"Suggested": "مقترحات",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "النظام",
 	"System Prompt": "محادثة النظام",
 	"Tags": "الوسوم",
@@ -592,6 +593,7 @@
 	"Text-to-Speech Engine": "محرك تحويل النص إلى كلام",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "شكرا لملاحظاتك!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "يجب أن تكون النتيجة قيمة تتراوح بين 0.0 (0%) و1.0 (100%).",
 	"Theme": "الثيم",
 	"Thinking...": "",
@@ -700,6 +702,7 @@
 	"You're a helpful assistant.": "مساعدك المفيد هنا",
 	"You're now logged in.": "لقد قمت الآن بتسجيل الدخول.",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Youtube تحميل اعدادات"
 }

@@ -576,6 +576,7 @@
 	"Successfully updated.": "Uppdaterades framgångsrikt.",
 	"Suggested": "Föreslagen",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "System",
 	"System Prompt": "Systeminstruktion",
 	"Tags": "Taggar",
@@ -588,6 +589,7 @@
 	"Text-to-Speech Engine": "Text-till-tal-motor",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "Tack för din feedback!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "Betyget ska vara ett värde mellan 0.0 (0%) och 1.0 (100%).",
 	"Theme": "Tema",
 	"Thinking...": "",
@@ -696,6 +698,7 @@
 	"You're a helpful assistant.": "Du är en hjälpsam assistent.",
 	"You're now logged in.": "Du är nu inloggad.",
 	"Your account status is currently pending activation.": "Ditt konto väntar på att bli aktiverat",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Youtube Loader-inställningar"
 }

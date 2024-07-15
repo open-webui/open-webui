@@ -576,6 +576,7 @@
 	"Successfully updated.": "Succesvol bijgewerkt.",
 	"Suggested": "Suggestie",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "Systeem",
 	"System Prompt": "Systeem Prompt",
 	"Tags": "Tags",
@@ -588,6 +589,7 @@
 	"Text-to-Speech Engine": "Tekst-naar-Spraak Engine",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "Bedankt voor uw feedback!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "Het score moet een waarde zijn tussen 0.0 (0%) en 1.0 (100%).",
 	"Theme": "Thema",
 	"Thinking...": "",
@@ -696,6 +698,7 @@
 	"You're a helpful assistant.": "Jij bent een behulpzame assistent.",
 	"You're now logged in.": "Je bent nu ingelogd.",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Youtube-laderinstellingen"
 }

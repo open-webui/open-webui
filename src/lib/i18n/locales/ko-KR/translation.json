@@ -576,6 +576,7 @@
 	"Successfully updated.": "성공적으로 업데이트되었습니다.",
 	"Suggested": "제안",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "시스템",
 	"System Prompt": "시스템 프롬프트",
 	"Tags": "태그",
@@ -588,6 +589,7 @@
 	"Text-to-Speech Engine": "텍스트-음성 변환 엔진",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "피드백 감사합니다!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "점수는 0.0(0%)에서 1.0(100%) 사이의 값이어야 합니다.",
 	"Theme": "테마",
 	"Thinking...": "생각 중...",
@@ -696,6 +698,7 @@
 	"You're a helpful assistant.": "당신은 유용한 어시스턴트입니다.",
 	"You're now logged in.": "로그인되었습니다.",
 	"Your account status is currently pending activation.": "현재 계정은 아직 활성화되지 않았습니다.",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "유튜브",
 	"Youtube Loader Settings": "유튜브 로더 설정"
 }

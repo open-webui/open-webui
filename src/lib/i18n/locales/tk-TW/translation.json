@@ -576,6 +576,7 @@
 	"Successfully updated.": "",
 	"Suggested": "",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "",
 	"System Prompt": "",
 	"Tags": "",
@@ -588,6 +589,7 @@
 	"Text-to-Speech Engine": "",
 	"Tfs Z": "",
 	"Thanks for your feedback!": "",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "",
 	"Theme": "",
 	"Thinking...": "",
@@ -696,6 +698,7 @@
 	"You're a helpful assistant.": "",
 	"You're now logged in.": "",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "",
 	"Youtube Loader Settings": ""
 }

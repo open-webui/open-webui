@@ -577,6 +577,7 @@
 	"Successfully updated.": "עדכון הצלחה.",
 	"Suggested": "מומלץ",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "מערכת",
 	"System Prompt": "תגובת מערכת",
 	"Tags": "תגיות",
@@ -589,6 +590,7 @@
 	"Text-to-Speech Engine": "מנוע טקסט לדיבור",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "תודה על המשוב שלך!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "ציון צריך להיות ערך בין 0.0 (0%) ל-1.0 (100%)",
 	"Theme": "נושא",
 	"Thinking...": "",
@@ -697,6 +699,7 @@
 	"You're a helpful assistant.": "אתה עוזר מועיל.",
 	"You're now logged in.": "כעת אתה מחובר.",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "הגדרות Youtube Loader"
 }

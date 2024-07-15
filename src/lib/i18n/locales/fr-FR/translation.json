@@ -577,6 +577,7 @@
 	"Successfully updated.": "Mise à jour réussie.",
 	"Suggested": "Sugéré",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "Système",
 	"System Prompt": "Prompt du système",
 	"Tags": "Balises",
@@ -589,6 +590,7 @@
 	"Text-to-Speech Engine": "Moteur de synthèse vocale",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "Merci pour vos commentaires !",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "Le score doit être une valeur comprise entre 0,0 (0\u00a0%) et 1,0 (100\u00a0%).",
 	"Theme": "Thème",
 	"Thinking...": "En train de réfléchir...",
@@ -697,6 +699,7 @@
 	"You're a helpful assistant.": "Vous êtes un assistant serviable.",
 	"You're now logged in.": "Vous êtes désormais connecté.",
 	"Your account status is currently pending activation.": "Votre statut de compte est actuellement en attente d'activation.",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "Paramètres de l'outil de téléchargement YouTube"
 }

@@ -576,6 +576,7 @@
 	"Successfully updated.": "Berhasil diperbarui.",
 	"Suggested": "Disarankan",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "Sistem",
 	"System Prompt": "Permintaan Sistem",
 	"Tags": "Tag",
@@ -588,6 +589,7 @@
 	"Text-to-Speech Engine": "Mesin Teks-ke-Suara",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "Terima kasih atas umpan balik Anda!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "Nilai yang diberikan haruslah nilai antara 0,0 (0%) dan 1,0 (100%).",
 	"Theme": "Tema",
 	"Thinking...": "Berpikir",
@@ -696,6 +698,7 @@
 	"You're a helpful assistant.": "Anda adalah asisten yang membantu.",
 	"You're now logged in.": "Anda sekarang sudah masuk.",
 	"Your account status is currently pending activation.": "Status akun Anda saat ini sedang menunggu aktivasi.",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Pengaturan Pemuat Youtube"
 }

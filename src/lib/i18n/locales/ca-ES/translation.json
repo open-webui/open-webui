@@ -577,6 +577,7 @@
 	"Successfully updated.": "Actualitzat correctament.",
 	"Suggested": "Suggerit",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "Sistema",
 	"System Prompt": "Indicació del Sistema",
 	"Tags": "Etiquetes",
@@ -589,6 +590,7 @@
 	"Text-to-Speech Engine": "Motor de text a veu",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "Gràcies pel teu comentari!",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "El valor de puntuació hauria de ser entre 0.0 (0%) i 1.0 (100%).",
 	"Theme": "Tema",
 	"Thinking...": "Pensant...",
@@ -697,6 +699,7 @@
 	"You're a helpful assistant.": "Ets un assistent útil.",
 	"You're now logged in.": "Ara estàs connectat.",
 	"Your account status is currently pending activation.": "El compte està actualment pendent d'activació",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Loader Settings": "Preferències del carregador de Youtube"
 }

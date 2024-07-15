@@ -575,6 +575,7 @@
 	"Successfully updated.": "正常に更新されました。",
 	"Suggested": "提案",
 	"Support": "",
+	"Support this plugin:": "",
 	"System": "システム",
 	"System Prompt": "システムプロンプト",
 	"Tags": "タグ",
@@ -587,6 +588,7 @@
 	"Text-to-Speech Engine": "テキスト音声変換エンジン",
 	"Tfs Z": "Tfs Z",
 	"Thanks for your feedback!": "ご意見ありがとうございます！",
+	"The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.": "",
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "スコアは0.0(0%)から1.0(100%)の間の値にしてください。",
 	"Theme": "テーマ",
 	"Thinking...": "",
@@ -695,6 +697,7 @@
 	"You're a helpful assistant.": "あなたは役に立つアシスタントです。",
 	"You're now logged in.": "ログインしました。",
 	"Your account status is currently pending activation.": "",
+	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "Youtubeローダー設定"
 }
