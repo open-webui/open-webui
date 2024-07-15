@@ -930,7 +930,9 @@ def store_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
         )
 
 
-def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> bool:
+def store_data_in_vector_db(
+    data, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
+) -> bool:
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.config.CHUNK_SIZE,
@@ -942,7 +944,7 @@ def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> b
 
     if len(docs) > 0:
         log.info(f"store_data_in_vector_db {docs}")
-        return store_docs_in_vector_db(docs, collection_name, overwrite), None
+        return store_docs_in_vector_db(docs, collection_name, metadata, overwrite), None
     else:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
@@ -956,14 +958,16 @@ def store_text_in_vector_db(
         add_start_index=True,
     )
     docs = text_splitter.create_documents([text], metadatas=[metadata])
-    return store_docs_in_vector_db(docs, collection_name, overwrite)
+    return store_docs_in_vector_db(docs, collection_name, overwrite=overwrite)
 
 
-def store_docs_in_vector_db(docs, collection_name, overwrite: bool = False) -> bool:
+def store_docs_in_vector_db(
+    docs, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
+) -> bool:
     log.info(f"store_docs_in_vector_db {docs} {collection_name}")
 
     texts = [doc.page_content for doc in docs]
-    metadatas = [doc.metadata for doc in docs]
+    metadatas = [{**doc.metadata, **(metadata if metadata else {})} for doc in docs]
 
     # ChromaDB does not like datetime formats
     # for meta-data so convert them to string.
@@ -1237,13 +1241,21 @@ def process_doc(
         data = loader.load()
 
         try:
-            result = store_data_in_vector_db(data, collection_name)
+            result = store_data_in_vector_db(
+                data,
+                collection_name,
+                {
+                    "file_id": form_data.file_id,
+                    "name": file.meta.get("name", file.filename),
+                },
+            )
 
             if result:
                 return {
                     "status": True,
                     "collection_name": collection_name,
                     "known_type": known_type,
+                    "filename": file.meta.get("name", file.filename),
                 }
         except Exception as e:
             raise HTTPException(

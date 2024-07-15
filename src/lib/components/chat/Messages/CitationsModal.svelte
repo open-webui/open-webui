@@ -57,12 +57,12 @@
 						{#if document.source?.name}
 							<div class="text-sm dark:text-gray-400">
 								<a
-									href={document?.source?.url
-										? `${document?.source?.url}/content`
+									href={document?.metadata?.file_id
+										? `/api/v1/files/${document?.metadata?.file_id}/content`
 										: document.source.name}
 									target="_blank"
 								>
-									{document.source.name}
+									{document?.metadata?.name ?? document.source.name}
 								</a>
 							</div>
 						{:else}
