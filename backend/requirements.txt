@@ -12,7 +12,7 @@ passlib[bcrypt]==1.7.4
 
 requests==2.32.3
 aiohttp==3.9.5
-sqlalchemy==2.0.30
+sqlalchemy==2.0.31
 alembic==1.13.2
 peewee==3.17.6
 peewee-migrate==1.12.2
