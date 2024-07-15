@@ -291,13 +291,18 @@ async def generate_function_chat_completion(form_data, user):
         sig = inspect.signature(pipe)
         params = {"body": form_data}
 
+        try:
+            setting_enableFileUpdateBase64 = user.settings.ui.get("enableFileUpdateBase64", False)
+        except AttributeError:
+            setting_enableFileUpdateBase64 = False
+
         if "__user__" in sig.parameters:
             __user__ = {
                 "id": user.id,
                 "email": user.email,
                 "name": user.name,
                 "role": user.role,
-                "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False) and rag_app.state.config.ENABLE_BASE64,
+                "enableFileUpdateBase64": setting_enableFileUpdateBase64 and rag_app.state.config.ENABLE_BASE64,
             }
 
             try:
