@@ -351,7 +351,7 @@ class Pipe:
 							<span class=" font-semibold dark:text-gray-200">{$i18n.t('Warning:')}</span>
 							{$i18n.t('Functions allow arbitrary code execution')} <br />—
 							<span class=" font-medium dark:text-gray-400"
-								>{$i18n.t('don't install random functions from sources you don't trust.')}</span
+								>{$i18n.t(`don't install random functions from sources you don't trust.`)}</span
 							>
 						</div>
 					</div>
