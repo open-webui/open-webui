@@ -59,7 +59,9 @@
 								<a
 									href={document?.metadata?.file_id
 										? `/api/v1/files/${document?.metadata?.file_id}/content`
-										: document.source.name}
+										: document.source.name.includes('http')
+										? document.source.name
+										: `#`}
 									target="_blank"
 								>
 									{document?.metadata?.name ?? document.source.name}
