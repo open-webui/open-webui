@@ -235,7 +235,7 @@
 			</a>
 			<div class="flex flex-row gap-0.5 self-center">
 				{#if func?.meta?.manifest?.funding_url ?? false}
-					<Tooltip content="$i18n.t('Support')">
+					<Tooltip content={$i18n.t('Support')}>
 						<button
 							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 							type="button"
@@ -249,7 +249,7 @@
 					</Tooltip>
 				{/if}
 
-				<Tooltip content="$i18n.t('Valves')">
+				<Tooltip content={$i18n.t('Valves')}>
 					<button
 						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 						type="button"
