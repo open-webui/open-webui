@@ -398,6 +398,11 @@ async def get_function_call_response(
                 if key in sig.parameters:
                     params[key] = value
 
+            try:
+                setting_enableFileUpdateBase64 = user.settings.ui.get("enableFileUpdateBase64", False)
+            except AttributeError:
+                setting_enableFileUpdateBase64 = False
+
             if "__user__" in sig.parameters:
                 # Call the function with the '__user__' parameter included
                 __user__ = {
@@ -405,7 +410,7 @@ async def get_function_call_response(
                     "email": user.email,
                     "name": user.name,
                     "role": user.role,
-                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False) and rag_app.state.config.ENABLE_BASE64,
+                    "enableFileUpdateBase64": setting_enableFileUpdateBase64 and rag_app.state.config.ENABLE_BASE64,
                 }
 
                 try:
@@ -491,13 +496,18 @@ async def chat_completion_functions_handler(
                 if key in sig.parameters:
                     params[key] = value
 
+            try:
+                setting_enableFileUpdateBase64 = user.settings.ui.get("enableFileUpdateBase64", False)
+            except AttributeError:
+                setting_enableFileUpdateBase64 = False
+                
             if "__user__" in sig.parameters:
                 __user__ = {
                     "id": user.id,
                     "email": user.email,
                     "name": user.name,
                     "role": user.role,
-                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False) and rag_app.state.config.ENABLE_BASE64,
+                    "enableFileUpdateBase64": setting_enableFileUpdateBase64 and rag_app.state.config.ENABLE_BASE64,
                 }
 
                 try:
@@ -1194,13 +1204,18 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                 if key in sig.parameters:
                     params[key] = value
 
+            try:
+                setting_enableFileUpdateBase64 = user.settings.ui.get("enableFileUpdateBase64", False)
+            except AttributeError:
+                setting_enableFileUpdateBase64 = False
+
             if "__user__" in sig.parameters:
                 __user__ = {
                     "id": user.id,
                     "email": user.email,
                     "name": user.name,
                     "role": user.role,
-                    "enableFileUpdateBase64": user.settings.ui.get("enableFileUpdateBase64", False) and rag_app.state.config.ENABLE_BASE64,
+                    "enableFileUpdateBase64": setting_enableFileUpdateBase64 and rag_app.state.config.ENABLE_BASE64,
                 }
 
                 try:
