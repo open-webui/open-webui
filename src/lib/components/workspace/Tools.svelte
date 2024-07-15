@@ -439,7 +439,9 @@
 			<div>{$i18n.t('Please carefully review the following warnings:')}</div>
 
 			<ul class=" mt-1 list-disc pl-4 text-xs">
-				<li>{$i18n.t('Tools have a function calling system that allows arbitrary code execution')}.</li>
+				<li>
+						{$i18n.t('Tools have a function calling system that allows arbitrary code execution')}.
+				</li>
 				<li>{$i18n.t('Do not install tools from sources you do not fully trust.')}</li>
 			</ul>
 		</div>

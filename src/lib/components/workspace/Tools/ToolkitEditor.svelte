@@ -214,7 +214,9 @@ class Tools:
 					<input
 						class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 						type="text"
-						placeholder={$i18n.t('Toolkit Description (e.g. A toolkit for performing various operations)')}
+						placeholder={$i18n.t(
+							'Toolkit Description (e.g. A toolkit for performing various operations)'
+						)}
 						bind:value={meta.description}
 						required
 					/>
@@ -267,7 +269,9 @@ class Tools:
 			<div>{$i18n.t('Please carefully review the following warnings:')}</div>
 
 			<ul class=" mt-1 list-disc pl-4 text-xs">
-				<li>{$i18n.t('Tools have a function calling system that allows arbitrary code execution.')}</li>
+				<li>
+						{$i18n.t('Tools have a function calling system that allows arbitrary code execution.')}
+				</li>
 				<li>{$i18n.t('Do not install tools from sources you do not fully trust.')}</li>
 			</ul>
 		</div>
