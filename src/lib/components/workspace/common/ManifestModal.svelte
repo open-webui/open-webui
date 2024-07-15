@@ -61,9 +61,10 @@
 						<div class="my-2">
 							{$i18n.t('Support this plugin:')}
 							<a 
-							href={manifest.funding_url} 
-							target="_blank" 
-							class="underline text-blue-400 hover:text-blue-300">{manifest.funding_url}</a>
+								href={manifest.funding_url} 
+								target="_blank" 
+								class="underline text-blue-400 hover:text-blue-300">{manifest.funding_url}</a
+							>
 						</div>
 					</div>
 
