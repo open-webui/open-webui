@@ -802,25 +802,17 @@ async def generate_chat_completion(
     model_id = form_data.model
     model_info = Models.get_model_by_id(model_id)
 
+    chat_settings_params = copy.deepcopy(payload["options"])
+    payload["options"] = {}
+
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
 
         model_info.params = model_info.params.model_dump()
-
-        chat_settings_params = copy.deepcopy(payload["options"])
-        payload["options"] = {}
-
         if model_info.params:
             payload["options"] = apply_params(model_info.params, payload["options"])
 
-        if user.settings.ui["params"]:
-            payload["options"] = apply_params(
-                user.settings.ui["params"], payload["options"]
-            )
-
-        if chat_settings_params:
-            payload["options"] = apply_params(chat_settings_params, payload["options"])
 
         system = model_info.params.get("system", None)
         if system:
@@ -844,6 +836,17 @@ async def generate_chat_completion(
                 payload["messages"] = add_or_update_system_message(
                     system, payload["messages"]
                 )
+
+    
+    if user.settings:
+        if user.settings.ui:
+            if user.settings.ui.get("params", None):
+                payload["options"] = apply_params(
+                    user.settings.ui["params"], payload["options"]
+                )
+
+    if chat_settings_params:
+        payload["options"] = apply_params(chat_settings_params, payload["options"])
 
     if url_idx == None:
         if ":" not in payload["model"]:
