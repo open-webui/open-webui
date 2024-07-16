@@ -97,7 +97,7 @@
 					{/if}
 				</div> -->
 				<div class="text-lg font-medium text-gray-600 dark:text-gray-500 text-center" in:fade={{ duration: 200, delay: 200 }}>
-					Your AI-powered copilot for the web
+					<!-- Your AI-powered copilot for the web -->
 				</div>
 			</div>
 		</div>
