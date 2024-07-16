@@ -11,12 +11,13 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 - [Earthscape for Chatbot UI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/) - TO DO (everyone)
 
 **Charts, SQL, Vite, Supabase, AI Chat**
-- [Food Nutrition Labels](/data-commons/docs/food) - Shali and Wenwei (Stella)
-- [Requests Visualization](/requests/) - for Storyboards, Meal Planning and Project Visualization - TO DO
-- [Evaporation Kits](/evaporation-kits/) - Desalination x4 using cold, green LED light - Soham - Content prep for RAG - TO DO
-- [Sankey Industry eChart](/useeio.js/charts/echarts/sankey-nodeAlign-left.html) - eCharts uses a common echarts.min.js file which we'll load in [Feed Viewer](/feed/view). -TO DO<!-- Chenbohan -->
+- [Internation Trade Flow SQL Data Prep](/useeio.js/footprint) - Sahil, Himanshu, Sridevi, Song
 - [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab - Song, Ivy, SQL Team
-- [SQL Data Prep](/useeio.js/footprint) - Sahil, Himanshu, Sridevi, Song
+- [Food Nutrition Labels](/data-commons/docs/food) - Shali and Wenwei (Stella)
+- [AI Requests Visualization](/requests/) - for Storyboards, Meal Planning and Project Visualization - TO DO
+- [Music for Data Science Visualizations](https://github.com/DreamStudioCode/music) - Alex, Ivy
+- [Innovations in Water Purification](/evaporation-kits/innovations/) - Hyper Desalination - Soham - Content prep for RAG - TO DO
+- [Sankey Industry eChart](/useeio.js/charts/echarts/sankey-nodeAlign-left.html) - eCharts uses a common echarts.min.js file which we'll load in [Feed Viewer](/feed/view). -TO DO<!-- Chenbohan -->
 - [Feed Player](../feed/intro.html) - Video and Images - Gary, Fanyi, Marco
 - [Feed Viewer](../feed/view/#feed=nasa) - JSON, YAML, CSS, RSS - Loren and Gary ([address lookup](/feed/view/#feed=311)) 
 - [Python - Finalize our All the Places data by State and Zip](/places) - TO DO
