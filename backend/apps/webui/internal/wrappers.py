@@ -1,6 +1,6 @@
 from contextvars import ContextVar
 from peewee import *
-from peewee import PostgresqlDatabase, InterfaceError as PeeWeeInterfaceError
+from peewee import PostgresqlDatabase, MySQLDatabase, InterfaceError as PeeWeeInterfaceError
 
 import logging
 from playhouse.db_url import connect, parse
@@ -42,10 +42,14 @@ class ReconnectingPostgresqlDatabase(CustomReconnectMixin, PostgresqlDatabase):
     pass
 
 
+class ReconnectingMySQLDatabase(CustomReconnectMixin, MySQLDatabase):
+    pass
+
+
 def register_connection(db_url):
     db = connect(db_url)
     if isinstance(db, PostgresqlDatabase):
-        # Enable autoconnect for SQLite databases, managed by Peewee
+        # Enable autoconnect for PostgreSQL databases, managed by Peewee
         db.autoconnect = True
         db.reuse_if_open = True
         log.info("Connected to PostgreSQL database")
@@ -58,6 +62,24 @@ def register_connection(db_url):
             connection["database"],
             user=connection["user"],
             password=connection["password"],
+            host=connection["host"],
+            port=connection["port"],
+        )
+        db.connect(reuse_if_open=True)
+    elif isinstance(db, MySQLDatabase):
+        # Enable autoconnect for MySQL databases, managed by Peewee
+        db.autoconnect = True
+        db.reuse_if_open = True
+        log.info("Connected to MySQL database")
+
+        # Get the connection details
+        connection = parse(db_url)
+
+        # Use our custom database class that supports reconnection
+        db = ReconnectingMySQLDatabase(
+            connection["database"],
+            user=connection["user"],
+            password=connection["passwd"],
             host=connection["host"],
             port=connection["port"],
         )

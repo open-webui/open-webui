@@ -1,6 +1,7 @@
 import os
 import logging
 import json
+import re
 from contextlib import contextmanager
 
 from peewee_migrate import Router
@@ -56,9 +57,12 @@ else:
 def handle_peewee_migration(DATABASE_URL):
     try:
         # Replace the postgresql:// with postgres:// and %40 with @ in the DATABASE_URL
-        db = register_connection(
-            DATABASE_URL.replace("postgresql://", "postgres://").replace("%40", "@")
-        )
+        db_url = DATABASE_URL
+        if "postgresql://" in db_url:
+            db_url = db_url.replace("postgresql://", "postgres://").replace("%40", "@")
+        elif "mysql+" in db_url:
+            db_url = re.sub(r'^mysql\+.*?://', "mysql://", db_url)
+        db = register_connection(db_url)
         migrate_dir = BACKEND_DIR / "apps" / "webui" / "internal" / "migrations"
         router = Router(db, logger=log, migrate_dir=migrate_dir)
         router.run()
