@@ -6,11 +6,6 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 
 [Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
-**Guru/Manager Roles**
-[Observable Framework UN Goals Dashboard](https://observablehq.com/framework/) 
-[Open WebUI + StreamLit](https://github.com/streamlit/streamlit/issues/969)
-[Earthscape NextJS in Open WebUI](/earthscape/app/)
-
 **Choose one to fork and install locally**
 - [Open WebUI (Projects)](src) with Python and [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/) - TO DO (everyone)
 - [Earthscape for Chatbot UI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/) - TO DO (everyone)
@@ -93,6 +88,11 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [Tabulator - Merge in titles using Javascript (4)](/data-pipeline/timelines/tabulator/) - Dinesh, Fanyi, Rupesh
 - [Steps for SQLite in Browser](/data-pipeline/timelines/sqlite/phiresky/) - [Example (Runs SQL)](https://phiresky.github.io/blog/2021/hosting-sqlite-databases-on-github-pages/) - Aashish
 - [Impact Label Pipeline](/apps/impact) - Too optimize and change inputs
+
+**Guru Roles**
+- [Earthscape NextJS in Open WebUI](/earthscape/app/)
+- [StreamLit integration into Open WebUI](https://github.com/streamlit/streamlit/issues/969)
+- [Observable Framework Dashboard for UN Goals](https://observablehq.com/framework/) 
 
 **Moonshot Challenges** - [Take the leap](/community/projects/)
 <br>
