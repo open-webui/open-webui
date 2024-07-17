@@ -134,9 +134,7 @@
 	}
 
 	$: if (message) {
-		let processedContent = escapeDollarNumber(message.content);
-		processedContent = escapeBrackets(processedContent);
-		processedContent = escapeMhchem(processedContent);
+		let processedContent = escapeMhchem(escapeBrackets(escapeDollarNumber(message.content)));
 		message.content = processedContent;
 		renderStyling();
 	}
