@@ -160,37 +160,6 @@
 		}
 	};
 
-	const escapeDollarNumber = (text) => {
-		let escapedText = '';
-		for (let i = 0; i < text.length; i += 1) {
-			let char = text[i];
-			const nextChar = text[i + 1] || ' ';
-			if (char === '$' && nextChar >= '0' && nextChar <= '9') {
-				char = '\\$';
-			}
-			escapedText += char;
-		}
-		return escapedText;
-	}
-
-	const escapeBrackets = (text) => {
-		const pattern = /(```[\S\s]*?```|`.*?`)|\\\[([\S\s]*?[^\\])\\]|\\\((.*?)\\\)/g;
-		return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
-			if (codeBlock) {
-				return codeBlock;
-			} else if (squareBracket) {
-				return `$$${squareBracket}$$`;
-			} else if (roundBracket) {
-				return `$${roundBracket}$`;
-			}
-			return match;
-		});
-	}
-
-	const escapeMhchem = (text) => {
-		return text.replace(/\$\\ce\{/g, '$\\\\ce{').replace(/\$\\pu\{/g, '$\\\\pu{');
-	}
-
 	const renderLatex = () => {
 		let chatMessageElements = document
 			.getElementById(`message-${message.id}`)
@@ -198,19 +167,15 @@
 
 		if (chatMessageElements) {
 			for (const element of chatMessageElements) {
-				let processedText = escapeDollarNumber(element.textContent);
-				console.log(element.textContent);
-				processedText = escapeBrackets(processedText);
-				processedText = escapeMhchem(processedText);
-				element.textContent = processedText;
 				auto_render(element, {
 					// customised options
 					// • auto-render specific keys, e.g.:
 					delimiters: [
-						{left: "$$", right: "$$", display: true},
-						{left: "$", right: "$", display: false},
-						{left: "\\(", right: "\\)", display: false},
-						{left: "\\[", right: "\\]", display: true},
+						{ left: '$$', right: '$$', display: false },
+						{ left: '$ ', right: ' $', display: false },
+						{ left: '\\(', right: '\\)', display: false },
+						{ left: '\\[', right: '\\]', display: false },
+						{ left: '[ ', right: ' ]', display: false }
 					],
 					// • rendering keys, e.g.:
 					throwOnError: false
