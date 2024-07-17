@@ -121,10 +121,10 @@
 			if (codeBlock) {
 				return codeBlock;
 			} else if (squareBracket) {
-				const cleanSquareBracket = squareBracket.replace(/\n/g, '');
+				const cleanSquareBracket = squareBracket.replace(/\n/g, ' ');
 				return `$$${cleanSquareBracket}$$`;
 			} else if (roundBracket) {
-				const cleanRoundBracket = roundBracket.replace(/\n/g, '');
+				const cleanRoundBracket = roundBracket.replace(/\n/g, ' ');
 				return `$${cleanRoundBracket}$`;
 			}
 			return match;
