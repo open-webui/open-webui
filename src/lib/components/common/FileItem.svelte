@@ -7,8 +7,9 @@
 	export let className = 'w-72';
 	export let url: string | null = null;
 
-	export let dismissible = false;
+	export let clickHandler: Function | null = null;
 
+	export let dismissible = false;
 	export let status = 'processed';
 
 	export let name: string;
@@ -20,12 +21,16 @@
 		class="h-14 {className} flex items-center space-x-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 text-left"
 		type="button"
 		on:click={async () => {
-			if (url) {
-				if (type === 'file') {
-					window.open(`${url}/content`, '_blank').focus();
-				} else {
-					window.open(`${url}`, '_blank').focus();
+			if (clickHandler === null) {
+				if (url) {
+					if (type === 'file') {
+						window.open(`${url}/content`, '_blank').focus();
+					} else {
+						window.open(`${url}`, '_blank').focus();
+					}
 				}
+			} else {
+				clickHandler();
 			}
 		}}
 	>
