@@ -536,7 +536,7 @@
 												</div>
 											{:else if ['doc', 'file'].includes(file.type)}
 												<div
-													class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
+													class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-none"
 												>
 													<div class="p-2.5 bg-red-400 text-white rounded-lg">
 														{#if file.status === 'processed'}
@@ -615,7 +615,7 @@
 												</div>
 											{:else if file.type === 'collection'}
 												<div
-													class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none"
+													class="h-16 w-[15rem] flex items-center space-x-3 px-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-none"
 												>
 													<div class="p-2.5 bg-red-400 text-white rounded-lg">
 														<svg
