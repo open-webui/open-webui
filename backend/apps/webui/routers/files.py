@@ -58,6 +58,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
 
         # replace filename with uuid
         id = str(uuid.uuid4())
+        name = filename
         filename = f"{id}_{filename}"
         file_path = f"{UPLOAD_DIR}/{filename}"
 
@@ -73,6 +74,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
                     "id": id,
                     "filename": filename,
                     "meta": {
+                        "name": name,
                         "content_type": file.content_type,
                         "size": len(contents),
                         "path": file_path,

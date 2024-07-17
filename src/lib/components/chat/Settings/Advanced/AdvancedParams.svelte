@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Switch from '$lib/components/common/Switch.svelte';
 	import { getContext, createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -720,10 +721,22 @@
 					{#if (params?.use_mmap ?? null) === null}
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{:else}
-						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 					{/if}
 				</button>
 			</div>
+
+			{#if (params?.use_mmap ?? null) !== null}
+				<div class="flex justify-between items-center mt-1">
+					<div class="text-xs text-gray-500">
+						{params.use_mmap ? 'Enabled' : 'Disabled'}
+					</div>
+
+					<div class=" pr-2">
+						<Switch bind:state={params.use_mmap} />
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<div class=" py-0.5 w-full justify-between">
@@ -740,10 +753,22 @@
 					{#if (params?.use_mlock ?? null) === null}
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{:else}
-						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 					{/if}
 				</button>
 			</div>
+
+			{#if (params?.use_mlock ?? null) !== null}
+				<div class="flex justify-between items-center mt-1">
+					<div class="text-xs text-gray-500">
+						{params.use_mlock ? 'Enabled' : 'Disabled'}
+					</div>
+
+					<div class=" pr-2">
+						<Switch bind:state={params.use_mlock} />
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<div class=" py-0.5 w-full justify-between">
