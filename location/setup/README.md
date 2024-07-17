@@ -50,6 +50,44 @@ The ~ in the command works for all machines types. On a PC you'll need to use po
 
 Docker set-up contributors: Dinesh B, Loren, Yifeng
 
+## Using git inside of docker
+**Code in Dockerfile to install Git while creating a Container**
+	apt-get install -y --no-install-recommends curl jq git
+	apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq git
+
+**Running Git inside container**
+Once you've cloned the repo make a docker image and then create a container
+	docker build -t openwebui:latest .
+	docker create --name openwebui-container openwebui:latest
+	docker start openwebui-container
+
+**Initialize new Git repository**
+	git init
+
+**Add a remote repository**
+	git remote add origin https://github.com/ModelEarth/projects.git
+
+**Fetch the latest data from the remote repository**
+	git fetch origin
+
+**List remote branches to verify the correct branch name**
+	git branch -r
+
+**Reset your current branch to match the remote branch exactly**
+	git reset --[branch name]
+
+**Create a new Branch**
+	git checkout -b my-new-feature
+
+**Stage the changes**
+	git add .
+
+**Commit the changes**
+	git commit -m "Add new feature"
+
+**Push the new branch to the remote repository**
+	git push origin my-new-feature
+
 ## Edit our Open WebUI "projects" repo
 
 The "location" folder is where we'll edit enhancements to the "src" folder. We'll merge our enhancments into "src-merged" so we don't have sync issues with open-webui.
