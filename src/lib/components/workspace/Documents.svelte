@@ -205,7 +205,7 @@
 	<EditDocModal bind:show={showEditDocModal} {selectedDoc} />
 {/key}
 
-<AddDocModal bind:show={showAddDocModal} />
+<AddDocModal bind:show={showAddDocModal} {uploadDoc} />
 
 <div class="mb-3">
 	<div class="flex justify-between items-center">
