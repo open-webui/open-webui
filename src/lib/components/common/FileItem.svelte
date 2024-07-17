@@ -29,7 +29,7 @@
 			}
 		}}
 	>
-		<div class="p-4 py-[1.1rem] bg-red-400 text-white rounded-l-lg">
+		<div class="p-4 py-[1.1rem] bg-red-400 text-white rounded-l-xl">
 			{#if status === 'processed'}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
