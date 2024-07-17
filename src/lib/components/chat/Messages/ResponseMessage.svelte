@@ -4,7 +4,6 @@
 	import { marked } from 'marked';
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
-	import MathJax from 'mathjax/es5/tex-mml-chtml.js';
 	import 'katex/dist/katex.min.css';
 	import mermaid from 'mermaid';
 
@@ -99,7 +98,7 @@
 		extensions: any;
 	};
 
-	const escapeDollarNumber = async (text) => {
+	function escapeDollarNumber(text: string) {
 		let escapedText = '';
 
 		for (let i = 0; i < text.length; i += 1) {
@@ -114,9 +113,9 @@
 		}
 
 		return escapedText;
-	};
+	}
 
-	const escapeBrackets = async (text) => {
+	function escapeBrackets(text: string) {
 		const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
 		return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
 			if (codeBlock) {
@@ -128,15 +127,13 @@
 			}
 			return match;
 		});
-	};
+	}
 
 	$: if (message) {
-		(async () => {
-			let processedContent = await escapeDollarNumber(message.content);
-			processedContent = await escapeBrackets(processedContent);
-			message.content = processedContent;
-			renderStyling();
-		})();
+		let processedContent = escapeDollarNumber(message.content);
+		processedContent = escapeBrackets(processedContent);
+		message.content = processedContent;
+		renderStyling();
 	}
 
 	const renderStyling = async () => {
