@@ -229,8 +229,7 @@
                 placeholder={$i18n.t('Search Documents')}
         />
     </div>
-
-    <div>
+    <!-- <div>
         <input
                 bind:this={filesInputElement}
                 bind:files={inputFiles}
@@ -240,6 +239,20 @@
                   await embeddingFile($selectedIndexId, inputFiles[0])
                   embeddedFiles = await getEmbeddedFiles($selectedIndexId)
 				}}
+        /> -->
+    <div>
+        <input
+                bind:this={filesInputElement}
+                bind:files={inputFiles}
+                type="file"
+                hidden
+                multiple
+                on:change={async () => {
+                    for (const file of inputFiles){
+                        await embeddingFile($selectedIndexId, file)
+                        console.log($selectedIndexId)
+                        embeddedFiles = await getEmbeddedFiles($selectedIndexId)
+                }}}
         />
         <button
                 class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
