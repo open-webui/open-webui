@@ -121,6 +121,7 @@
 	function escapeBrackets(text) {
 		let cleanSquareBracket = '';
 		let cleanRoundBracket = '';
+		
 		const pattern = /(```[\s\S]*?```|`[\s\S]*?`)|\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)/g;
 		return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
 			if (codeBlock) {
