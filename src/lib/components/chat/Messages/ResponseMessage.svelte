@@ -126,10 +126,10 @@
 			if (codeBlock) {
 				return codeBlock;
 			} else if (squareBracket !== undefined) {
-				cleanSquareBracket = squareBracket.replace(/\n/g, ' ').replace(/\/\//g, '\\\\');
+				cleanSquareBracket = squareBracket.replace(/\n/g, ' ').replace(/\\/g, '\\\\');
 				return `$$${cleanSquareBracket}$$`;
 			} else if (roundBracket !== undefined) {
-				cleanRoundBracket = roundBracket.replace(/\n/g, ' ').replace(/\/\//g, '\\\\');
+				cleanRoundBracket = roundBracket.replace(/\n/g, ' ').replace(/\\/g, '\\\\');
 				return `$${cleanRoundBracket}$`;
 			}
 			return match;
