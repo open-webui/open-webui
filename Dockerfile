@@ -101,7 +101,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     # install helper tools
-    apt-get install -y --no-install-recommends curl jq && \
+    apt-get install -y --no-install-recommends curl jq git && \
     # install ollama
     curl -fsSL https://ollama.com/install.sh | sh && \
     # cleanup
@@ -109,7 +109,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     else \
     apt-get update && \
     # Install pandoc, netcat and gcc
-    apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq && \
+    apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq git && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
