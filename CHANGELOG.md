@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.9] - 2024-07-17
+
+### Added
+
+- **📁 Files Chat Controls**: We've reverted to the old file handling behavior where uploaded files are always included. You can now manage files directly within the chat controls section, giving you the ability to remove files as needed.
+- **🔧 "Action" Function Support**: Introducing a new "Action" function to write custom buttons to the message toolbar. This feature enables more interactive messaging, with documentation coming soon.
+- **📜 Citations Handling**: For newly uploaded files in documents workspace, citations will now display the actual filename. Additionally, you can click on these filenames to open the file in a new tab for easier access.
+- **🛠️ Event Emitter and Call Updates**: Enhanced 'event_emitter' to allow message replacement and 'event_call' to support text input for Tools and Functions. Detailed documentation will be provided shortly.
+- **🎨 Styling Refactor**: Various styling updates for a cleaner and more cohesive user interface.
+- **🌐 Enhanced Translations**: Improved translations for Catalan, Ukrainian, and Brazilian Portuguese.
+
+### Fixed
+
+- **🔧 Chat Controls Priority**: Resolved an issue where Chat Controls values were being overridden by model information parameters. The priority is now Chat Controls, followed by Global Settings, then Model Settings.
+- **🪲 Debug Logs**: Fixed an issue where debug logs were not being logged properly.
+- **🔑 Automatic1111 Auth Key**: The auth key for Automatic1111 is no longer required.
+- **📝 Title Generation**: Ensured that the title generation runs only once, even when multiple models are in a chat.
+- **✅ Boolean Values in Params**: Added support for boolean values in parameters.
+- **🖼️ Files Overlay Styling**: Fixed the styling issue with the files overlay.
+
+### Changed
+
+- **⬆️ Dependency Updates** 
+  - Upgraded 'pydantic' from version 2.7.1 to 2.8.2.
+  - Upgraded 'sqlalchemy' from version 2.0.30 to 2.0.31.
+  - Upgraded 'unstructured' from version 0.14.9 to 0.14.10.
+  - Upgraded 'chromadb' from version 0.5.3 to 0.5.4.
+
 ## [0.3.8] - 2024-07-09
 
 ### Added

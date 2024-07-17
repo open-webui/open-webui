@@ -167,6 +167,15 @@ class FunctionsTable:
                 .all()
             ]
 
+    def get_global_action_functions(self) -> List[FunctionModel]:
+        with get_db() as db:
+            return [
+                FunctionModel.model_validate(function)
+                for function in db.query(Function)
+                .filter_by(type="action", is_active=True, is_global=True)
+                .all()
+            ]
+
     def get_function_valves_by_id(self, id: str) -> Optional[dict]:
         with get_db() as db:
 

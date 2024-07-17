@@ -1,6 +1,6 @@
 fastapi==0.111.0
 uvicorn[standard]==0.22.0
-pydantic==2.7.1
+pydantic==2.8.2
 python-multipart==0.0.9
 
 Flask==3.0.3
@@ -12,7 +12,7 @@ passlib[bcrypt]==1.7.4
 
 requests==2.32.3
 aiohttp==3.9.5
-sqlalchemy==2.0.30
+sqlalchemy==2.0.31
 alembic==1.13.2
 peewee==3.17.6
 peewee-migrate==1.12.2
@@ -38,12 +38,12 @@ langchain-community==0.2.6
 langchain-chroma==0.1.2
 
 fake-useragent==1.5.1
-chromadb==0.5.3
+chromadb==0.5.4
 sentence-transformers==3.0.1
 pypdf==4.2.0
 docx2txt==0.8
 python-pptx==0.6.23
-unstructured==0.14.9
+unstructured==0.14.10
 Markdown==3.6
 pypandoc==1.13
 pandas==2.2.2
@@ -71,7 +71,7 @@ pytube==15.0.0
 
 extract_msg
 pydub
-duckduckgo-search~=6.1.7
+duckduckgo-search~=6.1.12
 
 ## Tests
 docker~=7.1.0

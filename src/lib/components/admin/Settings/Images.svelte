@@ -282,6 +282,7 @@
 			<SensitiveInput
 				placeholder={$i18n.t('Enter api auth string (e.g. username:password)')}
 				bind:value={AUTOMATIC1111_API_AUTH}
+				required={false}
 			/>
 
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">

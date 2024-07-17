@@ -121,11 +121,11 @@
 			<div class=" my-auto pb-16 text-left">
 				<div>
 					<div class=" font-semibold text-yellow-600 text-4xl">
-						Get up and running with <br />large language models, locally.
+						{$i18n.t('Get up and running with')} <br /> {$i18n.t('large language models, locally.')}
 					</div>
 
 					<div class="mt-2 text-yellow-600 text-xl">
-						Run Llama 2, Code Llama, and other models. Customize and create your own.
+						{$i18n.t('Run Llama 2, Code Llama, and other models. Customize and create your own.')}
 					</div>
 				</div>
 			</div>

@@ -52,7 +52,7 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
-	import { chatCompleted, generateTitle, generateSearchQuery } from '$lib/apis';
+	import { chatCompleted, generateTitle, generateSearchQuery, chatAction } from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -78,6 +78,8 @@
 	let showEventConfirmation = false;
 	let eventConfirmationTitle = '';
 	let eventConfirmationMessage = '';
+	let eventConfirmationInput = false;
+	let eventConfirmationInputPlaceholder = '';
 	let eventCallback = null;
 
 	let showModelSelector = true;
@@ -96,6 +98,8 @@
 
 	let title = '';
 	let prompt = '';
+
+	let chatFiles = [];
 	let files = [];
 	let messages = [];
 	let history = {
@@ -104,6 +108,7 @@
 	};
 
 	let params = {};
+	let valves = {};
 
 	$: if (history.currentId !== null) {
 		let _messages = [];
@@ -156,12 +161,27 @@
 				} else {
 					message.citations = [data];
 				}
+			} else if (type === 'message') {
+				message.content += data.content;
+			} else if (type === 'replace') {
+				message.content = data.content;
 			} else if (type === 'confirmation') {
 				eventCallback = cb;
+
+				eventConfirmationInput = false;
 				showEventConfirmation = true;
 
 				eventConfirmationTitle = data.title;
 				eventConfirmationMessage = data.message;
+			} else if (type === 'input') {
+				eventCallback = cb;
+
+				eventConfirmationInput = true;
+				showEventConfirmation = true;
+
+				eventConfirmationTitle = data.title;
+				eventConfirmationMessage = data.message;
+				eventConfirmationInputPlaceholder = data.placeholder;
 			} else {
 				console.log('Unknown message type', data);
 			}
@@ -315,6 +335,7 @@
 				}
 
 				params = chatContent?.params ?? {};
+				chatFiles = chatContent?.files ?? {};
 
 				autoScroll = true;
 				await tick();
@@ -347,7 +368,7 @@
 		}
 	};
 
-	const chatCompletedHandler = async (modelId, responseMessageId, messages) => {
+	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
 		await mermaid.run({
 			querySelector: '.mermaid'
 		});
@@ -361,7 +382,7 @@
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp
 			})),
-			chat_id: $chatId,
+			chat_id: chatId,
 			session_id: $socket?.id,
 			id: responseMessageId
 		}).catch((error) => {
@@ -381,6 +402,65 @@
 						: {}),
 					...message
 				};
+			}
+		}
+
+		if ($chatId == chatId) {
+			if ($settings.saveChatHistory ?? true) {
+				chat = await updateChatById(localStorage.token, chatId, {
+					models: selectedModels,
+					messages: messages,
+					history: history,
+					params: params,
+					files: chatFiles
+				});
+				await chats.set(await getChatList(localStorage.token));
+			}
+		}
+	};
+
+	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId) => {
+		const res = await chatAction(localStorage.token, actionId, {
+			model: modelId,
+			messages: messages.map((m) => ({
+				id: m.id,
+				role: m.role,
+				content: m.content,
+				info: m.info ? m.info : undefined,
+				timestamp: m.timestamp
+			})),
+			chat_id: chatId,
+			session_id: $socket?.id,
+			id: responseMessageId
+		}).catch((error) => {
+			toast.error(error);
+			messages.at(-1).error = { content: error };
+			return null;
+		});
+
+		if (res !== null) {
+			// Update chat history with the new messages
+			for (const message of res.messages) {
+				history.messages[message.id] = {
+					...history.messages[message.id],
+					...(history.messages[message.id].content !== message.content
+						? { originalContent: history.messages[message.id].content }
+						: {}),
+					...message
+				};
+			}
+		}
+
+		if ($chatId == chatId) {
+			if ($settings.saveChatHistory ?? true) {
+				chat = await updateChatById(localStorage.token, chatId, {
+					models: selectedModels,
+					messages: messages,
+					history: history,
+					params: params,
+					files: chatFiles
+				});
+				await chats.set(await getChatList(localStorage.token));
 			}
 		}
 	};
@@ -439,6 +519,13 @@
 			}
 
 			const _files = JSON.parse(JSON.stringify(files));
+			chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type)));
+			chatFiles = chatFiles.filter(
+				// Remove duplicates
+				(item, index, array) =>
+					array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+			);
+
 			files = [];
 
 			prompt = '';
@@ -679,25 +766,10 @@
 			}
 		});
 
-		let files = [];
+		let files = JSON.parse(JSON.stringify(chatFiles));
 		if (model?.info?.meta?.knowledge ?? false) {
-			files = model.info.meta.knowledge;
+			files.push(...model.info.meta.knowledge);
 		}
-		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
-
-		files = [
-			...files,
-			...(lastUserMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
-			) ?? []),
-			...(responseMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
-			) ?? [])
-		].filter(
-			// Remove duplicates
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
 
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:start', {
@@ -729,6 +801,7 @@
 			keep_alive: $settings.keepAlive ?? undefined,
 			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 			files: files.length > 0 ? files : undefined,
+			...(Object.keys(valves).length ? { valves } : {}),
 			session_id: $socket?.id,
 			chat_id: $chatId,
 			id: responseMessageId
@@ -752,7 +825,7 @@
 						controller.abort('User: Stop Response');
 					} else {
 						const messages = createMessagesList(responseMessageId);
-						await chatCompletedHandler(model.id, responseMessageId, messages);
+						await chatCompletedHandler(_chatId, model.id, responseMessageId, messages);
 					}
 
 					_response = responseMessage.content;
@@ -860,7 +933,8 @@
 						messages: messages,
 						history: history,
 						models: selectedModels,
-						params: params
+						params: params,
+						files: chatFiles
 					});
 					await chats.set(await getChatList(localStorage.token));
 				}
@@ -914,7 +988,7 @@
 			scrollToBottom();
 		}
 
-		if (messages.length == 2 && messages.at(1).content !== '') {
+		if (messages.length == 2 && messages.at(1).content !== '' && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 			const _title = await generateChatTitle(userPrompt);
 			await setChatTitle(_chatId, _title);
@@ -927,24 +1001,10 @@
 		let _response = null;
 		const responseMessage = history.messages[responseMessageId];
 
-		let files = [];
+		let files = JSON.parse(JSON.stringify(chatFiles));
 		if (model?.info?.meta?.knowledge ?? false) {
-			files = model.info.meta.knowledge;
+			files.push(...model.info.meta.knowledge);
 		}
-		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
-		files = [
-			...files,
-			...(lastUserMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
-			) ?? []),
-			...(responseMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
-			) ?? [])
-		].filter(
-			// Remove duplicates
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
 
 		scrollToBottom();
 
@@ -1033,6 +1093,7 @@
 					max_tokens: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
 					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 					files: files.length > 0 ? files : undefined,
+					...(Object.keys(valves).length ? { valves } : {}),
 					session_id: $socket?.id,
 					chat_id: $chatId,
 					id: responseMessageId
@@ -1064,7 +1125,7 @@
 						} else {
 							const messages = createMessagesList(responseMessageId);
 
-							await chatCompletedHandler(model.id, responseMessageId, messages);
+							await chatCompletedHandler(_chatId, model.id, responseMessageId, messages);
 						}
 
 						_response = responseMessage.content;
@@ -1137,7 +1198,8 @@
 							models: selectedModels,
 							messages: messages,
 							history: history,
-							params: params
+							params: params,
+							files: chatFiles
 						});
 						await chats.set(await getChatList(localStorage.token));
 					}
@@ -1175,7 +1237,7 @@
 			scrollToBottom();
 		}
 
-		if (messages.length == 2) {
+		if (messages.length == 2 && selectedModels[0] === model.id) {
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 
 			const _title = await generateChatTitle(userPrompt);
@@ -1408,8 +1470,14 @@
 	bind:show={showEventConfirmation}
 	title={eventConfirmationTitle}
 	message={eventConfirmationMessage}
+	input={eventConfirmationInput}
+	inputPlaceholder={eventConfirmationInputPlaceholder}
 	on:confirm={(e) => {
-		eventCallback(true);
+		if (e.detail) {
+			eventCallback(e.detail);
+		} else {
+			eventCallback(true);
+		}
 	}}
 	on:cancel={() => {
 		eventCallback(false);
@@ -1511,6 +1579,7 @@
 						{sendPrompt}
 						{continueGeneration}
 						{regenerateResponse}
+						{chatActionHandler}
 					/>
 				</div>
 			</div>
@@ -1539,6 +1608,18 @@
 			</div>
 		</div>
 
-		<ChatControls bind:show={showControls} bind:params />
+		<ChatControls
+			models={selectedModelIds.reduce((a, e, i, arr) => {
+				const model = $models.find((m) => m.id === e);
+				if (model) {
+					return [...a, model];
+				}
+				return a;
+			}, [])}
+			bind:show={showControls}
+			bind:chatFiles
+			bind:params
+			bind:valves
+		/>
 	</div>
 {/if}

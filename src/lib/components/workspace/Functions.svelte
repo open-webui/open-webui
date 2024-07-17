@@ -122,12 +122,17 @@
 
 		if (res) {
 			if (func.is_global) {
-				toast.success($i18n.t('Filter is now globally enabled'));
+				func.type === 'filter'
+					? toast.success($i18n.t('Filter is now globally enabled'))
+					: toast.success($i18n.t('Function is now globally enabled'));
 			} else {
-				toast.success($i18n.t('Filter is now globally disabled'));
+				func.type === 'filter'
+					? toast.success($i18n.t('Filter is now globally disabled'))
+					: toast.success($i18n.t('Function is now globally disabled'));
 			}
 
 			functions.set(await getFunctions(localStorage.token));
+			models.set(await getModels(localStorage.token));
 		}
 	};
 </script>
@@ -230,7 +235,7 @@
 			</a>
 			<div class="flex flex-row gap-0.5 self-center">
 				{#if func?.meta?.manifest?.funding_url ?? false}
-					<Tooltip content="Support">
+					<Tooltip content={$i18n.t('Support')}>
 						<button
 							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 							type="button"
@@ -244,7 +249,7 @@
 					</Tooltip>
 				{/if}
 
-				<Tooltip content="Valves">
+				<Tooltip content={$i18n.t('Valves')}>
 					<button
 						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 						type="button"
@@ -294,7 +299,7 @@
 						showDeleteConfirm = true;
 					}}
 					toggleGlobalHandler={() => {
-						if (func.type === 'filter') {
+						if (['filter', 'action'].includes(func.type)) {
 							toggleGlobalHandler(func);
 						}
 					}}
@@ -309,7 +314,7 @@
 				</FunctionMenu>
 
 				<div class=" self-center mx-1">
-					<Tooltip content={func.is_active ? 'Enabled' : 'Disabled'}>
+					<Tooltip content={func.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
 						<Switch
 							bind:state={func.is_active}
 							on:change={async (e) => {
@@ -489,15 +494,15 @@
 			<div>Please carefully review the following warnings:</div>
 
 			<ul class=" mt-1 list-disc pl-4 text-xs">
-				<li>Functions allow arbitrary code execution.</li>
-				<li>Do not install functions from sources you do not fully trust.</li>
+				<li>{$i18n.t('Functions allow arbitrary code execution.')}</li>
+				<li>{$i18n.t('Do not install functions from sources you do not fully trust.')}</li>
 			</ul>
 		</div>
 
 		<div class="my-3">
-			I acknowledge that I have read and I understand the implications of my action. I am aware of
-			the risks associated with executing arbitrary code and I have verified the trustworthiness of
-			the source.
+			{$i18n.t(
+				'I acknowledge that I have read and I understand the implications of my action. I am aware of the risks associated with executing arbitrary code and I have verified the trustworthiness of the source.'
+			)}
 		</div>
 	</div>
 </ConfirmDialog>
