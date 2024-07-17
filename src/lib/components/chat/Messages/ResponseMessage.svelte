@@ -5,6 +5,7 @@
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
+	import 'katex/dist/katex.min.js';
 	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
@@ -118,14 +119,16 @@
 	}
 
 	function escapeBrackets(text: string) {
-		const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
-		return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
+		const pattern = /(```[\S\s]*?```|`.*?`)|\\\[([\S\s]*?[^\\])\\]|\\\((.*?)\\\)/g;
+		return text.replaceAll(pattern, (match, codeBlock, squareBracket, roundBracket) => {
 			if (codeBlock) {
 				return codeBlock;
 			} else if (squareBracket) {
-				return `$$${squareBracket}$$`;
+				const cleanSquareBracket = squareBracket.replace(/\n/g, ' ');
+				return `$$${cleanSquareBracket}$$`;
 			} else if (roundBracket) {
-				return `$${roundBracket}$`;
+				const cleanRoundBracket = roundBracket.replace(/\n/g, ' ');
+				return `$${cleanRoundBracket}$`;
 			}
 			return match;
 		});
