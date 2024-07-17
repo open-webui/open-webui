@@ -119,18 +119,15 @@
 	}
 
 	function escapeBrackets(text) {
-		let cleanSquareBracket = '';
-		let cleanRoundBracket = '';
-
 		const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
 		return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
 			if (codeBlock) {
 				return codeBlock;
 			} else if (squareBracket !== undefined) {
-				cleanSquareBracket = squareBracket.replace(/\n/g, '\\ ');
+				let cleanSquareBracket = squareBracket.replace(/\n/g, '\\ ');
 				return `$$${cleanSquareBracket}$$`;
 			} else if (roundBracket !== undefined) {
-				cleanRoundBracket = roundBracket.replace(/\n/g, '\\ ');
+				let cleanRoundBracket = roundBracket.replace(/\n/g, '\\ ');
 				return `$${cleanRoundBracket}$`;
 			}
 			return match;
