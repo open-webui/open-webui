@@ -1,7 +1,11 @@
 {
 	"version": 0,
 	"ui": {
+<<<<<<< HEAD
 		"default_locale": "",
+=======
+		"default_locale": "en-CA",
+>>>>>>> e9493364 (changing default locale to english canada)
 		"prompt_suggestions": [
 			{
 				"title": ["Help me study", "vocabulary for a college entrance exam"],
