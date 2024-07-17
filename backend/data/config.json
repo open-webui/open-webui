@@ -1,7 +1,7 @@
 {
 	"version": 0,
 	"ui": {
-		"default_locale": "en-US",
+		"default_locale": "",
 		"prompt_suggestions": [
 			{
 				"title": ["Help me study", "vocabulary for a college entrance exam"],

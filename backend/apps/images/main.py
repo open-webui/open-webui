@@ -421,7 +421,7 @@ def save_url_image(url):
 
 
 @app.post("/generations")
-def generate_image(
+async def image_generations(
     form_data: GenerateImageForm,
     user=Depends(get_verified_user),
 ):
