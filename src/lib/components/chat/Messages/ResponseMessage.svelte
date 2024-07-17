@@ -127,10 +127,10 @@
 			if (codeBlock) {
 				return codeBlock;
 			} else if (squareBracket !== undefined) {
-				cleanSquareBracket = squareBracket.replace(/\n/g, '/ ');
+				cleanSquareBracket = squareBracket.replace(/\n/g, '\\ ');
 				return `$$${cleanSquareBracket}$$`;
 			} else if (roundBracket !== undefined) {
-				cleanRoundBracket = roundBracket.replace(/\n/g, '/ ');
+				cleanRoundBracket = roundBracket.replace(/\n/g, '\\ ');
 				return `$${cleanRoundBracket}$`;
 			}
 			return match;
