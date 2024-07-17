@@ -41,6 +41,7 @@
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import FileItem from '../common/FileItem.svelte';
+	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -298,24 +299,7 @@
 	});
 </script>
 
-{#if dragged}
-	<div
-		class="fixed {$showSidebar
-			? 'left-0 md:left-[260px] md:w-[calc(100%-260px)]'
-			: 'left-0'}  w-full h-full flex z-50 touch-none pointer-events-none"
-		id="dropzone"
-		role="region"
-		aria-label="Drag and Drop Container"
-	>
-		<div class="absolute w-full h-full backdrop-blur bg-gray-800/40 flex justify-center">
-			<div class="m-auto pt-64 flex flex-col justify-center">
-				<div class="max-w-md">
-					<AddFilesPlaceholder />
-				</div>
-			</div>
-		</div>
-	</div>
-{/if}
+<FilesOverlay show={dragged} />
 
 <div class="w-full font-primary">
 	<div class=" -mb-0.5 mx-auto inset-x-0 bg-transparent flex justify-center">
