@@ -174,6 +174,7 @@
 						{ left: '$$', right: '$$', display: false },
 						{ left: '$ ', right: ' $', display: false },
 						{ left: '\\(', right: '\\)', display: false },
+						{ left: '\\( ', right: ' \\)', display: false },
 						{ left: '\\[', right: '\\]', display: false },
 						{ left: '[ ', right: ' ]', display: false }
 					],
