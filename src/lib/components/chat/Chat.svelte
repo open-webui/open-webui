@@ -797,7 +797,7 @@
 				stop:
 					params?.stop ?? $settings?.params?.stop ?? undefined
 						? (params?.stop ?? $settings.params.stop).map((str) =>
-								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+								decodeURIComponent(JSON.parse('"' + str + '"'))
 						  )
 						: undefined,
 				num_predict: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
@@ -1095,7 +1095,7 @@
 					stop:
 						params?.stop ?? $settings?.params?.stop ?? undefined
 							? (params?.stop ?? $settings.params.stop).map((str) =>
-									decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+									decodeURIComponent(JSON.parse('"' + str + '"'))
 							  )
 							: undefined,
 					temperature: params?.temperature ?? $settings?.params?.temperature ?? undefined,
