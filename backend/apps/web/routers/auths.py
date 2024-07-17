@@ -371,7 +371,7 @@ sso = MicrosoftSSO(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
     tenant=TENANT,
-    redirect_uri="http://localhost:8080/api/v1/auths/signin/callback",
+    redirect_uri="http://localhost/api/v1/auths/signin/callback",
     allow_insecure_http=True,
     scope=["User.Read", "Directory.Read.All", "User.ReadBasic.All"],
     # ["openid", "User.Read", "email"],
