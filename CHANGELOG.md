@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.10] - 2024-07-17
+
+### Fixed
+
+- **🔄 Improved File Upload**: Addressed the issue where file uploads lacked animation.
+- **💬 Chat Continuity**: Fixed a problem where existing chats were not functioning properly in some instances.
+- **🗂️ Chat File Reset**: Resolved the issue of chat files not resetting for new conversations, now ensuring a clean slate for each chat session.
+- **📁 Document Workspace Management**: Corrected the handling of document uploads in the workspace using the Files API.
+
 ## [0.3.9] - 2024-07-17
 
 ### Added
@@ -27,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **⬆️ Dependency Updates** 
+- **⬆️ Dependency Updates**
   - Upgraded 'pydantic' from version 2.7.1 to 2.8.2.
   - Upgraded 'sqlalchemy' from version 2.0.30 to 2.0.31.
   - Upgraded 'unstructured' from version 0.14.9 to 0.14.10.
