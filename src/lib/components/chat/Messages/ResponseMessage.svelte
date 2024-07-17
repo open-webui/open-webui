@@ -199,6 +199,7 @@
 		if (chatMessageElements) {
 			for (const element of chatMessageElements) {
 				let processedText = escapeDollarNumber(element.textContent);
+				console.log(element.textContent);
 				processedText = escapeBrackets(processedText);
 				processedText = escapeMhchem(processedText);
 				element.textContent = processedText;
