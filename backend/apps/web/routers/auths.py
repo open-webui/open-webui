@@ -2,6 +2,7 @@ import logging
 
 from fastapi import Request, UploadFile, File
 from fastapi import Depends, HTTPException, status
+from fastapi_sso.sso.microsoft import MicrosoftSSO
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -357,3 +358,68 @@ async def get_api_key(user=Depends(get_current_user)):
         }
     else:
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+############################
+# SignIn with Microsoft Entra ID - SSO
+############################
+
+CLIENT_ID = "ffa8bad1-4e70-4514-8c2c-d1f6ddfdbd2e"
+CLIENT_SECRET = "89r8Q~AC8EMrvzimVaSNIBVwtGTz0zYVIz1I1bjL"
+TENANT = "c93272d3-1b07-4b3d-a3b6-19b34a973915"
+
+sso = MicrosoftSSO(
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    tenant=TENANT,
+    redirect_uri="http://localhost:8080/api/v1/auths/signin/callback",
+    allow_insecure_http=True,
+    scope=["User.Read", "Directory.Read.All", "User.ReadBasic.All"],
+    # ["openid", "User.Read", "email"],
+)
+
+@router.get("/signin/sso", response_model=SigninResponse)
+async def signin_with_sso():
+    """Initialize auth and redirect"""
+    print("signin_with_sso")
+    with sso:
+        return await sso.get_login_redirect()
+
+
+@router.get("/signin/callback", response_model=SigninResponse)
+async def signin_callback(request: Request):
+    """Verify login"""
+    print("signin_callback")
+    sso_user = None
+    with sso:
+        
+        sso_user = await sso.verify_and_process(request)
+        print(sso_user)
+        sso_user_email = sso_user.email
+        user = Users.get_user_by_email(sso_user_email.lower())
+        if not user:
+            await signup(
+                request,
+                SignupForm(
+                    email=sso_user_email, password=str(uuid.uuid4()), name=sso_user_email
+                ),
+            )
+            user = Auths.authenticate_user_by_trusted_header(sso_user_email)
+        else:
+            print("user already exists")
+            # TODO update the metadata to the DB
+            # Users.update_user_by_id(user.id, )
+
+        token = create_token(
+            data={"id": user.id},
+            expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
+        )
+
+        return {
+            "token": token,
+            "token_type": "Bearer",
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "profile_image_url": user.profile_image_url,
+        }
