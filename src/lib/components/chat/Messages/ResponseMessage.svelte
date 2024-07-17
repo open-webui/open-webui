@@ -129,9 +129,14 @@
 		});
 	}
 
+	function escapeMhchem(text: string) {
+		return text.replaceAll('$\\ce{', '$\\\\ce{').replaceAll('$\\pu{', '$\\\\pu{');
+	}
+
 	$: if (message) {
 		let processedContent = escapeDollarNumber(message.content);
 		processedContent = escapeBrackets(processedContent);
+		processedContent = escapeMhchem(processedContent);
 		message.content = processedContent;
 		renderStyling();
 	}
