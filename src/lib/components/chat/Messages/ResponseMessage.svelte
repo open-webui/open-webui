@@ -3,9 +3,7 @@
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
 	import tippy from 'tippy.js';
-	import auto_render from 'katex/dist/contrib/auto-render.mjs';
-	import 'katex/dist/katex.min.css';
-	import 'katex/dist/katex.min.js';
+	import MathJax from 'mathjax/es5/tex-mml-chtml.js';
 	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
@@ -209,19 +207,7 @@
 
 		if (chatMessageElements) {
 			for (const element of chatMessageElements) {
-				auto_render(element, {
-					// customised options
-					// • auto-render specific keys, e.g.:
-					delimiters: [
-						{ left: '$$', right: '$$', display: true },
-						{ left: '$', right: '$', display: false },
-						{ left: '\\(', right: '\\)', display: false },
-						{ left: '\\[', right: '\\]', display: true },
-						{ left: '[', right: ']', display: false }
-					],
-					// • rendering keys, e.g.:
-					throwOnError: false
-				});
+				MathJax.typesetPromise([element]).catch(err => console.error('MathJax typesetting error:', err));
 			}
 		}
 	};
