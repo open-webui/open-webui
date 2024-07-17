@@ -335,7 +335,7 @@
 				}
 
 				params = chatContent?.params ?? {};
-				chatFiles = chatContent?.files ?? {};
+				chatFiles = chatContent?.files ?? [];
 
 				autoScroll = true;
 				await tick();
