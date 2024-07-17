@@ -5,6 +5,7 @@
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
+	import 'katex/dist/katex.min.js';
 	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
