@@ -99,8 +99,44 @@
 		extensions: any;
 	};
 
+	const escapeDollarNumber = async (text) => {
+		let escapedText = '';
+
+		for (let i = 0; i < text.length; i += 1) {
+			let char = text[i];
+			const nextChar = text[i + 1] || ' ';
+
+			if (char === '$' && nextChar >= '0' && nextChar <= '9') {
+				char = '\\$';
+			}
+
+			escapedText += char;
+		}
+
+		return escapedText;
+	};
+
+	const escapeBrackets = async (text) => {
+		const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
+		return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
+			if (codeBlock) {
+				return codeBlock;
+			} else if (squareBracket) {
+				return `$$${squareBracket}$$`;
+			} else if (roundBracket) {
+				return `$${roundBracket}$`;
+			}
+			return match;
+		});
+	};
+
 	$: if (message) {
-		renderStyling();
+		(async () => {
+			let processedContent = await escapeDollarNumber(message.content);
+			processedContent = await escapeBrackets(processedContent);
+			message.content = processedContent;
+			renderStyling();
+		})();
 	}
 
 	const renderStyling = async () => {
@@ -168,21 +204,20 @@
 
 		if (chatMessageElements) {
 			for (const element of chatMessageElements) {
-				// auto_render(element, {
-				// 	// customised options
-				// 	// • auto-render specific keys, e.g.:
-				// 	delimiters: [
-				// 		{ left: '$$', right: '$$', display: false },
-				// 		{ left: '$ ', right: ' $', display: false },
-				// 		{ left: '\\(', right: '\\)', display: false },
-				// 		{ left: '\\( ', right: ' \\)', display: false },
-				// 		{ left: '\\[', right: '\\]', display: false },
-				// 		{ left: '[ ', right: ' ]', display: false }
-				// 	],
-				// 	// • rendering keys, e.g.:
-				// 	throwOnError: false
-				// });
-				MathJax.typesetPromise([element]).catch((err) => console.log(err.message));
+				auto_render(element, {
+					// customised options
+					// • auto-render specific keys, e.g.:
+					delimiters: [
+						{ left: '$$', right: '$$', display: false },
+						{ left: '$ ', right: ' $', display: false },
+						{ left: '\\(', right: '\\)', display: false },
+						{ left: '\\( ', right: ' \\)', display: false },
+						{ left: '\\[', right: '\\]', display: false },
+						{ left: '[ ', right: ' ]', display: false }
+					],
+					// • rendering keys, e.g.:
+					throwOnError: false
+				});
 			}
 		}
 	};
