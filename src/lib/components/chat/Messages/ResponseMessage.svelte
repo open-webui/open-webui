@@ -3,7 +3,11 @@
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
 	import tippy from 'tippy.js';
-	import MathJax from 'mathjax/es5/tex-mml-chtml.js';
+	import { mathjax } from 'mathjax-full/js/mathjax.js';
+	import { TeX } from 'mathjax-full/js/input/tex.js';
+	import { CHTML } from 'mathjax-full/js/output/chtml.js';
+	import { browserAdaptor } from 'mathjax-full/js/adaptors/browserAdaptor.js';
+	import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html.js';
 	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
@@ -200,6 +204,15 @@
 		}
 	};
 
+	RegisterHTMLHandler(browserAdaptor());
+
+	const tex = new TeX({ packages: ['base', 'ams'] });
+	const chtml = new CHTML();
+	const html = mathjax.document(document, {
+		InputJax: tex,
+		OutputJax: chtml
+	});
+
 	const renderLatex = () => {
 		let chatMessageElements = document
 			.getElementById(`message-${message.id}`)
@@ -207,7 +220,7 @@
 
 		if (chatMessageElements) {
 			for (const element of chatMessageElements) {
-				MathJax.typesetPromise([element]).catch(err => console.error('MathJax typesetting error:', err));
+				html.convert(element, { display: true });
 			}
 		}
 	};
