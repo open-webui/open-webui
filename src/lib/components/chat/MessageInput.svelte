@@ -545,6 +545,7 @@
 											<FileItem
 												name={file.name}
 												type={file.type}
+												status={file.status}
 												dismissible={true}
 												on:dismiss={() => {
 													files.splice(fileIdx, 1);
