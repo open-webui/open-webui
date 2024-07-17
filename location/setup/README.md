@@ -1,12 +1,14 @@
 # Docker Setup
 
-## Installing git while creation of docker image
+## Edit our Open WebUI "projects" repo
 
-To be able to run git commands inside a docker container the following command has been used:
+The "projects/location" folder is where we'll edit enhancements to the "src" folder.  
+We'll merge our enhancments into "src-merged" so we don't have sync issues with open-webui.
 
-	apt-get install -y --no-install-recommends curl jq git
+We also edit index.html and active.md in our "projects" fork root since we added those files.
 
-## Edit your local files pulled down with Docker
+
+## Edit your project/location files pulled down from our Docker package
 
 Once you get the following installed, see our [Location Projects for Open WebUI](../).
 
@@ -42,15 +44,18 @@ The above does the following:
 3.) Run the docker container
 4.) cd into the container
 
+5.) Copy the files from the container into your webroot. If you aleady have a projects folder in your webroot, rename it.
+The ~ in the command works for all machines types. On a PC you'll need to use powershell. 
 
-5.) Copy the files from the container to local. If you aleady have a projects folder in your webroot, rename it.
-The ~ in the command works for all machines types. On a PC you'll need to use powershell.
+The first line will create the folders if they do not yet exist.
 
+	mkdir -p ~/Documents/Webroot/projects
 	docker cp projects-container:/app/backend "~/Documents/Webroot/projects"
 
 Docker set-up contributors: Dinesh B, Loren, Yifeng
 
 ## Using git inside of docker
+
 **Code in Dockerfile to install Git while creating a Container**
 	apt-get install -y --no-install-recommends curl jq git
 	apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq git
@@ -88,14 +93,16 @@ Once you've cloned the repo make a docker image and then create a container
 **Push the new branch to the remote repository**
 	git push origin my-new-feature
 
-## Edit our Open WebUI "projects" repo
 
-The "location" folder is where we'll edit enhancements to the "src" folder. We'll merge our enhancments into "src-merged" so we don't have sync issues with open-webui.
+## Installing git while creation of docker image
 
-We also edit index.html and active.md in the repo root.
+To run git commands above inside our docker container,
+ the following command was used:
 
+	apt-get install -y --no-install-recommends curl jq git
 
-
+**Areas of future sync issues:**
+We updated our [DockerFile with this PR](https://github.com/ModelEarth/projects/pull/2/files) - Dinesh
 
 ## We created a Docker "projects" container on GitHub
 
