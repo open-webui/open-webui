@@ -198,10 +198,10 @@
 
 		if (chatMessageElements) {
 			for (const element of chatMessageElements) {
-				let processedText = escapeDollarNumber(element.innerHTML);
+				let processedText = escapeDollarNumber(element.textContent);
 				processedText = escapeBrackets(processedText);
 				processedText = escapeMhchem(processedText);
-				element.innerHTML = processedText;
+				element.textContent = processedText;
 				auto_render(element, {
 					// customised options
 					// • auto-render specific keys, e.g.:
