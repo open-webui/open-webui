@@ -264,6 +264,8 @@
 			messages: {},
 			currentId: null
 		};
+
+		chatFiles = [];
 		params = {};
 
 		if ($page.url.searchParams.get('models')) {

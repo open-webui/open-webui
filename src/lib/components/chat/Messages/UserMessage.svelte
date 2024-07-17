@@ -99,12 +99,8 @@
 						<div class={$settings?.chatBubble ?? true ? 'self-end' : ''}>
 							{#if file.type === 'image'}
 								<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
-							{:else if file.type === 'file'}
-								<FileItem url={`${file?.url}/content`} name={file.name} type={$i18n.t('File')} />
-							{:else if file.type === 'doc'}
-								<FileItem url={`${file?.url}`} name={file.name} type={$i18n.t('Document')} />
-							{:else if file.type === 'collection'}
-								<FileItem name={file?.title ?? `#${file.name}`} type={$i18n.t('Collection')} />
+							{:else}
+								<FileItem url={file.url} name={file.name} type={file.type} />
 							{/if}
 						</div>
 					{/each}
