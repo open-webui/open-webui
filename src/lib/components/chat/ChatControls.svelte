@@ -9,8 +9,9 @@
 	export let models = [];
 
 	export let chatId = null;
-	export let valves = {};
 
+	export let chatFiles = [];
+	export let valves = {};
 	export let params = {};
 
 	let largeScreen = false;
@@ -48,6 +49,7 @@
 							show = false;
 						}}
 						{models}
+						bind:chatFiles
 						bind:valves
 						bind:params
 					/>
@@ -63,6 +65,7 @@
 					show = false;
 				}}
 				{models}
+				bind:chatFiles
 				bind:valves
 				bind:params
 			/>

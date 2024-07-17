@@ -98,6 +98,8 @@
 
 	let title = '';
 	let prompt = '';
+
+	let chatFiles = [];
 	let files = [];
 	let messages = [];
 	let history = {
@@ -333,6 +335,7 @@
 				}
 
 				params = chatContent?.params ?? {};
+				chatFiles = chatContent?.files ?? {};
 
 				autoScroll = true;
 				await tick();
@@ -408,7 +411,8 @@
 					models: selectedModels,
 					messages: messages,
 					history: history,
-					params: params
+					params: params,
+					files: chatFiles
 				});
 				await chats.set(await getChatList(localStorage.token));
 			}
@@ -453,7 +457,8 @@
 					models: selectedModels,
 					messages: messages,
 					history: history,
-					params: params
+					params: params,
+					files: chatFiles
 				});
 				await chats.set(await getChatList(localStorage.token));
 			}
@@ -514,6 +519,13 @@
 			}
 
 			const _files = JSON.parse(JSON.stringify(files));
+			chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type)));
+			chatFiles = chatFiles.filter(
+				// Remove duplicates
+				(item, index, array) =>
+					array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
+			);
+
 			files = [];
 
 			prompt = '';
@@ -754,25 +766,10 @@
 			}
 		});
 
-		let files = [];
+		let files = JSON.parse(JSON.stringify(chatFiles));
 		if (model?.info?.meta?.knowledge ?? false) {
-			files = model.info.meta.knowledge;
+			files.push(...model.info.meta.knowledge);
 		}
-		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
-
-		files = [
-			...files,
-			...(lastUserMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
-			) ?? []),
-			...(responseMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
-			) ?? [])
-		].filter(
-			// Remove duplicates
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
 
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:start', {
@@ -936,7 +933,8 @@
 						messages: messages,
 						history: history,
 						models: selectedModels,
-						params: params
+						params: params,
+						files: chatFiles
 					});
 					await chats.set(await getChatList(localStorage.token));
 				}
@@ -1003,24 +1001,10 @@
 		let _response = null;
 		const responseMessage = history.messages[responseMessageId];
 
-		let files = [];
+		let files = JSON.parse(JSON.stringify(chatFiles));
 		if (model?.info?.meta?.knowledge ?? false) {
-			files = model.info.meta.knowledge;
+			files.push(...model.info.meta.knowledge);
 		}
-		const lastUserMessage = messages.filter((message) => message.role === 'user').at(-1);
-		files = [
-			...files,
-			...(lastUserMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
-			) ?? []),
-			...(responseMessage?.files?.filter((item) =>
-				['doc', 'file', 'collection', 'web_search_results'].includes(item.type)
-			) ?? [])
-		].filter(
-			// Remove duplicates
-			(item, index, array) =>
-				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
-		);
 
 		scrollToBottom();
 
@@ -1214,7 +1198,8 @@
 							models: selectedModels,
 							messages: messages,
 							history: history,
-							params: params
+							params: params,
+							files: chatFiles
 						});
 						await chats.set(await getChatList(localStorage.token));
 					}
@@ -1632,6 +1617,7 @@
 				return a;
 			}, [])}
 			bind:show={showControls}
+			bind:chatFiles
 			bind:params
 			bind:valves
 		/>
