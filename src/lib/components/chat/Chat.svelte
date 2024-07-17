@@ -706,6 +706,7 @@
 		let _response = null;
 
 		const responseMessage = history.messages[responseMessageId];
+		const userMessage = history.messages[responseMessage.parentId];
 
 		// Wait until history/message have been updated
 		await tick();
@@ -772,11 +773,12 @@
 		if (model?.info?.meta?.knowledge ?? false) {
 			files.push(...model.info.meta.knowledge);
 		}
-		if (responseMessage?.files) {
-			files.push(
-				...responseMessage?.files.filter((item) => ['web_search_results'].includes(item.type))
-			);
-		}
+		files.push(
+			...(userMessage?.files ?? []).filter((item) =>
+				['doc', 'file', 'collection'].includes(item.type)
+			),
+			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
+		);
 
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:start', {
@@ -1006,17 +1008,20 @@
 
 	const sendPromptOpenAI = async (model, userPrompt, responseMessageId, _chatId) => {
 		let _response = null;
+
 		const responseMessage = history.messages[responseMessageId];
+		const userMessage = history.messages[responseMessage.parentId];
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		if (model?.info?.meta?.knowledge ?? false) {
 			files.push(...model.info.meta.knowledge);
 		}
-		if (responseMessage?.files) {
-			files.push(
-				...responseMessage?.files.filter((item) => ['web_search_results'].includes(item.type))
-			);
-		}
+		files.push(
+			...(userMessage?.files ?? []).filter((item) =>
+				['doc', 'file', 'collection'].includes(item.type)
+			),
+			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
+		);
 
 		scrollToBottom();
 
