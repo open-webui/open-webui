@@ -5,6 +5,7 @@
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-72';
+	export let colorClassName = 'bg-white dark:bg-gray-800';
 	export let url: string | null = null;
 
 	export let clickHandler: Function | null = null;
@@ -18,7 +19,7 @@
 
 <div class="relative group">
 	<button
-		class="h-14 {className} flex items-center space-x-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 text-left"
+		class="h-14 {className} flex items-center space-x-3 {colorClassName} rounded-xl border border-gray-100 dark:border-gray-800 text-left"
 		type="button"
 		on:click={async () => {
 			if (clickHandler === null) {
