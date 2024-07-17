@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🔄 Improved File Upload**: Addressed the issue where file uploads lacked animation.
 - **💬 Chat Continuity**: Fixed a problem where existing chats were not functioning properly in some instances.
 - **🗂️ Chat File Reset**: Resolved the issue of chat files not resetting for new conversations, now ensuring a clean slate for each chat session.
-- **📁 Document Workspace Management**: Corrected the handling of document uploads in the workspace using the Files API.
+- **📁 Document Workspace Uploads**: Corrected the handling of document uploads in the workspace using the Files API.
 
 ## [0.3.9] - 2024-07-17
 
