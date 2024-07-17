@@ -4,6 +4,7 @@
 	import { marked } from 'marked';
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
+	import MathJax from 'mathjax/es5/tex-mml-chtml.js';
 	import 'katex/dist/katex.min.css';
 	import mermaid from 'mermaid';
 
@@ -167,20 +168,21 @@
 
 		if (chatMessageElements) {
 			for (const element of chatMessageElements) {
-				auto_render(element, {
-					// customised options
-					// • auto-render specific keys, e.g.:
-					delimiters: [
-						{ left: '$$', right: '$$', display: false },
-						{ left: '$ ', right: ' $', display: false },
-						{ left: '\\(', right: '\\)', display: false },
-						{ left: '\\( ', right: ' \\)', display: false },
-						{ left: '\\[', right: '\\]', display: false },
-						{ left: '[ ', right: ' ]', display: false }
-					],
-					// • rendering keys, e.g.:
-					throwOnError: false
-				});
+				// auto_render(element, {
+				// 	// customised options
+				// 	// • auto-render specific keys, e.g.:
+				// 	delimiters: [
+				// 		{ left: '$$', right: '$$', display: false },
+				// 		{ left: '$ ', right: ' $', display: false },
+				// 		{ left: '\\(', right: '\\)', display: false },
+				// 		{ left: '\\( ', right: ' \\)', display: false },
+				// 		{ left: '\\[', right: '\\]', display: false },
+				// 		{ left: '[ ', right: ' ]', display: false }
+				// 	],
+				// 	// • rendering keys, e.g.:
+				// 	throwOnError: false
+				// });
+				MathJax.typesetPromise([element]).catch((err) => console.log(err.message));
 			}
 		}
 	};
