@@ -48,7 +48,7 @@
 			align="start"
 			transition={flyAndScale}
 		>
-			{#if func.type === 'filter'}
+			{#if ['filter', 'action'].includes(func.type)}
 				<div
 					class="flex gap-2 justify-between items-center px-3 py-2 text-sm font-medium cursor-pointerrounded-md"
 				>

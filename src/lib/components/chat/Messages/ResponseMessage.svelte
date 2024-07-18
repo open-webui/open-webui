@@ -37,6 +37,7 @@
 	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
+	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 
 	export let message;
 	export let siblings;
@@ -54,6 +55,7 @@
 	export let copyToClipboard: Function;
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
+	export let chatActionHandler: Function;
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
@@ -564,6 +566,11 @@
 											const metadata = citation.metadata?.[index];
 											const id = metadata?.source ?? 'N/A';
 											let source = citation?.source;
+
+											if (metadata?.name) {
+												source = { ...source, name: metadata.name };
+											}
+
 											// Check if ID looks like a URL
 											if (id.startsWith('http://') || id.startsWith('https://')) {
 												source = { name: id };
@@ -1020,6 +1027,33 @@
 														</svg>
 													</button>
 												</Tooltip>
+
+												{#each model?.actions ?? [] as action}
+													<Tooltip content={action.name} placement="bottom">
+														<button
+															type="button"
+															class="{isLastMessage
+																? 'visible'
+																: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+															on:click={() => {
+																dispatch('action', action.id);
+															}}
+														>
+															{#if action.icon_url}
+																<img
+																	src={action.icon_url}
+																	class="w-4 h-4 {action.icon_url.includes('svg')
+																		? 'dark:invert-[80%]'
+																		: ''}"
+																	style="fill: currentColor;"
+																	alt={action.name}
+																/>
+															{:else}
+																<Sparkles strokeWidth="2.1" className="size-4" />
+															{/if}
+														</button>
+													</Tooltip>
+												{/each}
 											{/if}
 										{/if}
 									{/if}

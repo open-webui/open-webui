@@ -139,7 +139,7 @@ type Config = {
 	name: string;
 	version: string;
 	default_locale: string;
-	default_models: string[];
+	default_models: string;
 	default_prompt_suggestions: PromptSuggestion[];
 	features: {
 		auth: boolean;

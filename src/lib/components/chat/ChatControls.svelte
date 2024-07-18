@@ -6,7 +6,12 @@
 
 	export let show = false;
 
+	export let models = [];
+
 	export let chatId = null;
+
+	export let chatFiles = [];
+	export let valves = {};
 	export let params = {};
 
 	let largeScreen = false;
@@ -43,6 +48,9 @@
 						on:close={() => {
 							show = false;
 						}}
+						{models}
+						bind:chatFiles
+						bind:valves
 						bind:params
 					/>
 				</div>
@@ -56,6 +64,9 @@
 				on:close={() => {
 					show = false;
 				}}
+				{models}
+				bind:chatFiles
+				bind:valves
 				bind:params
 			/>
 		</div>

@@ -21,6 +21,7 @@ from utils.utils import (
     get_admin_user,
 )
 from utils.task import prompt_template
+from utils.misc import add_or_update_system_message
 
 from config import (
     SRC_LOG_LEVELS,
@@ -357,6 +358,8 @@ async def generate_chat_completion(
 ):
     idx = 0
     payload = {**form_data}
+    if "metadata" in payload:
+        del payload["metadata"]
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
@@ -368,24 +371,33 @@ async def generate_chat_completion(
         model_info.params = model_info.params.model_dump()
 
         if model_info.params:
-            if model_info.params.get("temperature", None) is not None:
+            if (
+                model_info.params.get("temperature", None)
+                and payload.get("temperature") is None
+            ):
                 payload["temperature"] = float(model_info.params.get("temperature"))
 
-            if model_info.params.get("top_p", None):
+            if model_info.params.get("top_p", None) and payload.get("top_p") is None:
                 payload["top_p"] = int(model_info.params.get("top_p", None))
 
-            if model_info.params.get("max_tokens", None):
+            if (
+                model_info.params.get("max_tokens", None)
+                and payload.get("max_tokens") is None
+            ):
                 payload["max_tokens"] = int(model_info.params.get("max_tokens", None))
 
-            if model_info.params.get("frequency_penalty", None):
+            if (
+                model_info.params.get("frequency_penalty", None)
+                and payload.get("frequency_penalty") is None
+            ):
                 payload["frequency_penalty"] = int(
                     model_info.params.get("frequency_penalty", None)
                 )
 
-            if model_info.params.get("seed", None):
+            if model_info.params.get("seed", None) and payload.get("seed") is None:
                 payload["seed"] = model_info.params.get("seed", None)
 
-            if model_info.params.get("stop", None):
+            if model_info.params.get("stop", None) and payload.get("stop") is None:
                 payload["stop"] = (
                     [
                         bytes(stop, "utf-8").decode("unicode_escape")
@@ -410,21 +422,10 @@ async def generate_chat_completion(
                     else {}
                 ),
             )
-            # Check if the payload already has a system message
-            # If not, add a system message to the payload
             if payload.get("messages"):
-                for message in payload["messages"]:
-                    if message.get("role") == "system":
-                        message["content"] = system + message["content"]
-                        break
-                else:
-                    payload["messages"].insert(
-                        0,
-                        {
-                            "role": "system",
-                            "content": system,
-                        },
-                    )
+                payload["messages"] = add_or_update_system_message(
+                    system, payload["messages"]
+                )
 
     else:
         pass

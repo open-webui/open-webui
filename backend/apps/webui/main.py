@@ -20,7 +20,6 @@ from apps.webui.routers import (
 )
 from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
-
 from apps.webui.utils import load_function_module_by_id
 
 from utils.misc import stream_message_template
@@ -48,12 +47,14 @@ from config import (
     OAUTH_PICTURE_CLAIM,
 )
 
+from apps.socket.main import get_event_call, get_event_emitter
+
 import inspect
 import uuid
 import time
 import json
 
-from typing import Iterator, Generator
+from typing import Iterator, Generator, Optional
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -164,6 +165,10 @@ async def get_pipe_models():
                             f"{function_module.name}{manifold_pipe_name}"
                         )
 
+                    pipe_flag = {"type": pipe.type}
+                    if hasattr(function_module, "ChatValves"):
+                        pipe_flag["valves_spec"] = function_module.ChatValves.schema()
+
                     pipe_models.append(
                         {
                             "id": manifold_pipe_id,
@@ -171,10 +176,14 @@ async def get_pipe_models():
                             "object": "model",
                             "created": pipe.created_at,
                             "owned_by": "openai",
-                            "pipe": {"type": pipe.type},
+                            "pipe": pipe_flag,
                         }
                     )
         else:
+            pipe_flag = {"type": "pipe"}
+            if hasattr(function_module, "ChatValves"):
+                pipe_flag["valves_spec"] = function_module.ChatValves.schema()
+
             pipe_models.append(
                 {
                     "id": pipe.id,
@@ -182,7 +191,7 @@ async def get_pipe_models():
                     "object": "model",
                     "created": pipe.created_at,
                     "owned_by": "openai",
-                    "pipe": {"type": "pipe"},
+                    "pipe": pipe_flag,
                 }
             )
 
@@ -192,6 +201,27 @@ async def get_pipe_models():
 async def generate_function_chat_completion(form_data, user):
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
+
+    metadata = None
+    if "metadata" in form_data:
+        metadata = form_data["metadata"]
+        del form_data["metadata"]
+
+    __event_emitter__ = None
+    __event_call__ = None
+    __task__ = None
+
+    if metadata:
+        if (
+            metadata.get("session_id")
+            and metadata.get("chat_id")
+            and metadata.get("message_id")
+        ):
+            __event_emitter__ = await get_event_emitter(metadata)
+            __event_call__ = await get_event_call(metadata)
+
+        if metadata.get("task"):
+            __task__ = metadata.get("task")
 
     if model_info:
         if model_info.base_model_id:
@@ -306,6 +336,15 @@ async def generate_function_chat_completion(form_data, user):
                 print(e)
 
             params = {**params, "__user__": __user__}
+
+        if "__event_emitter__" in sig.parameters:
+            params = {**params, "__event_emitter__": __event_emitter__}
+
+        if "__event_call__" in sig.parameters:
+            params = {**params, "__event_call__": __event_call__}
+
+        if "__task__" in sig.parameters:
+            params = {**params, "__task__": __task__}
 
         if form_data["stream"]:
 

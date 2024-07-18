@@ -309,7 +309,7 @@ class Pipe:
 						<input
 							class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 							type="text"
-							placeholder="Function Name (e.g. My Filter)"
+							placeholder={$i18n.t('Function Name (e.g. My Filter)')}
 							bind:value={name}
 							required
 						/>
@@ -317,7 +317,7 @@ class Pipe:
 						<input
 							class="w-full px-3 py-2 text-sm font-medium disabled:text-gray-300 dark:disabled:text-gray-700 bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 							type="text"
-							placeholder="Function ID (e.g. my_filter)"
+							placeholder={$i18n.t('Function ID (e.g. my_filter)')}
 							bind:value={id}
 							required
 							disabled={edit}
@@ -326,7 +326,9 @@ class Pipe:
 					<input
 						class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 						type="text"
-						placeholder="Function Description (e.g. A filter to remove profanity from text)"
+						placeholder={$i18n.t(
+							'Function Description (e.g. A filter to remove profanity from text)'
+						)}
 						bind:value={meta.description}
 						required
 					/>
@@ -348,10 +350,10 @@ class Pipe:
 				<div class="pb-3 flex justify-between">
 					<div class="flex-1 pr-3">
 						<div class="text-xs text-gray-500 line-clamp-2">
-							<span class=" font-semibold dark:text-gray-200">Warning:</span> Functions allow
-							arbitrary code execution <br />—
+							<span class=" font-semibold dark:text-gray-200">{$i18n.t('Warning:')}</span>
+							{$i18n.t('Functions allow arbitrary code execution')} <br />—
 							<span class=" font-medium dark:text-gray-400"
-								>don't install random functions from sources you don't trust.</span
+								>{$i18n.t(`don't install random functions from sources you don't trust.`)}</span
 							>
 						</div>
 					</div>
@@ -376,18 +378,18 @@ class Pipe:
 >
 	<div class="text-sm text-gray-500">
 		<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
-			<div>Please carefully review the following warnings:</div>
+			<div>{$i18n.t('Please carefully review the following warnings:')}</div>
 
 			<ul class=" mt-1 list-disc pl-4 text-xs">
-				<li>Functions allow arbitrary code execution.</li>
-				<li>Do not install functions from sources you do not fully trust.</li>
+				<li>{$i18n.t('Functions allow arbitrary code execution.')}</li>
+				<li>{$i18n.t('Do not install functions from sources you do not fully trust.')}</li>
 			</ul>
 		</div>
 
 		<div class="my-3">
-			I acknowledge that I have read and I understand the implications of my action. I am aware of
-			the risks associated with executing arbitrary code and I have verified the trustworthiness of
-			the source.
+			{$i18n.t(
+				'I acknowledge that I have read and I understand the implications of my action. I am aware of the risks associated with executing arbitrary code and I have verified the trustworthiness of the source.'
+			)}
 		</div>
 	</div>
 </ConfirmDialog>
