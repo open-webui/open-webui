@@ -119,19 +119,34 @@
 	}
 
 	function escapeBrackets(text: string) {
-		const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
-		return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
-			if (codeBlock) {
-				return codeBlock;
-			} else if (squareBracket !== undefined) {
-				let cleanSquareBracket = squareBracket.replaceAll('\\\\', '\\\\\\').replace(/\n/g, ' ');
-				return `$$${cleanSquareBracket}$$`;
-			} else if (roundBracket !== undefined) {
-				let cleanRoundBracket = roundBracket.replaceAll('\\\\', '\\\\\\').replace(/\n/g, ' ');
-				return `$${cleanRoundBracket}$`;
+		const pattern =
+			/(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)|\$\$([\s\S]*?)\$\$|\$([\s\S]*?)\$/g;
+
+		return text.replace(
+			pattern,
+			(match, codeBlock, squareBracket, roundBracket, doubleDollar, singleDollar) => {
+				if (codeBlock) {
+					return codeBlock;
+				} else if (squareBracket !== undefined) {
+					let cleanSquareBracket = squareBracket.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
+					return `$$${cleanSquareBracket}$$`;
+				} else if (roundBracket !== undefined) {
+					let cleanRoundBracket = roundBracket.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
+					return `$${cleanRoundBracket}$`;
+				} else if (doubleDollar !== undefined) {
+					let cleanDoubleDollar = doubleDollar
+						.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\')
+						.replace(/\n/g, ' ');
+					return `$$${cleanDoubleDollar}$$`;
+				} else if (singleDollar !== undefined) {
+					let cleanSingleDollar = singleDollar
+						.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\')
+						.replace(/\n/g, ' ');
+					return `$${cleanSingleDollar}$`;
+				}
+				return match;
 			}
-			return match;
-		});
+		);
 	}
 
 	function escapeMhchem(text: string) {
