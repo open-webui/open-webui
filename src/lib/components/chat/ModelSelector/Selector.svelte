@@ -238,6 +238,13 @@
 						class="w-full text-sm bg-transparent outline-none"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
+						on:keydown={(e) => {
+							if (e.code === 'Enter' && filteredItems.length > 0) {
+								value = filteredItems[0].value;
+								show = false;
+							}
+						}}
+
 					/>
 				</div>
 
