@@ -126,13 +126,13 @@
 				if (codeBlock) {
 					return codeBlock;
 				} else if (squareBracket !== undefined) {
-					let cleanSquareBracket = squareBracket.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
+					let cleanSquareBracket = squareBracket.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\').replace(/\n/g, ' ');
 					return `$$${cleanSquareBracket}$$`;
 				} else if (roundBracket !== undefined) {
-					let cleanRoundBracket = roundBracket.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
+					let cleanRoundBracket = roundBracket.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\').replace(/\n/g, ' ');
 					return `$${cleanRoundBracket}$`;
 				}
-				return match.replace(/\\\\/g, '\\\\\\');
+				return match.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\');
 			});
 	}
 
