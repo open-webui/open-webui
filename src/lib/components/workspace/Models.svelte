@@ -271,7 +271,7 @@
 	</div>
 
 	<div class=" self-center">
-		<div class=" font-bold line-clamp-1">{$i18n.t('Create a model')}</div>
+		<div class=" font-semibold line-clamp-1">{$i18n.t('Create a model')}</div>
 		<div class=" text-sm line-clamp-1">{$i18n.t('Customize models for a specific purpose')}</div>
 	</div>
 </a>
@@ -297,7 +297,7 @@
 							: ''} "
 					>
 						<img
-							src={model?.info?.meta?.profile_image_url ?? '/favicon.png'}
+							src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
 							alt="modelfile profile"
 							class=" rounded-full w-full h-auto object-cover"
 						/>
@@ -307,7 +307,7 @@
 				<div
 					class=" flex-1 self-center {model?.info?.meta?.hidden ?? false ? 'text-gray-500' : ''}"
 				>
-					<div class="  font-bold line-clamp-1">{model.name}</div>
+					<div class="  font-semibold line-clamp-1">{model.name}</div>
 					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
 						{!!model?.info?.meta?.description ? model?.info?.meta?.description : model.id}
 					</div>
@@ -518,7 +518,7 @@
 		</div>
 
 		<div class=" self-center">
-			<div class=" font-bold line-clamp-1">{$i18n.t('Discover a model')}</div>
+			<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a model')}</div>
 			<div class=" text-sm line-clamp-1">
 				{$i18n.t('Discover, download, and explore model presets')}
 			</div>

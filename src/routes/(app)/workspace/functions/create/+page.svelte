@@ -7,6 +7,8 @@
 	import { createNewFunction, getFunctions } from '$lib/apis/functions';
 	import FunctionEditor from '$lib/components/workspace/Functions/FunctionEditor.svelte';
 	import { getModels } from '$lib/apis';
+	import { compareVersion, extractFrontmatter } from '$lib/utils';
+	import { WEBUI_VERSION } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -16,6 +18,22 @@
 
 	const saveHandler = async (data) => {
 		console.log(data);
+
+		const manifest = extractFrontmatter(data.content);
+		if (compareVersion(manifest?.required_open_webui_version ?? '0.0.0', WEBUI_VERSION)) {
+			console.log('Version is lower than required');
+			toast.error(
+				$i18n.t(
+					'Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})',
+					{
+						OPEN_WEBUI_VERSION: WEBUI_VERSION,
+						REQUIRED_VERSION: manifest?.required_open_webui_version ?? '0.0.0'
+					}
+				)
+			);
+			return;
+		}
+
 		const res = await createNewFunction(localStorage.token, {
 			id: data.id,
 			name: data.name,

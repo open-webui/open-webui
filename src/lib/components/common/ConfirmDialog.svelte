@@ -7,15 +7,20 @@
 
 	const dispatch = createEventDispatcher();
 
-	export let title = $i18n.t('Confirm your action');
-	export let message = $i18n.t('This action cannot be undone. Do you wish to continue?');
+	export let title = '';
+	export let message = '';
 
 	export let cancelLabel = $i18n.t('Cancel');
 	export let confirmLabel = $i18n.t('Confirm');
 
+	export let input = false;
+	export let inputPlaceholder = '';
+
 	export let show = false;
+
 	let modalElement = null;
 	let mounted = false;
+	let inputValue = '';
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
@@ -58,11 +63,31 @@
 			}}
 		>
 			<div class="px-[1.75rem] py-6">
-				<div class=" text-lg font-semibold dark:text-gray-200 mb-2.5">{title}</div>
+				<div class=" text-lg font-semibold dark:text-gray-200 mb-2.5">
+					{#if title !== ''}
+						{title}
+					{:else}
+						{$i18n.t('Confirm your action')}
+					{/if}
+				</div>
 
 				<slot>
 					<div class=" text-sm text-gray-500">
-						{message}
+						{#if message !== ''}
+							{message}
+						{:else}
+							{$i18n.t('This action cannot be undone. Do you wish to continue?')}
+						{/if}
+
+						{#if input}
+							<textarea
+								bind:value={inputValue}
+								placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
+								class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-none resize-none"
+								rows="3"
+								required
+							/>
+						{/if}
 					</div>
 				</slot>
 
@@ -71,6 +96,7 @@
 						class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-medium w-full py-2.5 rounded-lg transition"
 						on:click={() => {
 							show = false;
+							dispatch('cancel');
 						}}
 						type="button"
 					>
@@ -80,7 +106,7 @@
 						class="bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2.5 rounded-lg transition"
 						on:click={() => {
 							show = false;
-							dispatch('confirm');
+							dispatch('confirm', inputValue);
 						}}
 						type="button"
 					>

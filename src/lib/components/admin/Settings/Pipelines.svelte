@@ -19,6 +19,7 @@
 	} from '$lib/apis';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -213,7 +214,7 @@
 					<div class="flex gap-2">
 						<div class="flex-1">
 							<select
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 								bind:value={selectedPipelinesUrlIdx}
 								placeholder={$i18n.t('Select a pipeline url')}
 								on:change={async () => {
@@ -327,7 +328,7 @@
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 								placeholder={$i18n.t('Enter Github Raw URL')}
 								bind:value={pipelineDownloadUrl}
 							/>
@@ -411,7 +412,7 @@
 								<div class="flex gap-2">
 									<div class="flex-1">
 										<select
-											class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 											bind:value={selectedPipelineIdx}
 											placeholder={$i18n.t('Select a pipeline')}
 											on:change={async () => {
@@ -476,15 +477,40 @@
 												</div>
 
 												{#if (valves[property] ?? null) !== null}
-													<div class="flex mt-0.5 space-x-2">
+													<!-- {valves[property]} -->
+													<div class="flex mt-0.5 mb-1.5 space-x-2">
 														<div class=" flex-1">
-															<input
-																class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-																type="text"
-																placeholder={valves_spec.properties[property].title}
-																bind:value={valves[property]}
-																autocomplete="off"
-															/>
+															{#if valves_spec.properties[property]?.enum ?? null}
+																<select
+																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+																	bind:value={valves[property]}
+																>
+																	{#each valves_spec.properties[property].enum as option}
+																		<option value={option} selected={option === valves[property]}>
+																			{option}
+																		</option>
+																	{/each}
+																</select>
+															{:else if (valves_spec.properties[property]?.type ?? null) === 'boolean'}
+																<div class="flex justify-between items-center">
+																	<div class="text-xs text-gray-500">
+																		{valves[property] ? 'Enabled' : 'Disabled'}
+																	</div>
+
+																	<div class=" pr-2">
+																		<Switch bind:state={valves[property]} />
+																	</div>
+																</div>
+															{:else}
+																<input
+																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+																	type="text"
+																	placeholder={valves_spec.properties[property].title}
+																	bind:value={valves[property]}
+																	autocomplete="off"
+																	required
+																/>
+															{/if}
 														</div>
 													</div>
 												{/if}

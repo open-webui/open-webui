@@ -137,3 +137,34 @@ async def disconnect(sid):
         await sio.emit("user-count", {"count": len(USER_POOL)})
     else:
         print(f"Unknown session ID {sid} disconnected")
+
+
+async def get_event_emitter(request_info):
+    async def __event_emitter__(event_data):
+        await sio.emit(
+            "chat-events",
+            {
+                "chat_id": request_info["chat_id"],
+                "message_id": request_info["message_id"],
+                "data": event_data,
+            },
+            to=request_info["session_id"],
+        )
+
+    return __event_emitter__
+
+
+async def get_event_call(request_info):
+    async def __event_call__(event_data):
+        response = await sio.call(
+            "chat-events",
+            {
+                "chat_id": request_info["chat_id"],
+                "message_id": request_info["message_id"],
+                "data": event_data,
+            },
+            to=request_info["session_id"],
+        )
+        return response
+
+    return __event_call__
