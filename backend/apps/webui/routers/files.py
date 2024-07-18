@@ -50,10 +50,7 @@ router = APIRouter()
 
 
 @router.post("/")
-def upload_file(
-    file: UploadFile = File(...),
-    user=Depends(get_verified_user),
-):
+def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
     log.info(f"file.content_type: {file.content_type}")
     try:
         unsanitized_filename = file.filename
@@ -61,6 +58,7 @@ def upload_file(
 
         # replace filename with uuid
         id = str(uuid.uuid4())
+        name = filename
         filename = f"{id}_{filename}"
         file_path = f"{UPLOAD_DIR}/{filename}"
 
@@ -76,6 +74,7 @@ def upload_file(
                     "id": id,
                     "filename": filename,
                     "meta": {
+                        "name": name,
                         "content_type": file.content_type,
                         "size": len(contents),
                         "path": file_path,

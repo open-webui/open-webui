@@ -12,6 +12,8 @@
 	} from '$lib/apis/functions';
 	import { getToolValvesById, getToolValvesSpecById, updateToolValvesById } from '$lib/apis/tools';
 	import Spinner from '../../common/Spinner.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
+	import Valves from '$lib/components/common/Valves.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -126,64 +128,7 @@
 				>
 					<div class="px-1">
 						{#if !loading}
-							{#if valvesSpec}
-								{#each Object.keys(valvesSpec.properties) as property, idx}
-									<div class=" py-0.5 w-full justify-between">
-										<div class="flex w-full justify-between">
-											<div class=" self-center text-xs font-medium">
-												{valvesSpec.properties[property].title}
-
-												{#if (valvesSpec?.required ?? []).includes(property)}
-													<span class=" text-gray-500">*required</span>
-												{/if}
-											</div>
-
-											<button
-												class="p-1 px-3 text-xs flex rounded transition"
-												type="button"
-												on:click={() => {
-													valves[property] = (valves[property] ?? null) === null ? '' : null;
-												}}
-											>
-												{#if (valves[property] ?? null) === null}
-													<span class="ml-2 self-center">
-														{#if (valvesSpec?.required ?? []).includes(property)}
-															{$i18n.t('None')}
-														{:else}
-															{$i18n.t('Default')}
-														{/if}
-													</span>
-												{:else}
-													<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
-												{/if}
-											</button>
-										</div>
-
-										{#if (valves[property] ?? null) !== null}
-											<div class="flex mt-0.5 mb-1.5 space-x-2">
-												<div class=" flex-1">
-													<input
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-														type="text"
-														placeholder={valvesSpec.properties[property].title}
-														bind:value={valves[property]}
-														autocomplete="off"
-														required
-													/>
-												</div>
-											</div>
-										{/if}
-
-										{#if (valvesSpec.properties[property]?.description ?? null) !== null}
-											<div class="text-xs text-gray-500">
-												{valvesSpec.properties[property].description}
-											</div>
-										{/if}
-									</div>
-								{/each}
-							{:else}
-								<div class="text-sm">No valves</div>
-							{/if}
+							<Valves {valvesSpec} bind:valves />
 						{:else}
 							<Spinner className="size-5" />
 						{/if}

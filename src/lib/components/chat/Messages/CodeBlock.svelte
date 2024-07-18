@@ -250,7 +250,8 @@ __builtins__.input = input`);
 			stderr ||
 			result) &&
 			'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
-			class="language-{lang} rounded-t-none whitespace-pre">{@html highlightedCode || code}</code
+			class="language-{lang} rounded-t-none whitespace-pre"
+			>{#if highlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
 		></pre>
 
 	<div

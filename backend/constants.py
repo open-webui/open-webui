@@ -89,3 +89,14 @@ class ERROR_MESSAGES(str, Enum):
     OLLAMA_API_DISABLED = (
         "The Ollama API is disabled. Please enable it to use this feature."
     )
+
+
+class TASKS(str, Enum):
+    def __str__(self) -> str:
+        return super().__str__()
+
+    DEFAULT = lambda task="": f"{task if task else 'generation'}"
+    TITLE_GENERATION = "title_generation"
+    EMOJI_GENERATION = "emoji_generation"
+    QUERY_GENERATION = "query_generation"
+    FUNCTION_CALLING = "function_calling"

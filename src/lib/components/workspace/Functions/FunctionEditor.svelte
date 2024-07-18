@@ -27,61 +27,73 @@
 	}
 
 	let codeEditor;
-	let boilerplate = `from pydantic import BaseModel
+	let boilerplate = `"""
+title: Example Filter
+author: open-webui
+author_url: https://github.com/open-webui
+funding_url: https://github.com/open-webui
+version: 0.1
+"""
+
+from pydantic import BaseModel, Field
 from typing import Optional
 
 
 class Filter:
     class Valves(BaseModel):
-        max_turns: int = 4
+        priority: int = Field(
+            default=0, description="Priority level for the filter operations."
+        )
+        max_turns: int = Field(
+            default=8, description="Maximum allowable conversation turns for a user."
+        )
+        pass
+
+    class UserValves(BaseModel):
+        max_turns: int = Field(
+            default=4, description="Maximum allowable conversation turns for a user."
+        )
         pass
 
     def __init__(self):
         # Indicates custom file handling logic. This flag helps disengage default routines in favor of custom
         # implementations, informing the WebUI to defer file-related operations to designated methods within this class.
         # Alternatively, you can remove the files directly from the body in from the inlet hook
-        self.file_handler = True
+        # self.file_handler = True
 
         # Initialize 'valves' with specific configurations. Using 'Valves' instance helps encapsulate settings,
         # which ensures settings are managed cohesively and not confused with operational flags like 'file_handler'.
-        self.valves = self.Valves(**{"max_turns": 2})
+        self.valves = self.Valves()
         pass
 
-    def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
+    def inlet(self, body: dict, __user__: Optional[dict] = None) -> dict:
         # Modify the request body or validate it before processing by the chat completion API.
         # This function is the pre-processor for the API where various checks on the input can be performed.
         # It can also modify the request before sending it to the API.
         print(f"inlet:{__name__}")
         print(f"inlet:body:{body}")
-        print(f"inlet:user:{user}")
+        print(f"inlet:user:{__user__}")
 
-        if user.get("role", "admin") in ["user", "admin"]:
+        if __user__.get("role", "admin") in ["user", "admin"]:
             messages = body.get("messages", [])
-            if len(messages) > self.valves.max_turns:
+
+            max_turns = min(__user__["valves"].max_turns, self.valves.max_turns)
+            if len(messages) > max_turns:
                 raise Exception(
-                    f"Conversation turn limit exceeded. Max turns: {self.valves.max_turns}"
+                    f"Conversation turn limit exceeded. Max turns: {max_turns}"
                 )
 
         return body
 
-    def outlet(self, body: dict, user: Optional[dict] = None) -> dict:
+    def outlet(self, body: dict, __user__: Optional[dict] = None) -> dict:
         # Modify or analyze the response body after processing by the API.
         # This function is the post-processor for the API, which can be used to modify the response
         # or perform additional checks and analytics.
         print(f"outlet:{__name__}")
         print(f"outlet:body:{body}")
-        print(f"outlet:user:{user}")
+        print(f"outlet:user:{__user__}")
 
-        messages = [
-            {
-                **message,
-                "content": f"{message['content']} - @@Modified from Filter Outlet",
-            }
-            for message in body.get("messages", [])
-        ]
-
-        return {"messages": messages}
-
+        return body
 `;
 
 	const _boilerplate = `from pydantic import BaseModel
@@ -297,7 +309,7 @@ class Pipe:
 						<input
 							class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 							type="text"
-							placeholder="Function Name (e.g. My Filter)"
+							placeholder={$i18n.t('Function Name (e.g. My Filter)')}
 							bind:value={name}
 							required
 						/>
@@ -305,7 +317,7 @@ class Pipe:
 						<input
 							class="w-full px-3 py-2 text-sm font-medium disabled:text-gray-300 dark:disabled:text-gray-700 bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 							type="text"
-							placeholder="Function ID (e.g. my_filter)"
+							placeholder={$i18n.t('Function ID (e.g. my_filter)')}
 							bind:value={id}
 							required
 							disabled={edit}
@@ -314,7 +326,9 @@ class Pipe:
 					<input
 						class="w-full px-3 py-2 text-sm font-medium bg-gray-50 dark:bg-gray-850 dark:text-gray-200 rounded-lg outline-none"
 						type="text"
-						placeholder="Function Description (e.g. A filter to remove profanity from text)"
+						placeholder={$i18n.t(
+							'Function Description (e.g. A filter to remove profanity from text)'
+						)}
 						bind:value={meta.description}
 						required
 					/>
@@ -336,10 +350,10 @@ class Pipe:
 				<div class="pb-3 flex justify-between">
 					<div class="flex-1 pr-3">
 						<div class="text-xs text-gray-500 line-clamp-2">
-							<span class=" font-semibold dark:text-gray-200">Warning:</span> Functions allow
-							arbitrary code execution <br />—
+							<span class=" font-semibold dark:text-gray-200">{$i18n.t('Warning:')}</span>
+							{$i18n.t('Functions allow arbitrary code execution')} <br />—
 							<span class=" font-medium dark:text-gray-400"
-								>don't install random functions from sources you don't trust.</span
+								>{$i18n.t(`don't install random functions from sources you don't trust.`)}</span
 							>
 						</div>
 					</div>
@@ -364,18 +378,18 @@ class Pipe:
 >
 	<div class="text-sm text-gray-500">
 		<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
-			<div>Please carefully review the following warnings:</div>
+			<div>{$i18n.t('Please carefully review the following warnings:')}</div>
 
 			<ul class=" mt-1 list-disc pl-4 text-xs">
-				<li>Functions allow arbitrary code execution.</li>
-				<li>Do not install functions from sources you do not fully trust.</li>
+				<li>{$i18n.t('Functions allow arbitrary code execution.')}</li>
+				<li>{$i18n.t('Do not install functions from sources you do not fully trust.')}</li>
 			</ul>
 		</div>
 
 		<div class="my-3">
-			I acknowledge that I have read and I understand the implications of my action. I am aware of
-			the risks associated with executing arbitrary code and I have verified the trustworthiness of
-			the source.
+			{$i18n.t(
+				'I acknowledge that I have read and I understand the implications of my action. I am aware of the risks associated with executing arbitrary code and I have verified the trustworthiness of the source.'
+			)}
 		</div>
 	</div>
 </ConfirmDialog>
