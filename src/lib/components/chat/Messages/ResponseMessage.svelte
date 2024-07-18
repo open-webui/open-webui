@@ -119,12 +119,11 @@
 
 	function escapeBrackets(text: string) {
 		const pattern =
-			/(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)|\$\$([\s\S]*?)\$\$|\$([\s\S]*?)\$/g;
-		text = text.replace(/[ ]+```/g, '```');
+			/(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\(([\s\S]*?)\\\)|\$(\$?)([\s\S]*?)\4\$/g;
 
-		return text.replace(
-			pattern,
-			(match, codeBlock, squareBracket, roundBracket, doubleDollar, singleDollar) => {
+		return text
+			.replace(/[ ]+```/g, '```')
+			.replace(pattern, (match, codeBlock, squareBracket, roundBracket, dollarSign, content) => {
 				if (codeBlock) {
 					return codeBlock;
 				} else if (squareBracket !== undefined) {
@@ -133,20 +132,12 @@
 				} else if (roundBracket !== undefined) {
 					let cleanRoundBracket = roundBracket.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
 					return `$${cleanRoundBracket}$`;
-				} else if (doubleDollar !== undefined) {
-					let cleanDoubleDollar = doubleDollar
-						.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\')
-						.replace(/\n/g, ' ');
-					return `$$${cleanDoubleDollar}$$`;
-				} else if (singleDollar !== undefined) {
-					let cleanSingleDollar = singleDollar
-						.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\')
-						.replace(/\n/g, ' ');
-					return `$${cleanSingleDollar}$`;
+				} else if (dollarSign) {
+					let cleanContent = content.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\').replace(/\n/g, ' ');
+					return `${dollarSign}${cleanContent}${dollarSign}`;
 				}
 				return match;
-			}
-		);
+			});
 	}
 
 	function escapeMhchem(text: string) {
