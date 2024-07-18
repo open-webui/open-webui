@@ -121,7 +121,7 @@
 		const pattern =
 			/(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)|\$\$([\s\S]*?)\$\$|\$([\s\S]*?)\$/g;
 
-		return text.replace(
+		return text.replace(/[ ]+```/g, '```').replace(
 			pattern,
 			(match, codeBlock, squareBracket, roundBracket, doubleDollar, singleDollar) => {
 				if (codeBlock) {
