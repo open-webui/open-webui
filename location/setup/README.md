@@ -7,8 +7,13 @@ We'll merge our enhancments into "src-merged" so we don't have sync issues with 
 
 We also edit index.html and active.md in our "projects" fork root since we added those files.
 
+<span style="color:red">
+We've temporarily deactivated the following while we move it to another repo. It seems that the large size of the Docker container may have filled our storage space, preventing other pages in the model.earth repos from being deployed. Old pages were stuck in the cache.
+</span>
 
-## Edit your project/location files pulled down from our Docker package
+Please simply fork and clone our [projects repo](https://github.com/ModelEarth/projects) while get the following Docker container process reestablished.
+
+## Edit your project/location files pulled down from our Docker package (COMING SOON)
 
 Once you get the following installed, see our [Location Projects for Open WebUI](../).
 
@@ -19,7 +24,7 @@ Replaced open-webui/open-webui with modelearth/projects
 Replaced open-webui-container with projects-container
 -->
 
-Here are commands to install [the Docker package](https://github.com/modelearth/projects/pkgs/container/projects) created from our "[projects](https://github.com/modelearth/projects)"  fork of open-webui.
+Here are commands to locally install [the Docker package](https://github.com/modelearth/projects/pkgs/container/projects) created from our "[projects](https://github.com/modelearth/projects)"  fork of open-webui.
 
 <!--
 The main Open WebUI container is at:
@@ -126,6 +131,14 @@ Now you can build and push your Docker image:
 	docker push ghcr.io/modelearth/projects:main
 
 Our container then appeared at: [https://github.com/modelearth/projects/pkgs/container/projects](projects/pkgs/container/projects)
+
+
+To delete a package in GitHub, click on the "Package settings" gear icon in the lower-right.  
+Scroll down to the bottom and click the Delete package button.
+
+To delete locally, run `docker rmi ghcr.io/modelearth/projects:main`
+To remove all unused Docker images, containers, networks, and volumes locally: `docker system prune -a`
+
 
 ## Build Locally
 
