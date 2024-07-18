@@ -118,12 +118,11 @@
 	}
 
 	function escapeBrackets(text: string) {
-		const pattern =
-			/(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\(([\s\S]*?)\\\)|\$(\$?)([\s\S]*?)\4\$/g;
+		const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
 
 		return text
 			.replace(/[ ]+```/g, '```')
-			.replace(pattern, (match, codeBlock, squareBracket, roundBracket, dollarSign, content) => {
+			.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
 				if (codeBlock) {
 					return codeBlock;
 				} else if (squareBracket !== undefined) {
@@ -132,11 +131,8 @@
 				} else if (roundBracket !== undefined) {
 					let cleanRoundBracket = roundBracket.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
 					return `$${cleanRoundBracket}$`;
-				} else if (dollarSign) {
-					let cleanContent = content.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\').replace(/\n/g, ' ');
-					return `${dollarSign}${cleanContent}${dollarSign}`;
 				}
-				return match;
+				return match.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
 			});
 	}
 
