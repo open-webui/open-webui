@@ -120,8 +120,9 @@
 	function escapeBrackets(text: string) {
 		const pattern =
 			/(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)|\$\$([\s\S]*?)\$\$|\$([\s\S]*?)\$/g;
+		text = text.replace(/[ ]+```/g, '```');
 
-		return text.replace(/[ ]+```/g, '```').replace(
+		return text.replace(
 			pattern,
 			(match, codeBlock, squareBracket, roundBracket, doubleDollar, singleDollar) => {
 				if (codeBlock) {
