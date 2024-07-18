@@ -641,7 +641,7 @@ export const getBackendConfig = async () => {
 			error = err;
 			return null;
 		});
-
+		console.log(res);
 	if (error) {
 		throw error;
 	}
