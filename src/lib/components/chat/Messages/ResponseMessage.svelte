@@ -3,7 +3,7 @@
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
 	import tippy from 'tippy.js';
-	import katex from 'katex';
+	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
 	import mermaid from 'mermaid';
 
@@ -223,19 +223,23 @@
 
 		if (chatMessageElements) {
 			for (const element of chatMessageElements) {
-				let latexElements = element.querySelectorAll('span.latex');
-				for (const latexElement of latexElements) {
-					let latexText = latexElement.textContent;
-					if (latexText !== null) {
-						let displayMode = latexText.startsWith('$$') && latexText.endsWith('$$');
-						latexText = latexText.replace(/^\$\$|^\$|\\\(|\\\[|\\\]|\\\)|\$\$$|\$$/g, '');
-
-						katex.render(latexText, latexElement, {
-							throwOnError: false,
-							displayMode: displayMode
-						});
-					}
-				}
+				auto_render(element, {
+					// customised options
+					// • auto-render specific keys, e.g.:
+					delimiters: [
+						{ left: '$$', right: '$$', display: true },
+						{ left: '$', right: '$', display: false },
+						{ left: '\\(', right: '\\)', display: false },
+						{ left: '\\begin{equation}', right: '\\end{equation}', display: true },
+						{ left: '\\begin{align}', right: '\\end{align}', display: true },
+						{ left: '\\begin{alignat}', right: '\\end{alignat}', display: true },
+						{ left: '\\begin{gather}', right: '\\end{gather}', display: true },
+						{ left: '\\begin{CD}', right: '\\end{CD}', display: true },
+						{ left: '\\[', right: '\\]', display: true }
+					],
+					// • rendering keys, e.g.:
+					throwOnError: false
+				});
 			}
 		}
 	};
