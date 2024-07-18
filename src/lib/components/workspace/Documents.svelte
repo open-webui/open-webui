@@ -51,7 +51,7 @@
 		await documents.set(await getDocs(localStorage.token));
 	};
 
-	const uploadDoc = async (file) => {
+	const uploadDoc = async (file, tags?: object) => {
 		console.log(file);
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
@@ -84,7 +84,12 @@
 				res.collection_name,
 				res.filename,
 				transformFileName(res.filename),
-				res.filename
+				res.filename,
+				tags?.length > 0
+					? {
+							tags: tags
+					  }
+					: null
 			).catch((error) => {
 				toast.error(error);
 				return null;
