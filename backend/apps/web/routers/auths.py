@@ -388,12 +388,10 @@ async def signin_with_sso():
 @router.get("/signin/callback", response_model=SigninResponse)
 async def signin_callback(request: Request):
     """Verify login"""
-    print("signin_callback")
     sso_user = None
     with sso:
         
         sso_user = await sso.verify_and_process(request)
-        print(sso_user)
         sso_user_email = sso_user.email
         user = Users.get_user_by_email(sso_user_email.lower())
         if not user:
@@ -403,14 +401,14 @@ async def signin_callback(request: Request):
                     email=sso_user_email, password=str(uuid.uuid4()), name=sso_user_email
                 ),
             )
-            user = Auths.authenticate_user_by_trusted_header(sso_user_email)
+            user = Auths.authenticate_user_by_trusted_header(sso_user_email.lower())
         else:
             print("user already exists")
             # TODO update the metadata to the DB
             # Users.update_user_by_id(user.id, )
 
         token = create_token(
-            data={"id": user.id},
+            data={"id": Users.get_user_by_email(sso_user_email.lower()).id},
             expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
         )
 
