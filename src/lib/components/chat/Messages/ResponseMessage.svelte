@@ -132,7 +132,7 @@
 					let cleanRoundBracket = roundBracket.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
 					return `$${cleanRoundBracket}$`;
 				}
-				return match.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
+				return match.replace(/\\\\/g, '\\\\\\');
 			});
 	}
 
