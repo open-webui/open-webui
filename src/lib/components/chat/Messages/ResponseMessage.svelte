@@ -134,8 +134,10 @@
 					let cleanRoundBracket = roundBracket.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
 					return `$${cleanRoundBracket}$`;
 				} else if (doubleDollar !== undefined) {
-					let cleanLatex = doubleDollar.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\').replace(/\n/g, ' ');
-					return `$$${cleanLatex}$$`;
+					let cleanDoubleDollar = doubleDollar
+						.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\')
+						.replace(/\n/g, ' ');
+					return `$$${cleanDoubleDollar}$$`;
 				} else if (singleDollar !== undefined) {
 					let cleanSingleDollar = singleDollar
 						.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\')
