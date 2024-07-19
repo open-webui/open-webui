@@ -53,7 +53,7 @@
 						await goto('/auth');
 					}
 				} else {
-					await goto('/auth');
+					// await goto('/login');
 				}
 			}
 		} else {
