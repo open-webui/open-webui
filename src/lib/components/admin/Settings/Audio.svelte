@@ -16,6 +16,7 @@
 
 	let TTS_OPENAI_API_BASE_URL = '';
 	let TTS_OPENAI_API_KEY = '';
+	let TTS_API_KEY = '';
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
 	let TTS_VOICE = '';
@@ -60,6 +61,7 @@
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+				TTS_API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
 				VOICE: TTS_VOICE
@@ -86,6 +88,7 @@
 			console.log(res);
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
+			TTS_API_KEY = res.tts.TTS_API_KEY;
 
 			TTS_ENGINE = res.tts.ENGINE;
 			TTS_MODEL = res.tts.MODEL;
@@ -190,11 +193,13 @@
 								} else {
 									getWebAPIVoices();
 									TTS_VOICE = '';
+									TTS_MODEL = '';
 								}
 							}}
 						>
 							<option value="">{$i18n.t('Web API')}</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
+							<option value="elevenlabs">{$i18n.t('Eleven Labs')}</option>
 						</select>
 					</div>
 				</div>
@@ -210,6 +215,17 @@
 							/>
 
 							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_OPENAI_API_KEY} />
+						</div>
+					</div>
+				{:else if TTS_ENGINE === 'elevenlabs'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full rounded-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder={$i18n.t('API Key')}
+								bind:value={TTS_API_KEY}
+								required
+							/>
 						</div>
 					</div>
 				{/if}
@@ -238,6 +254,47 @@
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'openai'}
+					<div class=" flex gap-2">
+						<div class="w-full">
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Voice')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										list="voice-list"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										bind:value={TTS_VOICE}
+										placeholder="Select a voice"
+									/>
+
+									<datalist id="voice-list">
+										{#each voices as voice}
+											<option value={voice.name} />
+										{/each}
+									</datalist>
+								</div>
+							</div>
+						</div>
+						<div class="w-full">
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Model')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										list="model-list"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										bind:value={TTS_MODEL}
+										placeholder="Select a model"
+									/>
+
+									<datalist id="model-list">
+										{#each models as model}
+											<option value={model.name} />
+										{/each}
+									</datalist>
+								</div>
+							</div>
+						</div>
+					</div>
+				{:else if TTS_ENGINE === 'elevenlabs'}
 					<div class=" flex gap-2">
 						<div class="w-full">
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Voice')}</div>

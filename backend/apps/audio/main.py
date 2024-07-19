@@ -43,6 +43,7 @@ from config import (
     AUDIO_STT_OPENAI_API_KEY,
     AUDIO_TTS_OPENAI_API_BASE_URL,
     AUDIO_TTS_OPENAI_API_KEY,
+    AUDIO_TTS_API_KEY,
     AUDIO_STT_ENGINE,
     AUDIO_STT_MODEL,
     AUDIO_TTS_ENGINE,
@@ -75,6 +76,7 @@ app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
 app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
 app.state.config.TTS_MODEL = AUDIO_TTS_MODEL
 app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
+app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
 
 # setting device type for whisper model
 whisper_device_type = DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu"
@@ -87,6 +89,7 @@ SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 class TTSConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    API_KEY: str
     ENGINE: str
     MODEL: str
     VOICE: str
@@ -137,6 +140,7 @@ async def get_audio_config(user=Depends(get_admin_user)):
         "tts": {
             "OPENAI_API_BASE_URL": app.state.config.TTS_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": app.state.config.TTS_OPENAI_API_KEY,
+            "API_KEY": app.state.config.TTS_API_KEY,
             "ENGINE": app.state.config.TTS_ENGINE,
             "MODEL": app.state.config.TTS_MODEL,
             "VOICE": app.state.config.TTS_VOICE,
@@ -156,6 +160,7 @@ async def update_audio_config(
 ):
     app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
     app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
+    app.state.config.TTS_API_KEY = form_data.tts.API_KEY
     app.state.config.TTS_ENGINE = form_data.tts.ENGINE
     app.state.config.TTS_MODEL = form_data.tts.MODEL
     app.state.config.TTS_VOICE = form_data.tts.VOICE
@@ -169,6 +174,7 @@ async def update_audio_config(
         "tts": {
             "OPENAI_API_BASE_URL": app.state.config.TTS_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": app.state.config.TTS_OPENAI_API_KEY,
+            "API_KEY": app.state.config.TTS_API_KEY,
             "ENGINE": app.state.config.TTS_ENGINE,
             "MODEL": app.state.config.TTS_MODEL,
             "VOICE": app.state.config.TTS_VOICE,
@@ -194,55 +200,111 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     if file_path.is_file():
         return FileResponse(file_path)
 
-    headers = {}
-    headers["Authorization"] = f"Bearer {app.state.config.TTS_OPENAI_API_KEY}"
-    headers["Content-Type"] = "application/json"
+    if app.state.config.TTS_ENGINE == "openai":
+        headers = {}
+        headers["Authorization"] = f"Bearer {app.state.config.TTS_OPENAI_API_KEY}"
+        headers["Content-Type"] = "application/json"
 
-    try:
-        body = body.decode("utf-8")
-        body = json.loads(body)
-        body["model"] = app.state.config.TTS_MODEL
-        body = json.dumps(body).encode("utf-8")
-    except Exception as e:
-        pass
+        try:
+            body = body.decode("utf-8")
+            body = json.loads(body)
+            body["model"] = app.state.config.TTS_MODEL
+            body = json.dumps(body).encode("utf-8")
+        except Exception as e:
+            pass
 
-    r = None
-    try:
-        r = requests.post(
-            url=f"{app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
-            data=body,
-            headers=headers,
-            stream=True,
-        )
+        r = None
+        try:
+            r = requests.post(
+                url=f"{app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
+                data=body,
+                headers=headers,
+                stream=True,
+            )
 
-        r.raise_for_status()
+            r.raise_for_status()
 
-        # Save the streaming content to a file
-        with open(file_path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
+            # Save the streaming content to a file
+            with open(file_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
 
-        with open(file_body_path, "w") as f:
-            json.dump(json.loads(body.decode("utf-8")), f)
+            with open(file_body_path, "w") as f:
+                json.dump(json.loads(body.decode("utf-8")), f)
 
-        # Return the saved file
-        return FileResponse(file_path)
+            # Return the saved file
+            return FileResponse(file_path)
 
-    except Exception as e:
-        log.exception(e)
-        error_detail = "Open WebUI: Server Connection Error"
-        if r is not None:
-            try:
-                res = r.json()
-                if "error" in res:
-                    error_detail = f"External: {res['error']['message']}"
-            except:
-                error_detail = f"External: {e}"
+        except Exception as e:
+            log.exception(e)
+            error_detail = "Open WebUI: Server Connection Error"
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "error" in res:
+                        error_detail = f"External: {res['error']['message']}"
+                except:
+                    error_detail = f"External: {e}"
 
-        raise HTTPException(
-            status_code=r.status_code if r != None else 500,
-            detail=error_detail,
-        )
+            raise HTTPException(
+                status_code=r.status_code if r != None else 500,
+                detail=error_detail,
+            )
+
+    elif app.state.config.TTS_ENGINE == "elevenlabs":
+
+        payload = None
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception as e:
+            log.exception(e)
+            pass
+
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{payload['voice']}"
+
+        headers = {
+            "Accept": "audio/mpeg",
+            "Content-Type": "application/json",
+            "xi-api-key": app.state.config.TTS_API_KEY,
+        }
+
+        data = {
+            "text": payload["input"],
+            "model_id": app.state.config.TTS_MODEL,
+            "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
+        }
+
+        try:
+            r = requests.post(url, json=data, headers=headers)
+
+            r.raise_for_status()
+
+            # Save the streaming content to a file
+            with open(file_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            with open(file_body_path, "w") as f:
+                json.dump(json.loads(body.decode("utf-8")), f)
+
+            # Return the saved file
+            return FileResponse(file_path)
+
+        except Exception as e:
+            log.exception(e)
+            error_detail = "Open WebUI: Server Connection Error"
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "error" in res:
+                        error_detail = f"External: {res['error']['message']}"
+                except:
+                    error_detail = f"External: {e}"
+
+            raise HTTPException(
+                status_code=r.status_code if r != None else 500,
+                detail=error_detail,
+            )
 
 
 @app.post("/transcriptions")

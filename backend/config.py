@@ -1339,6 +1339,11 @@ AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
     os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+AUDIO_TTS_API_KEY = PersistentConfig(
+    "AUDIO_TTS_API_KEY",
+    "audio.tts.api_key",
+    os.getenv("AUDIO_TTS_API_KEY", ""),
+)
 
 AUDIO_TTS_ENGINE = PersistentConfig(
     "AUDIO_TTS_ENGINE",
