@@ -549,7 +549,8 @@
 							doc.collection_name,
 							doc.filename,
 							doc.name,
-							doc.title
+							doc.title,
+							doc.content
 						).catch((error) => {
 							toast.error(error);
 							return null;
