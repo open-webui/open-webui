@@ -7,11 +7,12 @@ We'll merge our enhancments into "src-merged" so we don't have sync issues with 
 
 We also edit index.html and active.md in our "projects" fork root since we added those files.
 
-<span style="color:red">
+<span style="color:red; display:none">
 We've temporarily deactivated the following while we move it to another repo. It seems that the large size of the Docker container may have filled our storage space, preventing other pages in the model.earth repos from being deployed. Old pages were stuck in the cache.
 </span>
 
-Please simply fork and clone our [projects repo](https://github.com/ModelEarth/projects) while get the following Docker container process reestablished.
+You can either fork and clone our [projects repo](https://github.com/ModelEarth/projects)  
+Or you can use our datascape Docker container, which is created from the same modelearth/projects repo.
 
 ## Edit your project/location files pulled down from our Docker package (COMING SOON)
 
@@ -34,12 +35,15 @@ We're not an org, so this was not our URL:
 [https://github.com/orgs/modelearth/packages?repo_name=projects](https://github.com/orgs/modelearth/packages?repo_name=projects)
 -->
 
+Our Docker container live in our datascape repo.
+This allows us to minimize the storage use in modelearth.
+
 First [update your Docker, Node, Pip, Python and Conda](../../io/coders/python/)
 
 **Run to pull the "projects" Docker container into your Webroot:**
 
-	docker pull ghcr.io/modelearth/projects:main
-	docker create --name projects-container ghcr.io/modelearth/projects:main
+	docker pull ghcr.io/datascape/projects:main
+	docker create --name projects-container ghcr.io/datascape/projects:main
 	docker start projects-container
 	docker exec -it projects-container /bin/bash
 
@@ -109,34 +113,56 @@ To run git commands above inside our docker container,
 **Areas of future sync issues:**
 We updated our [DockerFile with this PR](https://github.com/ModelEarth/projects/pull/2/files) - Dinesh
 
-## We created a Docker "projects" container on GitHub
+## How we created a Docker "projects" container on GitHub
 
 Advice on [package setup provided by ChatGPT](https://chatgpt.com/share/2200ae05-4f33-4b1c-a1f9-57be4d18257b)
 
-This only needed to be done once by our site admin.  (You can skip this.)  
+This only needed to be done once by our site admin.  (You can skip this.) 
+
+In our datascape repo, go to [Personal access tokens (classic)](https://github.com/settings/tokens)
 Settings > Developer settings > Personal access tokens > Tokens (classic)
 
-Generate new token button and in the note put CR_PAT for Container Registry Personal Access Token.  
-Choose write:packages (chooses read:packages) and delete:packages
+Click "Generate new token" button and in the note put 'CR_PAT for Container Registry'  
+Choose write:packages (chooses read:packages) and delete:packages  
+Copy and save your token. Starts with ghp_
 
 Run the following command to log in to the GitHub Container Registry using your personal access token (starts with ghp_):
 
 	echo your_personal_access_token | docker login ghcr.io -u your_github_username --password-stdin
 
-Now you can build and push your Docker image:
-<!-- the first command took about 10 minutes for the build -->
-<!-- http://localhost:3000/ probably works before running since Docker starts on startup. -->
+
+[http://localhost:3000](http://localhost:3000) probably works before running because Docker starts on your computer's startup. 
+
+### We built from modelearth/projects and pushed to datascape.
+
+Build Docker locally from modelearth. Run this in your local "projects" folder
+(The the first command takes about 10 minutes for the build.)
+
+Alternatively, you can use "latest" instead of "main" on the first two commands if you have a newer version than the main one.
+
+	docker build -t modelearth/projects:main .
+	docker tag modelearth/projects:main ghcr.io/datascape/projects:main
+	echo your_personal_access_token | docker login ghcr.io -u your-username --password-stdin
+
+	docker push ghcr.io/datascape/projects:main
+
+The container then appears at: [https://github.com/users/datascape/packages/container/package/projects](https://github.com/users/datascape/packages/container/package/projects)
+
+
+<!--
+Probably won't be using this since 
+(This allows us to avoid using too much storage space in modelearth account.)
 
 	docker build -t ghcr.io/modelearth/projects:main .
-	docker push ghcr.io/modelearth/projects:main
+	docker push ghcr.io/datascape/projects:main
 
-Our container then appeared at: [https://github.com/modelearth/projects/pkgs/container/projects](projects/pkgs/container/projects)
-
+Our container then appeared at: [https://github.com/datascape/projects/pkgs/container/projects](projects/pkgs/container/projects)
+-->
 
 To delete a package in GitHub, click on the "Package settings" gear icon in the lower-right.  
 Scroll down to the bottom and click the Delete package button.
 
-To delete locally, run `docker rmi ghcr.io/modelearth/projects:main`
+To delete locally, run `docker rmi ghcr.io/datascape/projects:main`
 To remove all unused Docker images, containers, networks, and volumes locally: `docker system prune -a`
 
 
@@ -168,7 +194,7 @@ To build for our Docker container, we can install using these commands from [Ope
 
 # Open WebUI Install
 
-We're installing from our [Gihub "projects" Docker container](https://github.com/modelearth/projects/pkgs/container/projects) instead.
+We're installing from our [Gihub datascape "projects" Docker container](https://github.com/datascape/projects/pkgs/container/projects) instead.
 
 You can probably ignore this, or use it to inform your install from our fork.
 
