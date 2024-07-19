@@ -218,7 +218,7 @@
 			if ((message?.content ?? '').trim() !== '') {
 				speaking = true;
 
-				if ($config.audio.tts.engine === 'openai') {
+				if ($config.audio.tts.engine !== '') {
 					loadingSpeech = true;
 
 					const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {

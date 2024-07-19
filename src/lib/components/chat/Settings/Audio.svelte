@@ -181,7 +181,7 @@
 					</div>
 				</div>
 			</div>
-		{:else if $config.audio.tts.engine === 'openai'}
+		{:else if $config.audio.tts.engine !== ''}
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
 				<div class="flex w-full">
