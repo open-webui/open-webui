@@ -133,12 +133,12 @@ Run the following command to log in to the GitHub Container Registry using your 
 
 [http://localhost:3000](http://localhost:3000) probably works before running because Docker starts on your computer's startup. 
 
-### We built from modelearth/projects and pushed to datascape.
+### We built from modelearth/projects and pushed to datascape
 
-Build Docker locally from modelearth. Run this in your local "projects" folder
-(The the first command takes about 10 minutes for the build.)
+We built Docker locally from modelearth/projects. Run this in your local "projects" folder
+(The first command takes about 10 minutes for the build.)
 
-Alternatively, you can use "latest" instead of "main" on the first two commands if you have a newer version than the main one.
+Alternatively, you can use "latest" instead of "main" in the first two commands if you have a newer version than the main one.
 
 	docker build -t modelearth/projects:main .
 	docker tag modelearth/projects:main ghcr.io/datascape/projects:main
@@ -146,7 +146,9 @@ Alternatively, you can use "latest" instead of "main" on the first two commands 
 
 	docker push ghcr.io/datascape/projects:main
 
-The container then appears at: [https://github.com/users/datascape/packages/container/package/projects](https://github.com/users/datascape/packages/container/package/projects)
+The command above will create the container image if it does not exist yet.
+
+The container image then appears at: [https://github.com/users/datascape/packages/container/package/projects](https://github.com/users/datascape/packages/container/package/projects)
 
 
 <!--
