@@ -339,6 +339,12 @@ GOOGLE_OAUTH_SCOPE = PersistentConfig(
     os.environ.get("GOOGLE_OAUTH_SCOPE", "openid email profile"),
 )
 
+GOOGLE_REDIRECT_URI = PersistentConfig(
+    "GOOGLE_REDIRECT_URI",
+    "oauth.google.redirect_uri",
+    os.environ.get("GOOGLE_REDIRECT_URI", ""),
+)
+
 MICROSOFT_CLIENT_ID = PersistentConfig(
     "MICROSOFT_CLIENT_ID",
     "oauth.microsoft.client_id",
@@ -363,6 +369,12 @@ MICROSOFT_OAUTH_SCOPE = PersistentConfig(
     os.environ.get("MICROSOFT_OAUTH_SCOPE", "openid email profile"),
 )
 
+MICROSOFT_REDIRECT_URI = PersistentConfig(
+    "MICROSOFT_REDIRECT_URI",
+    "oauth.microsoft.redirect_uri",
+    os.environ.get("MICROSOFT_REDIRECT_URI", ""),
+)
+
 OAUTH_CLIENT_ID = PersistentConfig(
     "OAUTH_CLIENT_ID",
     "oauth.oidc.client_id",
@@ -379,6 +391,12 @@ OPENID_PROVIDER_URL = PersistentConfig(
     "OPENID_PROVIDER_URL",
     "oauth.oidc.provider_url",
     os.environ.get("OPENID_PROVIDER_URL", ""),
+)
+
+OPENID_REDIRECT_URI = PersistentConfig(
+    "OPENID_REDIRECT_URI",
+    "oauth.oidc.redirect_uri",
+    os.environ.get("OPENID_REDIRECT_URI", ""),
 )
 
 OAUTH_SCOPES = PersistentConfig(
@@ -414,6 +432,7 @@ def load_oauth_providers():
             "client_secret": GOOGLE_CLIENT_SECRET.value,
             "server_metadata_url": "https://accounts.google.com/.well-known/openid-configuration",
             "scope": GOOGLE_OAUTH_SCOPE.value,
+            "redirect_uri": GOOGLE_REDIRECT_URI.value,
         }
 
     if (
@@ -426,6 +445,7 @@ def load_oauth_providers():
             "client_secret": MICROSOFT_CLIENT_SECRET.value,
             "server_metadata_url": f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration",
             "scope": MICROSOFT_OAUTH_SCOPE.value,
+            "redirect_uri": MICROSOFT_REDIRECT_URI.value,
         }
 
     if (
@@ -439,6 +459,7 @@ def load_oauth_providers():
             "server_metadata_url": OPENID_PROVIDER_URL.value,
             "scope": OAUTH_SCOPES.value,
             "name": OAUTH_PROVIDER_NAME.value,
+            "redirect_uri": OPENID_REDIRECT_URI.value,
         }
 
 

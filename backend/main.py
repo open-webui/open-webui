@@ -2111,6 +2111,7 @@ for provider_name, provider_config in OAUTH_PROVIDERS.items():
         client_kwargs={
             "scope": provider_config["scope"],
         },
+        redirect_uri=provider_config["redirect_uri"],
     )
 
 # SessionMiddleware is used by authlib for oauth
@@ -2128,7 +2129,10 @@ if len(OAUTH_PROVIDERS) > 0:
 async def oauth_login(provider: str, request: Request):
     if provider not in OAUTH_PROVIDERS:
         raise HTTPException(404)
-    redirect_uri = request.url_for("oauth_callback", provider=provider)
+    # If the provider has a custom redirect URL, use that, otherwise automatically generate one
+    redirect_uri = OAUTH_PROVIDERS[provider].get("redirect_url") or request.url_for(
+        "oauth_callback", provider=provider
+    )
     return await oauth.create_client(provider).authorize_redirect(request, redirect_uri)
 
 
