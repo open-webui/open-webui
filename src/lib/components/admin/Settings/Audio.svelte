@@ -199,7 +199,7 @@
 						>
 							<option value="">{$i18n.t('Web API')}</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
-							<option value="elevenlabs">{$i18n.t('Eleven Labs')}</option>
+							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 						</select>
 					</div>
 				</div>
