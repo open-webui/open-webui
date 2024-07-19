@@ -12,9 +12,9 @@ We've temporarily deactivated the following while we move it to another repo. It
 </span>
 
 You can either fork and clone our [projects repo](https://github.com/ModelEarth/projects)  
-Or you can use our datascape Docker container, which is created from the same modelearth/projects repo.
+Or you can use our [datascape Docker container image](https://github.com/users/datascape/packages/container/package/projects), which is created from the same modelearth/projects repo.
 
-## Edit your project/location files pulled down from our Docker package (COMING SOON)
+## Edit your project/location files pulled down from our Docker package
 
 Once you get the following installed, see our [Location Projects for Open WebUI](../).
 
@@ -150,6 +150,7 @@ The command above will create the container image if it does not exist yet.
 
 The container image then appears at: [https://github.com/users/datascape/packages/container/package/projects](https://github.com/users/datascape/packages/container/package/projects)
 
+Make the new container image under the settings icon in the lower right.
 
 <!--
 Probably won't be using this since 
