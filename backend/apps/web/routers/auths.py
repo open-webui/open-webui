@@ -9,6 +9,8 @@ from pydantic import BaseModel
 import re
 import uuid
 import csv
+import json
+from fastapi.responses import RedirectResponse
 
 
 from apps.web.models.auths import (
@@ -51,6 +53,7 @@ async def get_session_user(user=Depends(get_current_user)):
         "name": user.name,
         "role": user.role,
         "profile_image_url": user.profile_image_url,
+        "extra_sso": user.extra_sso,
     }
 
 
@@ -173,6 +176,7 @@ async def signup(request: Request, form_data: SignupForm):
             hashed,
             form_data.name,
             form_data.profile_image_url,
+            form_data.extra_sso,
             role,
         )
 
@@ -371,7 +375,8 @@ sso = MicrosoftSSO(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
     tenant=TENANT,
-    redirect_uri="https://localhost/api/v1/auths/signin/callback",
+    # redirect_uri="https://localhost/api/v1/auths/signin/callback",
+    redirect_uri="http://localhost:8080/api/v1/auths/signin/callback",
     allow_insecure_http=True,
     scope=["User.Read", "Directory.Read.All", "User.ReadBasic.All"],
     # ["openid", "User.Read", "email"],
@@ -388,36 +393,54 @@ async def signin_with_sso():
 @router.get("/signin/callback", response_model=SigninResponse)
 async def signin_callback(request: Request):
     """Verify login"""
-    sso_user = None
-    with sso:
-        
-        sso_user = await sso.verify_and_process(request)
-        sso_user_email = sso_user.email
-        user = Users.get_user_by_email(sso_user_email.lower())
-        if not user:
-            await signup(
-                request,
-                SignupForm(
-                    email=sso_user_email, password=str(uuid.uuid4()), name=sso_user_email
-                ),
+    try:
+        print("signin_callback")
+        sso_user = None
+        with sso:
+            sso_user = await sso.verify_and_process(request)
+            sso_user_json_str = json.dumps(sso_user.__dict__)
+            print(sso_user_json_str)
+            sso_user_email = sso_user.email
+            user = Users.get_user_by_email(sso_user_email.lower())
+            print("get_user_by_email")
+            if not user:
+                await signup(
+                    request,
+                    SignupForm(
+                        email=sso_user_email, password=str(uuid.uuid4()), name=sso_user_email, profile_image_url="/user.png", extra_sso=sso_user_json_str
+                    ),
+                )
+                print("singup")
+                user = Auths.authenticate_user_by_trusted_header(sso_user_email.lower())
+                print("authenticate_user_by_trusted_header")
+            else:
+                print("update_user_by_id")
+                user = Users.update_user_by_id(
+                    user.id, {"extra_sso": sso_user_json_str}
+                )
+
+            print("create_token")
+            token = create_token(
+                data={"id": user.id},
+                expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
             )
-            user = Auths.authenticate_user_by_trusted_header(sso_user_email.lower())
-        else:
-            print("user already exists")
-            # TODO update the metadata to the DB
-            # Users.update_user_by_id(user.id, )
+            print(user)
+            # request.headers["Authorization"] = f"Bearer {token}"
+            print(request.headers)
+            # return RedirectResponse(url=request.url_for("/"), status_code=status.HTTP_303_SEE_OTHER)
 
-        token = create_token(
-            data={"id": Users.get_user_by_email(sso_user_email.lower()).id},
-            expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
-        )
+            print(Users.get_user_by_email(sso_user_email.lower()))
 
-        return {
-            "token": token,
-            "token_type": "Bearer",
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-            "profile_image_url": user.profile_image_url,
-        }
+            return {
+                "token": token,
+                "token_type": "Bearer",
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "role": user.role,
+                "profile_image_url": user.profile_image_url,
+                "extra_sso": user.extra_sso,
+            }
+    except Exception as e:
+        print(e)
+        raise HTTPException(400, detail="")

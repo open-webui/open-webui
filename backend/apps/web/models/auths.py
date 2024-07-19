@@ -57,6 +57,7 @@ class UserResponse(BaseModel):
     name: str
     role: str
     profile_image_url: str
+    extra_sso: str
 
 
 class SigninResponse(Token, UserResponse):
@@ -87,6 +88,8 @@ class SignupForm(BaseModel):
     email: str
     password: str
     profile_image_url: Optional[str] = "/user.png"
+    extra_sso: str = ''
+
 
 
 class AddUserForm(SignupForm):
@@ -104,6 +107,7 @@ class AuthsTable:
         password: str,
         name: str,
         profile_image_url: str = "/user.png",
+        extra_sso: str = '',
         role: str = "pending",
     ) -> Optional[UserModel]:
         log.info("insert_new_auth")
@@ -115,7 +119,7 @@ class AuthsTable:
         )
         result = Auth.create(**auth.model_dump())
 
-        user = Users.insert_new_user(id, name, email, profile_image_url, role)
+        user = Users.insert_new_user(id, name, email, profile_image_url, extra_sso, role)
 
         if result and user:
             return user
