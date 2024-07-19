@@ -177,14 +177,14 @@
 					<div class=" flex-1 self-center pl-1">
 						<div class=" font-semibold flex items-center gap-1.5">
 							<div
-								class=" text-xs font-black px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+								class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 							>
 								TOOL
 							</div>
 
 							{#if tool?.meta?.manifest?.version}
 								<div
-									class="text-xs font-black px-1 rounded line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+									class="text-xs font-bold px-1 rounded line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 								>
 									v{tool?.meta?.manifest?.version ?? ''}
 								</div>
@@ -221,7 +221,7 @@
 					</Tooltip>
 				{/if}
 
-				<Tooltip content="Valves">
+				<Tooltip content={$i18n.t('Valves')}>
 					<button
 						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 						type="button"
@@ -389,7 +389,7 @@
 		</div>
 
 		<div class=" self-center">
-			<div class=" font-bold line-clamp-1">{$i18n.t('Discover a tool')}</div>
+			<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a tool')}</div>
 			<div class=" text-sm line-clamp-1">
 				{$i18n.t('Discover, download, and explore custom tools')}
 			</div>
@@ -436,18 +436,20 @@
 >
 	<div class="text-sm text-gray-500">
 		<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
-			<div>Please carefully review the following warnings:</div>
+			<div>{$i18n.t('Please carefully review the following warnings:')}</div>
 
 			<ul class=" mt-1 list-disc pl-4 text-xs">
-				<li>Tools have a function calling system that allows arbitrary code execution.</li>
-				<li>Do not install tools from sources you do not fully trust.</li>
+				<li>
+					{$i18n.t('Tools have a function calling system that allows arbitrary code execution')}.
+				</li>
+				<li>{$i18n.t('Do not install tools from sources you do not fully trust.')}</li>
 			</ul>
 		</div>
 
 		<div class="my-3">
-			I acknowledge that I have read and I understand the implications of my action. I am aware of
-			the risks associated with executing arbitrary code and I have verified the trustworthiness of
-			the source.
+			{$i18n.t(
+				'I acknowledge that I have read and I understand the implications of my action. I am aware of the risks associated with executing arbitrary code and I have verified the trustworthiness of the source.'
+			)}
 		</div>
 	</div>
 </ConfirmDialog>

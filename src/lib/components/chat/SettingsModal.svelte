@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { models, settings, user } from '$lib/stores';
-
+	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
+	import { goto } from '$app/navigation';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -14,8 +15,6 @@
 	import Chats from './Settings/Chats.svelte';
 	import User from '../icons/User.svelte';
 	import Personalization from './Settings/Personalization.svelte';
-	import { updateUserSettings } from '$lib/apis/users';
-	import { goto } from '$app/navigation';
 	import Valves from './Settings/Valves.svelte';
 
 	const i18n = getContext('i18n');
@@ -34,6 +33,37 @@
 	};
 
 	let selectedTab = 'general';
+
+	// Function to handle sideways scrolling
+	const scrollHandler = (event) => {
+		const settingsTabsContainer = document.getElementById('settings-tabs-container');
+		if (settingsTabsContainer) {
+			event.preventDefault(); // Prevent default vertical scrolling
+			settingsTabsContainer.scrollLeft += event.deltaY; // Scroll sideways
+		}
+	};
+
+	const addScrollListener = async () => {
+		await tick();
+		const settingsTabsContainer = document.getElementById('settings-tabs-container');
+		if (settingsTabsContainer) {
+			settingsTabsContainer.addEventListener('wheel', scrollHandler);
+		}
+	};
+
+	const removeScrollListener = async () => {
+		await tick();
+		const settingsTabsContainer = document.getElementById('settings-tabs-container');
+		if (settingsTabsContainer) {
+			settingsTabsContainer.removeEventListener('wheel', scrollHandler);
+		}
+	};
+
+	$: if (show) {
+		addScrollListener();
+	} else {
+		removeScrollListener();
+	}
 </script>
 
 <Modal bind:show>
@@ -61,6 +91,7 @@
 
 		<div class="flex flex-col md:flex-row w-full p-4 md:space-x-4">
 			<div
+				id="settings-tabs-container"
 				class="tabs flex flex-row overflow-x-auto space-x-1 md:space-x-0 md:space-y-1 md:flex-col flex-1 md:flex-none md:w-40 dark:text-gray-200 text-xs text-left mb-3 md:mb-0"
 			>
 				<button

@@ -23,6 +23,8 @@
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
 				if (localStorage?.theme && localStorage?.theme.includes('oled')) {
+					document.documentElement.style.setProperty('--color-gray-800', '#101010');
+					document.documentElement.style.setProperty('--color-gray-850', '#050505');
 					document.documentElement.style.setProperty('--color-gray-900', '#000000');
 					document.documentElement.style.setProperty('--color-gray-950', '#000000');
 					document.documentElement.classList.add('dark');
@@ -63,6 +65,7 @@
 
 		%sveltekit.head%
 	</head>
+
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
 
@@ -80,13 +83,13 @@
 				id="logo"
 				style="
 					position: absolute;
-					width: 6rem;
+					width: auto;
 					height: 6rem;
-					top: 41%;
+					top: 44%;
 					left: 50%;
-					margin-left: -3rem;
+					transform: translateX(-50%);
 				"
-				src="/logo.svg"
+				src="/static/splash.png"
 			/>
 
 			<div
@@ -96,7 +99,7 @@
 					left: 50%;
 
 					width: 24rem;
-					margin-left: -12rem;
+					transform: translateX(-50%);
 
 					display: flex;
 					flex-direction: column;
@@ -105,8 +108,8 @@
 			>
 				<img
 					id="logo-her"
-					style="width: 13rem; height: 13rem"
-					src="/logo.svg"
+					style="width: auto; height: 13rem"
+					src="/static/splash.png"
 					class="animate-pulse-fast"
 				/>
 
@@ -152,6 +155,7 @@
 	#splash-screen {
 		background: #fff;
 	}
+
 	html.dark #splash-screen {
 		background: #000;
 	}
@@ -208,6 +212,7 @@
 			opacity: 0.65;
 		}
 	}
+
 	.animate-pulse-fast {
 		animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 	}
