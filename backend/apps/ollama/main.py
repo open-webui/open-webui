@@ -805,7 +805,7 @@ async def generate_chat_completion(
                 )
 
             if (
-                model_info.params.get("temperature", None)
+                model_info.params.get("temperature", None) is not None
                 and payload["options"].get("temperature") is None
             ):
                 payload["options"]["temperature"] = model_info.params.get(
@@ -813,7 +813,7 @@ async def generate_chat_completion(
                 )
 
             if (
-                model_info.params.get("seed", None)
+                model_info.params.get("seed", None) is not None
                 and payload["options"].get("seed") is None
             ):
                 payload["options"]["seed"] = model_info.params.get("seed", None)
