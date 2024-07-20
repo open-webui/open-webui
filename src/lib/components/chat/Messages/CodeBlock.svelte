@@ -203,7 +203,7 @@ __builtins__.input = input`);
 	};
 
 	let sandpackIframe;
-	let expanded = false;
+	let expanded = true;
 	let sandpackClient;
 
 	const executeHTML = async (code) => {
