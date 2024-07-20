@@ -205,7 +205,7 @@ __builtins__.input = input`);
 	let expanded = true;
 	let sandpackIframe;
 	let sandpackClient;
-	let iframeContent = null;
+	let savedCode = code;
 
 	const executeHTML = async (code) => {
 		const content = {
@@ -233,10 +233,11 @@ __builtins__.input = input`);
 	const toggleExpand = async () => {
 		expanded = !expanded;
 		if (expanded) {
-			await executeHTML(iframeContent || code);
+			await executeHTML(savedCode);
 		} else {
-			if (sandpackIframe) {
-				iframeContent = sandpackIframe.contentDocument.documentElement.outerHTML;
+			if (sandpackClient) {
+				const files = await sandpackClient.getFiles();
+				savedCode = files['/index.html'];
 			}
 		}
 	};
