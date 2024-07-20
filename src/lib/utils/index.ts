@@ -7,6 +7,9 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 //////////////////////////
 
 export const sanitizeResponseContent = (content: string) => {
+	// replace single backslash with double backslash
+	content = content.replace(/\\/g, '\\\\');
+
 	// First, temporarily replace valid <video> tags with a placeholder
 	const videoTagRegex = /<video\s+src="([^"]+)"\s+controls><\/video>/gi;
 	const placeholders: string[] = [];

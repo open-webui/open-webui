@@ -178,6 +178,7 @@
 						{ left: '\\pu{', right: '}', display: false },
 						{ left: '\\ce{', right: '}', display: false },
 						{ left: '\\(', right: '\\)', display: false },
+						{ left: '( ', right: ' )', display: false },
 						{ left: '\\[', right: '\\]', display: false },
 						{ left: '[ ', right: ' ]', display: false },
 						{ left: '\\begin{equation}', right: '\\end{equation}', display: true },
