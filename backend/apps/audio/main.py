@@ -134,7 +134,7 @@ def convert_mp4_to_wav(file_path, output_path):
     print(f"Converted {file_path} to {output_path}")
 
 
-async def fetch_available_voices():
+async def get_available_voices():
     if app.state.config.TTS_ENGINE != "elevenlabs":
         return {}
 
@@ -289,7 +289,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             log.exception(e)
             raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-        voice_options = await fetch_available_voices()
+        voice_options = await get_available_voices()
         voice_id = voice_options.get(payload['voice'])
 
         if not voice_id:
@@ -474,5 +474,5 @@ def transcribe(
 
 @app.get("/voices")
 async def get_voices(user=Depends(get_verified_user)):
-    voices = await fetch_available_voices()
+    voices = await get_available_voices()
     return {"voices": list(voices.keys())}

@@ -57,7 +57,7 @@
 	};
 
     // Fetch available ElevenLabs voices
-    const fetchAvailableVoices = async () => {
+    const getVoices = async () => {
         const response = await fetch('/voices', {
             method: 'GET',
             headers: {
@@ -100,7 +100,7 @@
 
 	onMount(async () => {
         // Fetch available voices on component mount
-        await fetchAvailableVoices(); 
+        await getVoices(); 
         
 		const res = await getAudioConfig(localStorage.token);
 
@@ -125,7 +125,7 @@
 			getOpenAIVoices();
 			getOpenAIModels();
         } else if(TTS_ENGINE === 'elevenlabs') {
-            await fetchAvailableVoices(); // Fetch voices if TTS_ENGINE is ElevenLabs
+            await getVoices(); //Get voices if TTS_ENGINE is ElevenLabs
 		} else {
 			getWebAPIVoices();
 		}
@@ -213,7 +213,7 @@
 									TTS_VOICE = 'alloy';
 									TTS_MODEL = 'tts-1';
 								} else if(e.target.value === 'elevenlabs') {
-									await fetchAvailableVoices();
+									await getVoices();
 								} else {
 									getWebAPIVoices();
 									TTS_VOICE = '';
