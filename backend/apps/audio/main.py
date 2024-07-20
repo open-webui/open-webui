@@ -134,6 +134,35 @@ def convert_mp4_to_wav(file_path, output_path):
     print(f"Converted {file_path} to {output_path}")
 
 
+async def fetch_available_voices():
+    if app.state.config.TTS_ENGINE != "elevenlabs":
+        return {}
+
+    base_url = "https://api.elevenlabs.io/v1"
+    headers = {
+        "xi-api-key": app.state.config.TTS_API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    voices_url = f"{base_url}/voices"
+    try:
+        response = requests.get(voices_url, headers=headers)
+        response.raise_for_status()
+        voices_data = response.json()
+
+        voice_options = {}
+        for voice in voices_data.get("voices", []):
+            voice_name = voice["name"]
+            voice_id = voice["voice_id"]
+            voice_options[voice_name] = voice_id
+
+        return voice_options
+
+    except requests.RequestException as e:
+        log.error(f"Error fetching voices: {str(e)}")
+        return {}
+
+
 @app.get("/config")
 async def get_audio_config(user=Depends(get_admin_user)):
     return {
@@ -258,9 +287,15 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             payload = json.loads(body.decode("utf-8"))
         except Exception as e:
             log.exception(e)
-            pass
+            raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-        url = f"https://api.elevenlabs.io/v1/text-to-speech/{payload['voice']}"
+        voice_options = await fetch_available_voices()
+        voice_id = voice_options.get(payload['voice'])
+
+        if not voice_id:
+            raise HTTPException(status_code=400, detail="Invalid voice name")
+
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
 
         headers = {
             "Accept": "audio/mpeg",
@@ -435,3 +470,9 @@ def transcribe(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+
+
+@app.get("/voices")
+async def get_voices(user=Depends(get_verified_user)):
+    voices = await fetch_available_voices()
+    return {"voices": list(voices.keys())}

@@ -56,6 +56,23 @@
 		}, 100);
 	};
 
+    // Fetch available ElevenLabs voices
+    const fetchAvailableVoices = async () => {
+        const response = await fetch('/voices', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            voices = data.voices.map(name => ({ name })); // Update voices array with fetched names
+        } else {
+            toast.error('Failed to fetch voices');
+        }
+    };
+
 	const updateConfigHandler = async () => {
 		const res = await updateAudioConfig(localStorage.token, {
 			tts: {
@@ -82,6 +99,9 @@
 	};
 
 	onMount(async () => {
+        // Fetch available voices on component mount
+        await fetchAvailableVoices(); 
+        
 		const res = await getAudioConfig(localStorage.token);
 
 		if (res) {
@@ -104,6 +124,8 @@
 		if (TTS_ENGINE === 'openai') {
 			getOpenAIVoices();
 			getOpenAIModels();
+        } else if(TTS_ENGINE === 'elevenlabs') {
+            await fetchAvailableVoices(); // Fetch voices if TTS_ENGINE is ElevenLabs
 		} else {
 			getWebAPIVoices();
 		}
@@ -116,7 +138,7 @@
 		await updateConfigHandler();
 		dispatch('save');
 	}}
->
+	>
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-3">
 			<div>
@@ -185,11 +207,13 @@
 							class=" dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 							bind:value={TTS_ENGINE}
 							placeholder="Select a mode"
-							on:change={(e) => {
+							on:change={async (e) => {
 								if (e.target.value === 'openai') {
 									getOpenAIVoices();
 									TTS_VOICE = 'alloy';
 									TTS_MODEL = 'tts-1';
+								} else if(e.target.value === 'elevenlabs') {
+									await fetchAvailableVoices();
 								} else {
 									getWebAPIVoices();
 									TTS_VOICE = '';
@@ -199,7 +223,7 @@
 						>
 							<option value="">{$i18n.t('Web API')}</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
-							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
+							<option value="elevenlabs">{$i18n.t('Eleven Labs')}</option>
 						</select>
 					</div>
 				</div>
@@ -232,7 +256,7 @@
 
 				<hr class=" dark:border-gray-850 my-2" />
 
-				{#if TTS_ENGINE === ''}
+				{#if TTS_ENGINE !== ''}
 					<div>
 						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Voice')}</div>
 						<div class="flex w-full">
@@ -244,9 +268,9 @@
 									<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
 									{#each voices as voice}
 										<option
-											value={voice.voiceURI}
+											value={voice.name}
 											class="bg-gray-100 dark:bg-gray-700"
-											selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option
+											selected={TTS_VOICE === voice.name}>{voice.name}</option
 										>
 									{/each}
 								</select>
