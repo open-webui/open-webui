@@ -100,61 +100,7 @@
 		extensions: any;
 	};
 
-	function escapeDollarNumber(text: string) {
-		let escapedText = '';
-
-		for (let i = 0; i < text.length; i += 1) {
-			let char = text[i];
-			const nextChar = text[i + 1] || ' ';
-
-			if (char === '$' && nextChar >= '0' && nextChar <= '9') {
-				char = '\\$';
-			}
-
-			escapedText += char;
-		}
-
-		return escapedText;
-	}
-
-	function escapeBrackets(text: string) {
-		const pattern =
-			/(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)|\$\$([\s\S]*?)\$\$|\$([\s\S]*?)\$/g;
-
-		return text.replace(
-			pattern,
-			(match, codeBlock, squareBracket, roundBracket, doubleDollar, singleDollar) => {
-				if (codeBlock) {
-					return codeBlock;
-				} else if (squareBracket !== undefined) {
-					let cleanSquareBracket = squareBracket.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
-					return `$$${cleanSquareBracket}$$`;
-				} else if (roundBracket !== undefined) {
-					let cleanRoundBracket = roundBracket.replace(/\\\\/g, '\\\\\\').replace(/\n/g, ' ');
-					return `$${cleanRoundBracket}$`;
-				} else if (doubleDollar !== undefined) {
-					let cleanDoubleDollar = doubleDollar
-						.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\')
-						.replace(/\n/g, ' ');
-					return `$$${cleanDoubleDollar}$$`;
-				} else if (singleDollar !== undefined) {
-					let cleanSingleDollar = singleDollar
-						.replace(/(?<!\\)\\\\(?!\\)/g, '\\\\\\')
-						.replace(/\n/g, ' ');
-					return `$${cleanSingleDollar}$`;
-				}
-				return match;
-			}
-		);
-	}
-
-	function escapeMhchem(text: string) {
-		return text.replaceAll('$\\ce{', '$\\\\ce{').replaceAll('$\\pu{', '$\\\\pu{');
-	}
-
 	$: if (message) {
-		let processedContent = escapeMhchem(escapeBrackets(escapeDollarNumber(message.content)));
-		message.content = processedContent;
 		renderStyling();
 	}
 
@@ -227,15 +173,14 @@
 					// customised options
 					// • auto-render specific keys, e.g.:
 					delimiters: [
-						{ left: '$$', right: '$$', display: true },
-						{ left: '$', right: '$', display: false },
+						{ left: '$$', right: '$$', display: false },
+						{ left: '$ ', right: ' $', display: false },
+						{ left: '\\pu{', right: '}', display: false },
+						{ left: '\\ce{', right: '}', display: false },
 						{ left: '\\(', right: '\\)', display: false },
-						{ left: '\\begin{equation}', right: '\\end{equation}', display: true },
-						{ left: '\\begin{align}', right: '\\end{align}', display: true },
-						{ left: '\\begin{alignat}', right: '\\end{alignat}', display: true },
-						{ left: '\\begin{gather}', right: '\\end{gather}', display: true },
-						{ left: '\\begin{CD}', right: '\\end{CD}', display: true },
-						{ left: '\\[', right: '\\]', display: true }
+						{ left: '( ', right: ' )', display: false },
+						{ left: '\\[', right: '\\]', display: false },
+						{ left: '[ ', right: ' ]', display: false }
 					],
 					// • rendering keys, e.g.:
 					throwOnError: false
