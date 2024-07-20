@@ -11,8 +11,6 @@ const convertLatexToSingleLine = (content) => {
 	const patterns = [
 		/(\$\$[\s\S]*?\$\$)/g, // Match $$ ... $$
 		/(\\[\s\S]*?\\])/g, // Match \[ ... \]
-		/(\$\[\s\S]*?\$\])/g, // Match $\[ ... \]$
-		/(\$\(\s\S]*?\$\))/g, // Match $\( ... \)$
 		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
 	];
 
