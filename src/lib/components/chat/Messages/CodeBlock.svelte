@@ -1,11 +1,10 @@
 <script lang="ts">
-	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { copyToClipboard } from '$lib/utils';
 	import hljs from 'highlight.js';
 	import 'highlight.js/styles/github-dark.min.css';
 	import { loadPyodide } from 'pyodide';
-	import { onMount, tick } from 'svelte';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { loadSandpackClient } from '@codesandbox/sandpack-client';
 
 	export let id = '';
 
@@ -203,6 +202,38 @@ __builtins__.input = input`);
 		};
 	};
 
+	let sandpackIframe;
+	let sandpackClient;
+	const executeHTML = async (code) => {
+		// Initialize Sandpack client
+		const content = {
+			files: {
+				'/package.json': {
+					code: JSON.stringify({
+						main: 'index.html',
+						devDependencies: {}
+					})
+				},
+				'/index.html': { code }
+			},
+			environment: 'vanilla',
+			template: 'static'
+		};
+		if (sandpackClient) {
+			sandpackClient.updateSandbox(content);
+		} else {
+			sandpackClient = await loadSandpackClient(sandpackIframe, content, {
+				showOpenInCodeSandbox: true
+			});
+		}
+	};
+
+	$: if (lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html') {
+		if (!!sandpackIframe) {
+			executeHTML(code);
+		}
+	}
+
 	let debounceTimeout;
 	$: if (code) {
 		// Function to perform the code highlighting
@@ -252,7 +283,8 @@ __builtins__.input = input`);
 			'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 			class="language-{lang} rounded-t-none whitespace-pre"
 			>{#if highlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
-		></pre>
+		>
+	</pre>
 
 	<div
 		id="plt-canvas-{id}"
@@ -268,6 +300,20 @@ __builtins__.input = input`);
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 			<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
 			<div class="text-sm">{stdout || stderr || result}</div>
+		</div>
+	{/if}
+	{#if lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html'}
+		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+			<div class="text-gray-500 text-xs mb-1 flex justify-between items-center">
+				<span>HTML</span>
+				<button
+					class="copy-code-button bg-none border-none p-1"
+					on:click={() => {
+						executeHTML(code);
+					}}>Refresh</button
+				>
+			</div>
+			<iframe bind:this={sandpackIframe} title="HTML Preview" class="w-full h-96 mt-4 bg-white" />
 		</div>
 	{/if}
 </div>
