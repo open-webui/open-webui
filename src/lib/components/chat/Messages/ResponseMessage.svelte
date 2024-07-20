@@ -182,6 +182,7 @@
 						{ left: '\\[', right: '\\]', display: false },
 						{ left: '[ ', right: ' ]', display: false },
 						{ left: '\\begin{equation}', right: '\\end{equation}', display: true },
+						{ left: '\\begin{matrix}', right: '\\end{matrix}', display: true },
 						{ left: '\\begin{align}', right: '\\end{align}', display: true },
 						{ left: '\\begin{alignat}', right: '\\end{alignat}', display: true },
 						{ left: '\\begin{gather}', right: '\\end{gather}', display: true },
