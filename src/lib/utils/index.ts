@@ -10,13 +10,13 @@ const convertLatexToSingleLine = (content) => {
 	// Patterns to match multiline LaTeX blocks
 	const patterns = [
 		/(\$\$[\s\S]*?\$\$)/g, // Match $$ ... $$
-		/(\\[\s\S]*?\\])/g, // Match \[ ... \]
+		/(\\\[[\s\S]*?\\\])/g, // Match \[ ... \]
 		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
 	];
 
 	patterns.forEach((pattern) => {
 		content = content.replace(pattern, (match) => {
-			return match.replace(/\s+/g, ' ').trim();
+			return match.replace(/\s*\n\s*/g, ' ').trim();
 		});
 	});
 
