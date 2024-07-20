@@ -323,7 +323,7 @@ __builtins__.input = input`);
 						}}>Refresh</button
 					>
 					<button
-						class="toggle-expand-button bg-none border-none p-1"
+						class="copy-code-button bg-none border-none p-1"
 						on:click={() => {
 							toggleExpand(code);
 						}}>{expanded ? 'Collapse' : 'Expand'}</button
