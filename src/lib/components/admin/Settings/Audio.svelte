@@ -138,7 +138,7 @@
 		await updateConfigHandler();
 		dispatch('save');
 	}}
-	>
+>
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-3">
 			<div>
@@ -223,7 +223,7 @@
 						>
 							<option value="">{$i18n.t('Web API')}</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
-							<option value="elevenlabs">{$i18n.t('Eleven Labs')}</option>
+							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 						</select>
 					</div>
 				</div>
