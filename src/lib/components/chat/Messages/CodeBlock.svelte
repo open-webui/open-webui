@@ -203,7 +203,9 @@ __builtins__.input = input`);
 	};
 
 	let sandpackIframe;
+	let expanded = false;
 	let sandpackClient;
+
 	const executeHTML = async (code) => {
 		// Initialize Sandpack client
 		const content = {
@@ -226,6 +228,10 @@ __builtins__.input = input`);
 				showOpenInCodeSandbox: true
 			});
 		}
+	};
+
+	const toggleExpand = async () => {
+		expanded = !expanded;
 	};
 
 	$: if (lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html') {
@@ -306,14 +312,21 @@ __builtins__.input = input`);
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 			<div class="text-gray-500 text-xs mb-1 flex justify-between items-center">
 				<span>HTML</span>
-				<button
-					class="copy-code-button bg-none border-none p-1"
-					on:click={() => {
-						executeHTML(code);
-					}}>Refresh</button
-				>
+				<div class="flex items-center">
+					<button
+						class="copy-code-button bg-none border-none p-1"
+						on:click={() => {
+							executeHTML(code);
+						}}>Refresh</button
+					>
+					<button class="toggle-expand-button bg-none border-none p-1" on:click={toggleExpand}
+						>{expanded ? 'Collapse' : 'Expand'}</button
+					>
+				</div>
 			</div>
-			<iframe bind:this={sandpackIframe} title="HTML Preview" class="w-full h-96 mt-4 bg-white" />
+			{#if expanded}
+				<iframe bind:this={sandpackIframe} title="HTML Preview" class="w-full h-96 mt-4 bg-white" />
+			{/if}
 		</div>
 	{/if}
 </div>
