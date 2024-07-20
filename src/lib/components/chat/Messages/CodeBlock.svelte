@@ -230,8 +230,11 @@ __builtins__.input = input`);
 		}
 	};
 
-	const toggleExpand = async () => {
+	const toggleExpand = async (code) => {
 		expanded = !expanded;
+		if (expanded) {
+			executeHTML(code);
+		}
 	};
 
 	$: if (lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html') {
@@ -319,8 +322,11 @@ __builtins__.input = input`);
 							executeHTML(code);
 						}}>Refresh</button
 					>
-					<button class="toggle-expand-button bg-none border-none p-1" on:click={toggleExpand}
-						>{expanded ? 'Collapse' : 'Expand'}</button
+					<button
+						class="toggle-expand-button bg-none border-none p-1"
+						on:click={() => {
+							toggleExpand(code);
+						}}>{expanded ? 'Collapse' : 'Expand'}</button
 					>
 				</div>
 			</div>
