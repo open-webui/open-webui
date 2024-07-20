@@ -207,7 +207,6 @@ __builtins__.input = input`);
 	let sandpackClient;
 
 	const executeHTML = async (code) => {
-		// Initialize Sandpack client
 		const content = {
 			files: {
 				'/package.json': {
@@ -230,9 +229,9 @@ __builtins__.input = input`);
 		}
 	};
 
-	const toggleExpand = async (code) => {
+	const toggleExpand = () => {
 		expanded = !expanded;
-		if (expanded) {
+		if (expanded && !sandpackClient) {
 			executeHTML(code);
 		}
 	};
