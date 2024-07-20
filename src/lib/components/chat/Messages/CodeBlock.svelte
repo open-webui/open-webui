@@ -202,9 +202,10 @@ __builtins__.input = input`);
 		};
 	};
 
-	let sandpackIframe;
 	let expanded = true;
+	let sandpackIframe;
 	let sandpackClient;
+	let iframeContent = null;
 
 	const executeHTML = async (code) => {
 		const content = {
@@ -229,10 +230,14 @@ __builtins__.input = input`);
 		}
 	};
 
-	const toggleExpand = () => {
+	const toggleExpand = async () => {
 		expanded = !expanded;
-		if (expanded && !sandpackClient) {
-			executeHTML(code);
+		if (expanded) {
+			await executeHTML(iframeContent || code);
+		} else {
+			if (sandpackIframe) {
+				iframeContent = sandpackIframe.contentDocument.documentElement.outerHTML;
+			}
 		}
 	};
 
@@ -321,11 +326,8 @@ __builtins__.input = input`);
 							executeHTML(code);
 						}}>Refresh</button
 					>
-					<button
-						class="copy-code-button bg-none border-none p-1"
-						on:click={() => {
-							toggleExpand(code);
-						}}>{expanded ? 'Collapse' : 'Expand'}</button
+					<button class="copy-code-button bg-none border-none p-1" on:click={toggleExpand}
+						>{expanded ? 'Collapse' : 'Expand'}</button
 					>
 				</div>
 			</div>
