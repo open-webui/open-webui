@@ -11,7 +11,7 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 - [Earthscape for Chatbot UI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/) - TO DO (everyone)
 
 **Charts, SQL, Vite, Supabase, AI Chat**
-- [Timeline from Google Data Commons](/data-pipeline/timelines/earthscape/datacommons.html) - Mehul
+- [Javascript Timelines from Google Data Commons API](/data-pipeline/timelines/earthscape/datacommons.html) - Mehul
 - [International Trade Flow SQL Data Prep](/useeio.js/footprint) - Sahil, Himanshu, Song
 - [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab - Song, Ivy, SQL Team
 - [Food Nutrition Labels](/data-commons/docs/food) - Shali and Wenwei (Stella)
