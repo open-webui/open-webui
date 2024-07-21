@@ -205,7 +205,7 @@ __builtins__.input = input`);
 	let expanded = true;
 	let sandpackIframe;
 	let sandpackClient;
-	let temIframe;
+	let enableHTML = false;
 
 	const executeHTML = async (code) => {
 		const content = {
@@ -237,6 +237,7 @@ __builtins__.input = input`);
 	$: if (lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html') {
 		if (!!sandpackIframe) {
 			executeHTML(code);
+			enableHTML = true;
 		}
 	}
 
@@ -285,7 +286,8 @@ __builtins__.input = input`);
 		style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
 			stdout ||
 			stderr ||
-			result) &&
+			result ||
+			enableHTML) &&
 			'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 			class="language-{lang} rounded-t-none whitespace-pre"
 			>{#if highlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
@@ -310,8 +312,8 @@ __builtins__.input = input`);
 	{/if}
 	{#if lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html'}
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-			<div class="text-gray-500 text-xs mb-1 flex justify-between items-center">
-				<span>HTML</span>
+			<div class="text-gray-500 text-white text-xs mb-1 flex justify-between items-center">
+				<div class="p-1">{@html lang.toUpperCase()}</div>
 				<div class="flex items-center">
 					<button
 						class="copy-code-button bg-none border-none p-1"
@@ -325,7 +327,12 @@ __builtins__.input = input`);
 				</div>
 			</div>
 			<div style="display: {expanded ? 'block' : 'none'};">
-				<iframe bind:this={sandpackIframe} title="HTML Preview" class="h-96 mt-4 bg-white" style="width: 100.5%;"/>
+				<iframe
+					bind:this={sandpackIframe}
+					title="HTML Preview"
+					class="mt-4 bg-white"
+					style="width: 100.5%; height: 24.1rem;"
+				/>
 			</div>
 		</div>
 	{/if}
