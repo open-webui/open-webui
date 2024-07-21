@@ -325,7 +325,7 @@ __builtins__.input = input`);
 				</div>
 			</div>
 			<div style="display: {expanded ? 'block' : 'none'};">
-				<iframe bind:this={sandpackIframe} title="HTML Preview" class="w-full h-96 mt-4 bg-white" />
+				<iframe bind:this={sandpackIframe} title="HTML Preview" class="h-96 mt-4 bg-white" style="width: 100.5%;"/>
 			</div>
 		</div>
 	{/if}
