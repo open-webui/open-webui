@@ -203,6 +203,7 @@ __builtins__.input = input`);
 	};
 
 	let expanded = true;
+	let all_expanded = true;
 	let sandpackIframe;
 	let sandpackClient;
 	let enableHTML = false;
@@ -236,6 +237,10 @@ __builtins__.input = input`);
 		expanded = !expanded;
 	};
 
+	const toggleAllExpand = async () => {
+		all_expanded = !all_expanded;
+	};
+
 	$: if (lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html') {
 		if (!!sandpackIframe) {
 			executeHTML(code);
@@ -262,7 +267,9 @@ __builtins__.input = input`);
 	<div
 		class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg overflow-x-auto"
 	>
-		<div class="p-1">{@html lang}</div>
+		<button class="p-1" on:click={toggleAllExpand}>
+			{@html lang}
+		</button>
 
 		<div class="flex items-center">
 			{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
@@ -283,54 +290,59 @@ __builtins__.input = input`);
 		</div>
 	</div>
 
-	<pre
-		class=" hljs p-4 px-5 overflow-x-auto"
-		style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
-			stdout ||
-			stderr ||
-			result ||
-			enableHTML) &&
-			'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
-			class="language-{lang} rounded-t-none whitespace-pre"
-			>{#if highlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
-		>
-	</pre>
+	<div style="display: {all_expanded ? 'flex' : 'none'};">
+		<pre
+			class=" hljs p-4 px-5 overflow-x-auto"
+			style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
+				stdout ||
+				stderr ||
+				result ||
+				enableHTML) &&
+				'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
+				class="language-{lang} rounded-t-none whitespace-pre"
+				>{#if highlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
+			>
+		</pre>
 
-	<div
-		id="plt-canvas-{id}"
-		class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
-	/>
+		<div
+			id="plt-canvas-{id}"
+			class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
+		/>
 
-	{#if executing}
-		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-			<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-			<div class="text-sm">Running...</div>
-		</div>
-	{:else if stdout || stderr || result}
-		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-			<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-			<div class="text-sm">{stdout || stderr || result}</div>
-		</div>
-	{/if}
-	{#if lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html'}
-		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-			<div class="text-gray-500 text-white text-xs mb-1 flex justify-between items-center">
-				<div class="p-1">{@html lang.toUpperCase()}</div>
-				<div class="flex items-center">
-					<button
-						class="copy-code-button bg-none border-none p-1"
-						on:click={() => {
-							executeHTML(code);
-						}}>Refresh</button
-					>
-					<button class="copy-code-button bg-none border-none p-1" on:click={toggleExpand}
-						>{expanded ? 'Collapse' : 'Expand'}</button
-					>
+		{#if executing}
+			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+				<div class="text-sm">Running...</div>
+			</div>
+		{:else if stdout || stderr || result}
+			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+				<div class="text-sm">{stdout || stderr || result}</div>
+			</div>
+		{/if}
+
+		{#if lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html'}
+			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+				<div class="text-gray-500 text-white text-xs mb-1 flex justify-between items-center">
+					<button class="p-1" on:click={toggleExpand}>
+						{@html lang.toUpperCase()}
+					</button>
+					<div class="flex items-center">
+						<button
+							class="copy-code-button bg-none border-none p-1"
+							on:click={() => {
+								executeHTML(code);
+							}}>Refresh</button
+						>
+						<button class="copy-code-button bg-none border-none p-1" on:click={toggleExpand}
+							>{expanded ? 'Collapse' : 'Expand'}</button
+						>
+					</div>
+				</div>
+				<div style="display: {expanded ? 'flex' : 'none'}; bg-white">
+					<iframe bind:this={sandpackIframe} title="HTML Preview" class="w-full h-96 mt-4" />
 				</div>
 			</div>
-			<div style="display: {expanded ? 'flex' : 'none'}; bg-white">
-				<iframe bind:this={sandpackIframe} title="HTML Preview" class="w-full h-96 mt-4" />
-			</div>
-		</div>
-	{/if}
+		{/if}
+	</div>
 </div>
