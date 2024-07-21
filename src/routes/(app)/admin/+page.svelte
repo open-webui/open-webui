@@ -266,12 +266,14 @@
 									'user' && 'text-green-600 dark:text-green-200 bg-green-200/30'} {user.role ===
 									'pending' && 'text-gray-600 dark:text-gray-200 bg-gray-200/30'}"
 								on:click={() => {
-									if (user.role === 'user') {
-										updateRoleHandler(user.id, 'admin');
-									} else if (user.role === 'pending') {
-										updateRoleHandler(user.id, 'user');
-									} else {
-										updateRoleHandler(user.id, 'pending');
+									if (isProAdmin){
+										if (user.role === 'user') {
+											updateRoleHandler(user.id, 'admin');
+										} else if (user.role === 'pending') {
+											updateRoleHandler(user.id, 'user');
+										} else {
+											updateRoleHandler(user.id, 'pending');
+										}
 									}
 								}}
 							>
@@ -375,8 +377,8 @@
 											</svg>
 										</button>
 									</Tooltip>
-								{:else}
-									<Tooltip content={$i18n.t('Edit User')}>
+									<!-- {:else} -->
+									<!-- <Tooltip content={$i18n.t('Edit User')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 											on:click={async () => {
@@ -399,7 +401,7 @@
 												/>
 											</svg>
 										</button>
-									</Tooltip>
+									</Tooltip> -->
 								{/if}
 							</div>
 						</td>
