@@ -205,7 +205,7 @@ __builtins__.input = input`);
 	let expanded = true;
 	let sandpackIframe;
 	let sandpackClient;
-	let savedCode = code;
+	let temIframe;
 
 	const executeHTML = async (code) => {
 		const content = {
