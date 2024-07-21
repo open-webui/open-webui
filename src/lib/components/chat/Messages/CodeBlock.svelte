@@ -208,25 +208,27 @@ __builtins__.input = input`);
 	let enableHTML = false;
 
 	const executeHTML = async (code) => {
-		const content = {
-			files: {
-				'/package.json': {
-					code: JSON.stringify({
-						main: 'index.html',
-						devDependencies: {}
-					})
+		if (expanded) {
+			const content = {
+				files: {
+					'/package.json': {
+						code: JSON.stringify({
+							main: 'index.html',
+							devDependencies: {}
+						})
+					},
+					'/index.html': { code }
 				},
-				'/index.html': { code }
-			},
-			environment: 'vanilla',
-			template: 'static'
-		};
-		if (sandpackClient) {
-			sandpackClient.updateSandbox(content);
-		} else {
-			sandpackClient = await loadSandpackClient(sandpackIframe, content, {
-				showOpenInCodeSandbox: true
-			});
+				environment: 'vanilla',
+				template: 'static'
+			};
+			if (sandpackClient) {
+				sandpackClient.updateSandbox(content);
+			} else {
+				sandpackClient = await loadSandpackClient(sandpackIframe, content, {
+					showOpenInCodeSandbox: true
+				});
+			}
 		}
 	};
 
