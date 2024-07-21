@@ -427,7 +427,7 @@
 								console.log(data);
 								currentRequestId = data.id;
 							} else {
-								if (data.done == false) {
+								if (data.done == false || data.done_reason == "stop") {
 									if (responseMessage.content == '' && data.message.content == '\n') {
 										continue;
 									} else {

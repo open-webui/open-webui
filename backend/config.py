@@ -231,6 +231,13 @@ Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
 
 
 ####################################
+# Tools DIR
+####################################
+
+TOOLS_DIR = os.getenv("TOOLS_DIR", f"{DATA_DIR}/tools")
+Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
+
+####################################
 # LITELLM_CONFIG
 ####################################
 
@@ -596,3 +603,15 @@ LITELLM_PROXY_HOST = os.getenv("LITELLM_PROXY_HOST", "127.0.0.1")
 ####################################
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+
+
+####################################
+# TOOLS
+####################################
+
+
+TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = os.environ.get(
+    "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
+    """Tools: {{TOOLS}}
+If a function tool doesn't match the query, return an empty string. Else, pick a function tool, fill in the parameters from the function tool's schema, and return it in the format { "name": \"functionName\", "parameters": { "key": "value" } }. Only pick a function if the user asks.  Only return the object. Do not return any other text.""",
+)

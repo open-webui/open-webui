@@ -13,11 +13,16 @@ from fastapi.staticfiles import StaticFiles
 from fastapi import HTTPException
 from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import StreamingResponse
 
-from apps.ollama.main import app as ollama_app
+from apps.ollama.main import (
+    app as ollama_app,
+    OpenAIChatCompletionForm,
+    generate_openai_chat_completion as generate_ollama_chat_completion,
+)
 from apps.openai.main import app as openai_app
 
 from apps.litellm.main import (
@@ -37,8 +42,18 @@ from pydantic import BaseModel
 from typing import List
 
 
-from utils.utils import get_admin_user
+from utils.utils import (
+    get_admin_user,
+    get_verified_user,
+    get_current_user,
+    get_http_authorization_cred,
+)
 from apps.rag.utils import rag_messages
+
+from utils.misc import get_last_user_message
+
+from apps.web.models.tools import Tools
+from apps.web.utils import load_toolkit_module_by_id, tools_function_calling_generation_template
 
 from config import (
     CONFIG_DATA,
@@ -56,7 +71,8 @@ from config import (
     SRC_LOG_LEVELS,
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
-    MAX_CITATION_DISTANCE
+    MAX_CITATION_DISTANCE,
+    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 )
 from constants import ERROR_MESSAGES
 
@@ -101,6 +117,73 @@ app.state.WEBHOOK_URL = WEBHOOK_URL
 origins = ["*"]
 
 
+async def get_function_call_response(prompt, tool_id, template, task_model_id, user):
+    tool = Tools.get_tool_by_id(tool_id)
+    tools_specs = json.dumps(tool.specs, indent=2)
+    content = tools_function_calling_generation_template(template, tools_specs)
+
+    payload = {
+        "model": task_model_id,
+        "messages": [
+            {"role": "system", "content": content},
+            {"role": "user", "content": f"Query: {prompt}"},
+        ],
+        "stream": False,
+    }
+
+    response = None
+    try:
+        response = await generate_ollama_chat_completion(
+            OpenAIChatCompletionForm(**payload), user=user
+        )
+
+        content = None
+        async for chunk in response.body_iterator:
+            data = json.loads(chunk.decode("utf-8"))
+            content = data["choices"][0]["message"]["content"]
+        log.info(f'the data from the call: {data}')
+        # Cleanup any remaining background tasks if necessary
+        if response.background is not None:
+            await response.background()
+
+        # Parse the function response
+        if content is not None:
+            result = json.loads(content)
+            print(result)
+
+            # Call the function
+            if "name" in result:
+                if tool_id in webui_app.state.TOOLS:
+                    toolkit_module = webui_app.state.TOOLS[tool_id]
+                else:
+                    toolkit_module = load_toolkit_module_by_id(tool_id)
+                    webui_app.state.TOOLS[tool_id] = toolkit_module
+
+                function = getattr(toolkit_module, result["name"])
+                function_result = None
+                try:
+                    function_result = function(**result["parameters"])
+                except Exception as e:
+                    print(e)
+
+                if function_result:
+                    response = {
+                        "model": data.get('model'),
+                        "created_at": data.get('created'),
+                        "message": {
+                            "role": "assistant",
+                            "content": function_result
+                        },
+                        "done_reason": "stop",
+                        "done": True,
+                    }
+                    return response
+    except Exception as e:
+        print(f"Error: {e}")
+
+    return None
+
+
 class RAGMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         return_citations = False
@@ -121,8 +204,34 @@ class RAGMiddleware(BaseHTTPMiddleware):
             if "citations" in data:
                 del data["citations"]
 
-            # Example: Add a new key-value pair or modify existing ones
-            # data["modified"] = True  # Example modification
+            tools = Tools.get_tools()
+
+            if tools:
+                task_model_id = data["model"]
+                
+                user = get_current_user(
+                    get_http_authorization_cred(request.headers.get("Authorization"))
+                )
+                prompt = get_last_user_message(data["messages"])
+                context = ""
+
+                for tool in tools:
+                    response = await get_function_call_response(
+                        prompt=prompt,
+                        tool_id=tool.id,
+                        template=TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+                        task_model_id=task_model_id,
+                        user=user,
+                    )
+
+                    if response:
+                        async def response_stream():
+                            # Yield the response as a single JSON object
+                            yield json.dumps(response)
+
+                        # Return as StreamingResponse
+                        return StreamingResponse(response_stream())
+
             if "docs" in data:
                 data = {**data}
                 data["messages"], citations = rag_messages(
@@ -178,8 +287,7 @@ class RAGMiddleware(BaseHTTPMiddleware):
                     if isinstance(citations[0][key], list):
                         citations[0][key] = remove_indices(citations[0][key], indices_to_remove)
 
-            log.info(f"query_doc:citations {citations}")
-
+            
             # Inject the citations into the response
             if isinstance(response, StreamingResponse):
                 # If it's a streaming response, inject it as SSE event or NDJSON line

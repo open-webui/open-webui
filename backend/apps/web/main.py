@@ -10,6 +10,7 @@ from apps.web.routers import (
     prompts,
     configs,
     utils,
+    tools
 )
 from config import (
     WEBUI_VERSION,
@@ -26,6 +27,7 @@ from config import (
 app = FastAPI()
 
 origins = ["*"]
+app.state.TOOLS = {}
 
 app.state.ENABLE_SIGNUP = ENABLE_SIGNUP
 app.state.JWT_EXPIRES_IN = "-1"
@@ -54,6 +56,7 @@ app.include_router(prompts.router, prefix="/prompts", tags=["prompts"])
 
 app.include_router(configs.router, prefix="/configs", tags=["configs"])
 app.include_router(utils.router, prefix="/utils", tags=["utils"])
+app.include_router(tools.router, prefix="/tools", tags=["tools"])
 
 
 @app.get("/")
