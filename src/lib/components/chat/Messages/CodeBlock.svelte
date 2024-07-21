@@ -232,14 +232,6 @@ __builtins__.input = input`);
 
 	const toggleExpand = async () => {
 		expanded = !expanded;
-		if (expanded) {
-			await executeHTML(savedCode);
-		} else {
-			if (sandpackClient) {
-				const files = await sandpackClient.getFiles();
-				savedCode = files['/index.html'];
-			}
-		}
 	};
 
 	$: if (lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html') {
@@ -332,9 +324,9 @@ __builtins__.input = input`);
 					>
 				</div>
 			</div>
-			{#if expanded}
+			<div style="display: {expanded ? 'block' : 'none'};">
 				<iframe bind:this={sandpackIframe} title="HTML Preview" class="w-full h-96 mt-4 bg-white" />
-			{/if}
+			</div>
 		</div>
 	{/if}
 </div>
