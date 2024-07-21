@@ -231,14 +231,15 @@ __builtins__.input = input`);
 	};
 
 	const toggleExpand = async () => {
-		expanded = !expanded;
-		if (expanded) {
+		if (!expanded) {
 			sandpackIframe = temIframe
 		} else {
 			if (sandpackIframe) {
-			 temIframe = sandpackIframe
+				temIframe = sandpackIframe
 			}
 		}
+		expanded = !expanded;
+
 	};
 
 	$: if (lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html') {
