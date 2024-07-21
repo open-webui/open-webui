@@ -290,7 +290,7 @@ __builtins__.input = input`);
 		</div>
 	</div>
 
-	<div style="display: {all_expanded ? 'flex' : 'none'};">
+	<div style="display: {all_expanded ? 'block' : 'none'};">
 		<pre
 			class=" hljs p-4 px-5 overflow-x-auto"
 			style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
