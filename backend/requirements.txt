@@ -54,7 +54,7 @@ validators==0.28.1
 psutil
 
 opencv-python-headless==4.10.0.84
-rapidocr-onnxruntime==1.3.22
+rapidocr-onnxruntime==1.3.24
 
 fpdf2==2.7.9
 rank-bm25==0.2.2
