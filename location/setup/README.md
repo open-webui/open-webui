@@ -1,5 +1,9 @@
 # Docker Setup
 
+Since Docker restarts local containers when your computer restarts, you may have 
+[http://localhost:3000](http://localhost:3000) running already if you've added to Docker previously. The port and ghcr.io source is visible under details within Docker.
+
+
 ## Edit our Open WebUI "projects" repo
 
 The "projects/location" folder is where we'll edit enhancements to the "src" folder.  
@@ -41,6 +45,8 @@ This allows us to minimize the storage use in modelearth.
 First [update your Docker, Node, Pip, Python and Conda](../../io/coders/python/)
 
 **Run to pull the "projects" Docker container into your Webroot:**
+<!-- ran in Documents/Webroot. Did not have 
+	a projects or projects-container folder beforehand. -->
 
 	docker pull ghcr.io/datascape/projects:main
 	docker create --name projects-container ghcr.io/datascape/projects:main
@@ -52,6 +58,8 @@ The above does the following:
 2.) Create a container called projects-container
 3.) Run the docker container
 4.) cd into the container
+
+<!-- No folder is there yet, and the prompt now says: /app/backend# -->
 
 5.) Copy the files from the container into your webroot. If you aleady have a projects folder in your webroot, rename it.
 The ~ in the command works for all machines types. On a PC you'll need to use powershell. 
@@ -131,14 +139,10 @@ Run the following command to log in to the GitHub Container Registry using your 
 	echo your_personal_access_token | docker login ghcr.io -u your_github_username --password-stdin
 
 
-[http://localhost:3000](http://localhost:3000) probably works before running because Docker starts on your computer's startup. 
-
 ### We built from modelearth/projects and pushed to datascape
 
 We built Docker locally from modelearth/projects. Run this in your local "projects" folder
 (The first command takes about 10 minutes for the build.)
-
-Alternatively, you can use "latest" instead of "main" in the first two commands if you have a newer version than the main one.
 
 	docker build -t modelearth/projects:main .
 	docker tag modelearth/projects:main ghcr.io/datascape/projects:main
@@ -147,6 +151,7 @@ Alternatively, you can use "latest" instead of "main" in the first two commands 
 	docker push ghcr.io/datascape/projects:main
 
 The command above will create the container image if it does not exist yet.
+Alternatively, you can use "latest" instead of "main" in the first two commands if you have a newer version than the main one.
 
 The container image then appears at: [https://github.com/users/datascape/packages/container/package/projects](https://github.com/users/datascape/packages/container/package/projects)
 
