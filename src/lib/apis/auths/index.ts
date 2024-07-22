@@ -7,7 +7,7 @@ export const ssoSignIn = async (params) => {
 		method: 'GET',
 	}).then(async (res) => {
 			if (!res.ok) throw await res.json();
-			console.info(res)
+			console.info(res, 'rrrr')
 			return res;
 	}).catch((err) => {
 		console.log(err);

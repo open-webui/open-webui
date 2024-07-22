@@ -18,12 +18,13 @@
 	let password = '';
 
 	const setSessionUser = async (sessionUser) => {
+		console.info(sessionUser, 'uuuuuuu')
 		if (sessionUser) {
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
 			localStorage.token = sessionUser.token;
 			await user.set(sessionUser);
-			goto('/');
+			goto('http://10.127.110.178:31032/');
 		}
 	};
 
@@ -60,9 +61,11 @@
 		const path = window.location.href;
 		const paramStr = path.split('?')[1]
 		const sessionUser = await ssoSignIn(paramStr).catch((error) => {
+			console.info("???????????")
 			toast.error(error)
 			return null
 		})
+		console.info(sessionUser, 'sssss')
 		await setSessionUser(sessionUser)
 		// const params = {}
 		// paramStr.split('&').forEach(str => {
@@ -73,13 +76,13 @@
 
 	onMount(async () => {
 		getUrlParams()
-		if ($user !== undefined) {
-			await goto('/');
-		}
-		loaded = true;
-		if ($config?.trusted_header_auth ?? false) {
-			await signInHandler();
-		}
+		// if ($user !== undefined) {
+		// 	await goto('/');
+		// }
+		// loaded = true;
+		// if ($config?.trusted_header_auth ?? false) {
+		// 	await signInHandler();
+		// }
 	});
 </script>
 
