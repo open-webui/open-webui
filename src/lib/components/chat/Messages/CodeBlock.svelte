@@ -325,7 +325,7 @@ __builtins__.input = input`);
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 			<div class="text-gray-500 text-white text-xs mb-1 flex justify-between items-center">
 				<button class="p-1" on:click={toggleExpand}>
-					{@html lang.toUpperCase() + 'Preview'}
+					{@html 'Preview'}
 				</button>
 				<div class="flex items-center">
 					<button
@@ -342,7 +342,7 @@ __builtins__.input = input`);
 			<div style="display: {expanded ? 'flex' : 'none'}; bg-white">
 				<iframe
 					bind:this={sandpackIframe}
-					title="{lang.toUpperCase()} Preview"
+					title="Preview"
 					class="w-full h-96 mt-4"
 				/>
 			</div>
