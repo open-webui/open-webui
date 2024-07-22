@@ -19,7 +19,7 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 - [Music for Data Science Visualizations](https://github.com/DreamStudioCode/music) - Alex, Ivy
 - [Innovations in Water Purification](/evaporation-kits/innovations/) - Hyper Desalination - Soham - Content prep for RAG - TO DO
 - [Sankey Industry eChart](/useeio.js/charts/echarts/sankey-nodeAlign-left.html) - eCharts uses a common echarts.min.js file which we'll load in [Feed Viewer](/feed/view). -TO DO<!-- Chenbohan -->
-- [Feed Player](../feed/intro.html) - Video and Images - Gary, Fanyi, Marco
+- [Feed Player](../feed/intro.html) - Video and Images
 - [Feed Viewer](../feed/view/#feed=nasa) - JSON, YAML, CSS, RSS - Loren and Gary ([address lookup](/feed/view/#feed=311)) 
 - [Python - Finalize our All the Places data by State and Zip](/places) - TO DO
 
@@ -83,11 +83,11 @@ Pre-processed data for county industry levels, based on employment, establishmen
 <!--- [Image Gallery (React)](/react-gallery/view/) - Anthony -->
 
 **React, Tabulator, Industry Timelines**
-- [React Team - Impact Side Navigation](/io/charts/inflow-outflow/#set=prosperity&indicators=VADD,JOBS) - Ziyao
-- [React Team - Mosaic column checkboxes](/io/charts) - Fanyi
+- [React Team - Impact Side Navigation](/io/charts/inflow-outflow/#set=prosperity&indicators=VADD,JOBS)
+- [React Team - Mosaic column checkboxes](/io/charts)
 - [React Team - Commodity Totals](/localsite/info/data/totals/) in [Jobs Reports](/localsite/info/#indicators=JOBS)
 - [Tabulator - Merge in industry year rows using Javascript (1-3)](/data-pipeline/timelines/tabulator/) - Rupesh<!--Vadlamudi-->
-- [Tabulator - Merge in titles using Javascript (4)](/data-pipeline/timelines/tabulator/) - Dinesh, Fanyi, Rupesh
+- [Tabulator - Merge in titles using Javascript (4)](/data-pipeline/timelines/tabulator/) - DONE <!--Dinesh, Fanyi, Rupesh-->
 - [Steps for SQLite in Browser](/data-pipeline/timelines/sqlite/phiresky/) - [Example (Runs SQL)](https://phiresky.github.io/blog/2021/hosting-sqlite-databases-on-github-pages/) - Aashish
 - [Impact Label Pipeline](/apps/impact) - Too optimize and change inputs
 
