@@ -1,9 +1,8 @@
 [Active Projects](../)
 # Location Projects for Open WebUI
 
-Use our [Docker Setup](setup) so you can send Pull Requests to our "projects" fork.  
+Use our [Install Steps](setup) and send Pull Requests for our "projects/location" folder.  
 You'll have our Open WebUI "projects" fork running at [http://localhost:3000](http://localhost:3000/).  
-Our Docker package resides at [https://github.com/modelearth/projects/pkgs/container/projects](https://github.com/modelearth/projects/pkgs/container/projects)
 
 TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) and share some cool findings during our meetup.
 
