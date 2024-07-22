@@ -194,7 +194,7 @@
 							<button
 								class=" bg-blue-900 hover:bg-blue-800 w-full rounded-full text-white font-semibold text-sm py-3 transition mt-4"
 								on:click={() => {
-								window.location.href = 'https://localhost/api/v1/auths/signin/sso'
+								window.location.href = '/api/v1/auths/signin/sso'
 							}}
 							>AD Login</button>
 							<div class=" mt-4 text-sm text-center">

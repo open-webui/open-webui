@@ -3,7 +3,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 export const ssoSignIn = async (params) => {
 	let error = null;
 
-	const res = await fetch(`https://localhost/api/v1/auths/signin/callback?${params}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signin/callback?${params}`, {
 		method: 'GET',
 	}).then(async (res) => {
 			if (!res.ok) throw await res.json();
