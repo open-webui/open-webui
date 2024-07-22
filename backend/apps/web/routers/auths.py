@@ -375,9 +375,9 @@ sso = MicrosoftSSO(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
     tenant=TENANT,
-    redirect_uri="https://localhost/api/v1/auths/signin/callback",
+    # redirect_uri="https://localhost/api/v1/auths/signin/callback",
     # redirect_uri="http://localhost:8080/api/v1/auths/signin/callback",
-    # redirect_uri="https://localhost/login",
+    redirect_uri="https://localhost/login",
     allow_insecure_http=True,
     scope=["User.Read", "Directory.Read.All", "User.ReadBasic.All"],
     # ["openid", "User.Read", "email"],
@@ -444,4 +444,4 @@ async def signin_callback(request: Request):
             }
     except Exception as e:
         print(e)
-        raise HTTPException(400, detail="")
+        raise HTTPException(500, detail=e)
