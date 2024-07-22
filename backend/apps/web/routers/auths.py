@@ -367,8 +367,8 @@ async def get_api_key(user=Depends(get_current_user)):
 # SignIn with Microsoft Entra ID - SSO
 ############################
 
-CLIENT_ID = "ffa8bad1-4e70-4514-8c2c-d1f6ddfdbd2e"
-CLIENT_SECRET = "89r8Q~AC8EMrvzimVaSNIBVwtGTz0zYVIz1I1bjL"
+CLIENT_ID = "2b0e50f6-6937-4a32-9501-94bf7357e883"
+CLIENT_SECRET = "3e38Q~beYBGdElt-x7Y.ueqsO2u_lGm3y-dSha2w"
 TENANT = "c93272d3-1b07-4b3d-a3b6-19b34a973915"
 
 sso = MicrosoftSSO(
@@ -415,6 +415,13 @@ async def signin_callback(request: Request):
                 print("singup")
                 user = Auths.authenticate_user_by_trusted_header(sso_user_email.lower())
                 print("authenticate_user_by_trusted_header")
+                role = (
+                    "admin"
+                    if Users.get_num_users() == 0
+                    else "user"
+                )
+                Users.update_user_role_by_id(user.id, role)
+                print("update_user_role_by_id")
             else:
                 print("update_user_by_id")
                 user = Users.update_user_by_id(
