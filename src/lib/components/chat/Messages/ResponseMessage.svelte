@@ -566,6 +566,11 @@
 											const metadata = citation.metadata?.[index];
 											const id = metadata?.source ?? 'N/A';
 											let source = citation?.source;
+
+											if (metadata?.name) {
+												source = { ...source, name: metadata.name };
+											}
+
 											// Check if ID looks like a URL
 											if (id.startsWith('http://') || id.startsWith('https://')) {
 												source = { name: id };

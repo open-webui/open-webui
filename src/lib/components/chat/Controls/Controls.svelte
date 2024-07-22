@@ -33,8 +33,8 @@
 			<div>
 				<div class="mb-1.5 font-medium">{$i18n.t('Files')}</div>
 
-				<div>
-					{#each chatFiles as file}
+				<div class="flex flex-col gap-1">
+					{#each chatFiles as file, fileIdx}
 						<FileItem
 							className="w-full"
 							url={`${file?.url}`}
@@ -43,7 +43,9 @@
 							dismissible={true}
 							on:dismiss={() => {
 								// Remove the file from the chatFiles array
-								chatFiles = chatFiles.filter((f) => f.id !== file.id);
+
+								chatFiles.splice(fileIdx, 1);
+								chatFiles = chatFiles;
 							}}
 						/>
 					{/each}
