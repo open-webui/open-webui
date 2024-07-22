@@ -61,15 +61,19 @@ The above does the following:
 
 <!-- No folder is there yet, and the prompt now says: /app/backend# -->
 
+IMPORTANT: Now open a new terminal window.
+
 5.) Copy the files from the container into your webroot. If you aleady have a projects folder in your webroot, rename it.
 The ~ in the command works for all machines types. On a PC you'll need to use powershell. 
 
 The first line will create the folders if they do not yet exist.
 
 	mkdir -p ~/Documents/Webroot/projects
-	docker cp projects-container:/app/backend "~/Documents/Webroot/projects"
+	docker cp projects-container:/app/backend "Documents/Webroot/projects"
 
-Docker set-up contributors: Dinesh B, Loren, Yifeng
+Note that we do not use \~/ in the command above since it already runs in your computer's [username] folder. 
+
+Docker set-up contributors: Dinesh B, Loren, Yifeng, Yuxin<!--user download-->
 
 ## Using git inside of docker
 
