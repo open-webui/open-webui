@@ -24,7 +24,7 @@
 			toast.success($i18n.t(`You're now logged in.`));
 			localStorage.token = sessionUser.token;
 			await user.set(sessionUser);
-			goto('http://10.127.110.178:31032/');
+			goto('/');
 		}
 	};
 

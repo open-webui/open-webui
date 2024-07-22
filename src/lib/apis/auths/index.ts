@@ -14,6 +14,7 @@ export const ssoSignIn = async (params) => {
 		error = err.detail;
 		return null;
 	});
+	return res
 }
 
 export const getSessionUser = async (token: string) => {
