@@ -28,7 +28,7 @@ math {
 	@apply rounded-lg;
 }
 
-ol > li {
+ol>li {
 	counter-increment: list-number;
 	display: block;
 	margin-bottom: 0;
@@ -36,7 +36,7 @@ ol > li {
 	min-height: 28px;
 }
 
-.prose ol > li::before {
+.prose ol>li::before {
 	content: counters(list-number, '.') '.';
 	padding-right: 0.5rem;
 	color: var(--tw-prose-counters);
@@ -81,4 +81,18 @@ select {
 
 .katex-mathml {
 	display: none;
+}
+
+:root {
+	.mdc-select--outlined .mdc-select__anchor {
+		height: 40px;
+	}
+
+	.mdc-text-field--outlined {
+		height: 40px;
+	}
+
+	.mdc-text-field--textarea {
+		height: auto !important;
+	}
 }

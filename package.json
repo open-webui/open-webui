@@ -18,6 +18,8 @@
 		"cy:open": "cypress open"
 	},
 	"devDependencies": {
+		"@smui/select": "^7.0.0",
+		"@smui/textfield": "^7.0.0",
 		"@sveltejs/adapter-auto": "^2.0.0",
 		"@sveltejs/adapter-static": "^2.0.3",
 		"@sveltejs/kit": "^1.30.0",
@@ -48,6 +50,7 @@
 		"@sveltejs/adapter-node": "^1.3.1",
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
+		"date-picker-svelte": "^2.13.0",
 		"dayjs": "^1.11.10",
 		"eventsource-parser": "^1.1.2",
 		"file-saver": "^2.0.5",
