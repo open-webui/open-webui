@@ -374,6 +374,7 @@ CLIENT_ID = "2b0e50f6-6937-4a32-9501-94bf7357e883"
 CLIENT_SECRET = "3e38Q~beYBGdElt-x7Y.ueqsO2u_lGm3y-dSha2w"
 TENANT = "c93272d3-1b07-4b3d-a3b6-19b34a973915"
 
+logging.info("Init MicrosoftSSO")
 sso = MicrosoftSSO(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
@@ -390,7 +391,7 @@ sso = MicrosoftSSO(
 @router.get("/signin/sso", response_model=SigninResponse)
 async def signin_with_sso():
     """Initialize auth and redirect"""
-    print("signin_with_sso")
+    logging.info("signin_with_sso")
     with sso:
         return await sso.get_login_redirect()
 
@@ -399,49 +400,42 @@ async def signin_with_sso():
 async def signin_callback(request: Request):
     """Verify login"""
     try:
-        print("signin_callback")
+        logging.info(f"Request query params: {request.headers}")
         sso_user = None
         with sso:
             sso_user = await sso.verify_and_process(request)
             sso_user_json_str = json.dumps(sso_user.__dict__)
-            print(sso_user_json_str)
+            logging.info(f"Tje user info of SSO is {sso_user_json_str}")
             sso_user_email = sso_user.email
             user = Users.get_user_by_email(sso_user_email.lower())
-            print("get_user_by_email")
+            logging.info(f"Got user info by email where email is {sso_user_email.lower()}. User info is {user}")
             if not user:
+                logging.info("User not found. Then going to signup.")
                 await signup(
                     request,
                     SignupForm(
                         email=sso_user_email, password=str(uuid.uuid4()), name=sso_user_email, profile_image_url="/user.png", extra_sso=sso_user_json_str
                     ),
                 )
-                print("singup")
+                logging.info("Signup done.")
                 user = Auths.authenticate_user_by_trusted_header(sso_user_email.lower())
-                print("authenticate_user_by_trusted_header")
                 role = (
                     "admin"
                     if Users.get_num_users() == 0
                     else "user"
                 )
                 user = Users.update_user_role_by_id(user.id, role)
-                print("update_user_role_by_id")
+                logging.info(f"Update user's role to {role}.")
             else:
-                print("update_user_by_id")
+                logging.info("User found. Then going to update user's extra_sso.")
                 user = Users.update_user_by_id(
                     user.id, {"extra_sso": sso_user_json_str}
                 )
 
-            print("create_token")
             token = create_token(
                 data={"id": user.id},
                 expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
             )
-            print(user)
-            # request.headers["Authorization"] = f"Bearer {token}"
-            print(request.headers)
-            # return RedirectResponse(url=request.url_for("/"), status_code=status.HTTP_303_SEE_OTHER)
-
-            print(Users.get_user_by_email(sso_user_email.lower()))
 
             return {
                 "token": token,
@@ -454,5 +448,5 @@ async def signin_callback(request: Request):
                 "extra_sso": user.extra_sso,
             }
     except Exception as e:
-        print(e)
-        raise HTTPException(500, detail=e)
+        logging.error(f"Error in signin_callback: {e}")
+        raise HTTPException(500, detail="Error in signin_callback")
