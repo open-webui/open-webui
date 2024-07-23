@@ -5,10 +5,13 @@ export const ssoSignIn = async (params) => {
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signin/callback?${params}`, {
 		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+		}
 	}).then(async (res) => {
 			if (!res.ok) throw await res.json();
-			console.info(res, 'rrrr')
-			return res;
+			console.info(res.json(), 'rrrr')
+			return res.json();
 	}).catch((err) => {
 		console.log(err);
 		error = err.detail;
