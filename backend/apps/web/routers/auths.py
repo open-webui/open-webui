@@ -423,7 +423,7 @@ async def signin_callback(request: Request):
                     if Users.get_num_users() == 0
                     else "user"
                 )
-                Users.update_user_role_by_id(user.id, role)
+                user = Users.update_user_role_by_id(user.id, role)
                 print("update_user_role_by_id")
             else:
                 print("update_user_by_id")
