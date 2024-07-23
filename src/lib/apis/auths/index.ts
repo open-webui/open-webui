@@ -5,17 +5,24 @@ export const ssoSignIn = async (params) => {
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signin/callback?${params}`, {
 		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+		}
 	}).then(async (res) => {
 			if (!res.ok) throw await res.json();
-			console.info(res, 'rrrr')
-			return res;
+			return res.json();
 	}).catch((err) => {
 		console.log(err);
-		error = err.detail;
+		error = err;
 		return null;
 	});
-	return res
-}
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
 
 export const getSessionUser = async (token: string) => {
 	let error = null;
