@@ -198,9 +198,10 @@
 							</div>
 							<button
 								class=" bg-[#2073B7] hover:bg-[#2073B7dd] w-full rounded-full text-white font-semibold text-sm py-3 transition mt-4 flex justify-center"
+								type="button"
 								on:click={() => {
-								window.location.href = '/api/v1/auths/signin/sso'
-							}}
+									window.location.href = '/api/v1/auths/signin/sso'
+								}}
 							>
 								<img src="/outlook.png" alt="outlook" class="w-[20px] mr-2" />
 								Outlook Account
