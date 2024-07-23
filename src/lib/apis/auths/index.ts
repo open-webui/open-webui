@@ -10,15 +10,19 @@ export const ssoSignIn = async (params) => {
 		}
 	}).then(async (res) => {
 			if (!res.ok) throw await res.json();
-			console.info(res.json(), 'rrrr')
 			return res.json();
 	}).catch((err) => {
 		console.log(err);
-		error = err.detail;
+		error = err;
 		return null;
 	});
-	return res
-}
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
 
 export const getSessionUser = async (token: string) => {
 	let error = null;

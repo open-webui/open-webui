@@ -20,7 +20,7 @@
 	const setSessionUser = async (sessionUser) => {
 		console.info(sessionUser, 'uuuuuuu')
 		if (sessionUser) {
-			console.log(sessionUser);
+			console.log("Setting session user", sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
 			localStorage.token = sessionUser.token;
 			await user.set(sessionUser);
@@ -61,17 +61,12 @@
 		const path = window.location.href;
 		const paramStr = path.split('?')[1]
 		const sessionUser = await ssoSignIn(paramStr).catch((error) => {
-			console.info("???????????")
+			console.info("Error when fetching token", error)
 			toast.error(error)
 			return null
 		})
 		console.info(sessionUser, 'sssss')
 		await setSessionUser(sessionUser)
-		// const params = {}
-		// paramStr.split('&').forEach(str => {
-		// 	const [key, val] = str.split('=')
-		// 	params[key] = val
-		// })
 	}
 
 	onMount(async () => {
