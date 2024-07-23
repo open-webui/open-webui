@@ -17,6 +17,7 @@
 	import { getModels } from '$lib/apis';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import WebParams from '$lib/components/documents/Settings/WebParams.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -42,6 +43,9 @@
 
 	let searchValue = '';
 	let ollamaVersion = null;
+
+	let pseudoSelectedIndex = 0;
+	let autoScrollTimeout;
 
 	$: filteredItems = items.filter(
 		(item) =>
@@ -239,10 +243,21 @@
 						placeholder={searchPlaceholder}
 						autocomplete="off"
 						on:keydown={(e) => {
-							if (e.code === 'Enter' && filteredItems.length > 0) {
-								value = filteredItems[0].value;
+							if (e.code === 'Enter') {
+								value = filteredItems[pseudoSelectedIndex].value;
 								show = false;
+								return; // dont need to scroll on selection
+							} else if (e.code === 'ArrowDown') {
+								pseudoSelectedIndex = Math.min(pseudoSelectedIndex + 1, filteredItems.length - 1);
+							} else if (e.code === 'ArrowUp') {
+								pseudoSelectedIndex = Math.max(pseudoSelectedIndex - 1, 0);
+							} else {
+								// if the user types something, reset to the top selection.
+								pseudoSelectedIndex = 0;
 							}
+
+							const item = document.querySelector(`[data-pseudo-selected="true"]`);
+							item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
 						}}
 					/>
 				</div>
@@ -255,11 +270,13 @@
 					<button
 						aria-label="model-item"
 						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
-						0
+						pseudoSelectedIndex
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"
+						data-pseudo-selected={index === pseudoSelectedIndex}
 						on:click={() => {
 							value = item.value;
+							pseudoSelectedIndex = index;
 
 							show = false;
 						}}
