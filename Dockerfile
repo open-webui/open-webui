@@ -17,7 +17,7 @@ ARG UID=0
 ARG GID=0
 
 ######## WebUI frontend ########
-FROM --platform=$BUILDPLATFORM node:21-alpine3.19 as build
+FROM --platform=linux/amd64 node:21-alpine3.19 as build
 ARG BUILD_HASH
 
 WORKDIR /app
@@ -45,11 +45,11 @@ ARG GID
 ENV ENV=prod \
     PORT=8080 \
     # pass build args to the build
-    USE_OLLAMA_DOCKER=${USE_OLLAMA} \
-    USE_CUDA_DOCKER=${USE_CUDA} \
-    USE_CUDA_DOCKER_VER=${USE_CUDA_VER} \
-    USE_EMBEDDING_MODEL_DOCKER=${USE_EMBEDDING_MODEL} \
-    USE_RERANKING_MODEL_DOCKER=${USE_RERANKING_MODEL}
+    USE_OLLAMA_DOCKER=false \
+    USE_CUDA_DOCKER=false \
+    USE_CUDA_DOCKER_VER=cu121 \
+    USE_EMBEDDING_MODEL_DOCKER=sentence-transformers/all-MiniLM-L6-v2 \
+    USE_RERANKING_MODEL_DOCKER=""
 
 ## Basis URL Config ##
 ENV OLLAMA_BASE_URL="/ollama" \
@@ -154,6 +154,6 @@ HEALTHCHECK CMD curl --silent --fail http://localhost:8080/health | jq -e '.stat
 USER $UID:$GID
 
 ARG BUILD_HASH
-ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
+ENV WEBUI_BUILD_VERSION=dev-build
 
 CMD [ "bash", "start.sh"]
