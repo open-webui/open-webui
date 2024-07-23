@@ -6,26 +6,35 @@ You can also use our [Docker Setup](docker), but it only provides the backend fi
 
 If you already have an "open-webui" Docker container, the server may already be running at [localhost:3000](http://localhost:3000)
 
-Start with the [Open WebUI Documentation](https://docs.openwebui.com/)
-
 
 ## Make sure you have Ollama installed
 
-You might need to increase your storage allocation in Docker
+<!--You might need to increase your storage allocation in Docker-->
 
 If Ollama is installed, you should see it here:
-
 [http://localhost:11434](http://localhost:11434)
 
 <!-- Also saw this in Settings > Conections:  http://ollama:11434 -->
 
-If you don't have Ollama installed yet, you can run the following in your local projects folder.  
+**If you don't have Ollama installed yet**
+Start with the [Open WebUI Documentation](https://docs.openwebui.com/)
+
 <!--(If you already have an "open-webui" container in Docker, delete or rename it.)-->
 
+<!--
+You can run the following in your local projects folder.  
+
 	docker compose up -d --build
+-->
 
 <!-- If you already have Ollama running in Docker,
-	the above command my exceed the avalable allocated memory. -->
+	the above command my exceed the avalable allocated memory. 
+
+Tried again after changind in Docker > Settings > Resources > Advanced
+CPU was already at 16
+Increased memory limit from 8GB to 24GB
+Increase Swap from 1GB to 3GB
+-->
 
 Otherwise, here are the steps [if you already have Ollama](https://docs.openwebui.com/)
 Or if you're retaining an [existing open-webui container](https://docs.openwebui.com/getting-started/)
@@ -35,13 +44,13 @@ Or if you're retaining an [existing open-webui container](https://docs.openwebui
 	docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
 -->
 
+## Build Locally
+
 Open your local build at [localhost:3000](http://localhost:3000)
 
 	npm run build
 
-
-
-## Build Locally - More detailed
+### More detailed
 
 NOT needed if you are running as a local Docker instance.  
 
@@ -99,8 +108,10 @@ Sample prompt: Create 8 categories that all news stories fall in, and calculate 
 
 [Open WebUI Documentation](https://docs.openwebui.com/)
 
-[Location Projects for Open WebUI](../)
 
+## To Explore
 
 [Hugging Face Transformers](https://huggingface.co/docs/transformers)
 Transformers support framework interoperability between PyTorch, TensorFlow, and JAX
+
+[Location Projects for Open WebUI](../)
