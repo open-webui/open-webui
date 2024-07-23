@@ -18,9 +18,7 @@
 	let password = '';
 
 	const setSessionUser = async (sessionUser) => {
-		console.info(sessionUser, 'uuuuuuu')
 		if (sessionUser) {
-			console.log("Setting session user", sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
 			localStorage.token = sessionUser.token;
 			await user.set(sessionUser);
@@ -65,7 +63,6 @@
 			toast.error(error)
 			return null
 		})
-		console.info(sessionUser, 'sssss')
 		await setSessionUser(sessionUser)
 	}
 
