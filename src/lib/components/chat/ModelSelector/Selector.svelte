@@ -45,7 +45,6 @@
 	let ollamaVersion = null;
 
 	let pseudoSelectedIndex = 0;
-	let autoScrollTimeout;
 
 	$: filteredItems = items.filter(
 		(item) =>
@@ -206,6 +205,7 @@
 	bind:open={show}
 	onOpenChange={async () => {
 		searchValue = '';
+		pseudoSelectedIndex = 0; // when the dropdown is closed, reset the selected index
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 	}}
 	closeFocus={false}
