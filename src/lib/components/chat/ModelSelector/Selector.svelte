@@ -282,8 +282,8 @@
 										<div class="flex items-center min-w-fit">
 											<img
 												src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
-												alt="Model ImageURl"
-												class="rounded-full w-5 h-5 flex items-center mr-2"
+												alt="Model"
+												class="rounded-full size-5 flex items-center mr-2"
 											/>
 											{item.label}
 										</div>
