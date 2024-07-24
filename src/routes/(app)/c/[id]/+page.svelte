@@ -427,11 +427,11 @@
 								console.log(data);
 								currentRequestId = data.id;
 							} else {
-								if (data.done == false) {
+								if (data.done == false || data.done_reason == 'stop') {
 									if (responseMessage.content == '' && data.message.content == '\n') {
 										continue;
 									} else {
-										responseMessage.content += data.message.content;
+										responseMessage.content += data.message.content || '';
 										messages = messages;
 									}
 								} else {
