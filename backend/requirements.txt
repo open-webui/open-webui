@@ -77,3 +77,6 @@ duckduckgo-search~=6.1.12
 docker~=7.1.0
 pytest~=8.2.2
 pytest-docker~=3.1.1
+
+## Self-Aware Document Monitoring
+watchdog
