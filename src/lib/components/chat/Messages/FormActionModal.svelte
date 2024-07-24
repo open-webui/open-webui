@@ -152,13 +152,13 @@
 				</div>
 				<div class="flex mt-4 justify-end">
 					<button
-						class="py-2 px-12 rounded-lg border border-black/opacity-3 text-black/opacity-60"
+						class="py-1 px-12 rounded-lg border border-black/opacity-3 text-black/opacity-60 text-sm"
 						on:click={() => {
 							show = false;
 						}}>Cancel</button
 					>
 					<button
-						class="py-2 px-12 ml-6 text-white bg-[#1595F4] rounded-lg"
+						class="py-1 px-12 ml-6 text-white bg-[#1595F4] rounded-lg text-sm"
 						on:click={() => {
 							handleConfirm();
 						}}>Confirm</button

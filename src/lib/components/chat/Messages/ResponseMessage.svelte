@@ -448,6 +448,13 @@
 												lang={token.lang}
 												code={revertSanitizedResponseContent(token.text)}
 											/>
+										{:else if token.raw.includes('annual_leave_form')}
+											<button
+												class="px-4 my-2 rounded-lg bg-[#ffffffaa] hover:bg-[#fff]"
+												on:click={() => {
+													showLeaveForm = true;
+												}}>Click here to apply for leave</button
+											>
 										{:else}
 											{@html marked.parse(token.raw, {
 												...defaults,
@@ -459,12 +466,7 @@
 									{/each}
 									<!-- {@html marked(message.content.replaceAll('\\', '\\\\'))} -->
 								{/if}
-								<button
-									class="px-4 my-2 rounded-lg border bg-white"
-									on:click={() => {
-										showLeaveForm = true;
-									}}>Show Form</button
-								>
+
 								{#if message.citations}
 									<div class="mt-1 mb-2 w-full flex gap-1 items-center flex-wrap">
 										{#each message.citations.reduce((acc, citation) => {

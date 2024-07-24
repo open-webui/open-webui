@@ -84,6 +84,8 @@ select {
 }
 
 :root {
+	--mdc-theme-primary: #1595F4;
+
 	.mdc-select--outlined .mdc-select__anchor {
 		height: 40px;
 	}
