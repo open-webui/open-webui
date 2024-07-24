@@ -44,7 +44,7 @@
 	let searchValue = '';
 	let ollamaVersion = null;
 
-	let pseudoSelectedIndex = 0;
+	let selectedModelIdx = 0;
 
 	$: filteredItems = items.filter(
 		(item) =>
@@ -205,7 +205,7 @@
 	bind:open={show}
 	onOpenChange={async () => {
 		searchValue = '';
-		pseudoSelectedIndex = 0; // when the dropdown is closed, reset the selected index
+		selectedModelIdx = 0;
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 	}}
 	closeFocus={false}
@@ -244,19 +244,19 @@
 						autocomplete="off"
 						on:keydown={(e) => {
 							if (e.code === 'Enter') {
-								value = filteredItems[pseudoSelectedIndex].value;
+								value = filteredItems[selectedModelIdx].value;
 								show = false;
 								return; // dont need to scroll on selection
 							} else if (e.code === 'ArrowDown') {
-								pseudoSelectedIndex = Math.min(pseudoSelectedIndex + 1, filteredItems.length - 1);
+								selectedModelIdx = Math.min(selectedModelIdx + 1, filteredItems.length - 1);
 							} else if (e.code === 'ArrowUp') {
-								pseudoSelectedIndex = Math.max(pseudoSelectedIndex - 1, 0);
+								selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
 							} else {
 								// if the user types something, reset to the top selection.
-								pseudoSelectedIndex = 0;
+								selectedModelIdx = 0;
 							}
 
-							const item = document.querySelector(`[data-pseudo-selected="true"]`);
+							const item = document.querySelector(`[data-arrow-selected="true"]`);
 							item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
 						}}
 					/>
@@ -270,13 +270,13 @@
 					<button
 						aria-label="model-item"
 						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
-						pseudoSelectedIndex
+						selectedModelIdx
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"
-						data-pseudo-selected={index === pseudoSelectedIndex}
+						data-arrow-selected={index === selectedModelIdx}
 						on:click={() => {
 							value = item.value;
-							pseudoSelectedIndex = index;
+							selectedModelIdx = index;
 
 							show = false;
 						}}
