@@ -89,6 +89,7 @@ from config import (
     WEBUI_URL,
     WEBUI_AUTH,
     ENV,
+    DOCS_DIR,
     VERSION,
     CHANGELOG,
     FRONTEND_BUILD_DIR,
@@ -122,6 +123,22 @@ from config import (
 
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES, TASKS
 from utils.webhook import post_webhook
+
+#added Self-Aware Document monitoring module
+from apps.webui.routers.sadm import (
+    router as sadm, 
+    read_state,
+    write_state,
+    start_monitoring_thread,
+    start_monitoring,
+    DocEventHandler,
+    MonitoringStatus,
+    stop_event,
+    STATE_FILE,
+    monitoring_thread
+)
+
+
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -174,9 +191,38 @@ def run_migrations():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    log.info("Running alembic migrations...")
     run_migrations()
-    yield
 
+    state = read_state()
+    log.debug(f"Current monitoring state: {state}")
+
+    if state == "enabled":
+        if not (monitoring_thread and monitoring_thread.is_alive()):
+            log.info("Starting Self-Aware Document Monitoring thread...")
+            start_monitoring_thread(DOCS_DIR, stop_event)
+        else:
+            log.info("Self-Aware Document Monitoring thread is already active.")
+    else:
+        log.info("Self-Aware Document Monitoring is disabled according to the state.")
+
+    try:
+        yield
+    finally:
+        log.info("Shutting down Self-Aware Document Monitoring...")
+        stop_event.set()  # Signal the monitoring thread to stop
+
+        if monitoring_thread and monitoring_thread.is_alive():
+            log.info("Joining Self-Aware Document Monitoring thread...")
+            monitoring_thread.join(timeout=10)  # Wait for the thread to finish within the timeout
+            if monitoring_thread.is_alive():
+                log.warning("Self-Aware Document Monitoring thread did not stop within the timeout period.")
+            else:
+                log.info("Self-Aware Document Monitoring thread stopped successfully.")
+        else:
+            log.info("No active Self-Aware Document Monitoring thread found to join.")
+
+        log.info("Self-Aware Document Monitoring stopped and application shutdown completed.")
 
 app = FastAPI(
     docs_url="/docs" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan

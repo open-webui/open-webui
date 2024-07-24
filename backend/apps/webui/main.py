@@ -17,6 +17,7 @@ from apps.webui.routers import (
     utils,
     files,
     functions,
+    sadm,  # sadm stands for Self-Aware Document monitoring
 )
 from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
@@ -113,6 +114,8 @@ app.include_router(tools.router, prefix="/tools", tags=["tools"])
 app.include_router(functions.router, prefix="/functions", tags=["functions"])
 
 app.include_router(utils.router, prefix="/utils", tags=["utils"])
+app.include_router(sadm.router, prefix="/sadm", tags=["sadm"]) #added sadm router to /api/v1 endpoint
+
 
 
 @app.get("/")
