@@ -43,7 +43,7 @@ sentence-transformers==3.0.1
 pypdf==4.2.0
 docx2txt==0.8
 python-pptx==0.6.23
-unstructured==0.14.10
+unstructured==0.15.0
 Markdown==3.6
 pypandoc==1.13
 pandas==2.2.2
