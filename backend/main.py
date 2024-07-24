@@ -1995,6 +1995,7 @@ async def get_app_config():
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
             "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
+            "enable_username_password_login": webui_app.state.config.ENABLE_USERNAME_PASSWORD_LOGIN,
             "enable_web_search": rag_app.state.config.ENABLE_RAG_WEB_SEARCH,
             "enable_image_generation": images_app.state.config.ENABLED,
             "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
