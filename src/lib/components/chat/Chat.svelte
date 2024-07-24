@@ -80,6 +80,7 @@
 	let eventConfirmationMessage = '';
 	let eventConfirmationInput = false;
 	let eventConfirmationInputPlaceholder = '';
+	let eventConfirmationInputValue = '';
 	let eventCallback = null;
 
 	let showModelSelector = true;
@@ -182,6 +183,7 @@
 				eventConfirmationTitle = data.title;
 				eventConfirmationMessage = data.message;
 				eventConfirmationInputPlaceholder = data.placeholder;
+				eventConfirmationInputValue = data?.value ?? '';
 			} else {
 				console.log('Unknown message type', data);
 			}
@@ -1489,6 +1491,7 @@
 	message={eventConfirmationMessage}
 	input={eventConfirmationInput}
 	inputPlaceholder={eventConfirmationInputPlaceholder}
+	inputValue={eventConfirmationInputValue}
 	on:confirm={(e) => {
 		if (e.detail) {
 			eventCallback(e.detail);
