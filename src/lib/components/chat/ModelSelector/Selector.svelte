@@ -17,7 +17,6 @@
 	import { getModels } from '$lib/apis';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import WebParams from '$lib/components/documents/Settings/WebParams.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
