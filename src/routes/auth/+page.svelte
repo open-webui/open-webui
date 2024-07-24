@@ -191,7 +191,21 @@
 							>
 								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
 							</button>
-
+							<div class="text-[#6A707C] text-sm w-full flex justify-center items-center mt-4">
+								<div class="h-[1px] flex-1 bg-[#E8ECF4]"></div>
+								<div class="mx-2">Or Sign in with</div>
+								<div class="h-[1px] flex-1 bg-[#E8ECF4]"></div>
+							</div>
+							<button
+								class=" bg-[#2073B7] hover:bg-[#2073B7dd] w-full rounded-full text-white font-semibold text-sm py-3 transition mt-4 flex justify-center"
+								type="button"
+								on:click={() => {
+									window.location.href = '/api/v1/auths/signin/sso'
+								}}
+							>
+								<img src="/outlook.png" alt="outlook" class="w-[20px] mr-2" />
+								Outlook Account
+							</button>
 							<div class=" mt-4 text-sm text-center">
 								{mode === 'signin'
 									? $i18n.t("Don't have an account?")

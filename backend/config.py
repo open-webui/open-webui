@@ -596,3 +596,13 @@ LITELLM_PROXY_HOST = os.getenv("LITELLM_PROXY_HOST", "127.0.0.1")
 ####################################
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+
+####################################
+# Azure AD Authentication
+####################################
+
+CLIENT_ID = os.environ.get("CLIENT_ID", "ffa8bad1-4e70-4514-8c2c-d1f6ddfdbd2e")
+CLIENT_SECRET = os.environ.get("CLIENT_SECRET", "89r8Q~AC8EMrvzimVaSNIBVwtGTz0zYVIz1I1bjL")
+TENANT = os.environ.get("TENANT", "c93272d3-1b07-4b3d-a3b6-19b34a973915")
+REDIRECT_URI = os.environ.get("REDIRECT_URI", "http://localhost:8080/api/v1/auths/signin/callback")
+log.info(f"Azure AD Authentication set. CLIENT_ID: \"{CLIENT_ID}\"; CLIENT_SECRET: \"******\"; TENANT: \"{TENANT}\"; REDIRECT_URI: \"{REDIRECT_URI}\"")
