@@ -145,6 +145,7 @@ type Config = {
 		auth: boolean;
 		auth_trusted_header: boolean;
 		enable_signup: boolean;
+		enable_username_password_login: boolean;
 		enable_web_search?: boolean;
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
