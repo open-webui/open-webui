@@ -19,6 +19,7 @@ class User(Model):
     email = CharField()
     role = CharField()
     profile_image_url = TextField()
+    extra_sso = TextField()
 
     last_active_at = BigIntegerField()
     updated_at = BigIntegerField()
@@ -36,6 +37,7 @@ class UserModel(BaseModel):
     email: str
     role: str = "pending"
     profile_image_url: str
+    extra_sso: str
 
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -59,6 +61,7 @@ class UserUpdateForm(BaseModel):
     email: str
     profile_image_url: str
     password: Optional[str] = None
+    extra_sso: Optional[str] = None
 
 
 class UsersTable:
@@ -72,6 +75,7 @@ class UsersTable:
         name: str,
         email: str,
         profile_image_url: str = "/user.png",
+        extra_sso: str = '',
         role: str = "pending",
     ) -> Optional[UserModel]:
         user = UserModel(
@@ -81,6 +85,7 @@ class UsersTable:
                 "email": email,
                 "role": role,
                 "profile_image_url": profile_image_url,
+                "extra_sso": extra_sso,
                 "last_active_at": int(time.time()),
                 "created_at": int(time.time()),
                 "updated_at": int(time.time()),
