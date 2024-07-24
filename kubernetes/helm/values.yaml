@@ -83,7 +83,7 @@ hrwebui:
   replicaCount: 1
   image:
     repository: ghcr.io/ciai-engineering/open-webui
-    tag: "git-c03c400"
+    tag: "git-53c7c57"
     pullPolicy: Always
   resources: {}
   imagePullSecrets: 
@@ -107,9 +107,8 @@ hrwebui:
     storageClass: ""
     selector: {}
     annotations: {}
-  nodeSelector: {
+  nodeSelector: 
     kubernetes.io/hostname: ciai-cpu-w05588
-    }
   tolerations: []
   service:
     type: NodePort
@@ -119,3 +118,10 @@ hrwebui:
     nodePort: 31031
     labels: {}
     loadBalancerClass: "" 
+  sso:
+    azure:
+      enabled: true
+      clientId: "2b0e50f6-6937-4a32-9501-94bf7357e883"
+      clientSecret: "3e38Q~beYBGdElt-x7Y.ueqsO2u_lGm3y-dSha2w"
+      tenant: "c93272d3-1b07-4b3d-a3b6-19b34a973915"
+      redirectUri: "https://hr.ciai-mbzuai.ac.ae/login"

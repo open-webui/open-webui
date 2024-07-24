@@ -47,6 +47,32 @@ spec:
           value: http://192.168.100.14:31774
           {{- end}}
           # value: {{ include "ollama.url" . | quote }}
+        # SSO Configuration
+        - name: CLIENT_ID
+          {{- if .Values.sso.enabled.enabled}}
+          value: {{ .Values.sso.enabled.clientId}}
+          {{- else}}
+          value: ffa8bad1-4e70-4514-8c2c-d1f6ddfdbd2e
+          {{- end}}
+        - name: CLIENT_SECRET
+          {{- if .Values.sso.enabled.enabled}}
+          value: {{ .Values.sso.enabled.clientSecret}}
+          {{- else}}
+          value: 89r8Q~AC8EMrvzimVaSNIBVwtGTz0zYVIz1I1bjL
+          {{- end}}
+        - name: TENANT
+          {{- if .Values.sso.enabled.enabled}}
+          value: {{ .Values.sso.enabled.tenant}}
+          {{- else}}
+          value: c93272d3-1b07-4b3d-a3b6-19b34a973915
+          {{- end}}
+        - name: REDIRECT_URI
+          {{- if .Values.sso.enabled.enabled}}
+          value: {{ .Values.sso.enabled.redirectUri}}
+          {{- else}}
+          value: http://localhost:8080/api/v1/auths/signin/callback
+          {{- end}}
+        # SSO Configuration
         tty: true
       imagePullSecrets:
       - name: {{.Values.hrwebui.imagePullSecrets.name}}

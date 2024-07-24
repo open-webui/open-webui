@@ -36,7 +36,13 @@ from utils.utils import (
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from config import WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+from config import (
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
+    CLIENT_ID,
+    CLIENT_SECRET,
+    TENANT,
+    REDIRECT_URI,
+)
 
 router = APIRouter()
 
@@ -370,22 +376,14 @@ async def get_api_key(user=Depends(get_current_user)):
 # SignIn with Microsoft Entra ID - SSO
 ############################
 
-CLIENT_ID = "2b0e50f6-6937-4a32-9501-94bf7357e883"
-CLIENT_SECRET = "3e38Q~beYBGdElt-x7Y.ueqsO2u_lGm3y-dSha2w"
-TENANT = "c93272d3-1b07-4b3d-a3b6-19b34a973915"
-
 logging.info("Init MicrosoftSSO")
 sso = MicrosoftSSO(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
     tenant=TENANT,
-    # redirect_uri="https://localhost/api/v1/auths/signin/callback",
-    # redirect_uri="http://localhost:8080/api/v1/auths/signin/callback",
-    # redirect_uri="https://localhost/login",
-    redirect_uri="https://hr.ciai-mbzuai.ac.ae/login",
+    redirect_uri=REDIRECT_URI,
     allow_insecure_http=True,
     scope=["User.Read", "Directory.Read.All", "User.ReadBasic.All"],
-    # ["openid", "User.Read", "email"],
 )
 
 @router.get("/signin/sso", response_model=SigninResponse)

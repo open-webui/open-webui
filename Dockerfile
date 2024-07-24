@@ -58,6 +58,11 @@ ENV OPENAI_API_KEY="" \
 # to avoid repetitive startup connections
 ENV LITELLM_LOCAL_MODEL_COST_MAP="True"
 
+# Use to login with Microsoft Azure Application with for the SSO feature
+ENV CLIENT_ID="" \
+    CLIENT_SECRET="" \
+    TENANT="" \
+    REDIRECT_URI=""
 
 #### Other models #########################################################
 ## whisper TTS model settings ##
