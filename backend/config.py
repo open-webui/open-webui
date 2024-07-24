@@ -231,6 +231,13 @@ Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
 
 
 ####################################
+# Tools DIR
+####################################
+
+TOOLS_DIR = os.getenv("TOOLS_DIR", f"{DATA_DIR}/tools")
+Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
+
+####################################
 # LITELLM_CONFIG
 ####################################
 
@@ -606,3 +613,41 @@ CLIENT_SECRET = os.environ.get("CLIENT_SECRET", "89r8Q~AC8EMrvzimVaSNIBVwtGTz0zY
 TENANT = os.environ.get("TENANT", "c93272d3-1b07-4b3d-a3b6-19b34a973915")
 REDIRECT_URI = os.environ.get("REDIRECT_URI", "http://localhost:8080/api/v1/auths/signin/callback")
 log.info(f"Azure AD Authentication set. CLIENT_ID: \"{CLIENT_ID}\"; CLIENT_SECRET: \"******\"; TENANT: \"{TENANT}\"; REDIRECT_URI: \"{REDIRECT_URI}\"")
+
+####################################
+# TOOLS
+####################################
+
+
+TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = os.environ.get(
+    "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
+    """Tools: {{TOOLS}}
+If a function tool doesn't match the query, return an empty string. Else, pick a function tool, fill in the parameters from the function tool's schema, and return it in the format { "name": \"functionName\", "parameters": { "key": "value" } }. Only pick a function if the user asks.  Only return the object. Do not return any other text.""",
+)
+
+INITIAL_TOOLKITS = os.environ.get(
+    "INITIAL_TOOLKITS",
+    json.dumps({
+        "id": "annual_leave_toolkit",
+        "name": "annual leave toolkit",
+        "meta": {"description": "annual leave toolkit"},
+        "content": (
+            "import os\n"
+            "import requests\n"
+            "from datetime import datetime\n\n\n"
+            "class Tools:\n"
+            "    def __init__(self):\n"
+            "        pass\n\n"
+            "    def display_annual_leave_form(self, user_type):\n"
+            "        \"\"\"\n"
+            "        Displays the URL for submitting an annual leave form. Use this function **only when the user explicitly asks** for submitting, applying for, or requesting an annual leave form. The query must clearly indicate the user's intent to take action regarding annual leave. Avoid using this function for general inquiries or questions about annual leave policies.\n"
+            "        \"\"\"\n"
+            "        if user_type == \"contractual\":\n"
+            "            return \"annual_leave_form=True\"\n"
+            "        else:\n"
+            "            return \"The annual leave form URL is : www.annual-leave-form.com\"\n"
+        )
+    })
+)
+
+INITIAL_TOOLKITS = json.loads(INITIAL_TOOLKITS)
