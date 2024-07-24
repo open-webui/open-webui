@@ -615,3 +615,30 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = os.environ.get(
     """Tools: {{TOOLS}}
 If a function tool doesn't match the query, return an empty string. Else, pick a function tool, fill in the parameters from the function tool's schema, and return it in the format { "name": \"functionName\", "parameters": { "key": "value" } }. Only pick a function if the user asks.  Only return the object. Do not return any other text.""",
 )
+
+INITIAL_TOOLKITS = os.environ.get(
+    "INITIAL_TOOLKITS",
+    json.dumps({
+        "id": "annual_leave_toolkit",
+        "name": "annual leave toolkit",
+        "meta": {"description": "annual leave toolkit"},
+        "content": (
+            "import os\n"
+            "import requests\n"
+            "from datetime import datetime\n\n\n"
+            "class Tools:\n"
+            "    def __init__(self):\n"
+            "        pass\n\n"
+            "    def display_annual_leave_form(self, user_type):\n"
+            "        \"\"\"\n"
+            "        Displays the URL for submitting an annual leave form. Use this function **only when the user explicitly asks** for submitting, applying for, or requesting an annual leave form. The query must clearly indicate the user's intent to take action regarding annual leave. Avoid using this function for general inquiries or questions about annual leave policies.\n"
+            "        \"\"\"\n"
+            "        if user_type == \"contractual\":\n"
+            "            return \"annual_leave_form=True\"\n"
+            "        else:\n"
+            "            return \"The annual leave form URL is : www.annual-leave-form.com\"\n"
+        )
+    })
+)
+
+INITIAL_TOOLKITS = json.loads(INITIAL_TOOLKITS)

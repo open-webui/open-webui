@@ -14,6 +14,7 @@ from fastapi import HTTPException
 from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.testclient import TestClient
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import StreamingResponse
@@ -72,7 +73,8 @@ from config import (
     WEBHOOK_URL,
     ENABLE_ADMIN_EXPORT,
     MAX_CITATION_DISTANCE,
-    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
+    TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+    INITIAL_TOOLKITS
 )
 from constants import ERROR_MESSAGES
 
@@ -116,6 +118,36 @@ app.state.WEBHOOK_URL = WEBHOOK_URL
 
 origins = ["*"]
 
+async def initialize_toolkits():
+    toolkits_data = [INITIAL_TOOLKITS]  # List of toolkits
+
+    # Fetch existing toolkits
+    existing_toolkits = Tools.get_tools()
+    existing_tool_ids = {toolkit.id for toolkit in existing_toolkits}
+
+    client = TestClient(app)  # Use TestClient to make requests
+
+    for data in toolkits_data:
+        toolkit_id = data["id"].lower()
+
+        # Check if toolkit already exists
+        if toolkit_id not in existing_tool_ids:
+            # Prepare form data for toolkit creation
+            form_data = {
+                "id": toolkit_id,
+                "name": data["name"],
+                "meta": data["meta"],
+                "content": data["content"]
+            }
+
+            # Call the create_new_toolkit endpoint
+            try:
+                response = client.post("/api/v1/tools/create", json=form_data)
+                log.info(f"Toolkit {toolkit_id} created successfully.")
+            except Exception as e:
+                log.error(f"An error occurred while creating toolkit {toolkit_id}: {e}")
+        else:
+            log.info(f"{toolkit_id} toolkit already exists.")
 
 async def get_function_call_response(prompt, tool_id, template, task_model_id, user):
     tool = Tools.get_tool_by_id(tool_id)
@@ -149,7 +181,6 @@ async def get_function_call_response(prompt, tool_id, template, task_model_id, u
         # Parse the function response
         if content is not None:
             result = json.loads(content)
-            print(result)
 
             # Call the function
             if "name" in result:
@@ -162,6 +193,10 @@ async def get_function_call_response(prompt, tool_id, template, task_model_id, u
                 function = getattr(toolkit_module, result["name"])
                 function_result = None
                 try:
+                    if result["name"] == 'display_annual_leave_form' or "user_type" in result["parameters"]:
+                        result["parameters"] = {}
+                        result["parameters"]["user_type"] = 'contractual'
+                        log.info(f'final resuls: {result}')
                     function_result = function(**result["parameters"])
                 except Exception as e:
                     print(e)
@@ -179,7 +214,7 @@ async def get_function_call_response(prompt, tool_id, template, task_model_id, u
                     }
                     return response
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error from the function call response: {e}")
 
     return None
 
@@ -343,6 +378,9 @@ async def check_url(request: Request, call_next):
 async def on_startup():
     if ENABLE_LITELLM:
         asyncio.create_task(start_litellm_background())
+    # Initialize toolkits
+    await initialize_toolkits()
+
 
 
 app.mount("/api/v1", webui_app)
