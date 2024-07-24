@@ -279,7 +279,14 @@
 							<div class="flex items-center gap-2">
 								<div class="flex items-center min-w-fit">
 									<div class="line-clamp-1">
-										{item.label}
+										<div class="flex items-center min-w-fit">
+											<img
+												src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+												alt="Model ImageURl"
+												class="rounded-full w-5 h-5 flex items-center mr-2"
+											/>
+											{item.label}
+										</div>
 									</div>
 									{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
 										<div class="flex ml-1 items-center translate-y-[0.5px]">
