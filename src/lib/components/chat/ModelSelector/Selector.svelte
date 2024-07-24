@@ -243,7 +243,7 @@
 						placeholder={searchPlaceholder}
 						autocomplete="off"
 						on:keydown={(e) => {
-							if (e.code === 'Enter') {
+							if (e.code === 'Enter' && filteredItems.length > 0) {
 								value = filteredItems[selectedModelIdx].value;
 								show = false;
 								return; // dont need to scroll on selection
