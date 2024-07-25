@@ -43,6 +43,8 @@
 	let searchValue = '';
 	let ollamaVersion = null;
 
+	let selectedModelIdx = 0;
+
 	$: filteredItems = items.filter(
 		(item) =>
 			(searchValue
@@ -202,6 +204,7 @@
 	bind:open={show}
 	onOpenChange={async () => {
 		searchValue = '';
+		selectedModelIdx = 0;
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 	}}
 	closeFocus={false}
@@ -240,9 +243,20 @@
 						autocomplete="off"
 						on:keydown={(e) => {
 							if (e.code === 'Enter' && filteredItems.length > 0) {
-								value = filteredItems[0].value;
+								value = filteredItems[selectedModelIdx].value;
 								show = false;
+								return; // dont need to scroll on selection
+							} else if (e.code === 'ArrowDown') {
+								selectedModelIdx = Math.min(selectedModelIdx + 1, filteredItems.length - 1);
+							} else if (e.code === 'ArrowUp') {
+								selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
+							} else {
+								// if the user types something, reset to the top selection.
+								selectedModelIdx = 0;
 							}
+
+							const item = document.querySelector(`[data-arrow-selected="true"]`);
+							item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
 						}}
 					/>
 				</div>
@@ -255,11 +269,13 @@
 					<button
 						aria-label="model-item"
 						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
-						0
+						selectedModelIdx
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"
+						data-arrow-selected={index === selectedModelIdx}
 						on:click={() => {
 							value = item.value;
+							selectedModelIdx = index;
 
 							show = false;
 						}}
