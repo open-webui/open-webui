@@ -33,7 +33,7 @@
 		[key: string]: any;
 	} = [];
 
-	export let className = 'w-[30rem]';
+	export let className = 'w-[32rem]';
 
 	let show = false;
 
