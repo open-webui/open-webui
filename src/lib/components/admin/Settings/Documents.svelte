@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getDocs, sadmToggleAPISend, sadmStatusApiSend } from '$lib/apis/documents';
+	import { getDocs, sadmToggleAPISend, sadmStatusAPISend } from '$lib/apis/documents';
 	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
 	import {
 		getQuerySettings,
@@ -167,7 +167,7 @@
 		}
 	};
 
-		const submitHandler = async () => {
+	const submitHandler = async () => {
 		embeddingModelUpdateHandler();
 
 		if (querySettings.hybrid) {
@@ -225,7 +225,7 @@
 	// Function to update monitoring status
 	const updateMonitoringStatus = async () => {
 		try {
-			const status = await sadmStatusApiSend(localStorage.token);
+			const status = await sadmStatusAPISend(localStorage.token);
 			isMonitoringOn = (status === 'running');
 			sadmStatus.sadmCondition = isMonitoringOn;
 			savesadmStatusinfo(); // Save the status to local storage
@@ -235,10 +235,10 @@
 		}
 	};
 
-	const toggleAutoDocsMonCho = async () => {
+	const sadmToggle = async () => {
 		sadmStatus.sadmCondition = !sadmStatus.sadmCondition;
-		const enableMessage = $i18n.t('Self-Aware Document Monitoring has been enabled and is now Active');
-		const disableMessage = $i18n.t('Self-Aware Document Monitoring has been been disabled and is now inactive');
+		const SADMenableMessage = $i18n.t('Self-Aware Document Monitoring has been enabled and is now Active');
+		const SADMdisableMessage = $i18n.t('Self-Aware Document Monitoring has been been disabled and is now inactive');
 		
 		try {
 			await sadmToggleAPISend(localStorage.token, sadmStatus.sadmCondition);
@@ -246,11 +246,11 @@
 			
 			// Show appropriate message based on the new state
 			if (sadmStatus.sadmCondition) {
-				toast.success(enableMessage, {
+				toast.success(SADMenableMessage, {
 					duration: 1000 * 10 // Show for 10 seconds
 				});
 			} else {
-				toast.error(disableMessage, {
+				toast.error(SADMdisableMessage, {
 					duration: 1000 * 10 // Show for 10 seconds
 				});
 			}
@@ -264,7 +264,7 @@
 		localStorage.setItem('sadmStatusinfo', JSON.stringify(sadmStatus.sadmCondition));
 	};
 
-	const loadChoice = () => {
+	const loadSADMChoice = () => {
 		const savedChoice = localStorage.getItem('sadmStatusinfo');
 		if (savedChoice !== null) {
 			sadmStatus.sadmCondition = JSON.parse(savedChoice);
@@ -292,7 +292,7 @@
     }
 
     // Load choice from local storage
-    loadChoice();
+    loadSADMChoice();
 
     // Update monitoring status
     await updateMonitoringStatus();
@@ -397,7 +397,7 @@
 			
 				<button
 					class="p-1 px-3 text-xs flex rounded transition"
-					on:click={toggleAutoDocsMonCho}
+					on:click={sadmToggle}
 					type="button"
 				>
 					{#if sadmStatus.sadmCondition === true}

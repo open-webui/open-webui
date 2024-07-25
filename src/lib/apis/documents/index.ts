@@ -268,7 +268,7 @@ export async function sadmToggleAPISend(token: string, status: boolean) {
 }
 
 // Function to fetch the current status of the Self-Aware Document Monitoring
-export async function sadmStatusApiSend(token: string): Promise<string> {
+export async function sadmStatusAPISend(token: string): Promise<string> {
     const STATUS_API_URL = `${WEBUI_API_BASE_URL}/sadm/status`;
     try {
         const response = await fetch(STATUS_API_URL, {
