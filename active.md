@@ -9,7 +9,6 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 
 **Timely Projects** - To choose from today
 
-- [View DuckDB from Javascript](/OpenFootprint/prep/sql/duckdb/)
 - [Webhook to create Word Doc from Google Form](https://chatgpt.com/share/4daa1c9e-31e2-42f5-bdcf-c9e1e369391c) - for [our New Member Signup](/community/members/)
 - [Python to pull Harmonized Code (HS) lookups into Supabase](/OpenFootprint/)
 - [Activate Ollama on a different server](https://docs.openwebui.com/) for use with our [Docker Setup](/projects/location/setup/docker/)
@@ -22,6 +21,7 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 - [Javascript Timelines from Google Data Commons API](/data-pipeline/timelines/earthscape/datacommons.html) - Mehul
 - [International Trade Flow SQL Data Prep](/useeio.js/footprint) - Sahil, Himanshu, Song
 - [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab - Song+
+- [View DuckDB from Javascript](/OpenFootprint/prep/sql/duckdb/) - Gary
 - [Food Nutrition Labels](/data-commons/docs/food) - Shali and Wenwei (Stella)
 - [AI Requests Visualization](/requests/) - for Storyboards, Meal Planning and Project Visualization - TO DO
 - [Music for Data Science Visualizations](https://github.com/DreamStudioCode/music) - Alex, Ivy
