@@ -135,6 +135,7 @@ def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
         email = pw.CharField(max_length=255)
         role = pw.CharField(max_length=255)
         profile_image_url = pw.CharField(max_length=255)
+        extra_sso = pw.CharField(max_length=2550)
         timestamp = pw.BigIntegerField()
 
         class Meta:
@@ -228,6 +229,7 @@ def migrate_external(migrator: Migrator, database: pw.Database, *, fake=False):
         email = pw.CharField(max_length=255)
         role = pw.CharField(max_length=255)
         profile_image_url = pw.TextField()
+        extra_sso = pw.CharField(max_length=2550)
         timestamp = pw.BigIntegerField()
 
         class Meta:

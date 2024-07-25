@@ -2,12 +2,15 @@ import logging
 
 from fastapi import Request, UploadFile, File
 from fastapi import Depends, HTTPException, status
+from fastapi_sso.sso.microsoft import MicrosoftSSO
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 import re
 import uuid
 import csv
+import json
+from fastapi.responses import RedirectResponse
 
 
 from apps.web.models.auths import (
@@ -33,7 +36,13 @@ from utils.utils import (
 from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from config import WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+from config import (
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
+    CLIENT_ID,
+    CLIENT_SECRET,
+    TENANT,
+    REDIRECT_URI,
+)
 
 router = APIRouter()
 
@@ -50,6 +59,7 @@ async def get_session_user(user=Depends(get_current_user)):
         "name": user.name,
         "role": user.role,
         "profile_image_url": user.profile_image_url,
+        "extra_sso": user.extra_sso,
     }
 
 
@@ -135,6 +145,7 @@ async def signin(request: Request, form_data: SigninForm):
             "name": user.name,
             "role": user.role,
             "profile_image_url": user.profile_image_url,
+            "extra_sso": "",
         }
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -172,6 +183,7 @@ async def signup(request: Request, form_data: SignupForm):
             hashed,
             form_data.name,
             form_data.profile_image_url,
+            form_data.extra_sso,
             role,
         )
 
@@ -201,6 +213,7 @@ async def signup(request: Request, form_data: SignupForm):
                 "name": user.name,
                 "role": user.role,
                 "profile_image_url": user.profile_image_url,
+                "extra_sso": "",
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
@@ -246,6 +259,7 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
                 "name": user.name,
                 "role": user.role,
                 "profile_image_url": user.profile_image_url,
+                "extra_sso": "",
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
@@ -357,3 +371,80 @@ async def get_api_key(user=Depends(get_current_user)):
         }
     else:
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+############################
+# SignIn with Microsoft Entra ID - SSO
+############################
+
+logging.info("Init MicrosoftSSO")
+sso = MicrosoftSSO(
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    tenant=TENANT,
+    redirect_uri=REDIRECT_URI,
+    allow_insecure_http=True,
+    scope=["User.Read", "Directory.Read.All", "User.ReadBasic.All"],
+)
+
+@router.get("/signin/sso", response_model=SigninResponse)
+async def signin_with_sso():
+    """Initialize auth and redirect"""
+    logging.info("signin_with_sso")
+    with sso:
+        return await sso.get_login_redirect()
+
+
+@router.get("/signin/callback", response_model=SigninResponse)
+async def signin_callback(request: Request):
+    """Verify login"""
+    try:
+        logging.info(f"Request query params: {request.headers}")
+        sso_user = None
+        with sso:
+            sso_user = await sso.verify_and_process(request)
+            sso_user_json_str = json.dumps(sso_user.__dict__)
+            logging.info(f"Tje user info of SSO is {sso_user_json_str}")
+            sso_user_email = sso_user.email
+            user = Users.get_user_by_email(sso_user_email.lower())
+            logging.info(f"Got user info by email where email is {sso_user_email.lower()}. User info is {user}")
+            if not user:
+                logging.info("User not found. Then going to signup.")
+                await signup(
+                    request,
+                    SignupForm(
+                        email=sso_user_email, password=str(uuid.uuid4()), name=sso_user_email, profile_image_url="/user.png", extra_sso=sso_user_json_str
+                    ),
+                )
+                logging.info("Signup done.")
+                user = Auths.authenticate_user_by_trusted_header(sso_user_email.lower())
+                role = (
+                    "admin"
+                    if Users.get_num_users() == 0
+                    else "user"
+                )
+                user = Users.update_user_role_by_id(user.id, role)
+                logging.info(f"Update user's role to {role}.")
+            else:
+                logging.info("User found. Then going to update user's extra_sso.")
+                user = Users.update_user_by_id(
+                    user.id, {"extra_sso": sso_user_json_str}
+                )
+
+            token = create_token(
+                data={"id": user.id},
+                expires_delta=parse_duration(request.app.state.JWT_EXPIRES_IN),
+            )
+
+            return {
+                "token": token,
+                "token_type": "Bearer",
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "role": user.role,
+                "profile_image_url": user.profile_image_url,
+                "extra_sso": user.extra_sso,
+            }
+    except Exception as e:
+        logging.error(f"Error in signin_callback: {e}")
+        raise HTTPException(500, detail="Error in signin_callback")
