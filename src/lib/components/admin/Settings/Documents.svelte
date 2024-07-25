@@ -272,31 +272,31 @@
 	};
 
 	onMount(async () => {
-    // Fetch and set the embedding and reranking configuration
-    await setEmbeddingConfig();
-    await setRerankingConfig();
+		// Fetch and set the embedding and reranking configuration
+		await setEmbeddingConfig();
+		await setRerankingConfig();
 
-    // Fetch query settings
-    querySettings = await getQuerySettings(localStorage.token);
+		// Fetch query settings
+		querySettings = await getQuerySettings(localStorage.token);
 
-    // Fetch RAG configuration
-    const res = await getRAGConfig(localStorage.token);
+		// Fetch RAG configuration
+		const res = await getRAGConfig(localStorage.token);
 
-    if (res) {
-        pdfExtractImages = res.pdf_extract_images;
-        chunkSize = res.chunk.chunk_size;
-        chunkOverlap = res.chunk.chunk_overlap;
-        contentExtractionEngine = res.content_extraction.engine;
-        tikaServerUrl = res.content_extraction.tika_server_url;
-        showTikaServerUrl = contentExtractionEngine === 'tika';
-    }
+		if (res) {
+			pdfExtractImages = res.pdf_extract_images;
+			chunkSize = res.chunk.chunk_size;
+			chunkOverlap = res.chunk.chunk_overlap;
+			contentExtractionEngine = res.content_extraction.engine;
+			tikaServerUrl = res.content_extraction.tika_server_url;
+			showTikaServerUrl = contentExtractionEngine === 'tika';
+		}
 
-    // Load choice from local storage
-    loadSADMChoice();
+		// Load choice from local storage
+		loadSADMChoice();
 
-    // Update monitoring status
-    await updateMonitoringStatus();
-});
+		// Update monitoring status
+		await updateMonitoringStatus();
+	});
 </script>
 
 <ResetUploadDirConfirmDialog
