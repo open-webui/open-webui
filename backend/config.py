@@ -411,7 +411,7 @@ MICROSOFT_CLIENT_ID = PersistentConfig(
     os.environ.get("MICROSOFT_CLIENT_ID", ""),
 )
 
-MICROSOFT_CLIENT_SECRET = PersistentConfig(
+MICROSOFT_CLIENT_SECRET = SecretConfig(
     "MICROSOFT_CLIENT_SECRET",
     "oauth.microsoft.client_secret",
     os.environ.get("MICROSOFT_CLIENT_SECRET", ""),
@@ -435,7 +435,7 @@ OAUTH_CLIENT_ID = PersistentConfig(
     os.environ.get("OAUTH_CLIENT_ID", ""),
 )
 
-OAUTH_CLIENT_SECRET = PersistentConfig(
+OAUTH_CLIENT_SECRET = SecretConfig(
     "OAUTH_CLIENT_SECRET",
     "oauth.oidc.client_secret",
     os.environ.get("OAUTH_CLIENT_SECRET", ""),
