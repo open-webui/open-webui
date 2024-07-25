@@ -56,6 +56,17 @@ monitoring_thread = None
 # File to persist monitoring state
 STATE_FILE = ".monitoring_state"
 
+# class for dummy userid
+class DummyUserIDClass:
+    def __init__(self, id: str):
+        self.id = id
+
+# Dummy user ID
+dummy_userid = '98df4ebb-1f64-487b-8705-9835acf0b407'
+
+# Dummy user ID but with the id attribute for scan_docs_dir in the main script
+DummyUserIDForMainScript = DummyUserIDClass(id=dummy_userid)
+
 def read_state():
     """Read monitoring state from file."""
     if not os.path.exists(STATE_FILE):
@@ -125,8 +136,6 @@ class DocEventHandler(FileSystemEventHandler):
 
             log.debug(f"Transformed file name: '{new_file_name}'")
             log.debug(f"Generated collection name: '{collection_name}'")
-
-            dummy_userid = '98df4ebb-1f64-487b-8705-9835acf0b407'
 
             try:
                 if Documents.get_doc_by_name(new_file_name):
@@ -222,13 +231,13 @@ def enable_monitoring_route(user=Depends(get_admin_user)):
     try:
         write_state("enabled")
         
-        log.info(f"Scanning {DOCS_DIR} for new Documents")
+        log.info("Scanning for new Documents...")
 
         if DOCS_DIR:
             log.debug(f"Starting scan of directory: {DOCS_DIR}")
             try:
                 scan_docs_dir(user=user)
-                log.debug("scan_docs_dir function completed successfully.")
+                log.info("Scan completed successfully!")
             except Exception as scan_error:
                 log.error(f"Error during scan_docs_dir execution: {scan_error}")
                 raise HTTPException(status_code=500, detail=f"Failed to scan documents: {scan_error}")
