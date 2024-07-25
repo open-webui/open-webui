@@ -327,23 +327,11 @@
 									{/if}
 								</div>
 
-								{#if !$mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
-									<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
-										{#each item.model?.info?.meta.tags as tag}
-											<div
-												class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
-											>
-												{tag.name}
-											</div>
-										{/each}
-									</div>
-								{/if}
-
 								<!-- {JSON.stringify(item.info)} -->
 
 								{#if item.model.owned_by === 'openai'}
 									<Tooltip content={`${'External'}`}>
-										<div class="">
+										<div class="translate-y-[1px]">
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
 												viewBox="0 0 16 16"
@@ -374,7 +362,7 @@
 											)
 										)}`}
 									>
-										<div class="">
+										<div class=" translate-y-[1px]">
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
 												fill="none"
@@ -391,6 +379,20 @@
 											</svg>
 										</div>
 									</Tooltip>
+								{/if}
+
+								{#if !$mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+									<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
+										{#each item.model?.info?.meta.tags as tag}
+											<Tooltip content={tag.name}>
+												<div
+													class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+												>
+													{tag.name}
+												</div>
+											</Tooltip>
+										{/each}
+									</div>
 								{/if}
 							</div>
 						</div>
