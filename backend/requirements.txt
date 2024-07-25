@@ -34,7 +34,7 @@ google-generativeai==0.7.2
 tiktoken
 
 langchain==0.2.6
-langchain-community==0.2.6
+langchain-community==0.2.9
 langchain-chroma==0.1.2
 
 fake-useragent==1.5.1
