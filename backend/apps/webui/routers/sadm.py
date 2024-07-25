@@ -1,26 +1,45 @@
+# Unfortunately, an attempt to split the Self-Aware Document Monitoring (SADM) script into two separate files (one for definitions and classes (models),
+# and one for the APIRouter (routers)) resulted in issues with starting/stopping and tracking the monitoring thread's status. 
+# This restructuring caused problems in determining whether the thread was running correctly. 
+# As a result, I made a single-file implementation to maintain reliable thread management. 
+
+import sys
 import time
 import logging
 import os
+
 from threading import Event, Thread, Lock
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from pathlib import Path
 import mimetypes
+
 from fastapi import FastAPI, HTTPException, Depends, APIRouter
 from pydantic import BaseModel
-from apps.webui.models.documents import Documents, DocumentForm
-from apps.rag.main import store_data_in_vector_db, get_loader
-from utils.misc import calculate_sha256, extract_folders_after_data_docs
-from config import DOCS_DIR, SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
-import sys
+
+from apps.webui.models.documents import (
+    Documents,
+    DocumentForm,
+)  
+
+from apps.rag.main import (
+    store_data_in_vector_db,
+    get_loader,
+    scan_docs_dir,
+) 
+from utils.misc import (
+    calculate_sha256,
+    extract_folders_after_data_docs,
+)  
+
+from config import (
+    DOCS_DIR,
+    SRC_LOG_LEVELS,
+    GLOBAL_LOG_LEVEL
+)  
 
 from utils.utils import (
     get_admin_user,
-    get_verified_user,
-    get_current_user,
-    get_http_authorization_cred,
-    get_password_hash,
-    create_token,
 )
 
 
@@ -189,7 +208,7 @@ def start_monitoring(path: str, stop_event: Event):
         observer.join()
         log.debug("Self-Aware Document Monitoring stopped successfully.")
         
-# FastAPI application setup
+# FastAPI Router application setup
 router = APIRouter()
 
 @router.post("/enable")
@@ -202,6 +221,20 @@ def enable_monitoring_route(user=Depends(get_admin_user)):
 
     try:
         write_state("enabled")
+        
+        log.info(f"Scanning {DOCS_DIR} for new Documents")
+
+        if DOCS_DIR:
+            log.debug(f"Starting scan of directory: {DOCS_DIR}")
+            try:
+                scan_docs_dir(user=user)
+                log.debug("scan_docs_dir function completed successfully.")
+            except Exception as scan_error:
+                log.error(f"Error during scan_docs_dir execution: {scan_error}")
+                raise HTTPException(status_code=500, detail=f"Failed to scan documents: {scan_error}")
+        else:
+            log.warning("DOCS_DIR is not defined. Skipping scan_docs_dir function.")
+        
         start_monitoring_thread(DOCS_DIR, stop_event)
         return {"message": "Self-Aware Document Monitoring has been enabled and is now Active"}
     except Exception as e:
