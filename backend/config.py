@@ -709,10 +709,10 @@ ENABLE_SIGNUP = PersistentConfig(
     ),
 )
 
-ENABLE_USERNAME_PASSWORD_LOGIN = PersistentConfig(
-    "ENABLE_USERNAME_PASSWORD_LOGIN",
-    "ui.enable_username_password_login",
-    os.environ.get("ENABLE_USERNAME_PASSWORD_LOGIN", "True").lower() == "true",
+ENABLE_LOGIN_FORM = PersistentConfig(
+    "ENABLE_LOGIN_FORM",
+    "ui.ENABLE_LOGIN_FORM",
+    os.environ.get("ENABLE_LOGIN_FORM", "True").lower() == "true",
 )
 
 DEFAULT_LOCALE = PersistentConfig(

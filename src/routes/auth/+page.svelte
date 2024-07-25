@@ -173,7 +173,7 @@
 							{/if}
 						</div>
 
-						{#if $config?.features.enable_username_password_login}
+						{#if $config?.features.enable_login_form}
 							<div class="flex flex-col mt-4">
 								{#if mode === 'signup'}
 									<div>
@@ -218,7 +218,7 @@
 							</div>
 						{/if}
 
-						{#if $config?.features.enable_username_password_login}
+						{#if $config?.features.enable_login_form}
 							<div class="mt-5">
 								<button
 									class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-medium text-sm py-3 transition"
@@ -255,7 +255,7 @@
 					{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 						<div class="inline-flex items-center justify-center w-full">
 							<hr class="w-64 h-px my-8 bg-gray-200 border-0 dark:bg-gray-700" />
-							{#if $config?.features.enable_username_password_login}
+							{#if $config?.features.enable_login_form}
 								<span
 									class="absolute px-3 font-medium text-gray-900 -translate-x-1/2 bg-white left-1/2 dark:text-white dark:bg-gray-950"
 									>{$i18n.t('or')}</span
