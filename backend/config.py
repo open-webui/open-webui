@@ -243,7 +243,7 @@ def save_config():
         log.exception(e)
 
 
-def get_config_value(config_path: str) -> str | None:
+def get_config_value(config_path: str):
     path_parts = config_path.split(".")
     cur_config = CONFIG_DATA
     for key in path_parts:
@@ -251,10 +251,7 @@ def get_config_value(config_path: str) -> str | None:
             cur_config = cur_config[key]
         else:
             return None
-    if isinstance(cur_config, str):
-        return cur_config
-    log.error(f"Expected string value for {config_path}, found {cur_config}")
-    return None
+    return cur_config
 
 
 class PersistentConfig:
