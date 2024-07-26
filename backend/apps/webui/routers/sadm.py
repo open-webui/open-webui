@@ -8,7 +8,7 @@ import time
 import logging
 import os
 
-from threading import Event, Thread, Lock
+from threading import Event, Thread
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from pathlib import Path
@@ -80,6 +80,8 @@ def write_state(state: str):
     with open(STATE_FILE, "w") as file:
         file.write(state)
 
+class MonitoringStatus(BaseModel):
+    status: str
 
 class DocEventHandler(FileSystemEventHandler):
     def on_created(self, event):
@@ -171,11 +173,6 @@ class DocEventHandler(FileSystemEventHandler):
             except Exception as e:
                 log.error(f"Unexpected error during file processing for '{file_name_no_symbols}': {e}")
 
-
-class MonitoringStatus(BaseModel):
-    status: str
-
-lock = Lock()
 
 def start_monitoring_thread(path: str, stop_event: Event):
     global monitoring_thread
