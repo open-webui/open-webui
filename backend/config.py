@@ -336,7 +336,6 @@ class SecretConfig(PersistentConfig):
         if encrypted is None and unencrypted is None:
             self.value = self.env_value
             self.config_value = None
-        print(self.value)
 
     def save(self):
         self._save(encrypt=True)
@@ -882,7 +881,7 @@ try:
     banners = json.loads(os.environ.get("WEBUI_BANNERS", "[]"))
     banners = [BannerModel(**banner) for banner in banners]
 except Exception as e:
-    print(f"Error loading WEBUI_BANNERS: {e}")
+    log.error(f"Error loading WEBUI_BANNERS: {e}")
     banners = []
 
 WEBUI_BANNERS = PersistentConfig("WEBUI_BANNERS", "ui.banners", banners)
