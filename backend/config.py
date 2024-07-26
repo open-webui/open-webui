@@ -17,7 +17,7 @@ import yaml
 from bs4 import BeautifulSoup
 from chromadb.config import Settings
 from constants import ERROR_MESSAGES
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from pydantic import BaseModel
 
 ####################################
@@ -243,6 +243,17 @@ def save_config():
         log.exception(e)
 
 
+def load_from_config(config_path: str):
+    path_parts = config_path.split(".")
+    cur_config = CONFIG_DATA
+    for key in path_parts:
+        if key in cur_config:
+            cur_config = cur_config[key]
+        else:
+            return None
+    return cur_config
+
+
 class PersistentConfig:
     def __init__(self, env_name: str, config_path: str, env_value):
         self.env_name = env_name
@@ -267,18 +278,11 @@ class PersistentConfig:
         return super().__getattribute__(item)
 
     def load(self):
-        path_parts = self.config_path.split(".")
-        cur_config = CONFIG_DATA
-        for key in path_parts:
-            if key in cur_config:
-                cur_config = cur_config[key]
-            else:
-                self.value = self.env_value
-                self.config_value = None
-                break
-        else:
-            self.value = self.config_value = cur_config
+        if config_value := load_from_config(self.config_path) is not None:
+            self.config_value = self.value = config_value
             log.info(f"'{self.env_name}' loaded from config.json")
+        else:
+            self.config_value = self.value = self.env_value
 
     def _save(self, value=None):
         if self.env_value == self.value == self.config_value:
@@ -303,7 +307,9 @@ class SecretConfig(PersistentConfig):
         self.encryped_env_name = f"{env_name}_ENCRYPTED"
         self.fernet = Fernet(secret_key_to_fernet(WEBUI_SECRET_KEY))
         if not config_path.endswith("_encrypted"):
-            config_path += "_encrypted"
+            self.config_path_crypt = config_path + "_encrypted"
+        else:
+            self.config_path_crypt = config_path
         super().__init__(env_name, config_path, env_value)
 
     def encrypt(self, value):
@@ -312,32 +318,23 @@ class SecretConfig(PersistentConfig):
     def decrypt(self, value):
         return self.fernet.decrypt(value.encode()).decode()
 
-    def warn(self):
-        log.warn(f"Unencrypted value found for '{self.env_name}'.")
-        config_path = self.config_path.removesuffix("_encrypted")
-        log.warn(f"For security, delete {config_path} from config.json.")
-
     def load(self):
-        path_parts = self.config_path.split(".")
-        cur_config = CONFIG_DATA
-        for key in path_parts:
-            if key in cur_config:
-                if (k := key.removesuffix("_encrypted")) in cur_config and k != key:
-                    self.warn()
-                cur_config = cur_config[key]
-            elif (k := key.removesuffix("_encrypted")) in cur_config:
-                self.warn()
-                log.warn(f"Encrypting '{self.env_name}' and saving to config.json...")
-                self.config_value = self.value = cur_config[k]
-                self.save()
-                return
-            else:
-                self.value = self.env_value
-                self.config_value = None
-                break
-        else:
-            self.config_value = self.value = self.decrypt(cur_config)
-            log.info(f"'{self.env_name}' loaded from config.json")
+        if encrypted := load_from_config(self.config_path_crypt) is not None:
+            try:
+                self.value = self.config_value = self.decrypt(encrypted)
+                log.info(f"'{self.env_name}' loaded from config.json")
+            except InvalidToken:
+                log.error(f"Invalid token for '{self.env_name}' in config.json.")
+                encrypted = None
+        if unencrypted := load_from_config(self.config_path) is not None:
+            log.warn(f"Unencrypted value found for '{self.env_name}'.")
+            log.warn(f"For security, delete {self.config_path} from config.json.")
+            self.value = self.config_value = unencrypted
+            log.info(f"Encrypting '{self.env_name}' and saving to config.json...")
+            self.save()
+        if encrypted is None and unencrypted is None:
+            self.value = self.env_value
+            self.config_value = None
 
     def save(self):
         self._save(self.encrypt(self.value))
