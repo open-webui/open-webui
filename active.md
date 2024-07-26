@@ -9,10 +9,13 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 
 **Timely Projects** - To choose from today
 
-- [Webhook to create Word Doc from Google Form](https://chatgpt.com/share/4daa1c9e-31e2-42f5-bdcf-c9e1e369391c) - for [our New Member Signup](/community/members/)
 - [Python to pull Harmonized Code (HS) lookups into Supabase](/OpenFootprint/)
 - [Activate Ollama on a different server](https://docs.openwebui.com/) for use with our [Docker Setup](/projects/location/setup/docker/)
-
+- [Document loading from our Supabase backup file into databricks SQL](https://chatgpt.com/share/d610d3e6-ce5f-4e7f-ba9e-4c74ec23abd4) - Apurva, Soham
+<!--
+	Full-Stack Cloudflare SaaS kit
+	https://github.com/Dhravya/cloudflare-saas-stack
+-->
 **LLM Interfaces** - Where we'll be embedding data visualizaions
 - [Open WebUI (Projects)](src) with Python and [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/)
 - [Earthscape for Chatbot UI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/)
@@ -21,6 +24,7 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 - [Javascript Timelines from Google Data Commons API](/data-pipeline/timelines/earthscape/datacommons.html) - Mehul
 - [International Trade Flow SQL Data Prep](/useeio.js/footprint) - Sahil, Himanshu, Song
 - [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab - Song+
+- [Webhook to create Word Doc from Google Form](https://chatgpt.com/share/4daa1c9e-31e2-42f5-bdcf-c9e1e369391c) - for [our New Member Signup](/community/members/) - Jingyu
 - [View DuckDB from Javascript](/OpenFootprint/prep/sql/duckdb/) - Gary
 - [Food Nutrition Labels](/data-commons/docs/food) - Shali and Wenwei (Stella)
 - [AI Requests Visualization](/requests/) - for Storyboards, Meal Planning and Project Visualization - TO DO
