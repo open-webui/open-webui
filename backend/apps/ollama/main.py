@@ -212,18 +212,27 @@ async def get_all_models():
     log.info("get_all_models()")
 
     if app.state.config.ENABLE_OLLAMA_API:
-        tasks = [
-            fetch_url(f"{url}/api/tags") for url in app.state.config.OLLAMA_BASE_URLS
-        ]
-        responses = await asyncio.gather(*tasks)
+        try:
+            tasks = [
+                fetch_url(f"{url}/api/tags") for url in app.state.config.OLLAMA_BASE_URLS
+            ]
+            responses = await asyncio.gather(*tasks)
 
-        models = {
-            "models": merge_models_lists(
-                map(
-                    lambda response: response["models"] if response else None, responses
+            models = {
+                "models": merge_models_lists(
+                    map(
+                        lambda response: response["models"] if response else None, responses
+                    )
                 )
+            }
+        except Exception as e:
+            log.exception(e)
+            error_detail = "Open WebUI: Server Connection Error"
+            raise HTTPException(
+                status_code=500,
+                detail=error_detail,
             )
-        }
+            models = {"models": []}
 
     else:
         models = {"models": []}
