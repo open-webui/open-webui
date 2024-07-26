@@ -230,9 +230,8 @@ WEBUI_SECRET_KEY = os.environ.get(
 def secret_key_to_fernet(secret_key: str) -> bytes:
     # convert to bytes
     encoded = secret_key.encode()
-    # sha256 hash to make sure the length is correct
+    # sha256 hash to make sure the key is long enough
     hashed = hashlib.sha256(encoded).digest()
-    # return the first 32 bytes
     return base64.urlsafe_b64encode(hashed)
 
 
