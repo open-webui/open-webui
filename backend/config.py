@@ -284,17 +284,18 @@ class PersistentConfig:
         else:
             self.config_value = self.value = self.env_value
 
-    def _save(self, value=None):
+    def _save(self, encrypt: bool = False):
         if self.env_value == self.value == self.config_value:
             return
         log.info(f"Saving '{self.env_name}' to config.json")
-        path_parts = self.config_path.split(".")
+        config_path = self.config_path_crypt if encrypt else self.config_path
+        path_parts = config_path.split(".")
         config = CONFIG_DATA
         for key in path_parts[:-1]:
             if key not in config:
                 config[key] = {}
             config = config[key]
-        config[path_parts[-1]] = value or self.value
+        config[path_parts[-1]] = self.encrypt(self.value) if encrypt else self.value
         save_config()
         self.config_value = self.value
 
@@ -319,25 +320,26 @@ class SecretConfig(PersistentConfig):
         return self.fernet.decrypt(value.encode()).decode()
 
     def load(self):
-        if encrypted := load_from_config(self.config_path_crypt) is not None:
+        if (encrypted := load_from_config(self.config_path_crypt)) is not None:
             try:
                 self.value = self.config_value = self.decrypt(encrypted)
                 log.info(f"'{self.env_name}' loaded from config.json")
             except InvalidToken:
                 log.error(f"Invalid token for '{self.env_name}' in config.json.")
                 encrypted = None
-        if unencrypted := load_from_config(self.config_path) is not None:
+        if (unencrypted := load_from_config(self.config_path)) is not None:
             log.warn(f"Unencrypted value found for '{self.env_name}'.")
             log.warn(f"For security, delete {self.config_path} from config.json.")
             self.value = self.config_value = unencrypted
-            log.info(f"Encrypting '{self.env_name}' and saving to config.json...")
+            log.warn(f"Encrypting '{self.env_name}' and saving to config.json...")
             self.save()
         if encrypted is None and unencrypted is None:
             self.value = self.env_value
             self.config_value = None
+        print(self.value)
 
     def save(self):
-        self._save(self.encrypt(self.value))
+        self._save(encrypt=True)
 
 
 class AppConfig:
