@@ -204,6 +204,12 @@ def merge_models_lists(model_lists):
                     merged_models[digest] = model
                 else:
                     merged_models[digest]["urls"].append(idx)
+                
+                # ollama v0.3.0:
+                # model["model"] doesn't exist
+                # use model["name"] to fill it
+                if "model" not in model and "name" in model:
+                    model["model"] = model["name"]
 
     return list(merged_models.values())
 
