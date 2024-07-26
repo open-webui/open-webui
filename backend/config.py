@@ -313,15 +313,21 @@ class SecretConfig(PersistentConfig):
     def decrypt(self, value):
         return self.fernet.decrypt(value.encode()).decode()
 
+    def warn(self):
+        log.warn(f"Unencrypted value found for '{self.env_name}'.")
+        config_path = self.config_path.removesuffix("_encrypted")
+        log.warn(f"For security, delete {config_path} from config.json.")
+
     def load(self):
         path_parts = self.config_path.split(".")
         cur_config = CONFIG_DATA
         for key in path_parts:
             if key in cur_config:
+                if (k := key.removesuffix("_encrypted")) in cur_config and k != key:
+                    self.warn()
                 cur_config = cur_config[key]
             elif (k := key.removesuffix("_encrypted")) in cur_config:
-                log.warn(f"Unencrypted value found for '{self.env_name}'.")
-                log.warn(f"For security, delete {self.config_path} from config.json.")
+                self.warn()
                 log.warn(f"Encrypting '{self.env_name}' and saving to config.json...")
                 self.config_value = self.value = cur_config[k]
                 self.save()
@@ -332,8 +338,6 @@ class SecretConfig(PersistentConfig):
                 break
         else:
             self.config_value = self.value = self.decrypt(cur_config)
-            # DONT LET THIS THROUGH TO DEV
-            print(self.config_value)
             log.info(f"'{self.env_name}' loaded from config.json")
 
     def save(self):
