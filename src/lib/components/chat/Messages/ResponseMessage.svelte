@@ -95,14 +95,14 @@
 		return html.replace(/^<a /, '<a target="_blank" rel="nofollow" ');
 	};
 
-	renderer.image = function (href, title, text) {
-		// 生成自定义 HTML，使用 Svelte 的 Image 组件
-		return `
-            <div class="image-preview">
-                <Image src="${href}" alt="${text}" title="${title || text}" />
-            </div>
-        `;
-	};
+	// renderer.image = function (href, title, text) {
+	// 	// 生成自定义 HTML，使用 Svelte 的 Image 组件
+	// 	return `
+    //         <div class="image-preview">
+    //             <Image src="${href}" alt="${text}" title="${title || text}" />
+    //         </div>
+    //     `;
+	// };
 
 	const { extensions, ...defaults } = marked.getDefaults() as marked.MarkedOptions & {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
