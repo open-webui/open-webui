@@ -278,7 +278,7 @@ class PersistentConfig:
         return super().__getattribute__(item)
 
     def load(self):
-        if config_value := get_config_value(self.config_path) is not None:
+        if (config_value := get_config_value(self.config_path)) is not None:
             self.config_value = self.value = config_value
             log.info(f"'{self.env_name}' loaded from config.json")
         else:
@@ -758,7 +758,7 @@ try:
     OPENAI_API_KEY = OPENAI_API_KEYS.value[
         OPENAI_API_BASE_URLS.value.index("https://api.openai.com/v1")
     ]
-except:
+except Exception:
     pass
 
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
