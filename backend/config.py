@@ -303,8 +303,8 @@ class SecretConfig(PersistentConfig):
     def __init__(self, env_name: str, config_path: str, env_value):
         self.encryped_env_name = f"{env_name}_ENCRYPTED"
         self.fernet = Fernet(secret_key_to_fernet(WEBUI_SECRET_KEY))
-        if config_path.split(".")[-1] != "encrypted":
-            config_path += ".encrypted"
+        if not config_path.endswith("_encrypted"):
+            config_path += "_encrypted"
         super().__init__(env_name, config_path, env_value)
 
     def encrypt(self, value):
@@ -316,18 +316,19 @@ class SecretConfig(PersistentConfig):
     def load(self):
         path_parts = self.config_path.split(".")
         cur_config = CONFIG_DATA
-        for i, key in enumerate(path_parts):
+        for key in path_parts:
             if key in cur_config:
                 cur_config = cur_config[key]
-            elif i == len(path_parts) - 1:
+            elif (k := key.removesuffix("_encrypted")) in cur_config:
                 log.warn(f"Unencrypted value found for '{self.env_name}'.")
                 log.warn(f"For security, delete {self.config_path} from config.json.")
                 log.warn(f"Encrypting '{self.env_name}' and saving to config.json...")
-                self.config_value = self.value = cur_config
+                self.config_value = self.value = cur_config[k]
                 self.save()
                 return
             else:
                 self.value = self.env_value
+                self.config_value = None
                 break
         else:
             self.config_value = self.value = self.decrypt(cur_config)
