@@ -79,6 +79,7 @@ from utils.task import (
 from utils.misc import (
     get_last_user_message,
     add_or_update_system_message,
+    prepend_to_first_user_message_content,
     parse_duration,
 )
 
@@ -686,12 +687,23 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             if len(contexts) > 0:
                 context_string = "/n".join(contexts).strip()
                 prompt = get_last_user_message(body["messages"])
-                body["messages"] = add_or_update_system_message(
-                    rag_template(
-                        rag_app.state.config.RAG_TEMPLATE, context_string, prompt
-                    ),
-                    body["messages"],
-                )
+
+                # Workaround for Ollama 2.0+ system prompt issue
+                # TODO: replace with add_or_update_system_message
+                if model["owned_by"] == "ollama":
+                    body["messages"] = prepend_to_first_user_message_content(
+                        rag_template(
+                            rag_app.state.config.RAG_TEMPLATE, context_string, prompt
+                        ),
+                        body["messages"],
+                    )
+                else:
+                    body["messages"] = add_or_update_system_message(
+                        rag_template(
+                            rag_app.state.config.RAG_TEMPLATE, context_string, prompt
+                        ),
+                        body["messages"],
+                    )
 
             # If there are citations, add them to the data_items
             if len(citations) > 0:
