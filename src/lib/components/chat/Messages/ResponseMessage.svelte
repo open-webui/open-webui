@@ -96,18 +96,12 @@
 	};
 
 	renderer.image = function (href, title, text) {
-		// 自定义的图片 HTML 模板，添加预览功能
-		// return `
-		// 	<div class="image-preview">
-		// 		<img src="${href}" alt="${text}" title="${title || text}">
-		// 		<div class="preview-overlay">
-		// 			<a href="${href}" target="_blank">预览</a>
-		// 		</div>
-		// 	</div>
-		// `;
+		// 生成自定义 HTML，使用 Svelte 的 Image 组件
 		return `
-			<Image src="${href}" alt="${text}" title="${title || text}" />
-		`;
+            <div class="image-preview">
+                <Image src="${href}" alt="${text}" title="${title || text}" />
+            </div>
+        `;
 	};
 
 	const { extensions, ...defaults } = marked.getDefaults() as marked.MarkedOptions & {
