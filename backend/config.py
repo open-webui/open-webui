@@ -243,7 +243,7 @@ def save_config():
         log.exception(e)
 
 
-def load_from_config(config_path: str):
+def get_config_value(config_path: str) -> str | None:
     path_parts = config_path.split(".")
     cur_config = CONFIG_DATA
     for key in path_parts:
@@ -251,7 +251,10 @@ def load_from_config(config_path: str):
             cur_config = cur_config[key]
         else:
             return None
-    return cur_config
+    if isinstance(cur_config, str):
+        return cur_config
+    log.error(f"Expected string value for {config_path}, found {cur_config}")
+    return None
 
 
 class PersistentConfig:
@@ -278,7 +281,7 @@ class PersistentConfig:
         return super().__getattribute__(item)
 
     def load(self):
-        if config_value := load_from_config(self.config_path) is not None:
+        if config_value := get_config_value(self.config_path) is not None:
             self.config_value = self.value = config_value
             log.info(f"'{self.env_name}' loaded from config.json")
         else:
@@ -320,14 +323,14 @@ class SecretConfig(PersistentConfig):
         return self.fernet.decrypt(value.encode()).decode()
 
     def load(self):
-        if (encrypted := load_from_config(self.config_path_crypt)) is not None:
+        if (encrypted := get_config_value(self.config_path_crypt)) is not None:
             try:
                 self.value = self.config_value = self.decrypt(encrypted)
                 log.info(f"'{self.env_name}' loaded from config.json")
             except InvalidToken:
                 log.error(f"Invalid token for '{self.env_name}' in config.json.")
                 encrypted = None
-        if (unencrypted := load_from_config(self.config_path)) is not None:
+        if (unencrypted := get_config_value(self.config_path)) is not None:
             log.warn(f"Unencrypted value found for '{self.env_name}'.")
             log.warn(f"For security, delete {self.config_path} from config.json.")
             self.value = self.config_value = unencrypted
