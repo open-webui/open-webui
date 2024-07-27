@@ -2,12 +2,38 @@
 # Open WebUI Install
 <!--Pinecone -->
 
-You can also use our [Docker Setup](docker), but it only provides the backend files for editing.
+If you already have an "open-webui" Docker container, your OpenWebUI server may already be running at [localhost:3000](http://localhost:3000) (since Docker restarts it when you start your computer).  You can now [train with a web page](train).
 
-If you already have an "open-webui" Docker container, the server may already be running at [localhost:3000](http://localhost:3000)
+Two options...
+
+### If you are not editing OpenWebUI files
+
+You can use the <a href="https://docs.openwebui.com">Quick Start with Docker (recommended)</a> to install locally. This will automatically include Ollama in your Docker install.
 
 
-## Make sure you have Ollama installed
+### If you are editing our "projects" fork locally
+
+You can try use our [Docker Setup Experiments](docker) in which we use Docker with a fork of OpenWebUI and extract files to edit in a Webroot. It currently only extracts the backend files for editing.
+
+
+<div style="border:1px solid #ccc; padding:20px 20px 25px 30px; border-radius:20px;" >
+
+<b>Issue: Storage exceeded when installing Ollama locally</b><br><br>
+
+I had Ollama working fine from the QuickStart above, but since our goal is to build locally, I tried installing Ollama to use with the local build process described below.<br><br>
+
+My install of Ollama locally did not complete due to a storage limitation. I increased the allowed storage, but then my machine was overwhelmed.<br><br>
+
+So now one goal is to install Ollama externally, using the "Different Server" command here: <a href="https://docs.openwebui.com">docs.openwebui.com</a>
+
+</div>
+
+<br>
+
+## Build Locally
+
+
+### You'll probably need to have Ollama installed
 
 <!--You might need to increase your storage allocation in Docker-->
 
@@ -44,7 +70,7 @@ Or if you're retaining an [existing open-webui container](https://docs.openwebui
 	docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
 -->
 
-## Build Locally
+## Run the Build
 
 Open your local build at [localhost:3000](http://localhost:3000)
 
@@ -93,25 +119,3 @@ We've temporarily deactivated the following while we move it to another repo. It
 
 You can either fork and clone our [projects repo](https://github.com/ModelEarth/projects)  
 Or you can use our [datascape Docker container image](https://github.com/users/datascape/packages/container/package/projects), which is created from the same modelearth/projects repo.
-
-## Train with a web page
-
-Type # followed by any https:// domain path to ask questions about a specific web page. 
-Allow a couple minutes to process each question. You can ask questions about today's headlines:
-
-	#https://yahoo.com
-
-**Digesting the News**
-Sample prompt: Create 8 categories that all news stories fall in, and calculate the percentage of stories in each category. The 8 category percentages should add up to 100%. A story can be divided among multiple categories. Then list a sample of three top stories for each of the 5 categories. Include URL links for each article listed using using markdown formatting for each of the 3 articles listed below each of the 8 categories.
-
-<!-- npm run preview didn't have an api. flower -->
-
-[Open WebUI Documentation](https://docs.openwebui.com/)
-
-
-## To Explore
-
-[Hugging Face Transformers](https://huggingface.co/docs/transformers)
-Transformers support framework interoperability between PyTorch, TensorFlow, and JAX
-
-[Location Projects for Open WebUI](../)
