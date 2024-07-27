@@ -9,7 +9,7 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 
 **Timely Projects** - To choose from today
 
-- [Python to pull Harmonized Code (HS) lookups into Supabase](/OpenFootprint/)
+- [Python to pull Harmonized Code (HS) lookups into Supabase](/OpenFootprint/harmonized-system/)
 - [Activate Ollama on a different server](https://docs.openwebui.com/) for use with our [Docker Setup](/projects/location/setup/docker/)
 - [Document loading from our Supabase backup file into databricks SQL](https://chatgpt.com/share/d610d3e6-ce5f-4e7f-ba9e-4c74ec23abd4) - Apurva, Soham
 <!--
