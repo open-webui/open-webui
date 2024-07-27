@@ -462,6 +462,9 @@ async def generate_chat_completion(
     headers = {}
     headers["Authorization"] = f"Bearer {key}"
     headers["Content-Type"] = "application/json"
+    if "openrouter.ai" in app.state.config.OPENAI_API_BASE_URLS[idx]:
+        headers["HTTP-Referer"] = "https://openwebui.com/"
+        headers["X-Title"] = "Open WebUI"
 
     r = None
     session = None
