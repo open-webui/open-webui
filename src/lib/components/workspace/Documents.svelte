@@ -73,7 +73,7 @@
 			return null;
 		});
 
-		const res = await processDocToVectorDB(localStorage.token, uploadedFile.id).catch((error) => {
+		const res = await processDocToVectorDB(localStorage.token, uploadedFile.id, "doc").catch((error) => {
 			toast.error(error);
 			return null;
 		});

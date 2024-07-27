@@ -96,7 +96,7 @@
 		element.scrollTop = element.scrollHeight;
 	};
 
-	const uploadFileHandler = async (file) => {
+	const uploadFileHandler = async (file, base64_url) => {
 		console.log(file);
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
@@ -127,6 +127,8 @@
 				name: file.name,
 				collection_name: '',
 				status: 'uploaded',
+				base64: false,
+				base64_url: '',
 				error: ''
 			};
 			files = [...files, fileItem];
@@ -137,25 +139,29 @@
 				SUPPORTED_FILE_TYPE.includes(file['type']) ||
 				SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
 			) {
-				processFileItem(fileItem);
+				processFileItem(fileItem, base64_url);
 			} else {
 				toast.error(
 					$i18n.t(`Unknown file type '{{file_type}}'. Proceeding with the file upload anyway.`, {
 						file_type: file['type']
 					})
 				);
-				processFileItem(fileItem);
+				processFileItem(fileItem, base64_url);
 			}
 		}
 	};
 
-	const processFileItem = async (fileItem) => {
+	const processFileItem = async (fileItem, base64_url) => {
 		try {
-			const res = await processDocToVectorDB(localStorage.token, fileItem.id);
+			const res = await processDocToVectorDB(localStorage.token, fileItem.id, "file");
 
 			if (res) {
 				fileItem.status = 'processed';
 				fileItem.collection_name = res.collection_name;
+				if (res.base64) {
+					fileItem.base64 = true;
+					fileItem.base64_url = base64_url;
+				}
 				files = files;
 			}
 		} catch (e) {
@@ -272,7 +278,12 @@
 							};
 							reader.readAsDataURL(file);
 						} else {
-							uploadFileHandler(file);
+							let reader = new FileReader();
+							reader.onload = (event) => {
+								let base64_url = event.target.result;
+								uploadFileHandler(file, base64_url);
+							};
+							reader.readAsDataURL(file);
 						}
 					});
 				} else {
@@ -438,7 +449,12 @@
 									};
 									reader.readAsDataURL(file);
 								} else {
-									uploadFileHandler(file);
+									let reader = new FileReader();
+									reader.onload = (event) => {
+										let base64_url = event.target.result;
+										uploadFileHandler(file, base64_url);
+									};
+									reader.readAsDataURL(file);
 								}
 							});
 						} else {

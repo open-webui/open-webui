@@ -521,7 +521,7 @@
 			}
 
 			const _files = JSON.parse(JSON.stringify(files));
-			chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type)));
+			chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type) && (!item.base64 || item.type !== 'file')));
 			chatFiles = chatFiles.filter(
 				// Remove duplicates
 				(item, index, array) =>
@@ -1063,7 +1063,7 @@
 						.filter((message) => message?.content?.trim())
 						.map((message, idx, arr) => ({
 							role: message.role,
-							...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
+							...((message.files?.filter((file) => file.type === 'image' || (file.base64 && file.type === 'file')).length > 0 ?? false) &&
 							message.role === 'user'
 								? {
 										content: [
@@ -1075,11 +1075,11 @@
 														: message?.raContent ?? message.content
 											},
 											...message.files
-												.filter((file) => file.type === 'image')
+												.filter((file) => file.type === 'image' || (file.base64 && file.type === 'file'))
 												.map((file) => ({
 													type: 'image_url',
 													image_url: {
-														url: file.url
+														url: file.base64 ? file.base64_url : file.url
 													}
 												}))
 										]

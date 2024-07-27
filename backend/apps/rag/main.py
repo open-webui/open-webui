@@ -1231,6 +1231,7 @@ def store_doc(
 
 class ProcessDocForm(BaseModel):
     file_id: str
+    type: str
     collection_name: Optional[str] = None
 
 
@@ -1261,7 +1262,7 @@ def process_doc(
         f.close()
 
         try:
-            if not enableFileUpdateBase64 or not app.state.config.ENABLE_BASE64:
+            if not enableFileUpdateBase64 or not app.state.config.ENABLE_BASE64 or form_data.type != "file":
                 loader, known_type = get_loader(
                     file.filename, file.meta.get("content_type"), file_path
                 )
@@ -1278,12 +1279,15 @@ def process_doc(
                 if result:
                     return {
                         "status": True,
+                        "base64": False,
                         "collection_name": collection_name,
                         "known_type": known_type,
+                        "filename": file.meta.get("name", file.filename),
                     }
             else:
                 return {
                     "status": True,
+                    "base64": True,
                     "collection_name": collection_name,
                     "known_type": known_type,
                     "filename": file.meta.get("name", file.filename),
