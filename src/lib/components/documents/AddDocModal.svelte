@@ -16,6 +16,7 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
+	export let uploadDoc: Function;
 	let uploadDocInputElement: HTMLInputElement;
 	let inputFiles;
 	let tags = [];
@@ -24,32 +25,6 @@
 		name: '',
 		title: '',
 		content: null
-	};
-
-	const uploadDoc = async (file) => {
-		const res = await uploadDocToVectorDB(localStorage.token, '', file).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		if (res) {
-			await createNewDoc(
-				localStorage.token,
-				res.collection_name,
-				res.filename,
-				transformFileName(res.filename),
-				res.filename,
-				tags.length > 0
-					? {
-							tags: tags
-					  }
-					: null
-			).catch((error) => {
-				toast.error(error);
-				return null;
-			});
-			await documents.set(await getDocs(localStorage.token));
-		}
 	};
 
 	const submitHandler = async () => {

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
-
 	import Modal from '$lib/components/common/Modal.svelte';
 	const i18n = getContext('i18n');
 
@@ -54,9 +53,25 @@
 						<div class="text-sm font-medium dark:text-gray-300">
 							{$i18n.t('Source')}
 						</div>
-						<div class="text-sm dark:text-gray-400">
-							{document.source?.name ?? $i18n.t('No source available')}
-						</div>
+
+						{#if document.source?.name}
+							<div class="text-sm dark:text-gray-400">
+								<a
+									href={document?.metadata?.file_id
+										? `/api/v1/files/${document?.metadata?.file_id}/content`
+										: document.source.name.includes('http')
+										? document.source.name
+										: `#`}
+									target="_blank"
+								>
+									{document?.metadata?.name ?? document.source.name}
+								</a>
+							</div>
+						{:else}
+							<div class="text-sm dark:text-gray-400">
+								{$i18n.t('No source available')}
+							</div>
+						{/if}
 					</div>
 					<div class="flex flex-col w-full">
 						<div class=" text-sm font-medium dark:text-gray-300">

@@ -6,7 +6,6 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import json
 
-
 from apps.webui.models.users import Users
 from apps.webui.models.tools import Tools, ToolForm, ToolModel, ToolResponse
 from apps.webui.utils import load_toolkit_module_by_id
@@ -57,7 +56,9 @@ async def get_toolkits(user=Depends(get_admin_user)):
 
 @router.post("/create", response_model=Optional[ToolResponse])
 async def create_new_toolkit(
-    request: Request, form_data: ToolForm, user=Depends(get_admin_user)
+    request: Request,
+    form_data: ToolForm,
+    user=Depends(get_admin_user),
 ):
     if not form_data.id.isidentifier():
         raise HTTPException(
@@ -131,7 +132,10 @@ async def get_toolkit_by_id(id: str, user=Depends(get_admin_user)):
 
 @router.post("/id/{id}/update", response_model=Optional[ToolModel])
 async def update_toolkit_by_id(
-    request: Request, id: str, form_data: ToolForm, user=Depends(get_admin_user)
+    request: Request,
+    id: str,
+    form_data: ToolForm,
+    user=Depends(get_admin_user),
 ):
     toolkit_path = os.path.join(TOOLS_DIR, f"{id}.py")
 

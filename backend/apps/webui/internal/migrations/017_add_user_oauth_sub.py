@@ -1,10 +1,7 @@
 """Peewee migrations -- 017_add_user_oauth_sub.py.
-
 Some examples (model - class or model name)::
-
     > Model = migrator.orm['table_name']            # Return model in current state by name
     > Model = migrator.ModelClass                   # Return model in current state by name
-
     > migrator.sql(sql)                             # Run custom SQL
     > migrator.run(func, *args, **kwargs)           # Run python function with the given args
     > migrator.create_model(Model)                  # Create a model (could be used as decorator)
@@ -21,7 +18,6 @@ Some examples (model - class or model name)::
     > migrator.drop_index(model, *col_names)
     > migrator.drop_not_null(model, *field_names)
     > migrator.drop_constraints(model, *constraints)
-
 """
 
 from contextlib import suppress

@@ -200,7 +200,7 @@
 										<input
 											class="w-full rounded-lg py-2 px-4 {pipelineUrls[url]
 												? 'pr-8'
-												: ''} text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+												: ''} text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={url}
 											autocomplete="off"
@@ -338,7 +338,7 @@
 							{#each OLLAMA_BASE_URLS as url, idx}
 								<div class="flex gap-1.5">
 									<input
-										class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
 										bind:value={url}
 									/>

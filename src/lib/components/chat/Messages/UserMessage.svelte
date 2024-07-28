@@ -9,6 +9,7 @@
 
 	import { user as _user } from '$lib/stores';
 	import { getFileContentById } from '$lib/apis/files';
+	import FileItem from '$lib/components/common/FileItem.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -98,107 +99,8 @@
 						<div class={$settings?.chatBubble ?? true ? 'self-end' : ''}>
 							{#if file.type === 'image'}
 								<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
-							{:else if file.type === 'file'}
-								<button
-									class="h-16 w-72 flex items-center space-x-3 px-2.5 dark:bg-gray-850 rounded-xl border border-gray-200 dark:border-none text-left"
-									type="button"
-									on:click={async () => {
-										if (file?.url) {
-											window.open(`${file?.url}/content`, '_blank').focus();
-										}
-									}}
-								>
-									<div class="p-2.5 bg-red-400 text-white rounded-lg">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											class="w-6 h-6"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75 2.25a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z"
-												clip-rule="evenodd"
-											/>
-											<path
-												d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z"
-											/>
-										</svg>
-									</div>
-
-									<div class="flex flex-col justify-center -space-y-0.5">
-										<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
-											{file.name}
-										</div>
-
-										<div class=" text-gray-500 text-sm">{$i18n.t('File')}</div>
-									</div>
-								</button>
-							{:else if file.type === 'doc'}
-								<button
-									class="h-16 w-72 flex items-center space-x-3 px-2.5 dark:bg-gray-850 rounded-xl border border-gray-200 dark:border-none text-left"
-									type="button"
-									on:click={() => {
-										if (file?.url) {
-											window.open(file?.url, '_blank').focus();
-										}
-									}}
-								>
-									<div class="p-2.5 bg-red-400 text-white rounded-lg">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											class="w-6 h-6"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75 2.25a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z"
-												clip-rule="evenodd"
-											/>
-											<path
-												d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z"
-											/>
-										</svg>
-									</div>
-
-									<div class="flex flex-col justify-center -space-y-0.5">
-										<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
-											{file.name}
-										</div>
-
-										<div class=" text-gray-500 text-sm">{$i18n.t('Document')}</div>
-									</div>
-								</button>
-							{:else if file.type === 'collection'}
-								<button
-									class="h-16 w-72 flex items-center space-x-3 px-2.5 dark:bg-gray-600 rounded-xl border border-gray-200 dark:border-none text-left"
-									type="button"
-								>
-									<div class="p-2.5 bg-red-400 text-white rounded-lg">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											class="w-6 h-6"
-										>
-											<path
-												d="M7.5 3.375c0-1.036.84-1.875 1.875-1.875h.375a3.75 3.75 0 0 1 3.75 3.75v1.875C13.5 8.161 14.34 9 15.375 9h1.875A3.75 3.75 0 0 1 21 12.75v3.375C21 17.16 20.16 18 19.125 18h-9.75A1.875 1.875 0 0 1 7.5 16.125V3.375Z"
-											/>
-											<path
-												d="M15 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 17.25 7.5h-1.875A.375.375 0 0 1 15 7.125V5.25ZM4.875 6H6v10.125A3.375 3.375 0 0 0 9.375 19.5H16.5v1.125c0 1.035-.84 1.875-1.875 1.875h-9.75A1.875 1.875 0 0 1 3 20.625V7.875C3 6.839 3.84 6 4.875 6Z"
-											/>
-										</svg>
-									</div>
-
-									<div class="flex flex-col justify-center -space-y-0.5">
-										<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
-											{file?.title ?? `#${file.name}`}
-										</div>
-
-										<div class=" text-gray-500 text-sm">{$i18n.t('Collection')}</div>
-									</div>
-								</button>
+							{:else}
+								<FileItem url={file.url} name={file.name} type={file.type} />
 							{/if}
 						</div>
 					{/each}
