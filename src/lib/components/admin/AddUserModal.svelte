@@ -75,7 +75,7 @@
 						if (idx > 0) {
 							if (
 								columns.length === 4 &&
-								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
+								['admin', 'user', 'vip', 'svip', 'pending'].includes(columns[3].toLowerCase())
 							) {
 								const res = await addUser(
 									localStorage.token,
@@ -178,6 +178,8 @@
 									>
 										<option value="pending"> {$i18n.t('pending')} </option>
 										<option value="user"> {$i18n.t('user')} </option>
+										<option value="vip">{$i18n.t('vip')}</option>
+										<option value="svip">{$i18n.t('svip')}</option>
 										<option value="admin"> {$i18n.t('admin')} </option>
 									</select>
 								</div>

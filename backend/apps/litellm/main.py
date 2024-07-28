@@ -244,7 +244,7 @@ async def get_models(user=Depends(get_current_user)):
             data = r.json()
 
             if app.state.ENABLE_MODEL_FILTER:
-                if user and user.role == "user":
+                if user and user.role != "admin":
                     data["data"] = list(
                         filter(
                             lambda model: model["id"] in app.state.MODEL_FILTER_LIST,

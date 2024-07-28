@@ -579,6 +579,8 @@
 	"Sign Out": "登出",
 	"Sign up": "註冊",
 	"Signing in": "正在登入",
+	"vip": "VIP",
+	"svip": "SVIP",
 	"Source": "來源",
 	"Speech recognition error: {{error}}": "語音識別錯誤：{{error}}",
 	"Speech-to-Text Engine": "語音轉文字引擎",

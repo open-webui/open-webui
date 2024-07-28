@@ -22,6 +22,8 @@
 
 	const i18n = getContext('i18n');
 
+	const roleMap = ['admin', 'user', 'vip', 'svip', 'pending'];
+
 	let loaded = false;
 	let tab = '';
 	let users = [];
@@ -264,22 +266,27 @@
 								class=" flex items-center gap-2 text-xs px-3 py-0.5 rounded-lg {user.role ===
 									'admin' && 'text-sky-600 dark:text-sky-200 bg-sky-200/30'} {user.role ===
 									'user' && 'text-green-600 dark:text-green-200 bg-green-200/30'} {user.role ===
+									'vip' && 'text-green-600 dark:text-green-200 bg-green-200/30'} {user.role ===
+									'svip' && 'text-green-600 dark:text-green-200 bg-green-200/30'} {user.role ===
 									'pending' && 'text-gray-600 dark:text-gray-200 bg-gray-200/30'}"
 								on:click={() => {
-									if (isProAdmin){
-										if (user.role === 'user') {
-											updateRoleHandler(user.id, 'admin');
-										} else if (user.role === 'pending') {
-											updateRoleHandler(user.id, 'user');
+									if (isProAdmin) {
+										let newRole = '';
+										const currentIndex = roleMap.indexOf(user.role);
+										if (currentIndex !== -1 && currentIndex < roleMap.length - 1) {
+											newRole = roleMap[currentIndex + 1];
 										} else {
-											updateRoleHandler(user.id, 'pending');
+											newRole = roleMap[0];
 										}
+										updateRoleHandler(user.id, newRole);
 									}
 								}}
 							>
 								<div
 									class="w-1 h-1 rounded-full {user.role === 'admin' &&
 										'bg-sky-600 dark:bg-sky-300'} {user.role === 'user' &&
+										'bg-green-600 dark:bg-green-300'} {user.role === 'vip' &&
+										'bg-green-600 dark:bg-green-300'} {user.role === 'svip' &&
 										'bg-green-600 dark:bg-green-300'} {user.role === 'pending' &&
 										'bg-gray-600 dark:bg-gray-300'}"
 								/>

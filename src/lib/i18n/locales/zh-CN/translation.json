@@ -580,6 +580,8 @@
 	"Sign Out": "登出",
 	"Sign up": "注册",
 	"Signing in": "正在登录",
+	"vip": "VIP",
+	"svip": "SVIP",
 	"Source": "来源",
 	"Speech recognition error: {{error}}": "语音识别错误：{{error}}",
 	"Speech-to-Text Engine": "语音转文本引擎",
