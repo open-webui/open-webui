@@ -1043,14 +1043,39 @@ async def get_all_models():
         model["actions"] = []
         for action_id in action_ids:
             action = Functions.get_function_by_id(action_id)
-            model["actions"].append(
-                {
-                    "id": action_id,
-                    "name": action.name,
-                    "description": action.meta.description,
-                    "icon_url": action.meta.manifest.get("icon_url", None),
-                }
-            )
+
+            if action_id in webui_app.state.FUNCTIONS:
+                function_module = webui_app.state.FUNCTIONS[action_id]
+            else:
+                function_module, _, _ = load_function_module_by_id(action_id)
+                webui_app.state.FUNCTIONS[action_id] = function_module
+
+            if hasattr(function_module, "actions"):
+                actions = function_module.actions
+                model["actions"].extend(
+                    [
+                        {
+                            "id": f"{action_id}.{_action['id']}",
+                            "name": _action.get(
+                                "name", f"{action.name} ({_action['id']})"
+                            ),
+                            "description": action.meta.description,
+                            "icon_url": _action.get(
+                                "icon_url", action.meta.manifest.get("icon_url", None)
+                            ),
+                        }
+                        for _action in actions
+                    ]
+                )
+            else:
+                model["actions"].append(
+                    {
+                        "id": action_id,
+                        "name": action.name,
+                        "description": action.meta.description,
+                        "icon_url": action.meta.manifest.get("icon_url", None),
+                    }
+                )
 
     app.state.MODELS = {model["id"]: model for model in models}
     webui_app.state.MODELS = app.state.MODELS
@@ -1288,6 +1313,11 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
 async def chat_completed(
     action_id: str, form_data: dict, user=Depends(get_verified_user)
 ):
+    if "." in action_id:
+        action_id, sub_action_id = action_id.split(".")
+    else:
+        sub_action_id = None
+
     action = Functions.get_function_by_id(action_id)
     if not action:
         raise HTTPException(
@@ -1340,7 +1370,7 @@ async def chat_completed(
             # Extra parameters to be passed to the function
             extra_params = {
                 "__model__": model,
-                "__id__": action_id,
+                "__id__": sub_action_id if sub_action_id is not None else action_id,
                 "__event_emitter__": __event_emitter__,
                 "__event_call__": __event_call__,
             }
