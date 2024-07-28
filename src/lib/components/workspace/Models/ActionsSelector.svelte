@@ -31,7 +31,6 @@
 		{$i18n.t('To select actions here, add them to the "Functions" workspace first.')}
 	</div>
 
-	<!-- TODO: Filer order matters -->
 	<div class="flex flex-col">
 		{#if actions.length > 0}
 			<div class=" flex items-center mt-2 flex-wrap">
