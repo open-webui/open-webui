@@ -79,6 +79,7 @@ from utils.task import (
 from utils.misc import (
     get_last_user_message,
     add_or_update_system_message,
+    prepend_to_first_user_message_content,
     parse_duration,
 )
 
@@ -686,12 +687,23 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             if len(contexts) > 0:
                 context_string = "/n".join(contexts).strip()
                 prompt = get_last_user_message(body["messages"])
-                body["messages"] = add_or_update_system_message(
-                    rag_template(
-                        rag_app.state.config.RAG_TEMPLATE, context_string, prompt
-                    ),
-                    body["messages"],
-                )
+
+                # Workaround for Ollama 2.0+ system prompt issue
+                # TODO: replace with add_or_update_system_message
+                if model["owned_by"] == "ollama":
+                    body["messages"] = prepend_to_first_user_message_content(
+                        rag_template(
+                            rag_app.state.config.RAG_TEMPLATE, context_string, prompt
+                        ),
+                        body["messages"],
+                    )
+                else:
+                    body["messages"] = add_or_update_system_message(
+                        rag_template(
+                            rag_app.state.config.RAG_TEMPLATE, context_string, prompt
+                        ),
+                        body["messages"],
+                    )
 
             # If there are citations, add them to the data_items
             if len(citations) > 0:
@@ -979,32 +991,15 @@ async def get_all_models():
                     model["name"] = custom_model.name
                     model["info"] = custom_model.model_dump()
 
-                    action_ids = [] + global_action_ids
+                    action_ids = []
                     if "info" in model and "meta" in model["info"]:
                         action_ids.extend(model["info"]["meta"].get("actionIds", []))
-                        action_ids = list(set(action_ids))
-                    action_ids = [
-                        action_id
-                        for action_id in action_ids
-                        if action_id in enabled_action_ids
-                    ]
 
-                    model["actions"] = []
-                    for action_id in action_ids:
-                        action = Functions.get_function_by_id(action_id)
-                        model["actions"].append(
-                            {
-                                "id": action_id,
-                                "name": action.name,
-                                "description": action.meta.description,
-                                "icon_url": action.meta.manifest.get("icon_url", None),
-                            }
-                        )
-
+                    model["action_ids"] = action_ids
         else:
             owned_by = "openai"
             pipe = None
-            actions = []
+            action_ids = []
 
             for model in models:
                 if (
@@ -1015,26 +1010,8 @@ async def get_all_models():
                     if "pipe" in model:
                         pipe = model["pipe"]
 
-                    action_ids = [] + global_action_ids
                     if "info" in model and "meta" in model["info"]:
                         action_ids.extend(model["info"]["meta"].get("actionIds", []))
-                        action_ids = list(set(action_ids))
-                    action_ids = [
-                        action_id
-                        for action_id in action_ids
-                        if action_id in enabled_action_ids
-                    ]
-
-                    actions = [
-                        {
-                            "id": action_id,
-                            "name": Functions.get_function_by_id(action_id).name,
-                            "description": Functions.get_function_by_id(
-                                action_id
-                            ).meta.description,
-                        }
-                        for action_id in action_ids
-                    ]
                     break
 
             models.append(
@@ -1047,7 +1024,31 @@ async def get_all_models():
                     "info": custom_model.model_dump(),
                     "preset": True,
                     **({"pipe": pipe} if pipe is not None else {}),
-                    "actions": actions,
+                    "action_ids": action_ids,
+                }
+            )
+
+    for model in models:
+        action_ids = []
+        if "action_ids" in model:
+            action_ids = model["action_ids"]
+            del model["action_ids"]
+
+        action_ids = action_ids + global_action_ids
+        action_ids = list(set(action_ids))
+        action_ids = [
+            action_id for action_id in action_ids if action_id in enabled_action_ids
+        ]
+
+        model["actions"] = []
+        for action_id in action_ids:
+            action = Functions.get_function_by_id(action_id)
+            model["actions"].append(
+                {
+                    "id": action_id,
+                    "name": action.name,
+                    "description": action.meta.description,
+                    "icon_url": action.meta.manifest.get("icon_url", None),
                 }
             )
 
