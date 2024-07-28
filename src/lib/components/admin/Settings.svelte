@@ -1,5 +1,5 @@
 <script>
-	import { getContext, tick } from 'svelte';
+	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import Database from './Settings/Database.svelte';
@@ -21,17 +21,31 @@
 	const i18n = getContext('i18n');
 
 	let selectedTab = 'general';
+
+	onMount(() => {
+		const containerElement = document.getElementById('admin-settings-tabs-container');
+
+		if (containerElement) {
+			containerElement.addEventListener('wheel', function (event) {
+				if (event.deltaY !== 0) {
+					// Adjust horizontal scroll position based on vertical scroll
+					containerElement.scrollLeft += event.deltaY;
+				}
+			});
+		}
+	});
 </script>
 
 <div class="flex flex-col lg:flex-row w-full h-full py-2 lg:space-x-4">
 	<div
+		id="admin-settings-tabs-container"
 		class="tabs flex flex-row overflow-x-auto space-x-1 max-w-full lg:space-x-0 lg:space-y-1 lg:flex-col lg:flex-none lg:w-44 dark:text-gray-200 text-xs text-left scrollbar-none"
 	>
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 			'general'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'general';
 			}}
@@ -56,8 +70,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'users'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'users';
 			}}
@@ -80,8 +94,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'connections'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'connections';
 			}}
@@ -104,8 +118,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'models'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'models';
 			}}
@@ -130,8 +144,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'documents'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'documents';
 			}}
@@ -160,8 +174,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'web'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'web';
 			}}
@@ -184,8 +198,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'interface'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'interface';
 			}}
@@ -210,8 +224,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'audio'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'audio';
 			}}
@@ -237,8 +251,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'images'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'images';
 			}}
@@ -263,8 +277,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'pipelines'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'pipelines';
 			}}
@@ -293,8 +307,8 @@
 		<button
 			class="px-2.5 py-2.5 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'db'
-				? 'bg-gray-200 dark:bg-gray-800'
-				: ' hover:bg-gray-300 dark:hover:bg-gray-850'}"
+				? 'bg-gray-100 dark:bg-gray-800'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-850'}"
 			on:click={() => {
 				selectedTab = 'db';
 			}}
