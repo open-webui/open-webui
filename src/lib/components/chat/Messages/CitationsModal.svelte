@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
+	import DOMPurify from 'dompurify';
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -79,7 +80,7 @@
 						</div>
 						{#if document.metadata?.html}
 							<div class="text-sm dark:text-gray-400 whitespace-pre-line">
-								{@html document.document}
+								{@html DOMPurify.sanitize(document.document)}
 							</div>
 						{:else}
 							<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
