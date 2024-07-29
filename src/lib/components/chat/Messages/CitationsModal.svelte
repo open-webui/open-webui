@@ -77,9 +77,15 @@
 						<div class=" text-sm font-medium dark:text-gray-300">
 							{$i18n.t('Content')}
 						</div>
-						<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
-							{document.document}
-						</pre>
+						{#if document.metadata?.html}
+							<div class="text-sm dark:text-gray-400 whitespace-pre-line">
+								{@html document.document}
+							</div>
+						{:else}
+							<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
+                {document.document}
+              </pre>
+						{/if}
 					</div>
 
 					{#if documentIdx !== mergedDocuments.length - 1}
