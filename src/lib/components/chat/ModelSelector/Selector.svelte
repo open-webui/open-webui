@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { marked } from 'marked';
+	import { QuickScore } from 'quick-score';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
@@ -45,16 +46,20 @@
 
 	let selectedModelIdx = 0;
 
-	$: filteredItems = items.filter(
-		(item) =>
-			(searchValue
-				? item.value.toLowerCase().includes(searchValue.toLowerCase()) ||
-				  item.label.toLowerCase().includes(searchValue.toLowerCase()) ||
-				  (item.model?.info?.meta?.tags ?? []).some((tag) =>
-						tag.name.toLowerCase().includes(searchValue.toLowerCase())
-				  )
-				: true) && !(item.model?.info?.meta?.hidden ?? false)
+	let fuzzySearch = new QuickScore(
+		items
+			.filter((item) => !item.model?.info?.meta?.hidden)
+			.map((item) => {
+				return {
+					...item,
+					flattened_tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' ')
+				};
+			}),
+		{
+			keys: ['value', 'model.name', 'flattened_tags']
+		}
 	);
+	$: filteredItems = searchValue ? fuzzySearch.search(searchValue).map((item) => item.item) : items;
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
