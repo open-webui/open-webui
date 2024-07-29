@@ -39,6 +39,7 @@
 							url={`${file?.url}`}
 							name={file.name}
 							type={file.type}
+							size={file?.size}
 							dismissible={true}
 							on:dismiss={() => {
 								// Remove the file from the chatFiles array

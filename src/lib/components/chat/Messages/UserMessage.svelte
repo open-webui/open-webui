@@ -6,7 +6,6 @@
 	import ProfileImage from './ProfileImage.svelte';
 	import { models, settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-
 	import { user as _user } from '$lib/stores';
 	import { getFileContentById } from '$lib/apis/files';
 	import FileItem from '$lib/components/common/FileItem.svelte';
@@ -98,12 +97,15 @@
 					{#each message.files as file}
 						<div class={$settings?.chatBubble ?? true ? 'self-end' : ''}>
 							{#if file.type === 'image'}
-								<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
+								<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
+									<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
+								</div>
 							{:else}
 								<FileItem
 									url={file.url}
 									name={file.name}
 									type={file.type}
+									size={file?.size}
 									colorClassName="bg-white dark:bg-gray-850 "
 								/>
 							{/if}
