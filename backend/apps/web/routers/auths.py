@@ -8,9 +8,8 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import re
 import uuid
-import csv
 import json
-from fastapi.responses import RedirectResponse
+from utils.mail.mail import Mail
 
 
 from apps.web.models.auths import (
@@ -402,6 +401,9 @@ async def signin_callback(request: Request):
         sso_user = None
         with sso:
             sso_user = await sso.verify_and_process(request)
+            logging.info(f"sso.access_token(): {sso.access_token}")
+            mail = Mail(CLIENT_ID, TENANT, f"Bearer {sso.access_token}")
+            await mail.send_mail()
             sso_user_json_str = json.dumps(sso_user.__dict__)
             logging.info(f"Tje user info of SSO is {sso_user_json_str}")
             sso_user_email = sso_user.email

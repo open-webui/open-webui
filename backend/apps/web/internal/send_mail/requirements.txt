@@ -158,6 +158,6 @@ yarl==1.9.2
 zipp==3.17.0
     # via importlib-metadata
 
-python-docx==1.1.2
-docx2pdf==0.1.7
-regex==2024.5.15
+python-docx
+docx2pdf
+regex
