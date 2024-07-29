@@ -45,7 +45,7 @@
 	"Allow non-local voices": "Benarkan suara bukan tempatan ",
 	"Allow User Location": "Benarkan Lokasi Pengguna",
 	"Allow Voice Interruption in Call": "Benarkan gangguan suara dalam panggilan",
-	"alphanumeric characters and hyphens": "aksara alfanumerik dan tanda sempang",#to update with correct term
+	"alphanumeric characters and hyphens": "aksara alfanumerik dan tanda sempang",
 	"Already have an account?": "Telah mempunyai akaun?",
 	"an assistant": "seorang pembantu",
 	"and": "dan",
