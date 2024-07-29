@@ -50,6 +50,7 @@
 		items
 			.filter((item) => !item.model?.info?.meta?.hidden)
 			.map((item) => {
+				// used so QuickScore can fuzz tags.
 				return {
 					...item,
 					flattened_tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' ')
