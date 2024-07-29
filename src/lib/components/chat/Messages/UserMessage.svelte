@@ -6,7 +6,6 @@
 	import ProfileImage from './ProfileImage.svelte';
 	import { models, settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-
 	import { user as _user } from '$lib/stores';
 	import { getFileContentById } from '$lib/apis/files';
 	import FileItem from '$lib/components/common/FileItem.svelte';
@@ -104,6 +103,7 @@
 									url={file.url}
 									name={file.name}
 									type={file.type}
+									size={file?.size}
 									colorClassName="bg-white dark:bg-gray-850 "
 								/>
 							{/if}
