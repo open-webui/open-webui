@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
 	import { onMount, tick, getContext } from 'svelte';
 	import {
 		type Model,
@@ -15,6 +16,7 @@
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
+		getQuerySettings,
 		processDocToVectorDB,
 		uploadDocToVectorDB,
 		uploadWebToVectorDB,
@@ -26,7 +28,9 @@
 		SUPPORTED_FILE_TYPE,
 		SUPPORTED_FILE_EXTENSIONS,
 		WEBUI_BASE_URL,
-		WEBUI_API_BASE_URL
+		WEBUI_API_BASE_URL,
+		MAX_FILE_COUNT,
+		MAX_FILE_SIZE
 	} from '$lib/constants';
 
 	import Prompts from './MessageInput/PromptCommands.svelte';
@@ -79,6 +83,14 @@
 	export let prompt = '';
 	export let messages = [];
 
+	let querySettings = {
+		template: '',
+		r: 0.0,
+		k: 4,
+		hybrid: false,
+		enableBase64: false
+	};
+
 	let visionCapableModels = [];
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
@@ -96,8 +108,10 @@
 		element.scrollTop = element.scrollHeight;
 	};
 
-	const uploadFileHandler = async (file, base64_url) => {
+	const uploadFileHandler = async (file, base64_url, enableBase64) => {
 		console.log(file);
+		const fileId = uuidv4();
+
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
 			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
@@ -112,48 +126,61 @@
 			}
 		}
 
-		// Upload the file to the server
-		const uploadedFile = await uploadFile(localStorage.token, file).catch((error) => {
-			toast.error(error);
-			return null;
-		});
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: fileId,
+			url: '',
+			name: file.name,
+			collection_name: '',
+			status: 'uploaded',
+			size: file.size,
+			base64: false,
+			base64_url: '',
+			error: ''
+		};
+		files = [...files, fileItem];
 
-		if (uploadedFile) {
-			const fileItem = {
-				type: 'file',
-				file: uploadedFile,
-				id: uploadedFile.id,
-				url: `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`,
-				name: file.name,
-				collection_name: '',
-				status: 'uploaded',
-				base64: false,
-				base64_url: '',
-				error: ''
-			};
-			files = [...files, fileItem];
+		try {
+			const uploadedFile = await uploadFile(localStorage.token, file);
 
-			// TODO: Check if tools & functions have files support to skip this step to delegate file processing
-			// Default Upload to VectorDB
-			if (
-				SUPPORTED_FILE_TYPE.includes(file['type']) ||
-				SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-			) {
-				processFileItem(fileItem, base64_url);
+			if (uploadedFile) {
+				fileItem.file = uploadedFile;
+				fileItem.id = uploadedFile.id;
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+				// TODO: Check if tools & functions have files support to skip this step to delegate file processing
+				// Default Upload to VectorDB
+				if (
+					SUPPORTED_FILE_TYPE.includes(file['type']) ||
+					SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+				) {
+					processFileItem(fileItem, base64_url);
+				} else {
+					if (!enableBase64) {
+						toast.error(
+							$i18n.t(
+								`Unknown file type '{{file_type}}'. Proceeding with the file upload anyway.`,
+								{
+									file_type: file['type']
+								}
+							)
+						);
+					}
+					processFileItem(fileItem, base64_url);
+				}
 			} else {
-				toast.error(
-					$i18n.t(`Unknown file type '{{file_type}}'. Proceeding with the file upload anyway.`, {
-						file_type: file['type']
-					})
-				);
-				processFileItem(fileItem, base64_url);
+				files = files.filter((item) => item.id !== fileId);
 			}
+		} catch (error) {
+			toast.error(error);
+			files = files.filter((item) => item.id !== fileId);
 		}
 	};
 
 	const processFileItem = async (fileItem, base64_url) => {
 		try {
-			const res = await processDocToVectorDB(localStorage.token, fileItem.id, "file");
+			const res = await processDocToVectorDB(localStorage.token, fileItem.id, 'file');
 
 			if (res) {
 				fileItem.status = 'processed';
@@ -231,6 +258,14 @@
 	};
 
 	onMount(() => {
+		const initializeSettings = async () => {
+			try {
+				querySettings = await getQuerySettings(localStorage.token);
+			} catch (error) {
+				console.error('Error fetching query settings:', error);
+			}
+		};
+		initializeSettings();
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
@@ -259,31 +294,47 @@
 				const inputFiles = Array.from(e.dataTransfer?.files);
 
 				if (inputFiles && inputFiles.length > 0) {
-					inputFiles.forEach((file) => {
+					const filesToProcess = inputFiles.slice(0, MAX_FILE_COUNT);
+					if (inputFiles.length > MAX_FILE_COUNT) {
+						toast.error(
+							$i18n.t('Only the first {{count}} files will be processed.', {
+								count: MAX_FILE_COUNT
+							})
+						);
+					}
+					filesToProcess.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
-						if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
-							if (visionCapableModels.length === 0) {
-								toast.error($i18n.t('Selected model(s) do not support image inputs'));
-								return;
+						if (file.size <= MAX_FILE_SIZE) {
+							if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
+								if (visionCapableModels.length === 0) {
+									toast.error($i18n.t('Selected model(s) do not support image inputs'));
+									return;
+								}
+								let reader = new FileReader();
+								reader.onload = (event) => {
+									files = [
+										...files,
+										{
+											type: 'image',
+											url: `${event.target.result}`
+										}
+									];
+								};
+								reader.readAsDataURL(file);
+							} else {
+								let reader = new FileReader();
+								reader.onload = (event) => {
+									let base64_url = event.target.result;
+									uploadFileHandler(file, base64_url, querySettings.enableBase64);
+								};
+								reader.readAsDataURL(file);
 							}
-							let reader = new FileReader();
-							reader.onload = (event) => {
-								files = [
-									...files,
-									{
-										type: 'image',
-										url: `${event.target.result}`
-									}
-								];
-							};
-							reader.readAsDataURL(file);
 						} else {
-							let reader = new FileReader();
-							reader.onload = (event) => {
-								let base64_url = event.target.result;
-								uploadFileHandler(file, base64_url);
-							};
-							reader.readAsDataURL(file);
+							toast.error(
+								$i18n.t('File size exceeds the limit of {{size}}MB', {
+									size: Math.floor(MAX_FILE_SIZE / (1024 * 1024))
+								})
+							);
 						}
 					});
 				} else {
@@ -431,30 +482,48 @@
 					on:change={async () => {
 						if (inputFiles && inputFiles.length > 0) {
 							const _inputFiles = Array.from(inputFiles);
-							_inputFiles.forEach((file) => {
-								if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
-									if (visionCapableModels.length === 0) {
-										toast.error($i18n.t('Selected model(s) do not support image inputs'));
-										return;
+							const filesToProcess = _inputFiles.slice(0, MAX_FILE_COUNT);
+							if (_inputFiles.length > MAX_FILE_COUNT) {
+								toast.error(
+									$i18n.t('Only the first {{count}} files will be processed.', {
+										count: MAX_FILE_COUNT
+									})
+								);
+							}
+							filesToProcess.forEach((file) => {
+								if (file['size'] <= MAX_FILE_SIZE) {
+									if (
+										['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])
+									) {
+										if (visionCapableModels.length === 0) {
+											toast.error($i18n.t('Selected model(s) do not support image inputs'));
+											return;
+										}
+										let reader = new FileReader();
+										reader.onload = (event) => {
+											files = [
+												...files,
+												{
+													type: 'image',
+													url: `${event.target.result}`
+												}
+											];
+										};
+										reader.readAsDataURL(file);
+									} else {
+										let reader = new FileReader();
+										reader.onload = (event) => {
+											let base64_url = event.target.result;
+											uploadFileHandler(file, base64_url, querySettings.enableBase64);
+										};
+										reader.readAsDataURL(file);
 									}
-									let reader = new FileReader();
-									reader.onload = (event) => {
-										files = [
-											...files,
-											{
-												type: 'image',
-												url: `${event.target.result}`
-											}
-										];
-									};
-									reader.readAsDataURL(file);
 								} else {
-									let reader = new FileReader();
-									reader.onload = (event) => {
-										let base64_url = event.target.result;
-										uploadFileHandler(file, base64_url);
-									};
-									reader.readAsDataURL(file);
+									toast.error(
+										$i18n.t('File size exceeds the limit of {{size}}MB', {
+											size: Math.floor(MAX_FILE_SIZE / (1024 * 1024))
+										})
+									);
 								}
 							});
 						} else {
@@ -562,6 +631,7 @@
 												name={file.name}
 												type={file.type}
 												status={file.status}
+												size={file?.size}
 												dismissible={true}
 												on:dismiss={() => {
 													files.splice(fileIdx, 1);

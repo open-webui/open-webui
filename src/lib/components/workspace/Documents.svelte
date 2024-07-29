@@ -7,7 +7,7 @@
 	import { WEBUI_NAME, documents, showSidebar } from '$lib/stores';
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
-	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
+	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS, MAX_FILE_SIZE } from '$lib/constants';
 	import { processDocToVectorDB, uploadDocToVectorDB } from '$lib/apis/rag';
 	import { blobToFile, transformFileName } from '$lib/utils';
 
@@ -73,10 +73,12 @@
 			return null;
 		});
 
-		const res = await processDocToVectorDB(localStorage.token, uploadedFile.id, "doc").catch((error) => {
-			toast.error(error);
-			return null;
-		});
+		const res = await processDocToVectorDB(localStorage.token, uploadedFile.id, 'doc').catch(
+			(error) => {
+				toast.error(error);
+				return null;
+			}
+		);
 
 		if (res) {
 			await createNewDoc(
@@ -131,16 +133,24 @@
 				if (inputFiles && inputFiles.length > 0) {
 					for (const file of inputFiles) {
 						console.log(file, file.name.split('.').at(-1));
-						if (
-							SUPPORTED_FILE_TYPE.includes(file['type']) ||
-							SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-						) {
-							uploadDoc(file);
+						if (file.size <= MAX_FILE_SIZE) {
+							if (
+								SUPPORTED_FILE_TYPE.includes(file['type']) ||
+								SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+							) {
+								uploadDoc(file);
+							} else {
+								toast.error(
+									`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+								);
+								uploadDoc(file);
+							}
 						} else {
 							toast.error(
-								`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+								$i18n.t('File size exceeds the limit of {{size}}MB', {
+									size: Math.floor(MAX_FILE_SIZE / (1024 * 1024))
+								})
 							);
-							uploadDoc(file);
 						}
 					}
 				} else {
