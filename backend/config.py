@@ -615,6 +615,12 @@ REDIRECT_URI = os.environ.get("REDIRECT_URI", "http://localhost:8080/api/v1/auth
 log.info(f"Azure AD Authentication set. CLIENT_ID: \"{CLIENT_ID}\"; CLIENT_SECRET: \"******\"; TENANT: \"{TENANT}\"; REDIRECT_URI: \"{REDIRECT_URI}\"")
 
 ####################################
+# Email Notifications
+####################################
+HR_EMAIL = os.environ.get("HR_EMAIL", "Qinghao.Zhang@mbzuai.ac.ae")
+log.info(f"HR_EMAIL: {HR_EMAIL}")
+
+####################################
 # TOOLS
 ####################################
 

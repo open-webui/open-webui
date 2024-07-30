@@ -8,7 +8,7 @@ from apps.web.models.services import LeaveForm
 class Mail:
     graph: Graph
 
-    def __init__(self, client_id: str, tenant_id: str, authorization: str, graph_user_scopes: list[str] = ["Mail.Read", "Mail.Send"]):
+    def __init__(self, client_id: str, tenant_id: str, authorization: str, graph_user_scopes: list[str] = ["Mail.Send"]):
         azure_settings={}
         azure_settings["client_id"] = client_id
         azure_settings["tenant_id"] = tenant_id

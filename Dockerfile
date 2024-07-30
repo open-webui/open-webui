@@ -64,6 +64,9 @@ ENV CLIENT_ID="" \
     TENANT="" \
     REDIRECT_URI=""
 
+# Use to send emails to HR
+ENV HR_EMAIL=""
+
 #### Other models #########################################################
 ## whisper TTS model settings ##
 ENV WHISPER_MODEL="base" \
