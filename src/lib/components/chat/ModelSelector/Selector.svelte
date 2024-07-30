@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { marked } from 'marked';
-	import { QuickScore } from 'quick-score';
+	import { QuickScore } from '$lib/utils/search';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
@@ -48,17 +48,19 @@
 
 	let fuzzySearch = new QuickScore(
 		items
+			.slice() // slice to create a copy
 			.filter((item) => !item.model?.info?.meta?.hidden)
 			.map((item) => {
 				// used so QuickScore can fuzz tags.
-				return {
+				const r = {
 					...item,
+					flattened_model_name: item.model?.name,
 					flattened_tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' ')
 				};
+
+				return r;
 			}),
-		{
-			keys: ['value', 'model.name', 'flattened_tags']
-		}
+		['value', 'flattened_tags', 'flattened_model_name']
 	);
 	$: filteredItems = searchValue ? fuzzySearch.search(searchValue).map((item) => item.item) : items;
 
