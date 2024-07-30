@@ -975,11 +975,15 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
 RAG_MAX_FILE_COUNT = PersistentConfig(
-    "RAG_MAX_FILE_COUNT", "rag.max_file_count", int(os.environ.get("RAG_MAX_FILE_COUNT", 5))
+    "RAG_MAX_FILE_COUNT",
+    "rag.max_file_count",
+    int(os.environ.get("RAG_MAX_FILE_COUNT", "5"))
 )
 
 RAG_MAX_FILE_SIZE = PersistentConfig(
-    "RAG_MAX_FILE_SIZE", "rag.max_file_size", int(os.environ.get("RAG_MAX_FILE_SIZE", 10))
+    "RAG_MAX_FILE_SIZE",
+    "rag.max_file_size",
+    int(os.environ.get("RAG_MAX_FILE_SIZE", "10"))
 )
 
 RAG_TOP_K = PersistentConfig(
