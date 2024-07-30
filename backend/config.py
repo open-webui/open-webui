@@ -77,7 +77,7 @@ for source in log_sources:
 
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "RaphAK")
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "RaphAI")
 if WEBUI_NAME != "RaphAI":
     WEBUI_NAME += " (RaphAI)"
 
