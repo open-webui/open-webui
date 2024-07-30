@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
 	import { onMount, tick, getContext } from 'svelte';
 	import {
 		type Model,
@@ -98,6 +99,8 @@
 
 	const uploadFileHandler = async (file) => {
 		console.log(file);
+		const fileId = uuidv4();
+
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
 			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
@@ -112,40 +115,48 @@
 			}
 		}
 
-		// Upload the file to the server
-		const uploadedFile = await uploadFile(localStorage.token, file).catch((error) => {
-			toast.error(error);
-			return null;
-		});
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: fileId,
+			url: '',
+			name: file.name,
+			collection_name: '',
+			status: 'uploaded',
+			size: file.size,
+			error: ''
+		};
+		files = [...files, fileItem];
 
-		if (uploadedFile) {
-			const fileItem = {
-				type: 'file',
-				file: uploadedFile,
-				id: uploadedFile.id,
-				url: `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`,
-				name: file.name,
-				collection_name: '',
-				status: 'uploaded',
-				error: ''
-			};
-			files = [...files, fileItem];
+		try {
+			const uploadedFile = await uploadFile(localStorage.token, file);
 
-			// TODO: Check if tools & functions have files support to skip this step to delegate file processing
-			// Default Upload to VectorDB
-			if (
-				SUPPORTED_FILE_TYPE.includes(file['type']) ||
-				SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-			) {
-				processFileItem(fileItem);
+			if (uploadedFile) {
+				fileItem.file = uploadedFile;
+				fileItem.id = uploadedFile.id;
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+				// TODO: Check if tools & functions have files support to skip this step to delegate file processing
+				// Default Upload to VectorDB
+				if (
+					SUPPORTED_FILE_TYPE.includes(file['type']) ||
+					SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+				) {
+					processFileItem(fileItem);
+				} else {
+					toast.error(
+						$i18n.t(`Unknown file type '{{file_type}}'. Proceeding with the file upload anyway.`, {
+							file_type: file['type']
+						})
+					);
+					processFileItem(fileItem);
+				}
 			} else {
-				toast.error(
-					$i18n.t(`Unknown file type '{{file_type}}'. Proceeding with the file upload anyway.`, {
-						file_type: file['type']
-					})
-				);
-				processFileItem(fileItem);
+				files = files.filter((item) => item.id !== fileId);
 			}
+		} catch (error) {
+			toast.error(error);
+			files = files.filter((item) => item.id !== fileId);
 		}
 	};
 
