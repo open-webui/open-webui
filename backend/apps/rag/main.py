@@ -1263,6 +1263,12 @@ def process_doc(
             # logging.error(f"user_settings: {user_settings}")
             # logging.error(f"enableFileUpdateBase64: {enableFileUpdateBase64}")
 
+        if not enableFileUpdateBase64 or not app.state.config.ENABLE_BASE64 or form_data.type != "file":
+            return {
+                "status": True,
+                "base64": True,
+            }
+
         known_type = True
         file = Files.get_file_by_id(form_data.file_id)
         file_path = file.meta.get("path", f"{UPLOAD_DIR}/{file.filename}")
@@ -1297,14 +1303,14 @@ def process_doc(
                         "known_type": known_type,
                         "filename": file.meta.get("name", file.filename),
                     }
-            else:
-                return {
-                    "status": True,
-                    "base64": True,
-                    "collection_name": collection_name,
-                    "known_type": known_type,
-                    "filename": file.meta.get("name", file.filename),
-                }
+            # else:
+            #     return {
+            #         "status": True,
+            #         "base64": True,
+            #         "collection_name": collection_name,
+            #         "known_type": known_type,
+            #         "filename": file.meta.get("name", file.filename),
+            #     }
             
         except Exception as e:
             raise HTTPException(

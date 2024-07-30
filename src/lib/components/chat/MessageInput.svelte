@@ -134,18 +134,25 @@
 		files = [...files, fileItem];
 
 		try {
-			const uploadedFile = await uploadFile(localStorage.token, file);
+			let uploadedFile = null;
 
-			if (uploadedFile) {
-				fileItem.file = uploadedFile;
-				fileItem.id = uploadedFile.id;
-				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+			if (!enableBase64) {
+				uploadedFile = await uploadFile(localStorage.token, file);
+			}
 
-				// TODO: Check if tools & functions have files support to skip this step to delegate file processing
-				// Default Upload to VectorDB
+			if (uploadedFile || enableBase64) {
+				if (!enableBase64) {
+					fileItem.file = uploadedFile;
+					fileItem.id = uploadedFile.id;
+					fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+				}
+
+				const fileType = file['type'];
+				const fileExtension = file.name.split('.').pop();
+
 				if (
-					SUPPORTED_FILE_TYPE.includes(file['type']) ||
-					SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+					SUPPORTED_FILE_TYPE.includes(fileType) ||
+					SUPPORTED_FILE_EXTENSIONS.includes(fileExtension)
 				) {
 					processFileItem(fileItem, base64_url);
 				} else {
@@ -154,7 +161,7 @@
 							$i18n.t(
 								`Unknown file type '{{file_type}}'. Proceeding with the file upload anyway.`,
 								{
-									file_type: file['type']
+									file_type: fileType
 								}
 							)
 						);
@@ -165,7 +172,7 @@
 				files = files.filter((item) => item.id !== fileId);
 			}
 		} catch (error) {
-			toast.error(error);
+			toast.error(error.message || error);
 			files = files.filter((item) => item.id !== fileId);
 		}
 	};
@@ -176,10 +183,11 @@
 
 			if (res) {
 				fileItem.status = 'processed';
-				fileItem.collection_name = res.collection_name;
 				if (res.base64) {
 					fileItem.base64 = true;
 					fileItem.base64_url = base64_url;
+				} else {
+					fileItem.collection_name = res.collection_name;
 				}
 				files = files;
 			}
