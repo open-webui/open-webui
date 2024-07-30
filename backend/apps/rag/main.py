@@ -609,9 +609,9 @@ async def update_query_settings(
     app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )
-    app.state.config.ENABLE_BASE64 = form_data.enableBase64 if form_data.enableBase64 else False
     app.state.config.MAX_FILE_SIZE = form_data.max_file_size if form_data.max_file_size else 10
     app.state.config.MAX_FILE_COUNT = form_data.max_file_count if form_data.max_file_count else 5
+    app.state.config.ENABLE_BASE64 = form_data.enableBase64 if form_data.enableBase64 else False
 
     return {
         "status": True,
