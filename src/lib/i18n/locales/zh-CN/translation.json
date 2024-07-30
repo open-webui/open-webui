@@ -281,7 +281,6 @@
 	"File Mode": "文件模式",
 	"File not found.": "文件未找到。",
 	"File size exceeds the limit of {{size}}MB": "文件大小超过限制 {{size}}MB",
-	"Filter": "消息过滤",
 	"Files": "文件",
 	"Filter is now globally disabled": "过滤器已全局禁用",
 	"Filter is now globally enabled": "过滤器已全局启用",
