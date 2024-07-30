@@ -281,6 +281,7 @@
 								count: querySettings.max_file_count
 							})
 						);
+						dragged = false;
 						return;
 					}
 					inputFiles.forEach((file) => {
@@ -290,6 +291,7 @@
 									count: querySettings.max_file_count
 								})
 							);
+							dragged = false;
 							return;
 						}
 						console.log(file, file.name.split('.').at(-1));
