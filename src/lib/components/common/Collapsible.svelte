@@ -29,18 +29,10 @@
 		</button>
 	{:else}
 		<button on:click={() => (open = !open)}>
-			<slot />
-
 			<div
 				class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
 			>
 				<slot />
-
-				{#if open}
-					<ChevronUp strokeWidth="3.5" className="size-3.5 " />
-				{:else}
-					<ChevronDown strokeWidth="3.5" className="size-3.5 " />
-				{/if}
 			</div>
 		</button>
 	{/if}
