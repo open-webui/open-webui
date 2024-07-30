@@ -1,6 +1,6 @@
 <script>
 	import { onMount, tick, setContext } from 'svelte';
-	import { config, user, theme, WEBUI_NAME } from '$lib/stores';
+	import { config, user, theme, WEBUI_NAME, settings } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { Toaster, toast } from 'svelte-sonner';
 
@@ -18,6 +18,15 @@
 	setContext('i18n', i18n);
 
 	let loaded = false;
+
+	const getUserDefaultPrompt = async (userInfo) => {
+		let originSetting = JSON.parse(localStorage.getItem('settings') ?? '{}');
+		if (!originSetting.system) {
+			originSetting.system = `I am one user. My name is ${userInfo.name ?? ''}, I am the ${userInfo.title ?? '_'} at MBZUAI. My phone number is ${userInfo.phone ?? '_'}. My email address is ${userInfo.email ?? ''}. My ID is ${userInfo.id ?? '_'}`
+		}
+		await settings.set({ ...$settings, ...originSetting });
+		localStorage.setItem('settings', JSON.stringify($settings))
+	}
 
 	onMount(async () => {
 		theme.set(localStorage.theme);
@@ -47,6 +56,7 @@
 					if (sessionUser) {
 						// Save Session User to Store
 						await user.set(sessionUser);
+						await getUserDefaultPrompt(sessionUser)
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');

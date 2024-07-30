@@ -336,7 +336,6 @@
 </script>
 
 <CitationsModal bind:show={showCitationModal} citation={selectedCitation} />
-<FormActionModal bind:show={showLeaveForm} />
 
 {#key message.id}
 	<div class=" flex w-full message-{message.id}" id="message-{message.id}">
@@ -449,10 +448,19 @@
 												code={revertSanitizedResponseContent(token.text)}
 											/>
 										{:else if token.raw.includes('annual_leave_form')}
+											<FormActionModal on:save={() => {
+												editedContent = 'Leave form submited by user.'; 
+												editMessageConfirmHandler()
+											}} on:cancel={() => {
+												editedContent = 'leave_request_cancled';
+												editMessageConfirmHandler()
+											}} />
+										{:else if token.raw.includes('leave_request_cancled')}
 											<button
 												class="px-4 my-2 rounded-lg bg-[#ffffffaa] hover:bg-[#fff]"
 												on:click={() => {
-													showLeaveForm = true;
+													editedContent = 'annual_leave_form'
+													editMessageConfirmHandler()
 												}}>Click here to apply for leave</button
 											>
 										{:else}

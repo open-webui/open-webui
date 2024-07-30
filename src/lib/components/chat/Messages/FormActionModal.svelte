@@ -4,12 +4,15 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { DateInput } from 'date-picker-svelte';
 	import Textfield from '@smui/textfield';
-	import Select, { Option } from '@smui/select';
+	import { createEventDispatcher } from 'svelte';
+	// import Select, { Option } from '@smui/select';
 
 	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let citation;
+
+	const dispatch = createEventDispatcher();
 
 	let mergedDocuments = [];
 	let startDate = new Date();
@@ -32,10 +35,10 @@
 			};
 		});
 	}
-	// $: if (show) {
-	// 	let diff = new Date(endDate).getTime() - new Date(startDate).getTime();
-	// 	count = diff / 1000 / 60 / 60 / 24;
-	// }
+	$: if (show) {
+		let diff = new Date(endDate).getTime() - new Date(startDate).getTime();
+		count = diff / 1000 / 60 / 60 / 24;
+	}
 	$: dayCount = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 1000 / 60 / 60 / 24;
 
 	const handleConfirm = () => {
@@ -55,16 +58,17 @@
 			'{EMAIL}': 'nikhil.ranjan@mbzuai.ac.ae',
 			'{DATE}': new Date()
 		};
+		dispatch('confirm', formData);
 		console.info(formData, 'dddd');
 		show = false;
 	};
 </script>
 
-<Modal size="lg" bind:show>
-	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
+<!-- <Modal size="lg" bind:show> -->
+	<div class="w-2/3 bg-[#ffffffee] rounded-lg my-4 mx-2">
+		<!-- <div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center capitalize">
-				<!-- {$i18n.t('Citation')} -->
+				{$i18n.t('Citation')}
 			</div>
 			<button
 				class="self-center"
@@ -83,9 +87,9 @@
 					/>
 				</svg>
 			</button>
-		</div>
+		</div> -->
 
-		<div class="flex flex-col md:flex-row w-full px-6 pb-5 md:space-x-4">
+		<div class="flex flex-col md:flex-row w-full px-6 py-5 md:space-x-4">
 			<div class=" w-full dark:text-gray-200 overflow-y-scroll scrollbar-hidden p-5">
 				<!-- Leave Type & ID  -->
 				<div class="flex w-full">
@@ -93,11 +97,11 @@
 						<div class="mb-2 text-sm">Type of Leave</div>
 						<div class="flex items-center">
 							<img src="/icon/type.png" alt="icon-form" class="h-[22px] mr-2" />
-							<Select variant="outlined" bind:type class="flex-1">
+							<select name="type" id="leave_type" class="flex-1 rounded-md px-2 h-[44px]" style="border: 1px solid #0000004D">
 								{#each leaves as leaveType}
-									<Option value={leaveType}>{leaveType}</Option>
+									<option value={leaveType}>{leaveType}</option>
 								{/each}
-							</Select>
+							</select>
 						</div>
 					</div>
 					<div class="w-1/3">
@@ -115,7 +119,7 @@
 						<div class="flex items-center">
 							<img src="/icon/calendar.png" alt="icon-form" class="h-[24px] mr-2" />
 							<DateInput bind:value={startDate} format="yyyy-MM-dd" min={minDate} class="mr-2" />
-							-
+							<span>-</span>
 							<DateInput
 								bind:value={endDate}
 								format="yyyy-MM-dd"
@@ -154,7 +158,8 @@
 					<button
 						class="py-1 px-12 rounded-lg border border-black/opacity-3 text-black/opacity-60 text-sm"
 						on:click={() => {
-							show = false;
+							// show = false;
+							dispatch('cancel')
 						}}>Cancel</button
 					>
 					<button
@@ -167,4 +172,4 @@
 			</div>
 		</div>
 	</div>
-</Modal>
+<!-- </Modal> -->
