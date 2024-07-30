@@ -977,13 +977,13 @@ CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 RAG_MAX_FILE_COUNT = PersistentConfig(
     "RAG_MAX_FILE_COUNT",
     "rag.max_file_count",
-    int(os.environ.get("RAG_MAX_FILE_COUNT", "5"))
+    int(os.environ.get("RAG_MAX_FILE_COUNT", "5")),
 )
 
 RAG_MAX_FILE_SIZE = PersistentConfig(
     "RAG_MAX_FILE_SIZE",
     "rag.max_file_size",
-    int(os.environ.get("RAG_MAX_FILE_SIZE", "10"))
+    int(os.environ.get("RAG_MAX_FILE_SIZE", "10")),
 )
 
 RAG_TOP_K = PersistentConfig(
