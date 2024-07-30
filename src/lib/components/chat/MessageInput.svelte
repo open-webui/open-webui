@@ -28,9 +28,7 @@
 		SUPPORTED_FILE_TYPE,
 		SUPPORTED_FILE_EXTENSIONS,
 		WEBUI_BASE_URL,
-		WEBUI_API_BASE_URL,
-		MAX_FILE_COUNT,
-		MAX_FILE_SIZE
+		WEBUI_API_BASE_URL
 	} from '$lib/constants';
 
 	import Prompts from './MessageInput/PromptCommands.svelte';
@@ -83,13 +81,7 @@
 	export let prompt = '';
 	export let messages = [];
 
-	let querySettings = {
-		template: '',
-		r: 0.0,
-		k: 4,
-		hybrid: false,
-		enableBase64: false
-	};
+	let querySettings = {};
 
 	let visionCapableModels = [];
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
@@ -294,17 +286,17 @@
 				const inputFiles = Array.from(e.dataTransfer?.files);
 
 				if (inputFiles && inputFiles.length > 0) {
-					const filesToProcess = inputFiles.slice(0, MAX_FILE_COUNT);
-					if (inputFiles.length > MAX_FILE_COUNT) {
+					const filesToProcess = inputFiles.slice(0, querySettings.max_file_count);
+					if (inputFiles.length > querySettings.max_file_count) {
 						toast.error(
 							$i18n.t('Only the first {{count}} files will be processed.', {
-								count: MAX_FILE_COUNT
+								count: querySettings.max_file_count
 							})
 						);
 					}
 					filesToProcess.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
-						if (file.size <= MAX_FILE_SIZE) {
+						if (file.size <= querySettings.max_file_size * 1024 * 1024) {
 							if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
 								if (visionCapableModels.length === 0) {
 									toast.error($i18n.t('Selected model(s) do not support image inputs'));
@@ -332,7 +324,7 @@
 						} else {
 							toast.error(
 								$i18n.t('File size exceeds the limit of {{size}}MB', {
-									size: Math.floor(MAX_FILE_SIZE / (1024 * 1024))
+									size: querySettings.max_file_size
 								})
 							);
 						}
@@ -482,16 +474,16 @@
 					on:change={async () => {
 						if (inputFiles && inputFiles.length > 0) {
 							const _inputFiles = Array.from(inputFiles);
-							const filesToProcess = _inputFiles.slice(0, MAX_FILE_COUNT);
-							if (_inputFiles.length > MAX_FILE_COUNT) {
+							const filesToProcess = _inputFiles.slice(0, querySettings.max_file_count);
+							if (_inputFiles.length > querySettings.max_file_count) {
 								toast.error(
 									$i18n.t('Only the first {{count}} files will be processed.', {
-										count: MAX_FILE_COUNT
+										count: querySettings.max_file_count
 									})
 								);
 							}
 							filesToProcess.forEach((file) => {
-								if (file['size'] <= MAX_FILE_SIZE) {
+								if (file['size'] <= querySettings.max_file_size * 1024 * 1024) {
 									if (
 										['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])
 									) {
@@ -521,7 +513,7 @@
 								} else {
 									toast.error(
 										$i18n.t('File size exceeds the limit of {{size}}MB', {
-											size: Math.floor(MAX_FILE_SIZE / (1024 * 1024))
+											size: querySettings.max_file_size
 										})
 									);
 								}

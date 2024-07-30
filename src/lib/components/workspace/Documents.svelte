@@ -7,8 +7,8 @@
 	import { WEBUI_NAME, documents, showSidebar } from '$lib/stores';
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
-	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS, MAX_FILE_SIZE } from '$lib/constants';
-	import { processDocToVectorDB, uploadDocToVectorDB } from '$lib/apis/rag';
+	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
+	import { getQuerySettings, processDocToVectorDB, uploadDocToVectorDB } from '$lib/apis/rag';
 	import { blobToFile, transformFileName } from '$lib/utils';
 
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
@@ -35,6 +35,7 @@
 	let selectedTag = '';
 
 	let dragged = false;
+	let querySettings = {};
 
 	const deleteDoc = async (name) => {
 		await deleteDocByName(localStorage.token, name);
@@ -96,6 +97,14 @@
 	};
 
 	onMount(() => {
+		const initializeSettings = async () => {
+			try {
+				querySettings = await getQuerySettings(localStorage.token);
+			} catch (error) {
+				console.error('Error fetching query settings:', error);
+			}
+		};
+		initializeSettings();
 		documents.subscribe((docs) => {
 			tags = docs.reduce((a, e, i, arr) => {
 				return [...new Set([...a, ...(e?.content?.tags ?? []).map((tag) => tag.name)])];
@@ -133,7 +142,7 @@
 				if (inputFiles && inputFiles.length > 0) {
 					for (const file of inputFiles) {
 						console.log(file, file.name.split('.').at(-1));
-						if (file.size <= MAX_FILE_SIZE) {
+						if (file.size <= querySettings.max_file_size * 1024 * 1024) {
 							if (
 								SUPPORTED_FILE_TYPE.includes(file['type']) ||
 								SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
@@ -148,7 +157,7 @@
 						} else {
 							toast.error(
 								$i18n.t('File size exceeds the limit of {{size}}MB', {
-									size: Math.floor(MAX_FILE_SIZE / (1024 * 1024))
+									size: querySettings.max_file_size
 								})
 							);
 						}
