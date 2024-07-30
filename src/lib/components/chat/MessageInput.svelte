@@ -286,25 +286,22 @@
 				const inputFiles = Array.from(e.dataTransfer?.files);
 
 				if (inputFiles && inputFiles.length > 0) {
-					if (files.length >= querySettings.max_file_count) {
+					if (
+						files.length >= querySettings.max_file_count ||
+						files.length + inputFiles.length > querySettings.max_file_count
+					) {
 						toast.error(
 							$i18n.t('Only the first {{count}} files will be processed.', {
 								count: querySettings.max_file_count
 							})
 						);
-						dragged = false;
-						return;
-					}
-					inputFiles.forEach((file) => {
 						if (files.length >= querySettings.max_file_count) {
-							toast.error(
-								$i18n.t('Only the first {{count}} files will be processed.', {
-									count: querySettings.max_file_count
-								})
-							);
 							dragged = false;
 							return;
 						}
+					}
+					const filesToProcess = inputFiles.slice(0, querySettings.max_file_count - files.length);
+					filesToProcess.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
 						if (file.size <= querySettings.max_file_size * 1024 * 1024) {
 							if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
@@ -483,26 +480,26 @@
 					multiple
 					on:change={async () => {
 						if (inputFiles && inputFiles.length > 0) {
-							if (files.length >= querySettings.max_file_count) {
+							if (
+								files.length >= querySettings.max_file_count ||
+								files.length + inputFiles.length > querySettings.max_file_count
+							) {
 								toast.error(
 									$i18n.t('Only the first {{count}} files will be processed.', {
 										count: querySettings.max_file_count
 									})
 								);
-								filesInputElement.value = '';
-								return;
-							}
-							const _inputFiles = Array.from(inputFiles);
-							_inputFiles.forEach((file) => {
-								if (files.length >= querySettings.max_file_count) {
-									toast.error(
-										$i18n.t('Only the first {{count}} files will be processed.', {
-											count: querySettings.max_file_count
-										})
-									);
+								if (files.length > querySettings.max_file_count) {
 									filesInputElement.value = '';
 									return;
 								}
+							}
+							const _inputFiles = Array.from(inputFiles);
+							const filesToProcess = _inputFiles.slice(
+								0,
+								querySettings.max_file_count - files.length
+							);
+							filesToProcess.forEach((file) => {
 								if (file['size'] <= querySettings.max_file_size * 1024 * 1024) {
 									if (
 										['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])
