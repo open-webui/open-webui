@@ -20,8 +20,9 @@
 		"pyodide:fetch": "node scripts/prepare-pyodide.js"
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-auto": "^2.0.0",
-		"@sveltejs/adapter-static": "^2.0.3",
+		"@sveltejs/adapter-auto": "^3.2.2",
+		"@sveltejs/adapter-node": "^5.2.0",
+		"@sveltejs/adapter-static": "^3.0.2",
 		"@sveltejs/kit": "^2.5.18",
 		"@tailwindcss/typography": "^0.5.10",
 		"@types/bun": "latest",
@@ -52,7 +53,6 @@
 		"@codemirror/lang-python": "^6.1.6",
 		"@codemirror/theme-one-dark": "^6.1.2",
 		"@pyscript/core": "^0.4.32",
-		"@sveltejs/adapter-node": "^1.3.1",
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
 		"codemirror": "^6.0.1",
