@@ -125,3 +125,6 @@ hrwebui:
       clientSecret: "3e38Q~beYBGdElt-x7Y.ueqsO2u_lGm3y-dSha2w"
       tenant: "c93272d3-1b07-4b3d-a3b6-19b34a973915"
       redirectUri: "https://hr.ciai-mbzuai.ac.ae/login"
+  mail:
+    enabled: true
+    hr: "Qinghao.Zhang@mbzuai.ac.ae"
