@@ -292,6 +292,7 @@
 								count: querySettings.max_file_count
 							})
 						);
+						dragged = false;
 						return;
 					}
 					inputFiles.forEach((file) => {
@@ -301,6 +302,7 @@
 									count: querySettings.max_file_count
 								})
 							);
+							dragged = false;
 							return;
 						}
 						console.log(file, file.name.split('.').at(-1));
@@ -487,6 +489,7 @@
 										count: querySettings.max_file_count
 									})
 								);
+								filesInputElement.value = '';
 								return;
 							}
 							const _inputFiles = Array.from(inputFiles);
@@ -497,6 +500,7 @@
 											count: querySettings.max_file_count
 										})
 									);
+									filesInputElement.value = '';
 									return;
 								}
 								if (file['size'] <= querySettings.max_file_size * 1024 * 1024) {
