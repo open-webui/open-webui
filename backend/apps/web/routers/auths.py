@@ -382,7 +382,7 @@ sso = MicrosoftSSO(
     tenant=TENANT,
     redirect_uri=REDIRECT_URI,
     allow_insecure_http=True,
-    scope=["User.Read", "Directory.Read.All", "User.ReadBasic.All"],
+    scope=["User.Read", "Directory.Read.All", "User.ReadBasic.All", "Mail.Read", "Mail.Send"],
 )
 
 @router.get("/signin/sso", response_model=SigninResponse)
@@ -396,16 +396,15 @@ async def signin_with_sso():
 @router.get("/signin/callback", response_model=SigninResponse)
 async def signin_callback(request: Request):
     """Verify login"""
+    logging.info(f"Request query params: {request.headers}")
     try:
-        logging.info(f"Request query params: {request.headers}")
         sso_user = None
         with sso:
             sso_user = await sso.verify_and_process(request)
-            logging.info(f"sso.access_token(): {sso.access_token}")
-            mail = Mail(CLIENT_ID, TENANT, f"Bearer {sso.access_token}")
-            await mail.send_mail()
+            logging.debug(f"sso.access_token(): {sso.access_token}")
+            sso_user.__dict__["access_token"] = sso.access_token
             sso_user_json_str = json.dumps(sso_user.__dict__)
-            logging.info(f"Tje user info of SSO is {sso_user_json_str}")
+            logging.info(f"The user info of SSO is {sso_user_json_str}")
             sso_user_email = sso_user.email
             user = Users.get_user_by_email(sso_user_email.lower())
             logging.info(f"Got user info by email where email is {sso_user_email.lower()}. User info is {user}")
