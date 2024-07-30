@@ -435,7 +435,7 @@
 	"On": "オン",
 	"Only": "のみ",
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "コマンド文字列には英数字とハイフンのみが許可されています。",
-	"Only the first {{count}} files will be processed.": "",
+	"Only the first {{count}} files will be processed._other": "",
 	"Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.": "おっと！ しばらくお待ちください！ ファイルはまだ処理中です。完璧に仕上げていますので、しばらくお待ちください。準備ができたらお知らせします。",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "おっと！ URL が無効なようです。もう一度確認してやり直してください。",
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "",

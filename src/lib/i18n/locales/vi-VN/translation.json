@@ -435,7 +435,7 @@
 	"On": "Bật",
 	"Only": "Only",
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Chỉ ký tự số và gạch nối được phép trong chuỗi lệnh.",
-	"Only the first {{count}} files will be processed.": "",
+	"Only the first {{count}} files will be processed._other": "",
 	"Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.": "Vui lòng kiên nhẫn chờ đợi! Các tệp của bạn vẫn đang trong được phân tích và xử lý. Chúng tôi đang cố gắng hoàn thành chúng. Vui lòng kiên nhẫn và chúng tôi sẽ cho bạn biết khi chúng sẵn sàng.",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Rất tiếc! URL dường như không hợp lệ. Vui lòng kiểm tra lại và thử lại.",
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "Rất tiếc! Đã xảy ra lỗi trong phản hồi trước đó. Vui lòng thử lại hoặc liên hệ với quản trị viên.",

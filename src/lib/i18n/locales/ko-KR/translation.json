@@ -435,7 +435,7 @@
 	"On": "켜기",
 	"Only": "오직",
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "명령어 문자열에는 영문자, 숫자 및 하이픈만 허용됩니다.",
-	"Only the first {{count}} files will be processed.": "",
+	"Only the first {{count}} files will be processed._other": "",
 	"Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.": "이런! 잠시만 기다려 주세요! 파일이 아직 처리 중입니다. 완벽을 위해 준비하고 있습니다. 준비가 되면 알려드리겠습니다.",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "이런! URL이 잘못된 것 같습니다. 다시 한번 확인하고 다시 시도해주세요.",
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "",
