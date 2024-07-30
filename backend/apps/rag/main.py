@@ -1263,7 +1263,7 @@ def process_doc(
             # logging.error(f"user_settings: {user_settings}")
             # logging.error(f"enableFileUpdateBase64: {enableFileUpdateBase64}")
 
-        if not enableFileUpdateBase64 or not app.state.config.ENABLE_BASE64 or form_data.type != "file":
+        if enableFileUpdateBase64 and app.state.config.ENABLE_BASE64 and form_data.type == "file":
             return {
                 "status": True,
                 "base64": True,
