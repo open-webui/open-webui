@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
+	import DOMPurify from 'dompurify';
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -77,9 +78,15 @@
 						<div class=" text-sm font-medium dark:text-gray-300">
 							{$i18n.t('Content')}
 						</div>
-						<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
-							{document.document}
-						</pre>
+						{#if document.metadata?.html}
+							<div class="text-sm dark:text-gray-400 whitespace-pre-line">
+								{@html DOMPurify.sanitize(document.document)}
+							</div>
+						{:else}
+							<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
+                {document.document}
+              </pre>
+						{/if}
 					</div>
 
 					{#if documentIdx !== mergedDocuments.length - 1}
