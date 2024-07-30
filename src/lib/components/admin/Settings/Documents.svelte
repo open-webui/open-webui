@@ -388,33 +388,38 @@
 				</div>
 			{/if}
 
-			<div class="  flex w-full justify-between">
-				<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('MAX FILE COUNT')}</div>
-
-				<div class="self-center p-3">
-					<input
-						class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-						type="number"
-						placeholder={$i18n.t('Enter MAX FILE COUNT')}
-						bind:value={querySettings.max_file_count}
-						autocomplete="off"
-						min="0"
-					/>
+			<div class=" my-2 flex gap-1.5">
+				<div class="  w-full justify-between">
+					<div class="self-center text-xs font-medium min-w-fit mb-1">
+						{$i18n.t('Enter MAX FILE COUNT')}
+					</div>
+					<div class="self-center">
+						<input
+							class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="number"
+							placeholder={$i18n.t('MAX FILE COUNT')}
+							bind:value={querySettings.max_file_count}
+							autocomplete="off"
+							min="0"
+						/>
+					</div>
 				</div>
-			</div>
 
-			<div class="  flex w-full justify-between">
-				<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('MAX FILE SIZE(MB)')}</div>
+				<div class="w-full">
+					<div class=" self-center text-xs font-medium min-w-fit mb-1">
+						{$i18n.t('Enter MAX FILE SIZE(MB)')}
+					</div>
 
-				<div class="self-center p-3">
-					<input
-						class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-						type="number"
-						placeholder={$i18n.t('Enter MAX FILE SIZE(MB)')}
-						bind:value={querySettings.max_file_size}
-						autocomplete="off"
-						min="0"
-					/>
+					<div class="self-center">
+						<input
+							class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="number"
+							placeholder={$i18n.t('MAX FILE SIZE(MB)')}
+							bind:value={querySettings.max_file_size}
+							autocomplete="off"
+							min="0"
+						/>
+					</div>
 				</div>
 			</div>
 

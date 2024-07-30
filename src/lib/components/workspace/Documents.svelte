@@ -108,6 +108,7 @@
 			}
 		};
 		initializeSettings();
+		
 		documents.subscribe((docs) => {
 			tags = docs.reduce((a, e, i, arr) => {
 				return [...new Set([...a, ...(e?.content?.tags ?? []).map((tag) => tag.name)])];
