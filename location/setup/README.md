@@ -70,11 +70,28 @@ Or if you're retaining an [existing open-webui container](https://docs.openwebui
 	docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
 -->
 
+## Install with Pip and Start your server (Beta)
+
+This pip install did not work on Loren's Mac.
+No error, but there's no backend running.
+
+Takes about 10 minutes. (Docker is a faster option if you are not coding.)
+
+	python3 -m venv env
+	source env/bin/activate
+	pip install open-webui
+	open-webui serve
+
 ## Run the Build
 
-Open your local build at [localhost:3000](http://localhost:3000)
+Takes another 10 minutes.
 
 	npm run build
+
+Neither of these worked after the above, so we'll try the installing the backend.
+
+Open your local build at [localhost:3000](http://localhost:3000)
+View at [localhost:8080]( http://localhost:8080/)
 
 ### More detailed
 
@@ -103,6 +120,8 @@ Commands from [Open WebUI Getting Started](https://docs.openwebui.com/getting-st
 	pip install -r requirements.txt -U
 
 	bash start.sh
+
+Than ran (still not working)
 
 	npm run dev
 
