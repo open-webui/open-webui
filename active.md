@@ -2,6 +2,12 @@ Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](
 
 ---
 
+<!--
+medium.com subscription needed
+
+	How to install Open WebUI without Docker
+	https://bhavikjikadara.medium.com/how-to-install-open-webui-without-docker-33eedbda9b96
+-->
 
 # Active Projects
 

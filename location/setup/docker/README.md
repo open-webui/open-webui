@@ -1,5 +1,5 @@
 [Install Steps](../)
-# Docker Setup
+# Docker Setup for Editing (Experimental)
 
 Since Docker restarts local containers when your computer restarts, you may already have 
 [http://localhost:3000](http://localhost:3000) running if you've added to Docker previously. The port and ghcr.io source is visible under details within Docker.
