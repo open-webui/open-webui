@@ -448,8 +448,9 @@
 												code={revertSanitizedResponseContent(token.text)}
 											/>
 										{:else if token.raw.includes('annual_leave_form')}
-											<FormActionModal on:save={() => {
-												editedContent = 'Leave form submited by user.'; 
+											<FormActionModal on:confirm={(e) => {
+												const data = e.detail ?? {}
+												editedContent = `${data['{LEAVETYPE}']} request submited. Date: ${data['{LEAVEFROM}']} - ${data['{LEAVETO}']}`; 
 												editMessageConfirmHandler()
 											}} on:cancel={() => {
 												editedContent = 'leave_request_cancled';

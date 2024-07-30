@@ -5,6 +5,7 @@
 	import { DateInput } from 'date-picker-svelte';
 	import Textfield from '@smui/textfield';
 	import { createEventDispatcher } from 'svelte';
+	import { user } from '$lib/stores';
 	// import Select, { Option } from '@smui/select';
 
 	const i18n = getContext('i18n');
@@ -41,22 +42,24 @@
 	}
 	$: dayCount = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 1000 / 60 / 60 / 24;
 
+
 	const handleConfirm = () => {
 		window.alert('submitted');
+		const leaveType = document.getElementById('leave_type').value
 		const formData = {
-			'{NAME}': 'John Doe',
-			'{ID}': 'AI40051',
+			'{NAME}': $user.name,
+			'{ID}': employeeID,
 			'{JOBTITLE}': 'NLP Engineer',
 			'{DEPT}': 'CIAI Engineering Team',
-			'{LEAVETYPE}': type,
+			'{LEAVETYPE}': leaveType,
 			'{REMARKS}': remark,
-			'{LEAVEFROM}': startDate,
-			'{LEAVETO}': endDate,
+			'{LEAVEFROM}': new Date(startDate).toLocaleDateString(),
+			'{LEAVETO}': new Date(endDate).toLocaleDateString(),
 			'{DAYS}': dayCount,
 			'{ADDRESS}': address,
 			'{TELE}': phone,
-			'{EMAIL}': 'nikhil.ranjan@mbzuai.ac.ae',
-			'{DATE}': new Date()
+			'{EMAIL}': $user.email,
+			'{DATE}': new Date().toLocaleDateString()
 		};
 		dispatch('confirm', formData);
 		console.info(formData, 'dddd');
