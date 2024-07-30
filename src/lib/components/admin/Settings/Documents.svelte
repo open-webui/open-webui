@@ -55,7 +55,7 @@
 		k: 4,
 		max_file_size: 10,
 		max_file_count: 5,
-		hybrid: false,
+		hybrid: false
 	};
 
 	const scanHandler = async () => {
