@@ -583,6 +583,8 @@ async def get_query_settings(user=Depends(get_admin_user)):
 class QuerySettingsForm(BaseModel):
     k: Optional[int] = None
     r: Optional[float] = None
+    max_file_size: Optional[int] = None
+    max_file_count: Optional[int] = None
     template: Optional[str] = None
     hybrid: Optional[bool] = None
 
