@@ -53,7 +53,9 @@
 		template: '',
 		r: 0.0,
 		k: 4,
-		hybrid: false
+		max_file_size: 10,
+		max_file_count: 5,
+		hybrid: false,
 	};
 
 	const scanHandler = async () => {
@@ -385,6 +387,36 @@
 					</div>
 				</div>
 			{/if}
+
+			<div class="  flex w-full justify-between">
+				<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('MAX FILE COUNT')}</div>
+
+				<div class="self-center p-3">
+					<input
+						class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						type="number"
+						placeholder={$i18n.t('Enter MAX FILE COUNT')}
+						bind:value={querySettings.max_file_count}
+						autocomplete="off"
+						min="0"
+					/>
+				</div>
+			</div>
+
+			<div class="  flex w-full justify-between">
+				<div class="self-center text-xs font-medium min-w-fit">{$i18n.t('MAX FILE SIZE(MB)')}</div>
+
+				<div class="self-center p-3">
+					<input
+						class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						type="number"
+						placeholder={$i18n.t('Enter MAX FILE SIZE(MB)')}
+						bind:value={querySettings.max_file_size}
+						autocomplete="off"
+						min="0"
+					/>
+				</div>
+			</div>
 
 			<div class=" flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Hybrid Search')}</div>
