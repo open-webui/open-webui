@@ -435,7 +435,7 @@
 	"On": "เปิด",
 	"Only": "เท่านั้น",
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "อนุญาตให้ใช้เฉพาะอักขระตัวอักษรและตัวเลข รวมถึงเครื่องหมายขีดกลางในสตริงคำสั่งเท่านั้น",
-	"Only the first {{count}} files will be processed.": "",
+	"Only the first {{count}} files will be processed._other": "",
 	"Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.": "อุ๊บส์! ช้าก่อน! ไฟล์ของคุณยังอยู่ในขั้นตอนการประมวลผล เรากำลังจัดการให้สมบูรณ์แบบ โปรดอดทนสักครู่ แล้วเราจะแจ้งให้คุณทราบเมื่อไฟล์พร้อมแล้ว",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "อุ๊บส์! ดูเหมือนว่า URL ไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่อีกครั้ง",
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "อุ๊บส์! มีข้อผิดพลาดในคำตอบก่อนหน้า กรุณาลองใหม่อีกครั้งหรือติดต่อผู้ดูแลระบบ",

@@ -435,7 +435,7 @@
 	"On": "Aktif",
 	"Only": "Hanya",
 	"Only alphanumeric characters and hyphens are allowed in the command string.": "Hanya karakter alfanumerik dan tanda hubung yang diizinkan dalam string perintah.",
-	"Only the first {{count}} files will be processed.": "",
+	"Only the first {{count}} files will be processed._other": "",
 	"Oops! Hold tight! Your files are still in the processing oven. We're cooking them up to perfection. Please be patient and we'll let you know once they're ready.": "Ups! Pegangan yang kuat! File Anda masih berada di dalam oven pemrosesan. Kami sedang memasaknya hingga sempurna. Mohon bersabar dan kami akan memberi tahu Anda jika sudah siap.",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ups! Sepertinya URL tidak valid. Mohon periksa ulang dan coba lagi.",
 	"Oops! There was an error in the previous response. Please try again or contact admin.": "Ups! Ada kesalahan pada respons sebelumnya. Silakan coba lagi atau hubungi admin.",
