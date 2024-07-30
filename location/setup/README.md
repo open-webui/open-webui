@@ -32,7 +32,7 @@ So now one goal is to install Ollama externally, using the "Different Server" co
 
 ## Steps for Local Build
 
-NOT needed if you are running as a local Docker instance.  
+NOT needed if you install as a [local Docker instance](https://docs.openwebui.com/) and don't plan to edit and build.  
 
 Commands from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/) for building locally:
 
