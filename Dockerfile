@@ -16,19 +16,6 @@ ARG BUILD_HASH=dev-build
 ARG UID=0
 ARG GID=0
 
-######## WebUI frontend ########
-FROM --platform=$BUILDPLATFORM node:21-alpine3.19 as build
-ARG BUILD_HASH
-
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-RUN npm ci
-
-COPY . .
-ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build
-
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm as base
 
@@ -77,6 +64,8 @@ ENV HF_HOME="/app/backend/data/cache/embedding/models"
 #### Other models ##########################################################
 
 WORKDIR /app/backend
+
+COPY --chown=$UID:$GID ./CHANGELOG.md /app/CHANGELOG.md
 
 ENV HOME /root
 # Create user and group if not root
@@ -134,17 +123,6 @@ RUN pip3 install uv && \
     python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
     fi; \
     chown -R $UID:$GID /app/backend/data/
-
-
-
-# copy embedding weight from build
-# RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2
-# COPY --from=build /app/onnx /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx
-
-# copy built frontend files
-COPY --chown=$UID:$GID --from=build /app/build /app/build
-COPY --chown=$UID:$GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
-COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
