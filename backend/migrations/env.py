@@ -9,7 +9,6 @@ from alembic import context
 from apps.webui.models.auths import Auth
 from apps.webui.models.chats import Chat
 from apps.webui.models.documents import Document
-from apps.webui.models.memories import Memory
 from apps.webui.models.models import Model
 from apps.webui.models.prompts import Prompt
 from apps.webui.models.tags import Tag, ChatIdTag

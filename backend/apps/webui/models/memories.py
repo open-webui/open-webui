@@ -1,27 +1,11 @@
+import os
 from pydantic import BaseModel, ConfigDict
-from typing import List, Union, Optional
+from typing import List, Optional
 
-from sqlalchemy import Column, String, BigInteger, Text
-
-from apps.webui.internal.db import Base, get_db
-
-import time
-import uuid
-
-####################
-# Memory DB Schema
-####################
+from mem0 import MemoryClient
 
 
-class Memory(Base):
-    __tablename__ = "memory"
-
-    id = Column(String, primary_key=True)
-    user_id = Column(String)
-    content = Column(Text)
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
-
+memory = MemoryClient(api_key=os.getenv("MEM0_API_KEY"))
 
 class MemoryModel(BaseModel):
     id: str
@@ -46,103 +30,102 @@ class MemoriesTable:
         content: str,
     ) -> Optional[MemoryModel]:
 
-        with get_db() as db:
-            id = str(uuid.uuid4())
+        try:
+            memory.add(messages=content, user_id=user_id)
+        except:
+            return None
+    
+    def query_memory(
+        self,
+        user_id: str,
+        content: str,
+        k: int,
+    ):
+        try:
+            chromadb_format = {
+                'documents': [],
+                'ids': [],
+                'distances': [],
+                'uris': None,
+                'data': None,
+                'metadatas': [],
+                'embeddings': None,
+            }
 
-            memory = MemoryModel(
-                **{
-                    "id": id,
-                    "user_id": user_id,
-                    "content": content,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                }
-            )
-            result = Memory(**memory.model_dump())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
-            if result:
-                return MemoryModel.model_validate(result)
-            else:
-                return None
+            memories = memory.search(query=content, user_id=user_id, limit=k)
+
+            for item in memories:
+                chromadb_format['documents'].append([item['memory']])
+                chromadb_format['ids'].append([item['id']])
+                chromadb_format['distances'].append([item['score']])
+                chromadb_format['metadatas'].append([item['metadata']])
+
+            return chromadb_format
+        except:
+            return None
+
 
     def update_memory_by_id(
         self,
         id: str,
         content: str,
     ) -> Optional[MemoryModel]:
-        with get_db() as db:
-
-            try:
-                db.query(Memory).filter_by(id=id).update(
-                    {"content": content, "updated_at": int(time.time())}
-                )
-                db.commit()
-                return self.get_memory_by_id(id)
-            except:
-                return None
-
-    def get_memories(self) -> List[MemoryModel]:
-        with get_db() as db:
-
-            try:
-                memories = db.query(Memory).all()
-                return [MemoryModel.model_validate(memory) for memory in memories]
-            except:
-                return None
+        try:
+            memory.update(memory_id=id, data=content)
+            return self.get_memory_by_id(id)
+        except:
+            return None
 
     def get_memories_by_user_id(self, user_id: str) -> List[MemoryModel]:
-        with get_db() as db:
-
-            try:
-                memories = db.query(Memory).filter_by(user_id=user_id).all()
-                return [MemoryModel.model_validate(memory) for memory in memories]
-            except:
-                return None
+        try:
+            memories = memory.get_all(user_id=user_id)
+            resulting_memories = []
+            for memory in memories:
+                resulting_memories.append(
+                    MemoryModel(
+                        id=memory["id"],
+                        user_id=memory["user_id"],
+                        content=memory["memory"],
+                        updated_at=memory["updated_at"],
+                        created_at=memory["created_at"],
+                    )
+                )
+            return resulting_memories
+        except:
+            return None
 
     def get_memory_by_id(self, id: str) -> Optional[MemoryModel]:
-        with get_db() as db:
-
             try:
-                memory = db.get(Memory, id)
-                return MemoryModel.model_validate(memory)
+                memory = memory.get(memory_id=id)
+                return MemoryModel(
+                    id=memory["id"],
+                    user_id=memory["user_id"],
+                    content=memory["memory"],
+                    updated_at=memory["updated_at"],
+                    created_at=memory["created_at"],
+                )
             except:
                 return None
 
     def delete_memory_by_id(self, id: str) -> bool:
-        with get_db() as db:
-
             try:
-                db.query(Memory).filter_by(id=id).delete()
-                db.commit()
-
+                memory.delete(id=id)
                 return True
-
             except:
                 return False
 
     def delete_memories_by_user_id(self, user_id: str) -> bool:
-        with get_db() as db:
-
             try:
-                db.query(Memory).filter_by(user_id=user_id).delete()
-                db.commit()
-
+                memory.delete_all(user_id=user_id)
                 return True
             except:
                 return False
 
-    def delete_memory_by_id_and_user_id(self, id: str, user_id: str) -> bool:
-        with get_db() as db:
-
-            try:
-                db.query(Memory).filter_by(id=id, user_id=user_id).delete()
-                db.commit()
-
-                return True
-            except:
-                return False
-
+    def reset_memory(self) -> bool:
+        try:
+            memory.delete_all()
+            return True
+        except:
+            return False
 
 Memories = MemoriesTable()
