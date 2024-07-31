@@ -13,15 +13,21 @@ medium.com subscription needed
 
 [Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
-**Timely Projects** - To choose from today
 
-- [Python to pull Harmonized Code (HS) lookups into Supabase](/OpenFootprint/harmonized-system/)
-- [Activate Ollama on a different server](https://docs.openwebui.com/) for use with our [Docker Setup](/projects/location/setup/docker/)
-- [Document loading from our Supabase backup file into databricks SQL](https://chatgpt.com/share/d610d3e6-ce5f-4e7f-ba9e-4c74ec23abd4) - Apurva, Soham
 <!--
+**Timely Projects**
+
+- [Activate Ollama on a different server](https://docs.openwebui.com/) for use with our [Docker Setup](/projects/location/setup/docker/)
+
+
 	Full-Stack Cloudflare SaaS kit
 	https://github.com/Dhravya/cloudflare-saas-stack
 -->
+
+**Feed Player React**
+- [Feed Player](../feed/dist) - Video and Images from API feeds and Google Sheet lists
+- [NASA Feed Viewer](../feed/view/#feed=nasa) - JSON, YAML, CSS, RSS - [Address Lookup](/feed/view/#feed=311)
+
 **LLM Interfaces** - Where we'll be embedding data visualizaions
 - [Open WebUI (Projects)](src) with Python and [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/)
 - [Earthscape for Chatbot UI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/)
@@ -29,16 +35,15 @@ medium.com subscription needed
 **Charts, SQL, Vite, Supabase, AI Chat**
 - [Javascript Timelines from Google Data Commons API](/data-pipeline/timelines/earthscape/datacommons.html#country=IN,CN,US) - Mehul
 - [International Trade Flow SQL Data Prep](/useeio.js/footprint) - Sahil, Himanshu, Song
-- [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab - Song+
+- [Python to pull Harmonized Code (HS) lookups into Supabase](/OpenFootprint/harmonized-system/) - Chen and Wenjie
 - [Webhook to create Word Doc from Google Form](https://chatgpt.com/share/4daa1c9e-31e2-42f5-bdcf-c9e1e369391c) - for [our New Member Signup](/community/members/) - Jingyu
+- [Pull from Supabase (or backup file) into databricks SQL](https://chatgpt.com/share/d610d3e6-ce5f-4e7f-ba9e-4c74ec23abd4) - Apurva, Soham
 - [View DuckDB from Javascript](/OpenFootprint/prep/sql/duckdb/) - Gary
 - [Food Nutrition Labels](/data-commons/docs/food) - Shali and Wenwei (Stella)
 - [AI Requests Visualization](/requests/) - for Storyboards, Meal Planning and Project Visualization - TO DO
 - [Music for Data Science Visualizations](https://github.com/DreamStudioCode/music) - Alex, Ivy
 - [Innovations in Water Purification](/evaporation-kits/innovations/) - Hyper Desalination - Soham - Content prep for RAG - TO DO
 - [Sankey Industry eChart](/useeio.js/charts/echarts/sankey-nodeAlign-left.html) - eCharts uses a common echarts.min.js file which we'll load in [Feed Viewer](/feed/view). -TO DO<!-- Chenbohan -->
-- [Feed Player](../feed/intro.html) - Video and Images
-- [Feed Viewer](../feed/view/#feed=nasa) - JSON, YAML, CSS, RSS - Loren and Gary ([address lookup](/feed/view/#feed=311)) 
 - [Python - Finalize our All the Places data by State and Zip](/places) - TO DO
 
 <!--
