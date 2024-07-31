@@ -147,9 +147,7 @@ async def get_pipe_models():
         function_module = get_function_module(pipe.id)
 
         # Check if function is a manifold
-        if hasattr(function_module, "type"):
-            if not function_module.type == "manifold":
-                continue
+        if hasattr(function_module, "type") and function_module.type == "manifold":
             manifold_pipes = []
 
             # Check if pipes is a function or a list
