@@ -87,21 +87,27 @@ def add_or_update_system_message(content: str, messages: List[dict]):
     return messages
 
 
-def stream_message_template(model: str, message: str):
+def message_template(model: str):
     return {
         "id": f"{model}-{str(uuid.uuid4())}",
-        "object": "chat.completion.chunk",
         "created": int(time.time()),
         "model": model,
-        "choices": [
-            {
-                "index": 0,
-                "delta": {"content": message},
-                "logprobs": None,
-                "finish_reason": None,
-            }
-        ],
+        "choices": [{"index": 0, "logprobs": None, "finish_reason": None}],
     }
+
+
+def stream_message_template(model: str, message: str):
+    template = message_template(model)
+    template["object"] = "chat.completion.chunk"
+    template["choices"][0]["delta"] = {"content": message}
+    return template
+
+
+def whole_message_template(model: str, message: str):
+    template = message_template(model)
+    template["object"] = "chat.completion"
+    template["choices"][0]["message"] = {"content": message, "role": "assistant"}
+    template["choices"][0]["finish_reason"] = "stop"
 
 
 def get_gravatar_url(email):
