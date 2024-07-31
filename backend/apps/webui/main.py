@@ -21,7 +21,7 @@ from apps.webui.utils import load_function_module_by_id
 
 from utils.misc import (
     stream_message_template,
-    whole_message_template,
+    openai_chat_completion_message_template,
     add_or_update_system_message,
 )
 from utils.task import prompt_template
@@ -403,6 +403,6 @@ async def generate_function_chat_completion(form_data, user):
                 return res.model_dump()
 
             message = await get_message_content(res)
-            return whole_message_template(form_data["model"], message)
+            return openai_chat_completion_message_template(form_data["model"], message)
 
     return await job()

@@ -1,6 +1,5 @@
 from pathlib import Path
 import hashlib
-import json
 import re
 from datetime import timedelta
 from typing import Optional, List, Tuple
@@ -8,37 +7,39 @@ import uuid
 import time
 
 
-def get_last_user_message_item(messages: List[dict]) -> str:
+def get_last_user_message_item(messages: List[dict]) -> Optional[dict]:
     for message in reversed(messages):
         if message["role"] == "user":
             return message
     return None
 
 
-def get_last_user_message(messages: List[dict]) -> str:
-    message = get_last_user_message_item(messages)
-
-    if message is not None:
-        if isinstance(message["content"], list):
-            for item in message["content"]:
-                if item["type"] == "text":
-                    return item["text"]
+def get_content_from_message(message: dict) -> Optional[str]:
+    if isinstance(message["content"], list):
+        for item in message["content"]:
+            if item["type"] == "text":
+                return item["text"]
+    else:
         return message["content"]
     return None
 
 
-def get_last_assistant_message(messages: List[dict]) -> str:
+def get_last_user_message(messages: List[dict]) -> Optional[str]:
+    message = get_last_user_message_item(messages)
+    if message is None:
+        return None
+
+    return get_content_from_message(message)
+
+
+def get_last_assistant_message(messages: List[dict]) -> Optional[str]:
     for message in reversed(messages):
         if message["role"] == "assistant":
-            if isinstance(message["content"], list):
-                for item in message["content"]:
-                    if item["type"] == "text":
-                        return item["text"]
-            return message["content"]
+            return get_content_from_message(message)
     return None
 
 
-def get_system_message(messages: List[dict]) -> dict:
+def get_system_message(messages: List[dict]) -> Optional[dict]:
     for message in messages:
         if message["role"] == "system":
             return message
@@ -49,7 +50,7 @@ def remove_system_message(messages: List[dict]) -> List[dict]:
     return [message for message in messages if message["role"] != "system"]
 
 
-def pop_system_message(messages: List[dict]) -> Tuple[dict, List[dict]]:
+def pop_system_message(messages: List[dict]) -> Tuple[Optional[dict], List[dict]]:
     return get_system_message(messages), remove_system_message(messages)
 
 
@@ -103,7 +104,7 @@ def stream_message_template(model: str, message: str):
     return template
 
 
-def whole_message_template(model: str, message: str):
+def openai_chat_completion_message_template(model: str, message: str):
     template = message_template(model)
     template["object"] = "chat.completion"
     template["choices"][0]["message"] = {"content": message, "role": "assistant"}
@@ -180,7 +181,7 @@ def extract_folders_after_data_docs(path):
     tags = []
 
     folders = parts[index_docs:-1]
-    for idx, part in enumerate(folders):
+    for idx, _ in enumerate(folders):
         tags.append("/".join(folders[: idx + 1]))
 
     return tags
@@ -276,11 +277,11 @@ def parse_ollama_modelfile(model_text):
             value = param_match.group(1)
 
             try:
-                if param_type == int:
+                if param_type is int:
                     value = int(value)
-                elif param_type == float:
+                elif param_type is float:
                     value = float(value)
-                elif param_type == bool:
+                elif param_type is bool:
                     value = value.lower() == "true"
             except Exception as e:
                 print(e)
