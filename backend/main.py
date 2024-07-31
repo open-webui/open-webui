@@ -13,8 +13,6 @@ import aiohttp
 import requests
 import mimetypes
 import shutil
-import os
-import uuid
 import inspect
 
 from fastapi import FastAPI, Request, Depends, status, UploadFile, File, Form
@@ -29,7 +27,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import StreamingResponse, Response, RedirectResponse
 
 
-from apps.socket.main import sio, app as socket_app, get_event_emitter, get_event_call
+from apps.socket.main import app as socket_app, get_event_emitter, get_event_call
 from apps.ollama.main import (
     app as ollama_app,
     get_all_models as get_ollama_models,
@@ -639,10 +637,10 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 message_id = body["id"]
                 del body["id"]
 
-            __event_emitter__ = await get_event_emitter(
+            __event_emitter__ = get_event_emitter(
                 {"chat_id": chat_id, "message_id": message_id, "session_id": session_id}
             )
-            __event_call__ = await get_event_call(
+            __event_call__ = get_event_call(
                 {"chat_id": chat_id, "message_id": message_id, "session_id": session_id}
             )
 
@@ -1191,13 +1189,13 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                             status_code=r.status_code,
                             content=res,
                         )
-                except:
+                except Exception:
                     pass
 
             else:
                 pass
 
-    __event_emitter__ = await get_event_emitter(
+    __event_emitter__ = get_event_emitter(
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],
@@ -1205,7 +1203,7 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
         }
     )
 
-    __event_call__ = await get_event_call(
+    __event_call__ = get_event_call(
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],
@@ -1334,14 +1332,14 @@ async def chat_completed(
         )
     model = app.state.MODELS[model_id]
 
-    __event_emitter__ = await get_event_emitter(
+    __event_emitter__ = get_event_emitter(
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
         }
     )
-    __event_call__ = await get_event_call(
+    __event_call__ = get_event_call(
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],
@@ -1770,7 +1768,6 @@ class AddPipelineForm(BaseModel):
 
 @app.post("/api/pipelines/add")
 async def add_pipeline(form_data: AddPipelineForm, user=Depends(get_admin_user)):
-
     r = None
     try:
         urlIdx = form_data.urlIdx
@@ -1813,7 +1810,6 @@ class DeletePipelineForm(BaseModel):
 
 @app.delete("/api/pipelines/delete")
 async def delete_pipeline(form_data: DeletePipelineForm, user=Depends(get_admin_user)):
-
     r = None
     try:
         urlIdx = form_data.urlIdx
@@ -1891,7 +1887,6 @@ async def get_pipeline_valves(
     models = await get_all_models()
     r = None
     try:
-
         url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
         key = openai_app.state.config.OPENAI_API_KEYS[urlIdx]
 
