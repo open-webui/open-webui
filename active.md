@@ -27,7 +27,7 @@ medium.com subscription needed
 - [Earthscape for Chatbot UI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/)
 
 **Charts, SQL, Vite, Supabase, AI Chat**
-- [Javascript Timelines from Google Data Commons API](/data-pipeline/timelines/earthscape/datacommons.html) - Mehul
+- [Javascript Timelines from Google Data Commons API](/data-pipeline/timelines/earthscape/datacommons.html#country=IN,CN,US) - Mehul
 - [International Trade Flow SQL Data Prep](/useeio.js/footprint) - Sahil, Himanshu, Song
 - [Harmonized System (HS) codes](/requests/products/) - via Concordence R Language within Python CoLab - Song+
 - [Webhook to create Word Doc from Google Form](https://chatgpt.com/share/4daa1c9e-31e2-42f5-bdcf-c9e1e369391c) - for [our New Member Signup](/community/members/) - Jingyu
