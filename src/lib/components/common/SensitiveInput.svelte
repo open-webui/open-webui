@@ -14,12 +14,13 @@
 <div class={outerClassName}>
 	<input
 		class={inputClassName}
+		class:dot={!show}
 		{placeholder}
 		bind:value
 		required={required && !readOnly}
 		disabled={readOnly}
 		autocomplete="off"
-		{...{ type: show ? 'text' : 'password' }}
+		type="text"
 	/>
 	<button
 		class={showButtonClassName}
@@ -61,3 +62,9 @@
 		{/if}
 	</button>
 </div>
+
+<style>
+	.dot {
+		-webkit-text-security: disc;
+	}
+</style>
