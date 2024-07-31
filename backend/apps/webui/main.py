@@ -20,7 +20,7 @@ from apps.webui.models.models import Models
 from apps.webui.utils import load_function_module_by_id
 
 from utils.misc import (
-    stream_message_template,
+    openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
     add_or_update_system_message,
 )
@@ -227,7 +227,7 @@ def process_line(form_data: dict, line):
     if line.startswith("data:"):
         return f"{line}\n\n"
     else:
-        line = stream_message_template(form_data["model"], line)
+        line = openai_chat_chunk_message_template(form_data["model"], line)
         return f"data: {json.dumps(line)}\n\n"
 
 
@@ -371,7 +371,9 @@ async def generate_function_chat_completion(form_data, user):
                     return
 
                 if isinstance(res, str):
-                    message = stream_message_template(form_data["model"], res)
+                    message = openai_chat_chunk_message_template(
+                        form_data["model"], res
+                    )
                     yield f"data: {json.dumps(message)}\n\n"
 
                 if isinstance(res, Iterator):
@@ -383,7 +385,9 @@ async def generate_function_chat_completion(form_data, user):
                         yield process_line(form_data, line)
 
                 if isinstance(res, str) or isinstance(res, Generator):
-                    finish_message = stream_message_template(form_data["model"], "")
+                    finish_message = openai_chat_chunk_message_template(
+                        form_data["model"], ""
+                    )
                     finish_message["choices"][0]["finish_reason"] = "stop"
                     yield f"data: {json.dumps(finish_message)}\n\n"
                     yield "data: [DONE]"
