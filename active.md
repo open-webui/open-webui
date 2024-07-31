@@ -38,7 +38,7 @@ medium.com subscription needed
 - [Python to pull Harmonized Code (HS) lookups into Supabase](/OpenFootprint/harmonized-system/) - Chen and Wenjie
 - [Webhook to create Word Doc from Google Form](https://chatgpt.com/share/4daa1c9e-31e2-42f5-bdcf-c9e1e369391c) - for [our New Member Signup](/community/members/) - Jingyu
 - [Pull from Supabase (or backup file) into databricks SQL](https://chatgpt.com/share/d610d3e6-ce5f-4e7f-ba9e-4c74ec23abd4) - Apurva, Soham
-- [View DuckDB from Javascript](/OpenFootprint/prep/sql/duckdb/) - Gary
+- [View DuckDB from Javascript](/OpenFootprint/prep/sql/duckdb/) - Kelly, Gary
 - [Food Nutrition Labels](/data-commons/docs/food) - Shali and Wenwei (Stella)
 - [AI Requests Visualization](/requests/) - for Storyboards, Meal Planning and Project Visualization - TO DO
 - [Music for Data Science Visualizations](https://github.com/DreamStudioCode/music) - Alex, Ivy
