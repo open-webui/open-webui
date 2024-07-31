@@ -28,11 +28,14 @@ export const getFilterConfig = async (token: string) => {
 };
 
 type FilterConfigForm = {
-    ENABLE_MESSAGE_FILTER: boolean;
-    CHAT_FILTER_WORDS: string;
-    CHAT_FILTER_WORDS_FILE: string;
-    ENABLE_REPLACE_FILTER_WORDS: boolean;
-    REPLACE_FILTER_WORDS: string;
+	ENABLE_MESSAGE_FILTER: boolean;
+	CHAT_FILTER_WORDS: string;
+	CHAT_FILTER_WORDS_FILE: string;
+	ENABLE_REPLACE_FILTER_WORDS: boolean;
+	REPLACE_FILTER_WORDS: string;
+	ENABLE_WECHAT_NOTICE: boolean;
+	WECHAT_APP_SECRET: string;
+
 };
 
 export const updateFilterConfig = async (token: string, payload: FilterConfigForm) => {

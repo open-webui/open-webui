@@ -2,7 +2,9 @@ import logging
 import os
 import time
 
+import aiohttp
 from apps.filter.wordsSearch import wordsSearch
+from apps.webui.routers.chats import request_share_chat_by_id, request_get_chat_by_id
 from config import (
     ENABLE_MESSAGE_FILTER,
     CHAT_FILTER_WORDS_FILE,
@@ -10,14 +12,17 @@ from config import (
     ENABLE_REPLACE_FILTER_WORDS,
     REPLACE_FILTER_WORDS,
     AppConfig,
+    WEBUI_URL,
+    ENABLE_WECHAT_NOTICE,
+    WECHAT_APP_SECRET,
 )
+from config import SRC_LOG_LEVELS, DATA_DIR
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from utils.utils import (
     get_admin_user,
 )
-from pydantic import BaseModel
-from config import SRC_LOG_LEVELS, DATA_DIR, PersistentConfig
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["FILTER"])
@@ -38,6 +43,8 @@ app.state.config.CHAT_FILTER_WORDS_FILE = CHAT_FILTER_WORDS_FILE
 app.state.config.CHAT_FILTER_WORDS = CHAT_FILTER_WORDS
 app.state.config.ENABLE_REPLACE_FILTER_WORDS = ENABLE_REPLACE_FILTER_WORDS
 app.state.config.REPLACE_FILTER_WORDS = REPLACE_FILTER_WORDS
+app.state.config.ENABLE_WECHAT_NOTICE = ENABLE_WECHAT_NOTICE
+app.state.config.WECHAT_APP_SECRET = WECHAT_APP_SECRET
 
 file_path = os.path.join(DATA_DIR, app.state.config.CHAT_FILTER_WORDS_FILE)
 
@@ -68,6 +75,8 @@ class FILTERConfigForm(BaseModel):
     CHAT_FILTER_WORDS_FILE: str
     ENABLE_REPLACE_FILTER_WORDS: bool
     REPLACE_FILTER_WORDS: str
+    ENABLE_WECHAT_NOTICE: bool
+    WECHAT_APP_SECRET: str
 
 
 @app.get("/config")
@@ -78,12 +87,14 @@ async def get_filter_config(user=Depends(get_admin_user)):
         "CHAT_FILTER_WORDS_FILE": app.state.config.CHAT_FILTER_WORDS_FILE,
         "ENABLE_REPLACE_FILTER_WORDS": app.state.config.ENABLE_REPLACE_FILTER_WORDS,
         "REPLACE_FILTER_WORDS": app.state.config.REPLACE_FILTER_WORDS,
+        "ENABLE_WECHAT_NOTICE": app.state.config.ENABLE_WECHAT_NOTICE,
+        "WECHAT_APP_SECRET": app.state.config.WECHAT_APP_SECRET,
     }
 
 
 @app.post("/config/update")
 async def update_filter_config(
-    form_data: FILTERConfigForm, user=Depends(get_admin_user)
+        form_data: FILTERConfigForm, user=Depends(get_admin_user)
 ):
     global search
     global file_path
@@ -92,6 +103,8 @@ async def update_filter_config(
     app.state.config.CHAT_FILTER_WORDS_FILE = form_data.CHAT_FILTER_WORDS_FILE
     app.state.config.ENABLE_REPLACE_FILTER_WORDS = form_data.ENABLE_REPLACE_FILTER_WORDS
     app.state.config.REPLACE_FILTER_WORDS = form_data.REPLACE_FILTER_WORDS
+    app.state.config.ENABLE_WECHAT_NOTICE = form_data.ENABLE_WECHAT_NOTICE
+    app.state.config.WECHAT_APP_SECRET = form_data.WECHAT_APP_SECRET
 
     request_file_path = os.path.join(DATA_DIR, app.state.config.CHAT_FILTER_WORDS_FILE)
 
@@ -114,43 +127,92 @@ async def update_filter_config(
         "CHAT_FILTER_WORDS_FILE": app.state.config.CHAT_FILTER_WORDS_FILE,
         "ENABLE_REPLACE_FILTER_WORDS": app.state.config.ENABLE_REPLACE_FILTER_WORDS,
         "REPLACE_FILTER_WORDS": app.state.config.REPLACE_FILTER_WORDS,
+        "ENABLE_WECHAT_NOTICE": app.state.config.ENABLE_WECHAT_NOTICE,
+        "WECHAT_APP_SECRET": app.state.config.WECHAT_APP_SECRET,
     }
 
 
-def filter_message(payload: dict):
+async def send_message_to_wechatapp(share_id, user):
+    url = f"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={app.state.config.WECHAT_APP_SECRET}"
+    log.info(f"Send message to WeChat app: {url}")
+
+    headers = {'Content-type': 'application/json'}
+    data = {
+        "msgtype": "news",
+        "news": {
+            "articles": [
+                {
+                    "title": f"🚨{user.name}提问敏感消息！",
+                    "description": "💢💢💢为了API的正常运行，赶紧点开看看吧！",
+                    "url": f"{WEBUI_URL}/s/{share_id}",
+                    "picurl": f"{WEBUI_URL}/static/favicon.png"
+                }
+            ]
+        }
+    }
+    log.info(f"Send message to WeChat app: {data}")
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=data, headers=headers) as response:
+            response.raise_for_status()
+            response_text = await response.text()
+            log.info("文本发送情况提示", response_text)
+
+
+async def content_filter_message(payload: dict, content: str, user):
+    chat_id = payload.get("metadata", {}).get("chat_id", None)
+    log.info("chat_id: " + chat_id)
+    if content:
+        start_time = time.time()
+        filter_condition = search.FindFirst(content)
+        if filter_condition:
+            filter_word = filter_condition["Keyword"]
+            log.info(
+                "The time taken to check the filter words: %.6fs",
+                time.time() - start_time,
+            )
+
+            if chat_id and app.state.config.ENABLE_WECHAT_NOTICE:
+                try:
+                    await request_share_chat_by_id(chat_id, user)
+                    share_response = await request_get_chat_by_id(chat_id, user)
+                    try:
+                        share_id = share_response.share_id
+                    except AttributeError:
+                        share_id = None
+                    if share_id:
+                        log.info(f"Share ID: {share_id}")
+                        await send_message_to_wechatapp(share_id, user)
+                except Exception as e:
+                    log.error(f"Failed to send message to WeChat app: {e}")
+
+            if not app.state.config.ENABLE_REPLACE_FILTER_WORDS:
+                detail_message = (
+                    f"Yubb Chat: 您的消息包含敏感词语（`{filter_word}`）无法发送。请创建新话题并重试。"
+                )
+                raise HTTPException(
+                    status_code=503, detail=detail_message
+                )
+            else:
+                filter_text = search.Replace(content, app.state.config.REPLACE_FILTER_WORDS)
+                return filter_text
+    return content
+
+
+async def filter_message(payload: dict, user):
     if app.state.config.ENABLE_MESSAGE_FILTER and search:
-        if payload.get("messages") and search:
-            start_time = time.time()
+        if payload.get("messages"):
             for message in reversed(payload["messages"]):
                 if message.get("role") == "user":
                     content = message.get("content")
-                    if not isinstance(content, list):
-                        filter_condition = search.FindFirst(content)
-                        if filter_condition:
-                            if not app.state.config.ENABLE_REPLACE_FILTER_WORDS:
-                                filter_word = filter_condition["Keyword"]
-                                detail_message = (
-                                    f"Open WebUI: Your message contains bad words (`{filter_word}`) "
-                                    "and cannot be sent. Please create a new topic and try again."
-                                )
-                                log.info(
-                                    "The time taken to check the filter words: %.6fs",
-                                    time.time() - start_time,
-                                )
-                                raise HTTPException(
-                                    status_code=503, detail=detail_message
-                                )
-                            else:
-                                message["content"] = search.Replace(
-                                    content, app.state.config.REPLACE_FILTER_WORDS
-                                )
-                                log.info(
-                                    f"Replace bad words in content: {message['content']}"
-                                )
-            log.info(
-                "The time taken to check the bad words: %.6fs",
-                time.time() - start_time,
-            )
+                    if isinstance(content, str):
+                        message["content"] = await content_filter_message(payload, content, user)
+                    elif isinstance(content, list):
+                        for item in content:
+                            if item.get("type", "image_url") == "text":
+                                item_content = item.get("text", "")
+                                item["text"] = await content_filter_message(payload, item_content, user)
+                    break
 
 
 def write_words_to_file():

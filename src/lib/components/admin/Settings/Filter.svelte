@@ -4,7 +4,7 @@
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { getBackendConfig } from '$lib/apis';
-
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -24,6 +24,8 @@
 	let CHAT_FILTER_WORDS = '';
 	let ENABLE_REPLACE_FILTER_WORDS = false;
 	let REPLACE_FILTER_WORDS = '';
+	let ENABLE_WECHAT_NOTICE = true;
+	let WECHAT_APP_SECRET = '';
 
 	const updateConfigHandler = async () => {
 		const res = await updateFilterConfig(localStorage.token, {
@@ -31,7 +33,9 @@
 			CHAT_FILTER_WORDS: CHAT_FILTER_WORDS,
 			CHAT_FILTER_WORDS_FILE: CHAT_FILTER_WORDS_FILE,
 			ENABLE_REPLACE_FILTER_WORDS: ENABLE_REPLACE_FILTER_WORDS,
-			REPLACE_FILTER_WORDS: REPLACE_FILTER_WORDS
+			REPLACE_FILTER_WORDS: REPLACE_FILTER_WORDS,
+			ENABLE_WECHAT_NOTICE: ENABLE_WECHAT_NOTICE,
+			WECHAT_APP_SECRET: WECHAT_APP_SECRET
 		});
 
 		if (res) {
@@ -50,6 +54,8 @@
 			CHAT_FILTER_WORDS = res.CHAT_FILTER_WORDS;
 			ENABLE_REPLACE_FILTER_WORDS = res.ENABLE_REPLACE_FILTER_WORDS;
 			REPLACE_FILTER_WORDS = res.REPLACE_FILTER_WORDS;
+			ENABLE_WECHAT_NOTICE = ENABLE_WECHAT_NOTICE;
+			WECHAT_APP_SECRET = WECHAT_APP_SECRET;
 		}
 	});
 </script>
@@ -64,9 +70,9 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-3">
 			<div>
-				<div class=" mb-1 text-sm font-medium">{$i18n.t('Message Filter Settings')}</div>
+				<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Message Filter Settings')}</div>
 
-				<div class=" py-0.5 flex w-full justify-between">
+				<div class=" mb-1.5 py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Enable Message Filter')}
 					</div>
@@ -81,7 +87,7 @@
 					</button>
 				</div>
 
-				<div class=" py-0.5 flex w-full justify-between">
+				<div class=" mb-1.5 py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Enable message bad Words replacement')}
 					</div>
@@ -96,7 +102,22 @@
 					</button>
 				</div>
 
-				<div class=" py-0.5 flex w-full justify-between" />
+				<div class=" mb-1.5 py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Enable message bad Words wechat notice')}
+					</div>
+
+					<button
+						class=" text-xs font-medium text-gray-500"
+						type="button"
+						on:click={() => {
+							ENABLE_WECHAT_NOTICE = !ENABLE_WECHAT_NOTICE;
+						}}
+						>{ENABLE_WECHAT_NOTICE ? $i18n.t('On') : $i18n.t('Off')}
+					</button>
+				</div>
+
+				<div class=" py-1 flex w-full justify-between" />
 
 				<div class=" flex gap-2">
 					<div class="w-full">
@@ -123,14 +144,24 @@
 					</div>
 				</div>
 
-				<div class=" py-0.5 flex w-full justify-between" />
+				<div class=" mb-1.5 py-0.5 flex w-full justify-between" />
+
+				<div>
+					<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Wechat App Secret')}</div>
+					<SensitiveInput
+						placeholder={$i18n.t('Wechat App Secret')}
+						bind:value={WECHAT_APP_SECRET}
+					/>
+				</div>
+
+				<div class=" mb-1.5 py-0.5 flex w-full justify-between" />
 
 				<div>
 					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Bad words Template')}</div>
 					<textarea
 						bind:value={CHAT_FILTER_WORDS}
 						class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-						rows="25"
+						rows="22"
 					/>
 				</div>
 			</div>

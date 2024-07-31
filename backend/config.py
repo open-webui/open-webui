@@ -1399,6 +1399,18 @@ REPLACE_FILTER_WORDS = PersistentConfig(
     os.getenv("REPLACE_FILTER_WORDS", "*"),
 )
 
+ENABLE_WECHAT_NOTICE = PersistentConfig(
+    "ENABLE_WECHAT_NOTICE",
+    "message_filter.enable_wechat_notice",
+    os.environ.get("ENABLE_WECHAT_NOTICE", "").lower() == "true",
+)
+
+WECHAT_APP_SECRET = PersistentConfig(
+    "WECHAT_APP_SECRET",
+    "message_filter.wechat_app_secret",
+    os.getenv("WECHAT_APP_SECRET", ""),
+)
+
 ####################################
 # Database
 ####################################

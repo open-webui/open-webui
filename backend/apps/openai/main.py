@@ -43,8 +43,6 @@ from utils.utils import (
     get_admin_user,
 )
 
-from apps.filter.main import filter_message
-
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 
@@ -363,11 +361,6 @@ async def generate_chat_completion(
     payload = {**form_data}
     if "metadata" in payload:
         del payload["metadata"]
-
-    try:
-        filter_message(payload)
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=str(e))
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
