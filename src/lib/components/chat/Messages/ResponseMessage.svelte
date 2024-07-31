@@ -448,20 +448,23 @@
 												code={revertSanitizedResponseContent(token.text)}
 											/>
 										{:else if token.raw.includes('annual_leave_form')}
-											<FormActionModal on:confirm={(e) => {
-												const data = e.detail ?? {}
-												editedContent = `${data['{LEAVETYPE}']} request submited. Date: ${data['{LEAVEFROM}']} - ${data['{LEAVETO}']}`; 
-												editMessageConfirmHandler()
-											}} on:cancel={() => {
-												editedContent = 'leave_request_cancled';
-												editMessageConfirmHandler()
-											}} />
+											<FormActionModal
+												on:confirm={(e) => {
+													const data = e.detail ?? {};
+													editedContent = `${data['type_of_leave']} request submitted. Date: ${data.leavefrom} to ${data.leaveto}`;
+													editMessageConfirmHandler();
+												}}
+												on:cancel={() => {
+													editedContent = 'leave_request_cancled';
+													editMessageConfirmHandler();
+												}}
+											/>
 										{:else if token.raw.includes('leave_request_cancled')}
 											<button
 												class="px-4 my-2 rounded-lg bg-[#ffffffaa] hover:bg-[#fff]"
 												on:click={() => {
-													editedContent = 'annual_leave_form'
-													editMessageConfirmHandler()
+													editedContent = 'annual_leave_form';
+													editMessageConfirmHandler();
 												}}>Click here to apply for leave</button
 											>
 										{:else}

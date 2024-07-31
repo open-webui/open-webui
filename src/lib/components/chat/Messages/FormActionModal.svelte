@@ -6,6 +6,7 @@
 	import Textfield from '@smui/textfield';
 	import { createEventDispatcher } from 'svelte';
 	import { user } from '$lib/stores';
+	import { submitLeaveForm } from '$lib/apis/chats';
 	// import Select, { Option } from '@smui/select';
 
 	const i18n = getContext('i18n');
@@ -36,40 +37,48 @@
 			};
 		});
 	}
-	$: if (show) {
-		let diff = new Date(endDate).getTime() - new Date(startDate).getTime();
-		count = diff / 1000 / 60 / 60 / 24;
-	}
-	$: dayCount = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 1000 / 60 / 60 / 24;
+	$: dayCount =
+		(new Date(endDate).getTime() - new Date(startDate).getTime()) / 1000 / 60 / 60 / 24 + 1;
 
-
+	const dateFormatter = (val) => {
+		const date = val ? new Date(val) : new Date();
+		const day = String(date.getDate()).padStart(2, '0'); // 获取日，并确保两位数格式
+		const month = String(date.getMonth() + 1).padStart(2, '0'); // 获取月，并确保两位数格式（月份从0开始，所以需要+1）
+		const year = String(date.getFullYear()).slice(-2); // 获取年的最后两位
+		return `${day}-${month}-${year}`;
+	};
 	const handleConfirm = () => {
-		window.alert('submitted');
-		const leaveType = document.getElementById('leave_type').value
 		const formData = {
-			'{NAME}': $user.name,
-			'{ID}': employeeID,
-			'{JOBTITLE}': 'NLP Engineer',
-			'{DEPT}': 'CIAI Engineering Team',
-			'{LEAVETYPE}': leaveType,
-			'{REMARKS}': remark,
-			'{LEAVEFROM}': new Date(startDate).toLocaleDateString(),
-			'{LEAVETO}': new Date(endDate).toLocaleDateString(),
-			'{DAYS}': dayCount,
-			'{ADDRESS}': address,
-			'{TELE}': phone,
-			'{EMAIL}': $user.email,
-			'{DATE}': new Date().toLocaleDateString()
+			name: $user.name,
+			employee_id: employeeID,
+			job_title: 'NLP Engineer',
+			dept: 'CIAI Engineering Team',
+			type_of_leave: type,
+			remarks: remark,
+			leavefrom: dateFormatter(startDate),
+			leaveto: dateFormatter(endDate),
+			days: dayCount,
+			address: address,
+			tele: phone,
+			email: $user.email,
+			date: dateFormatter()
 		};
+		submitLeaveForm(localStorage.token, formData)
+			.then((res) => {
+				dispatch('confirm', formData);
+				show = false;
+			})
+			.catch((err) => {
+				window.alert('Submission failed. Please try again.');
+				return;
+			});
 		dispatch('confirm', formData);
-		console.info(formData, 'dddd');
-		show = false;
 	};
 </script>
 
 <!-- <Modal size="lg" bind:show> -->
-	<div class="w-2/3 bg-[#ffffffee] rounded-lg my-4 mx-2">
-		<!-- <div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
+<div class="w-2/3 bg-[#ffffffee] rounded-lg my-4 mx-2">
+	<!-- <div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center capitalize">
 				{$i18n.t('Citation')}
 			</div>
@@ -92,15 +101,25 @@
 			</button>
 		</div> -->
 
-		<div class="flex flex-col md:flex-row w-full px-6 py-5 md:space-x-4">
-			<div class=" w-full dark:text-gray-200 overflow-y-scroll scrollbar-hidden p-5">
+	<div class="flex flex-col md:flex-row w-full px-6 py-5 md:space-x-4">
+		<div class=" w-full dark:text-gray-200 overflow-y-scroll scrollbar-hidden p-5">
+			<form
+				on:submit|preventDefault={() => {
+					handleConfirm();
+				}}
+			>
 				<!-- Leave Type & ID  -->
 				<div class="flex w-full">
 					<div class="w-2/3 mr-10">
 						<div class="mb-2 text-sm">Type of Leave</div>
 						<div class="flex items-center">
 							<img src="/icon/type.png" alt="icon-form" class="h-[22px] mr-2" />
-							<select name="type" id="leave_type" class="flex-1 rounded-md px-2 h-[44px]" style="border: 1px solid #0000004D">
+							<select
+								required
+								bind:value={type}
+								class="flex-1 rounded-md px-2 h-[44px]"
+								style="border: 1px solid #0000004D"
+							>
 								{#each leaves as leaveType}
 									<option value={leaveType}>{leaveType}</option>
 								{/each}
@@ -111,7 +130,7 @@
 						<div class="mb-2 text-sm">ID #</div>
 						<div class="flex items-center">
 							<img src="/icon/id.png" alt="icon-form" class="h-[29px] mr-2" />
-							<Textfield variant="outlined" bind:value={employeeID} class="w-full" />
+							<Textfield required variant="outlined" bind:value={employeeID} class="w-full" />
 						</div>
 					</div>
 				</div>
@@ -121,9 +140,16 @@
 						<div class="mt-4 mb-2 text-sm">Leave Applied From/To</div>
 						<div class="flex items-center">
 							<img src="/icon/calendar.png" alt="icon-form" class="h-[24px] mr-2" />
-							<DateInput bind:value={startDate} format="yyyy-MM-dd" min={minDate} class="mr-2" />
+							<DateInput
+								required
+								bind:value={startDate}
+								format="yyyy-MM-dd"
+								min={minDate}
+								class="mr-2"
+							/>
 							<span>-</span>
 							<DateInput
+								required
 								bind:value={endDate}
 								format="yyyy-MM-dd"
 								bind:min={startDate}
@@ -135,7 +161,7 @@
 						<div class="mt-4 text-sm">Leave Days</div>
 						<div class="my-2 flex items-center">
 							<img src="/icon/calendar1.png" alt="icon-form" class="h-[24px] mr-2" />
-							{dayCount} Days
+							{dayCount} Day(s)
 						</div>
 					</div>
 				</div>
@@ -143,13 +169,13 @@
 				<div class="mt-4 mb-2 text-sm">Address while on leave</div>
 				<div class="flex items-center">
 					<img src="/icon/address.png" alt="icon-form" class="h-[34px] mr-2" />
-					<Textfield variant="outlined" bind:value={address} class="w-full" />
+					<Textfield required variant="outlined" bind:value={address} class="w-full" />
 				</div>
 				<!-- Phone  -->
 				<div class="mt-4 mb-2 text-sm">Telephone (Local)</div>
 				<div class="flex items-center">
 					<img src="/icon/phone.png" alt="icon-form" class="h-[30px] mr-2" />
-					<Textfield variant="outlined" bind:value={phone} class="w-1/2" />
+					<Textfield required variant="outlined" bind:value={phone} class="w-1/2" />
 				</div>
 				<!-- Remark  -->
 				<div class="mt-4 mb-2 text-sm">Employee Remarks (Optional)</div>
@@ -162,17 +188,15 @@
 						class="py-1 px-12 rounded-lg border border-black/opacity-3 text-black/opacity-60 text-sm"
 						on:click={() => {
 							// show = false;
-							dispatch('cancel')
+							dispatch('cancel');
 						}}>Cancel</button
 					>
-					<button
-						class="py-1 px-12 ml-6 text-white bg-[#1595F4] rounded-lg text-sm"
-						on:click={() => {
-							handleConfirm();
-						}}>Confirm</button
+					<button class="py-1 px-12 ml-6 text-white bg-[#1595F4] rounded-lg text-sm" type="submit"
+						>Confirm</button
 					>
 				</div>
-			</div>
+			</form>
 		</div>
 	</div>
+</div>
 <!-- </Modal> -->
