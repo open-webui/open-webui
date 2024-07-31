@@ -3,8 +3,8 @@
 	"version": "0.3.10",
 	"private": true,
 	"scripts": {
-		"dev": "npm run pyodide:fetch && vite dev --host",
-		"build": "npm run pyodide:fetch && vite build",
+		"dev": "vite dev --host",
+		"build": "vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -21,6 +21,7 @@
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^3.2.2",
+		"@sveltejs/adapter-cloudflare": "^4.7.0",
 		"@sveltejs/adapter-node": "^5.2.0",
 		"@sveltejs/adapter-static": "^3.0.2",
 		"@sveltejs/kit": "^2.5.18",
