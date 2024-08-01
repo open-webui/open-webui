@@ -221,7 +221,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "Modello di embedding impostato su \"{{embedding_model}}\"",
 	"Enable Chat History": "Abilita cronologia chat",
 	"Enable Community Sharing": "Abilita la condivisione della community",
-	"Enable message bad Words replacement": "",
+	"Enable Message Bad Words Replacement": "",
 	"Enable Message Filter": "",
 	"Enable New Sign Ups": "Abilita nuove iscrizioni",
 	"Enable Web Search": "Abilita ricerca Web",

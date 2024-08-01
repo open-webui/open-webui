@@ -28,7 +28,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import StreamingResponse, Response, RedirectResponse
 
 from apps.audio.main import app as audio_app
-from apps.filter.main import app as filter_app, filter_message
+from apps.filter.main import app as filter_app, filter_message, app_start
 from apps.images.main import app as images_app
 from apps.ollama.main import (
     app as ollama_app,
@@ -164,6 +164,7 @@ def run_migrations():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     run_migrations()
+    await app_start()
     yield
 
 

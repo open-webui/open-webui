@@ -221,7 +221,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "임베딩 모델을 \"{{embedding_model}}\"로 설정함",
 	"Enable Chat History": "채팅 기록 활성화",
 	"Enable Community Sharing": "커뮤니티 공유 활성화",
-	"Enable message bad Words replacement": "",
+	"Enable Message Bad Words Replacement": "",
 	"Enable Message Filter": "",
 	"Enable New Sign Ups": "새 회원가입 활성화",
 	"Enable Web Search": "웹 검색 활성화",

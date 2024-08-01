@@ -221,7 +221,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "ჩასმის ძირითადი პროგრამა ჩართულია \"{{embedding_model}}\"",
 	"Enable Chat History": "მიმოწერის ისტორიის ჩართვა",
 	"Enable Community Sharing": "საზოგადოების გაზიარების ჩართვა",
-	"Enable message bad Words replacement": "",
+	"Enable Message Bad Words Replacement": "",
 	"Enable Message Filter": "",
 	"Enable New Sign Ups": "ახალი რეგისტრაციების ჩართვა",
 	"Enable Web Search": "ვებ ძიების ჩართვა",

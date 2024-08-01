@@ -221,7 +221,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "埋め込みモデルを\"{{embedding_model}}\"に設定しました",
 	"Enable Chat History": "チャット履歴を有効化",
 	"Enable Community Sharing": "コミュニティ共有の有効化",
-	"Enable message bad Words replacement": "",
+	"Enable Message Bad Words Replacement": "",
 	"Enable Message Filter": "",
 	"Enable New Sign Ups": "新規登録を有効化",
 	"Enable Web Search": "Web 検索を有効にする",

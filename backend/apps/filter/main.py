@@ -20,7 +20,7 @@ from config import (
     REPLACE_FILTER_WORDS,
     ENABLE_WECHAT_NOTICE,
     ENABLE_DAILY_USAGES_NOTICE,
-    WECHAT_NOTICE_PROFIX,
+    WECHAT_NOTICE_SUFFIX,
     WECHAT_APP_SECRET,
 )
 from config import SRC_LOG_LEVELS, DATA_DIR
@@ -54,133 +54,17 @@ app.state.config.REPLACE_FILTER_WORDS = REPLACE_FILTER_WORDS
 app.state.config.ENABLE_WECHAT_NOTICE = ENABLE_WECHAT_NOTICE
 app.state.config.WECHAT_APP_SECRET = WECHAT_APP_SECRET
 app.state.config.ENABLE_DAILY_USAGES_NOTICE = ENABLE_DAILY_USAGES_NOTICE
-app.state.config.WECHAT_NOTICE_PROFIX = WECHAT_NOTICE_PROFIX
+app.state.config.WECHAT_NOTICE_SUFFIX = WECHAT_NOTICE_SUFFIX
 
 file_path = os.path.join(DATA_DIR, app.state.config.CHAT_FILTER_WORDS_FILE)
 user_usage = defaultdict(lambda: defaultdict(int))
 usage_lock = asyncio.Lock()
-
-
-async def init_file():
-    if app.state.config.CHAT_FILTER_WORDS_FILE:
-        if os.path.exists(DATA_DIR):
-            if os.path.isfile(file_path):
-                with open(file_path, "r", encoding="utf-8") as file:
-                    lines = file.readlines()
-                    unique_lines = set(line.strip() for line in lines)
-                    joined_text = ",".join(unique_lines)
-                    app.state.config.CHAT_FILTER_WORDS = joined_text if joined_text else ""
-            else:
-                await write_words_to_file()
-
-
 search = None
-if app.state.config.ENABLE_MESSAGE_FILTER and app.state.config.CHAT_FILTER_WORDS:
-    search = wordsSearch()
-    search.SetKeywords(app.state.config.CHAT_FILTER_WORDS.split(","))
 
 
-class FILTERConfigForm(BaseModel):
-    ENABLE_MESSAGE_FILTER: bool
-    CHAT_FILTER_WORDS: str
-    CHAT_FILTER_WORDS_FILE: str
-    ENABLE_REPLACE_FILTER_WORDS: bool
-    REPLACE_FILTER_WORDS: str
-    ENABLE_WECHAT_NOTICE: bool
-    WECHAT_APP_SECRET: str
-    ENABLE_DAILY_USAGES_NOTICE: bool
-    WECHAT_NOTICE_PROFIX: str
-
-
-@app.on_event("startup")
-async def app_start():
-    await init_file()
-    if app.state.config.ENABLE_WECHAT_NOTICE:
-        scheduler.add_job(id='reset_usage', func=reset_usage, trigger='cron', hour=0, minute=0)
-        asyncio.get_event_loop().call_later(0, lambda: asyncio.create_task(reset_usage()))
-        if app.state.config.ENABLE_DAILY_USAGES_NOTICE:
-            scheduler.add_job(id='daily_send_usage', func=daily_send_usage, trigger='cron', hour=23, minute=30)
-            asyncio.get_event_loop().call_later(0, lambda: asyncio.create_task(daily_send_usage()))
-        scheduler.start()
-
-
-@app.get("/config")
-async def get_filter_config(user=Depends(get_admin_user)):
-    return {
-        "ENABLE_MESSAGE_FILTER": app.state.config.ENABLE_MESSAGE_FILTER,
-        "CHAT_FILTER_WORDS": app.state.config.CHAT_FILTER_WORDS,
-        "CHAT_FILTER_WORDS_FILE": app.state.config.CHAT_FILTER_WORDS_FILE,
-        "ENABLE_REPLACE_FILTER_WORDS": app.state.config.ENABLE_REPLACE_FILTER_WORDS,
-        "REPLACE_FILTER_WORDS": app.state.config.REPLACE_FILTER_WORDS,
-        "ENABLE_WECHAT_NOTICE": app.state.config.ENABLE_WECHAT_NOTICE,
-        "WECHAT_APP_SECRET": app.state.config.WECHAT_APP_SECRET,
-        "ENABLE_DAILY_USAGES_NOTICE": app.state.config.ENABLE_DAILY_USAGES_NOTICE,
-        "WECHAT_NOTICE_PROFIX": app.state.config.WECHAT_NOTICE_PROFIX,
-    }
-
-
-@app.post("/config/update")
-async def update_filter_config(
-        form_data: FILTERConfigForm, user=Depends(get_admin_user)
-):
-    global search
-    global file_path
-
-    app.state.config.ENABLE_MESSAGE_FILTER = form_data.ENABLE_MESSAGE_FILTER
-    app.state.config.CHAT_FILTER_WORDS_FILE = form_data.CHAT_FILTER_WORDS_FILE
-    app.state.config.ENABLE_REPLACE_FILTER_WORDS = form_data.ENABLE_REPLACE_FILTER_WORDS
-    app.state.config.REPLACE_FILTER_WORDS = form_data.REPLACE_FILTER_WORDS
-    app.state.config.ENABLE_WECHAT_NOTICE = form_data.ENABLE_WECHAT_NOTICE
-    app.state.config.WECHAT_APP_SECRET = form_data.WECHAT_APP_SECRET
-
-    request_file_path = os.path.join(DATA_DIR, app.state.config.CHAT_FILTER_WORDS_FILE)
-
-    if request_file_path != file_path:
-        app.state.config.CHAT_FILTER_WORDS = form_data.CHAT_FILTER_WORDS
-        file_path = request_file_path
-        await init_file()
-
-    else:
-        if app.state.config.CHAT_FILTER_WORDS != form_data.CHAT_FILTER_WORDS:
-            app.state.config.CHAT_FILTER_WORDS = form_data.CHAT_FILTER_WORDS
-            await write_words_to_file()
-
-    search = wordsSearch()
-    search.SetKeywords(app.state.config.CHAT_FILTER_WORDS.split(","))
-
-    return {
-        "ENABLE_MESSAGE_FILTER": app.state.config.ENABLE_MESSAGE_FILTER,
-        "CHAT_FILTER_WORDS": app.state.config.CHAT_FILTER_WORDS,
-        "CHAT_FILTER_WORDS_FILE": app.state.config.CHAT_FILTER_WORDS_FILE,
-        "ENABLE_REPLACE_FILTER_WORDS": app.state.config.ENABLE_REPLACE_FILTER_WORDS,
-        "REPLACE_FILTER_WORDS": app.state.config.REPLACE_FILTER_WORDS,
-        "ENABLE_WECHAT_NOTICE": app.state.config.ENABLE_WECHAT_NOTICE,
-        "WECHAT_APP_SECRET": app.state.config.WECHAT_APP_SECRET,
-    }
-
-
-async def init_usages():
-    usage_strings = []
-    now = datetime.datetime.now()
-    formatted_now = now.strftime("%Y年%m月%d日 %H时%M分")
-    replyText = f"📅{formatted_now}\n\n🤖{WEBUI_NAME}使用如下："
-
-    for user_name, models in user_usage.items():
-        model_usage_list = [f"{model}: {count}" for model, count in sorted(models.items())]
-        usage_string = f"⭐User {user_name} \n" + "\n".join(model_usage_list)
-        usage_strings.append(usage_string)
-
-    return f"{replyText}\n\n" + "\n\n".join(usage_strings) + f"\n\n{app.state.config.WECHAT_NOTICE_PROFIX}"
-
-
-@app.post("/usages")
-async def get_usages(
-        user=Depends(get_admin_user)
-):
-    if user.role != "admin":
-        raise HTTPException(status_code=401, detail="Permission denied.")
-
-    return {"data": await init_usages()}
+async def reset_usage():
+    global user_usage
+    user_usage = []
 
 
 async def daily_send_usage():
@@ -231,6 +115,162 @@ async def send_message_to_wechatapp(data):
                 return response_text
     except aiohttp.ClientError as e:
         log.error(f"POST 请求失败: {url}, 错误: {str(e)}")
+
+
+async def init_file():
+    if app.state.config.CHAT_FILTER_WORDS_FILE:
+        if os.path.exists(DATA_DIR):
+            if os.path.isfile(file_path):
+                with open(file_path, "r", encoding="utf-8") as file:
+                    lines = file.readlines()
+                    unique_lines = set(line.strip() for line in lines)
+                    joined_text = ",".join(unique_lines)
+                    app.state.config.CHAT_FILTER_WORDS = joined_text if joined_text else ""
+            else:
+                await write_words_to_file()
+
+
+async def write_words_to_file():
+    new_bad_words = set(
+        word.strip() for word in app.state.config.CHAT_FILTER_WORDS.split(",")
+    )
+    app.state.config.CHAT_FILTER_WORDS = ",".join(sorted(new_bad_words))
+    if app.state.config.CHAT_FILTER_WORDS:
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write("\n".join(sorted(new_bad_words)) + "\n")
+    else:
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write("")
+    log.info(f"Create a new bad words file: {file_path}")
+
+
+async def app_start():
+    global search
+
+    log.info("Initializing files...")
+    await init_file()
+
+    if app.state.config.ENABLE_WECHAT_NOTICE:
+        log.info("WeChat notice enabled.")
+        scheduler.add_job(reset_usage, 'cron', hour=0, minute=0, id='reset_usage')
+        log.info("Added reset_usage job.")
+        if app.state.config.ENABLE_DAILY_USAGES_NOTICE:
+            log.info("Daily usages notice enabled.")
+            scheduler.add_job(daily_send_usage, 'cron', hour=23, minute=30, id='daily_send_usage')
+            log.info("Added daily_send_usage job.")
+        scheduler.start()
+        log.info("Scheduler started.")
+
+    search = None
+    if app.state.config.ENABLE_MESSAGE_FILTER and app.state.config.CHAT_FILTER_WORDS:
+        log.info("Message filter enabled with keywords.")
+        search = wordsSearch()
+        search.SetKeywords(app.state.config.CHAT_FILTER_WORDS.split(","))
+        log.info("Keywords set for message filter.")
+
+
+class FILTERConfigForm(BaseModel):
+    ENABLE_MESSAGE_FILTER: bool
+    CHAT_FILTER_WORDS: str
+    CHAT_FILTER_WORDS_FILE: str
+    ENABLE_REPLACE_FILTER_WORDS: bool
+    REPLACE_FILTER_WORDS: str
+    ENABLE_WECHAT_NOTICE: bool
+    WECHAT_APP_SECRET: str
+    ENABLE_DAILY_USAGES_NOTICE: bool
+    WECHAT_NOTICE_SUFFIX: str
+
+
+@app.get("/config")
+async def get_filter_config(user=Depends(get_admin_user)):
+    return {
+        "ENABLE_MESSAGE_FILTER": app.state.config.ENABLE_MESSAGE_FILTER,
+        "CHAT_FILTER_WORDS": app.state.config.CHAT_FILTER_WORDS,
+        "CHAT_FILTER_WORDS_FILE": app.state.config.CHAT_FILTER_WORDS_FILE,
+        "ENABLE_REPLACE_FILTER_WORDS": app.state.config.ENABLE_REPLACE_FILTER_WORDS,
+        "REPLACE_FILTER_WORDS": app.state.config.REPLACE_FILTER_WORDS,
+        "ENABLE_WECHAT_NOTICE": app.state.config.ENABLE_WECHAT_NOTICE,
+        "WECHAT_APP_SECRET": app.state.config.WECHAT_APP_SECRET,
+        "ENABLE_DAILY_USAGES_NOTICE": app.state.config.ENABLE_DAILY_USAGES_NOTICE,
+        "WECHAT_NOTICE_SUFFIX": app.state.config.WECHAT_NOTICE_SUFFIX,
+    }
+
+
+@app.post("/config/update")
+async def update_filter_config(
+        form_data: FILTERConfigForm, user=Depends(get_admin_user)
+):
+    global search
+    global file_path
+
+    app.state.config.ENABLE_MESSAGE_FILTER = form_data.ENABLE_MESSAGE_FILTER
+    app.state.config.CHAT_FILTER_WORDS_FILE = form_data.CHAT_FILTER_WORDS_FILE
+    app.state.config.ENABLE_REPLACE_FILTER_WORDS = form_data.ENABLE_REPLACE_FILTER_WORDS
+    app.state.config.REPLACE_FILTER_WORDS = form_data.REPLACE_FILTER_WORDS
+    app.state.config.ENABLE_WECHAT_NOTICE = form_data.ENABLE_WECHAT_NOTICE
+    app.state.config.WECHAT_APP_SECRET = form_data.WECHAT_APP_SECRET
+    app.state.config.ENABLE_DAILY_USAGES_NOTICE = form_data.ENABLE_DAILY_USAGES_NOTICE
+    app.state.config.WECHAT_NOTICE_SUFFIX = form_data.WECHAT_NOTICE_SUFFIX
+
+    request_file_path = os.path.join(DATA_DIR, app.state.config.CHAT_FILTER_WORDS_FILE)
+
+    if request_file_path != file_path:
+        app.state.config.CHAT_FILTER_WORDS = form_data.CHAT_FILTER_WORDS
+        file_path = request_file_path
+        await init_file()
+
+    else:
+        if app.state.config.CHAT_FILTER_WORDS != form_data.CHAT_FILTER_WORDS:
+            app.state.config.CHAT_FILTER_WORDS = form_data.CHAT_FILTER_WORDS
+            await write_words_to_file()
+
+    search = wordsSearch()
+    search.SetKeywords(app.state.config.CHAT_FILTER_WORDS.split(","))
+
+    if not app.state.config.ENABLE_DAILY_USAGES_NOTICE and scheduler.get_job('daily_send_usage'):
+        scheduler.remove_job('daily_send_usage')
+        if not scheduler.get_job('daily_send_usage'):
+            log.info("Remove daily_send_usage job.")
+    elif app.state.config.ENABLE_DAILY_USAGES_NOTICE and not scheduler.get_job('daily_send_usage'):
+        scheduler.add_job(daily_send_usage, 'cron', hour=23, minute=30, id='daily_send_usage')
+        if scheduler.get_job('daily_send_usage'):
+            log.info("Add daily_send_usage job.")
+
+    return {
+        "ENABLE_MESSAGE_FILTER": app.state.config.ENABLE_MESSAGE_FILTER,
+        "CHAT_FILTER_WORDS": app.state.config.CHAT_FILTER_WORDS,
+        "CHAT_FILTER_WORDS_FILE": app.state.config.CHAT_FILTER_WORDS_FILE,
+        "ENABLE_REPLACE_FILTER_WORDS": app.state.config.ENABLE_REPLACE_FILTER_WORDS,
+        "REPLACE_FILTER_WORDS": app.state.config.REPLACE_FILTER_WORDS,
+        "ENABLE_WECHAT_NOTICE": app.state.config.ENABLE_WECHAT_NOTICE,
+        "WECHAT_APP_SECRET": app.state.config.WECHAT_APP_SECRET,
+        "ENABLE_DAILY_USAGES_NOTICE": app.state.config.ENABLE_DAILY_USAGES_NOTICE,
+        "WECHAT_NOTICE_SUFFIX": app.state.config.WECHAT_NOTICE_SUFFIX,
+    }
+
+
+async def init_usages():
+    usage_strings = []
+    now = datetime.datetime.now()
+    formatted_now = now.strftime("%Y年%m月%d日 %H时%M分")
+    replyText = f"📅{formatted_now}\n\n🤖{WEBUI_NAME}使用如下："
+
+    for user_name, models in user_usage.items():
+        model_usage_list = [f"{model}: {count}" for model, count in sorted(models.items())]
+        usage_string = f"⭐User {user_name} \n" + "\n".join(model_usage_list)
+        usage_strings.append(usage_string)
+
+    return f"{replyText}\n\n" + "\n\n".join(usage_strings) + f"\n\n{app.state.config.WECHAT_NOTICE_SUFFIX}"
+
+
+@app.post("/usages")
+async def get_usages(
+        user=Depends(get_admin_user)
+):
+    if user.role != "admin":
+        raise HTTPException(status_code=401, detail="Permission denied.")
+
+    return {"data": await init_usages()}
 
 
 async def content_filter_message(payload: dict, content: str, user):
@@ -300,22 +340,3 @@ async def filter_message(payload: dict, user, model):
                                 item_content = item.get("text", "")
                                 item["text"] = await content_filter_message(payload, item_content, user)
                     break
-
-
-async def write_words_to_file():
-    new_bad_words = set(
-        word.strip() for word in app.state.config.CHAT_FILTER_WORDS.split(",")
-    )
-    app.state.config.CHAT_FILTER_WORDS = ",".join(sorted(new_bad_words))
-    if app.state.config.CHAT_FILTER_WORDS:
-        with open(file_path, "w", encoding="utf-8") as file:
-            file.write("\n".join(sorted(new_bad_words)) + "\n")
-    else:
-        with open(file_path, "w", encoding="utf-8") as file:
-            file.write("")
-    log.info(f"Create a new bad words file: {file_path}")
-
-
-async def reset_usage():
-    global user_usage
-    user_usage = []

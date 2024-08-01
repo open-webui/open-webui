@@ -221,7 +221,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "تم تعيين نموذج التضمين على \"{{embedding_model}}\"",
 	"Enable Chat History": "تمكين سجل الدردشة",
 	"Enable Community Sharing": "تمكين مشاركة المجتمع",
-	"Enable message bad Words replacement": "",
+	"Enable Message Bad Words Replacement": "",
 	"Enable Message Filter": "",
 	"Enable New Sign Ups": "تفعيل عمليات التسجيل الجديدة",
 	"Enable Web Search": "تمكين بحث الويب",

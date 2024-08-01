@@ -221,7 +221,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "एम्बेडिंग मॉडल को \"{{embedding_model}}\" पर सेट किया गया",
 	"Enable Chat History": "चैट इतिहास सक्रिय करें",
 	"Enable Community Sharing": "समुदाय साझाकरण सक्षम करें",
-	"Enable message bad Words replacement": "",
+	"Enable Message Bad Words Replacement": "",
 	"Enable Message Filter": "",
 	"Enable New Sign Ups": "नए साइन अप सक्रिय करें",
 	"Enable Web Search": "वेब खोज सक्षम करें",

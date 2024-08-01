@@ -221,7 +221,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "Эмбеддинг-модель установлена в \"{{embedding_model}}\"",
 	"Enable Chat History": "Включить историю чата",
 	"Enable Community Sharing": "Включить общий доступ к сообществу",
-	"Enable message bad Words replacement": "",
+	"Enable Message Bad Words Replacement": "",
 	"Enable Message Filter": "",
 	"Enable New Sign Ups": "Разрешить новые регистрации",
 	"Enable Web Search": "Включить поиск в Интернете",

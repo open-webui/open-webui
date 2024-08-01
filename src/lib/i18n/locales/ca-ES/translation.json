@@ -221,7 +221,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "Model d'incrustació configurat a \"{{embedding_model}}\"",
 	"Enable Chat History": "Activar l'historial de xats",
 	"Enable Community Sharing": "Activar l'ús compartit amb la comunitat",
-	"Enable message bad Words replacement": "",
+	"Enable Message Bad Words Replacement": "",
 	"Enable Message Filter": "",
 	"Enable New Sign Ups": "Permetre nous registres",
 	"Enable Web Search": "Activar la cerca web",

@@ -221,7 +221,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "ইমেজ ইমেবডিং মডেল সেট করা হয়েছে - \"{{embedding_model}}\"",
 	"Enable Chat History": "চ্যাট হিস্টোরি চালু করুন",
 	"Enable Community Sharing": "সম্প্রদায় শেয়ারকরণ সক্ষম করুন",
-	"Enable message bad Words replacement": "",
+	"Enable Message Bad Words Replacement": "",
 	"Enable Message Filter": "",
 	"Enable New Sign Ups": "নতুন সাইনআপ চালু করুন",
 	"Enable Web Search": "ওয়েব অনুসন্ধান সক্ষম করুন",

@@ -26,6 +26,8 @@
 	let REPLACE_FILTER_WORDS = '';
 	let ENABLE_WECHAT_NOTICE = true;
 	let WECHAT_APP_SECRET = '';
+	let ENABLE_DAILY_USAGES_NOTICE = true;
+	let WECHAT_NOTICE_SUFFIX = '';
 
 	const updateConfigHandler = async () => {
 		const res = await updateFilterConfig(localStorage.token, {
@@ -35,7 +37,9 @@
 			ENABLE_REPLACE_FILTER_WORDS: ENABLE_REPLACE_FILTER_WORDS,
 			REPLACE_FILTER_WORDS: REPLACE_FILTER_WORDS,
 			ENABLE_WECHAT_NOTICE: ENABLE_WECHAT_NOTICE,
-			WECHAT_APP_SECRET: WECHAT_APP_SECRET
+			WECHAT_APP_SECRET: WECHAT_APP_SECRET,
+			ENABLE_DAILY_USAGES_NOTICE: ENABLE_DAILY_USAGES_NOTICE,
+			WECHAT_NOTICE_SUFFIX: WECHAT_NOTICE_SUFFIX
 		});
 
 		if (res) {
@@ -56,6 +60,8 @@
 			REPLACE_FILTER_WORDS = res.REPLACE_FILTER_WORDS;
 			ENABLE_WECHAT_NOTICE = res.ENABLE_WECHAT_NOTICE;
 			WECHAT_APP_SECRET = res.WECHAT_APP_SECRET;
+			ENABLE_DAILY_USAGES_NOTICE = res.ENABLE_DAILY_USAGES_NOTICE;
+			WECHAT_NOTICE_SUFFIX = res.WECHAT_NOTICE_SUFFIX;
 		}
 	});
 </script>
@@ -89,7 +95,7 @@
 
 				<div class=" mb-1.5 py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Enable message bad Words replacement')}
+						{$i18n.t('Enable Message Bad Words Replacement')}
 					</div>
 
 					<button
@@ -104,7 +110,22 @@
 
 				<div class=" mb-1.5 py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Enable message bad Words wechat notice')}
+						{$i18n.t('Enable Daily Usages Notice')}
+					</div>
+
+					<button
+						class=" text-xs font-medium text-gray-500"
+						type="button"
+						on:click={() => {
+							ENABLE_DAILY_USAGES_NOTICE = !ENABLE_DAILY_USAGES_NOTICE;
+						}}
+						>{ENABLE_DAILY_USAGES_NOTICE ? $i18n.t('On') : $i18n.t('Off')}
+					</button>
+				</div>
+
+				<div class=" mb-1.5 py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Enable Message Bad Words wechat Notice')}
 					</div>
 
 					<button
@@ -157,11 +178,23 @@
 				<div class=" mb-1.5 py-0.5 flex w-full justify-between" />
 
 				<div>
+					<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Wechat Notice Suffix')}</div>
+					<input
+						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						type="text"
+						placeholder={$i18n.t('Wechat Notice Suffix')}
+						bind:value={WECHAT_NOTICE_SUFFIX}
+					/>
+				</div>
+
+				<div class=" mb-1.5 py-0.5 flex w-full justify-between" />
+
+				<div>
 					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Bad words Template')}</div>
 					<textarea
 						bind:value={CHAT_FILTER_WORDS}
 						class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-						rows="22"
+						rows="18"
 					/>
 				</div>
 			</div>

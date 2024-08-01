@@ -35,6 +35,8 @@ type FilterConfigForm = {
 	REPLACE_FILTER_WORDS: string;
 	ENABLE_WECHAT_NOTICE: boolean;
 	WECHAT_APP_SECRET: string;
+	ENABLE_DAILY_USAGES_NOTICE: boolean;
+	WECHAT_NOTICE_SUFFIX: string;
 
 };
 

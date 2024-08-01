@@ -1416,10 +1416,10 @@ WECHAT_APP_SECRET = PersistentConfig(
     os.getenv("WECHAT_APP_SECRET", ""),
 )
 
-WECHAT_NOTICE_PROFIX = PersistentConfig(
-    "WECHAT_NOTICE_PROFIX",
-    "wechatapp.wechat_notice_profix",
-    os.getenv("WECHAT_NOTICE_PROFIX", "🎉🎉🎉感谢大家的使用!"),
+WECHAT_NOTICE_SUFFIX = PersistentConfig(
+    "WECHAT_NOTICE_SUFFIX",
+    "wechatapp.wechat_notice_suffix",
+    os.getenv("WECHAT_NOTICE_SUFFIX", "🎉🎉🎉感谢大家的使用!"),
 )
 
 ENABLE_DAILY_USAGES_NOTICE = PersistentConfig(

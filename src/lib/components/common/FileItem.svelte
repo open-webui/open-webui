@@ -5,6 +5,7 @@
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-72';
+	export let colorClassName = 'bg-white dark:bg-gray-800';
 	export let url: string | null = null;
 
 	export let clickHandler: Function | null = null;
@@ -17,10 +18,13 @@
 	export let size: number;
 
 	function formatSize(size) {
-		if (size < 1024) return `${size} B`;
-		const units = ['KB', 'MB', 'GB'];
-		let unitIndex = -1;
-		while (size >= 1024) {
+		if (size == null) return 'Unknown size';
+		if (typeof size !== 'number' || size < 0) return 'Invalid size';
+		if (size === 0) return '0 B';
+		const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+		let unitIndex = 0;
+
+		while (size >= 1024 && unitIndex < units.length - 1) {
 			size /= 1024;
 			unitIndex++;
 		}
@@ -30,7 +34,7 @@
 
 <div class="relative group">
 	<button
-		class="h-14 {className} flex items-center space-x-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 text-left"
+		class="h-14 {className} flex items-center space-x-3 {colorClassName} rounded-xl border border-gray-100 dark:border-gray-800 text-left"
 		type="button"
 		on:click={async () => {
 			if (clickHandler === null) {

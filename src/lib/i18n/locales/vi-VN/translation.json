@@ -221,7 +221,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "Mô hình embedding đã được thiết lập thành \"{{embedding_model}}\"",
 	"Enable Chat History": "Bật Lịch sử chat",
 	"Enable Community Sharing": "Kích hoạt Chia sẻ Cộng đồng",
-	"Enable message bad Words replacement": "",
+	"Enable Message Bad Words Replacement": "",
 	"Enable Message Filter": "",
 	"Enable New Sign Ups": "Cho phép đăng ký mới",
 	"Enable Web Search": "Kích hoạt tìm kiếm Web",

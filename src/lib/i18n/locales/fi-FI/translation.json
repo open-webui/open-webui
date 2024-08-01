@@ -220,7 +220,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "\"{{embedding_model}}\" valittu upotusmalliksi",
 	"Enable Chat History": "Ota keskusteluhistoria käyttöön",
 	"Enable Community Sharing": "Ota yhteisön jakaminen käyttöön",
-	"Enable message bad Words replacement": "",
+	"Enable Message Bad Words Replacement": "",
 	"Enable Message Filter": "",
 	"Enable New Sign Ups": "Salli uudet rekisteröitymiset",
 	"Enable Web Search": "Ota verkkohaku käyttöön",
