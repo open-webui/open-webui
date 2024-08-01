@@ -13,8 +13,7 @@
 
 <div class={outerClassName}>
 	<input
-		class={inputClassName}
-		class:dot={!show}
+		class={`${inputClassName} ${show ? '' : 'password'}`}
 		{placeholder}
 		bind:value
 		required={required && !readOnly}
@@ -62,9 +61,3 @@
 		{/if}
 	</button>
 </div>
-
-<style>
-	.dot {
-		-webkit-text-security: disc;
-	}
-</style>
