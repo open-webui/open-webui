@@ -59,7 +59,7 @@
 				await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 			} else {
 				await chats.set(
-					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+					await getChatList(localStorage.token, 0, ($pageSkip * $pageLimit) || $pageLimit)
 				);
 			}
 
@@ -68,7 +68,7 @@
 			}
 		} else {
 			await chats.set(
-				await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+				await getChatList(localStorage.token, 0, ($pageSkip * $pageLimit) || $pageLimit)
 			);
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}

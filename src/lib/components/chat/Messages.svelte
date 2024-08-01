@@ -90,7 +90,7 @@
 			history: history
 		});
 
-		await chats.set(await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit));
+		await chats.set(await getChatList(localStorage.token, 0, ($pageSkip * $pageLimit) || $pageLimit));
 	};
 
 	const confirmEditResponseMessage = async (messageId, content) => {
