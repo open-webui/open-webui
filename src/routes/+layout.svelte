@@ -20,11 +20,9 @@
 	let loaded = false;
 
 	const getUserDefaultPrompt = async (userInfo) => {
-		let originSetting = JSON.parse(localStorage.getItem('settings') ?? '{}');
-		if (!originSetting.system) {
-			originSetting.system = `I am one user. My name is ${userInfo.name ?? ''}, I am the ${userInfo.title ?? '_'} at MBZUAI. My phone number is ${userInfo.phone ?? '_'}. My email address is ${userInfo.email ?? ''}. My ID is ${userInfo.id ?? '_'}`
-		}
-		await settings.set({ ...$settings, ...originSetting });
+		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+		_settings.system = `I am one user. My name is ${userInfo.name ?? ''}, I am the ${userInfo.title ?? '_'} at MBZUAI. My phone number is ${userInfo.phone ?? '_'}. My email address is ${userInfo.email ?? ''}. My ID is ${userInfo.id ?? '_'}`
+		await settings.set({ ...$settings, ..._settings });
 		localStorage.setItem('settings', JSON.stringify($settings))
 	}
 
@@ -56,7 +54,7 @@
 					if (sessionUser) {
 						// Save Session User to Store
 						await user.set(sessionUser);
-						await getUserDefaultPrompt(sessionUser)
+						// await getUserDefaultPrompt(sessionUser)
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
