@@ -1093,12 +1093,6 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
         )
     model = app.state.MODELS[model_id]
 
-    try:
-        log.info(f"model: {model}")
-        await filter_message(form_data, user, model)
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=str(e))
-
     # `task` field is used to determine the type of the request, e.g. `title_generation`, `query_generation`, etc.
     task = None
     if "task" in form_data:
@@ -1117,7 +1111,12 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
         print("generate_ollama_chat_completion")
         return await generate_ollama_chat_completion(form_data, user=user)
     else:
-        return await generate_openai_chat_completion(form_data, user=user)
+        try:
+            await filter_message(form_data, user, model)
+            return await generate_openai_chat_completion(form_data, user=user)
+        except Exception as e:
+            raise HTTPException(status_code=503, detail=str(e))
+
 
 
 @app.post("/api/chat/completed")

@@ -3,19 +3,21 @@ import datetime
 import logging
 import os
 import time
+from collections import defaultdict
 
 import aiohttp
 from apps.filter.wordsSearch import wordsSearch
 from apps.webui.routers.chats import request_share_chat_by_id, request_get_chat_by_id
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config import (
+    AppConfig,
+    WEBUI_URL,
+    WEBUI_NAME,
     ENABLE_MESSAGE_FILTER,
     CHAT_FILTER_WORDS_FILE,
     CHAT_FILTER_WORDS,
     ENABLE_REPLACE_FILTER_WORDS,
     REPLACE_FILTER_WORDS,
-    AppConfig,
-    WEBUI_URL,
     ENABLE_WECHAT_NOTICE,
     WECHAT_APP_SECRET,
 )
@@ -51,7 +53,7 @@ app.state.config.ENABLE_WECHAT_NOTICE = ENABLE_WECHAT_NOTICE
 app.state.config.WECHAT_APP_SECRET = WECHAT_APP_SECRET
 
 file_path = os.path.join(DATA_DIR, app.state.config.CHAT_FILTER_WORDS_FILE)
-user_usage = []
+user_usage = defaultdict(lambda: defaultdict(int))
 usage_lock = asyncio.Lock()
 
 
@@ -87,11 +89,12 @@ class FILTERConfigForm(BaseModel):
 @app.on_event("startup")
 async def app_start():
     await init_file()
-    scheduler.add_job(id='reset_usage', func=reset_usage, trigger='cron', hour=0, minute=0)
-    scheduler.add_job(id='daily_send_usage', func=daily_send_usage, trigger='cron', hour=23, minute=30)
-    scheduler.start()
-    asyncio.get_event_loop().call_later(0, lambda: asyncio.create_task(reset_usage()))
-    asyncio.get_event_loop().call_later(0, lambda: asyncio.create_task(daily_send_usage()))
+    if app.state.config.ENABLE_WECHAT_NOTICE:
+        scheduler.add_job(id='reset_usage', func=reset_usage, trigger='cron', hour=0, minute=0)
+        scheduler.add_job(id='daily_send_usage', func=daily_send_usage, trigger='cron', hour=23, minute=30)
+        scheduler.start()
+        asyncio.get_event_loop().call_later(0, lambda: asyncio.create_task(reset_usage()))
+        asyncio.get_event_loop().call_later(0, lambda: asyncio.create_task(daily_send_usage()))
 
 
 @app.get("/config")
@@ -147,22 +150,28 @@ async def update_filter_config(
     }
 
 
+async def init_usages():
+    usage_strings = []
+    now = datetime.datetime.now()
+    formatted_now = now.strftime("%Y年%m月%d日 %H时%M分")
+    replyText = f"📅{formatted_now}\n\n🤖{WEBUI_NAME}使用如下："
+
+    for user_name, models in user_usage.items():
+        model_usage_list = [f"{model}: {count}" for model, count in sorted(models.items())]
+        usage_string = f"⭐User {user_name} \n" + "\n".join(model_usage_list)
+        usage_strings.append(usage_string)
+
+    return f"{replyText}\n\n" + "\n\n".join(usage_strings)
+
+
 @app.post("/usages")
 async def get_usages(
         user=Depends(get_admin_user)
 ):
     if user.role != "admin":
         raise HTTPException(status_code=401, detail="Permission denied.")
-    usage_strings = []
-    now = datetime.datetime.now()
-    formatted_now = now.strftime("%Y年%m月%d日 %H时%M分")
-    replyText = f"📅{formatted_now}\n\n🤖Yubb Chat使用如下："
-    for user_name, models in user_usage.items():
-        model_usage_list = [f"{model}: {count}" for model, count in models.items()]
-        usage_string = f"⭐User {user_name} \n" + "\n ".join(model_usage_list)
-        usage_strings.append(usage_string)
 
-    return f"{replyText}\n\n".join(usage_strings)
+    return {"data": await init_usages()}
 
 
 async def daily_send_usage():
@@ -171,20 +180,10 @@ async def daily_send_usage():
 
 
 async def prepare_usage_to_wechatapp():
-    usage_strings = []
-    now = datetime.datetime.now()
-    formatted_now = now.strftime("%Y年%m月%d日 %H时%M分")
-    replyText = f"📅 **{formatted_now}**\\n\\n**🤖Yubb Chat使用如下：**\\n"
-
-    for user_name, models in user_usage.items():
-        model_usage_list = [f"> - **{model}**: {count}" for model, count in models.items()]
-        usage_string = f"**⭐ User {user_name}**\\n" + "\\n".join(model_usage_list)
-        usage_strings.append(usage_string)
-
     data = {
         "msgtype": "markdown",
         "markdown": {
-            "content": f"{replyText}\\n\\n".join(usage_strings),
+            "content": await init_usages(),
             "mentioned_list": [],
         }
     }
@@ -214,17 +213,22 @@ async def send_message_to_wechatapp(data):
     headers = {'Content-type': 'application/json'}
     log.info(f"Send message to WeChat app: {data}")
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=data, headers=headers) as response:
-            response.raise_for_status()
-            response_text = await response.text()
-            log.info("文本发送情况提示", response_text)
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=data, headers=headers) as response:
+                response.raise_for_status()  # 如果状态码不是200-299，会引发异常
+                response_text = await response.text()
+                log.info(f"POST 请求成功: {url}, 状态码: {response.status}, 响应: {response_text}")
+                return response_text
+    except aiohttp.ClientError as e:
+        log.error(f"POST 请求失败: {url}, 错误: {str(e)}")
 
 
 async def content_filter_message(payload: dict, content: str, user):
-    chat_id = payload.get("metadata", {}).get("chat_id", None)
-    log.info("chat_id: " + chat_id)
     if content:
+        chat_id = payload.get("metadata", {}).get("chat_id", None)
+        if chat_id:
+            log.info("chat_id: " + chat_id)
         start_time = time.time()
         filter_condition = search.FindFirst(content)
         if filter_condition:
@@ -267,22 +271,16 @@ async def process_user_usage(model, user):
     model_name = model.get("name", "")
 
     async with usage_lock:
-        if user.name not in user_usage:
-            user_usage[user.name] = {}
-
-        if model_name in user_usage[user.name]:
-            user_usage[user.name][model_name] += 1
-        else:
-            user_usage[user.name][model_name] = 1
+        user_usage[user.name][model_name] += 1
 
 
 async def filter_message(payload: dict, user, model):
     await process_user_usage(model, user)
-    await daily_send_usage()
+    messages = payload.get("messages", None)
 
     if app.state.config.ENABLE_MESSAGE_FILTER and search:
-        if payload.get("messages"):
-            for message in reversed(payload["messages"]):
+        if messages:
+            for message in reversed(messages):
                 if message.get("role") == "user":
                     content = message.get("content")
                     if isinstance(content, str):
