@@ -13,8 +13,6 @@ import aiohttp
 import requests
 import mimetypes
 import shutil
-import os
-import uuid
 import inspect
 
 from fastapi import FastAPI, Request, Depends, status, UploadFile, File, Form
@@ -29,7 +27,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import StreamingResponse, Response, RedirectResponse
 
 
-from apps.socket.main import sio, app as socket_app, get_event_emitter, get_event_call
+from apps.socket.main import app as socket_app, get_event_emitter, get_event_call
 from apps.ollama.main import (
     app as ollama_app,
     get_all_models as get_ollama_models,
@@ -619,32 +617,15 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     content={"detail": str(e)},
                 )
 
-            # Extract valves from the request body
-            valves = None
-            if "valves" in body:
-                valves = body["valves"]
-                del body["valves"]
+            metadata = {
+                "chat_id": body.pop("chat_id", None),
+                "message_id": body.pop("id", None),
+                "session_id": body.pop("session_id", None),
+                "valves": body.pop("valves", None),
+            }
 
-            # Extract session_id, chat_id and message_id from the request body
-            session_id = None
-            if "session_id" in body:
-                session_id = body["session_id"]
-                del body["session_id"]
-            chat_id = None
-            if "chat_id" in body:
-                chat_id = body["chat_id"]
-                del body["chat_id"]
-            message_id = None
-            if "id" in body:
-                message_id = body["id"]
-                del body["id"]
-
-            __event_emitter__ = await get_event_emitter(
-                {"chat_id": chat_id, "message_id": message_id, "session_id": session_id}
-            )
-            __event_call__ = await get_event_call(
-                {"chat_id": chat_id, "message_id": message_id, "session_id": session_id}
-            )
+            __event_emitter__ = get_event_emitter(metadata)
+            __event_call__ = get_event_call(metadata)
 
             # Initialize data_items to store additional data to be sent to the client
             data_items = []
@@ -709,13 +690,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             if len(citations) > 0:
                 data_items.append({"citations": citations})
 
-            body["metadata"] = {
-                "session_id": session_id,
-                "chat_id": chat_id,
-                "message_id": message_id,
-                "valves": valves,
-            }
-
+            body["metadata"] = metadata
             modified_body_bytes = json.dumps(body).encode("utf-8")
             # Replace the request body with the modified one
             request._body = modified_body_bytes
@@ -1191,13 +1166,13 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                             status_code=r.status_code,
                             content=res,
                         )
-                except:
+                except Exception:
                     pass
 
             else:
                 pass
 
-    __event_emitter__ = await get_event_emitter(
+    __event_emitter__ = get_event_emitter(
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],
@@ -1205,7 +1180,7 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
         }
     )
 
-    __event_call__ = await get_event_call(
+    __event_call__ = get_event_call(
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],
@@ -1334,14 +1309,14 @@ async def chat_completed(
         )
     model = app.state.MODELS[model_id]
 
-    __event_emitter__ = await get_event_emitter(
+    __event_emitter__ = get_event_emitter(
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],
             "session_id": data["session_id"],
         }
     )
-    __event_call__ = await get_event_call(
+    __event_call__ = get_event_call(
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],

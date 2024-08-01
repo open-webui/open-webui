@@ -52,7 +52,6 @@ async def user_join(sid, data):
             user = Users.get_user_by_id(data["id"])
 
         if user:
-
             SESSION_POOL[sid] = user.id
             if user.id in USER_POOL:
                 USER_POOL[user.id].append(sid)
@@ -80,7 +79,6 @@ def get_models_in_use():
 
 @sio.on("usage")
 async def usage(sid, data):
-
     model_id = data["model"]
 
     # Cancel previous callback if there is one
@@ -139,7 +137,7 @@ async def disconnect(sid):
         print(f"Unknown session ID {sid} disconnected")
 
 
-async def get_event_emitter(request_info):
+def get_event_emitter(request_info):
     async def __event_emitter__(event_data):
         await sio.emit(
             "chat-events",
@@ -154,7 +152,7 @@ async def get_event_emitter(request_info):
     return __event_emitter__
 
 
-async def get_event_call(request_info):
+def get_event_call(request_info):
     async def __event_call__(event_data):
         response = await sio.call(
             "chat-events",
