@@ -13,13 +13,13 @@
 
 <div class={outerClassName}>
 	<input
-		class={inputClassName}
+		class={`${inputClassName} ${show ? '' : 'password'}`}
 		{placeholder}
 		bind:value
 		required={required && !readOnly}
 		disabled={readOnly}
 		autocomplete="off"
-		{...{ type: show ? 'text' : 'password' }}
+		type="text"
 	/>
 	<button
 		class={showButtonClassName}
