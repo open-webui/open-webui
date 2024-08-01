@@ -53,12 +53,13 @@
 				const _item = {
 					...item,
 					modelName: item.model?.name,
-					tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' ')
+					tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
+					desc: item.model?.info?.meta?.description
 				};
 				return _item;
 			}),
 		{
-			keys: ['value', 'label', 'tags', 'modelName']
+			keys: ['value', 'label', 'tags', 'desc', 'modelName']
 		}
 	);
 
