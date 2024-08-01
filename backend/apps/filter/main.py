@@ -19,6 +19,8 @@ from config import (
     ENABLE_REPLACE_FILTER_WORDS,
     REPLACE_FILTER_WORDS,
     ENABLE_WECHAT_NOTICE,
+    ENABLE_DAILY_USAGES_NOTICE,
+    WECHAT_NOTICE_PROFIX,
     WECHAT_APP_SECRET,
 )
 from config import SRC_LOG_LEVELS, DATA_DIR
@@ -51,6 +53,8 @@ app.state.config.ENABLE_REPLACE_FILTER_WORDS = ENABLE_REPLACE_FILTER_WORDS
 app.state.config.REPLACE_FILTER_WORDS = REPLACE_FILTER_WORDS
 app.state.config.ENABLE_WECHAT_NOTICE = ENABLE_WECHAT_NOTICE
 app.state.config.WECHAT_APP_SECRET = WECHAT_APP_SECRET
+app.state.config.ENABLE_DAILY_USAGES_NOTICE = ENABLE_DAILY_USAGES_NOTICE
+app.state.config.WECHAT_NOTICE_PROFIX = WECHAT_NOTICE_PROFIX
 
 file_path = os.path.join(DATA_DIR, app.state.config.CHAT_FILTER_WORDS_FILE)
 user_usage = defaultdict(lambda: defaultdict(int))
@@ -84,6 +88,8 @@ class FILTERConfigForm(BaseModel):
     REPLACE_FILTER_WORDS: str
     ENABLE_WECHAT_NOTICE: bool
     WECHAT_APP_SECRET: str
+    ENABLE_DAILY_USAGES_NOTICE: bool
+    WECHAT_NOTICE_PROFIX: str
 
 
 @app.on_event("startup")
@@ -91,10 +97,11 @@ async def app_start():
     await init_file()
     if app.state.config.ENABLE_WECHAT_NOTICE:
         scheduler.add_job(id='reset_usage', func=reset_usage, trigger='cron', hour=0, minute=0)
-        scheduler.add_job(id='daily_send_usage', func=daily_send_usage, trigger='cron', hour=23, minute=30)
-        scheduler.start()
         asyncio.get_event_loop().call_later(0, lambda: asyncio.create_task(reset_usage()))
-        asyncio.get_event_loop().call_later(0, lambda: asyncio.create_task(daily_send_usage()))
+        if app.state.config.ENABLE_DAILY_USAGES_NOTICE:
+            scheduler.add_job(id='daily_send_usage', func=daily_send_usage, trigger='cron', hour=23, minute=30)
+            asyncio.get_event_loop().call_later(0, lambda: asyncio.create_task(daily_send_usage()))
+        scheduler.start()
 
 
 @app.get("/config")
@@ -107,6 +114,8 @@ async def get_filter_config(user=Depends(get_admin_user)):
         "REPLACE_FILTER_WORDS": app.state.config.REPLACE_FILTER_WORDS,
         "ENABLE_WECHAT_NOTICE": app.state.config.ENABLE_WECHAT_NOTICE,
         "WECHAT_APP_SECRET": app.state.config.WECHAT_APP_SECRET,
+        "ENABLE_DAILY_USAGES_NOTICE": app.state.config.ENABLE_DAILY_USAGES_NOTICE,
+        "WECHAT_NOTICE_PROFIX": app.state.config.WECHAT_NOTICE_PROFIX,
     }
 
 
@@ -161,7 +170,7 @@ async def init_usages():
         usage_string = f"⭐User {user_name} \n" + "\n".join(model_usage_list)
         usage_strings.append(usage_string)
 
-    return f"{replyText}\n\n" + "\n\n".join(usage_strings)
+    return f"{replyText}\n\n" + "\n\n".join(usage_strings) + f"\n\n{app.state.config.WECHAT_NOTICE_PROFIX}"
 
 
 @app.post("/usages")

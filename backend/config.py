@@ -1405,10 +1405,27 @@ ENABLE_WECHAT_NOTICE = PersistentConfig(
     os.environ.get("ENABLE_WECHAT_NOTICE", "").lower() == "true",
 )
 
+
+####################################
+# WECHATAPP NOTICE
+####################################
+
 WECHAT_APP_SECRET = PersistentConfig(
     "WECHAT_APP_SECRET",
-    "message_filter.wechat_app_secret",
+    "wechatapp.wechat_app_secret",
     os.getenv("WECHAT_APP_SECRET", ""),
+)
+
+WECHAT_NOTICE_PROFIX = PersistentConfig(
+    "WECHAT_NOTICE_PROFIX",
+    "wechatapp.wechat_notice_profix",
+    os.getenv("WECHAT_NOTICE_PROFIX", "🎉🎉🎉感谢大家的使用!"),
+)
+
+ENABLE_DAILY_USAGES_NOTICE = PersistentConfig(
+    "DAILY_USAGES_NOTICE",
+    "wechatapp.daily_usages_notice",
+    os.environ.get("DAILY_USAGES_NOTICE", "").lower() == "true",
 )
 
 ####################################
