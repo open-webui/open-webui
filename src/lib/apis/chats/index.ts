@@ -32,10 +32,10 @@ export const createNewChat = async (token: string, chat: object) => {
 	return res;
 };
 
-export const getChatList = async (token: string = '') => {
+export const getChatList = async (token: string = '', skip: number = 0, limit: number = -1) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/?skip=${skip}&limit=${limit}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
