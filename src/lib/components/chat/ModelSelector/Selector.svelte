@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { marked } from 'marked';
+	import Fuse from 'fuse.js';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
@@ -45,16 +46,27 @@
 
 	let selectedModelIdx = 0;
 
-	$: filteredItems = items.filter(
-		(item) =>
-			(searchValue
-				? item.value.toLowerCase().includes(searchValue.toLowerCase()) ||
-				  item.label.toLowerCase().includes(searchValue.toLowerCase()) ||
-				  (item.model?.info?.meta?.tags ?? []).some((tag) =>
-						tag.name.toLowerCase().includes(searchValue.toLowerCase())
-				  )
-				: true) && !(item.model?.info?.meta?.hidden ?? false)
+	const fuse = new Fuse(
+		items
+			.filter((item) => !item.model?.info?.meta?.hidden)
+			.map((item) => {
+				const _item = {
+					...item,
+					modelName: item.model?.name,
+					tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' ')
+				};
+				return _item;
+			}),
+		{
+			keys: ['value', 'label', 'tags', 'modelName']
+		}
 	);
+
+	$: filteredItems = searchValue
+		? fuse.search(searchValue).map((e) => {
+				return e.item;
+		  })
+		: items.filter((item) => !item.model?.info?.meta?.hidden);
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
