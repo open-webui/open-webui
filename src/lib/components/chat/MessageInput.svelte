@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { v4 as uuidv4 } from 'uuid';
 	import { onMount, tick, getContext } from 'svelte';
 	import {
 		type Model,
@@ -99,7 +98,6 @@
 
 	const uploadFileHandler = async (file) => {
 		console.log(file);
-		const fileId = uuidv4();
 
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
@@ -118,11 +116,11 @@
 		const fileItem = {
 			type: 'file',
 			file: '',
-			id: fileId,
+			id: null,
 			url: '',
 			name: file.name,
 			collection_name: '',
-			status: 'uploaded',
+			status: '',
 			size: file.size,
 			error: ''
 		};
@@ -132,6 +130,7 @@
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
+				fileItem.status = 'uploaded';
 				fileItem.file = uploadedFile;
 				fileItem.id = uploadedFile.id;
 				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
@@ -152,11 +151,11 @@
 					processFileItem(fileItem);
 				}
 			} else {
-				files = files.filter((item) => item.id !== fileId);
+				files = files.filter((item) => item.status !== null);
 			}
-		} catch (error) {
-			toast.error(error);
-			files = files.filter((item) => item.id !== fileId);
+		} catch (e) {
+			toast.error(e);
+			files = files.filter((item) => item.status !== null);
 		}
 	};
 
@@ -173,7 +172,6 @@
 			// Remove the failed doc from the files array
 			// files = files.filter((f) => f.id !== fileItem.id);
 			toast.error(e);
-
 			fileItem.status = 'processed';
 			files = files;
 		}
