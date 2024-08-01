@@ -72,7 +72,6 @@
 				window.alert('Submission failed. Please try again.');
 				return;
 			});
-		dispatch('confirm', formData);
 	};
 </script>
 
