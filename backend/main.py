@@ -1094,7 +1094,8 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
     model = app.state.MODELS[model_id]
 
     try:
-        await filter_message(form_data, user)
+        log.info(f"model: {model}")
+        await filter_message(form_data, user, model)
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
 

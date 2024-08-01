@@ -1,3 +1,5 @@
+import asyncio
+import datetime
 import logging
 import os
 import time
@@ -5,6 +7,7 @@ import time
 import aiohttp
 from apps.filter.wordsSearch import wordsSearch
 from apps.webui.routers.chats import request_share_chat_by_id, request_get_chat_by_id
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from config import (
     ENABLE_MESSAGE_FILTER,
     CHAT_FILTER_WORDS_FILE,
@@ -35,6 +38,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+scheduler = AsyncIOScheduler()
 
 app.state.config = AppConfig()
 
@@ -47,9 +51,11 @@ app.state.config.ENABLE_WECHAT_NOTICE = ENABLE_WECHAT_NOTICE
 app.state.config.WECHAT_APP_SECRET = WECHAT_APP_SECRET
 
 file_path = os.path.join(DATA_DIR, app.state.config.CHAT_FILTER_WORDS_FILE)
+user_usage = []
+usage_lock = asyncio.Lock()
 
 
-def init_file():
+async def init_file():
     if app.state.config.CHAT_FILTER_WORDS_FILE:
         if os.path.exists(DATA_DIR):
             if os.path.isfile(file_path):
@@ -59,10 +65,9 @@ def init_file():
                     joined_text = ",".join(unique_lines)
                     app.state.config.CHAT_FILTER_WORDS = joined_text if joined_text else ""
             else:
-                write_words_to_file()
+                await write_words_to_file()
 
 
-init_file()
 search = None
 if app.state.config.ENABLE_MESSAGE_FILTER and app.state.config.CHAT_FILTER_WORDS:
     search = wordsSearch()
@@ -77,6 +82,16 @@ class FILTERConfigForm(BaseModel):
     REPLACE_FILTER_WORDS: str
     ENABLE_WECHAT_NOTICE: bool
     WECHAT_APP_SECRET: str
+
+
+@app.on_event("startup")
+async def app_start():
+    await init_file()
+    scheduler.add_job(id='reset_usage', func=reset_usage, trigger='cron', hour=0, minute=0)
+    scheduler.add_job(id='daily_send_usage', func=daily_send_usage, trigger='cron', hour=23, minute=30)
+    scheduler.start()
+    asyncio.get_event_loop().call_later(0, lambda: asyncio.create_task(reset_usage()))
+    asyncio.get_event_loop().call_later(0, lambda: asyncio.create_task(daily_send_usage()))
 
 
 @app.get("/config")
@@ -111,12 +126,12 @@ async def update_filter_config(
     if request_file_path != file_path:
         app.state.config.CHAT_FILTER_WORDS = form_data.CHAT_FILTER_WORDS
         file_path = request_file_path
-        init_file()
+        await init_file()
 
     else:
         if app.state.config.CHAT_FILTER_WORDS != form_data.CHAT_FILTER_WORDS:
             app.state.config.CHAT_FILTER_WORDS = form_data.CHAT_FILTER_WORDS
-            write_words_to_file()
+            await write_words_to_file()
 
     search = wordsSearch()
     search.SetKeywords(app.state.config.CHAT_FILTER_WORDS.split(","))
@@ -132,11 +147,51 @@ async def update_filter_config(
     }
 
 
-async def send_message_to_wechatapp(share_id, user):
-    url = f"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={app.state.config.WECHAT_APP_SECRET}"
-    log.info(f"Send message to WeChat app: {url}")
+@app.post("/usages")
+async def get_usages(
+        user=Depends(get_admin_user)
+):
+    if user.role != "admin":
+        raise HTTPException(status_code=401, detail="Permission denied.")
+    usage_strings = []
+    now = datetime.datetime.now()
+    formatted_now = now.strftime("%Y年%m月%d日 %H时%M分")
+    replyText = f"📅{formatted_now}\n\n🤖Yubb Chat使用如下："
+    for user_name, models in user_usage.items():
+        model_usage_list = [f"{model}: {count}" for model, count in models.items()]
+        usage_string = f"⭐User {user_name} \n" + "\n ".join(model_usage_list)
+        usage_strings.append(usage_string)
 
-    headers = {'Content-type': 'application/json'}
+    return f"{replyText}\n\n".join(usage_strings)
+
+
+async def daily_send_usage():
+    data = await prepare_usage_to_wechatapp()
+    await send_message_to_wechatapp(data)
+
+
+async def prepare_usage_to_wechatapp():
+    usage_strings = []
+    now = datetime.datetime.now()
+    formatted_now = now.strftime("%Y年%m月%d日 %H时%M分")
+    replyText = f"📅 **{formatted_now}**\\n\\n**🤖Yubb Chat使用如下：**\\n"
+
+    for user_name, models in user_usage.items():
+        model_usage_list = [f"> - **{model}**: {count}" for model, count in models.items()]
+        usage_string = f"**⭐ User {user_name}**\\n" + "\\n".join(model_usage_list)
+        usage_strings.append(usage_string)
+
+    data = {
+        "msgtype": "markdown",
+        "markdown": {
+            "content": f"{replyText}\\n\\n".join(usage_strings),
+            "mentioned_list": [],
+        }
+    }
+    return data
+
+
+async def prepare_data_to_wechatapp(share_id, user):
     data = {
         "msgtype": "news",
         "news": {
@@ -150,6 +205,13 @@ async def send_message_to_wechatapp(share_id, user):
             ]
         }
     }
+    return data
+
+
+async def send_message_to_wechatapp(data):
+    url = f"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={app.state.config.WECHAT_APP_SECRET}"
+    log.info(f"Send message to WeChat app: {url}")
+    headers = {'Content-type': 'application/json'}
     log.info(f"Send message to WeChat app: {data}")
 
     async with aiohttp.ClientSession() as session:
@@ -182,7 +244,8 @@ async def content_filter_message(payload: dict, content: str, user):
                         share_id = None
                     if share_id:
                         log.info(f"Share ID: {share_id}")
-                        await send_message_to_wechatapp(share_id, user)
+                        data = await prepare_data_to_wechatapp(share_id, user)
+                        await send_message_to_wechatapp(data)
                 except Exception as e:
                     log.error(f"Failed to send message to WeChat app: {e}")
 
@@ -199,7 +262,24 @@ async def content_filter_message(payload: dict, content: str, user):
     return content
 
 
-async def filter_message(payload: dict, user):
+async def process_user_usage(model, user):
+    global user_usage
+    model_name = model.get("name", "")
+
+    async with usage_lock:
+        if user.name not in user_usage:
+            user_usage[user.name] = {}
+
+        if model_name in user_usage[user.name]:
+            user_usage[user.name][model_name] += 1
+        else:
+            user_usage[user.name][model_name] = 1
+
+
+async def filter_message(payload: dict, user, model):
+    await process_user_usage(model, user)
+    await daily_send_usage()
+
     if app.state.config.ENABLE_MESSAGE_FILTER and search:
         if payload.get("messages"):
             for message in reversed(payload["messages"]):
@@ -215,7 +295,7 @@ async def filter_message(payload: dict, user):
                     break
 
 
-def write_words_to_file():
+async def write_words_to_file():
     new_bad_words = set(
         word.strip() for word in app.state.config.CHAT_FILTER_WORDS.split(",")
     )
@@ -227,3 +307,8 @@ def write_words_to_file():
         with open(file_path, "w", encoding="utf-8") as file:
             file.write("")
     log.info(f"Create a new bad words file: {file_path}")
+
+
+async def reset_usage():
+    global user_usage
+    user_usage = []
