@@ -106,13 +106,14 @@ Pre-processed data for county industry levels, based on employment, establishmen
 <!--- [Image Gallery (React)](/react-gallery/view/) - Anthony -->
 
 **React, Tabulator, Industry Timelines**
-- [React Team - Impact Side Navigation](/io/charts/inflow-outflow/#set=prosperity&indicators=VADD,JOBS)
 - [React Team - Mosaic column checkboxes](/io/charts)
 - [React Team - Commodity Totals](/localsite/info/data/totals/) in [Jobs Reports](/localsite/info/#indicators=JOBS)
 - [Tabulator - Merge in industry year rows using Javascript (1-3)](/data-pipeline/timelines/tabulator/) - Rupesh<!--Vadlamudi-->
 - [Tabulator - Merge in titles using Javascript (4)](/data-pipeline/timelines/tabulator/) - DONE <!--Dinesh, Fanyi, Rupesh-->
 - [Steps for SQLite in Browser](/data-pipeline/timelines/sqlite/phiresky/) - [Example (Runs SQL)](https://phiresky.github.io/blog/2021/hosting-sqlite-databases-on-github-pages/) - Aashish
 - [Impact Label Pipeline](/apps/impact) - Too optimize and change inputs
+
+<!-- - [React Team - Impact Side Navigation](/io/charts/inflow-outflow/#set=prosperity&indicators=VADD,JOBS) -->
 
 **Guru Roles**
 - [Earthscape NextJS in Open WebUI](/earthscape/app/)
