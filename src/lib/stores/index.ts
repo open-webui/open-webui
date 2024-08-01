@@ -41,6 +41,9 @@ export const showSettings = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 export const showCallOverlay = writable(false);
+export const scrollPaginationEnabled = writable(true);
+export const pageSkip = writable(0);
+export const pageLimit = writable(-1);
 
 export type Model = OpenAIModel | OllamaModel;
 
