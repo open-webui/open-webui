@@ -8,7 +8,7 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { tags as _tags, chats, pinnedChats } from '$lib/stores';
+	import { tags as _tags, chats, pinnedChats, pageSkip, pageLimit } from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -47,22 +47,29 @@
 		});
 
 		console.log($_tags);
+
 		await _tags.set(await getAllChatTags(localStorage.token));
 
+		console.log($_tags);
+		console.log('this run !!!!!');
 		console.log($_tags);
 
 		if ($_tags.map((t) => t.name).includes(tagName)) {
 			if (tagName === 'pinned') {
 				await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 			} else {
-				await chats.set(await getChatListByTagName(localStorage.token, tagName));
+				await chats.set(
+					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+				);
 			}
 
 			if ($chats.find((chat) => chat.id === chatId)) {
 				dispatch('close');
 			}
 		} else {
-			await chats.set(await getChatList(localStorage.token));
+			await chats.set(
+				await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+			);
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};

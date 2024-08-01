@@ -14,7 +14,15 @@
 		getChatListByTagName,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { chatId, chats, mobile, pinnedChats, showSidebar } from '$lib/stores';
+	import {
+		chatId,
+		chats,
+		mobile,
+		pageSkip,
+		pageLimit,
+		pinnedChats,
+		showSidebar
+	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
@@ -40,7 +48,9 @@
 			await updateChatById(localStorage.token, id, {
 				title: _title
 			});
-			await chats.set(await getChatList(localStorage.token));
+			await chats.set(
+				await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+			);
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
@@ -53,14 +63,16 @@
 
 		if (res) {
 			goto(`/c/${res.id}`);
-			await chats.set(await getChatList(localStorage.token));
+			await chats.set(
+				await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+			);
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
 
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
-		await chats.set(await getChatList(localStorage.token));
+		await chats.set(await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit));
 		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 	};
 

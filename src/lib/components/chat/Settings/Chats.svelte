@@ -2,7 +2,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { chats, user, settings } from '$lib/stores';
+	import { chats, user, settings, scrollPaginationEnabled, pageSkip, pageLimit } from '$lib/stores';
 
 	import {
 		archiveAllChats,
@@ -61,7 +61,12 @@
 				await createNewChat(localStorage.token, chat);
 			}
 		}
-
+		// loading all chats. disable pagination on scrol.
+		scrollPaginationEnabled.set(false);
+		// subsequent queries will calculate page size to rehydrate the ui.
+		// since every chat is already loaded, the calculation should now load all chats.
+		pageSkip.set(0);
+		pageLimit.set(-1);
 		await chats.set(await getChatList(localStorage.token));
 	};
 
@@ -77,6 +82,12 @@
 		await archiveAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
 		});
+		// loading all chats. disable pagination on scrol.
+		scrollPaginationEnabled.set(false);
+		// subsequent queries will calculate page size to rehydrate the ui.
+		// since every chat is already loaded, the calculation should now load all chats.
+		pageSkip.set(0);
+		pageLimit.set(-1);
 		await chats.set(await getChatList(localStorage.token));
 	};
 
@@ -85,6 +96,12 @@
 		await deleteAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
 		});
+		// loading all chats. disable pagination on scrol.
+		scrollPaginationEnabled.set(false);
+		// subsequent queries will calculate page size to rehydrate the ui.
+		// since every chat is already loaded, the calculation should now load all chats.
+		pageSkip.set(0);
+		pageLimit.set(-1);
 		await chats.set(await getChatList(localStorage.token));
 	};
 
