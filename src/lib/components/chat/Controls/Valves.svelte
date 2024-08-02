@@ -130,8 +130,10 @@
 						bind:value={tab}
 						placeholder="Select"
 					>
-						<option value="tools">{$i18n.t('Tools')}</option>
-						<option value="functions">{$i18n.t('Functions')}</option>
+						<option value="tools" class="bg-gray-100 dark:bg-gray-800">{$i18n.t('Tools')}</option>
+						<option value="functions" class="bg-gray-100 dark:bg-gray-800"
+							>{$i18n.t('Functions')}</option
+						>
 					</select>
 				</div>
 
@@ -144,20 +146,20 @@
 						}}
 					>
 						{#if tab === 'tools'}
-							<option value="" selected disabled class="bg-gray-100 dark:bg-gray-700"
+							<option value="" selected disabled class="bg-gray-100 dark:bg-gray-800"
 								>{$i18n.t('Select a tool')}</option
 							>
 
 							{#each $tools as tool, toolIdx}
-								<option value={tool.id} class="bg-gray-100 dark:bg-gray-700">{tool.name}</option>
+								<option value={tool.id} class="bg-gray-100 dark:bg-gray-800">{tool.name}</option>
 							{/each}
 						{:else if tab === 'functions'}
-							<option value="" selected disabled class="bg-gray-100 dark:bg-gray-700"
+							<option value="" selected disabled class="bg-gray-100 dark:bg-gray-800"
 								>{$i18n.t('Select a function')}</option
 							>
 
 							{#each $functions as func, funcIdx}
-								<option value={func.id} class="bg-gray-100 dark:bg-700">{func.name}</option>
+								<option value={func.id} class="bg-gray-100 dark:bg-gray-800">{func.name}</option>
 							{/each}
 						{/if}
 					</select>
