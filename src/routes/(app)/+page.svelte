@@ -131,14 +131,20 @@
 		} else if ($config?.default_models) {
 			selectedModels = $config?.default_models.split(',');
 		} else {
-			selectedModels = [''];
+			selectedModels = [$models[0].id] ?? [''];
+			if ($user.role === 'admin') {
+				await setDefaultModels(localStorage.token, selectedModels.join(','));
+			}
 		}
-
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
 		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+		// if (!_settings.system) {
+		_settings.system = `I am one user. My name is ${$user.name ?? ''}, I am the ${$user.title ?? '_'} at MBZUAI. My phone number is ${$user.phone ?? '_'}. My email address is ${$user.email ?? ''}. My ID is ${$user.id ?? '_'}`
+		localStorage.setItem('settings', JSON.stringify(_settings))
+		// }
 		settings.set({
 			..._settings
 		});
