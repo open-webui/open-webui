@@ -8,7 +8,7 @@
 	export let valves = {};
 </script>
 
-{#if valvesSpec}
+{#if valvesSpec && Object.keys(valvesSpec?.properties ?? {}).length}
 	{#each Object.keys(valvesSpec.properties) as property, idx}
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
@@ -91,5 +91,5 @@
 		</div>
 	{/each}
 {:else}
-	<div class="text-sm">No valves</div>
+	<div class="text-xs">No valves</div>
 {/if}

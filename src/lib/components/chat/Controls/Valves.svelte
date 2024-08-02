@@ -15,17 +15,13 @@
 		updateUserValvesById as updateFunctionUserValvesById
 	} from '$lib/apis/functions';
 
-	import ManageModal from './Personalization/ManageModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Switch from '$lib/components/common/Switch.svelte';
 	import Valves from '$lib/components/common/Valves.svelte';
 
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
-
-	export let saveSettings: Function;
 
 	let tab = 'tools';
 	let selectedId = '';
@@ -112,18 +108,12 @@
 		dispatch('save');
 	}}
 >
-	<div class="flex flex-col pr-1.5 overflow-y-scroll max-h-[25rem]">
-		<div>
-			<div class="flex items-center justify-between mb-2">
-				<Tooltip content="">
-					<div class="text-sm font-medium">
-						{$i18n.t('Manage Valves')}
-					</div>
-				</Tooltip>
-
-				<div class=" self-end">
+	<div class="flex flex-col">
+		<div class="space-y-1">
+			<div class="flex gap-2">
+				<div class="flex-1">
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded text-xs bg-transparent outline-none text-right"
+						class="  w-full rounded text-xs py-2 px-1 bg-transparent outline-none"
 						bind:value={tab}
 						placeholder="Select"
 					>
@@ -131,14 +121,10 @@
 						<option value="functions">{$i18n.t('Functions')}</option>
 					</select>
 				</div>
-			</div>
-		</div>
 
-		<div class="space-y-1">
-			<div class="flex gap-2">
 				<div class="flex-1">
 					<select
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded py-2 px-1 text-xs bg-transparent outline-none"
 						bind:value={selectedId}
 						on:change={async () => {
 							await tick();
@@ -167,9 +153,9 @@
 		</div>
 
 		{#if selectedId}
-			<hr class="dark:border-gray-800 my-3 w-full" />
+			<hr class="dark:border-gray-800 my-1 w-full" />
 
-			<div>
+			<div class="my-2 text-xs">
 				{#if !loading}
 					<Valves {valvesSpec} bind:valves />
 				{:else}
@@ -177,14 +163,5 @@
 				{/if}
 			</div>
 		{/if}
-	</div>
-
-	<div class="flex justify-end text-sm font-medium">
-		<button
-			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
-			type="submit"
-		>
-			{$i18n.t('Save')}
-		</button>
 	</div>
 </form>
