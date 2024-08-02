@@ -32,12 +32,19 @@ So now one goal is to install Ollama externally, using the "Different Server" co
 
 ## Steps for Local Build
 
-NOT needed if you install as a [local Docker instance](https://docs.openwebui.com/) and don't plan to edit and build.  
+You won't need these time-intensive install steps if you instead run a [local Docker instance](https://docs.openwebui.com/).  
+
+These steps are for programmers who will be editing and building locally.  
+
+Clone with a command or use GitHub Desktop to pull to your computer from [our projects repo](https://github.com/modelearth/projects/).
 
 		git clone https://github.com/modelearth/projects.git
 		cd projects/
 
-Commands from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/) for building locally. [Get Python version](../../../io/coders/python/):
+Here are the commands from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/) for building locally.  
+
+As of July 2024 python 3.12 has issues with OpenWebUI, so use python 3.11.  
+Check [your local python version and install nvm](../../../io/coders/python/) to host multiple version of python.
 
 	python3.11 -m venv env
 	source env/bin/activate
