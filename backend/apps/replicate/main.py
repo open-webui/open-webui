@@ -1,117 +1,135 @@
-import os
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
-from pydantic import BaseModel
-from typing import Optional, List, Dict
-import replicate
-import logging
-import asyncio
+# backend/apps/replicate/main.py
 
-from config import AppConfig
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from typing import List, Optional
+import replicate
+import asyncio
+import json
+import logging
+
+from config import (
+    SRC_LOG_LEVELS,
+    ENABLE_REPLICATE_API,
+    REPLICATE_API_TOKEN,
+    AppConfig,
+)
 from utils.utils import get_verified_user, get_admin_user
+from utils.misc import add_or_update_system_message
 
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["REPLICATE"])
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.state.config = AppConfig()
+app.state.config.ENABLE_REPLICATE_API = ENABLE_REPLICATE_API
+app.state.config.REPLICATE_API_TOKEN = REPLICATE_API_TOKEN
 
-# Add Replicate configuration to AppConfig
-app.state.config.ENABLE_REPLICATE_API = os.environ.get("ENABLE_REPLICATE_API", "False").lower() == "true"
-app.state.config.REPLICATE_API_TOKEN = os.environ.get("REPLICATE_API_TOKEN", "")
 
-# Replicate models configuration (you might want to load this from a config file or environment variable)
-REPLICATE_MODELS = {
-    "llama-2-70b": "meta/llama-2-70b:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
-    "llama-3-70b": "meta/meta-llama-3.1-405b-instruct",
-    # Add more models as needed
-}
+class ChatMessage(BaseModel):
+    role: str
+    content: str
 
-# Store active predictions
-active_predictions: Dict[str, replicate.predictions.Prediction] = {}
+
+class ChatCompletionRequest(BaseModel):
+    model: str
+    messages: List[ChatMessage]
+    stream: Optional[bool] = False
+
+
+@app.post("/chat/completions")
+async def generate_chat_completion(
+        request: ChatCompletionRequest,
+        user=Depends(get_verified_user)
+):
+    if not app.state.config.ENABLE_REPLICATE_API:
+        raise HTTPException(status_code=400, detail="Replicate API is not enabled")
+
+    try:
+        client = replicate.Client(api_token=app.state.config.REPLICATE_API_TOKEN)
+
+        prompt = " ".join([msg.content for msg in request.messages])
+
+        if request.stream:
+            return StreamingResponse(
+                stream_replicate_response(client, request.model, prompt),
+                media_type="text/event-stream"
+            )
+        else:
+            output = replicate.run(
+                request.model,
+                input={"prompt": prompt}
+            )
+            return {"choices": [{"message": {"content": "".join(output)}}]}
+
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def stream_replicate_response(client, model: str, prompt: str):
+    try:
+        for event in client.stream(model, input={"prompt": prompt}):
+            yield f"data: {json.dumps({'choices': [{'delta': {'content': event}}]})}\n\n"
+        yield "data: [DONE]\n\n"
+    except Exception as e:
+        log.exception(f"Error in stream_replicate_response: {e}")
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+
+@app.post("/cancel")
+async def cancel_prediction(prediction_id: str, user=Depends(get_verified_user)):
+    if not app.state.config.ENABLE_REPLICATE_API:
+        raise HTTPException(status_code=400, detail="Replicate API is not enabled")
+
+    try:
+        client = replicate.Client(api_token=app.state.config.REPLICATE_API_TOKEN)
+        prediction = client.predictions.get(prediction_id)
+        prediction.cancel()
+        return {"status": "cancelled"}
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/models")
+async def get_models(user=Depends(get_verified_user)):
+    if not app.state.config.ENABLE_REPLICATE_API:
+        raise HTTPException(status_code=400, detail="Replicate API is not enabled")
+
+    try:
+        replicate.Client(api_token=app.state.config.REPLICATE_API_TOKEN)
+        # Note: Replicate doesn't have a direct API to list all models.
+        # You might need to maintain a list of supported models or fetch from a predefined source.
+        return {"models": ["meta/llama-2-70b-chat", "anthropic/claude-2"]}  # Example models
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Config routes similar to Ollama and OpenAI implementations
+@app.get("/config")
+async def get_config(user=Depends(get_admin_user)):
+    return {"ENABLE_REPLICATE_API": app.state.config.ENABLE_REPLICATE_API}
+
 
 class ReplicateConfigForm(BaseModel):
     enable_replicate_api: Optional[bool] = None
+
 
 @app.post("/config/update")
 async def update_config(form_data: ReplicateConfigForm, user=Depends(get_admin_user)):
     app.state.config.ENABLE_REPLICATE_API = form_data.enable_replicate_api
     return {"ENABLE_REPLICATE_API": app.state.config.ENABLE_REPLICATE_API}
 
-class ReplicateChatMessage(BaseModel):
-    role: str
-    content: str
-
-class ReplicateChatCompletionForm(BaseModel):
-    model: str
-    messages: List[ReplicateChatMessage]
-    temperature: Optional[float] = 0.7
-    max_length: Optional[int] = 500
-
-async def stream_prediction(prediction_id: str):
-    prediction = active_predictions[prediction_id]
-    for output in prediction.output_iterator():
-        yield f"data: {output}\n\n"
-    yield "data: [DONE]\n\n"
-    del active_predictions[prediction_id]
-
-@app.post("/api/replicate/chat")
-async def generate_replicate_chat_completion(
-    form_data: ReplicateChatCompletionForm,
-    background_tasks: BackgroundTasks,
-    user=Depends(get_verified_user)
-):
-    if not app.state.config.ENABLE_REPLICATE_API:
-        raise HTTPException(status_code=400, detail="Replicate API is not enabled")
-
-    if not app.state.config.REPLICATE_API_TOKEN:
-        raise HTTPException(status_code=400, detail="Replicate API token is not configured")
-
-    if form_data.model not in REPLICATE_MODELS:
-        raise HTTPException(status_code=400, detail=f"Model {form_data.model} not found")
-
-    try:
-        # Format messages for Replicate API
-        prompt = ""
-        for message in form_data.messages:
-            prompt += f"{message.role}: {message.content}\n"
-        prompt += "assistant: "
-
-        # Create prediction
-        prediction = replicate.predictions.create(
-            version=REPLICATE_MODELS[form_data.model],
-            input={
-                "prompt": prompt,
-                "temperature": form_data.temperature,
-                "max_length": form_data.max_length,
-            }
-        )
-
-        prediction_id = prediction.id
-        active_predictions[prediction_id] = prediction
-
-        # Return streaming response
-        return StreamingResponse(stream_prediction(prediction_id), media_type="text/event-stream")
-
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/replicate/cancel/{prediction_id}")
-async def cancel_prediction(prediction_id: str, user=Depends(get_verified_user)):
-    if prediction_id not in active_predictions:
-        raise HTTPException(status_code=404, detail="Prediction not found")
-
-    try:
-        prediction = active_predictions[prediction_id]
-        prediction.cancel()
-        del active_predictions[prediction_id]
-        return {"status": "cancelled", "prediction_id": prediction_id}
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/replicate/models")
-async def get_replicate_models(user=Depends(get_verified_user)):
-    if not app.state.config.ENABLE_REPLICATE_API:
-        raise HTTPException(status_code=400, detail="Replicate API is not enabled")
-
-    return {"models": list(REPLICATE_MODELS.keys())}
+# Add more routes as needed for Replicate-specific functionality

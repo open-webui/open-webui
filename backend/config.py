@@ -586,6 +586,17 @@ LITELLM_CONFIG_PATH = f"{DATA_DIR}/litellm/config.yaml"
 #     create_config_file(LITELLM_CONFIG_PATH)
 #     log.info("Config file created successfully.")
 
+####################################
+# REPLICATE_API
+####################################
+
+ENABLE_REPLICATE_API = PersistentConfig(
+    "ENABLE_REPLICATE_API",
+    "replicate.enable",
+    os.environ.get("ENABLE_REPLICATE_API", "True").lower() == "true",
+)
+
+REPLICATE_API_TOKEN = os.environ.get("REPLICATE_API_TOKEN", "")
 
 ####################################
 # OLLAMA_BASE_URL
