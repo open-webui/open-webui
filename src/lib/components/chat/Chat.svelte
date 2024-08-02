@@ -851,6 +851,8 @@
 							console.log(line);
 							let data = JSON.parse(line);
 
+							navigator.vibrate(50);
+
 							if ('citations' in data) {
 								responseMessage.citations = data.citations;
 								continue;
