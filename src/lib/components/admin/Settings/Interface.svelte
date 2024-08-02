@@ -151,7 +151,7 @@
 
 		<hr class=" dark:border-gray-850 my-3" />
 		<div>
-			<div class=" mb-2.5 text-sm font-medium flex">
+			<div class=" mb-2.5 text-sm font-medium">
 				<div class=" self-center text-sm font-semibold">
 					{$i18n.t('Chat Background Image')}
 				</div>
@@ -162,7 +162,6 @@
 					<input
 						bind:value={taskConfig.BACKGROUND_RANDOM_IMAGE_URL}
 						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-						type="number"
 					/>
 				</div>
 			</div>
