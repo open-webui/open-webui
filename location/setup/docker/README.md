@@ -4,9 +4,9 @@
 Since Docker restarts local containers when your computer restarts, you may already have 
 [http://localhost:3000](http://localhost:3000) running if you've added to Docker previously. The port and ghcr.io source is visible under details within Docker.
 
-Our staging Docker package resides at [https://github.com/modelearth/projects/pkgs/container/projects](https://github.com/modelearth/projects/pkgs/container/projects)
+Our staging Docker container resides at [https://github.com/modelearth/projects/pkgs/container/projects](https://github.com/modelearth/projects/pkgs/container/projects)
 
-Our production Docker is in our [Github datascape account packages](https://github.com/users/datascape/packages/container/package/projects).
+Our production Docker container is in our [Github datascape account packages](https://github.com/users/datascape/packages/container/package/projects).
 
 
 ## Edit files pulled down from our Docker package
