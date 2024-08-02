@@ -127,6 +127,13 @@ RUN pip3 install uv && \
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
+# Install Doppler CLI
+RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg && \
+    curl -sLf --retry 3 --tlsv1.2 --proto "=https" 'https://packages.doppler.com/public/cli/gpg.DE2A7741A397C129.key' | apt-key add - && \
+    echo "deb https://packages.doppler.com/public/cli/deb/debian any-version main" | tee /etc/apt/sources.list.d/doppler-cli.list && \
+    apt-get update && \
+    apt-get -y install doppler
+
 EXPOSE 8080
 
 HEALTHCHECK CMD curl --silent --fail http://localhost:8080/health | jq -e '.status == true' || exit 1
@@ -136,4 +143,4 @@ USER $UID:$GID
 ARG BUILD_HASH
 ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
 
-CMD [ "bash", "start.sh"]
+CMD ["doppler", "run", "--", "bash", "start.sh"]
