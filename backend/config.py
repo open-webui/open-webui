@@ -62,6 +62,7 @@ log_sources = [
     "MODELS",
     "OLLAMA",
     "OPENAI",
+    "REPLICATE",
     "RAG",
     "WEBHOOK",
 ]
@@ -596,8 +597,11 @@ ENABLE_REPLICATE_API = PersistentConfig(
     os.environ.get("ENABLE_REPLICATE_API", "True").lower() == "true",
 )
 
-REPLICATE_API_TOKEN = os.environ.get("REPLICATE_API_TOKEN", "")
-
+REPLICATE_API_TOKEN = PersistentConfig(
+    "REPLICATE_API_TOKEN",
+    "replicate.api_token",
+    os.environ.get("REPLICATE_API_TOKEN", ""),
+)
 ####################################
 # OLLAMA_BASE_URL
 ####################################

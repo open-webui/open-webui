@@ -40,6 +40,12 @@ from apps.openai.main import (
     get_all_models as get_openai_models,
     generate_chat_completion as generate_openai_chat_completion,
 )
+from apps.replicate.main import (
+    app as replicate_app,
+    get_all_models as get_replicate_models,
+    generate_replicate_chat_completion,
+is_enabled as is_replicate_enabled,
+)
 
 from apps.audio.main import app as audio_app
 from apps.images.main import app as images_app
@@ -922,6 +928,7 @@ app.mount("/ws", socket_app)
 
 app.mount("/ollama", ollama_app)
 app.mount("/openai", openai_app)
+app.mount("/replicate", replicate_app)
 
 app.mount("/images/api/v1", images_app)
 app.mount("/audio/api/v1", audio_app)
@@ -958,7 +965,22 @@ async def get_all_models():
             for model in ollama_models["models"]
         ]
 
-    models = pipe_models + openai_models + ollama_models
+    replicate_models = []
+    if is_replicate_enabled():
+        replicate_models = await get_replicate_models()
+        replicate_models = [
+            {
+                "id": model["id"],
+                "name": model["name"],
+                "object": "model",
+                "created": int(time.time()),
+                "owned_by": "replicate",
+                "replicate": model,
+            }
+            for model in replicate_models
+        ]
+
+    models = pipe_models + openai_models + ollama_models + replicate_models
 
     global_action_ids = [
         function.id for function in Functions.get_global_action_functions()
@@ -1108,6 +1130,9 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
     if model["owned_by"] == "ollama":
         print("generate_ollama_chat_completion")
         return await generate_ollama_chat_completion(form_data, user=user)
+    elif model["owned_by"] == "replicate":
+        print("generate_replicate_chat_completion")
+        return await generate_replicate_chat_completion(form_data, user=user)
     else:
         return await generate_openai_chat_completion(form_data, user=user)
 
