@@ -1285,7 +1285,7 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
 
 
 @app.post("/api/chat/actions/{action_id}")
-async def chat_completed(
+async def chat_completed_action(
     action_id: str, form_data: dict, user=Depends(get_verified_user)
 ):
     if "." in action_id:
