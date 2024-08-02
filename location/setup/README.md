@@ -54,6 +54,10 @@ Check [your local python version and install nvm](../../../io/coders/python/) to
 	cp -RPp .env.example .env
 -->
 
+Check that you have npm installed. If not, [install node project manager](../../../io/coders/python/)
+
+	npm -v
+
 We have a [start.sh script](https://github.com/ModelEarth/projects/blob/main/location/setup/script/start.sh) which will run the comands below for you. Run this in the root of the "projects" folder.
 	
 	bash location/setup/script/start.sh
