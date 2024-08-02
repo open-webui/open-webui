@@ -237,12 +237,9 @@
 
 	const processFileCountLimit = async (querySettings, inputFiles) => {
 		const maxFiles = querySettings.max_file_count;
-		console.log(maxFiles);
 		const currentFilesCount = files.length;
-		console.log(currentFilesCount);
 		const inputFilesCount = inputFiles.length;
 		const totalFilesCount = currentFilesCount + inputFilesCount;
-		console.log(totalFilesCount);
 
 		if (currentFilesCount >= maxFiles || totalFilesCount > maxFiles) {
 			toast.error(
@@ -290,15 +287,14 @@
 		}
 	};
 
-	const initializeSettings = async () => {
-		try {
-			querySettings = await getQuerySettings(localStorage.token);
-		} catch (error) {
-			console.error('Error fetching query settings:', error);
-		}
-	};
-
 	onMount(() => {
+		const initializeSettings = async () => {
+			try {
+				querySettings = await getQuerySettings(localStorage.token);
+			} catch (error) {
+				console.error('Error fetching query settings:', error);
+			}
+		};
 		initializeSettings();
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
