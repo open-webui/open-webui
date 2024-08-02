@@ -8,7 +8,7 @@
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
-	import { processDocToVectorDB, uploadDocToVectorDB } from '$lib/apis/rag';
+	import { getQuerySettings, processDocToVectorDB, uploadDocToVectorDB } from '$lib/apis/rag';
 	import { blobToFile, transformFileName } from '$lib/utils';
 
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
@@ -24,6 +24,7 @@
 	let importFiles = '';
 
 	let inputFiles = '';
+	let querySettings;
 	let query = '';
 	let documentsImportInputElement: HTMLInputElement;
 	let tags = [];
@@ -98,7 +99,17 @@
 		}
 	};
 
+	const initializeSettings = async () => {
+		try {
+			querySettings = await getQuerySettings(localStorage.token);
+		} catch (error) {
+			console.error('Error fetching query settings:', error);
+		}
+	};
+
 	onMount(() => {
+		initializeSettings();
+
 		documents.subscribe((docs) => {
 			tags = docs.reduce((a, e, i, arr) => {
 				return [...new Set([...a, ...(e?.content?.tags ?? []).map((tag) => tag.name)])];
@@ -136,16 +147,24 @@
 				if (inputFiles && inputFiles.length > 0) {
 					for (const file of inputFiles) {
 						console.log(file, file.name.split('.').at(-1));
-						if (
-							SUPPORTED_FILE_TYPE.includes(file['type']) ||
-							SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
-						) {
-							uploadDoc(file);
+						if (file.size <= querySettings.max_file_size * 1024 * 1024) {
+							if (
+								SUPPORTED_FILE_TYPE.includes(file['type']) ||
+								SUPPORTED_FILE_EXTENSIONS.includes(file.name.split('.').at(-1))
+							) {
+								uploadDoc(file);
+							} else {
+								toast.error(
+									`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+								);
+								uploadDoc(file);
+							}
 						} else {
 							toast.error(
-								`Unknown File Type '${file['type']}', but accepting and treating as plain text`
+								$i18n.t('File size exceeds the limit of {{size}}MB', {
+									size: querySettings.max_file_size
+								})
 							);
-							uploadDoc(file);
 						}
 					}
 				} else {
