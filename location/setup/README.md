@@ -54,8 +54,11 @@ Check [your local python version and install nvm](../../../io/coders/python/) to
 	cp -RPp .env.example .env
 -->
 
-We have a [start.sh script](https://github.com/ModelEarth/projects/blob/main/location/setup/script/start.sh) which will run the following for you.
+We have a [start.sh script](https://github.com/ModelEarth/projects/blob/main/location/setup/script/start.sh) which will run the comands below for you. Run this in the root of the "projects" folder.
+	
+	bash location/setup/script/start.sh
 
+Or, alternatively, run the following. (These are contained in the command above.)
 
 	# Building Frontend Using Node
 	npm i
