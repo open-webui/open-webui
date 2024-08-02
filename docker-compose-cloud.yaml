@@ -1,0 +1,27 @@
+services:
+  open-webui:
+    build:
+      context: .
+      args:
+        OLLAMA_BASE_URL: '/ollama'
+      dockerfile: Dockerfile
+    image: iad.ocir.io/idogrsehxj39/open-webui-es-dev:latest
+    container_name: open-webui
+    volumes:
+      - open-webui:/app/backend/data
+    ports:
+      - ${OPEN_WEBUI_PORT-3000}:8080
+    environment:
+      - 'WEBUI_NAME=CplayGpt'
+      #- 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'WEBUI_SECRET_KEY=Estrada14@'
+      - 'WEBUI_AUTH=True'
+      - 'DATABASE_URL=mysql://2QvKbM4gKoWwBRf.root:NrbW65FcFWJywmDj@gateway01.us-east-1.prod.aws.tidbcloud.com:4000/test'
+      #- 'DATABASE_URL=postgresql://a6e7mf:xau_7SGLERNn2aDuin6y0FMiOxTyXdyhSiEu1@us-east-1.sql.xata.sh:5432/cplaygpt:main?sslmode=require'
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+
+volumes:
+  ollama: {}
+  open-webui: {}
