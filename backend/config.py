@@ -1302,6 +1302,24 @@ COMFYUI_SD3 = PersistentConfig(
     os.environ.get("COMFYUI_SD3", "").lower() == "true",
 )
 
+COMFYUI_FLUX = PersistentConfig(
+    "COMFYUI_FLUX",
+    "image_generation.comfyui.flux",
+    os.environ.get("COMFYUI_FLUX", "").lower() == "true",
+)
+
+COMFYUI_FLUX_WEIGHT_DTYPE = PersistentConfig(
+    "COMFYUI_FLUX_WEIGHT_DTYPE",
+    "image_generation.comfyui.flux_weight_dtype",
+    os.getenv("COMFYUI_FLUX_WEIGHT_DTYPE", ""),
+)
+
+COMFYUI_FLUX_FP8_CLIP = PersistentConfig(
+    "COMFYUI_FLUX_FP8_CLIP",
+    "image_generation.comfyui.flux_fp8_clip",
+    os.getenv("COMFYUI_FLUX_FP8_CLIP", ""),
+)
+
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
     "IMAGES_OPENAI_API_BASE_URL",
     "image_generation.openai.api_base_url",
