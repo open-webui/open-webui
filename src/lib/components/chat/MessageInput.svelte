@@ -554,6 +554,7 @@
 											<FileItem
 												name={file.name}
 												type={file.type}
+												size={file?.size}
 												status={file.status}
 												dismissible={true}
 												on:dismiss={() => {
