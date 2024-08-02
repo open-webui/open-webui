@@ -61,7 +61,13 @@
 		responseAutoPlayback = $settings.responseAutoPlayback ?? false;
 
 		STTEngine = $settings?.audio?.stt?.engine ?? '';
-		voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';
+
+		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
+			voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';
+		} else {
+			voice = $config.audio.tts.voice ?? '';
+		}
+
 		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
 
 		await getVoices();
@@ -78,6 +84,7 @@
 				},
 				tts: {
 					voice: voice !== '' ? voice : undefined,
+					defaultVoice: $config?.audio?.tts?.voice ?? '',
 					nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
 				}
 			}
