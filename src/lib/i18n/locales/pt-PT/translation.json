@@ -364,7 +364,6 @@
 	"Manage Models": "Gerir Modelos",
 	"Manage Ollama Models": "Gerir Modelos Ollama",
 	"Manage Pipelines": "Gerir pipelines",
-	"Manage Valves": "",
 	"March": "Março",
 	"Max Tokens (num_predict)": "Máx Tokens (num_predict)",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "O máximo de 3 modelos podem ser descarregados simultaneamente. Tente novamente mais tarde.",

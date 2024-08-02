@@ -364,7 +364,6 @@
 	"Manage Models": "Керування моделями",
 	"Manage Ollama Models": "Керування моделями Ollama",
 	"Manage Pipelines": "Керування конвеєрами",
-	"Manage Valves": "Керування клапанами",
 	"March": "Березень",
 	"Max Tokens (num_predict)": "Макс токенів (num_predict)",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "Максимум 3 моделі можна завантажити одночасно. Будь ласка, спробуйте пізніше.",

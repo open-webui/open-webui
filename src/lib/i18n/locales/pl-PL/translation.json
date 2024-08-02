@@ -364,7 +364,6 @@
 	"Manage Models": "Zarządzaj modelami",
 	"Manage Ollama Models": "Zarządzaj modelami Ollama",
 	"Manage Pipelines": "Zarządzanie potokami",
-	"Manage Valves": "",
 	"March": "Marzec",
 	"Max Tokens (num_predict)": "Maksymalna liczba żetonów (num_predict)",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "Maksymalnie 3 modele można pobierać jednocześnie. Spróbuj ponownie później.",

@@ -364,7 +364,6 @@
 	"Manage Models": "Modelleri Yönet",
 	"Manage Ollama Models": "Ollama Modellerini Yönet",
 	"Manage Pipelines": "Pipelineları Yönet",
-	"Manage Valves": "Valvleri Yönet",
 	"March": "Mart",
 	"Max Tokens (num_predict)": "Maksimum Token (num_predict)",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "Aynı anda en fazla 3 model indirilebilir. Lütfen daha sonra tekrar deneyin.",

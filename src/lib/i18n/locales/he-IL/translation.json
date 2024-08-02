@@ -364,7 +364,6 @@
 	"Manage Models": "נהל מודלים",
 	"Manage Ollama Models": "נהל מודלים של Ollama",
 	"Manage Pipelines": "ניהול צינורות",
-	"Manage Valves": "",
 	"March": "מרץ",
 	"Max Tokens (num_predict)": "מקסימום אסימונים (num_predict)",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "ניתן להוריד מקסימום 3 מודלים בו זמנית. אנא נסה שוב מאוחר יותר.",

@@ -364,7 +364,6 @@
 	"Manage Models": "Administrer modeller",
 	"Manage Ollama Models": "Administrer Ollama-modeller",
 	"Manage Pipelines": "Administrer pipelines",
-	"Manage Valves": "Administrer valves",
 	"March": "mars",
 	"Max Tokens (num_predict)": "Maks antall tokens (num_predict)",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "Maksimalt 3 modeller kan lastes ned samtidig. Vennligst prøv igjen senere.",
