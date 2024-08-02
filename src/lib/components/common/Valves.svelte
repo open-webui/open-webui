@@ -1,5 +1,6 @@
 <script>
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
 	import Switch from './Switch.svelte';
@@ -28,6 +29,8 @@
 							(valves[property] ?? null) === null
 								? valvesSpec.properties[property]?.default ?? ''
 								: null;
+
+						dispatch('change');
 					}}
 				>
 					{#if (valves[property] ?? null) === null}
@@ -52,6 +55,9 @@
 							<select
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none border border-gray-100 dark:border-gray-800"
 								bind:value={valves[property]}
+								on:change={() => {
+									dispatch('change');
+								}}
 							>
 								{#each valvesSpec.properties[property].enum as option}
 									<option value={option} selected={option === valves[property]}>
@@ -66,7 +72,12 @@
 								</div>
 
 								<div class=" pr-2">
-									<Switch bind:state={valves[property]} />
+									<Switch
+										bind:state={valves[property]}
+										on:change={() => {
+											dispatch('change');
+										}}
+									/>
 								</div>
 							</div>
 						{:else}
@@ -77,6 +88,9 @@
 								bind:value={valves[property]}
 								autocomplete="off"
 								required
+								on:change={() => {
+									dispatch('change');
+								}}
 							/>
 						{/if}
 					</div>

@@ -109,7 +109,6 @@
 	};
 
 	let params = {};
-	let valves = {};
 
 	$: if (history.currentId !== null) {
 		let _messages = [];
@@ -812,7 +811,6 @@
 			keep_alive: $settings.keepAlive ?? undefined,
 			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 			files: files.length > 0 ? files : undefined,
-			...(Object.keys(valves).length ? { valves } : {}),
 			session_id: $socket?.id,
 			chat_id: $chatId,
 			id: responseMessageId
@@ -1112,7 +1110,6 @@
 					max_tokens: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
 					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 					files: files.length > 0 ? files : undefined,
-					...(Object.keys(valves).length ? { valves } : {}),
 					session_id: $socket?.id,
 					chat_id: $chatId,
 					id: responseMessageId
@@ -1639,7 +1636,6 @@
 			bind:show={showControls}
 			bind:chatFiles
 			bind:params
-			bind:valves
 		/>
 	</div>
 {/if}

@@ -12,7 +12,6 @@
 	export let models = [];
 
 	export let chatFiles = [];
-	export let valves = {};
 	export let params = {};
 </script>
 

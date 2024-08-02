@@ -31,6 +31,20 @@
 	let valvesSpec = null;
 	let valves = {};
 
+	let debounceTimer;
+
+	const debounceSubmitHandler = async () => {
+		// debounce 1 second
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+		}
+
+		// Set a new timer
+		debounceTimer = setTimeout(() => {
+			submitHandler();
+		}, 1000); // 1 second debounce
+	};
+
 	const getUserValves = async () => {
 		loading = true;
 		if (tab === 'tools') {
@@ -157,7 +171,13 @@
 
 			<div class="my-2 text-xs">
 				{#if !loading}
-					<Valves {valvesSpec} bind:valves />
+					<Valves
+						{valvesSpec}
+						bind:valves
+						on:change={() => {
+							debounceSubmitHandler();
+						}}
+					/>
 				{:else}
 					<Spinner className="size-5" />
 				{/if}
