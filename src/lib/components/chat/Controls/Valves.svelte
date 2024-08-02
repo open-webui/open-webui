@@ -34,7 +34,6 @@
 	let debounceTimer;
 
 	const debounceSubmitHandler = async () => {
-		// debounce 1 second
 		if (debounceTimer) {
 			clearTimeout(debounceTimer);
 		}
@@ -42,7 +41,7 @@
 		// Set a new timer
 		debounceTimer = setTimeout(() => {
 			submitHandler();
-		}, 1000); // 1 second debounce
+		}, 500); // 0.5 second debounce
 	};
 
 	const getUserValves = async () => {
