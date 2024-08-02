@@ -23,14 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🔧 Tags Handling in Document Upload**: Tags are now properly sent to the upload document handler, resolving issues with missing metadata in modal dialogs.
 - **🌐 URL Handling for Sensitive Inputs**: Fixed incorrect URL dependencies in SensitiveInput components that caused security risks.
 - **📂 Static Path Resolution in PDF Generation**: Fixed static paths that adjust dynamically to prevent issues across various environments.
-- **🖼️ Static Image Variables Initialization**: Optimized image file display intialization to enhance front-end performance.
 
 ### Changed
 
 - **🚧 Refactoring Various Components**: Numerous refactoring changes across styling, file handling, and function simplifications for clarity and performance.
 - **🎛️ User Valves Management**: Moved user valves from settings to direct chat controls for more user-friendly access during interactions.
 - **📄 Better LaTeX Rendering**: Improved identification and handling of LaTeX content in text, allowing for better rendering.
-- **🛠️ Voice ID Handling with ElevenLabs**: Streamlined the process to match voice ID dynamically as global voice updates occur, ensuring synchronization.
 
 ### Removed
 
