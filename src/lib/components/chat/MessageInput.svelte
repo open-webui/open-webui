@@ -246,7 +246,7 @@
 
 		if (currentFilesCount >= maxFiles || totalFilesCount > maxFiles) {
 			toast.error(
-				$i18n.t('Only the first {{count}} files will be processed.', {
+				$i18n.t('File count exceeds the limit of {{size}}', {
 					count: maxFiles
 				})
 			);
@@ -290,14 +290,15 @@
 		}
 	};
 
+	const initializeSettings = async () => {
+		try {
+			querySettings = await getQuerySettings(localStorage.token);
+		} catch (error) {
+			console.error('Error fetching query settings:', error);
+		}
+	};
+
 	onMount(() => {
-		const initializeSettings = async () => {
-			try {
-				querySettings = await getQuerySettings(localStorage.token);
-			} catch (error) {
-				console.error('Error fetching query settings:', error);
-			}
-		};
 		initializeSettings();
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
