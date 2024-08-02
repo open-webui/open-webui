@@ -490,6 +490,7 @@
 	"Pull a model from Ollama.com": "從 Ollama.com 下載模型",
 	"Query Params": "查詢參數",
 	"Random Chat Background Image": "隨機聊天背景圖片",
+	"Random background image has been enabled, please click Save to refresh the interface, and then you will get a new background image every time you refresh the page~": "✨已啟用隨機背景圖片，請點擊保存以刷新介面，然後每次刷新頁面時都會獲得新的背景圖片~",
 	"RAG Template": "RAG 範例",
 	"Read Aloud": "讀出",
 	"Record voice": "錄音",

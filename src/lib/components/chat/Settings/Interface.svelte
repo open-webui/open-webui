@@ -337,6 +337,11 @@
 								backgroundImageUrl = 'Random Image';
 							}
 							saveSettings({ backgroundImageUrl });
+							toast.success(
+								$i18n.t(
+									'Random background image has been enabled, please click Save to refresh the interface, and then you will get a new background image every time you refresh the page~'
+								)
+							);
 						}}
 						type="button"
 					>
