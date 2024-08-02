@@ -332,7 +332,7 @@
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							if (backgroundImageUrl !== null) {
-								backgroundImageUrl = '';
+								backgroundImageUrl = null;
 							} else {
 								backgroundImageUrl = 'Random Image';
 							}
