@@ -240,6 +240,7 @@
 		const currentFilesCount = files.length;
 		const inputFilesCount = inputFiles.length;
 		const totalFilesCount = currentFilesCount + inputFilesCount;
+		let filesToProcess = inputFiles;
 
 		if (currentFilesCount >= maxFiles || totalFilesCount > maxFiles) {
 			toast.error(
@@ -250,9 +251,10 @@
 			if (currentFilesCount >= maxFiles) {
 				return false, null;
 			}
+			if (totalFilesCount > maxFiles) {
+				filesToProcess = inputFiles.slice(0, maxFiles - currentFilesCount);
+			}
 		}
-
-		const filesToProcess = inputFiles.slice(0, maxFiles - currentFilesCount);
 		return true, filesToProcess;
 	};
 
@@ -332,10 +334,14 @@
 						dragged = false;
 						return;
 					}
-					filesToProcess.forEach((file) => {
-						console.log(file, file.name.split('.').at(-1));
-						processFileSizeLimit(querySettings, file);
-					});
+					if (Array.isArray(filesToProcess)) {
+						filesToProcess.forEach((file) => {
+							console.log(file, file.name.split('.').at(-1));
+							processFileSizeLimit(querySettings, file);
+						});
+					} else {
+						console.error('filesToProcess is not an array or is undefined:', filesToProcess);
+					}
 				} else {
 					toast.error($i18n.t(`File not found.`));
 				}
@@ -480,18 +486,23 @@
 					multiple
 					on:change={async () => {
 						if (inputFiles && inputFiles.length > 0) {
+							const _inputFiles = Array.from(inputFiles);
 							const [canProcess, filesToProcess] = await processFileCountLimit(
 								querySettings,
-								inputFiles
+								_inputFiles
 							);
 							if (!canProcess) {
 								filesInputElement.value = '';
 								return;
 							}
-							filesToProcess.forEach((file) => {
-								console.log(file, file.name.split('.').at(-1));
-								processFileSizeLimit(querySettings, file);
-							});
+							if (Array.isArray(filesToProcess)) {
+								filesToProcess.forEach((file) => {
+									console.log(file, file.name.split('.').at(-1));
+									processFileSizeLimit(querySettings, file);
+								});
+							} else {
+								console.error('filesToProcess is not an array or is undefined:', filesToProcess);
+							}
 						} else {
 							toast.error($i18n.t(`File not found.`));
 						}
