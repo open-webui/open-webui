@@ -15,6 +15,7 @@
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
+		getQuerySettings,
 		processDocToVectorDB,
 		uploadDocToVectorDB,
 		uploadWebToVectorDB,
@@ -65,6 +66,7 @@
 	let modelsElement;
 
 	let inputFiles;
+	let querySettings;
 	let dragged = false;
 
 	let user = null;
@@ -233,7 +235,67 @@
 		}
 	};
 
+	const processFileCountLimit = async (querySettings, inputFiles) => {
+		const maxFiles = querySettings.max_file_count;
+		const currentFilesCount = files.length;
+		const inputFilesCount = inputFiles.length;
+		const totalFilesCount = currentFilesCount + inputFilesCount;
+
+		if (currentFilesCount >= maxFiles || totalFilesCount > maxFiles) {
+			toast.error(
+				$i18n.t('Only the first {{count}} files will be processed.', {
+					count: maxFiles
+				})
+			);
+			if (currentFilesCount >= maxFiles) {
+				return false, null;
+			}
+		}
+
+		const filesToProcess = inputFiles.slice(0, maxFiles - currentFilesCount);
+		return true, filesToProcess;
+	};
+
+	const processFileSizeLimit = async (querySettings, file) => {
+		if (file.size <= querySettings.max_file_size * 1024 * 1024) {
+			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
+				if (visionCapableModels.length === 0) {
+					toast.error($i18n.t('Selected model(s) do not support image inputs'));
+					return;
+				}
+				let reader = new FileReader();
+				reader.onload = (event) => {
+					files = [
+						...files,
+						{
+							type: 'image',
+							url: `${event.target.result}`
+						}
+					];
+				};
+				reader.readAsDataURL(file);
+			} else {
+				uploadFileHandler(file);
+			}
+		} else {
+			toast.error(
+				$i18n.t('File size exceeds the limit of {{size}}MB', {
+					size: querySettings.max_file_size
+				})
+			);
+		}
+	};
+
+	const initializeSettings = async () => {
+		try {
+			querySettings = await getQuerySettings(localStorage.token);
+		} catch (error) {
+			console.error('Error fetching query settings:', error);
+		}
+	};
+
 	onMount(() => {
+		initializeSettings();
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
@@ -262,27 +324,17 @@
 				const inputFiles = Array.from(e.dataTransfer?.files);
 
 				if (inputFiles && inputFiles.length > 0) {
-					inputFiles.forEach((file) => {
+					const [canProcess, filesToProcess] = await processFileCountLimit(
+						querySettings,
+						inputFiles
+					);
+					if (!canProcess) {
+						dragged = false;
+						return;
+					}
+					filesToProcess.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
-						if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
-							if (visionCapableModels.length === 0) {
-								toast.error($i18n.t('Selected model(s) do not support image inputs'));
-								return;
-							}
-							let reader = new FileReader();
-							reader.onload = (event) => {
-								files = [
-									...files,
-									{
-										type: 'image',
-										url: `${event.target.result}`
-									}
-								];
-							};
-							reader.readAsDataURL(file);
-						} else {
-							uploadFileHandler(file);
-						}
+						processFileSizeLimit(querySettings, file);
 					});
 				} else {
 					toast.error($i18n.t(`File not found.`));
@@ -428,27 +480,17 @@
 					multiple
 					on:change={async () => {
 						if (inputFiles && inputFiles.length > 0) {
-							const _inputFiles = Array.from(inputFiles);
-							_inputFiles.forEach((file) => {
-								if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
-									if (visionCapableModels.length === 0) {
-										toast.error($i18n.t('Selected model(s) do not support image inputs'));
-										return;
-									}
-									let reader = new FileReader();
-									reader.onload = (event) => {
-										files = [
-											...files,
-											{
-												type: 'image',
-												url: `${event.target.result}`
-											}
-										];
-									};
-									reader.readAsDataURL(file);
-								} else {
-									uploadFileHandler(file);
-								}
+							const [canProcess, filesToProcess] = await processFileCountLimit(
+								querySettings,
+								inputFiles
+							);
+							if (!canProcess) {
+								filesInputElement.value = '';
+								return;
+							}
+							filesToProcess.forEach((file) => {
+								console.log(file, file.name.split('.').at(-1));
+								processFileSizeLimit(querySettings, file);
 							});
 						} else {
 							toast.error($i18n.t(`File not found.`));
