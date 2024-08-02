@@ -294,13 +294,13 @@
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
-										list="model-list"
+										list="tts-model-list"
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={TTS_MODEL}
 										placeholder="Select a model"
 									/>
 
-									<datalist id="model-list">
+									<datalist id="tts-model-list">
 										{#each models as model}
 											<option value={model.id} />
 										{/each}
@@ -335,13 +335,13 @@
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
-										list="model-list"
+										list="tts-model-list"
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={TTS_MODEL}
 										placeholder="Select a model"
 									/>
 
-									<datalist id="model-list">
+									<datalist id="tts-model-list">
 										{#each models as model}
 											<option value={model.id} />
 										{/each}
