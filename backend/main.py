@@ -115,7 +115,6 @@ from utils.utils import (
 )
 from utils.webhook import post_webhook
 
-
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
@@ -1088,7 +1087,7 @@ async def get_models(user=Depends(get_verified_user)):
 
 
 @app.post("/api/chat/completions")
-async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user) ):
+async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user)):
     model_id = form_data["model"]
 
     if model_id not in app.state.MODELS:
@@ -1121,7 +1120,6 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
             return await generate_openai_chat_completion(form_data, user=user)
         except Exception as e:
             raise HTTPException(status_code=503, detail=str(e))
-
 
 
 @app.post("/api/chat/completed")
@@ -1451,9 +1449,10 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
     app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
         form_data.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
     )
-    app.state.config.BACKGROUND_RANDOM_IMAGE_URL = form_data.BACKGROUND_RANDOM_IMAGE_URL
 
-    change_background_random_image_url(app.state.config.BACKGROUND_RANDOM_IMAGE_URL)
+    if form_data.BACKGROUND_RANDOM_IMAGE_URL != app.state.config.BACKGROUND_RANDOM_IMAGE_URL:
+        app.state.config.BACKGROUND_RANDOM_IMAGE_URL = form_data.BACKGROUND_RANDOM_IMAGE_URL
+        change_background_random_image_url(app.state.config.BACKGROUND_RANDOM_IMAGE_URL)
 
     return {
         "TASK_MODEL": app.state.config.TASK_MODEL,
