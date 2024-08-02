@@ -325,6 +325,33 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">
+						{$i18n.t('Random Chat Background Image')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							if (backgroundImageUrl !== null) {
+								backgroundImageUrl = '';
+							} else {
+								backgroundImageUrl = 'Random Image';
+							}
+							saveSettings({ backgroundImageUrl });
+						}}
+						type="button"
+					>
+						{#if backgroundImageUrl !== null}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
 						{$i18n.t('Chat Background Image')}
 					</div>
 
