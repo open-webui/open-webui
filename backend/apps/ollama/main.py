@@ -858,6 +858,12 @@ async def generate_chat_completion(
                 payload["options"]["top_p"] = model_info.params.get("top_p", None)
 
             if (
+                model_info.params.get("min_p", None)
+                and payload["options"].get("min_p") is None
+            ):
+                payload["options"]["min_p"] = model_info.params.get("min_p", None)
+
+            if (
                 model_info.params.get("use_mmap", None)
                 and payload["options"].get("use_mmap") is None
             ):

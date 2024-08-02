@@ -364,7 +364,6 @@
 	"Manage Models": "จัดการโมเดล",
 	"Manage Ollama Models": "จัดการโมเดล Ollama",
 	"Manage Pipelines": "จัดการไปป์ไลน์",
-	"Manage Valves": "จัดการวาล์ว",
 	"March": "มีนาคม",
 	"Max Tokens (num_predict)": "โทเค็นสูงสุด (num_predict)",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "สามารถดาวน์โหลดโมเดลได้สูงสุด 3 โมเดลในเวลาเดียวกัน โปรดลองอีกครั้งในภายหลัง",

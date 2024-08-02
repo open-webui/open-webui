@@ -364,7 +364,6 @@
 	"Manage Models": "モデルを管理",
 	"Manage Ollama Models": "Ollama モデルを管理",
 	"Manage Pipelines": "パイプラインの管理",
-	"Manage Valves": "",
 	"March": "3月",
 	"Max Tokens (num_predict)": "最大トークン数 (num_predict)",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "同時にダウンロードできるモデルは最大 3 つです。後でもう一度お試しください。",

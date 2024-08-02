@@ -364,7 +364,6 @@
 	"Manage Models": "Управление моделями",
 	"Manage Ollama Models": "Управление моделями Ollama",
 	"Manage Pipelines": "Управление конвейерами",
-	"Manage Valves": "",
 	"March": "Март",
 	"Max Tokens (num_predict)": "Максимальное количество жетонов (num_predict)",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "Максимальное количество моделей для загрузки одновременно - 3. Пожалуйста, попробуйте позже.",

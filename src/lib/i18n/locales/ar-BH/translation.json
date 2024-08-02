@@ -364,7 +364,6 @@
 	"Manage Models": "إدارة النماذج",
 	"Manage Ollama Models": "Ollama إدارة موديلات ",
 	"Manage Pipelines": "إدارة خطوط الأنابيب",
-	"Manage Valves": "",
 	"March": "مارس",
 	"Max Tokens (num_predict)": "ماكس توكنز (num_predict)",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "يمكن تنزيل 3 نماذج كحد أقصى في وقت واحد. الرجاء معاودة المحاولة في وقت لاحق.",

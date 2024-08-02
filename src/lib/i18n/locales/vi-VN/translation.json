@@ -364,7 +364,6 @@
 	"Manage Models": "Quản lý mô hình",
 	"Manage Ollama Models": "Quản lý mô hình với Ollama",
 	"Manage Pipelines": "Quản lý Pipelines",
-	"Manage Valves": "Quản lý Valves",
 	"March": "Tháng 3",
 	"Max Tokens (num_predict)": "Tokens tối đa (num_predict)",
 	"Maximum of 3 models can be downloaded simultaneously. Please try again later.": "Tối đa 3 mô hình có thể được tải xuống cùng lúc. Vui lòng thử lại sau.",

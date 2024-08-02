@@ -5,14 +5,13 @@
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import AdvancedParams from '../Settings/Advanced/AdvancedParams.svelte';
-	import Valves from '$lib/components/common/Valves.svelte';
+	import Valves from '$lib/components/chat/Controls/Valves.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
 	export let models = [];
 
 	export let chatFiles = [];
-	export let valves = {};
 	export let params = {};
 </script>
 
@@ -39,6 +38,7 @@
 							url={`${file?.url}`}
 							name={file.name}
 							type={file.type}
+							size={file?.size}
 							dismissible={true}
 							on:dismiss={() => {
 								// Remove the file from the chatFiles array
@@ -54,17 +54,13 @@
 			<hr class="my-2 border-gray-100 dark:border-gray-800" />
 		{/if}
 
-		{#if models.length === 1 && models[0]?.pipe?.valves_spec}
-			<div>
-				<div class=" font-medium">{$i18n.t('Valves')}</div>
-
-				<div>
-					<Valves valvesSpec={models[0]?.pipe?.valves_spec} bind:valves />
-				</div>
+		<Collapsible title={$i18n.t('Valves')}>
+			<div class="text-sm mt-1.5" slot="content">
+				<Valves />
 			</div>
+		</Collapsible>
 
-			<hr class="my-2 border-gray-100 dark:border-gray-800" />
-		{/if}
+		<hr class="my-2 border-gray-100 dark:border-gray-800" />
 
 		<Collapsible title={$i18n.t('System Prompt')} open={true}>
 			<div class=" mt-1.5" slot="content">
