@@ -154,3 +154,7 @@ input[type='number'] {
 .tippy-box[data-theme~='dark'] {
 	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
 }
+
+.password {
+	-webkit-text-security: disc;
+}
