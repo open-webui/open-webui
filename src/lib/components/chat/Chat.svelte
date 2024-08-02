@@ -282,6 +282,10 @@
 
 		if ($page.url.searchParams.get('q')) {
 			prompt = $page.url.searchParams.get('q') ?? '';
+			selectedToolIds = ($page.url.searchParams.get('tool_ids') ?? '')
+				.split(',')
+				.map((id) => id.trim())
+				.filter((id) => id);
 
 			if (prompt) {
 				await tick();
