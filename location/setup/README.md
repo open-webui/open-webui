@@ -54,6 +54,9 @@ Check [your local python version and install nvm](../../../io/coders/python/) to
 	cp -RPp .env.example .env
 -->
 
+We have a [start.sh script](https://github.com/ModelEarth/projects/blob/main/location/setup/script/start.sh) which will run the following for you.
+
+
 	# Building Frontend Using Node
 	npm i
 	npm run build
@@ -65,7 +68,7 @@ Check [your local python version and install nvm](../../../io/coders/python/) to
 
 	bash start.sh
 
-Than ran `npm run dev` (not working)
+Than ran `npm run dev` (not working). You probably don't need to run this.
 
 	npm run dev
 
