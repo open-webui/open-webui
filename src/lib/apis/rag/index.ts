@@ -137,6 +137,8 @@ export const getQuerySettings = async (token: string) => {
 type QuerySettings = {
 	k: number | null;
 	r: number | null;
+	max_file_size: number | null;
+	max_file_count: number | null;
 	template: string | null;
 };
 
