@@ -237,10 +237,12 @@
 
 	const processFileCountLimit = async (querySettings, inputFiles) => {
 		const maxFiles = querySettings.max_file_count;
+		console.log(maxFiles);
 		const currentFilesCount = files.length;
+		console.log(currentFilesCount);
 		const inputFilesCount = inputFiles.length;
 		const totalFilesCount = currentFilesCount + inputFilesCount;
-		let filesToProcess = inputFiles;
+		console.log(totalFilesCount);
 
 		if (currentFilesCount >= maxFiles || totalFilesCount > maxFiles) {
 			toast.error(
@@ -249,13 +251,13 @@
 				})
 			);
 			if (currentFilesCount >= maxFiles) {
-				return false, null;
+				return [false, null];
 			}
 			if (totalFilesCount > maxFiles) {
-				filesToProcess = inputFiles.slice(0, maxFiles - currentFilesCount);
+				inputFiles = inputFiles.slice(0, maxFiles - currentFilesCount);
 			}
 		}
-		return true, filesToProcess;
+		return [true, inputFiles];
 	};
 
 	const processFileSizeLimit = async (querySettings, file) => {
@@ -288,15 +290,14 @@
 		}
 	};
 
-	const initializeSettings = async () => {
-		try {
-			querySettings = await getQuerySettings(localStorage.token);
-		} catch (error) {
-			console.error('Error fetching query settings:', error);
-		}
-	};
-
 	onMount(() => {
+		const initializeSettings = async () => {
+			try {
+				querySettings = await getQuerySettings(localStorage.token);
+			} catch (error) {
+				console.error('Error fetching query settings:', error);
+			}
+		};
 		initializeSettings();
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
@@ -326,6 +327,7 @@
 				const inputFiles = Array.from(e.dataTransfer?.files);
 
 				if (inputFiles && inputFiles.length > 0) {
+					console.log(inputFiles);
 					const [canProcess, filesToProcess] = await processFileCountLimit(
 						querySettings,
 						inputFiles
@@ -334,14 +336,11 @@
 						dragged = false;
 						return;
 					}
-					if (Array.isArray(filesToProcess)) {
-						filesToProcess.forEach((file) => {
-							console.log(file, file.name.split('.').at(-1));
-							processFileSizeLimit(querySettings, file);
-						});
-					} else {
-						console.error('filesToProcess is not an array or is undefined:', filesToProcess);
-					}
+					console.log(filesToProcess);
+					filesToProcess.forEach((file) => {
+						console.log(file, file.name.split('.').at(-1));
+						processFileSizeLimit(querySettings, file);
+					});
 				} else {
 					toast.error($i18n.t(`File not found.`));
 				}
@@ -487,6 +486,7 @@
 					on:change={async () => {
 						if (inputFiles && inputFiles.length > 0) {
 							const _inputFiles = Array.from(inputFiles);
+							console.log(_inputFiles);
 							const [canProcess, filesToProcess] = await processFileCountLimit(
 								querySettings,
 								_inputFiles
@@ -495,14 +495,11 @@
 								filesInputElement.value = '';
 								return;
 							}
-							if (Array.isArray(filesToProcess)) {
-								filesToProcess.forEach((file) => {
-									console.log(file, file.name.split('.').at(-1));
-									processFileSizeLimit(querySettings, file);
-								});
-							} else {
-								console.error('filesToProcess is not an array or is undefined:', filesToProcess);
-							}
+							console.log(filesToProcess);
+							filesToProcess.forEach((file) => {
+								console.log(file, file.name.split('.').at(-1));
+								processFileSizeLimit(querySettings, file);
+							});
 						} else {
 							toast.error($i18n.t(`File not found.`));
 						}
