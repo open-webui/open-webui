@@ -1,12 +1,18 @@
 <script lang="ts">
-	import { getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
-	import { user, settings, config } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import Switch from '$lib/components/common/Switch.svelte';
-	import { getBackendConfig } from '$lib/apis';
-	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	const dispatch = createEventDispatcher();
+
+	import { getBackendConfig } from '$lib/apis';
+	import {
+		getAudioConfig,
+		updateAudioConfig,
+		getModels as _getModels,
+		getVoices as _getVoices
+	} from '$lib/apis/audio';
+	import { user, settings, config } from '$lib/stores';
+
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -30,30 +36,41 @@
 	let models = [];
 	let nonLocalVoices = false;
 
-	const getOpenAIVoices = () => {
-		voices = [
-			{ name: 'alloy' },
-			{ name: 'echo' },
-			{ name: 'fable' },
-			{ name: 'onyx' },
-			{ name: 'nova' },
-			{ name: 'shimmer' }
-		];
-	};
+	const getModels = async () => {
+		if (TTS_ENGINE === '') {
+			models = [];
+		} else {
+			const res = await _getModels(localStorage.token).catch((e) => {
+				toast.error(e);
+			});
 
-	const getOpenAIModels = () => {
-		models = [{ name: 'tts-1' }, { name: 'tts-1-hd' }];
-	};
-
-	const getWebAPIVoices = () => {
-		const getVoicesLoop = setInterval(async () => {
-			voices = await speechSynthesis.getVoices();
-
-			// do your loop
-			if (voices.length > 0) {
-				clearInterval(getVoicesLoop);
+			if (res) {
+				console.log(res);
+				models = res.models;
 			}
-		}, 100);
+		}
+	};
+
+	const getVoices = async () => {
+		if (TTS_ENGINE === '') {
+			const getVoicesLoop = setInterval(async () => {
+				voices = await speechSynthesis.getVoices();
+
+				// do your loop
+				if (voices.length > 0) {
+					clearInterval(getVoicesLoop);
+				}
+			}, 100);
+		} else {
+			const res = await _getVoices(localStorage.token).catch((e) => {
+				toast.error(e);
+			});
+
+			if (res) {
+				console.log(res);
+				voices = res.voices;
+			}
+		}
 	};
 
 	const updateConfigHandler = async () => {
@@ -101,12 +118,8 @@
 			STT_MODEL = res.stt.MODEL;
 		}
 
-		if (TTS_ENGINE === 'openai') {
-			getOpenAIVoices();
-			getOpenAIModels();
-		} else {
-			getWebAPIVoices();
-		}
+		await getVoices();
+		await getModels();
 	});
 </script>
 
@@ -185,13 +198,15 @@
 							class=" dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
 							bind:value={TTS_ENGINE}
 							placeholder="Select a mode"
-							on:change={(e) => {
+							on:change={async (e) => {
+								await updateConfigHandler();
+								await getVoices();
+								await getModels();
+
 								if (e.target.value === 'openai') {
-									getOpenAIVoices();
 									TTS_VOICE = 'alloy';
 									TTS_MODEL = 'tts-1';
 								} else {
-									getWebAPIVoices();
 									TTS_VOICE = '';
 									TTS_MODEL = '';
 								}
@@ -268,7 +283,7 @@
 
 									<datalist id="voice-list">
 										{#each voices as voice}
-											<option value={voice.name} />
+											<option value={voice.id}>{voice.name}</option>
 										{/each}
 									</datalist>
 								</div>
@@ -279,15 +294,15 @@
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
-										list="model-list"
+										list="tts-model-list"
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={TTS_MODEL}
 										placeholder="Select a model"
 									/>
 
-									<datalist id="model-list">
+									<datalist id="tts-model-list">
 										{#each models as model}
-											<option value={model.name} />
+											<option value={model.id} />
 										{/each}
 									</datalist>
 								</div>
@@ -309,7 +324,7 @@
 
 									<datalist id="voice-list">
 										{#each voices as voice}
-											<option value={voice.name} />
+											<option value={voice.id}>{voice.name}</option>
 										{/each}
 									</datalist>
 								</div>
@@ -320,15 +335,15 @@
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
-										list="model-list"
+										list="tts-model-list"
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 										bind:value={TTS_MODEL}
 										placeholder="Select a model"
 									/>
 
-									<datalist id="model-list">
+									<datalist id="tts-model-list">
 										{#each models as model}
-											<option value={model.name} />
+											<option value={model.id} />
 										{/each}
 									</datalist>
 								</div>
