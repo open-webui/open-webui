@@ -6,7 +6,28 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 // Helper functions
 //////////////////////////
 
+const convertLatexToSingleLine = (content) => {
+	// Patterns to match multiline LaTeX blocks
+	const patterns = [
+		/(\$\$[\s\S]*?\$\$)/g, // Match $$ ... $$
+		/(\\\[[\s\S]*?\\\])/g, // Match \[ ... \]
+		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
+	];
+
+	patterns.forEach((pattern) => {
+		content = content.replace(pattern, (match) => {
+			return match.replace(/\s*\n\s*/g, ' ').trim();
+		});
+	});
+
+	return content;
+};
+
 export const sanitizeResponseContent = (content: string) => {
+	// replace single backslash with double backslash
+	content = content.replace(/\\/g, '\\\\');
+	content = convertLatexToSingleLine(content);
+
 	// First, temporarily replace valid <video> tags with a placeholder
 	const videoTagRegex = /<video\s+src="([^"]+)"\s+controls><\/video>/gi;
 	const placeholders: string[] = [];

@@ -112,6 +112,10 @@
 		"title": "Portuguese (Portugal)"
 	},
 	{
+		"code": "ro-RO",
+		"title": "Romanian (Romania)"
+	},
+	{
 		"code": "ru-RU",
 		"title": "Russian (Russia)"
 	},
@@ -122,6 +126,10 @@
 	{
 		"code": "sr-RS",
 		"title": "Serbian (Српски)"
+	},
+	{
+		"code": "th-TH",
+		"title": "Thailand (ไทย)"
 	},
 	{
 		"code": "tr-TR",

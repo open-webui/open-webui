@@ -372,7 +372,7 @@ async def generate_chat_completion(
 
         if model_info.params:
             if (
-                model_info.params.get("temperature", None)
+                model_info.params.get("temperature", None) is not None
                 and payload.get("temperature") is None
             ):
                 payload["temperature"] = float(model_info.params.get("temperature"))
@@ -394,7 +394,10 @@ async def generate_chat_completion(
                     model_info.params.get("frequency_penalty", None)
                 )
 
-            if model_info.params.get("seed", None) and payload.get("seed") is None:
+            if (
+                model_info.params.get("seed", None) is not None
+                and payload.get("seed") is None
+            ):
                 payload["seed"] = model_info.params.get("seed", None)
 
             if model_info.params.get("stop", None) and payload.get("stop") is None:
@@ -459,6 +462,9 @@ async def generate_chat_completion(
     headers = {}
     headers["Authorization"] = f"Bearer {key}"
     headers["Content-Type"] = "application/json"
+    if "openrouter.ai" in app.state.config.OPENAI_API_BASE_URLS[idx]:
+        headers["HTTP-Referer"] = "https://openwebui.com/"
+        headers["X-Title"] = "Open WebUI"
 
     r = None
     session = None
