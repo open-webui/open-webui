@@ -92,6 +92,7 @@ app.state.config.COMFYUI_FLUX = COMFYUI_FLUX
 app.state.config.COMFYUI_FLUX_WEIGHT_DTYPE = COMFYUI_FLUX_WEIGHT_DTYPE
 app.state.config.COMFYUI_FLUX_FP8_CLIP = COMFYUI_FLUX_FP8_CLIP
 
+
 def get_automatic1111_api_auth():
     if app.state.config.AUTOMATIC1111_API_AUTH == None:
         return ""
