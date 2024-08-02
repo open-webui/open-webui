@@ -111,7 +111,7 @@ async def get_models(user=Depends(get_verified_user)):
         replicate.Client(api_token=app.state.config.REPLICATE_API_TOKEN)
         # Note: Replicate doesn't have a direct API to list all models.
         # You might need to maintain a list of supported models or fetch from a predefined source.
-        return {"models": ["meta/llama-2-70b-chat", "anthropic/claude-2"]}  # Example models
+        return {"models": ["meta/meta-llama-3.1-405b-instruct", "meta/meta-llama-3-70b-instruct"]}  # Example models
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
