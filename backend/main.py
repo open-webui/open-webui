@@ -83,7 +83,6 @@ from config import (
     SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
     SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD,
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
-    BACKGROUND_RANDOM_IMAGE_URL,
     SAFE_MODE,
     OAUTH_PROVIDERS,
     ENABLE_OAUTH_SIGNUP,
@@ -195,7 +194,7 @@ app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD = (
 app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 )
-app.state.config.BACKGROUND_RANDOM_IMAGE_URL = BACKGROUND_RANDOM_IMAGE_URL
+
 app.state.MODELS = {}
 
 origins = ["*"]
@@ -206,9 +205,6 @@ origins = ["*"]
 # ChatCompletion Middleware
 #
 ##################################
-
-def get_background_random_image_url():
-    return app.state.config.BACKGROUND_RANDOM_IMAGE_URL
 
 
 async def get_body_and_model_and_user(request):
@@ -1421,7 +1417,6 @@ async def get_task_config(user=Depends(get_verified_user)):
         "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
         "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD": app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
-        "BACKGROUND_RANDOM_IMAGE_URL": app.state.config.BACKGROUND_RANDOM_IMAGE_URL,
     }
 
 
@@ -1432,7 +1427,6 @@ class TaskConfigForm(BaseModel):
     SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: str
     SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD: int
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: str
-    BACKGROUND_RANDOM_IMAGE_URL: str
 
 
 @app.post("/api/task/config/update")
@@ -1451,7 +1445,6 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
     app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
         form_data.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
     )
-    app.state.config.BACKGROUND_RANDOM_IMAGE_URL = form_data.BACKGROUND_RANDOM_IMAGE_URL
 
     return {
         "TASK_MODEL": app.state.config.TASK_MODEL,
@@ -1460,7 +1453,6 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
         "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE": app.state.config.SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE,
         "SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD": app.state.config.SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
-        "BACKGROUND_RANDOM_IMAGE_URL": app.state.config.BACKGROUND_RANDOM_IMAGE_URL,
     }
 
 

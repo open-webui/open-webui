@@ -29,10 +29,6 @@ from constants import ERROR_MESSAGES
 
 from config import SRC_LOG_LEVELS
 
-from main import get_background_random_image_url
-
-# from apps.main import get_background_random_image_url
-
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
@@ -109,8 +105,6 @@ async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
 async def update_user_settings_by_session_user(
     form_data: UserSettings, user=Depends(get_verified_user)
 ):
-    if form_data.ui.get("backgroundImageUrl", None) == "Random Image":
-        form_data.ui["backgroundImageUrl"] = get_background_random_image_url()
     user = Users.update_user_by_id(user.id, {"settings": form_data.model_dump()})
     if user:
         return user.settings

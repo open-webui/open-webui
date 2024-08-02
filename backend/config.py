@@ -889,12 +889,6 @@ SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD = PersistentConfig(
     ),
 )
 
-BACKGROUND_RANDOM_IMAGE_URL = PersistentConfig(
-    "BACKGROUND_RANDOM_IMAGE_URL",
-    "task.background_random_image_url",
-    os.getenv("BACKGROUND_RANDOM_IMAGE_URL", "https://t.alcy.cc/fj/"),
-)
-
 TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
     "task.tools.prompt_template",

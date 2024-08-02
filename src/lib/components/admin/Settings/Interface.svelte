@@ -24,8 +24,7 @@
 		TASK_MODEL_EXTERNAL: '',
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE: '',
-		SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD: 0,
-		BACKGROUND_RANDOM_IMAGE_URL: '',
+		SEARCH_QUERY_PROMPT_LENGTH_THRESHOLD: 0
 	};
 
 	let promptSuggestions = [];
@@ -146,25 +145,6 @@
 					class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
 					type="number"
 				/>
-			</div>
-		</div>
-
-		<hr class=" dark:border-gray-850 my-3" />
-		<div>
-			<div class=" mb-2.5 text-sm font-medium flex">
-				<div class=" self-center text-sm font-semibold">
-					{$i18n.t('Chat Background Image')}
-				</div>
-				<div class="mt-3">
-					<div class=" mb-2.5 text-sm font-medium">
-						{$i18n.t('Random Chat Background Image')}
-					</div>
-					<input
-						bind:value={taskConfig.BACKGROUND_RANDOM_IMAGE_URL}
-						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-						type="number"
-					/>
-				</div>
 			</div>
 		</div>
 
