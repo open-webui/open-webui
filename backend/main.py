@@ -54,8 +54,8 @@ from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
 from apps.webui.models.tools import Tools
 from apps.webui.models.users import Users
-from apps.webui.utils import load_toolkit_module_by_id, load_function_module_by_id
 from apps.webui.routers.users import change_background_random_image_url
+from apps.webui.utils import load_toolkit_module_by_id, load_function_module_by_id
 from config import (
     WEBUI_NAME,
     WEBUI_URL,
