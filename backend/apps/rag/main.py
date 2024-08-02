@@ -606,7 +606,7 @@ async def update_query_settings(
     app.state.config.MAX_FILE_COUNT = (
         form_data.max_file_count if form_data.max_file_count else 5
     )
-    
+
     return {
         "status": True,
         "template": app.state.config.RAG_TEMPLATE,
