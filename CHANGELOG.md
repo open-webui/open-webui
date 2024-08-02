@@ -9,14 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🖼️ Model Selector Images**: Introduced visual previews for models in the selector for easier identification.
+- **📊 Model Information Display**: Added visuals for model selection, including images next to model names for more intuitive navigation.
+- **🗣 ElevenLabs Voice Adaptations**: Voice enhancements including support for ElevenLabs voice ID by name for personalized vocal interactions.
 - **⌨️ Arrow Keys Model Selection**: Users can now use arrow keys for quicker model selection, enhancing accessibility.
 - **🔍 Fuzzy Search in Model Selector**: Enhanced model selector with fuzzy search to locate models swiftly, including descriptions.
-- **✨ Elevenlabs Voice Integration**: Fully integrated Elevenlabs TTS support, allowing for more natural voice outputs.
 - **🕹️ ComfyUI Flux Image Generation**: Added support for the new Flux image gen model; introduces environment controls like weight precision and CLIP model options in Settings.
 - **💾 Display File Size Before Upload**: Enhanced file interface now displays file size prior to upload, preparing for upcoming upload restrictions.
 - **🎚️ Advanced Params "Min P"**: Added 'Min P' parameter in the advanced settings for customized model precision control.
 - **🔒 Enhanced OAuth**: Introduced custom redirect URI support for OAuth behind reverse proxies, enabling safer authentication processes.
+- **🖥 Enhanced Latex Rendering**: Adjustments made to latex rendering processes, now accurately detecting and presenting latex inputs from text.
+- **🌐 Internationalization**: Enhanced with new Romanian and updated Vietnamese and Ukrainian translations, helping broaden accessibility for international users.
 
 ### Fixed
 
@@ -26,13 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **🎨 UI/UX Styling Enhancements**: Multiple minor styling updates for a cleaner and more intuitive user interface.
 - **🚧 Refactoring Various Components**: Numerous refactoring changes across styling, file handling, and function simplifications for clarity and performance.
 - **🎛️ User Valves Management**: Moved user valves from settings to direct chat controls for more user-friendly access during interactions.
-- **📄 Better LaTeX Rendering**: Improved identification and handling of LaTeX content in text, allowing for better rendering.
 
 ### Removed
 
-- **🗑️ Discontinue /health Logging**: Removed redundant logging from the /health endpoint to streamline operations.
+- **⚙️ Health Check Logging**: Removed verbose logging from the health checking processes to declutter logs and improve backend performance.
 
 ## [0.3.10] - 2024-07-17
 
