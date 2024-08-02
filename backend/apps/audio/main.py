@@ -10,12 +10,12 @@ from fastapi import (
     File,
     Form,
 )
-
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from typing import List
 import uuid
 import requests
 import hashlib
@@ -30,6 +30,7 @@ from utils.utils import (
     get_admin_user,
 )
 from utils.misc import calculate_sha256
+
 
 from config import (
     SRC_LOG_LEVELS,
@@ -132,35 +133,6 @@ def convert_mp4_to_wav(file_path, output_path):
     audio = AudioSegment.from_file(file_path, format="mp4")
     audio.export(output_path, format="wav")
     print(f"Converted {file_path} to {output_path}")
-
-
-async def get_available_voices():
-    if app.state.config.TTS_ENGINE != "elevenlabs":
-        return {}
-
-    base_url = "https://api.elevenlabs.io/v1"
-    headers = {
-        "xi-api-key": app.state.config.TTS_API_KEY,
-        "Content-Type": "application/json",
-    }
-
-    voices_url = f"{base_url}/voices"
-    try:
-        response = requests.get(voices_url, headers=headers)
-        response.raise_for_status()
-        voices_data = response.json()
-
-        voice_options = {}
-        for voice in voices_data.get("voices", []):
-            voice_name = voice["name"]
-            voice_id = voice["voice_id"]
-            voice_options[voice_name] = voice_id
-
-        return voice_options
-
-    except requests.RequestException as e:
-        log.error(f"Error fetching voices: {str(e)}")
-        return {}
 
 
 @app.get("/config")
@@ -281,7 +253,6 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             )
 
     elif app.state.config.TTS_ENGINE == "elevenlabs":
-
         payload = None
         try:
             payload = json.loads(body.decode("utf-8"))
@@ -289,12 +260,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             log.exception(e)
             raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-        voice_options = await get_available_voices()
-        voice_id = voice_options.get(payload['voice'])
-
-        if not voice_id:
-            raise HTTPException(status_code=400, detail="Invalid voice name")
-
+        voice_id = payload.get("voice", "")
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
 
         headers = {
@@ -472,7 +438,67 @@ def transcribe(
         )
 
 
+def get_available_models() -> List[dict]:
+    if app.state.config.TTS_ENGINE == "openai":
+        return [{"id": "tts-1"}, {"id": "tts-1-hd"}]
+    elif app.state.config.TTS_ENGINE == "elevenlabs":
+        headers = {
+            "xi-api-key": app.state.config.TTS_API_KEY,
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.get(
+                "https://api.elevenlabs.io/v1/models", headers=headers
+            )
+            response.raise_for_status()
+            models = response.json()
+            return [
+                {"name": model["name"], "id": model["model_id"]} for model in models
+            ]
+        except requests.RequestException as e:
+            log.error(f"Error fetching voices: {str(e)}")
+    return []
+
+
+@app.get("/models")
+async def get_models(user=Depends(get_verified_user)):
+    return {"models": get_available_models()}
+
+
+def get_available_voices() -> List[dict]:
+    if app.state.config.TTS_ENGINE == "openai":
+        return [
+            {"name": "alloy", "id": "alloy"},
+            {"name": "echo", "id": "echo"},
+            {"name": "fable", "id": "fable"},
+            {"name": "onyx", "id": "onyx"},
+            {"name": "nova", "id": "nova"},
+            {"name": "shimmer", "id": "shimmer"},
+        ]
+    elif app.state.config.TTS_ENGINE == "elevenlabs":
+        headers = {
+            "xi-api-key": app.state.config.TTS_API_KEY,
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.get(
+                "https://api.elevenlabs.io/v1/voices", headers=headers
+            )
+            response.raise_for_status()
+            voices_data = response.json()
+
+            voices = []
+            for voice in voices_data.get("voices", []):
+                voices.append({"name": voice["name"], "id": voice["voice_id"]})
+            return voices
+        except requests.RequestException as e:
+            log.error(f"Error fetching voices: {str(e)}")
+
+    return []
+
+
 @app.get("/voices")
 async def get_voices(user=Depends(get_verified_user)):
-    voices = await get_available_voices()
-    return {"voices": list(voices.keys())}
+    return {"voices": get_available_voices()}

@@ -1,12 +1,18 @@
 <script lang="ts">
-	import { getAudioConfig, updateAudioConfig } from '$lib/apis/audio';
-	import { user, settings, config } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import Switch from '$lib/components/common/Switch.svelte';
-	import { getBackendConfig } from '$lib/apis';
-	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	const dispatch = createEventDispatcher();
+
+	import { getBackendConfig } from '$lib/apis';
+	import {
+		getAudioConfig,
+		updateAudioConfig,
+		getModels as _getModels,
+		getVoices as _getVoices
+	} from '$lib/apis/audio';
+	import { user, settings, config } from '$lib/stores';
+
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -30,48 +36,42 @@
 	let models = [];
 	let nonLocalVoices = false;
 
-	const getOpenAIVoices = () => {
-		voices = [
-			{ name: 'alloy' },
-			{ name: 'echo' },
-			{ name: 'fable' },
-			{ name: 'onyx' },
-			{ name: 'nova' },
-			{ name: 'shimmer' }
-		];
-	};
+	const getModels = async () => {
+		if (TTS_ENGINE === '') {
+			models = [];
+		} else {
+			const res = await _getModels(localStorage.token).catch((e) => {
+				toast.error(e);
+			});
 
-	const getOpenAIModels = () => {
-		models = [{ name: 'tts-1' }, { name: 'tts-1-hd' }];
-	};
-
-	const getWebAPIVoices = () => {
-		const getVoicesLoop = setInterval(async () => {
-			voices = await speechSynthesis.getVoices();
-
-			// do your loop
-			if (voices.length > 0) {
-				clearInterval(getVoicesLoop);
+			if (res) {
+				console.log(res);
+				models = res.models;
 			}
-		}, 100);
+		}
 	};
 
-    // Fetch available ElevenLabs voices
-    const getVoices = async () => {
-        const response = await fetch('/voices', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${localStorage.token}`
-            }
-        });
+	const getVoices = async () => {
+		if (TTS_ENGINE === '') {
+			const getVoicesLoop = setInterval(async () => {
+				voices = await speechSynthesis.getVoices();
 
-        if (response.ok) {
-            const data = await response.json();
-            voices = data.voices.map(name => ({ name })); // Update voices array with fetched names
-        } else {
-            toast.error('Failed to fetch voices');
-        }
-    };
+				// do your loop
+				if (voices.length > 0) {
+					clearInterval(getVoicesLoop);
+				}
+			}, 100);
+		} else {
+			const res = await _getVoices(localStorage.token).catch((e) => {
+				toast.error(e);
+			});
+
+			if (res) {
+				console.log(res);
+				voices = res.voices;
+			}
+		}
+	};
 
 	const updateConfigHandler = async () => {
 		const res = await updateAudioConfig(localStorage.token, {
@@ -99,9 +99,6 @@
 	};
 
 	onMount(async () => {
-        // Fetch available voices on component mount
-        await getVoices(); 
-        
 		const res = await getAudioConfig(localStorage.token);
 
 		if (res) {
@@ -121,14 +118,8 @@
 			STT_MODEL = res.stt.MODEL;
 		}
 
-		if (TTS_ENGINE === 'openai') {
-			getOpenAIVoices();
-			getOpenAIModels();
-        } else if(TTS_ENGINE === 'elevenlabs') {
-            await getVoices(); //Get voices if TTS_ENGINE is ElevenLabs
-		} else {
-			getWebAPIVoices();
-		}
+		await getVoices();
+		await getModels();
 	});
 </script>
 
@@ -208,14 +199,14 @@
 							bind:value={TTS_ENGINE}
 							placeholder="Select a mode"
 							on:change={async (e) => {
+								await updateConfigHandler();
+								await getVoices();
+								await getModels();
+
 								if (e.target.value === 'openai') {
-									getOpenAIVoices();
 									TTS_VOICE = 'alloy';
 									TTS_MODEL = 'tts-1';
-								} else if(e.target.value === 'elevenlabs') {
-									await getVoices();
 								} else {
-									getWebAPIVoices();
 									TTS_VOICE = '';
 									TTS_MODEL = '';
 								}
@@ -256,7 +247,7 @@
 
 				<hr class=" dark:border-gray-850 my-2" />
 
-				{#if TTS_ENGINE !== ''}
+				{#if TTS_ENGINE === ''}
 					<div>
 						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Voice')}</div>
 						<div class="flex w-full">
@@ -268,9 +259,9 @@
 									<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
 									{#each voices as voice}
 										<option
-											value={voice.name}
+											value={voice.voiceURI}
 											class="bg-gray-100 dark:bg-gray-700"
-											selected={TTS_VOICE === voice.name}>{voice.name}</option
+											selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option
 										>
 									{/each}
 								</select>
@@ -292,7 +283,7 @@
 
 									<datalist id="voice-list">
 										{#each voices as voice}
-											<option value={voice.name} />
+											<option value={voice.id}>{voice.name}</option>
 										{/each}
 									</datalist>
 								</div>
@@ -311,7 +302,7 @@
 
 									<datalist id="model-list">
 										{#each models as model}
-											<option value={model.name} />
+											<option value={model.id} />
 										{/each}
 									</datalist>
 								</div>
@@ -333,7 +324,7 @@
 
 									<datalist id="voice-list">
 										{#each voices as voice}
-											<option value={voice.name} />
+											<option value={voice.id}>{voice.name}</option>
 										{/each}
 									</datalist>
 								</div>
@@ -352,7 +343,7 @@
 
 									<datalist id="model-list">
 										{#each models as model}
-											<option value={model.name} />
+											<option value={model.id} />
 										{/each}
 									</datalist>
 								</div>
