@@ -185,11 +185,7 @@
 		const totalFilesCount = currentFilesCount + inputFilesCount;
 
 		if (currentFilesCount >= maxFiles || totalFilesCount > maxFiles) {
-			toast.error(
-				$i18n.t('File count exceeds the limit of {{size}}', {
-					count: maxFiles
-				})
-			);
+			toast.error(`File count exceeds the limit of '${maxFiles}'. Please remove some files.`);
 			if (currentFilesCount >= maxFiles) {
 				return [false, null];
 			}
