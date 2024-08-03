@@ -89,11 +89,31 @@ Once either of the above is complete, the site is visible at:
 [http://localhost:8080](http://localhost:8080)
 
 
-<!--
-Than ran `npm run dev` (not working). You probably don't need to run this.
+A RAM error shut down the local site: [1 leaked semaphore](https://github.com/lllyasviel/Fooocus/discussions/2690)
+
+The following restarted the frontend at [localhost:5173](http://localhost:5173/)
+After a couple minutes you'll see "Open WebUI Backend Required"
 
 	npm run dev
--->
+
+Running the build does not display change on the page above.
+
+	npm run build
+
+Running the pre-existing bash start.sh results in:
+
+Loading WEBUI_SECRET_KEY from file, not provided as an environment variable.
+Loading WEBUI_SECRET_KEY from .webui_secret_key
+start.sh: line 23: ${USE_OLLAMA_DOCKER,,}: bad substitution
+start.sh: line 25: ${USE_CUDA_DOCKER,,}: bad substitution
+start.sh: line 52: exec: uvicorn: not found
+
+Is there a way to reopen the conda instance?  
+
+If not, we'll run our script again. But do we need to change a RAM setting first?
+
+	bash location/setup/script/start.sh
+
 
 ## Edit in our Open WebUI "projects/location" folder
 
@@ -151,7 +171,7 @@ Or if you're retaining an [existing open-webui container](https://docs.openwebui
 	docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
 -->
 
-## Install with Pip and Start your server (Beta)
+## Install with Pip and start your server (Beta)
 
 This pip install did not work on Loren's Mac.
 No error, but there's no backend running.
