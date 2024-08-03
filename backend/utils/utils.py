@@ -2,7 +2,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import HTTPException, status, Depends, Request
 from sqlalchemy.orm import Session
 
-from apps.webui.models.users import Users
+from apps.webui.models.users import UserModel, Users
 
 from pydantic import BaseModel
 from typing import Union, Optional
