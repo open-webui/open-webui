@@ -103,6 +103,9 @@ Build to apply changes from "src".
 
 	npm run build
 
+The above seems to break secure https 0.0.0.0:8080 hosting.  
+Perhaps because during test external localsite.js include was added.
+
 Don't use `npm run dev` it only hosts the frontend.
 
 <!--
