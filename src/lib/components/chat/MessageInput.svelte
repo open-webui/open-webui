@@ -15,7 +15,7 @@
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
-		getQuerySettings,
+		getFileLimitSettings,
 		processDocToVectorDB,
 		uploadDocToVectorDB,
 		uploadWebToVectorDB,
@@ -66,7 +66,7 @@
 	let modelsElement;
 
 	let inputFiles;
-	let querySettings;
+	let fileLimitSettings;
 	let dragged = false;
 
 	let user = null;
@@ -235,8 +235,8 @@
 		}
 	};
 
-	const processFileCountLimit = async (querySettings, inputFiles) => {
-		const maxFiles = querySettings.max_file_count;
+	const processFileCountLimit = async (fileLimitSettings, inputFiles) => {
+		const maxFiles = fileLimitSettings.max_file_count;
 		const currentFilesCount = files.length;
 		const inputFilesCount = inputFiles.length;
 		const totalFilesCount = currentFilesCount + inputFilesCount;
@@ -253,8 +253,8 @@
 		return [true, inputFiles];
 	};
 
-	const processFileSizeLimit = async (querySettings, file) => {
-		if (file.size <= querySettings.max_file_size * 1024 * 1024) {
+	const processFileSizeLimit = async (fileLimitSettings, file) => {
+		if (file.size <= fileLimitSettings.max_file_size * 1024 * 1024) {
 			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
@@ -277,21 +277,22 @@
 		} else {
 			toast.error(
 				$i18n.t('File size exceeds the limit of {{size}}MB', {
-					size: querySettings.max_file_size
+					size: fileLimitSettings.max_file_size
 				})
 			);
 		}
 	};
 
 	onMount(() => {
-		const initializeSettings = async () => {
+		const initFileLimitSettings = async () => {
 			try {
-				querySettings = await getQuerySettings(localStorage.token);
+				fileLimitSettings = await getFileLimitSettings(localStorage.token);
 			} catch (error) {
 				console.error('Error fetching query settings:', error);
 			}
 		};
-		initializeSettings();
+		initFileLimitSettings();
+
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
@@ -322,7 +323,7 @@
 				if (inputFiles && inputFiles.length > 0) {
 					console.log(inputFiles);
 					const [canProcess, filesToProcess] = await processFileCountLimit(
-						querySettings,
+						fileLimitSettings,
 						inputFiles
 					);
 					if (!canProcess) {
@@ -332,7 +333,7 @@
 					console.log(filesToProcess);
 					filesToProcess.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
-						processFileSizeLimit(querySettings, file);
+						processFileSizeLimit(fileLimitSettings, file);
 					});
 				} else {
 					toast.error($i18n.t(`File not found.`));
@@ -481,7 +482,7 @@
 							const _inputFiles = Array.from(inputFiles);
 							console.log(_inputFiles);
 							const [canProcess, filesToProcess] = await processFileCountLimit(
-								querySettings,
+								fileLimitSettings,
 								_inputFiles
 							);
 							if (!canProcess) {
@@ -491,7 +492,7 @@
 							console.log(filesToProcess);
 							filesToProcess.forEach((file) => {
 								console.log(file, file.name.split('.').at(-1));
-								processFileSizeLimit(querySettings, file);
+								processFileSizeLimit(fileLimitSettings, file);
 							});
 						} else {
 							toast.error($i18n.t(`File not found.`));
