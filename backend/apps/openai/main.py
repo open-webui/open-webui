@@ -43,6 +43,8 @@ from utils.utils import (
     get_admin_user,
 )
 
+from apps.filter.main import process_user_usage
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 
@@ -514,6 +516,7 @@ async def generate_chat_completion(
             if r:
                 r.close()
             await session.close()
+        await process_user_usage(model, user)
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])

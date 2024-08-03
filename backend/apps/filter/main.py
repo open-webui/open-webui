@@ -338,7 +338,6 @@ async def process_user_usage(model, user):
 
 
 async def filter_message(payload: dict, user, model):
-    await process_user_usage(model, user)
     messages = payload.get("messages", None)
 
     if app.state.config.ENABLE_MESSAGE_FILTER and search:
