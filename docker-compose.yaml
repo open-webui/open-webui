@@ -5,7 +5,7 @@ services:
       args:
         OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
-    image: iad.ocir.io/idogrsehxj39/open-webui-es:latest
+    image: iad.ocir.io/idogrsehxj39/open-webui-esdev:latest
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
@@ -17,6 +17,7 @@ services:
       - 'WEBUI_SECRET_KEY=Estrada14@'
       - 'WEBUI_AUTH=True'
       - 'DATABASE_URL=postgresql://postgres:mysecretpassword@postgres:5432/cplaygpt?sslmode=disable'
+      - 'DOPPLER_TOKEN=dp.sa.X0CXgONWebHJ82gbXrYdlm0mQfegg96FQvyQ4lv15uW'
         #- 'DATABASE_URL=postgresql://a6e7mf:xau_7SGLERNn2aDuin6y0FMiOxTyXdyhSiEu1@us-east-1.sql.xata.sh:5432/cplaygpt:main?sslmode=require'
     extra_hosts:
       - host.docker.internal:host-gateway
