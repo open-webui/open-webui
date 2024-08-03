@@ -16,7 +16,7 @@
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
-		getQuerySettings,
+		getFileLimitSettings,
 		processDocToVectorDB,
 		uploadDocToVectorDB,
 		uploadWebToVectorDB,
@@ -81,7 +81,7 @@
 	export let prompt = '';
 	export let messages = [];
 
-	let querySettings = {};
+	let fileLimitSettings = {};
 
 	let visionCapableModels = [];
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
@@ -259,15 +259,17 @@
 		}
 	};
 
+	const initFileLimitSettings = async () => {
+		try {
+			fileLimitSettings = await getFileLimitSettings(localStorage.token);
+		} catch (error) {
+			console.error('Error fetching query settings:', error);
+		}
+	};
+
 	onMount(() => {
-		const initializeSettings = async () => {
-			try {
-				querySettings = await getQuerySettings(localStorage.token);
-			} catch (error) {
-				console.error('Error fetching query settings:', error);
-			}
-		};
-		initializeSettings();
+		initFileLimitSettings();
+		
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
@@ -297,23 +299,26 @@
 
 				if (inputFiles && inputFiles.length > 0) {
 					if (
-						files.length >= querySettings.max_file_count ||
-						files.length + inputFiles.length > querySettings.max_file_count
+						files.length >= fileLimitSettings.max_file_count ||
+						files.length + inputFiles.length > fileLimitSettings.max_file_count
 					) {
 						toast.error(
 							$i18n.t('Only the first {{count}} files will be processed.', {
-								count: querySettings.max_file_count
+								count: fileLimitSettings.max_file_count
 							})
 						);
-						if (files.length >= querySettings.max_file_count) {
+						if (files.length >= fileLimitSettings.max_file_count) {
 							dragged = false;
 							return;
 						}
 					}
-					const filesToProcess = inputFiles.slice(0, querySettings.max_file_count - files.length);
+					const filesToProcess = inputFiles.slice(
+						0,
+						fileLimitSettings.max_file_count - files.length
+					);
 					filesToProcess.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
-						if (file.size <= querySettings.max_file_size * 1024 * 1024) {
+						if (file.size <= fileLimitSettings.max_file_size * 1024 * 1024) {
 							if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
 								if (visionCapableModels.length === 0) {
 									toast.error($i18n.t('Selected model(s) do not support image inputs'));
@@ -334,14 +339,14 @@
 								let reader = new FileReader();
 								reader.onload = (event) => {
 									let base64_url = event.target.result;
-									uploadFileHandler(file, base64_url, querySettings.enableBase64);
+									uploadFileHandler(file, base64_url, fileLimitSettings.enableBase64);
 								};
 								reader.readAsDataURL(file);
 							}
 						} else {
 							toast.error(
 								$i18n.t('File size exceeds the limit of {{size}}MB', {
-									size: querySettings.max_file_size
+									size: fileLimitSettings.max_file_size
 								})
 							);
 						}
@@ -491,15 +496,15 @@
 					on:change={async () => {
 						if (inputFiles && inputFiles.length > 0) {
 							if (
-								files.length >= querySettings.max_file_count ||
-								files.length + inputFiles.length > querySettings.max_file_count
+								files.length >= fileLimitSettings.max_file_count ||
+								files.length + inputFiles.length > fileLimitSettings.max_file_count
 							) {
 								toast.error(
 									$i18n.t('Only the first {{count}} files will be processed.', {
-										count: querySettings.max_file_count
+										count: fileLimitSettings.max_file_count
 									})
 								);
-								if (files.length > querySettings.max_file_count) {
+								if (files.length > fileLimitSettings.max_file_count) {
 									filesInputElement.value = '';
 									return;
 								}
@@ -507,10 +512,10 @@
 							const _inputFiles = Array.from(inputFiles);
 							const filesToProcess = _inputFiles.slice(
 								0,
-								querySettings.max_file_count - files.length
+								fileLimitSettings.max_file_count - files.length
 							);
 							filesToProcess.forEach((file) => {
-								if (file['size'] <= querySettings.max_file_size * 1024 * 1024) {
+								if (file['size'] <= fileLimitSettings.max_file_size * 1024 * 1024) {
 									if (
 										['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])
 									) {
@@ -533,14 +538,14 @@
 										let reader = new FileReader();
 										reader.onload = (event) => {
 											let base64_url = event.target.result;
-											uploadFileHandler(file, base64_url, querySettings.enableBase64);
+											uploadFileHandler(file, base64_url, fileLimitSettings.enableBase64);
 										};
 										reader.readAsDataURL(file);
 									}
 								} else {
 									toast.error(
 										$i18n.t('File size exceeds the limit of {{size}}MB', {
-											size: querySettings.max_file_size
+											size: fileLimitSettings.max_file_size
 										})
 									);
 								}
