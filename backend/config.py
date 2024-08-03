@@ -1317,7 +1317,7 @@ COMFYUI_FLUX_WEIGHT_DTYPE = PersistentConfig(
 COMFYUI_FLUX_FP8_CLIP = PersistentConfig(
     "COMFYUI_FLUX_FP8_CLIP",
     "image_generation.comfyui.flux_fp8_clip",
-    os.getenv("COMFYUI_FLUX_FP8_CLIP", ""),
+    os.environ.get("COMFYUI_FLUX_FP8_CLIP", "").lower() == "true",
 )
 
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
