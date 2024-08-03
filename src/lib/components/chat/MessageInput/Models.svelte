@@ -21,10 +21,8 @@
 	let filteredModels = [];
 
 	$: filteredModels = $models
-		.filter(
-			(p) =>
-				p.name.toLowerCase().includes(prompt.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '') &&
-				p?.info?.meta?.hidden
+		.filter((p) =>
+			p.name.toLowerCase().includes(prompt.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '')
 		)
 		.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -149,9 +147,9 @@
 					<div class="m-1 overflow-y-auto p-1 rounded-r-lg space-y-0.5 scrollbar-hidden">
 						{#each filteredModels as model, modelIdx}
 							<button
-								class=" px-3 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
-									? '  bg-gray-50 dark:bg-gray-850  selected-command-option-button'
-									: ''}"
+								class="px-3 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
+									? 'bg-gray-50 dark:bg-gray-850 selected-command-option-button'
+									: ''} {model?.info?.meta?.hidden ? 'hidden' : ''}"
 								type="button"
 								on:click={() => {
 									confirmSelect(model);
@@ -164,7 +162,7 @@
 								<div class="flex font-medium text-black dark:text-gray-100 line-clamp-1">
 									<img
 										src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
-										alt="Model"
+										alt={model.name}
 										class="rounded-full size-6 items-center mr-2"
 									/>
 									{model.name}
@@ -172,7 +170,7 @@
 
 								<!-- <div class=" text-xs text-gray-600 line-clamp-1">
 								{doc.title}
-							</div> -->
+								</div> -->
 							</button>
 						{/each}
 					</div>
