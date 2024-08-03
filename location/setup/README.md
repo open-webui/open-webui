@@ -115,8 +115,8 @@ We also edit index.html and active.md in our "projects" fork root. We added thos
 
 TO DO:
 
-Place updates in our custom "projects/location" folder, then have a python script merge them into files from the "src" folder. Save the merged results to "src-merged".
+Place updates in our custom "projects/location" folder.
 
-Add CUSTOM START and CUSTOM END around your code. Use those strings to insert our custom code from the copy in projects/location into the "src" version and save the merged file in "src-merged".  (ChatGPT could help figure out how to insert the custom text.)
+Add CUSTOM START and CUSTOM END around our custom code. Create a python script that uses those strings to insert our custom code from projects/location into the "src" version and save the merged files in "src-merged". (ChatGPT could help figure out how to insert the custom text.)
 
 Point our "npm run build" at the "src-merged" folder.
