@@ -36,7 +36,6 @@ from apps.ollama.main import (
 from apps.openai.main import (
     app as openai_app,
     get_all_models as get_openai_models,
-    get_all_models_raw as get_openai_models_raw,
     generate_chat_completion as generate_openai_chat_completion,
 )
 
@@ -1657,7 +1656,7 @@ async def get_tools_function_calling(form_data: dict, user=Depends(get_verified_
 
 @app.get("/api/pipelines/list")
 async def get_pipelines_list(user=Depends(get_admin_user)):
-    responses = await get_openai_models_raw()
+    responses = await get_openai_models(raw = True)
 
     print(responses)
     urlIdxs = [

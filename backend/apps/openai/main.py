@@ -30,7 +30,7 @@ from config import (
     MODEL_FILTER_LIST,
     AppConfig,
 )
-from typing import List, Optional
+from typing import List, Optional, Literal, overload
 
 
 import hashlib
@@ -262,12 +262,22 @@ async def get_all_models_raw() -> list:
     return responses
 
 
-async def get_all_models() -> dict[str, list]:
+@overload
+async def get_all_models(raw: Literal[True]) -> list: ...
+
+
+@overload
+async def get_all_models(raw: Literal[False] = False) -> dict[str, list]: ...
+
+
+async def get_all_models(raw=False) -> dict[str, list] | list:
     log.info("get_all_models()")
     if is_openai_api_disabled():
-        return {"data": []}
+        return [] if raw else {"data": []}
 
     responses = await get_all_models_raw()
+    if raw:
+        return responses
 
     def extract_data(response):
         if response and "data" in response:
@@ -369,13 +379,6 @@ async def generate_chat_completion(
             "email": user.email,
             "role": user.role,
         }
-
-    # Check if the model is "gpt-4-vision-preview" and set "max_tokens" to 4000
-    # This is a workaround until OpenAI fixes the issue with this model
-    if payload.get("model") == "gpt-4-vision-preview":
-        if "max_tokens" not in payload:
-            payload["max_tokens"] = 4000
-        log.debug("Modified payload:", payload)
 
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
