@@ -21,10 +21,8 @@
 	let filteredModels = [];
 
 	$: filteredModels = $models
-		.filter(
-			(p) =>
-				p.name.toLowerCase().includes(prompt.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '') &&
-				!p?.info?.meta?.hidden
+		.filter((p) =>
+			p.name.toLowerCase().includes(prompt.toLowerCase().split(' ')?.at(0)?.substring(1) ?? '')
 		)
 		.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -161,14 +159,16 @@
 								}}
 								on:focus={() => {}}
 							>
-								<div class="flex font-medium text-black dark:text-gray-100 line-clamp-1">
-									<img
-										src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
-										alt="Model"
-										class="rounded-full size-6 items-center mr-2"
-									/>
-									{model.name}
-								</div>
+								{#if model?.info?.meta?.hidden === false}
+									<div class="flex font-medium text-black dark:text-gray-100 line-clamp-1">
+										<img
+											src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+											alt={model.name}
+											class="rounded-full size-6 items-center mr-2"
+										/>
+										{model.name}
+									</div>
+								{/if}
 
 								<!-- <div class=" text-xs text-gray-600 line-clamp-1">
 								{doc.title}
