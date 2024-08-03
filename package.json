@@ -54,6 +54,7 @@
 		"@codemirror/lang-javascript": "^6.2.2",
 		"@codemirror/lang-python": "^6.1.6",
 		"@codemirror/theme-one-dark": "^6.1.2",
+		"@codesandbox/sandpack-client": "^2.18.2",
 		"@pyscript/core": "^0.4.32",
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
