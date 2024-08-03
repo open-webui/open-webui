@@ -33,7 +33,9 @@ medium.com subscription needed
 - [Earthscape for Chatbot UI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/)
 
 **Charts, SQL, Vite, Supabase, AI Chat**
-- [Javascript Timelines from Google Data Commons API](/data-pipeline/timelines/earthscape/datacommons.html#country=IN,CN,US) - Mehul
+- [Javascript Timelines from Google Data Commons (GDC) API](/data-pipeline/timelines/earthscape/datacommons.html#country=IN,CN,US) - Mehul
+- [Python from GDC API for map filters and UN goal datasets](/localsite/info/data/map-filters/) - Abhishek L., Pratyush
+
 - [International Trade Flow SQL Data Prep](/useeio.js/footprint) - Sahil, Himanshu, Song
 - [Python to pull Harmonized Code (HS) lookups into Supabase](/OpenFootprint/harmonized-system/) - Chen and Wenjie
 - [Webhook to create Word Doc from Google Form](https://chatgpt.com/share/4daa1c9e-31e2-42f5-bdcf-c9e1e369391c) - for [our New Member Signup](/community/members/) - Jingyu
