@@ -5,6 +5,7 @@
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-72';
+	export let colorClassName = 'bg-white dark:bg-gray-800';
 	export let url: string | null = null;
 
 	export let clickHandler: Function | null = null;
@@ -14,11 +15,26 @@
 
 	export let name: string;
 	export let type: string;
+	export let size: number;
+
+	function formatSize(size) {
+		if (size == null) return 'Unknown size';
+		if (typeof size !== 'number' || size < 0) return 'Invalid size';
+		if (size === 0) return '0 B';
+		const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+		let unitIndex = 0;
+
+		while (size >= 1024 && unitIndex < units.length - 1) {
+			size /= 1024;
+			unitIndex++;
+		}
+		return `${size.toFixed(1)} ${units[unitIndex]}`;
+	}
 </script>
 
 <div class="relative group">
 	<button
-		class="h-14 {className} flex items-center space-x-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 text-left"
+		class="h-14 {className} flex items-center space-x-3 {colorClassName} rounded-xl border border-gray-100 dark:border-gray-800 text-left"
 		type="button"
 		on:click={async () => {
 			if (clickHandler === null) {
@@ -92,11 +108,11 @@
 		</div>
 
 		<div class="flex flex-col justify-center -space-y-0.5 pl-1.5 pr-4 w-full">
-			<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1">
+			<div class=" dark:text-gray-100 text-sm font-medium line-clamp-1 mb-1">
 				{name}
 			</div>
 
-			<div class=" text-gray-500 text-xs">
+			<div class=" flex justify-between text-gray-500 text-xs">
 				{#if type === 'file'}
 					{$i18n.t('File')}
 				{:else if type === 'doc'}
@@ -105,6 +121,9 @@
 					{$i18n.t('Collection')}
 				{:else}
 					<span class=" capitalize">{type}</span>
+				{/if}
+				{#if size}
+					<span class="capitalize">{formatSize(size)}</span>
 				{/if}
 			</div>
 		</div>
