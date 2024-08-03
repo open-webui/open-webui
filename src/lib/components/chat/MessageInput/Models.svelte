@@ -146,20 +146,20 @@
 				>
 					<div class="m-1 overflow-y-auto p-1 rounded-r-lg space-y-0.5 scrollbar-hidden">
 						{#each filteredModels as model, modelIdx}
-							<button
-								class=" px-3 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
-									? '  bg-gray-50 dark:bg-gray-850  selected-command-option-button'
-									: ''}"
-								type="button"
-								on:click={() => {
-									confirmSelect(model);
-								}}
-								on:mousemove={() => {
-									selectedIdx = modelIdx;
-								}}
-								on:focus={() => {}}
-							>
-								{#if !model?.info?.meta?.hidden}
+							{#if !model?.info?.meta?.hidden}
+								<button
+									class=" px-3 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
+										? '  bg-gray-50 dark:bg-gray-850  selected-command-option-button'
+										: ''}"
+									type="button"
+									on:click={() => {
+										confirmSelect(model);
+									}}
+									on:mousemove={() => {
+										selectedIdx = modelIdx;
+									}}
+									on:focus={() => {}}
+								>
 									<div class="flex font-medium text-black dark:text-gray-100 line-clamp-1">
 										<img
 											src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
@@ -168,12 +168,12 @@
 										/>
 										{model.name}
 									</div>
-								{/if}
 
-								<!-- <div class=" text-xs text-gray-600 line-clamp-1">
+									<!-- <div class=" text-xs text-gray-600 line-clamp-1">
 								{doc.title}
 							</div> -->
-							</button>
+								</button>
+							{/if}
 						{/each}
 					</div>
 				</div>
