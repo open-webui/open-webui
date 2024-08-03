@@ -76,7 +76,7 @@ async def prepare_usage_to_wechatapp():
     data = {
         "msgtype": "markdown",
         "markdown": {
-            "content": await init_usages(),
+            "content": await init_markdown_usages(),
             "mentioned_list": [],
         }
     }
@@ -247,6 +247,20 @@ async def update_filter_config(
         "ENABLE_DAILY_USAGES_NOTICE": app.state.config.ENABLE_DAILY_USAGES_NOTICE,
         "WECHAT_NOTICE_SUFFIX": app.state.config.WECHAT_NOTICE_SUFFIX,
     }
+
+
+async def init_markdown_usages():
+    usage_strings = []
+    now = datetime.datetime.now()
+    formatted_now = now.strftime("%Y年%m月%d日 %H时%M分")
+    replyText = f"### 📅 **{formatted_now}**\n\n### 🤖 **{WEBUI_NAME} 使用情况如下：**\n"
+
+    for user_name, models in user_usage.items():
+        model_usage_list = [f"> - {model}: {count}" for model, count in sorted(models.items())]
+        usage_string = f"### ⭐ **User {user_name}**\n" + "\n".join(model_usage_list)
+        usage_strings.append(usage_string)
+
+    return f"{replyText}\n" + "\n\n".join(usage_strings) + f"\n\n{app.state.config.WECHAT_NOTICE_SUFFIX}"
 
 
 async def init_usages():
