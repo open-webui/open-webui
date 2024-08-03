@@ -89,17 +89,23 @@ Once either of the above is complete, the site is visible at:
 [http://localhost:8080](http://localhost:8080)
 
 
-A RAM error shut down the local site: [1 leaked semaphore](https://github.com/lllyasviel/Fooocus/discussions/2690)
+A RAM error quickly shut down the local site: [1 leaked semaphore](https://github.com/lllyasviel/Fooocus/discussions/2690)  
+The CPU was not running when this occurred.
 
+<!--
 The following restarted the frontend at [localhost:5173](http://localhost:5173/)
 After a couple minutes you'll see "Open WebUI Backend Required"
 
 	npm run dev
+-->
 
-Running the build does not display change on the page above.
+Build to apply changes from "src".
 
 	npm run build
 
+Don't use `npm run dev` it only hosts the frontend.
+
+<!--
 Running the pre-existing bash start.sh results in:
 
 Loading WEBUI_SECRET_KEY from file, not provided as an environment variable.
@@ -108,9 +114,13 @@ start.sh: line 23: ${USE_OLLAMA_DOCKER,,}: bad substitution
 start.sh: line 25: ${USE_CUDA_DOCKER,,}: bad substitution
 start.sh: line 52: exec: uvicorn: not found
 
-Is there a way to reopen the conda instance?  
+Is there a fast way to reopen the conda instance?
+-->
 
-If not, we'll run our script again. But do we need to change a RAM setting first?
+**Restart server**
+
+Only takes a couple minutes this time, same command as above.  
+Choose the existing conda environment by saying "no" when asked to reinstall.
 
 	bash location/setup/script/start.sh
 
