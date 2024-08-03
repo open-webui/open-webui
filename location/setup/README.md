@@ -8,7 +8,7 @@ You can use the <a href="https://docs.openwebui.com/getting-started/">Quick Star
 <br>
 
 
-# Install and Build Locally
+# Install and Build Locally (without Docker)
 
 ### Use our conda-start.sh script to install with one step
 
@@ -67,7 +67,7 @@ The commands incude the following:
 
 	bash start.sh
 
-We created the script because using the `bash start.sh` above fails when Llama is not available - since it uses the settings config file.
+We created conda-start.sh because `bash start.sh` above fails when Llama is not available - since it uses the settings config file.
 
 Our conda-start.sh runs the backend in a virtual environment.  
 You could optionally run the following first too. We haven't confirmed the install works when running this first.
