@@ -265,19 +265,17 @@ class ChatTable:
                 ).all()
             )
             # result has to be destrctured from sqlalchemy `row` and mapped to a dict since the `ChatModel`is not the returned dataclass.
-            return list(
-                map(
-                    lambda row: ChatTitleIdResponse.model_validate(
-                        {
-                            "id": row[0],
-                            "title": row[1],
-                            "updated_at": row[2],
-                            "created_at": row[3],
-                        }
-                    ),
-                    all_chats,
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                    }
                 )
-            )
+                for chat in all_chats
+            ]
 
     def get_chat_list_by_chat_ids(
         self, chat_ids: List[str], skip: int = 0, limit: int = 50

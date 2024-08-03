@@ -1127,6 +1127,13 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         "vue",
         "svelte",
         "msg",
+        "ex",
+        "exs",
+        "erl",
+        "tsx",
+        "jsx",
+        "hs",
+        "lhs",
     ]
 
     if (

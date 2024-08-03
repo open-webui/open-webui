@@ -52,7 +52,7 @@
 		await documents.set(await getDocs(localStorage.token));
 	};
 
-	const uploadDoc = async (file) => {
+	const uploadDoc = async (file, tags?: object) => {
 		console.log(file);
 		// Check if the file is an audio file and transcribe/convert it to text file
 		if (['audio/mpeg', 'audio/wav'].includes(file['type'])) {
@@ -87,7 +87,12 @@
 				res.collection_name,
 				res.filename,
 				transformFileName(res.filename),
-				res.filename
+				res.filename,
+				tags?.length > 0
+					? {
+							tags: tags
+					  }
+					: null
 			).catch((error) => {
 				toast.error(error);
 				return null;
@@ -259,6 +264,7 @@
 	<div>
 		<button
 			class=" px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 dark:border-0 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition font-medium text-sm flex items-center space-x-1"
+			aria-label={$i18n.t('Add Docs')}
 			on:click={() => {
 				showAddDocModal = true;
 			}}
@@ -461,6 +467,7 @@
 				<button
 					class="self-center w-fit text-sm z-20 px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
+					aria-label={$i18n.t('Edit Doc')}
 					on:click={async (e) => {
 						e.stopPropagation();
 						showEditDocModal = !showEditDocModal;
@@ -508,6 +515,7 @@
 				<button
 					class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 					type="button"
+					aria-label={$i18n.t('Delete Doc')}
 					on:click={(e) => {
 						e.stopPropagation();
 
@@ -561,7 +569,8 @@
 							doc.collection_name,
 							doc.filename,
 							doc.name,
-							doc.title
+							doc.title,
+							doc.content
 						).catch((error) => {
 							toast.error(error);
 							return null;

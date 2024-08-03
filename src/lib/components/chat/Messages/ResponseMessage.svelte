@@ -230,7 +230,7 @@
 			if ((message?.content ?? '').trim() !== '') {
 				speaking = true;
 
-				if ($config.audio.tts.engine === 'openai') {
+				if ($config.audio.tts.engine !== '') {
 					loadingSpeech = true;
 
 					const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
@@ -262,7 +262,9 @@
 						for (const [idx, sentence] of sentences.entries()) {
 							const res = await synthesizeOpenAISpeech(
 								localStorage.token,
-								$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
+								$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
+									? $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
+									: $config?.audio?.tts?.voice,
 								sentence
 							).catch((error) => {
 								toast.error(error);
@@ -445,7 +447,7 @@
 						{@const status = (
 							message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
 						).at(-1)}
-						<div class="flex items-center gap-2 pt-1 pb-1">
+						<div class="flex items-center gap-2 pt-0.5 pb-1">
 							{#if status.done === false}
 								<div class="">
 									<Spinner className="size-4" />
