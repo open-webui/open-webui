@@ -146,8 +146,7 @@
 					fileItem.file = uploadedFile;
 					fileItem.id = uploadedFile.id;
 					fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
-				}
-				else{
+				} else {
 					fileItem.id = uuidv4();
 				}
 
