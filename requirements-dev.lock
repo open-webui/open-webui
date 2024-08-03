@@ -16,10 +16,17 @@ aiohttp==3.9.5
     # via open-webui
 aiosignal==1.3.1
     # via aiohttp
+alembic==1.13.2
+    # via open-webui
 annotated-types==0.6.0
     # via pydantic
-anyio==4.3.0
+anthropic==0.32.0
+    # via open-webui
+anyio==4.4.0
+    # via anthropic
     # via httpx
+    # via langfuse
+    # via openai
     # via starlette
     # via watchfiles
 apscheduler==3.10.4
@@ -32,6 +39,7 @@ asgiref==3.8.1
     # via opentelemetry-instrumentation-asgi
 attrs==23.2.0
     # via aiohttp
+    # via pytest-docker
 authlib==1.3.1
     # via open-webui
 av==11.0.0
@@ -76,9 +84,9 @@ chardet==5.2.0
 charset-normalizer==3.3.2
     # via requests
     # via unstructured-client
-chroma-hnswlib==0.7.3
+chroma-hnswlib==0.7.5
     # via chromadb
-chromadb==0.5.0
+chromadb==0.5.4
     # via langchain-chroma
     # via open-webui
 click==8.1.7
@@ -102,7 +110,6 @@ cryptography==42.0.7
 ctranslate2==4.2.1
     # via faster-whisper
 dataclasses-json==0.6.6
-    # via langchain
     # via langchain-community
     # via unstructured
     # via unstructured-client
@@ -113,11 +120,17 @@ defusedxml==0.7.1
 deprecated==1.2.14
     # via opentelemetry-api
     # via opentelemetry-exporter-otlp-proto-grpc
+distro==1.9.0
+    # via anthropic
+    # via openai
 dnspython==2.6.1
     # via email-validator
+    # via pymongo
+docker==7.1.0
+    # via open-webui
 docx2txt==0.8
     # via open-webui
-duckduckgo-search==6.1.5
+duckduckgo-search==6.2.6
     # via open-webui
 easygui==0.98.3
     # via oletools
@@ -208,8 +221,11 @@ httplib2==0.22.0
 httptools==0.6.1
     # via uvicorn
 httpx==0.27.0
+    # via anthropic
+    # via chromadb
     # via fastapi
     # via langfuse
+    # via openai
 huggingface-hub==0.23.0
     # via faster-whisper
     # via sentence-transformers
@@ -229,12 +245,16 @@ importlib-metadata==7.0.0
     # via opentelemetry-api
 importlib-resources==6.4.0
     # via chromadb
+iniconfig==2.0.0
+    # via pytest
 itsdangerous==2.2.0
     # via flask
 jinja2==3.1.4
     # via fastapi
     # via flask
     # via torch
+jiter==0.5.0
+    # via anthropic
 jmespath==1.0.1
     # via boto3
     # via botocore
@@ -249,14 +269,14 @@ jsonpointer==2.4
     # via jsonpatch
 kubernetes==29.0.0
     # via chromadb
-langchain==0.2.0
+langchain==0.2.11
     # via langchain-community
     # via open-webui
-langchain-chroma==0.1.1
+langchain-chroma==0.1.2
     # via open-webui
-langchain-community==0.2.0
+langchain-community==0.2.10
     # via open-webui
-langchain-core==0.2.1
+langchain-core==0.2.28
     # via langchain
     # via langchain-chroma
     # via langchain-community
@@ -265,22 +285,26 @@ langchain-text-splitters==0.2.0
     # via langchain
 langdetect==1.0.9
     # via unstructured
-langfuse==2.33.0
+langfuse==2.39.2
     # via open-webui
-langsmith==0.1.57
+langsmith==0.1.96
     # via langchain
     # via langchain-community
     # via langchain-core
 lark==1.1.8
     # via rtfde
 lxml==5.2.2
+    # via python-pptx
     # via unstructured
+mako==1.3.5
+    # via alembic
 markdown==3.6
     # via open-webui
 markdown-it-py==3.0.0
     # via rich
 markupsafe==2.1.5
     # via jinja2
+    # via mako
     # via werkzeug
 marshmallow==3.21.2
     # via dataclasses-json
@@ -339,11 +363,13 @@ onnxruntime==1.17.3
     # via chromadb
     # via faster-whisper
     # via rapidocr-onnxruntime
+openai==1.38.0
+    # via open-webui
 opencv-python==4.9.0.80
     # via rapidocr-onnxruntime
-opencv-python-headless==4.9.0.80
+opencv-python-headless==4.10.0.84
     # via open-webui
-openpyxl==3.1.2
+openpyxl==3.1.5
     # via open-webui
 opentelemetry-api==1.24.0
     # via chromadb
@@ -380,7 +406,6 @@ ordered-set==4.1.0
     # via deepdiff
 orjson==3.10.3
     # via chromadb
-    # via duckduckgo-search
     # via fastapi
     # via langsmith
 overrides==7.7.0
@@ -393,6 +418,7 @@ packaging==23.2
     # via langfuse
     # via marshmallow
     # via onnxruntime
+    # via pytest
     # via transformers
     # via unstructured-client
 pandas==2.2.2
@@ -403,19 +429,24 @@ pathspec==0.12.1
     # via black
 pcodedmp==1.2.6
     # via oletools
-peewee==3.17.5
+peewee==3.17.6
     # via open-webui
     # via peewee-migrate
 peewee-migrate==1.12.2
     # via open-webui
 pillow==10.3.0
     # via fpdf2
+    # via python-pptx
     # via rapidocr-onnxruntime
     # via sentence-transformers
 platformdirs==4.2.1
     # via black
+pluggy==1.5.0
+    # via pytest
 posthog==3.5.0
     # via chromadb
+primp==0.5.5
+    # via duckduckgo-search
 proto-plus==1.23.0
     # via google-ai-generativelanguage
     # via google-api-core
@@ -428,6 +459,9 @@ protobuf==4.25.3
     # via onnxruntime
     # via opentelemetry-proto
     # via proto-plus
+psutil==6.0.0
+    # via open-webui
+    # via unstructured
 psycopg2-binary==2.9.9
     # via open-webui
 pyasn1==0.6.0
@@ -440,7 +474,8 @@ pyclipper==1.3.0.post5
     # via rapidocr-onnxruntime
 pycparser==2.22
     # via cffi
-pydantic==2.7.1
+pydantic==2.8.2
+    # via anthropic
     # via chromadb
     # via fastapi
     # via google-generativeai
@@ -449,7 +484,8 @@ pydantic==2.7.1
     # via langfuse
     # via langsmith
     # via open-webui
-pydantic-core==2.18.2
+    # via openai
+pydantic-core==2.20.1
     # via pydantic
 pydub==0.25.1
     # via open-webui
@@ -457,7 +493,9 @@ pygments==2.18.0
     # via rich
 pyjwt==2.8.0
     # via open-webui
-pymysql==1.1.0
+pymongo==4.8.0
+    # via open-webui
+pymysql==1.1.1
     # via open-webui
 pypandoc==1.13
     # via open-webui
@@ -471,8 +509,11 @@ pypika==0.48.9
     # via chromadb
 pyproject-hooks==1.1.0
     # via build
-pyreqwest-impersonate==0.4.7
-    # via duckduckgo-search
+pytest==8.2.2
+    # via open-webui
+    # via pytest-docker
+pytest-docker==3.1.1
+    # via open-webui
 python-dateutil==2.9.0.post0
     # via botocore
     # via kubernetes
@@ -492,7 +533,9 @@ python-magic==0.4.27
 python-multipart==0.0.9
     # via fastapi
     # via open-webui
-python-socketio==5.11.2
+python-pptx==0.6.23
+    # via open-webui
+python-socketio==5.11.3
     # via open-webui
 pytube==15.0.0
     # via open-webui
@@ -516,15 +559,18 @@ rank-bm25==0.2.2
     # via open-webui
 rapidfuzz==3.9.0
     # via unstructured
-rapidocr-onnxruntime==1.3.22
+rapidocr-onnxruntime==1.3.24
     # via open-webui
 red-black-tree-mod==1.20
     # via extract-msg
+redis==5.0.8
+    # via open-webui
 regex==2024.5.10
     # via nltk
+    # via tiktoken
     # via transformers
-requests==2.32.2
-    # via chromadb
+requests==2.32.3
+    # via docker
     # via google-api-core
     # via huggingface-hub
     # via kubernetes
@@ -534,6 +580,7 @@ requests==2.32.2
     # via open-webui
     # via posthog
     # via requests-oauthlib
+    # via tiktoken
     # via transformers
     # via unstructured
     # via unstructured-client
@@ -556,12 +603,12 @@ scikit-learn==1.4.2
 scipy==1.13.0
     # via scikit-learn
     # via sentence-transformers
-sentence-transformers==2.7.0
+sentence-transformers==3.0.1
     # via open-webui
 setuptools==69.5.1
     # via ctranslate2
     # via opentelemetry-instrumentation
-shapely==2.0.4
+shapely==2.0.5
     # via rapidocr-onnxruntime
 shellingham==1.5.4
     # via typer
@@ -577,13 +624,17 @@ six==1.16.0
     # via rapidocr-onnxruntime
     # via unstructured-client
 sniffio==1.3.1
+    # via anthropic
     # via anyio
     # via httpx
+    # via openai
 soupsieve==2.5
     # via beautifulsoup4
-sqlalchemy==2.0.30
+sqlalchemy==2.0.31
+    # via alembic
     # via langchain
     # via langchain-community
+    # via open-webui
 starlette==0.37.2
     # via fastapi
 sympy==1.12
@@ -598,7 +649,10 @@ tenacity==8.3.0
     # via langchain-core
 threadpoolctl==3.5.0
     # via scikit-learn
+tiktoken==0.7.0
+    # via open-webui
 tokenizers==0.15.2
+    # via anthropic
     # via chromadb
     # via faster-whisper
     # via transformers
@@ -609,18 +663,24 @@ tqdm==4.66.4
     # via google-generativeai
     # via huggingface-hub
     # via nltk
+    # via openai
     # via sentence-transformers
     # via transformers
+    # via unstructured
 transformers==4.39.3
     # via sentence-transformers
 typer==0.12.3
     # via chromadb
     # via fastapi-cli
 typing-extensions==4.11.0
+    # via alembic
+    # via anthropic
     # via chromadb
     # via fastapi
     # via google-generativeai
     # via huggingface-hub
+    # via langchain-core
+    # via openai
     # via opentelemetry-sdk
     # via pydantic
     # via pydantic-core
@@ -640,7 +700,7 @@ tzlocal==5.2
     # via extract-msg
 ujson==5.10.0
     # via fastapi
-unstructured==0.14.0
+unstructured==0.15.0
     # via open-webui
 unstructured-client==0.22.0
     # via unstructured
@@ -648,6 +708,7 @@ uritemplate==4.1.1
     # via google-api-python-client
 urllib3==2.2.1
     # via botocore
+    # via docker
     # via kubernetes
     # via requests
     # via unstructured-client
@@ -676,6 +737,8 @@ wsproto==1.2.0
     # via simple-websocket
 xlrd==2.0.1
     # via open-webui
+xlsxwriter==3.2.0
+    # via python-pptx
 yarl==1.9.4
     # via aiohttp
 youtube-transcript-api==0.6.2

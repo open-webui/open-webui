@@ -131,3 +131,59 @@ export const synthesizeOpenAISpeech = async (
 
 	return res;
 };
+
+export const getModels = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${AUDIO_API_BASE_URL}/models`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getVoices = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${AUDIO_API_BASE_URL}/voices`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
