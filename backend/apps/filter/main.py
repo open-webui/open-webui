@@ -64,7 +64,7 @@ search = None
 
 async def reset_usage():
     global user_usage
-    user_usage = []
+    user_usage = defaultdict(lambda: defaultdict(int))
 
 
 async def daily_send_usage():
