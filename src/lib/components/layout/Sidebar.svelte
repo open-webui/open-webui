@@ -56,8 +56,10 @@
 	let nextPageLoading = false;
 	let tagView = false;
 	let chatPagniationComplete = false;
-
-	pageLimit.set(20);
+	// number of chats per page depends on screen size.
+	// 35px is the height of each chat item.
+	// load 5 extra chats
+	pageLimit.set(Math.round(window.innerHeight / 35) + 5);
 
 	$: filteredChatList = $chats.filter((chat) => {
 		if (search === '') {
