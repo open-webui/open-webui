@@ -299,6 +299,9 @@ async def get_all_models(raw: bool = False):
 @app.get("/models")
 @app.get("/models/{url_idx}")
 async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_user)):
+    if not app.state.config.ENABLE_OPENAI_API:
+        return {"data": []}
+
     if url_idx == None:
         models = await get_all_models()
         if app.state.config.ENABLE_MODEL_FILTER:
