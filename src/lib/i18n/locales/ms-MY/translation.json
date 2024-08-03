@@ -414,7 +414,7 @@
 	"None": "Tiada",
 	"Not factually correct": "Tidak tepat secara fakta",
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Nota: Jika anda menetapkan skor minimum, carian hanya akan mengembalikan dokumen dengan skor lebih besar daripada atau sama dengan skor minimum.",
-    "Notifications": "Pemberitahuan",
+	"Notifications": "Pemberitahuan",
 	"November": "November",
 	"num_thread (Ollama)": "num_thread (Ollama)",
 	"OAuth ID": "ID OAuth",
@@ -710,5 +710,5 @@
 	"Your account status is currently pending activation.": "Status akaun anda ialah sedang menunggu pengaktifan.",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Seluruh sumbangan anda akan dihantar terus kepada pembangun 'plugin'; Open WebUI tidak mengambil sebarang peratusan keuntungan daripadanya. Walau bagaimanapun, platform pembiayaan yang dipilih mungkin mempunyai caj tersendiri.",
 	"Youtube": "Youtube",
-	"Youtube Loader Settings": "Tetapan Pemuat Youtube"
+	"Youtube Loader Settings": "Tetapan Pemuat Youtube",
 }
