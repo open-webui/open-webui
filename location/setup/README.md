@@ -75,9 +75,16 @@ Or, alternatively, run the following. (These are contained in the command above.
 
 	bash start.sh
 
+Once either of the above is complete, the site is visible at:
+
+[http://localhost:8080](http://localhost:8080)
+
+
+<!--
 Than ran `npm run dev` (not working). You probably don't need to run this.
 
 	npm run dev
+-->
 
 ## Edit in our Open WebUI "projects/location" folder
 
