@@ -47,26 +47,24 @@
 		});
 
 		await _tags.set(await getAllChatTags(localStorage.token));
-
 		if ($_tags.map((t) => t.name).includes(tagName)) {
 			if (tagName === 'pinned') {
 				await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 			} else {
-				await chats.set(
-					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
-				);
+				await chats.set(await getChatListByTagName(localStorage.token, tagName));
 			}
 
 			if ($chats.find((chat) => chat.id === chatId)) {
 				dispatch('close');
 			}
 		} else {
+			// if the tag we deleted is no longer a valid tag, return to main chat list view
+			tagView.set(false);
 			await chats.set(
 				await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
 			);
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
-		tagView.set(false);
 	};
 
 	onMount(async () => {
