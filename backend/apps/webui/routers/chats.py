@@ -57,7 +57,7 @@ async def get_session_user_chat_list(
 async def delete_all_user_chats(request: Request, user=Depends(get_verified_user)):
 
     if (
-        user.role == "user"
+        user.is_user()
         and not request.app.state.config.USER_PERMISSIONS["chat"]["deletion"]
     ):
         raise HTTPException(
@@ -176,14 +176,14 @@ async def archive_all_chats(user=Depends(get_verified_user)):
 
 @router.get("/share/{share_id}", response_model=Optional[ChatResponse])
 async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user)):
-    if user.role == "pending":
+    if user.is_pending():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if user.role == "user":
+    if user.is_user():
         chat = Chats.get_chat_by_share_id(share_id)
-    elif user.role == "admin":
+    elif user.is_admin():
         chat = Chats.get_chat_by_id(share_id)
 
     if chat:
@@ -289,7 +289,7 @@ async def update_chat_by_id(
 @router.delete("/{id}", response_model=bool)
 async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
 
-    if user.role == "admin":
+    if user.is_admin():
         result = Chats.delete_chat_by_id(id)
         return result
     else:

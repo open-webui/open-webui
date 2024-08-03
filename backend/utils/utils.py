@@ -78,7 +78,7 @@ def get_http_authorization_cred(auth_header: str):
 def get_current_user(
     request: Request,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
-):
+) -> UserModel:
     token = None
 
     if auth_token is not None:
@@ -113,7 +113,7 @@ def get_current_user(
         )
 
 
-def get_current_user_by_api_key(api_key: str):
+def get_current_user_by_api_key(api_key: str) -> UserModel:
     user = Users.get_user_by_api_key(api_key)
 
     if user is None:
@@ -127,8 +127,8 @@ def get_current_user_by_api_key(api_key: str):
     return user
 
 
-def get_verified_user(user=Depends(get_current_user)):
-    if user.role not in {"user", "admin"}:
+def get_verified_user(user=Depends(get_current_user)) -> UserModel:
+    if not user.is_verified():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -136,8 +136,8 @@ def get_verified_user(user=Depends(get_current_user)):
     return user
 
 
-def get_admin_user(user=Depends(get_current_user)):
-    if user.role != "admin":
+def get_admin_user(user=Depends(get_current_user)) -> UserModel:
+    if not user.is_admin():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
