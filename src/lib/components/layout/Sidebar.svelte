@@ -20,6 +20,7 @@
 	import { onMount, getContext, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
+	import { disablePagination } from '$lib/utils';
 
 	import { updateUserSettings } from '$lib/apis/users';
 	import {
@@ -434,12 +435,7 @@
 						placeholder={$i18n.t('Search')}
 						bind:value={search}
 						on:focus={async () => {
-							// loading all chats. disable pagination on scrol.
-							scrollPaginationEnabled.set(false);
-							// subsequent queries will calculate page size to rehydrate the ui.
-							// since every chat is already loaded, the calculation should now load all chats.
-							pageSkip.set(0);
-							pageLimit.set(-1);
+							disablePagination();
 							await chats.set(await getChatList(localStorage.token)); // when searching, load all chats
 
 							enrichChatsWithContent($chats);
@@ -453,9 +449,7 @@
 					<button
 						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 						on:click={async () => {
-							scrollPaginationEnabled.set(false);
-							pageSkip.set(0);
-							pageLimit.set(-1);
+							disablePagination();
 
 							await chats.set(
 								await getChatList(localStorage.token, $pageSkip * $pageLimit, $pageLimit)
@@ -472,9 +466,7 @@
 								if (chatIds.length === 0) {
 									// no chats found in the tag
 									await tags.set(await getAllChatTags(localStorage.token));
-									scrollPaginationEnabled.set(false);
-									pageSkip.set(0);
-									pageLimit.set(-1);
+									disablePagination();
 									chatIds = await getChatList(
 										localStorage.token,
 										$pageSkip * $pageLimit,

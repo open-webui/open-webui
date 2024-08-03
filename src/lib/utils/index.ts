@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import { WEBUI_BASE_URL } from '$lib/constants';
+import { scrollPaginationEnabled, pageLimit, pageSkip } from '$lib/stores';
 
 //////////////////////////
 // Helper functions
@@ -778,4 +779,10 @@ export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, def
 
 	console.log(languages, preferredLanguages, match, defaultLocale);
 	return match || defaultLocale;
+};
+
+export const disablePagination = () => {
+	scrollPaginationEnabled.set(false);
+	pageLimit.set(-1);
+	pageSkip.set(0);
 };

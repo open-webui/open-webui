@@ -12,7 +12,7 @@
 		getAllUserChats,
 		getChatList
 	} from '$lib/apis/chats';
-	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
+	import { getImportOrigin, convertOpenAIChats, disablePagination } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -61,12 +61,7 @@
 				await createNewChat(localStorage.token, chat);
 			}
 		}
-		// loading all chats. disable pagination on scrol.
-		scrollPaginationEnabled.set(false);
-		// subsequent queries will calculate page size to rehydrate the ui.
-		// since every chat is already loaded, the calculation should now load all chats.
-		pageSkip.set(0);
-		pageLimit.set(-1);
+		disablePagination();
 		await chats.set(await getChatList(localStorage.token));
 	};
 
@@ -82,12 +77,7 @@
 		await archiveAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
 		});
-		// loading all chats. disable pagination on scrol.
-		scrollPaginationEnabled.set(false);
-		// subsequent queries will calculate page size to rehydrate the ui.
-		// since every chat is already loaded, the calculation should now load all chats.
-		pageSkip.set(0);
-		pageLimit.set(-1);
+		disablePagination();
 		await chats.set(await getChatList(localStorage.token));
 	};
 
@@ -96,12 +86,7 @@
 		await deleteAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
 		});
-		// loading all chats. disable pagination on scrol.
-		scrollPaginationEnabled.set(false);
-		// subsequent queries will calculate page size to rehydrate the ui.
-		// since every chat is already loaded, the calculation should now load all chats.
-		pageSkip.set(0);
-		pageLimit.set(-1);
+		disablePagination();
 		await chats.set(await getChatList(localStorage.token));
 	};
 
