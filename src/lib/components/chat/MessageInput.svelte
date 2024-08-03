@@ -786,37 +786,40 @@
 										}
 									}}
 									rows="1"
-									on:input={(e) => {
+									on:input={async (e) => {
 										e.target.style.height = '';
 										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 										user = null;
 									}}
-									on:focus={(e) => {
+									on:focus={async (e) => {
 										e.target.style.height = '';
 										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 									}}
-									on:paste={(e) => {
+									on:paste={async (e) => {
 										const clipboardData = e.clipboardData || window.clipboardData;
+										try {
+											if (clipboardData && clipboardData.items) {
+												const inputFiles = Array.from(clipboardData.items)
+													.map((item) => item.getAsFile())
+													.filter((file) => file);
 
-										if (clipboardData && clipboardData.items) {
-											for (const item of clipboardData.items) {
-												if (item.type.indexOf('image') !== -1) {
-													const blob = item.getAsFile();
-													const reader = new FileReader();
-
-													reader.onload = function (e) {
-														files = [
-															...files,
-															{
-																type: 'image',
-																url: `${e.target.result}`
-															}
-														];
-													};
-
-													reader.readAsDataURL(blob);
+												const [canProcess, filesToProcess] = await processFileCountLimit(
+													fileLimitSettings,
+													inputFiles
+												);
+												if (!canProcess) {
+													return;
 												}
+												filesToProcess.forEach((file) => {
+													console.log(file, file.name.split('.').at(-1));
+													processFileSizeLimit(fileLimitSettings, file);
+												});
+											} else {
+												toast.error($i18n.t(`File not found.`));
 											}
+										} catch (error) {
+											console.error('Error processing files:', error);
+											toast.error($i18n.t(`An error occurred while processing files.`));
 										}
 									}}
 								/>
