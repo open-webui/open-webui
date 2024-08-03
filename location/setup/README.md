@@ -46,6 +46,8 @@ Here are the commands from [Open WebUI Getting Started](https://docs.openwebui.c
 As of July 2024 python 3.12 has issues with OpenWebUI, so use python 3.11.  
 Check [your local python version and install nvm](../../../io/coders/python/) to host multiple version of python.
 
+This is optional. We haven't confirmed the install works when running this first.
+
 	python3.11 -m venv env
 	source env/bin/activate
 
@@ -63,7 +65,9 @@ If none are found, [download from Anaconda.com](https://www.anaconda.com/downloa
 
 	conda env list  
 
-We have a [start.sh script](https://github.com/ModelEarth/projects/blob/main/location/setup/script/start.sh) which will run the comands below for you. Run this in the root of the "projects" folder.
+The follow two options may take about 2 hour to run.
+
+We have a [start.sh script](https://github.com/ModelEarth/projects/blob/main/location/setup/script/start.sh) which will run the comands below for you. Run this in the root of the "projects" folder. It invokes python3.11.
 	
 	bash location/setup/script/start.sh
 
