@@ -159,7 +159,7 @@
 								}}
 								on:focus={() => {}}
 							>
-								{#if model?.info?.meta?.hidden === false}
+								{#if !model?.info?.meta?.hidden}
 									<div class="flex font-medium text-black dark:text-gray-100 line-clamp-1">
 										<img
 											src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
