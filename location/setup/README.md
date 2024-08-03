@@ -38,8 +38,8 @@ These steps are for programmers who will be editing and building locally.
 
 Clone with a command or use GitHub Desktop to pull to your computer from [our projects repo](https://github.com/modelearth/projects/).
 
-		git clone https://github.com/modelearth/projects.git
-		cd projects/
+	git clone https://github.com/modelearth/projects.git
+	cd projects/
 
 Here are the commands from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/) for building locally.  
 
@@ -57,6 +57,11 @@ Check [your local python version and install nvm](../../../io/coders/python/) to
 Check that you have npm installed. If not, [install node project manager](../../../io/coders/python/)
 
 	npm -v
+
+View a list of your conda environments.
+If none are found, [download from Anaconda.com](https://www.anaconda.com/download)
+
+	conda env list  
 
 We have a [start.sh script](https://github.com/ModelEarth/projects/blob/main/location/setup/script/start.sh) which will run the comands below for you. Run this in the root of the "projects" folder.
 	
