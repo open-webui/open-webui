@@ -424,7 +424,7 @@
 					files: chatFiles
 				});
 				await chats.set(
-					await getChatList(localStorage.token, 0, ($pageSkip * $pageLimit) || $pageLimit)
+					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
 				);
 			}
 		}
@@ -472,7 +472,7 @@
 					files: chatFiles
 				});
 				await chats.set(
-					await getChatList(localStorage.token, 0, ($pageSkip * $pageLimit) || $pageLimit)
+					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
 				);
 			}
 		}
@@ -634,7 +634,7 @@
 					timestamp: Date.now()
 				});
 				await chats.set(
-					await getChatList(localStorage.token, 0, ($pageSkip * $pageLimit) || $pageLimit)
+					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
 				);
 				await chatId.set(chat.id);
 			} else {
@@ -711,7 +711,7 @@
 			})
 		);
 
-		await chats.set(await getChatList(localStorage.token, 0, ($pageSkip * $pageLimit) || $pageLimit));
+		await chats.set(await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit));
 
 		return _responses;
 	};

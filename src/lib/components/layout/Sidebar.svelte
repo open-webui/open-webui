@@ -14,7 +14,8 @@
 		pinnedChats,
 		pageSkip,
 		pageLimit,
-		scrollPaginationEnabled
+		scrollPaginationEnabled,
+		tagView
 	} from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
@@ -54,7 +55,6 @@
 	let filteredChatList = [];
 	let paginationScrollThreashold = 0.6;
 	let nextPageLoading = false;
-	let tagView = false;
 	let chatPagniationComplete = false;
 	// number of chats per page depends on screen size.
 	// 35px is the height of each chat item.
@@ -250,6 +250,13 @@
 	>
 		<h1 class="text-red-400 text-bold text-xl">
 			Chats loaded: {$chats.length}
+		</h1>
+
+		<h1 class="text-red-400 text-bold text-xl">
+			Pagination Enabled: {$scrollPaginationEnabled}
+		</h1>
+		<h1 class="text-red-400 text-bold text-xl">
+			Final Page Reached: {chatPagniationComplete}
 		</h1>
 		<div class="px-2.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<a
@@ -474,7 +481,7 @@
 										$pageLimit
 									);
 								}
-								tagView = true;
+								tagView.set(true);
 								await chats.set(chatIds);
 							}}
 						>
@@ -520,7 +527,7 @@
 				class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden"
 				on:scroll={async (e) => {
 					if (!$scrollPaginationEnabled) return;
-					if (tagView) return;
+					if ($tagView) return;
 					if (nextPageLoading) return;
 					if (chatPagniationComplete) return;
 
