@@ -46,7 +46,7 @@ async def get_session_user_chat_list(
     user=Depends(get_verified_user), page: Optional[int] = None
 ):
     if page is not None:
-        limit = 20
+        limit = 60
         skip = (page - 1) * limit
 
         return Chats.get_chat_title_id_list_by_user_id(user.id, skip=skip, limit=limit)
