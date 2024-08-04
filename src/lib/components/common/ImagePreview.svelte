@@ -1,13 +1,25 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { showSidebar, mobile } from '$lib/stores';
 
 	export let show = false;
 	export let src = '';
 	export let alt = '';
+	export let isShowSidebar = false;
 
 	let mounted = false;
 
 	let previewElement = null;
+
+	const closeShow = () => {
+		if ($mobile) {
+			showSidebar.set(false);
+		} else {
+			showSidebar.set(isShowSidebar);
+		}
+		console.log(isShowSidebar);
+		show = false;
+	};
 
 	const downloadImage = (url, filename) => {
 		fetch(url)
@@ -28,7 +40,7 @@
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
 			console.log('Escape');
-			show = false;
+			closeShow();
 		}
 	};
 
@@ -59,7 +71,7 @@
 				<button
 					class=" p-5"
 					on:click={() => {
-						show = false;
+						closeShow();
 					}}
 				>
 					<svg
