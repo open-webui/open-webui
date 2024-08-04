@@ -97,18 +97,19 @@ def openai_chat_message_template(model: str):
     }
 
 
-def openai_chat_chunk_message_template(model: str, message: str):
+def openai_chat_chunk_message_template(model: str, message: str) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion.chunk"
     template["choices"][0]["delta"] = {"content": message}
     return template
 
 
-def openai_chat_completion_message_template(model: str, message: str):
+def openai_chat_completion_message_template(model: str, message: str) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion"
     template["choices"][0]["message"] = {"content": message, "role": "assistant"}
     template["choices"][0]["finish_reason"] = "stop"
+    return template
 
 
 def get_gravatar_url(email):
