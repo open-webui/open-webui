@@ -1,8 +1,7 @@
 [Active Projects](../)
 # Location Projects for Open WebUI
 
-Use our [Install Steps](setup) and send Pull Requests for our "projects/location" folder.  
-You'll have our Open WebUI "projects" fork running at [http://localhost:3000](http://localhost:3000/).  
+Use our [Install Steps](setup) and send Pull Requests for our "[projects/location](https://github.com/ModelEarth/projects/tree/main/location/)" folder.  
 
 TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) and share some cool findings during our meetup.
 
@@ -20,7 +19,7 @@ TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our 
 
 TO DO: Create an example of loading a Python util file that is also loaded by our [RealityStream](../../RealityStream/) app.
 
-TO DO: Activate hosting using Cloudflare.
+<!--TO DO: Activate hosting using Cloudflare.-->
 
 TO DO: Provide a means to upload a list of members from a Google Sheet link.
 

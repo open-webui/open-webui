@@ -3,18 +3,55 @@
 
 Since Docker restarts local containers when your computer restarts, you may already have 
 [http://localhost:3000](http://localhost:3000) running if you've added to Docker previously. The port and ghcr.io source is visible under details within Docker.
+<!-- ghcr.io stands for GitHub Container Registry (GHCR) -->
 
 Our staging Docker container resides at [https://github.com/modelearth/projects/pkgs/container/projects](https://github.com/modelearth/projects/pkgs/container/projects)
 
 Our production Docker container is in our [Github datascape account packages](https://github.com/users/datascape/packages/container/package/projects).
 
+## Setup
 
-## Edit files pulled down from our Docker package
+[Overview in video](https://www.youtube.com/watch?v=N-aRJe--txs)
 
-<!-- your project/location  -->
-Once you get the following installed, see our [Location Projects for Open WebUI](../).
+1. [Download Ollama](https://ollama.com/) - And Install (you'll have a llama icon)
+<!-- Sample says "ollama run llama3.1" but that downloads 4.7 GB -->
+
+<!--
+If Ollama is installed, you should see it here:
+[http://localhost:11434](http://localhost:11434)
+-->
+
+2. [Download Docker](https://www.docker.com/) - And Install (you'll have a whale icon)
+
+3. Since Ollama is now on your computer, you can use one of these commands:
+
+Pull from our modelearth "[projects](https://github.com/modelearth/projects/)" fork
+
+<!-- The --name value does not appear in Docker. -->
+```
+docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v projects:/app/backend/data --name modelearth-projects --restart always ghcr.io/modelearth/projects:main
+```
+
+Or pull from the main open-webui repo
+<!--(If you already have an "open-webui" container in Docker, delete or rename it.)-->
+
+```
+docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+```
+
+If the docker cmd is not recognized after installing Docker on a Mac, Create a symbolic link. Then confirm with `docker --version`
+
+	sudo ln -s /Applications/Docker.app/Contents/Resources/bin/docker /usr/local/bin/docker
 
 **ghcr.io** stands for GitHub Container Registry, which is a service provided by GitHub for hosting and managing container images.
+
+
+
+## Edit files pulled down from Docker package
+
+The objective is to install with Docker, then build and view changes locally, then send a PR to the modelearth/projects repo.
+
+TO DO: We need help testing and updating documentation below.
 
 <!--
 Replaced open-webui/open-webui with modelearth/projects
@@ -31,17 +68,18 @@ We're not an org, so this was not our URL:
 [https://github.com/orgs/modelearth/packages?repo_name=projects](https://github.com/orgs/modelearth/packages?repo_name=projects)
 -->
 
-Our Docker container live in our datascape repo.
-This allows us to minimize the storage use in modelearth.
+<!--
+Another Docker container reside in our datascape repo.
+The intent is to minimize the storage use in modelearth.
+-->
 
-First [update your Docker, Node, Pip, Python and Conda](../../io/coders/python/)
 
 **Run to pull the "projects" Docker container into your Webroot:**
 <!-- ran in Documents/Webroot. Did not have 
 	a projects or projects-container folder beforehand. -->
 
-	docker pull ghcr.io/datascape/projects:main
-	docker create --name projects-container ghcr.io/datascape/projects:main
+	docker pull ghcr.io/modelearth/projects:main
+	docker create --name projects-container ghcr.io/modelearth/projects:main
 	docker start projects-container
 	docker exec -it projects-container /bin/bash
 
@@ -70,7 +108,7 @@ Currently just the Backend folder is set in the "Dockerfile" config settings.
 
 Note that we do not use \~/ in the command above since it already runs in your computer's [username] folder. 
 
-Docker set-up contributors: Dinesh B, Loren, Yifeng, Yuxin<!--user download-->
+<!-- Docker set-up contributors: Dinesh B, Loren, Yifeng, Yuxin -->
 
 ## Using git inside of docker
 
@@ -122,27 +160,25 @@ To run git commands above inside our docker container,
 **Areas of future sync issues:**
 We updated our [DockerFile with this PR](https://github.com/ModelEarth/projects/pull/2/files) - Dinesh
 
-## How we created a Docker "projects" container on GitHub
+## How we created our Docker "projects" containers on GitHub
 
 Advice on [package setup provided by ChatGPT](https://chatgpt.com/share/2200ae05-4f33-4b1c-a1f9-57be4d18257b)
 
-This only needed to be done once by our site admin.  (You can skip this.) 
-
-In our datascape repo, go to [Personal access tokens (classic)](https://github.com/settings/tokens)
+In our repo, we went to [Personal access tokens (classic)](https://github.com/settings/tokens)
 Settings > Developer settings > Personal access tokens > Tokens (classic)
 
-Click "Generate new token" button and in the note put 'CR_PAT for Container Registry'  
+Clicked "Generate new token" button and in the note put 'CR_PAT for Container Registry'  
 Choose write:packages (chooses read:packages) and delete:packages  
 Copy and save your token. Starts with ghp_
 
-Run the following command to log in to the GitHub Container Registry using your personal access token (starts with ghp_):
+Ran to log in to the GitHub Container Registry using personal access token (starts with ghp_):
 
 	echo your_personal_access_token | docker login ghcr.io -u your_github_username --password-stdin
 
 
-### We built from modelearth/projects and pushed to datascape
+### We built from modelearth/projects and pushed to datascape Github account
 
-We built Docker locally from modelearth/projects. Run this in your local "projects" folder
+We built Docker locally from modelearth/projects. Ran in local "projects" folder
 (The first command takes about 10 minutes for the build.)
 
 	docker build -t modelearth/projects:main .
@@ -159,8 +195,7 @@ The container image then appears at: [https://github.com/users/datascape/package
 Make the new container image under the settings icon in the lower right.
 
 <!--
-Probably won't be using this since 
-(This allows us to avoid using too much storage space in modelearth account.)
+Using datascape account to avoid using too much storage space in modelearth account.
 
 	docker build -t ghcr.io/modelearth/projects:main .
 	docker push ghcr.io/datascape/projects:main
@@ -174,54 +209,18 @@ Scroll down to the bottom and click the Delete package button.
 To delete locally, run `docker rmi ghcr.io/datascape/projects:main`
 To remove all unused Docker images, containers, networks, and volumes locally: `docker system prune -a`
 
-
-
-TO DO: How would we change the config setting to avoid installing Ollama locally?
-
-<div style="border:1px solid #ccc; padding:20px 20px 25px 30px; border-radius:20px;" >
-
-<b>Issue: Storage exceeded when installing Ollama locally</b><br><br>
-
-I had Ollama working fine from the QuickStart above, but since our goal is to build locally, I tried installing Ollama to use with the local build process described below.<br><br>
-
-My install of Ollama locally did not complete due to a storage limitation. I increased the allowed storage, but then my machine was overwhelmed.<br><br>
-
-So now one goal is to install Ollama externally, using the "Different Server" command here: <a href="https://docs.openwebui.com">docs.openwebui.com</a>
-
-</div><br>
-
-<!--
-	Or you can use our [datascape Docker container image](https://github.com/users/datascape/packages/container/package/projects), which is created from the same modelearth/projects repo.
--->
-
-
-# Older Notes to Clean Up
-
-
-### You may need to have Ollama installed
-
-This may exceed your capacity or CPU if you don't have a fast graphics card.
-
-<!--You might need to increase your storage allocation in Docker-->
-
-If Ollama is installed, you should see it here:
-[http://localhost:11434](http://localhost:11434)
-
-<!-- Also saw this in Settings > Conections:  http://ollama:11434 -->
-
-**If you don't have Ollama installed yet**
-Start with the [Open WebUI Documentation](https://docs.openwebui.com/)
-
-<!--(If you already have an "open-webui" container in Docker, delete or rename it.)-->
-
 <!--
 You can run the following in your local projects folder.  
 
 	docker compose up -d --build
 -->
 
-<!-- If you already have Ollama running in Docker,
-	the above command my exceed the avalable allocated memory. 
+<!-- 
+Avoid this:
+docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
+
+If you already have Ollama running in Docker,
+the above command my exceed the avalable allocated memory. 
 
 Tried again after changind in Docker > Settings > Resources > Advanced
 CPU was already at 16
@@ -229,37 +228,5 @@ Increased memory limit from 8GB to 24GB
 Increase Swap from 1GB to 3GB
 -->
 
-Otherwise, here are the steps [if you already have Ollama](https://docs.openwebui.com/)
-Or if you're retaining an [existing open-webui container](https://docs.openwebui.com/getting-started/)
-<!--
-, and using GPU Support, then run:
-
-	docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
--->
-
-## Install with Pip and start your server (Beta)
-
-This pip install did not work on Loren's Mac.
-No error, but there's no backend running.
-
-Takes about 10 minutes. (Docker is a faster option if you are not coding.)
-
-	python3 -m venv env
-	source env/bin/activate
-	pip install open-webui
-	open-webui serve
-
-## Run the Build
-
-Takes another 10 minutes.
-Takes less than 2 minutes with our [conda-start.sh install](../).
-
-	npm run build
-
-Neither of the following works after the above.
-
-Open your local build at [localhost:3000](http://localhost:3000)
-View at [localhost:8080]( http://localhost:8080/)
-
 ---
-<br>Instead, use our [install for building locally](../)
+<br>[Install and build locally](../) - without Docker
