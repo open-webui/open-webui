@@ -8,7 +8,7 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { tags as _tags, chats, pinnedChats } from '$lib/stores';
+	import { tags as _tags, chats, pinnedChats, pageSkip, pageLimit, tagView } from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -46,11 +46,7 @@
 			tags: tags
 		});
 
-		console.log($_tags);
 		await _tags.set(await getAllChatTags(localStorage.token));
-
-		console.log($_tags);
-
 		if ($_tags.map((t) => t.name).includes(tagName)) {
 			if (tagName === 'pinned') {
 				await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
@@ -62,7 +58,11 @@
 				dispatch('close');
 			}
 		} else {
-			await chats.set(await getChatList(localStorage.token));
+			// if the tag we deleted is no longer a valid tag, return to main chat list view
+			tagView.set(false);
+			await chats.set(
+				await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+			);
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};

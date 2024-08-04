@@ -25,7 +25,9 @@
 		user,
 		socket,
 		showCallOverlay,
-		tools
+		tools,
+		pageSkip,
+		pageLimit
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -421,7 +423,9 @@
 					params: params,
 					files: chatFiles
 				});
-				await chats.set(await getChatList(localStorage.token));
+				await chats.set(
+					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+				);
 			}
 		}
 	};
@@ -467,7 +471,9 @@
 					params: params,
 					files: chatFiles
 				});
-				await chats.set(await getChatList(localStorage.token));
+				await chats.set(
+					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+				);
 			}
 		}
 	};
@@ -627,7 +633,9 @@
 					tags: [],
 					timestamp: Date.now()
 				});
-				await chats.set(await getChatList(localStorage.token));
+				await chats.set(
+					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+				);
 				await chatId.set(chat.id);
 			} else {
 				await chatId.set('local');
@@ -703,7 +711,8 @@
 			})
 		);
 
-		await chats.set(await getChatList(localStorage.token));
+		await chats.set(await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit));
+
 		return _responses;
 	};
 
@@ -949,7 +958,9 @@
 						params: params,
 						files: chatFiles
 					});
-					await chats.set(await getChatList(localStorage.token));
+					await chats.set(
+						await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+					);
 				}
 			}
 		} else {
@@ -1216,7 +1227,9 @@
 							params: params,
 							files: chatFiles
 						});
-						await chats.set(await getChatList(localStorage.token));
+						await chats.set(
+							await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+						);
 					}
 				}
 			} else {
@@ -1381,7 +1394,9 @@
 
 		if ($settings.saveChatHistory ?? true) {
 			chat = await updateChatById(localStorage.token, _chatId, { title: _title });
-			await chats.set(await getChatList(localStorage.token));
+			await chats.set(
+				await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+			);
 		}
 	};
 

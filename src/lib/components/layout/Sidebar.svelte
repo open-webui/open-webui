@@ -11,11 +11,16 @@
 		showSidebar,
 		mobile,
 		showArchivedChats,
-		pinnedChats
+		pinnedChats,
+		pageSkip,
+		pageLimit,
+		scrollPaginationEnabled,
+		tagView
 	} from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
+	import { disablePagination } from '$lib/utils';
 
 	import { updateUserSettings } from '$lib/apis/users';
 	import {
@@ -34,6 +39,7 @@
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Sparkles from '../icons/Sparkles.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -49,6 +55,13 @@
 	let showDropdown = false;
 
 	let filteredChatList = [];
+	let paginationScrollThreashold = 0.6;
+	let nextPageLoading = false;
+	let chatPagniationComplete = false;
+	// number of chats per page depends on screen size.
+	// 35px is the height of each chat item.
+	// load 5 extra chats
+	pageLimit.set(Math.round(window.innerHeight / 35) + 5);
 
 	$: filteredChatList = $chats.filter((chat) => {
 		if (search === '') {
@@ -84,7 +97,7 @@
 		showSidebar.set(window.innerWidth > BREAKPOINT);
 
 		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
-		await chats.set(await getChatList(localStorage.token));
+		await chats.set(await getChatList(localStorage.token, $pageSkip, $pageLimit));
 
 		let touchstart;
 		let touchend;
@@ -185,7 +198,9 @@
 				await tick();
 				goto('/');
 			}
-			await chats.set(await getChatList(localStorage.token));
+			await chats.set(
+				await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
+			);
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
@@ -410,7 +425,10 @@
 						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-none"
 						placeholder={$i18n.t('Search')}
 						bind:value={search}
-						on:focus={() => {
+						on:focus={async () => {
+							disablePagination();
+							await chats.set(await getChatList(localStorage.token)); // when searching, load all chats
+
 							enrichChatsWithContent($chats);
 						}}
 					/>
@@ -422,7 +440,11 @@
 					<button
 						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 						on:click={async () => {
-							await chats.set(await getChatList(localStorage.token));
+							disablePagination();
+
+							await chats.set(
+								await getChatList(localStorage.token, $pageSkip * $pageLimit, $pageLimit)
+							);
 						}}
 					>
 						{$i18n.t('all')}
@@ -433,9 +455,16 @@
 							on:click={async () => {
 								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
 								if (chatIds.length === 0) {
+									// no chats found in the tag
 									await tags.set(await getAllChatTags(localStorage.token));
-									chatIds = await getChatList(localStorage.token);
+									disablePagination();
+									chatIds = await getChatList(
+										localStorage.token,
+										$pageSkip * $pageLimit,
+										$pageLimit
+									);
 								}
+								tagView.set(true);
 								await chats.set(chatIds);
 							}}
 						>
@@ -477,7 +506,33 @@
 				</div>
 			{/if}
 
-			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
+			<div
+				class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden"
+				on:scroll={async (e) => {
+					if (!$scrollPaginationEnabled) return;
+					if ($tagView) return;
+					if (nextPageLoading) return;
+					if (chatPagniationComplete) return;
+
+					const maxScroll = e.target.scrollHeight - e.target.clientHeight;
+					const currentPos = e.target.scrollTop;
+					const ratio = currentPos / maxScroll;
+					if (ratio >= paginationScrollThreashold) {
+						nextPageLoading = true;
+						pageSkip.set($pageSkip + 1);
+						// extend existing chats
+						const nextPageChats = await getChatList(
+							localStorage.token,
+							$pageSkip * $pageLimit,
+							$pageLimit
+						);
+						// once the bottom of the list has been reached (no results) there is no need to continue querying
+						chatPagniationComplete = nextPageChats.length === 0;
+						await chats.set([...$chats, ...nextPageChats]);
+						nextPageLoading = false;
+					}
+				}}
+			>
 				{#each filteredChatList as chat, idx}
 					{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
 						<div
@@ -527,6 +582,11 @@
 						}}
 					/>
 				{/each}
+				{#if nextPageLoading}
+					<div class="w-full flex justify-center py-4 animate-pulse">
+						<Sparkles />
+					</div>
+				{/if}
 			</div>
 		</div>
 

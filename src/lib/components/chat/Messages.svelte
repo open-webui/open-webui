@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import { chats, config, settings, user as _user, mobile } from '$lib/stores';
+	import { chats, config, settings, user as _user, mobile, pageSkip, pageLimit } from '$lib/stores';
 	import { tick, getContext, onMount } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -90,7 +90,7 @@
 			history: history
 		});
 
-		await chats.set(await getChatList(localStorage.token));
+		await chats.set(await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit));
 	};
 
 	const confirmEditResponseMessage = async (messageId, content) => {
