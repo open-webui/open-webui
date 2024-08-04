@@ -39,6 +39,7 @@
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Sparkles from '../icons/Sparkles.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -591,6 +592,11 @@
 						}}
 					/>
 				{/each}
+				{#if nextPageLoading}
+					<div class="w-full flex justify-center py-4 animate-pulse">
+						<Sparkles />
+					</div>
+				{/if}
 			</div>
 		</div>
 
