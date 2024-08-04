@@ -1138,7 +1138,6 @@
 
 			if (res && res.ok && res.body) {
 				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
-				let lastUsage = null;
 
 				for await (const update of textStream) {
 					const { value, done, citations, error, usage } = update;
@@ -1164,7 +1163,7 @@
 					}
 
 					if (usage) {
-						lastUsage = usage;
+						responseMessage.info = { ...usage, openai: true };
 					}
 
 					if (citations) {
@@ -1216,10 +1215,6 @@
 					await tick();
 
 					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
-				}
-
-				if (lastUsage) {
-					responseMessage.info = { ...lastUsage, openai: true };
 				}
 
 				if ($chatId == _chatId) {
