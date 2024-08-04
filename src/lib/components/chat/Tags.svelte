@@ -8,13 +8,18 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { tags as _tags, chats, pinnedChats, currentChatPage } from '$lib/stores';
+	import {
+		tags as _tags,
+		chats,
+		pinnedChats,
+		currentChatPage,
+		scrollPaginationEnabled
+	} from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
 	import Tags from '../common/Tags.svelte';
-	import { enablePagination } from '$lib/utils';
 
 	export let chatId = '';
 	let tags = [];
@@ -60,10 +65,10 @@
 			}
 		} else {
 			// if the tag we deleted is no longer a valid tag, return to main chat list view
-			enablePagination();
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
+			await scrollPaginationEnabled.set(true);
 		}
 	};
 

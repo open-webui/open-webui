@@ -18,7 +18,6 @@
 	import { onMount, getContext, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
-	import { disablePagination, enablePagination } from '$lib/utils';
 
 	import { updateUserSettings } from '$lib/apis/users';
 	import {
@@ -56,7 +55,7 @@
 	let filteredChatList = [];
 
 	// Pagination variables
-	let chatListLoading = true;
+	let chatListLoading = false;
 	let allChatsLoaded = false;
 
 	$: filteredChatList = $chats.filter((chat) => {
@@ -78,6 +77,16 @@
 			return title.includes(query) || contentMatches;
 		}
 	});
+
+	const enablePagination = async () => {
+		// Reset pagination variables
+		currentChatPage.set(1);
+		allChatsLoaded = false;
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+
+		// Enable pagination
+		scrollPaginationEnabled.set(true);
+	};
 
 	const loadMoreChats = async () => {
 		chatListLoading = true;
@@ -104,10 +113,8 @@
 		});
 
 		showSidebar.set(window.innerWidth > BREAKPOINT);
-
 		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		chatListLoading = false;
+		await enablePagination();
 
 		let touchstart;
 		let touchend;
@@ -439,7 +446,7 @@
 						bind:value={search}
 						on:focus={async () => {
 							// TODO: migrate backend for more scalable search mechanism
-							disablePagination();
+							scrollPaginationEnabled.set(false);
 							await chats.set(await getChatList(localStorage.token)); // when searching, load all chats
 							enrichChatsWithContent($chats);
 						}}
@@ -452,9 +459,7 @@
 					<button
 						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 						on:click={async () => {
-							enablePagination();
-							allChatsLoaded = false;
-							await chats.set(await getChatList(localStorage.token, $currentChatPage));
+							await enablePagination();
 						}}
 					>
 						{$i18n.t('all')}
@@ -463,17 +468,17 @@
 						<button
 							class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 							on:click={async () => {
-								disablePagination();
+								scrollPaginationEnabled.set(false);
 								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
 								if (chatIds.length === 0) {
 									await tags.set(await getAllChatTags(localStorage.token));
 
 									// if the tag we deleted is no longer a valid tag, return to main chat list view
-									enablePagination();
-									allChatsLoaded = false;
-									chatIds = await getChatList(localStorage.token, $currentChatPage);
+									await enablePagination();
 								}
 								await chats.set(chatIds);
+
+								chatListLoading = false;
 							}}
 						>
 							{tag.name}

@@ -42,7 +42,7 @@ export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 export const showCallOverlay = writable(false);
 
-export const scrollPaginationEnabled = writable(true);
+export const scrollPaginationEnabled = writable(false);
 export const currentChatPage = writable(1);
 
 export type Model = OpenAIModel | OllamaModel;

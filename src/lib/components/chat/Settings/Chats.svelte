@@ -2,7 +2,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { chats, user, settings, scrollPaginationEnabled } from '$lib/stores';
+	import { chats, user, settings, scrollPaginationEnabled, currentChatPage } from '$lib/stores';
 
 	import {
 		archiveAllChats,
@@ -12,12 +12,7 @@
 		getAllUserChats,
 		getChatList
 	} from '$lib/apis/chats';
-	import {
-		getImportOrigin,
-		convertOpenAIChats,
-		disablePagination,
-		enablePagination
-	} from '$lib/utils';
+	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -66,7 +61,10 @@
 				await createNewChat(localStorage.token, chat);
 			}
 		}
-		enablePagination();
+
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		scrollPaginationEnabled.set(true);
 	};
 
 	const exportChats = async () => {
@@ -81,7 +79,10 @@
 		await archiveAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
 		});
-		enablePagination();
+
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		scrollPaginationEnabled.set(true);
 	};
 
 	const deleteAllChatsHandler = async () => {
@@ -90,7 +91,9 @@
 			toast.error(error);
 		});
 
-		enablePagination();
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		scrollPaginationEnabled.set(true);
 	};
 
 	const toggleSaveChatHistory = async () => {
