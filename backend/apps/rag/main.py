@@ -593,7 +593,6 @@ async def get_query_settings(user=Depends(get_verified_user)):
     return {
         "max_file_size": app.state.config.MAX_FILE_SIZE,
         "max_file_count": app.state.config.MAX_FILE_COUNT,
-        "enableBase64": app.state.config.ENABLE_BASE64,
     }
 
 
@@ -1273,8 +1272,7 @@ def process_doc(
         enableFileUpdateBase64 = False
 
         if user:
-            user_settings = user.settings
-            enableFileUpdateBase64 = user_settings.ui.get("enableFileUpdateBase64", False)
+            enableFileUpdateBase64 = user.settings.ui.get("enableFileUpdateBase64", False)
             # logging.error(f"user_settings: {user_settings}")
             # logging.error(f"enableFileUpdateBase64: {enableFileUpdateBase64}")
 

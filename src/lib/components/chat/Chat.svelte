@@ -508,7 +508,9 @@
 			);
 		} else if (
 			files.length > 0 &&
-			files.filter((file) => file.type !== 'image' && file.status !== 'processed').length > 0
+			files.filter(
+				(file) => file.type !== 'image' && !(file?.base64 ?? false) && file.status !== 'processed'
+			).length > 0
 		) {
 			// Upload not done
 			toast.error(
@@ -526,7 +528,13 @@
 			}
 
 			const _files = JSON.parse(JSON.stringify(files));
-			chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type) && (!item.base64 || item.type !== 'file')));
+			chatFiles.push(
+				..._files.filter(
+					(item) =>
+						['doc', 'file', 'collection'].includes(item.type) &&
+						(!item.base64 || item.type !== 'file')
+				)
+			);
 			chatFiles = chatFiles.filter(
 				// Remove duplicates
 				(item, index, array) =>
@@ -645,7 +653,7 @@
 				if (model) {
 					// If there are image files, check if model is vision capable
 					const hasImages = messages.some((message) =>
-						message.files?.some((file) => file.type === 'image')
+						message.files?.some((file) => file.type === 'image' || (file?.base64 ?? false))
 					);
 
 					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
@@ -748,7 +756,7 @@
 
 				// Extract and format image URLs if any exist
 				const imageUrls = message.files
-					?.filter((file) => file.type === 'image')
+					?.filter((file) => file.type === 'image' || (file?.base64 ?? false))
 					.map((file) => file.url.slice(file.url.indexOf(',') + 1));
 
 				// Add images array only if it contains elements
@@ -1072,7 +1080,9 @@
 						.filter((message) => message?.content?.trim())
 						.map((message, idx, arr) => ({
 							role: message.role,
-							...((message.files?.filter((file) => file.type === 'image' || (file.base64 && file.type === 'file')).length > 0 ?? false) &&
+							...((message.files?.filter((file) => file.type === 'image' || (file?.base64 ?? false))
+								.length > 0 ??
+								false) &&
 							message.role === 'user'
 								? {
 										content: [
@@ -1084,7 +1094,7 @@
 														: message?.raContent ?? message.content
 											},
 											...message.files
-												.filter((file) => file.type === 'image' || (file.base64 && file.type === 'file'))
+												.filter((file) => file.type === 'image' || (file?.base64 ?? false))
 												.map((file) => ({
 													type: 'image_url',
 													image_url: {

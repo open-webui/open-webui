@@ -118,7 +118,7 @@
 		}
 
 		const fileItem = {
-			type: 'file',
+			type: '',
 			file: '',
 			id: null,
 			url: '',
@@ -136,22 +136,25 @@
 			let uploadedFile = null;
 
 			if (!enableBase64) {
+				fileItem.type = 'file';
 				uploadedFile = await uploadFile(localStorage.token, file);
 			}
 
 			if (uploadedFile || enableBase64) {
 				fileItem.status = 'uploaded';
+				fileItem.url = URL.createObjectURL(file);
+				const fileType = file['type'];
+				const fileExtension = file.name.split('.').pop();
 
 				if (!enableBase64) {
 					fileItem.file = uploadedFile;
 					fileItem.id = uploadedFile.id;
-					fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+					// fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 				} else {
+					fileItem.type = fileExtension;
 					fileItem.id = uuidv4();
+					fileItem.base64 = true;
 				}
-
-				const fileType = file['type'];
-				const fileExtension = file.name.split('.').pop();
 
 				if (
 					SUPPORTED_FILE_TYPE.includes(fileType) ||
@@ -307,7 +310,7 @@
 				let reader = new FileReader();
 				reader.onload = (event) => {
 					let base64_url = event.target.result;
-					uploadFileHandler(file, base64_url, fileLimitSettings.enableBase64);
+					uploadFileHandler(file, base64_url, $settings?.enableFileUpdateBase64 ?? false);
 				};
 				reader.readAsDataURL(file);
 			}
@@ -321,13 +324,6 @@
 	};
 
 	onMount(() => {
-		const initFileLimitSettings = async () => {
-			try {
-				fileLimitSettings = await getFileLimitSettings(localStorage.token);
-			} catch (error) {
-				console.error('Error fetching query settings:', error);
-			}
-		};
 		initFileLimitSettings();
 
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
