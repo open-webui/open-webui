@@ -104,7 +104,13 @@
 		extensions: any;
 	};
 
+	function escapeMhchem(text: string) {
+		return text.replace(/^\\s*```/gm, '```');
+	}
+
 	$: if (message) {
+		let processedContent = escapeMhchem(message.content);
+		message.content = processedContent;
 		renderStyling();
 		processPlaceholders();
 	}
