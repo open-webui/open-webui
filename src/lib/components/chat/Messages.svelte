@@ -146,7 +146,7 @@
 
 		await tick();
 
-		if ($settings.scrollOnBranchChange) {
+		if ($settings?.scrollOnBranchChange ?? true) {
 			const element = document.getElementById('messages-container');
 			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
@@ -197,7 +197,7 @@
 
 		await tick();
 
-		if ($settings.scrollOnBranchChange) {
+		if ($settings?.scrollOnBranchChange ?? true) {
 			const element = document.getElementById('messages-container');
 			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
