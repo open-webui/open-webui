@@ -95,14 +95,9 @@
 		return html.replace(/^<a /, '<a target="_blank" rel="nofollow" ');
 	};
 
-	// renderer.image = function (href, title, text) {
-	// 	// 生成自定义 HTML，使用 Svelte 的 Image 组件
-	// 	return `
-    //         <div class="image-preview">
-    //             <Image src="${href}" alt="${text}" title="${title || text}" />
-    //         </div>
-    //     `;
-	// };
+	renderer.image = function (href, title, text) {
+		return `<div class="image-preview " style="z-index: 20; position: relative;" data-src="${href}" data-alt="${text}" ></div>`;
+	};
 
 	const { extensions, ...defaults } = marked.getDefaults() as marked.MarkedOptions & {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,6 +106,7 @@
 
 	$: if (message) {
 		renderStyling();
+		processPlaceholders();
 	}
 
 	const renderStyling = async () => {
@@ -384,11 +380,27 @@
 		(async () => {
 			await tick();
 			renderStyling();
+			processPlaceholders();
 
 			await mermaid.run({
 				querySelector: '.mermaid'
 			});
 		})();
+	}
+
+	function processPlaceholders() {
+		const placeholders = document.querySelectorAll('.image-preview');
+		placeholders.forEach((placeholder) => {
+			const src = placeholder.getAttribute('data-src');
+			const alt = placeholder.getAttribute('data-alt');
+			const isMarkdown = true;
+			placeholder.innerHTML = '';
+
+			new Image({
+				target: placeholder,
+				props: { src, alt, isMarkdown }
+			});
+		});
 	}
 
 	onMount(async () => {
@@ -398,6 +410,8 @@
 		await mermaid.run({
 			querySelector: '.mermaid'
 		});
+
+		setTimeout(processPlaceholders, 0);
 	});
 </script>
 

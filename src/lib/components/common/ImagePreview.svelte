@@ -1,11 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { showSidebar, mobile } from '$lib/stores';
 
 	export let show = false;
 	export let src = '';
 	export let alt = '';
-	export let isShowSidebar = false;
 
 	let mounted = false;
 
@@ -34,12 +32,6 @@
 	}
 
 	const closeShow = () => {
-		if ($mobile) {
-			showSidebar.set(false);
-		} else {
-			showSidebar.set(isShowSidebar);
-		}
-		console.log(isShowSidebar);
 		show = false;
 	};
 

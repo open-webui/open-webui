@@ -263,7 +263,7 @@ __builtins__.input = input`);
 	}
 </script>
 
-<div class="mb-4" dir="ltr">
+<div dir="ltr">
 	<div
 		class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg overflow-x-auto"
 	>
@@ -340,11 +340,7 @@ __builtins__.input = input`);
 				</div>
 			</div>
 			<div style="display: {expanded ? 'flex' : 'none'}; bg-white">
-				<iframe
-					bind:this={sandpackIframe}
-					title="Preview"
-					class="w-full h-96 mt-4"
-				/>
+				<iframe bind:this={sandpackIframe} title="Preview" class="w-full h-96 mt-4" />
 			</div>
 		</div>
 	{/if}
