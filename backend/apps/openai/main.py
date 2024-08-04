@@ -360,6 +360,7 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
 ):
     idx = 0
+    error = False
     payload = {**form_data}
     if "metadata" in payload:
         del payload["metadata"]
@@ -502,6 +503,7 @@ async def generate_chat_completion(
             return response_data
     except Exception as e:
         log.exception(e)
+        error = True
         error_detail = "Open WebUI: Server Connection Error"
         if r is not None:
             try:
@@ -516,7 +518,8 @@ async def generate_chat_completion(
             if r:
                 r.close()
             await session.close()
-        await process_user_usage(model, user)
+        if not error:
+            await process_user_usage(model, user)
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
