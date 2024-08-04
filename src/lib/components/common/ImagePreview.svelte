@@ -1,11 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { showSidebar, mobile } from '$lib/stores';
 
 	export let show = false;
 	export let src = '';
 	export let alt = '';
+	export let isShowSidebar = false;
 
 	let mounted = false;
+
+	let previewElement = null;
+
 	const MimeTypes: { [index: string]: string } = {
 		jpeg: 'image/jpeg',
 		jpg: 'image/jpeg',
@@ -27,6 +32,16 @@
 	function getMimeType(extension: string) {
 		return MimeTypes[extension.toLowerCase()] || 'image/png';
 	}
+
+	const closeShow = () => {
+		if ($mobile) {
+			showSidebar.set(false);
+		} else {
+			showSidebar.set(isShowSidebar);
+		}
+		console.log(isShowSidebar);
+		show = false;
+	};
 
 	const downloadImage = (url) => {
 		const urlParts = url.split('/');
@@ -55,7 +70,7 @@
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
 			console.log('Escape');
-			show = false;
+			closeShow();
 		}
 	};
 
@@ -63,14 +78,14 @@
 		mounted = true;
 	});
 
-	$: if (mounted) {
-		if (show) {
-			window.addEventListener('keydown', handleKeyDown);
-			document.body.style.overflow = 'hidden';
-		} else {
-			window.removeEventListener('keydown', handleKeyDown);
-			document.body.style.overflow = 'unset';
-		}
+	$: if (show && previewElement) {
+		document.body.appendChild(previewElement);
+		window.addEventListener('keydown', handleKeyDown);
+		document.body.style.overflow = 'hidden';
+	} else if (previewElement) {
+		window.removeEventListener('keydown', handleKeyDown);
+		document.body.removeChild(previewElement);
+		document.body.style.overflow = 'unset';
 	}
 </script>
 
@@ -78,14 +93,15 @@
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
-		class="fixed top-0 right-0 left-0 bottom-0 bg-black text-white w-full min-h-screen h-screen flex justify-center z-60 overflow-hidden overscroll-contain"
+		bind:this={previewElement}
+		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black text-white w-full min-h-screen h-screen flex justify-center z-[9999] overflow-hidden overscroll-contain"
 	>
 		<div class=" absolute left-0 w-full flex justify-between">
 			<div>
 				<button
 					class=" p-5"
 					on:click={() => {
-						show = false;
+						closeShow();
 					}}
 				>
 					<svg

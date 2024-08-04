@@ -3,6 +3,7 @@
 
 	import { tick, createEventDispatcher, getContext } from 'svelte';
 	import Name from './Name.svelte';
+	import Image from '$lib/components/common/Image.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import { models, settings } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -97,7 +98,8 @@
 					{#each message.files as file}
 						<div class={$settings?.chatBubble ?? true ? 'self-end' : ''}>
 							{#if file.type === 'image'}
-								<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
+								<Image src={file.url} alt="input" />
+								<!-- <img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" /> -->
 							{:else}
 								<FileItem
 									url={file.url}
