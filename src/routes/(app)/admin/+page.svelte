@@ -307,7 +307,7 @@
 
 						<td class="px-3 py-2 text-right">
 							<div class="flex justify-end w-full">
-								{#if user.role !== 'admin'}
+								{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Chats')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"

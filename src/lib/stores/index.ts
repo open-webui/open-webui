@@ -149,6 +149,7 @@ type Config = {
 		enable_web_search?: boolean;
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
+		enable_admin_chat_access: boolean;
 		enable_community_sharing: boolean;
 	};
 	oauth: {

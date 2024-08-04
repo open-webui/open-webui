@@ -28,7 +28,7 @@ from apps.webui.models.tags import (
 
 from constants import ERROR_MESSAGES
 
-from config import SRC_LOG_LEVELS, ENABLE_ADMIN_EXPORT
+from config import SRC_LOG_LEVELS, ENABLE_ADMIN_EXPORT, ENABLE_ADMIN_CHAT_ACCESS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -81,6 +81,11 @@ async def get_user_chat_list_by_user_id(
     skip: int = 0,
     limit: int = 50,
 ):
+    if not ENABLE_ADMIN_CHAT_ACCESS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
     return Chats.get_chat_list_by_user_id(
         user_id, include_archived=True, skip=skip, limit=limit
     )
@@ -183,7 +188,7 @@ async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user)):
 
     if user.role == "user":
         chat = Chats.get_chat_by_share_id(share_id)
-    elif user.role == "admin":
+    elif user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS:
         chat = Chats.get_chat_by_id(share_id)
 
     if chat:
