@@ -61,7 +61,7 @@
 		} else {
 			// if the tag we deleted is no longer a valid tag, return to main chat list view
 			enablePagination();
-			currentChatPage.set(0);
+			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}

@@ -209,7 +209,7 @@
 			}
 
 			allChatsLoaded = false;
-			currentChatPage.set(0);
+			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
@@ -453,6 +453,7 @@
 						on:click={async () => {
 							enablePagination();
 							allChatsLoaded = false;
+							await chats.set(await getChatList(localStorage.token, $currentChatPage));
 						}}
 					>
 						{$i18n.t('all')}
@@ -469,6 +470,7 @@
 									// if the tag we deleted is no longer a valid tag, return to main chat list view
 									enablePagination();
 									allChatsLoaded = false;
+									chatIds = await getChatList(localStorage.token, $currentChatPage);
 								}
 								await chats.set(chatIds);
 							}}

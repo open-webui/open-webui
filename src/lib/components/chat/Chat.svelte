@@ -423,7 +423,7 @@
 					files: chatFiles
 				});
 
-				currentChatPage.set(0);
+				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
@@ -471,7 +471,7 @@
 					files: chatFiles
 				});
 
-				currentChatPage.set(0);
+				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
@@ -633,7 +633,7 @@
 					timestamp: Date.now()
 				});
 
-				currentChatPage.set(0);
+				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 				await chatId.set(chat.id);
 			} else {
@@ -710,7 +710,7 @@
 			})
 		);
 
-		currentChatPage.set(0);
+		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 
 		return _responses;
@@ -959,7 +959,7 @@
 						files: chatFiles
 					});
 
-					currentChatPage.set(0);
+					currentChatPage.set(1);
 					await chats.set(await getChatList(localStorage.token, $currentChatPage));
 				}
 			}
@@ -1228,7 +1228,7 @@
 							files: chatFiles
 						});
 
-						currentChatPage.set(0);
+						currentChatPage.set(1);
 						await chats.set(await getChatList(localStorage.token, $currentChatPage));
 					}
 				}
@@ -1395,7 +1395,7 @@
 		if ($settings.saveChatHistory ?? true) {
 			chat = await updateChatById(localStorage.token, _chatId, { title: _title });
 
-			currentChatPage.set(0);
+			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		}
 	};

@@ -41,7 +41,7 @@
 				title: _title
 			});
 
-			currentChatPage.set(0);
+			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
@@ -56,7 +56,7 @@
 		if (res) {
 			goto(`/c/${res.id}`);
 
-			currentChatPage.set(0);
+			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
@@ -65,7 +65,7 @@
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
 
-		currentChatPage.set(0);
+		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 	};

@@ -90,7 +90,7 @@
 			history: history
 		});
 
-		currentChatPage.set(0);
+		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 

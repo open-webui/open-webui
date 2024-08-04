@@ -45,7 +45,7 @@ router = APIRouter()
 async def get_session_user_chat_list(
     user=Depends(get_verified_user), page: Optional[int] = None
 ):
-    if page:
+    if page is not None:
         limit = 20
         skip = (page - 1) * limit
 

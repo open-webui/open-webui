@@ -784,7 +784,7 @@ export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, def
 export const enablePagination = () => {
 	// Enable infinite scroll pagination
 	chats.set([]);
-	currentChatPage.set(0);
+	currentChatPage.set(1);
 	scrollPaginationEnabled.set(true);
 };
 
