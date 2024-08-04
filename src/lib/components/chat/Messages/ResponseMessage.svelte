@@ -55,7 +55,6 @@
 	export let copyToClipboard: Function;
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
-	export let chatActionHandler: Function;
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
@@ -527,6 +526,28 @@
 												lang={token?.lang ?? ''}
 												code={revertSanitizedResponseContent(token?.text ?? '')}
 											/>
+										{/if}
+									{:else if token.type === 'paragraph'}
+										{#if token.tokens}
+											{#each token.tokens as inlineToken}
+												{#if inlineToken.type === 'image'}
+													<Image src={inlineToken.href} alt={inlineToken.text} />
+												{:else}
+													{@html marked.parseInline(inlineToken.raw, {
+														...defaults,
+														gfm: true,
+														breaks: true,
+														renderer
+													})}
+												{/if}
+											{/each}
+										{:else}
+											{@html marked.parseInline(token.raw, {
+												...defaults,
+												gfm: true,
+												breaks: true,
+												renderer
+											})}
 										{/if}
 									{:else}
 										{@html marked.parse(token.raw, {
