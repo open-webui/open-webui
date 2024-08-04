@@ -1,15 +1,12 @@
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import HTTPException, status, Depends, Request
-from sqlalchemy.orm import Session
 
 from apps.webui.models.users import Users
 
-from pydantic import BaseModel
 from typing import Union, Optional
 from constants import ERROR_MESSAGES
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
-import requests
 import jwt
 import uuid
 import logging
@@ -54,7 +51,7 @@ def decode_token(token: str) -> Optional[dict]:
     try:
         decoded = jwt.decode(token, SESSION_SECRET, algorithms=[ALGORITHM])
         return decoded
-    except Exception as e:
+    except Exception:
         return None
 
 
@@ -71,7 +68,7 @@ def get_http_authorization_cred(auth_header: str):
     try:
         scheme, credentials = auth_header.split(" ")
         return HTTPAuthorizationCredentials(scheme=scheme, credentials=credentials)
-    except:
+    except Exception:
         raise ValueError(ERROR_MESSAGES.INVALID_TOKEN)
 
 
@@ -96,7 +93,7 @@ def get_current_user(
 
     # auth by jwt token
     data = decode_token(token)
-    if data != None and "id" in data:
+    if data is not None and "id" in data:
         user = Users.get_user_by_id(data["id"])
         if user is None:
             raise HTTPException(

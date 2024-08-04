@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import { chats, config, settings, user as _user, mobile } from '$lib/stores';
+	import { chats, config, settings, user as _user, mobile, currentChatPage } from '$lib/stores';
 	import { tick, getContext, onMount } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -90,7 +90,8 @@
 			history: history
 		});
 
-		await chats.set(await getChatList(localStorage.token));
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
 	const confirmEditResponseMessage = async (messageId, content) => {
@@ -146,12 +147,14 @@
 
 		await tick();
 
-		const element = document.getElementById('messages-container');
-		autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+		if ($settings?.scrollOnBranchChange ?? true) {
+			const element = document.getElementById('messages-container');
+			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
-		setTimeout(() => {
-			scrollToBottom();
-		}, 100);
+			setTimeout(() => {
+				scrollToBottom();
+			}, 100);
+		}
 	};
 
 	const showNextMessage = async (message) => {
@@ -195,12 +198,14 @@
 
 		await tick();
 
-		const element = document.getElementById('messages-container');
-		autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+		if ($settings?.scrollOnBranchChange ?? true) {
+			const element = document.getElementById('messages-container');
+			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
-		setTimeout(() => {
-			scrollToBottom();
-		}, 100);
+			setTimeout(() => {
+				scrollToBottom();
+			}, 100);
+		}
 	};
 
 	const deleteMessageHandler = async (messageId) => {

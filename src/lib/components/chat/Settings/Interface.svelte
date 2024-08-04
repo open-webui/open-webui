@@ -22,6 +22,7 @@
 	let responseAutoCopy = false;
 	let widescreenMode = false;
 	let splitLargeChunks = false;
+	let scrollOnBranchChange = true;
 	let userLocation = false;
 	let enableFileUpdateBase64 = false;
 
@@ -38,6 +39,11 @@
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
 		saveSettings({ splitLargeChunks: splitLargeChunks });
+	};
+
+	const togglesScrollOnBranchChange = async () => {
+		scrollOnBranchChange = !scrollOnBranchChange;
+		saveSettings({ scrollOnBranchChange: scrollOnBranchChange });
 	};
 
 	const togglewidescreenMode = async () => {
@@ -147,6 +153,7 @@
 		chatBubble = $settings.chatBubble ?? true;
 		widescreenMode = $settings.widescreenMode ?? false;
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
+		scrollOnBranchChange = $settings.scrollOnBranchChange ?? true;
 		chatDirection = $settings.chatDirection ?? 'LTR';
 		userLocation = $settings.userLocation ?? false;
 		enableFileUpdateBase64 = $settings.enableFileUpdateBase64 ?? false;
@@ -376,6 +383,28 @@
 							<span class="ml-2 self-center">{$i18n.t('Reset')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Upload')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('Scroll to bottom when switching between branches')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							togglesScrollOnBranchChange();
+						}}
+						type="button"
+					>
+						{#if scrollOnBranchChange === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
