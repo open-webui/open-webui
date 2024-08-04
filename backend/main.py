@@ -1395,6 +1395,11 @@ async def chat_action(action_id: str, form_data: dict, user=Depends(get_verified
             for key, value in extra_params.items():
                 if key in sig.parameters:
                     params[key] = value
+            
+            try:
+                setting_enableFileUpdateBase64 = user.settings.ui.get("enableFileUpdateBase64", False)
+            except AttributeError:
+                setting_enableFileUpdateBase64 = False
 
             if "__user__" in sig.parameters:
                 __user__ = {
