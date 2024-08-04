@@ -12,9 +12,8 @@
 		mobile,
 		showArchivedChats,
 		pinnedChats,
-		pageSkip,
-		pageLimit,
-		scrollPaginationEnabled
+		scrollPaginationEnabled,
+		currentChatPage
 	} from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
@@ -60,8 +59,6 @@
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
-	pageLimit.set(20);
-
 	$: filteredChatList = $chats.filter((chat) => {
 		if (search === '') {
 			return true;
@@ -84,8 +81,9 @@
 
 	const loadMoreChats = async () => {
 		chatListLoading = true;
-		pageSkip.set($pageSkip + 1);
-		const newChatList = await getChatList(localStorage.token, $pageSkip * $pageLimit, $pageLimit);
+
+		currentChatPage.set($currentChatPage + 1);
+		const newChatList = await getChatList(localStorage.token, $currentChatPage);
 
 		// once the bottom of the list has been reached (no results) there is no need to continue querying
 		allChatsLoaded = newChatList.length === 0;
@@ -108,7 +106,7 @@
 		showSidebar.set(window.innerWidth > BREAKPOINT);
 
 		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
-		await chats.set(await getChatList(localStorage.token, $pageSkip, $pageLimit));
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 
 		let touchstart;
 		let touchend;
@@ -209,9 +207,11 @@
 				await tick();
 				goto('/');
 			}
-			await chats.set(
-				await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
-			);
+
+			allChatsLoaded = false;
+			currentChatPage.set(0);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
@@ -453,9 +453,6 @@
 						on:click={async () => {
 							enablePagination();
 							allChatsLoaded = false;
-							await chats.set(
-								await getChatList(localStorage.token, $pageSkip * $pageLimit, $pageLimit)
-							);
 						}}
 					>
 						{$i18n.t('all')}
@@ -469,11 +466,9 @@
 								if (chatIds.length === 0) {
 									await tags.set(await getAllChatTags(localStorage.token));
 
-									chatIds = await getChatList(
-										localStorage.token,
-										$pageSkip * $pageLimit,
-										$pageLimit
-									);
+									// if the tag we deleted is no longer a valid tag, return to main chat list view
+									enablePagination();
+									allChatsLoaded = false;
 								}
 								await chats.set(chatIds);
 							}}

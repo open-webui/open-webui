@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import { WEBUI_BASE_URL } from '$lib/constants';
-import { scrollPaginationEnabled, pageLimit, pageSkip, chats } from '$lib/stores';
+import { scrollPaginationEnabled, chats, currentChatPage } from '$lib/stores';
 
 //////////////////////////
 // Helper functions
@@ -782,14 +782,13 @@ export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, def
 };
 
 export const enablePagination = () => {
+	// Enable infinite scroll pagination
 	chats.set([]);
+	currentChatPage.set(0);
 	scrollPaginationEnabled.set(true);
-	pageLimit.set(20);
-	pageSkip.set(0);
 };
 
 export const disablePagination = () => {
+	// Disable infinite scroll pagination
 	scrollPaginationEnabled.set(false);
-	pageLimit.set(-1);
-	pageSkip.set(0);
 };

@@ -2,7 +2,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { chats, user, settings, scrollPaginationEnabled, pageSkip, pageLimit } from '$lib/stores';
+	import { chats, user, settings, scrollPaginationEnabled } from '$lib/stores';
 
 	import {
 		archiveAllChats,

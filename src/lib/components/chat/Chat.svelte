@@ -26,8 +26,7 @@
 		socket,
 		showCallOverlay,
 		tools,
-		pageSkip,
-		pageLimit
+		currentChatPage
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -423,9 +422,9 @@
 					params: params,
 					files: chatFiles
 				});
-				await chats.set(
-					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
-				);
+
+				currentChatPage.set(0);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
 	};
@@ -471,9 +470,9 @@
 					params: params,
 					files: chatFiles
 				});
-				await chats.set(
-					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
-				);
+
+				currentChatPage.set(0);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
 	};
@@ -633,9 +632,9 @@
 					tags: [],
 					timestamp: Date.now()
 				});
-				await chats.set(
-					await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
-				);
+
+				currentChatPage.set(0);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 				await chatId.set(chat.id);
 			} else {
 				await chatId.set('local');
@@ -711,7 +710,8 @@
 			})
 		);
 
-		await chats.set(await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit));
+		currentChatPage.set(0);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 
 		return _responses;
 	};
@@ -958,9 +958,9 @@
 						params: params,
 						files: chatFiles
 					});
-					await chats.set(
-						await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
-					);
+
+					currentChatPage.set(0);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
 				}
 			}
 		} else {
@@ -1227,9 +1227,9 @@
 							params: params,
 							files: chatFiles
 						});
-						await chats.set(
-							await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
-						);
+
+						currentChatPage.set(0);
+						await chats.set(await getChatList(localStorage.token, $currentChatPage));
 					}
 				}
 			} else {
@@ -1394,9 +1394,9 @@
 
 		if ($settings.saveChatHistory ?? true) {
 			chat = await updateChatById(localStorage.token, _chatId, { title: _title });
-			await chats.set(
-				await getChatList(localStorage.token, 0, $pageSkip * $pageLimit || $pageLimit)
-			);
+
+			currentChatPage.set(0);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		}
 	};
 

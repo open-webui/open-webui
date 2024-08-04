@@ -32,10 +32,15 @@ export const createNewChat = async (token: string, chat: object) => {
 	return res;
 };
 
-export const getChatList = async (token: string = '', skip: number = 0, limit: number = -1) => {
+export const getChatList = async (token: string = '', page: number | null = null) => {
 	let error = null;
+	const searchParams = new URLSearchParams();
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/?skip=${skip}&limit=${limit}`, {
+	if (page !== null) {
+		searchParams.append('page', `${page}`);
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
