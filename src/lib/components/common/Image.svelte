@@ -13,11 +13,13 @@
 </script>
 
 <ImagePreview bind:show={showImagePreview} src={_src} {alt} />
-<button
-	on:click={() => {
-		console.log('image preview');
-		showImagePreview = true;
-	}}
->
-	<img src={_src} {alt} class=" max-h-96 rounded-lg" draggable="false" data-cy="image" />
-</button>
+
+<div class="w-full">
+	<button
+		on:click={() => {
+			showImagePreview = true;
+		}}
+	>
+		<img src={_src} {alt} class=" max-h-96 rounded-lg" draggable="false" data-cy="image" />
+	</button>
+</div>

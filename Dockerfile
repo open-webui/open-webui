@@ -136,7 +136,7 @@ RUN apt-get update && apt-get install -y apt-transport-https ca-certificates cur
 
 EXPOSE 8080
 
-HEALTHCHECK CMD curl --silent --fail http://localhost:8080/health | jq -e '.status == true' || exit 1
+HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
 
 USER $UID:$GID
 

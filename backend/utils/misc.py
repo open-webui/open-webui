@@ -1,44 +1,47 @@
 from pathlib import Path
 import hashlib
-import json
 import re
 from datetime import timedelta
 from typing import Optional, List, Tuple
 import uuid
 import time
 
+from utils.task import prompt_template
 
-def get_last_user_message_item(messages: List[dict]) -> str:
+
+def get_last_user_message_item(messages: List[dict]) -> Optional[dict]:
     for message in reversed(messages):
         if message["role"] == "user":
             return message
     return None
 
 
-def get_last_user_message(messages: List[dict]) -> str:
-    message = get_last_user_message_item(messages)
-
-    if message is not None:
-        if isinstance(message["content"], list):
-            for item in message["content"]:
-                if item["type"] == "text":
-                    return item["text"]
+def get_content_from_message(message: dict) -> Optional[str]:
+    if isinstance(message["content"], list):
+        for item in message["content"]:
+            if item["type"] == "text":
+                return item["text"]
+    else:
         return message["content"]
     return None
 
 
-def get_last_assistant_message(messages: List[dict]) -> str:
+def get_last_user_message(messages: List[dict]) -> Optional[str]:
+    message = get_last_user_message_item(messages)
+    if message is None:
+        return None
+
+    return get_content_from_message(message)
+
+
+def get_last_assistant_message(messages: List[dict]) -> Optional[str]:
     for message in reversed(messages):
         if message["role"] == "assistant":
-            if isinstance(message["content"], list):
-                for item in message["content"]:
-                    if item["type"] == "text":
-                        return item["text"]
-            return message["content"]
+            return get_content_from_message(message)
     return None
 
 
-def get_system_message(messages: List[dict]) -> dict:
+def get_system_message(messages: List[dict]) -> Optional[dict]:
     for message in messages:
         if message["role"] == "system":
             return message
@@ -49,8 +52,23 @@ def remove_system_message(messages: List[dict]) -> List[dict]:
     return [message for message in messages if message["role"] != "system"]
 
 
-def pop_system_message(messages: List[dict]) -> Tuple[dict, List[dict]]:
+def pop_system_message(messages: List[dict]) -> Tuple[Optional[dict], List[dict]]:
     return get_system_message(messages), remove_system_message(messages)
+
+
+def prepend_to_first_user_message_content(
+    content: str, messages: List[dict]
+) -> List[dict]:
+    for message in messages:
+        if message["role"] == "user":
+            if isinstance(message["content"], list):
+                for item in message["content"]:
+                    if item["type"] == "text":
+                        item["text"] = f"{content}\n{item['text']}"
+            else:
+                message["content"] = f"{content}\n{message['content']}"
+            break
+    return messages
 
 
 def add_or_update_system_message(content: str, messages: List[dict]):
@@ -72,21 +90,69 @@ def add_or_update_system_message(content: str, messages: List[dict]):
     return messages
 
 
-def stream_message_template(model: str, message: str):
+def openai_chat_message_template(model: str):
     return {
         "id": f"{model}-{str(uuid.uuid4())}",
-        "object": "chat.completion.chunk",
         "created": int(time.time()),
         "model": model,
-        "choices": [
-            {
-                "index": 0,
-                "delta": {"content": message},
-                "logprobs": None,
-                "finish_reason": None,
-            }
-        ],
+        "choices": [{"index": 0, "logprobs": None, "finish_reason": None}],
     }
+
+
+def openai_chat_chunk_message_template(model: str, message: str) -> dict:
+    template = openai_chat_message_template(model)
+    template["object"] = "chat.completion.chunk"
+    template["choices"][0]["delta"] = {"content": message}
+    return template
+
+
+def openai_chat_completion_message_template(model: str, message: str) -> dict:
+    template = openai_chat_message_template(model)
+    template["object"] = "chat.completion"
+    template["choices"][0]["message"] = {"content": message, "role": "assistant"}
+    template["choices"][0]["finish_reason"] = "stop"
+    return template
+
+
+# inplace function: form_data is modified
+def apply_model_system_prompt_to_body(params: dict, form_data: dict, user) -> dict:
+    system = params.get("system", None)
+    if not system:
+        return form_data
+
+    if user:
+        template_params = {
+            "user_name": user.name,
+            "user_location": user.info.get("location") if user.info else None,
+        }
+    else:
+        template_params = {}
+    system = prompt_template(system, **template_params)
+    form_data["messages"] = add_or_update_system_message(
+        system, form_data.get("messages", [])
+    )
+    return form_data
+
+
+# inplace function: form_data is modified
+def apply_model_params_to_body(params: dict, form_data: dict) -> dict:
+    if not params:
+        return form_data
+
+    mappings = {
+        "temperature": float,
+        "top_p": int,
+        "max_tokens": int,
+        "frequency_penalty": int,
+        "seed": lambda x: x,
+        "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
+    }
+
+    for key, cast_func in mappings.items():
+        if (value := params.get(key)) is not None:
+            form_data[key] = cast_func(value)
+
+    return form_data
 
 
 def get_gravatar_url(email):
@@ -159,7 +225,7 @@ def extract_folders_after_data_docs(path):
     tags = []
 
     folders = parts[index_docs:-1]
-    for idx, part in enumerate(folders):
+    for idx, _ in enumerate(folders):
         tags.append("/".join(folders[: idx + 1]))
 
     return tags
@@ -255,11 +321,11 @@ def parse_ollama_modelfile(model_text):
             value = param_match.group(1)
 
             try:
-                if param_type == int:
+                if param_type is int:
                     value = int(value)
-                elif param_type == float:
+                elif param_type is float:
                     value = float(value)
-                elif param_type == bool:
+                elif param_type is bool:
                     value = value.lower() == "true"
             except Exception as e:
                 print(e)

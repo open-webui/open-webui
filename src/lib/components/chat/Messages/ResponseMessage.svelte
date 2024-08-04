@@ -55,7 +55,6 @@
 	export let copyToClipboard: Function;
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
-	export let chatActionHandler: Function;
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
@@ -175,7 +174,10 @@
 					delimiters: [
 						{ left: '$$', right: '$$', display: false },
 						{ left: '$ ', right: ' $', display: false },
+						{ left: '\\pu{', right: '}', display: false },
+						{ left: '\\ce{', right: '}', display: false },
 						{ left: '\\(', right: '\\)', display: false },
+						{ left: '( ', right: ' )', display: false },
 						{ left: '\\[', right: '\\]', display: false },
 						{ left: '[ ', right: ' ]', display: false }
 					],
@@ -218,7 +220,7 @@
 			if ((message?.content ?? '').trim() !== '') {
 				speaking = true;
 
-				if ($config.audio.tts.engine === 'openai') {
+				if ($config.audio.tts.engine !== '') {
 					loadingSpeech = true;
 
 					const sentences = extractSentences(message.content).reduce((mergedTexts, currentText) => {
@@ -250,7 +252,9 @@
 						for (const [idx, sentence] of sentences.entries()) {
 							const res = await synthesizeOpenAISpeech(
 								localStorage.token,
-								$settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
+								$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
+									? $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
+									: $config?.audio?.tts?.voice,
 								sentence
 							).catch((error) => {
 								toast.error(error);
@@ -433,7 +437,7 @@
 						{@const status = (
 							message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
 						).at(-1)}
-						<div class="flex items-center gap-2 pt-1 pb-1">
+						<div class="flex items-center gap-2 pt-0.5 pb-1">
 							{#if status.done === false}
 								<div class="">
 									<Spinner className="size-4" />
@@ -522,6 +526,28 @@
 												lang={token?.lang ?? ''}
 												code={revertSanitizedResponseContent(token?.text ?? '')}
 											/>
+										{/if}
+									{:else if token.type === 'paragraph'}
+										{#if token.tokens}
+											{#each token.tokens as inlineToken}
+												{#if inlineToken.type === 'image'}
+													<Image src={inlineToken.href} alt={inlineToken.text} />
+												{:else}
+													{@html marked.parse(inlineToken.raw, {
+														...defaults,
+														gfm: true,
+														breaks: true,
+														renderer
+													})}
+												{/if}
+											{/each}
+										{:else}
+											{@html marked.parse(token.raw, {
+												...defaults,
+												gfm: true,
+												breaks: true,
+												renderer
+											})}
 										{/if}
 									{:else}
 										{@html marked.parse(token.raw, {

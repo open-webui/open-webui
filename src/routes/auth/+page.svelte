@@ -173,88 +173,94 @@
 							{/if}
 						</div>
 
-						<div class="flex flex-col mt-4">
-							{#if mode === 'signup'}
-								<div>
-									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Name')}</div>
+						{#if $config?.features.enable_login_form}
+							<div class="flex flex-col mt-4">
+								{#if mode === 'signup'}
+									<div>
+										<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Name')}</div>
+										<input
+											bind:value={name}
+											type="text"
+											class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
+											autocomplete="name"
+											placeholder={$i18n.t('Enter Your Full Name')}
+											required
+										/>
+									</div>
+
+									<hr class=" my-3 dark:border-gray-900" />
+								{/if}
+
+								<div class="mb-2">
+									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Email')}</div>
 									<input
-										bind:value={name}
-										type="text"
+										bind:value={email}
+										type="email"
 										class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
-										autocomplete="name"
-										placeholder={$i18n.t('Enter Your Full Name')}
+										autocomplete="email"
+										placeholder={$i18n.t('Enter Your Email')}
 										required
 									/>
 								</div>
 
-								<hr class=" my-3 dark:border-gray-900" />
-							{/if}
+								<div>
+									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
 
-							<div class="mb-2">
-								<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Email')}</div>
-								<input
-									bind:value={email}
-									type="email"
-									class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
-									autocomplete="email"
-									placeholder={$i18n.t('Enter Your Email')}
-									required
-								/>
-							</div>
-
-							<div>
-								<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
-
-								<input
-									bind:value={password}
-									type="password"
-									class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
-									placeholder={$i18n.t('Enter Your Password')}
-									autocomplete="current-password"
-									required
-								/>
-							</div>
-						</div>
-
-						<div class="mt-5">
-							<button
-								class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-medium text-sm py-3 transition"
-								type="submit"
-							>
-								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
-							</button>
-
-							{#if $config?.features.enable_signup}
-								<div class=" mt-4 text-sm text-center">
-									{mode === 'signin'
-										? $i18n.t("Don't have an account?")
-										: $i18n.t('Already have an account?')}
-
-									<button
-										class=" font-medium underline"
-										type="button"
-										on:click={() => {
-											if (mode === 'signin') {
-												mode = 'signup';
-											} else {
-												mode = 'signin';
-											}
-										}}
-									>
-										{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
-									</button>
+									<input
+										bind:value={password}
+										type="password"
+										class=" px-5 py-3 rounded-2xl w-full text-sm outline-none border dark:border-none dark:bg-gray-900"
+										placeholder={$i18n.t('Enter Your Password')}
+										autocomplete="current-password"
+										required
+									/>
 								</div>
-							{/if}
-						</div>
+							</div>
+						{/if}
+
+						{#if $config?.features.enable_login_form}
+							<div class="mt-5">
+								<button
+									class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-medium text-sm py-3 transition"
+									type="submit"
+								>
+									{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
+								</button>
+
+								{#if $config?.features.enable_signup}
+									<div class=" mt-4 text-sm text-center">
+										{mode === 'signin'
+											? $i18n.t("Don't have an account?")
+											: $i18n.t('Already have an account?')}
+
+										<button
+											class=" font-medium underline"
+											type="button"
+											on:click={() => {
+												if (mode === 'signin') {
+													mode = 'signup';
+												} else {
+													mode = 'signin';
+												}
+											}}
+										>
+											{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
+										</button>
+									</div>
+								{/if}
+							</div>
+						{/if}
 					</form>
 
 					{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 						<div class="inline-flex items-center justify-center w-full">
 							<hr class="w-64 h-px my-8 bg-gray-200 border-0 dark:bg-gray-700" />
-							<span
-								class="absolute px-3 font-medium text-gray-900 -translate-x-1/2 bg-white left-1/2 dark:text-white dark:bg-gray-950"
-								>{$i18n.t('or')}</span
-							>
+							{#if $config?.features.enable_login_form}
+								<span
+									class="absolute px-3 font-medium text-gray-900 -translate-x-1/2 bg-white left-1/2 dark:text-white dark:bg-gray-950"
+									>{$i18n.t('or')}</span
+								>
+							{/if}
 						</div>
 						<div class="flex flex-col space-y-2">
 							{#if $config?.oauth?.providers?.google}
