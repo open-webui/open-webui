@@ -116,6 +116,7 @@ from config import (
     WEBUI_SECRET_KEY,
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
+    ENABLE_ADMIN_CHAT_ACCESS,
     AppConfig,
 )
 
@@ -1996,6 +1997,7 @@ async def get_app_config():
             "enable_image_generation": images_app.state.config.ENABLED,
             "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
             "enable_admin_export": ENABLE_ADMIN_EXPORT,
+            "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
         },
         "audio": {
             "tts": {
