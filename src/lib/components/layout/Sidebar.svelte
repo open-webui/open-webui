@@ -39,7 +39,7 @@
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import Sparkles from '../icons/Sparkles.svelte';
+	import Spinner from '../common/Spinner.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -58,10 +58,8 @@
 	let paginationScrollThreashold = 0.6;
 	let nextPageLoading = false;
 	let chatPagniationComplete = false;
-	// number of chats per page depends on screen size.
-	// 35px is the height of each chat item.
-	// load 5 extra chats
-	pageLimit.set(Math.round(window.innerHeight / 35) + 5);
+
+	pageLimit.set(20);
 
 	$: filteredChatList = $chats.filter((chat) => {
 		if (search === '') {
@@ -152,6 +150,48 @@
 
 		window.addEventListener('focus', onFocus);
 		window.addEventListener('blur', onBlur);
+
+		// Infinite scroll
+		const loader = document.getElementById('loader');
+
+		const observer = new IntersectionObserver(
+			(entries, observer) => {
+				entries.forEach((entry) => {
+					if (entry.isIntersecting) {
+						loadMoreContent();
+						observer.unobserve(loader); // Stop observing until content is loaded
+					}
+				});
+			},
+			{
+				root: null, // viewport
+				rootMargin: '0px',
+				threshold: 1.0 // When 100% of the loader is visible
+			}
+		);
+
+		observer.observe(loader);
+		const loadMoreContent = async () => {
+			if (!$scrollPaginationEnabled) return;
+			if ($tagView) return;
+			if (nextPageLoading) return;
+			if (chatPagniationComplete) return;
+
+			nextPageLoading = true;
+			pageSkip.set($pageSkip + 1);
+			// extend existing chats
+			const nextPageChats = await getChatList(
+				localStorage.token,
+				$pageSkip * $pageLimit,
+				$pageLimit
+			);
+			// once the bottom of the list has been reached (no results) there is no need to continue querying
+			chatPagniationComplete = nextPageChats.length === 0;
+			await chats.set([...$chats, ...nextPageChats]);
+			nextPageLoading = false;
+
+			observer.observe(loader); // Start observing again after content is loaded
+		};
 
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
@@ -427,8 +467,8 @@
 						bind:value={search}
 						on:focus={async () => {
 							disablePagination();
+							// TODO: migrate backend for more scalable search mechanism
 							await chats.set(await getChatList(localStorage.token)); // when searching, load all chats
-
 							enrichChatsWithContent($chats);
 						}}
 					/>
@@ -506,33 +546,7 @@
 				</div>
 			{/if}
 
-			<div
-				class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden"
-				on:scroll={async (e) => {
-					if (!$scrollPaginationEnabled) return;
-					if ($tagView) return;
-					if (nextPageLoading) return;
-					if (chatPagniationComplete) return;
-
-					const maxScroll = e.target.scrollHeight - e.target.clientHeight;
-					const currentPos = e.target.scrollTop;
-					const ratio = currentPos / maxScroll;
-					if (ratio >= paginationScrollThreashold) {
-						nextPageLoading = true;
-						pageSkip.set($pageSkip + 1);
-						// extend existing chats
-						const nextPageChats = await getChatList(
-							localStorage.token,
-							$pageSkip * $pageLimit,
-							$pageLimit
-						);
-						// once the bottom of the list has been reached (no results) there is no need to continue querying
-						chatPagniationComplete = nextPageChats.length === 0;
-						await chats.set([...$chats, ...nextPageChats]);
-						nextPageLoading = false;
-					}
-				}}
-			>
+			<div class="pl-2 my-2 flex-1 flex flex-col space-y-1 overflow-y-auto scrollbar-hidden">
 				{#each filteredChatList as chat, idx}
 					{#if idx === 0 || (idx > 0 && chat.time_range !== filteredChatList[idx - 1].time_range)}
 						<div
@@ -582,9 +596,14 @@
 						}}
 					/>
 				{/each}
-				{#if nextPageLoading}
-					<div class="w-full flex justify-center py-4 animate-pulse">
-						<Sparkles />
+
+				{#if !chatPagniationComplete}
+					<div
+						id="loader"
+						class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+					>
+						<Spinner className=" size-4" />
+						<div class=" ">Loading...</div>
 					</div>
 				{/if}
 			</div>
