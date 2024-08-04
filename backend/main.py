@@ -957,7 +957,7 @@ async def get_all_models():
 
     custom_models = Models.get_all_models()
     for custom_model in custom_models:
-        if custom_model.base_model_id == None:
+        if custom_model.base_model_id is None:
             for model in models:
                 if (
                     custom_model.id == model["id"]
@@ -1656,13 +1656,13 @@ async def get_tools_function_calling(form_data: dict, user=Depends(get_verified_
 
 @app.get("/api/pipelines/list")
 async def get_pipelines_list(user=Depends(get_admin_user)):
-    responses = await get_openai_models(raw=True)
+    responses = await get_openai_models(raw = True)
 
     print(responses)
     urlIdxs = [
         idx
         for idx, response in enumerate(responses)
-        if response != None and "pipelines" in response
+        if response is not None and "pipelines" in response
     ]
 
     return {
@@ -1723,7 +1723,7 @@ async def upload_pipeline(
                 res = r.json()
                 if "detail" in res:
                     detail = res["detail"]
-            except:
+            except Exception:
                 pass
 
         raise HTTPException(
@@ -1769,7 +1769,7 @@ async def add_pipeline(form_data: AddPipelineForm, user=Depends(get_admin_user))
                 res = r.json()
                 if "detail" in res:
                     detail = res["detail"]
-            except:
+            except Exception:
                 pass
 
         raise HTTPException(
@@ -1811,7 +1811,7 @@ async def delete_pipeline(form_data: DeletePipelineForm, user=Depends(get_admin_
                 res = r.json()
                 if "detail" in res:
                     detail = res["detail"]
-            except:
+            except Exception:
                 pass
 
         raise HTTPException(
@@ -1844,7 +1844,7 @@ async def get_pipelines(urlIdx: Optional[int] = None, user=Depends(get_admin_use
                 res = r.json()
                 if "detail" in res:
                     detail = res["detail"]
-            except:
+            except Exception:
                 pass
 
         raise HTTPException(
@@ -1859,7 +1859,6 @@ async def get_pipeline_valves(
     pipeline_id: str,
     user=Depends(get_admin_user),
 ):
-    models = await get_all_models()
     r = None
     try:
         url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
@@ -1898,8 +1897,6 @@ async def get_pipeline_valves_spec(
     pipeline_id: str,
     user=Depends(get_admin_user),
 ):
-    models = await get_all_models()
-
     r = None
     try:
         url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
@@ -1922,7 +1919,7 @@ async def get_pipeline_valves_spec(
                 res = r.json()
                 if "detail" in res:
                     detail = res["detail"]
-            except:
+            except Exception:
                 pass
 
         raise HTTPException(
@@ -1938,8 +1935,6 @@ async def update_pipeline_valves(
     form_data: dict,
     user=Depends(get_admin_user),
 ):
-    models = await get_all_models()
-
     r = None
     try:
         url = openai_app.state.config.OPENAI_API_BASE_URLS[urlIdx]
@@ -1967,7 +1962,7 @@ async def update_pipeline_valves(
                 res = r.json()
                 if "detail" in res:
                     detail = res["detail"]
-            except:
+            except Exception:
                 pass
 
         raise HTTPException(
@@ -2068,7 +2063,7 @@ async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
 
 
 @app.get("/api/version")
-async def get_app_config():
+async def get_app_version():
     return {
         "version": VERSION,
     }
@@ -2091,7 +2086,7 @@ async def get_app_latest_release_version():
                 latest_version = data["tag_name"]
 
                 return {"current": VERSION, "latest": latest_version[1:]}
-    except aiohttp.ClientError as e:
+    except aiohttp.ClientError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
