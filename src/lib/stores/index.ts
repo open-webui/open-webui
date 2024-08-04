@@ -45,7 +45,6 @@ export const showCallOverlay = writable(false);
 export const scrollPaginationEnabled = writable(true);
 export const pageSkip = writable(0);
 export const pageLimit = writable(-1);
-export const tagView = writable(false);
 
 export type Model = OpenAIModel | OllamaModel;
 

@@ -12,7 +12,12 @@
 		getAllUserChats,
 		getChatList
 	} from '$lib/apis/chats';
-	import { getImportOrigin, convertOpenAIChats, disablePagination } from '$lib/utils';
+	import {
+		getImportOrigin,
+		convertOpenAIChats,
+		disablePagination,
+		enablePagination
+	} from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -61,8 +66,7 @@
 				await createNewChat(localStorage.token, chat);
 			}
 		}
-		disablePagination();
-		await chats.set(await getChatList(localStorage.token));
+		enablePagination();
 	};
 
 	const exportChats = async () => {
@@ -77,8 +81,7 @@
 		await archiveAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
 		});
-		disablePagination();
-		await chats.set(await getChatList(localStorage.token));
+		enablePagination();
 	};
 
 	const deleteAllChatsHandler = async () => {
@@ -86,8 +89,8 @@
 		await deleteAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
 		});
-		disablePagination();
-		await chats.set(await getChatList(localStorage.token));
+
+		enablePagination();
 	};
 
 	const toggleSaveChatHistory = async () => {
