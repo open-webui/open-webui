@@ -250,16 +250,6 @@
 			? ''
 			: 'invisible'}"
 	>
-		<h1 class="text-red-400 text-bold text-xl">
-			Chats loaded: {$chats.length}
-		</h1>
-
-		<h1 class="text-red-400 text-bold text-xl">
-			Pagination Enabled: {$scrollPaginationEnabled}
-		</h1>
-		<h1 class="text-red-400 text-bold text-xl">
-			Final Page Reached: {chatPagniationComplete}
-		</h1>
 		<div class="px-2.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-new-chat-button"
