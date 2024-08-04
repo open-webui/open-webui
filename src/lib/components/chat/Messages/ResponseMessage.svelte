@@ -533,7 +533,7 @@
 												{#if inlineToken.type === 'image'}
 													<Image src={inlineToken.href} alt={inlineToken.text} />
 												{:else}
-													{@html marked.parseInline(inlineToken.raw, {
+													{@html marked.parse(inlineToken.raw, {
 														...defaults,
 														gfm: true,
 														breaks: true,
@@ -542,7 +542,7 @@
 												{/if}
 											{/each}
 										{:else}
-											{@html marked.parseInline(token.raw, {
+											{@html marked.parse(token.raw, {
 												...defaults,
 												gfm: true,
 												breaks: true,
