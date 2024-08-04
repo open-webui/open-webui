@@ -509,6 +509,7 @@
 	"Scan": "Scanner",
 	"Scan complete!": "Scan terminé !",
 	"Scan for documents from {{path}}": "Scanner des documents depuis {{path}}",
+	"Scroll to bottom when switching between branches": "",
 	"Search": "Recherche",
 	"Search a model": "Rechercher un modèle",
 	"Search Chats": "Rechercher des conversations",

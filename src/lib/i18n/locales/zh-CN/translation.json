@@ -509,6 +509,7 @@
 	"Scan": "立即扫描",
 	"Scan complete!": "扫描完成！",
 	"Scan for documents from {{path}}": "从 {{path}} 扫描文档",
+	"Scroll to bottom when switching between branches": "",
 	"Search": "搜索",
 	"Search a model": "搜索模型",
 	"Search Chats": "搜索对话",

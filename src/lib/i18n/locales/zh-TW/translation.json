@@ -509,6 +509,7 @@
 	"Scan": "掃描",
 	"Scan complete!": "掃描完成！",
 	"Scan for documents from {{path}}": "從 {{path}} 掃描文件",
+	"Scroll to bottom when switching between branches": "",
 	"Search": "搜尋",
 	"Search a model": "搜尋模型",
 	"Search Chats": "搜尋聊天",
