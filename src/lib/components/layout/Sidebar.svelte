@@ -56,7 +56,7 @@
 	let filteredChatList = [];
 
 	// Pagination variables
-	let chatListLoading = false;
+	let chatListLoading = true;
 	let allChatsLoaded = false;
 
 	$: filteredChatList = $chats.filter((chat) => {
@@ -107,6 +107,7 @@
 
 		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		chatListLoading = false;
 
 		let touchstart;
 		let touchend;
