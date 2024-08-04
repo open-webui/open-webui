@@ -74,7 +74,8 @@
 			return null;
 		});
 
-		const res = await processDocToVectorDB(localStorage.token, uploadedFile.id, 'doc').catch(
+		const is_base64 = false;
+		const res = await processDocToVectorDB(localStorage.token, uploadedFile.id, is_base64).catch(
 			(error) => {
 				toast.error(error);
 				return null;

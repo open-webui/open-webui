@@ -164,7 +164,6 @@ export const updateUserSettings = async (token: string, settings: object) => {
 		.catch((err) => {
 			console.log(err);
 			error = err.detail;
-			return null;
 		});
 
 	if (error) {

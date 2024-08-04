@@ -21,24 +21,31 @@
 	export let show = false;
 
 	const saveSettings = async (updated) => {
-		const newSettings = { ...$settings, ...updated };
-		console.log(newSettings);
-		const initialBackgroundImageUrl = newSettings.backgroundImageUrl;
+		try {
+			const newSettings = { ...$settings, ...updated };
+			console.log(newSettings);
 
-		await Promise.all([
-			settings.set(newSettings),
-			getModels().then((modelsData) => models.set(modelsData))
-		]);
+			const res_setting = await updateUserSettings(localStorage.token, { ui: newSettings });
 
-		const res_setting = await updateUserSettings(localStorage.token, { ui: newSettings });
-
-		if (initialBackgroundImageUrl === 'Random Image' && res_setting) {
-			console.log(res_setting);
-			const backgroundImageUrl = res_setting?.ui?.backgroundImageUrl ?? null;
-			if (backgroundImageUrl) {
-				newSettings.backgroundImageUrl = backgroundImageUrl;
+			if (res_setting) {
+				const initialBackgroundImageUrl = newSettings.backgroundImageUrl;
 				await settings.set(newSettings);
+
+				const modelsData = await getModels();
+				await models.set(modelsData);
+
+				if (initialBackgroundImageUrl === 'Random Image') {
+					console.log(res_setting);
+					const backgroundImageUrl = res_setting.ui?.backgroundImageUrl ?? null;
+
+					if (backgroundImageUrl) {
+						newSettings.backgroundImageUrl = backgroundImageUrl;
+						await settings.set(newSettings);
+					}
+				}
 			}
+		} catch (error) {
+			toast.error(`Error: ${error}`);
 		}
 	};
 

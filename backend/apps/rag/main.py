@@ -41,7 +41,6 @@ import validators
 import urllib.parse
 import socket
 
-
 from pydantic import BaseModel
 from typing import Optional
 import mimetypes
@@ -56,6 +55,8 @@ from apps.webui.models.documents import (
 from apps.webui.models.files import (
     Files,
 )
+
+from apps.webui.routers.users import change_enableBase64
 
 from apps.rag.utils import (
     get_model_path,
@@ -157,6 +158,8 @@ app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
 
 app.state.config.ENABLE_BASE64 = ENABLE_BASE64
 
+change_enableBase64(app.state.config.ENABLE_BASE64)
+
 app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
 )
@@ -173,16 +176,13 @@ app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE = RAG_EMBEDDING_OPENAI_BATCH_SI
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
-
 app.state.config.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
 app.state.config.OPENAI_API_KEY = RAG_OPENAI_API_KEY
 
 app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
 
-
 app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
 app.state.YOUTUBE_LOADER_TRANSLATION = None
-
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
@@ -202,8 +202,8 @@ app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_
 
 
 def update_embedding_model(
-    embedding_model: str,
-    update_model: bool = False,
+        embedding_model: str,
+        update_model: bool = False,
 ):
     if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
         import sentence_transformers
@@ -218,8 +218,8 @@ def update_embedding_model(
 
 
 def update_reranking_model(
-    reranking_model: str,
-    update_model: bool = False,
+        reranking_model: str,
+        update_model: bool = False,
 ):
     if reranking_model:
         import sentence_transformers
@@ -243,7 +243,6 @@ update_reranking_model(
     RAG_RERANKING_MODEL_AUTO_UPDATE,
 )
 
-
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
@@ -254,7 +253,6 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
 )
 
 origins = ["*"]
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -327,7 +325,7 @@ class EmbeddingModelUpdateForm(BaseModel):
 
 @app.post("/embedding/update")
 async def update_embedding_config(
-    form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
+        form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
 ):
     log.info(
         f"Updating embedding model: {app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
@@ -381,7 +379,7 @@ class RerankingModelUpdateForm(BaseModel):
 
 @app.post("/reranking/update")
 async def update_reranking_config(
-    form_data: RerankingModelUpdateForm, user=Depends(get_admin_user)
+        form_data: RerankingModelUpdateForm, user=Depends(get_admin_user)
 ):
     log.info(
         f"Updating reranking model: {app.state.config.RAG_RERANKING_MODEL} to {form_data.reranking_model}"
@@ -588,6 +586,7 @@ async def get_query_settings(user=Depends(get_admin_user)):
         "enableBase64": app.state.config.ENABLE_BASE64,
     }
 
+
 @app.get("/file/limit/settings")
 async def get_query_settings(user=Depends(get_verified_user)):
     return {
@@ -608,7 +607,7 @@ class QuerySettingsForm(BaseModel):
 
 @app.post("/query/settings/update")
 async def update_query_settings(
-    form_data: QuerySettingsForm, user=Depends(get_admin_user)
+        form_data: QuerySettingsForm, user=Depends(get_admin_user)
 ):
     app.state.config.RAG_TEMPLATE = (
         form_data.template if form_data.template else RAG_TEMPLATE
@@ -620,7 +619,10 @@ async def update_query_settings(
     )
     app.state.config.MAX_FILE_SIZE = form_data.max_file_size if form_data.max_file_size else 10
     app.state.config.MAX_FILE_COUNT = form_data.max_file_count if form_data.max_file_count else 5
-    app.state.config.ENABLE_BASE64 = form_data.enableBase64 if form_data.enableBase64 else False
+
+    if app.state.config.ENABLE_BASE64 != form_data.enableBase64:
+        app.state.config.ENABLE_BASE64 = form_data.enableBase64 if form_data.enableBase64 else False
+        change_enableBase64(app.state.config.ENABLE_BASE64)
 
     return {
         "status": True,
@@ -686,8 +688,8 @@ class QueryCollectionsForm(BaseModel):
 
 @app.post("/query/collection")
 def query_collection_handler(
-    form_data: QueryCollectionsForm,
-    user=Depends(get_verified_user),
+        form_data: QueryCollectionsForm,
+        user=Depends(get_verified_user),
 ):
     try:
         if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
@@ -848,8 +850,8 @@ def search_web(engine: str, query: str) -> list[SearchResult]:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
     elif engine == "google_pse":
         if (
-            app.state.config.GOOGLE_PSE_API_KEY
-            and app.state.config.GOOGLE_PSE_ENGINE_ID
+                app.state.config.GOOGLE_PSE_API_KEY
+                and app.state.config.GOOGLE_PSE_ENGINE_ID
         ):
             return search_google_pse(
                 app.state.config.GOOGLE_PSE_API_KEY,
@@ -966,9 +968,8 @@ def store_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
 
 
 def store_data_in_vector_db(
-    data, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
+        data, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
 ) -> bool:
-
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.config.CHUNK_SIZE,
         chunk_overlap=app.state.config.CHUNK_OVERLAP,
@@ -985,7 +986,7 @@ def store_data_in_vector_db(
 
 
 def store_text_in_vector_db(
-    text, metadata, collection_name, overwrite: bool = False
+        text, metadata, collection_name, overwrite: bool = False
 ) -> bool:
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.config.CHUNK_SIZE,
@@ -997,7 +998,7 @@ def store_text_in_vector_db(
 
 
 def store_docs_in_vector_db(
-    docs, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
+        docs, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
 ) -> bool:
     log.info(f"store_docs_in_vector_db {docs} {collection_name}")
 
@@ -1033,11 +1034,11 @@ def store_docs_in_vector_db(
         embeddings = embedding_func(embedding_texts)
 
         for batch in create_batches(
-            api=CHROMA_CLIENT,
-            ids=[str(uuid.uuid4()) for _ in texts],
-            metadatas=metadatas,
-            embeddings=embeddings,
-            documents=texts,
+                api=CHROMA_CLIENT,
+                ids=[str(uuid.uuid4()) for _ in texts],
+                metadatas=metadatas,
+                embeddings=embeddings,
+                documents=texts,
         ):
             collection.add(*batch)
 
@@ -1144,11 +1145,11 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
     ]
 
     if (
-        app.state.config.CONTENT_EXTRACTION_ENGINE == "tika"
-        and app.state.config.TIKA_SERVER_URL
+            app.state.config.CONTENT_EXTRACTION_ENGINE == "tika"
+            and app.state.config.TIKA_SERVER_URL
     ):
         if file_ext in known_source_ext or (
-            file_content_type and file_content_type.find("text/") >= 0
+                file_content_type and file_content_type.find("text/") >= 0
         ):
             loader = TextLoader(file_path, autodetect_encoding=True)
         else:
@@ -1171,9 +1172,9 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         elif file_content_type == "application/epub+zip":
             loader = UnstructuredEPubLoader(file_path)
         elif (
-            file_content_type
-            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            or file_ext in ["doc", "docx"]
+                file_content_type
+                == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                or file_ext in ["doc", "docx"]
         ):
             loader = Docx2txtLoader(file_path)
         elif file_content_type in [
@@ -1189,7 +1190,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
         elif file_ext == "msg":
             loader = OutlookMessageLoader(file_path)
         elif file_ext in known_source_ext or (
-            file_content_type and file_content_type.find("text/") >= 0
+                file_content_type and file_content_type.find("text/") >= 0
         ):
             loader = TextLoader(file_path, autodetect_encoding=True)
         else:
@@ -1201,9 +1202,9 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
 
 @app.post("/doc")
 def store_doc(
-    collection_name: Optional[str] = Form(None),
-    file: UploadFile = File(...),
-    user=Depends(get_verified_user),
+        collection_name: Optional[str] = Form(None),
+        file: UploadFile = File(...),
+        user=Depends(get_verified_user),
 ):
     # "https://www.gutenberg.org/files/1727/1727-h/1727-h.htm"
 
@@ -1258,14 +1259,14 @@ def store_doc(
 
 class ProcessDocForm(BaseModel):
     file_id: str
-    type: str
+    is_base64: bool
     collection_name: Optional[str] = None
 
 
 @app.post("/process/doc")
 def process_doc(
-    form_data: ProcessDocForm,
-    user=Depends(get_verified_user),
+        form_data: ProcessDocForm,
+        user=Depends(get_verified_user),
 ):
     try:
         user = Users.get_user_by_id(user.id)
@@ -1275,12 +1276,11 @@ def process_doc(
             enableFileUpdateBase64 = user.settings.ui.get("enableFileUpdateBase64", False)
             # logging.error(f"user_settings: {user_settings}")
             # logging.error(f"enableFileUpdateBase64: {enableFileUpdateBase64}")
-
-        if enableFileUpdateBase64 and app.state.config.ENABLE_BASE64 and form_data.type == "file":
-            return {
-                "status": True,
-                "base64": True,
-            }
+            if enableFileUpdateBase64 and app.state.config.ENABLE_BASE64 and form_data.is_base64:
+                return {
+                    "status": True,
+                    "base64": True,
+                }
 
         known_type = True
         file = Files.get_file_by_id(form_data.file_id)
@@ -1294,28 +1294,27 @@ def process_doc(
         f.close()
 
         try:
-            if not enableFileUpdateBase64 or not app.state.config.ENABLE_BASE64 or form_data.type != "file":
-                loader, known_type = get_loader(
-                    file.filename, file.meta.get("content_type"), file_path
-                )
-                data = loader.load()
-                result = store_data_in_vector_db(
-                    data,
-                    collection_name,
-                    {
-                        "file_id": form_data.file_id,
-                        "name": file.meta.get("name", file.filename),
-                    },
-                )
+            loader, known_type = get_loader(
+                file.filename, file.meta.get("content_type"), file_path
+            )
+            data = loader.load()
+            result = store_data_in_vector_db(
+                data,
+                collection_name,
+                {
+                    "file_id": form_data.file_id,
+                    "name": file.meta.get("name", file.filename),
+                },
+            )
 
-                if result:
-                    return {
-                        "status": True,
-                        "base64": False,
-                        "collection_name": collection_name,
-                        "known_type": known_type,
-                        "filename": file.meta.get("name", file.filename),
-                    }
+            if result:
+                return {
+                    "status": True,
+                    "base64": False,
+                    "collection_name": collection_name,
+                    "known_type": known_type,
+                    "filename": file.meta.get("name", file.filename),
+                }
             # else:
             #     return {
             #         "status": True,
@@ -1324,7 +1323,7 @@ def process_doc(
             #         "known_type": known_type,
             #         "filename": file.meta.get("name", file.filename),
             #     }
-            
+
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1352,10 +1351,9 @@ class TextRAGForm(BaseModel):
 
 @app.post("/text")
 def store_text(
-    form_data: TextRAGForm,
-    user=Depends(get_verified_user),
+        form_data: TextRAGForm,
+        user=Depends(get_verified_user),
 ):
-
     collection_name = form_data.collection_name
     if collection_name == None:
         collection_name = calculate_sha256_string(form_data.content)
@@ -1514,10 +1512,10 @@ class SafeWebBaseLoader(WebBaseLoader):
 
 
 if ENV == "dev":
-
     @app.get("/ef")
     async def get_embeddings():
         return {"result": app.state.EMBEDDING_FUNCTION("hello world")}
+
 
     @app.get("/ef/{text}")
     async def get_embeddings_text(text: str):

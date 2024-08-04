@@ -20,6 +20,7 @@ from config import (
     REPLACE_FILTER_WORDS,
     ENABLE_WECHAT_NOTICE,
     ENABLE_DAILY_USAGES_NOTICE,
+    SEND_FILTER_MESSAGE_TYPE,
     WECHAT_NOTICE_SUFFIX,
     WECHAT_APP_SECRET,
 )
@@ -54,6 +55,7 @@ app.state.config.REPLACE_FILTER_WORDS = REPLACE_FILTER_WORDS
 app.state.config.ENABLE_WECHAT_NOTICE = ENABLE_WECHAT_NOTICE
 app.state.config.WECHAT_APP_SECRET = WECHAT_APP_SECRET
 app.state.config.ENABLE_DAILY_USAGES_NOTICE = ENABLE_DAILY_USAGES_NOTICE
+app.state.config.SEND_FILTER_MESSAGE_TYPE = SEND_FILTER_MESSAGE_TYPE
 app.state.config.WECHAT_NOTICE_SUFFIX = WECHAT_NOTICE_SUFFIX
 
 file_path = os.path.join(DATA_DIR, app.state.config.CHAT_FILTER_WORDS_FILE)
@@ -73,30 +75,47 @@ async def daily_send_usage():
 
 
 async def prepare_usage_to_wechatapp():
-    data = {
-        "msgtype": "markdown",
-        "markdown": {
-            "content": await init_markdown_usages(),
-            "mentioned_list": [],
+    if app.state.config.SEND_FILTER_MESSAGE_TYPE.lower() == "markdown":
+        data = {
+            "msgtype": "markdown",
+            "markdown": {
+                "content": await init_markdown_usages(),
+                "mentioned_list": [],
+            }
         }
-    }
+    else:
+        data = {
+            "msgtype": "text",
+            "text": {
+                "content": await init_usages()
+            }
+        }
     return data
 
 
-async def prepare_data_to_wechatapp(share_id, user):
-    data = {
-        "msgtype": "news",
-        "news": {
-            "articles": [
-                {
-                    "title": f"🚨{user.name}提问敏感消息！",
-                    "description": "💢💢💢为了API的正常运行，赶紧点开看看吧！",
-                    "url": f"{WEBUI_URL}/s/{share_id}",
-                    "picurl": f"{WEBUI_URL}/static/favicon.png"
-                }
-            ]
+async def prepare_data_to_wechatapp(share_id, user, type: str):
+    if type.lower() == "markdown":
+        data = {
+            "msgtype": "news",
+            "news": {
+                "articles": [
+                    {
+                        "title": f"🚨{user.name}提问敏感消息！",
+                        "description": "💢💢💢为了API的正常运行，赶紧点开看看吧！",
+                        "url": f"{WEBUI_URL}/s/{share_id}",
+                        "picurl": f"{WEBUI_URL}/static/favicon.png"
+                    }
+                ]
+            }
         }
-    }
+    else:
+        data = {
+            "msgtype": "text",
+            "text": {
+                "content": f"🚨{user.name}提问敏感消息！\n\n🔗{WEBUI_URL}/s/{share_id}\n\n💢为了API的正常运行，赶紧点开看看吧！"
+                           f"\n\n{app.state.config.WECHAT_NOTICE_SUFFIX}"
+            }
+        }
     return data
 
 
@@ -178,6 +197,7 @@ class FILTERConfigForm(BaseModel):
     ENABLE_WECHAT_NOTICE: bool
     WECHAT_APP_SECRET: str
     ENABLE_DAILY_USAGES_NOTICE: bool
+    SEND_FILTER_MESSAGE_TYPE: str
     WECHAT_NOTICE_SUFFIX: str
 
 
@@ -192,6 +212,7 @@ async def get_filter_config(user=Depends(get_admin_user)):
         "ENABLE_WECHAT_NOTICE": app.state.config.ENABLE_WECHAT_NOTICE,
         "WECHAT_APP_SECRET": app.state.config.WECHAT_APP_SECRET,
         "ENABLE_DAILY_USAGES_NOTICE": app.state.config.ENABLE_DAILY_USAGES_NOTICE,
+        "SEND_FILTER_MESSAGE_TYPE": app.state.config.SEND_FILTER_MESSAGE_TYPE,
         "WECHAT_NOTICE_SUFFIX": app.state.config.WECHAT_NOTICE_SUFFIX,
     }
 
@@ -210,6 +231,7 @@ async def update_filter_config(
     app.state.config.ENABLE_WECHAT_NOTICE = form_data.ENABLE_WECHAT_NOTICE
     app.state.config.WECHAT_APP_SECRET = form_data.WECHAT_APP_SECRET
     app.state.config.ENABLE_DAILY_USAGES_NOTICE = form_data.ENABLE_DAILY_USAGES_NOTICE
+    app.state.config.SEND_FILTER_MESSAGE_TYPE = form_data.SEND_FILTER_MESSAGE_TYPE
     app.state.config.WECHAT_NOTICE_SUFFIX = form_data.WECHAT_NOTICE_SUFFIX
 
     request_file_path = os.path.join(DATA_DIR, app.state.config.CHAT_FILTER_WORDS_FILE)
@@ -245,6 +267,7 @@ async def update_filter_config(
         "ENABLE_WECHAT_NOTICE": app.state.config.ENABLE_WECHAT_NOTICE,
         "WECHAT_APP_SECRET": app.state.config.WECHAT_APP_SECRET,
         "ENABLE_DAILY_USAGES_NOTICE": app.state.config.ENABLE_DAILY_USAGES_NOTICE,
+        "SEND_FILTER_MESSAGE_TYPE": app.state.config.SEND_FILTER_MESSAGE_TYPE,
         "WECHAT_NOTICE_SUFFIX": app.state.config.WECHAT_NOTICE_SUFFIX,
     }
 
@@ -311,7 +334,8 @@ async def content_filter_message(payload: dict, content: str, user):
                         share_id = None
                     if share_id:
                         log.info(f"Share ID: {share_id}")
-                        data = await prepare_data_to_wechatapp(share_id, user)
+                        data = await prepare_data_to_wechatapp(share_id, user,
+                                                               app.state.config.SEND_FILTER_MESSAGE_TYPE)
                         await send_message_to_wechatapp(data)
                 except Exception as e:
                     log.error(f"Failed to send message to WeChat app: {e}")

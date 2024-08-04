@@ -36,6 +36,7 @@ type FilterConfigForm = {
 	ENABLE_WECHAT_NOTICE: boolean;
 	WECHAT_APP_SECRET: string;
 	ENABLE_DAILY_USAGES_NOTICE: boolean;
+	SEND_FILTER_MESSAGE_TYPE: string;
 	WECHAT_NOTICE_SUFFIX: string;
 
 };

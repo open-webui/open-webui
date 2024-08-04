@@ -199,7 +199,7 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 	return res;
 };
 
-export const processDocToVectorDB = async (token: string, file_id: string, type: string) => {
+export const processDocToVectorDB = async (token: string, file_id: string, is_base64: boolean) => {
 	let error = null;
 
 	const res = await fetch(`${RAG_API_BASE_URL}/process/doc`, {
@@ -211,7 +211,7 @@ export const processDocToVectorDB = async (token: string, file_id: string, type:
 		},
 		body: JSON.stringify({
 			file_id: file_id,
-			type: type
+			is_base64: is_base64
 		})
 	})
 		.then(async (res) => {

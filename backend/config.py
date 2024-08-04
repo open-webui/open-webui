@@ -1498,6 +1498,12 @@ ENABLE_DAILY_USAGES_NOTICE = PersistentConfig(
     os.environ.get("DAILY_USAGES_NOTICE", "").lower() == "true",
 )
 
+SEND_FILTER_MESSAGE_TYPE = PersistentConfig(
+    "SEND_FILTER_MESSAGE_TYPE",
+    "wechatapp.send_filter_message_type",
+    os.getenv("SEND_FILTER_MESSAGE_TYPE", "Markdown"),
+)
+
 ####################################
 # Database
 ####################################

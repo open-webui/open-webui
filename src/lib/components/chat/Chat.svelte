@@ -765,7 +765,7 @@
 
 				// Extract and format image URLs if any exist
 				const imageUrls = message.files
-					?.filter((file) => file.type === 'image' || (file?.base64 ?? false))
+					?.filter((file) => file.type === 'image')
 					.map((file) => file.url.slice(file.url.indexOf(',') + 1));
 
 				// Add images array only if it contains elements

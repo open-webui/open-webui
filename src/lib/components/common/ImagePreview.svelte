@@ -4,6 +4,7 @@
 	export let show = false;
 	export let src = '';
 	export let alt = '';
+	export let isMarkdown = false;
 
 	let mounted = false;
 
@@ -113,7 +114,11 @@
 				<button
 					class=" p-5"
 					on:click={() => {
-						downloadImage(src);
+						if (isMarkdown) {
+							window.open(src, '_blank').focus();
+						} else {
+							downloadImage(src);
+						}
 					}}
 				>
 					<svg

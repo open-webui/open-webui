@@ -150,19 +150,12 @@
 					fileItem.file = uploadedFile;
 					fileItem.id = uploadedFile.id;
 					// fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
-				} else {
-					fileItem.type = fileExtension;
-					fileItem.id = uuidv4();
-					fileItem.base64 = true;
-				}
-
-				if (
-					SUPPORTED_FILE_TYPE.includes(fileType) ||
-					SUPPORTED_FILE_EXTENSIONS.includes(fileExtension)
-				) {
-					processFileItem(fileItem, base64_url);
-				} else {
-					if (!enableBase64) {
+					if (
+						SUPPORTED_FILE_TYPE.includes(fileType) ||
+						SUPPORTED_FILE_EXTENSIONS.includes(fileExtension)
+					) {
+						processFileItem(fileItem);
+					} else {
 						toast.error(
 							$i18n.t(
 								`Unknown file type '{{file_type}}'. Proceeding with the file upload anyway.`,
@@ -171,8 +164,15 @@
 								}
 							)
 						);
+						processFileItem(fileItem);
 					}
-					processFileItem(fileItem, base64_url);
+				} else {
+					fileItem.type = fileExtension;
+					fileItem.id = uuidv4();
+					fileItem.base64 = true;
+					fileItem.base64_url = base64_url;
+					fileItem.status = 'processed';
+					files = files;
 				}
 			} else {
 				files = files.filter((item) => item.status !== null);
@@ -183,15 +183,15 @@
 		}
 	};
 
-	const processFileItem = async (fileItem, base64_url) => {
+	const processFileItem = async (fileItem) => {
 		try {
-			const res = await processDocToVectorDB(localStorage.token, fileItem.id, 'file');
+			const is_base64 = fileItem.base64;
+			const res = await processDocToVectorDB(localStorage.token, fileItem.id, is_base64);
 
 			if (res) {
 				fileItem.status = 'processed';
 				if (res.base64) {
 					fileItem.base64 = true;
-					fileItem.base64_url = base64_url;
 				} else {
 					fileItem.collection_name = res.collection_name;
 				}
@@ -309,8 +309,7 @@
 			} else {
 				let reader = new FileReader();
 				reader.onload = (event) => {
-					let base64_url = event.target.result;
-					uploadFileHandler(file, base64_url, $settings?.enableFileUpdateBase64 ?? false);
+					uploadFileHandler(file, event.target.result, $settings?.enableFileUpdateBase64 ?? false);
 				};
 				reader.readAsDataURL(file);
 			}

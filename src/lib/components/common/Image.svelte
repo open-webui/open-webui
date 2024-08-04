@@ -12,7 +12,7 @@
 	$: _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
 </script>
 
-<ImagePreview bind:show={showImagePreview} src={_src} {alt} />
+<ImagePreview bind:show={showImagePreview} src={_src} {alt} {isMarkdown} />
 <button
 	on:click={() => {
 		console.log('image preview');

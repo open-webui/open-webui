@@ -28,6 +28,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 router = APIRouter()
 
 backgroundImageUrl = ""
+enableBase64 = False
 
 
 ############################
@@ -38,6 +39,10 @@ def change_background_random_image_url(url: str):
     global backgroundImageUrl
     backgroundImageUrl = url
 
+
+def change_enableBase64(enable: bool):
+    global enableBase64
+    enableBase64 = enable
 
 @router.get("/", response_model=List[UserModel])
 async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)):
@@ -106,6 +111,19 @@ async def update_user_settings_by_session_user(
 ):
     if form_data.ui.get("backgroundImageUrl", None) == "Random Image":
         form_data.ui["backgroundImageUrl"] = backgroundImageUrl
+
+    if form_data.ui.get("enableFileUpdateBase64", False):
+        if enableBase64:
+            form_data.ui["enableFileUpdateBase64"] = enableBase64
+        else:
+            form_data.ui["enableFileUpdateBase64"] = False
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="管理员未开启 Base64 直接上传模式, Base64 上传模式开启失败",
+            )
+    else:
+        form_data.ui["enableFileUpdateBase64"] = False
+
     user = Users.update_user_by_id(user.id, {"settings": form_data.model_dump()})
     if user:
         return user.settings

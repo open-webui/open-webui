@@ -298,7 +298,7 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center">{$i18n.t('Filter')}</div>
+			<div class=" self-center">{$i18n.t('Message Filter')}</div>
 		</button>
 
 		<button

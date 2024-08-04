@@ -27,6 +27,7 @@
 	let ENABLE_WECHAT_NOTICE = true;
 	let WECHAT_APP_SECRET = '';
 	let ENABLE_DAILY_USAGES_NOTICE = true;
+	let SEND_FILTER_MESSAGE_TYPE = 'text';
 	let WECHAT_NOTICE_SUFFIX = '';
 
 	const updateConfigHandler = async () => {
@@ -39,6 +40,7 @@
 			ENABLE_WECHAT_NOTICE: ENABLE_WECHAT_NOTICE,
 			WECHAT_APP_SECRET: WECHAT_APP_SECRET,
 			ENABLE_DAILY_USAGES_NOTICE: ENABLE_DAILY_USAGES_NOTICE,
+			SEND_FILTER_MESSAGE_TYPE: SEND_FILTER_MESSAGE_TYPE,
 			WECHAT_NOTICE_SUFFIX: WECHAT_NOTICE_SUFFIX
 		});
 
@@ -61,6 +63,7 @@
 			ENABLE_WECHAT_NOTICE = res.ENABLE_WECHAT_NOTICE;
 			WECHAT_APP_SECRET = res.WECHAT_APP_SECRET;
 			ENABLE_DAILY_USAGES_NOTICE = res.ENABLE_DAILY_USAGES_NOTICE;
+			SEND_FILTER_MESSAGE_TYPE = res.SEND_FILTER_MESSAGE_TYPE;
 			WECHAT_NOTICE_SUFFIX = res.WECHAT_NOTICE_SUFFIX;
 		}
 	});
@@ -138,6 +141,20 @@
 					</button>
 				</div>
 
+				<div class=" mb-1.5 py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Select restricted message warning acceptance type')}</div>
+					<div class="flex items-center relative">
+						<select
+							class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+							bind:value={SEND_FILTER_MESSAGE_TYPE}
+							placeholder="Select restricted message warning acceptance type"
+						>
+							<option value="Text">{'Text'}</option>
+							<option value="Markdown">{'Markdown'}</option>
+						</select>
+					</div>
+				</div>
+
 				<div class=" py-1 flex w-full justify-between" />
 
 				<div class=" flex gap-2">
@@ -146,7 +163,7 @@
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={CHAT_FILTER_WORDS_FILE}
 								/>
 							</div>
@@ -157,7 +174,7 @@
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={REPLACE_FILTER_WORDS}
 								/>
 							</div>

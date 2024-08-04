@@ -121,7 +121,7 @@
 				{:else if type === 'collection'}
 					{$i18n.t('Collection')}
 				{:else}
-					<span class=" capitalize">{type}</span>
+					<span class=" capitalize">{type.toUpperCase()}</span>
 				{/if}
 				{#if size}
 					<span class="capitalize">{formatSize(size)}</span>
