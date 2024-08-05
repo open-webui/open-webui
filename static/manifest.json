@@ -1,17 +1,1 @@
-{
-  "name": "InfoGPT",
-  "start_url": "/",
-  "display": "standalone",
-  "icons": [
-    {
-      "src": "favicon.png",
-      "sizes": "764x766",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "icon-high.svg",
-      "sizes": "257x257"
-    }
-  ]
-}
+{}
