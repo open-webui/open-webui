@@ -245,6 +245,38 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    def get_chat_title_id_list_by_user_id(
+        self,
+        user_id: str,
+        include_archived: bool = False,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> List[ChatTitleIdResponse]:
+        with get_db() as db:
+            query = db.query(Chat).filter_by(user_id=user_id)
+            if not include_archived:
+                query = query.filter_by(archived=False)
+
+            all_chats = (
+                query.order_by(Chat.updated_at.desc())
+                # limit cols
+                .with_entities(
+                    Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+                ).all()
+            )
+            # result has to be destrctured from sqlalchemy `row` and mapped to a dict since the `ChatModel`is not the returned dataclass.
+            return [
+                ChatTitleIdResponse.model_validate(
+                    {
+                        "id": chat[0],
+                        "title": chat[1],
+                        "updated_at": chat[2],
+                        "created_at": chat[3],
+                    }
+                )
+                for chat in all_chats
+            ]
+
     def get_chat_list_by_chat_ids(
         self, chat_ids: List[str], skip: int = 0, limit: int = 50
     ) -> List[ChatModel]:
