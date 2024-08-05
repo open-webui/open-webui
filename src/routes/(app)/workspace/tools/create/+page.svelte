@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { goto } from '$app/navigation';
 	import { createNewTool, getTools } from '$lib/apis/tools';
 	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
@@ -12,7 +12,7 @@
 
 	let mounted = false;
 	let clone = false;
-	let tool = null;
+	let tool: App.Tool | null = null;
 
 	const saveHandler = async (data) => {
 		console.log(data);

@@ -324,7 +324,7 @@ export const getChatById = async (token: string, id: string) => {
 	return res;
 };
 
-export const getChatByShareId = async (token: string, share_id: string) => {
+export const getChatByShareId = async (token: string, share_id: string): Promise<App.Chat | null> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/share/${share_id}`, {

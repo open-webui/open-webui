@@ -4,7 +4,7 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, settings, theme, user } from '$lib/stores';
+	import { settings, theme, user } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 

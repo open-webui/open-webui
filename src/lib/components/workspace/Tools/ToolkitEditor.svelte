@@ -1,5 +1,5 @@
-<script>
-	import { getContext, createEventDispatcher, onMount } from 'svelte';
+<script lang="ts">
+	import { getContext, createEventDispatcher } from 'svelte';
 
 	const i18n = getContext('i18n');
 

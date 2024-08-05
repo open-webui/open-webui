@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import { chats, config, settings, user as _user, mobile } from '$lib/stores';
-	import { tick, getContext, onMount } from 'svelte';
+	import { chats, settings, user as _user, mobile } from '$lib/stores';
+	import { tick, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
@@ -9,11 +9,8 @@
 	import UserMessage from './Messages/UserMessage.svelte';
 	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
-	import Spinner from '../common/Spinner.svelte';
-	import { imageGenerations } from '$lib/apis/images';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
 	import CompareMessages from './Messages/CompareMessages.svelte';
-	import { stringify } from 'postcss';
 
 	const i18n = getContext('i18n');
 
@@ -28,7 +25,7 @@
 	export let prompt;
 	export let processing = '';
 	export let bottomPadding = false;
-	export let autoScroll;
+	export let autoScroll = false;
 	export let history = {};
 	export let messages = [];
 
@@ -300,7 +297,7 @@
 				{#each messages as message, messageIdx}
 					<div class=" w-full {messageIdx === messages.length - 1 ? ' pb-12' : ''}">
 						<div
-							class="flex flex-col justify-between px-5 mb-3 {$settings?.widescreenMode ?? null
+							class="flex flex-col justify-between px-5 mb-3 {($settings?.widescreenMode ?? null)
 								? 'max-w-full'
 								: 'max-w-5xl'} mx-auto rounded-lg group"
 						>
@@ -312,10 +309,10 @@
 									{message}
 									isFirstMessage={messageIdx === 0}
 									siblings={message.parentId !== null
-										? history.messages[message.parentId]?.childrenIds ?? []
-										: Object.values(history.messages)
+										? (history.messages[message.parentId]?.childrenIds ?? [])
+										: (Object.values(history.messages)
 												.filter((message) => message.parentId === null)
-												.map((message) => message.id) ?? []}
+												.map((message) => message.id) ?? [])}
 									{confirmEditMessage}
 									{showPreviousMessage}
 									{showNextMessage}

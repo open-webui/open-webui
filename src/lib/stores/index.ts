@@ -1,6 +1,6 @@
 import { APP_NAME } from '$lib/constants';
 import { type Writable, writable } from 'svelte/store';
-import type { GlobalModelConfig, ModelConfig } from '$lib/apis';
+import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
 
@@ -110,6 +110,14 @@ type AudioSettings = {
 	speaker?: string;
 	model?: string;
 	nonLocalVoices?: boolean;
+	tts?: {
+		voice: string;
+		defaultVoice: string;
+		nonLocalVoices: boolean;
+	}
+	stt?: {
+		engine: string;
+	}
 };
 
 type TitleSettings = {
@@ -134,6 +142,16 @@ type Document = {
 	title: string;
 };
 
+type ConfigAudio = {
+	tts?: {
+		voice: string;
+		engine: string;
+	}
+	stt?: {
+		engine: string;
+	}
+}
+
 type Config = {
 	status: boolean;
 	name: string;
@@ -156,6 +174,7 @@ type Config = {
 			[key: string]: string;
 		};
 	};
+	audio?: ConfigAudio;
 };
 
 type PromptSuggestion = {
