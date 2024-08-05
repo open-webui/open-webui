@@ -38,7 +38,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
-	import TokenRenderer from './TokenRenderer.svelte';
+	import MarkdownTokens from './MarkdownTokens.svelte';
 
 	export let message;
 	export let siblings;
@@ -77,9 +77,7 @@
 
 	let selectedCitation = null;
 
-	$: tokens = marked.lexer(
-		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
-	);
+	$: tokens = marked.lexer(sanitizeResponseContent(message?.content));
 
 	$: if (message) {
 		renderStyling();
@@ -413,7 +411,7 @@
 				{/if}
 
 				<div
-					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-headings:-mb-4 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
+					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-p:my-0 prose-img:my-1 whitespace-pre-line"
 				>
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
@@ -499,9 +497,7 @@
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-									{#each tokens as token, tokenIdx}
-										<TokenRenderer {token} {tokenIdx} id={message.id} />
-									{/each}
+									<MarkdownTokens id={message.id} {tokens} />
 								{/if}
 
 								{#if message.error}
