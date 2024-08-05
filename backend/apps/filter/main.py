@@ -112,7 +112,7 @@ async def prepare_data_to_wechatapp(share_id, user, type: str):
         data = {
             "msgtype": "text",
             "text": {
-                "content": f"🚨{user.name}提问敏感消息！\n\n🔗{WEBUI_URL}/s/{share_id}\n\n💢为了API的正常运行，赶紧点开看看吧！"
+                "content": f"🚨🚨🚨[警告]\n\n{user.name}提问敏感消息！\n\n🔗{WEBUI_URL}/s/{share_id}\n\n💢为了API的正常运行，赶紧点开看看吧！"
                            f"\n\n{app.state.config.WECHAT_NOTICE_SUFFIX}"
             }
         }
