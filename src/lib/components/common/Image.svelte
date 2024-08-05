@@ -5,21 +5,26 @@
 	export let src = '';
 	export let alt = '';
 
-	let _src = '';
+	export let className = '';
 
+	let _src = '';
 	$: _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
 
 	let showImagePreview = false;
 </script>
 
-<div>
-	<button
+<div class={className}>
+	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+	<img
 		on:click={() => {
 			showImagePreview = true;
 		}}
-		class=" w-fit"
-	>
-		<img src={_src} {alt} class=" max-h-96 rounded-lg w-full" draggable="false" data-cy="image" />
-	</button>
+		src={_src}
+		{alt}
+		class=" rounded-lg"
+		draggable="false"
+		data-cy="image"
+	/>
 </div>
 <ImagePreview bind:show={showImagePreview} src={_src} {alt} />
