@@ -25,7 +25,7 @@ export const chats = writable([]);
 export const pinnedChats = writable([]);
 export const tags = writable([]);
 
-export const models: Writable<Model[]> = writable([]);
+export const models: Writable<App.Model[]> = writable([]);
 export const prompts: Writable<Prompt[]> = writable([]);
 export const documents: Writable<Document[]> = writable([]);
 
@@ -84,7 +84,7 @@ type Settings = {
 	notificationEnabled?: boolean;
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
-	chatDirection: 'LTR' | 'RTL';
+	chatDirection?: 'LTR' | 'RTL';
 
 	system?: string;
 	requestFormat?: string;
@@ -98,6 +98,7 @@ type Settings = {
 	num_batch?: string;
 	num_keep?: string;
 	options?: ModelOptions;
+	chatBubble?: boolean;
 };
 
 type ModelOptions = {
@@ -152,7 +153,7 @@ type ConfigAudio = {
 	}
 }
 
-type Config = {
+export type Config = {
 	status: boolean;
 	name: string;
 	version: string;

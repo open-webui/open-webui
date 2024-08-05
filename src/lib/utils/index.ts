@@ -109,10 +109,10 @@ export const splitStream = (splitOn) => {
 	});
 };
 
-export const convertMessagesToHistory = (messages) => {
-	const history = {
+export const convertMessagesToHistory = (messages: App.Message[]): App.History => {
+	const history: App.History = {
 		messages: {},
-		currentId: null
+		currentId: undefined
 	};
 
 	let parentMessageId = null;
@@ -131,18 +131,18 @@ export const convertMessagesToHistory = (messages) => {
 		history.messages[messageId] = {
 			...message,
 			id: messageId,
-			parentId: parentMessageId,
+			parentId: parentMessageId + '',
 			childrenIds: []
 		};
 
 		parentMessageId = messageId;
 	}
 
-	history.currentId = messageId;
+	history.currentId = messageId + '';
 	return history;
 };
 
-export const getGravatarURL = (email) => {
+export const getGravatarURL = (email: string) => {
 	// Trim leading and trailing whitespace from
 	// an email address and force all characters
 	// to lower case
@@ -155,7 +155,7 @@ export const getGravatarURL = (email) => {
 	return `https://www.gravatar.com/avatar/${hash}`;
 };
 
-export const canvasPixelTest = () => {
+export const canvasPixelTest = ():boolean => {
 	// Test a 1x1 pixel to potentially identify browser/plugin fingerprint blocking or spoofing
 	// Inspiration: https://github.com/kkapsner/CanvasBlocker/blob/master/test/detectionTest.js
 	const canvas = document.createElement('canvas');
@@ -174,29 +174,32 @@ export const canvasPixelTest = () => {
 		}
 	}
 
-	ctx.putImageData(imageData, 0, 0);
-	const p = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+	ctx?.putImageData(imageData, 0, 0);
+	const p = ctx?.getImageData(0, 0, canvas.width, canvas.height).data;
 
-	// Read RGB data and fail if unmatched
-	for (let i = 0; i < p.length; i += 1) {
-		if (p[i] !== pixelValues[i]) {
-			console.log(
-				'canvasPixelTest: Wrong canvas pixel RGB value detected:',
-				p[i],
-				'at:',
-				i,
-				'expected:',
-				pixelValues[i]
-			);
-			console.log('canvasPixelTest: Canvas blocking or spoofing is likely');
-			return false;
+	if (p) {
+		// Read RGB data and fail if unmatched
+		for (let i = 0; i < p.length; i += 1) {
+			if (p[i] !== pixelValues[i]) {
+				console.log(
+					'canvasPixelTest: Wrong canvas pixel RGB value detected:',
+					p[i],
+					'at:',
+					i,
+					'expected:',
+					pixelValues[i]
+				);
+				console.log('canvasPixelTest: Canvas blocking or spoofing is likely');
+				return false;
+			}
 		}
 	}
+	
 
 	return true;
 };
 
-export const generateInitialsImage = (name) => {
+export const generateInitialsImage = (name: string): string => {
 	const canvas = document.createElement('canvas');
 	const ctx = canvas.getContext('2d');
 	canvas.width = 100;
@@ -209,13 +212,15 @@ export const generateInitialsImage = (name) => {
 		return '/user.png';
 	}
 
-	ctx.fillStyle = '#F39C12';
-	ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-	ctx.fillStyle = '#FFFFFF';
-	ctx.font = '40px Helvetica';
-	ctx.textAlign = 'center';
-	ctx.textBaseline = 'middle';
+	if (ctx) {
+		ctx.fillStyle = '#F39C12';
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+	
+		ctx.fillStyle = '#FFFFFF';
+		ctx.font = '40px Helvetica';
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+	}
 
 	const sanitizedName = name.trim();
 	const initials =
@@ -226,12 +231,12 @@ export const generateInitialsImage = (name) => {
 					: '')
 			: '';
 
-	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
+	ctx?.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
 
 	return canvas.toDataURL();
 };
 
-export const copyToClipboard = async (text) => {
+export const copyToClipboard = async (text: string) => {
 	let result = false;
 	if (!navigator.clipboard) {
 		const textArea = document.createElement('textarea');

@@ -5,7 +5,7 @@
 	import { config, user, models as _models } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
-	import { blur, fade } from 'svelte/transition';
+	import { fade } from 'svelte/transition';
 
 	import Suggestions from '../MessageInput/Suggestions.svelte';
 	import { sanitizeResponseContent } from '$lib/utils';

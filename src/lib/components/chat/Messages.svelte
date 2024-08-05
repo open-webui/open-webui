@@ -27,7 +27,7 @@
 	export let bottomPadding = false;
 	export let autoScroll = false;
 	export let history = {};
-	export let messages = [];
+	export let messages: App.Message[] = [];
 
 	export let selectedModels;
 
@@ -40,17 +40,19 @@
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollHeight;
+		if (element) {
+			element.scrollTop = element.scrollHeight;
+		}
 	};
 
-	const copyToClipboardWithToast = async (text) => {
+	const copyToClipboardWithToast = async (text: string) => {
 		const res = await copyToClipboard(text);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
 	};
 
-	const confirmEditMessage = async (messageId, content) => {
+	const confirmEditMessage = async (messageId: string, content: string) => {
 		let userPrompt = content;
 		let userMessageId = uuidv4();
 

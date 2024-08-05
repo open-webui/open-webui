@@ -1,4 +1,5 @@
-import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { WEBUI_BASE_URL } from '$lib/constants';
+import type { Config } from '$lib/stores';
 
 export const getModels = async (token: string = '') => {
 	let error = null;
@@ -13,7 +14,7 @@ export const getModels = async (token: string = '') => {
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.json() as Promise<App.ModelsData>;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -31,13 +32,14 @@ export const getModels = async (token: string = '') => {
 		.filter((models) => models)
 		// Sort the models
 		.sort((a, b) => {
+			
 			// Check if models have position property
 			const aHasPosition = a.info?.meta?.position !== undefined;
 			const bHasPosition = b.info?.meta?.position !== undefined;
 
 			// If both a and b have the position property
 			if (aHasPosition && bHasPosition) {
-				return a.info.meta.position - b.info.meta.position;
+				return (a?.info?.meta?.position ?? 0) - (b?.info?.meta?.position ?? 0);
 			}
 
 			// If only a has the position property, it should come first
@@ -209,7 +211,7 @@ export const generateTitle = async (
 	model: string,
 	prompt: string,
 	chat_id?: string
-) => {
+): Promise<string | null> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/task/title/completions`, {
@@ -227,7 +229,7 @@ export const generateTitle = async (
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.json() as Promise<App.Completion>;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -634,7 +636,7 @@ export const getBackendConfig = async () => {
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.json() as Promise<Config>;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -660,7 +662,7 @@ export const getChangelog = async () => {
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.json() as Promise<App.Changelog>;
 		})
 		.catch((err) => {
 			console.log(err);

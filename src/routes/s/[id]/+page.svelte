@@ -32,7 +32,7 @@
 	let title = '';
 	let files = [];
 
-	let messages = [];
+	let messages: App.Message[] = [];
 	let history = {
 		messages: {},
 		currentId: null
