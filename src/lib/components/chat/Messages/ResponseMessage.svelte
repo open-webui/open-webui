@@ -411,7 +411,7 @@
 				{/if}
 
 				<div
-					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-p:my-0 prose-img:my-0 whitespace-pre-line"
+					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-p:my-0 prose-img:my-1 whitespace-pre-line"
 				>
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
