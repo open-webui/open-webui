@@ -12,16 +12,18 @@ Use our [Docker Setup](docker) for a quick install with Ollama for loading model
 
 ### Use our conda-start.sh script to install with one step
 
-These steps are for programmers planning to edit and build locally.  
+These steps are for programmers planning to edit and build locally. Visit [localhost:8080](http://localhost:8080) if you've already install.  
+After the initial one hour or more install, it only take a minute to restart the server using the same conda-start.sh command below.
 
-The install can take over an hour initially. It takes less than a minute to restart once installed. If you're not planning to edit, you can install faster using a [local Docker instance](https://docs.openwebui.com/).  
+If you machine needs updates, our [node, python and conda upgrade page](https://model.earth/io/coders/python) is helpful.  
+If you're not planning to edit, you can install faster using a [local Docker instance](docker).  
 
-Clone with a command or use GitHub Desktop to pull to your computer from [our projects repo](https://github.com/modelearth/projects/).
+We recommend using GitHub Desktop to pull [our projects repo](https://github.com/modelearth/projects/) to your computer, or you can clone with a command:
 
 	git clone https://github.com/modelearth/projects.git
 	cd projects/
 
-Next run our [conda-start.sh script](https://github.com/ModelEarth/projects/blob/main/location/setup/script/start.sh) in the root of the "projects" folder. It invokes python3.11.
+Next run the following to in the root of the "projects" folder. Our [conda-start.sh](https://github.com/ModelEarth/projects/blob/main/location/setup/script/conda-start.sh) script invokes python3.11 so you might need [pyenv](https://model.earth/io/coders/python).
 	
 	bash location/setup/script/conda-start.sh
 
@@ -29,7 +31,7 @@ That's it. Wait an hour or two to finish, then view the site here:
 
 [http://localhost:8080](http://localhost:8080)
 
-Now you can build to apply changes from "src".
+Now you can build to apply changes from "src" and "backup".
 
 	npm run build
 
