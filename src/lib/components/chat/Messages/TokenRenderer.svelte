@@ -10,6 +10,9 @@
 	export let tokenIdx = 0;
 	export let id;
 
+	let element;
+	let content;
+
 	const renderer = new marked.Renderer();
 
 	// For code blocks with simple backticks
@@ -17,30 +20,19 @@
 		return `<code>${code.replaceAll('&amp;', '&')}</code>`;
 	};
 
-	// renderer.code = (code, lang) => {
-	// 	const element = document.createElement('div');
-	// 	new CodeBlock({
-	// 		target: element,
-	// 		props: {
-	// 			id: `${id}-${tokenIdx}`,
-	// 			lang: lang ?? '',
-	// 			code: revertSanitizedResponseContent(code ?? '')
-	// 		}
-	// 	});
-	// 	return element.innerHTML;
-	// };
+	let codes = [];
+	renderer.code = (code, lang) => {
+		codes.push({ code, lang, id: codes.length });
+		codes = codes;
+		return `{{@CODE ${codes.length - 1}}}`;
+	};
 
-	// renderer.image = (href, title, text) => {
-	// 	const element = document.createElement('pre');
-	// 	new Image({
-	// 		target: element,
-	// 		props: {
-	// 			src: href,
-	// 			alt: text
-	// 		}
-	// 	});
-	// 	return element.innerHTML;
-	// };
+	let images = [];
+	renderer.image = (href, title, text) => {
+		images.push({ href, title, text });
+		images = images;
+		return `{{@IMAGE ${images.length - 1}}}`;
+	};
 
 	// Open all links in a new tab/window (from https://github.com/markedjs/marked/issues/655#issuecomment-383226346)
 	const origLinkRenderer = renderer.link;
@@ -53,23 +45,50 @@
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		extensions: any;
 	};
+
+	$: if (token) {
+		images = [];
+		codes = [];
+		content = marked
+			.parse(token.raw, {
+				...defaults,
+				gfm: true,
+				breaks: true,
+				renderer
+			})
+			.split(/({{@IMAGE [^}]+}}|{{@CODE [^}]+}})/g);
+	}
 </script>
 
-{#if token.type === 'code'}
-	{#if token.lang === 'mermaid'}
-		<pre class="mermaid">{revertSanitizedResponseContent(token.text)}</pre>
+<div bind:this={element}>
+	{#if token.type === 'code'}
+		{#if token.lang === 'mermaid'}
+			<pre class="mermaid">{revertSanitizedResponseContent(token.text)}</pre>
+		{:else}
+			<CodeBlock
+				id={`${id}-${tokenIdx}`}
+				lang={token?.lang ?? ''}
+				code={revertSanitizedResponseContent(token?.text ?? '')}
+			/>
+		{/if}
+	{:else if token.type === 'image'}
+		<Image src={token.href} alt={token.text} />
 	{:else}
-		<CodeBlock
-			id={`${id}-${tokenIdx}`}
-			lang={token?.lang ?? ''}
-			code={revertSanitizedResponseContent(token?.text ?? '')}
-		/>
+		{#each content as part}
+			{@html part.startsWith('{{@IMAGE ') || part.startsWith('{{@CODE ') ? '' : part}
+
+			{#if images.length > 0 && part.startsWith('{{@IMAGE ')}
+				{@const img = images[parseInt(part.match(/{{@IMAGE (\d+)}}/)[1])]}
+
+				<div class="mt-6">
+					<Image src={img.href} text={img.text} />
+				</div>
+			{:else if codes.length > 0 && part.startsWith('{{@CODE ')}
+				{@const _code = codes[parseInt(part.match(/{{@CODE (\d+)}}/)[1])]}
+				<div class="my-10 -mb-6">
+					<CodeBlock id={`${id}-${tokenIdx}-${_code.id}`} lang={_code.lang} code={_code.code} />
+				</div>
+			{/if}
+		{/each}
 	{/if}
-{:else}
-	{@html marked.parse(token.raw, {
-		...defaults,
-		gfm: true,
-		breaks: true,
-		renderer
-	})}
-{/if}
+</div>

@@ -12,14 +12,14 @@
 	let showImagePreview = false;
 </script>
 
-<div class="w-full py-3">
+<div>
 	<button
 		on:click={() => {
 			showImagePreview = true;
 		}}
+		class="w-full"
 	>
 		<img src={_src} {alt} class=" max-h-96 rounded-lg" draggable="false" data-cy="image" />
 	</button>
 </div>
-
 <ImagePreview bind:show={showImagePreview} src={_src} {alt} />
