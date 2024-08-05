@@ -1,15 +1,20 @@
 [Install Steps](../)
-# Docker Setup for Editing (Experimental)
+# Docker Setup
 
 Since Docker restarts local containers when your computer restarts, you may already have 
-[http://localhost:3000](http://localhost:3000) running if you've added to Docker previously. The port and ghcr.io source is visible under details within Docker.
-<!-- ghcr.io stands for GitHub Container Registry (GHCR) -->
+[http://localhost:3000](http://localhost:3000) running if you've added to Docker previously. 
 
-Our staging Docker container resides at [https://github.com/modelearth/projects/pkgs/container/projects](https://github.com/modelearth/projects/pkgs/container/projects)
+Also see <a href="https://docs.openwebui.com/getting-started/">Quick Start with Docker (recommended)</a> 
+The port and ghcr.io source is visible under details within Docker.  
+ghcr.io stands for GitHub Container Registry (GHCR)
 
-Our production Docker container is in our [Github datascape account packages](https://github.com/users/datascape/packages/container/package/projects).
+**Our Staging "modelearth" Docker container**
+Resides at [https://github.com/modelearth/projects/pkgs/container/projects](https://github.com/modelearth/projects/pkgs/container/projects)
 
-## Setup
+**Our Production "datascape" Docker container**
+Resides at [https://github.com/users/datascape/packages/container/package/projects](https://github.com/users/datascape/packages/container/package/projects)
+
+## Setup for your local computer
 
 [Overview in video](https://www.youtube.com/watch?v=N-aRJe--txs)
 
@@ -45,7 +50,9 @@ If the docker cmd is not recognized after installing Docker on a Mac, Create a s
 
 **ghcr.io** stands for GitHub Container Registry, which is a service provided by GitHub for hosting and managing container images.
 
+<br>
 
+# Docker Steps for Editing Locally (experimental)
 
 ## Edit files pulled down from Docker package
 
@@ -229,4 +236,4 @@ Increase Swap from 1GB to 3GB
 -->
 
 ---
-<br>[Install and build locally](../) - without Docker
+<br>[Install for Building Locally](../) - without Docker

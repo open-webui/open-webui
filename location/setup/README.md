@@ -4,11 +4,11 @@
 
 If you already have an "open-webui" Docker container, your OpenWebUI server may already be running at [localhost:3000](http://localhost:3000) (since Docker restarts it when you start your computer).  You can now [train with a web page](train).
 
-You can use the <a href="https://docs.openwebui.com/getting-started/">Quick Start with Docker (recommended)</a> to install locally. This will automatically include Ollama in your Docker install. It's a quick way to install. For editing, the backend files can be extract from Docker with our [Docker Setup for Editing (Experimental)](docker) in which we extract backend files to edit in a Webroot. We're not sure if un-built frontend files can reside in OpenWebUI Docker container images.
+Use our [Docker Setup](docker) for a quick install with Ollama for loading models. The page also includes experiments in which we extract backend files to edit in a Webroot. We're not sure if un-built frontend files can reside in OpenWebUI Docker container images.
 <br>
 
 
-# Install and Build Locally (without Docker)
+# Install for Building Locally (without Docker)
 
 ### Use our conda-start.sh script to install with one step
 
