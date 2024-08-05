@@ -4,7 +4,6 @@
 	import { marked } from 'marked';
 	import CodeBlock from './CodeBlock.svelte';
 	import Image from '$lib/components/common/Image.svelte';
-	import { stringify } from 'postcss';
 
 	export let token;
 	export let tokenIdx = 0;
@@ -86,7 +85,11 @@
 			{:else if codes.length > 0 && part.startsWith('{{@CODE ')}
 				{@const _code = codes[parseInt(part.match(/{{@CODE (\d+)}}/)[1])]}
 				<div class="my-10 -mb-6">
-					<CodeBlock id={`${id}-${tokenIdx}-${_code.id}`} lang={_code.lang} code={_code.code} />
+					<CodeBlock
+						id={`${id}-${tokenIdx}-${_code.id}`}
+						lang={_code.lang}
+						code={revertSanitizedResponseContent(_code.code)}
+					/>
 				</div>
 			{/if}
 		{/each}
