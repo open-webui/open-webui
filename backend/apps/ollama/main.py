@@ -805,7 +805,7 @@ async def generate_chat_completion(
                 )
 
             if (
-                model_info.params.get("temperature", None)
+                model_info.params.get("temperature", None) is not None
                 and payload["options"].get("temperature") is None
             ):
                 payload["options"]["temperature"] = model_info.params.get(
@@ -813,7 +813,7 @@ async def generate_chat_completion(
                 )
 
             if (
-                model_info.params.get("seed", None)
+                model_info.params.get("seed", None) is not None
                 and payload["options"].get("seed") is None
             ):
                 payload["options"]["seed"] = model_info.params.get("seed", None)
@@ -856,6 +856,12 @@ async def generate_chat_completion(
                 and payload["options"].get("top_p") is None
             ):
                 payload["options"]["top_p"] = model_info.params.get("top_p", None)
+
+            if (
+                model_info.params.get("min_p", None)
+                and payload["options"].get("min_p") is None
+            ):
+                payload["options"]["min_p"] = model_info.params.get("min_p", None)
 
             if (
                 model_info.params.get("use_mmap", None)

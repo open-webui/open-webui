@@ -110,7 +110,7 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				const _socket = io(`${WEBUI_BASE_URL}`, {
+				const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
 					path: '/ws/socket.io',
 					auth: { token: localStorage.token }
 				});
