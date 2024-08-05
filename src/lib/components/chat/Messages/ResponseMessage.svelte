@@ -499,7 +499,10 @@
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-									<MarkdownTokens id={message.id} {tokens} />
+
+									{#key tokens}
+										<MarkdownTokens id={message.id} {tokens} />
+									{/key}
 								{/if}
 
 								{#if message.error}
