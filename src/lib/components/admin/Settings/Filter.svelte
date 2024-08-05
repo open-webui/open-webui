@@ -211,7 +211,7 @@
 					<textarea
 						bind:value={CHAT_FILTER_WORDS}
 						class="w-full rounded-lg px-4 py-3 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-						rows="18"
+						rows="16"
 					/>
 				</div>
 			</div>
