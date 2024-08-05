@@ -29,6 +29,7 @@ from langchain_community.document_loaders import (
     UnstructuredRSTLoader,
     UnstructuredExcelLoader,
     YoutubeLoader,
+    PDFPlumberLoader,
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
@@ -660,7 +661,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
     ]
 
     if file_ext == "pdf":
-        loader = PyPDFLoader(file_path, extract_images=app.state.PDF_EXTRACT_IMAGES)
+        loader = PDFPlumberLoader(file_path, extract_images=app.state.PDF_EXTRACT_IMAGES)
     elif file_ext == "csv":
         loader = CSVLoader(file_path)
     elif file_ext == "rst":
