@@ -23,6 +23,13 @@ We recommend using GitHub Desktop to pull [our projects repo](https://github.com
 	git clone https://github.com/modelearth/projects.git
 	cd projects/
 
+Check that you have cmd apps available, include a 3.11 version of python.
+
+	conda --version
+	python3.11 --version
+	node --version
+	npm --version
+
 Next run the following to in the root of the "projects" folder. Our [conda-start.sh](https://github.com/ModelEarth/projects/blob/main/location/setup/script/conda-start.sh) script invokes python3.11 so you might need [pyenv](https://model.earth/io/coders/python).
 	
 	bash location/setup/script/conda-start.sh
