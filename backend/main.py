@@ -225,9 +225,7 @@ async def get_body_and_model_and_user(request):
     body = json.loads(body_str) if body_str else {}
 
     model_id = body["model"]
-    if model_id not in app.state.MODELS:
-        raise Exception("Model not found")
-    model = app.state.MODELS[model_id]
+    model = get_model(model_id)
 
     user = get_current_user(
         request,
@@ -613,10 +611,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             try:
                 body, model, user = await get_body_and_model_and_user(request)
             except Exception as e:
-                return JSONResponse(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    content={"detail": str(e)},
-                )
+                return exception_json_response(e)
 
             metadata = {
                 "chat_id": body.pop("chat_id", None),
@@ -640,10 +635,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     body, model, user, __event_emitter__, __event_call__
                 )
             except Exception as e:
-                return JSONResponse(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    content={"detail": str(e)},
-                )
+                return exception_json_response(e)
 
             try:
                 body, flags = await chat_completion_tools_handler(
@@ -752,6 +744,25 @@ app.add_middleware(ChatCompletionMiddleware)
 #
 ##################################
 
+def exception_json_response(e):
+    if isinstance(e, HTTPException):
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail},
+        )
+    else:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": str(e)},
+        )
+
+def get_model(model_id):
+    if model_id not in app.state.MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+    return app.state.MODELS[model_id]
 
 def get_sorted_filters(model_id):
     filters = [
@@ -774,10 +785,11 @@ def get_sorted_filters(model_id):
 
 def filter_pipeline(payload, user):
     user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
-    model_id = payload["model"]
-    sorted_filters = get_sorted_filters(model_id)
 
-    model = app.state.MODELS[model_id]
+    model_id = payload["model"]
+    model = get_model(model_id)
+
+    sorted_filters = get_sorted_filters(model_id)
 
     if "pipeline" in model:
         sorted_filters.append(model)
@@ -838,10 +850,7 @@ class PipelineMiddleware(BaseHTTPMiddleware):
             try:
                 data = filter_pipeline(data, user)
             except Exception as e:
-                return JSONResponse(
-                    status_code=e.args[0],
-                    content={"detail": e.args[1]},
-                )
+                return exception_json_response(e)
 
             modified_body_bytes = json.dumps(data).encode("utf-8")
             # Replace the request body with the modified one
@@ -1086,12 +1095,7 @@ async def get_models(user=Depends(get_verified_user)):
 @app.post("/api/chat/completions")
 async def generate_chat_completions(form_data: dict, user=Depends(get_verified_user)):
     model_id = form_data["model"]
-    if model_id not in app.state.MODELS:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
-        )
-    model = app.state.MODELS[model_id]
+    model = get_model(model_id)
 
     # `task` field is used to determine the type of the request, e.g. `title_generation`, `query_generation`, etc.
     task = None
@@ -1118,12 +1122,7 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
 async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
     data = form_data
     model_id = data["model"]
-    if model_id not in app.state.MODELS:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
-        )
-    model = app.state.MODELS[model_id]
+    model = get_model(model_id)
 
     sorted_filters = get_sorted_filters(model_id)
     if "pipeline" in model:
@@ -1276,11 +1275,7 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
                 data = outlet(**params)
 
         except Exception as e:
-            print(f"Error: {e}")
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
+            return exception_json_response(e)
 
     return data
 
@@ -1301,12 +1296,7 @@ async def chat_action(action_id: str, form_data: dict, user=Depends(get_verified
 
     data = form_data
     model_id = data["model"]
-    if model_id not in app.state.MODELS:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
-        )
-    model = app.state.MODELS[model_id]
+    model = get_model(model_id)
 
     __event_emitter__ = get_event_emitter(
         {
@@ -1380,11 +1370,7 @@ async def chat_action(action_id: str, form_data: dict, user=Depends(get_verified
                 data = action(**params)
 
         except Exception as e:
-            print(f"Error: {e}")
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": str(e)},
-            )
+            return exception_json_response(e)
 
     return data
 
@@ -1489,10 +1475,7 @@ async def generate_title(form_data: dict, user=Depends(get_verified_user)):
     try:
         payload = filter_pipeline(payload, user)
     except Exception as e:
-        return JSONResponse(
-            status_code=e.args[0],
-            content={"detail": e.args[1]},
-        )
+        return exception_json_response(e)
 
     if "chat_id" in payload:
         del payload["chat_id"]
@@ -1542,10 +1525,7 @@ async def generate_search_query(form_data: dict, user=Depends(get_verified_user)
     try:
         payload = filter_pipeline(payload, user)
     except Exception as e:
-        return JSONResponse(
-            status_code=e.args[0],
-            content={"detail": e.args[1]},
-        )
+        return exception_json_response(e)
 
     if "chat_id" in payload:
         del payload["chat_id"]
@@ -1599,10 +1579,7 @@ Message: """{{prompt}}"""
     try:
         payload = filter_pipeline(payload, user)
     except Exception as e:
-        return JSONResponse(
-            status_code=e.args[0],
-            content={"detail": e.args[1]},
-        )
+        return exception_json_response(e)
 
     if "chat_id" in payload:
         del payload["chat_id"]
@@ -1639,10 +1616,7 @@ async def get_tools_function_calling(form_data: dict, user=Depends(get_verified_
         )
         return context
     except Exception as e:
-        return JSONResponse(
-            status_code=e.args[0],
-            content={"detail": e.args[1]},
-        )
+        return exception_json_response(e)
 
 
 ##################################
