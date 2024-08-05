@@ -4,7 +4,7 @@
 Use our [Install Steps](setup) and send Pull Requests for our "[projects/location](https://github.com/ModelEarth/projects/tree/main/location/)" folder.  
 
 TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) and share some cool findings during our meetup.  
-The video's steps for downloading Ollama and Docker are on our [Docker Setup](setup/docker).  
+Use the video's steps for downloading Ollama and Docker was we've documented on our [Docker Setup](setup/docker).  
 If you're installing the buildable version with our [Install for Building Locally](setup), you can skip the Ollama and Docker install.
 
 TO DO: Figure out how to call our "src-merged" folder during build rather then "src". 
