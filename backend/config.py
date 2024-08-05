@@ -617,7 +617,7 @@ log.info(f"Azure AD Authentication set. CLIENT_ID: \"{CLIENT_ID}\"; CLIENT_SECRE
 ####################################
 # Email Notifications
 ####################################
-HR_EMAIL = os.environ.get("HR_EMAIL", "Qinghao.Zhang@mbzuai.ac.ae")
+HR_EMAIL = os.environ.get("HR_EMAIL")
 log.info(f"HR_EMAIL: {HR_EMAIL}")
 
 ####################################

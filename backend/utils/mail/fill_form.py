@@ -1,8 +1,10 @@
-from docx import Document
+from pdfrw import PdfReader, PdfWriter, PageMerge
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+import io
 
 from datetime import datetime
 import time
-import random
 import regex as re
 
 
@@ -164,21 +166,36 @@ class FillLeaveForm:
 
         required_keys = ['{NAME}','{ID}','{JOBTITLE}','{DEPT}','{LEAVETYPE}','{REMARKS}','{LEAVEFROM}','{LEAVETO}','{DAYS}','{ADDRESS}','{TELE}','{EMAIL}','{DATE}']
         self.validate_context(self.data, required_keys)
-        doc = Document(self.template_path)
         
-        for para in doc.paragraphs:
-            for key, value in self.data.items():
-                if key in para.text:
-                    para.text = para.text.replace(key, value)
-        
-        for table in doc.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    for key, value in self.data.items():
-                        if key in cell.text:
-                            cell.text = cell.text.replace(key, value)
+        packet = io.BytesIO()
+        can = canvas.Canvas(packet, pagesize=letter)
+        can.setFont("Helvetica", 10)
+        can.drawString(120, 690, self.data['{NAME}'])
+        can.drawString(400, 690, self.data['{ID}'])
+        can.drawString(120, 666, self.data['{JOBTITLE}'])
+        can.drawString(400, 666, self.data['{DEPT}'])
+        can.drawString(50, 620, self.data['{LEAVETYPE}'])
+        can.drawString(50, 570, self.data['{REMARKS}'])
+        can.drawString(160, 490, self.data['{LEAVEFROM}'])
+        can.drawString(320, 490, self.data['{LEAVETO}'])
+        can.drawString(475, 490, self.data['{DAYS}'])
+        can.drawString(160, 445, self.data['{ADDRESS}'])
+        can.drawString(160, 415, self.data['{TELE}'])
+        can.drawString(320, 415, self.data['{EMAIL}'])
+        can.drawString(120, 245, self.data['{DATE}'])
+        can.drawString(255, 245, self.data['{DATE}'])
+        can.save()
+        # Move to the beginning of the StringIO buffer
+        packet.seek(0)
+        # Read the existing PDF template
+        template = PdfReader(self.template_path)
+        overlay_pdf = PdfReader(packet)
+        overlay_page = overlay_pdf.pages[0]
+        # Merge the overlay with the template
+        for page in template.pages:
+            merger = PageMerge(page)
+            merger.add(overlay_page).render()
         # leave_{first_name}_{last_name}_start_date_end_date.pdf
         out_file = self.output_path+'leave_'+'_'.join(self.data['{NAME}'].split())+'_'+self.data['{LEAVEFROM}'].replace('-', '_')+'_'+self.data['{LEAVETO}'].replace('-', '_')+'.docx'
-        # out_file = self.output_path+self.data['{NAME}']+' '+self.data['{LEAVEFROM}']+' '+self.generate_unique_code()+'.docx'
-        doc.save(out_file)
+        PdfWriter(out_file, trailer=template).write()
         return out_file

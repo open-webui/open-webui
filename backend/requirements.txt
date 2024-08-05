@@ -224,8 +224,8 @@ zipp==3.17.0
     # via importlib-metadata
 
 msgraph-py==1.1.0
-python-docx
-docx2pdf
-regex
+pdfrw==0.4
+reportlab==4.2.2
 
+regex
 # All of the libs above is for the Microsoft Graph API to send email

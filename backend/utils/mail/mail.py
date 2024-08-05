@@ -2,7 +2,6 @@ import logging
 
 from .graph import Graph
 from .fill_form import FillLeaveForm
-from docx2pdf import convert
 from apps.web.models.services import LeaveForm
 
 class Mail:
@@ -18,7 +17,7 @@ class Mail:
 
     async def send_mail(self, subject, body, recipient, form_data: LeaveForm):
         # fill the leave form
-        template_path = 'utils/mail/leave_template.docx'
+        template_path = 'utils/mail/leave_template.pdf'
         output_path = 'utils/mail/'
 
         data = {
@@ -39,9 +38,9 @@ class Mail:
         #get the form file path
         file_path = FillLeaveForm(template_path, output_path, data).fill_template()
         #make the mail content and send the mail can customize the subject and body
-        pdf_path = file_path.replace('.docx','.pdf')
-        convert(file_path,pdf_path)
-        attachment_path = pdf_path
+        attachment_path = file_path
         attachment_name = 'Leave_Application_Form.pdf'
 
+        logging.info("Sending email...")
         await self.graph.send_leave_mail(subject, body, recipient, attachment_path, attachment_name)
+        logging.info("Success")
