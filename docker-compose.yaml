@@ -16,26 +16,9 @@ services:
       #- 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY=Estrada14@'
       - 'WEBUI_AUTH=True'
-      - 'DATABASE_URL=postgresql://postgres:mysecretpassword@postgres:5432/cplaygpt?sslmode=disable'
-      - 'DOPPLER_TOKEN=dp.sa.X0CXgONWebHJ82gbXrYdlm0mQfegg96FQvyQ4lv15uW'
-        #- 'DATABASE_URL=postgresql://a6e7mf:xau_7SGLERNn2aDuin6y0FMiOxTyXdyhSiEu1@us-east-1.sql.xata.sh:5432/cplaygpt:main?sslmode=require'
+      - 'DOPPLER_TOKEN=${DOPPLER_TOKEN}'
     extra_hosts:
       - host.docker.internal:host-gateway
-    depends_on:
-      - postgres
-    restart: unless-stopped
-
-  postgres:
-    image: postgres:latest
-    container_name: postgres
-    environment:
-      - POSTGRES_DB=cplaygpt
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=mysecretpassword
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     restart: unless-stopped
 
 volumes:
