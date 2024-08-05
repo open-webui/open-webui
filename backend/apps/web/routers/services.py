@@ -50,6 +50,8 @@ async def submit_leave_form(
 ):
     logging.info(f"Received leave form data: {form_data}")
     if session_user:
+        if not session_user.extra_sso:
+            raise HTTPException(401, detail=ERROR_MESSAGES.INVALID_ACCOUNT)
         access_token = json.loads(session_user.extra_sso)["access_token"]
         logging.info(f"SSO access_token: {access_token}")
 

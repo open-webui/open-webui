@@ -75,3 +75,5 @@ class ERROR_MESSAGES(str, Enum):
     INVALID_URL = (
         "Oops! The URL you provided is invalid. Please double-check and try again."
     )
+
+    INVALID_ACCOUNT = "Oops! Due to your account type, this feature has been restricted. Please contact the administrator."
