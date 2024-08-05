@@ -165,10 +165,5 @@ input[type='number'] {
 	padding: 3px 8px;
 	font-size: 0.8em;
 	font-weight: 600;
-}
-[data-theme='light'] .codespan {
-	background-color: #f0f0f0;
-}
-[data-theme='dark'] .codespan {
-	background-color: #111;
+	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
 }
