@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.12] - 2024-08-05
+
+### Added
+
+- **✨ Migrated to SvelteKit 2**: Added visuals for model selection, including images next to model names for more intuitive navigation.
+
+### Changed
+
+- **⬆️ Dependency Updates**
+  - Added '@sveltejs/vite-plugin-svelte'.
+  - Upgraded '@sveltejs/adapter-auto' from version 2.0.0 to 3.2.2.
+  - Upgraded '@sveltejs/adapter-static' from version 2.0.3 to 3.0.2.
+  - Upgraded '@sveltejs/kit' from version 1.30.0 to 2.5.20.
+  - Upgraded '@tailwindcss/typography' from version 0.5.10 to 0.5.13.
+  - Upgraded 'eslint-config-prettier' from version 8.5.0 to 9.1.0.
+  - Upgraded 'eslint-plugin-cypress' from version 3.0.2 to 3.4.0.
+  - Upgraded 'eslint-plugin-svelte' from version 2.30.0 to 2.43.0.
+  - Upgraded 'prettier' from version 2.8.0 to 3.3.3.
+  - Upgraded 'prettier-plugin-svelte' from version 2.10.1 to 3.2.6.
+  - Upgraded 'svelte' from version 4.0.5 to 4.2.18.
+  - Upgraded 'svelte-check' from version 3.4.3 to 3.8.5.
+  - Upgraded 'typescript' from version 5.0.0 to 5.5.4.
+  - Upgraded 'vite' from version 4.4.2 to 5.3.5.
+
 ## [0.3.11] - 2024-08-02
 
 ### Added
