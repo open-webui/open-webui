@@ -22,7 +22,7 @@
 		}}
 		src={_src}
 		{alt}
-		class=" rounded-lg"
+		class=" rounded-lg cursor-pointer"
 		draggable="false"
 		data-cy="image"
 	/>
