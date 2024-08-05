@@ -57,7 +57,7 @@
 			remarks: remark,
 			leavefrom: dateFormatter(startDate),
 			leaveto: dateFormatter(endDate),
-			days: dayCount,
+			days: String(dayCount),
 			address: address,
 			tele: phone,
 			email: $user.email,
