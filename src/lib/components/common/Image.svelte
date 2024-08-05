@@ -17,9 +17,9 @@
 		on:click={() => {
 			showImagePreview = true;
 		}}
-		class="w-full"
+		class=" w-fit"
 	>
-		<img src={_src} {alt} class=" max-h-96 rounded-lg" draggable="false" data-cy="image" />
+		<img src={_src} {alt} class=" max-h-96 rounded-lg w-full" draggable="false" data-cy="image" />
 	</button>
 </div>
 <ImagePreview bind:show={showImagePreview} src={_src} {alt} />
