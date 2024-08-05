@@ -1,4 +1,4 @@
-Our meetups are [Wednesdays at NOON EDT](/io/coders/) and [Fridays at 5 PM EDT](/io/coders) and [Sundays at 10 PM EDT](/io/coders/).
+Our meetups are [Wednesdays at 11 AM EDT](/io/coders/) and [Fridays at 6 PM EDT](/io/coders) and [Sundays at 11 PM EDT](/io/coders/).
 
 ---
 
