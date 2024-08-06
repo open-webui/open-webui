@@ -1,27 +1,13 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { marked } from 'marked';
 	import type { Token } from 'marked';
-
-	import {
-		replaceTokens,
-		revertSanitizedResponseContent,
-		sanitizeResponseContent,
-		unescapeHtml
-	} from '$lib/utils';
+	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
+	import { onMount } from 'svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/MarkdownInlineTokens.svelte';
-	import { user } from '$lib/stores';
 
 	export let id: string;
 	export let tokens: Token[];
-	export let model = null;
-	export let content = '';
 	export let top = true;
-
-	$: tokens = marked.lexer(
-		replaceTokens(sanitizeResponseContent(content), model?.name, $user?.name)
-	);
 
 	const headerComponent = (depth: number) => {
 		return 'h' + depth;
