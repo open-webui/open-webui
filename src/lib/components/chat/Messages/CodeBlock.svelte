@@ -5,12 +5,14 @@
 	import { loadPyodide } from 'pyodide';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import { loadSandpackClient } from '@codesandbox/sandpack-client';
+	import { getContext } from 'svelte';
 
 	export let id = '';
 
 	export let lang = '';
 	export let code = '';
 
+	const i18n = getContext('i18n');
 	let highlightedCode = null;
 	let executing = false;
 
@@ -202,38 +204,39 @@ __builtins__.input = input`);
 		};
 	};
 
-	let expanded = true;
+	let expanded = false;
 	let all_expanded = true;
 	let sandpackIframe;
 	let sandpackClient;
 	let enableHTML = false;
 
 	const executeHTML = async (code) => {
-		if (expanded) {
-			const content = {
-				files: {
-					'/package.json': {
-						code: JSON.stringify({
-							main: 'index.html',
-							devDependencies: {}
-						})
-					},
-					'/index.html': { code }
+		const content = {
+			files: {
+				'/package.json': {
+					code: JSON.stringify({
+						main: 'index.html',
+						devDependencies: {}
+					})
 				},
-				environment: 'vanilla',
-				template: 'static'
-			};
-			if (sandpackClient) {
-				sandpackClient.updateSandbox(content);
-			} else {
-				sandpackClient = await loadSandpackClient(sandpackIframe, content, {
-					showOpenInCodeSandbox: true
-				});
-			}
+				'/index.html': { code }
+			},
+			environment: 'vanilla',
+			template: 'static'
+		};
+		if (sandpackClient) {
+			sandpackClient.updateSandbox(content);
+		} else {
+			sandpackClient = await loadSandpackClient(sandpackIframe, content, {
+				showOpenInCodeSandbox: true
+			});
 		}
 	};
 
 	const toggleExpand = async () => {
+		if (!expanded) {
+			executeHTML(code);
+		}
 		expanded = !expanded;
 	};
 
@@ -241,9 +244,9 @@ __builtins__.input = input`);
 		all_expanded = !all_expanded;
 	};
 
-	$: if (lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html') {
-		if (!!sandpackIframe) {
-			executeHTML(code);
+	$: if (lang.toLowerCase() === 'php' || lang.toLowerCase() === 'html') {
+		if (!!sandpackIframe || !enableHTML) {
+			// executeHTML(code);
 			enableHTML = true;
 		}
 	}
@@ -325,17 +328,17 @@ __builtins__.input = input`);
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 			<div class="text-gray-500 text-white text-xs mb-1 flex justify-between items-center">
 				<button class="p-1" on:click={toggleExpand}>
-					{@html 'Preview'}
+					{@html $i18n.t('Preview')}
 				</button>
 				<div class="flex items-center">
 					<button
 						class="copy-code-button bg-none border-none p-1"
 						on:click={() => {
 							executeHTML(code);
-						}}>Refresh</button
+						}}>{$i18n.t('Refresh')}</button
 					>
 					<button class="copy-code-button bg-none border-none p-1" on:click={toggleExpand}
-						>{expanded ? 'Collapse' : 'Expand'}</button
+						>{expanded ? $i18n.t('Collapse') : $i18n.t('Expand')}</button
 					>
 				</div>
 			</div>
