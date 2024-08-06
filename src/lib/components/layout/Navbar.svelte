@@ -31,7 +31,11 @@
 		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 		delete _settings.system;
 		localStorage.setItem('settings', JSON.stringify(_settings))
-		location.href = '/auth';
+		if ($user.extra_sso) {
+			location.href = '/api/v1/auths/signin/ssoout'
+		} else {
+			location.href = '/auth';
+		}
 		showDropdown = false;
 	}
 
