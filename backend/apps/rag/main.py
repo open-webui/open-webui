@@ -15,6 +15,8 @@ from typing import List
 
 from chromadb.utils.batch_utils import create_batches
 
+from langchain.docstore.document import Document
+
 from langchain_community.document_loaders import (
     WebBaseLoader,
     TextLoader,
@@ -33,6 +35,7 @@ from langchain_community.document_loaders import (
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
+import camelot
 import validators
 import urllib.parse
 import socket
@@ -537,8 +540,40 @@ def resolve_hostname(hostname):
 
     return ipv4_addresses, ipv6_addresses
 
+def extract_and_process_tables(file_path):
+    # Extract tables using Camelot
+    tables = camelot.read_pdf(file_path, pages='all')
+    
+    structured_data = []
+    for idx, table in enumerate(tables):
+        df = table.df
+        if len(df) > 1 and len(df.columns) > 1:
+            headers = df.iloc[0]
+            if not any(header == '' for header in headers):
+                df = df.drop(0).reset_index(drop=True)
+                df.columns = headers
+                rows = df.values
+                for row in rows:
+                    row_dict = {headers[i]: row[i] for i in range(len(headers))}
+                    structured_data.append(row_dict)
+                structured_data.append("\n\n")
+    
+    table_texts = []
+    for entry in structured_data:
+        if isinstance(entry, dict):
+            row_text = ' | '.join(f"{k}: {v}" for k, v in entry.items())
+            table_texts.append(row_text)
+        else:
+            table_texts.append(entry)
+    
+    return '\n'.join(table_texts)
 
-def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> bool:
+def store_data_in_vector_db(data, collection_name, overwrite: bool = False, file_content_type = None, file_path = None) -> bool:
+    if file_content_type == 'application/pdf':
+        table_texts = extract_and_process_tables(file_path)
+        if table_texts:
+            new_document = Document(page_content=table_texts, metadata={"source": file_path, "type": "tables"})
+            data.append(new_document)
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.CHUNK_SIZE,
@@ -725,7 +760,7 @@ def store_doc(
         data = loader.load()
 
         try:
-            result = store_data_in_vector_db(data, collection_name, overwrite = True)
+            result = store_data_in_vector_db(data, collection_name, overwrite = True, file_content_type=file.content_type, file_path=file_path)
 
             if result:
                 return {
@@ -804,7 +839,7 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                 data = loader.load()
 
                 try:
-                    result = store_data_in_vector_db(data, collection_name, overwrite = True)
+                    result = store_data_in_vector_db(data, collection_name, overwrite = True, file_content_type=file_content_type[0],file_path=path)
 
                     if result:
                         sanitized_filename = sanitize_filename(filename)
