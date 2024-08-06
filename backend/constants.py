@@ -77,3 +77,5 @@ class ERROR_MESSAGES(str, Enum):
     )
 
     INVALID_ACCOUNT = "Oops! Due to your account type, this feature has been restricted. Please contact the administrator."
+
+    EMAIL_ERROR = "Oops! Something went wrong while sending the email. Maybe you don't have permission to send emails or your SSO account login has expired. Please login again, and then try it again. If the issue persists, contact support for assistance."

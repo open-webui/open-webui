@@ -72,4 +72,8 @@ class Graph:
         requestConfiguration: BaseRequestConfiguration = BaseRequestConfiguration()
         requestConfiguration.headers = HeadersCollection()
         requestConfiguration.headers.add("Authorization", self.authorization)
-        await self.user_client.me.send_mail.post(body=request_body, request_configuration=requestConfiguration)
+        try:
+            await self.user_client.me.send_mail.post(body=request_body, request_configuration=requestConfiguration)
+        except ValueError as e:
+            logging.error(f"Error sending email: {e}")
+            raise e

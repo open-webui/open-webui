@@ -83,7 +83,7 @@ hrwebui:
   replicaCount: 1
   image:
     repository: ghcr.io/ciai-engineering/open-webui
-    tag: "git-53c7c57"
+    tag: "git-15cfa2b"
     pullPolicy: Always
   resources: {}
   imagePullSecrets: 
@@ -126,5 +126,5 @@ hrwebui:
       tenant: "c93272d3-1b07-4b3d-a3b6-19b34a973915"
       redirectUri: "https://hr.ciai-mbzuai.ac.ae/login"
   mail:
-    enabled: true
+    enabled: false
     hr: "Qinghao.Zhang@mbzuai.ac.ae"

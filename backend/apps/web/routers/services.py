@@ -77,9 +77,13 @@ Sincerely,
             logging.warn(f"The HR_EMAIL is None. It will be seted with userslef's email {session_user.email}")
             recipient = session_user.email
         
-        logging.info(f"Preparing to send email to {recipient}")
-        await mail.send_mail(subject, body, recipient, form_data)
-        logging.info(f"Email sent to {recipient}")
+        try:
+            logging.info(f"Preparing to send email to {recipient}")
+            await mail.send_mail(subject, body, recipient, form_data)
+            logging.info(f"Email sent to {recipient}")
+        except ValueError as e:
+            logging.error(f"Error sending email: {e}")
+            raise HTTPException(401, detail=ERROR_MESSAGES.EMAIL_ERROR)
 
         return {
                 "email": session_user.email,

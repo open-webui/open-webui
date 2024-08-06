@@ -76,7 +76,7 @@ spec:
           {{- if .Values.hrwebui.mail.enabled}}
           value: {{ .Values.hrwebui.mail.hr}}
           {{- else}}
-          value: Qinghao.Zhang@mbzuai.ac.ae
+          value: 
           {{- end}}
         # SSO Configuration
         tty: true
