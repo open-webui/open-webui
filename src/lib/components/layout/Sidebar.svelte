@@ -34,7 +34,7 @@
 
 
 	export let shareEnabled: boolean = false;
-	export let selectedModels;
+	// export let selectedModels;
 
 	let show = false;
 	let navElement;

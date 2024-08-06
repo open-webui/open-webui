@@ -41,6 +41,8 @@
 	import { LITELLM_API_BASE_URL, OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
+	
+	import { setDefaultModels } from '$lib/apis/configs';
 
 	const i18n = getContext('i18n');
 
@@ -107,6 +109,20 @@
 	// Web functions
 	//////////////////////////
 
+	const setDefaultPrompt = () => {
+		if (!$user) return ''
+		let result = ''
+		if ($user.extra_sso) {
+			const ssoData = JSON.parse($user.extra_sso)
+			result = `RAG system’s information: “You are RAG system for supporting MBZUAI HR service.”
+			User’s information: “I am one user. My name is ${$user.name}, I am the ${ssoData.title ?? '_'} at MBZUAI. My phone number is ${ssoData.phone ?? '_'}. My email address is ${$user.email}. My ID is ${ssoData.id ?? '_'}"`
+		} else {
+			result = `RAG system’s information: “You are RAG system for supporting MBZUAI HR service.”
+			User’s information: “I am one user. My name is ${$user.name}. My email address is ${$user.email}."`
+		}
+		return result
+	}
+
 	const initNewChat = async () => {
 		if (currentRequestId !== null) {
 			await cancelOllamaRequest(localStorage.token, currentRequestId);
@@ -142,7 +158,8 @@
 
 		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 		// if (!_settings.system) {
-		_settings.system = `I am one user. My name is ${$user.name ?? ''}, I am the ${$user.title ?? '_'} at MBZUAI. My phone number is ${$user.phone ?? '_'}. My email address is ${$user.email ?? ''}. My ID is ${$user.id ?? '_'}`
+		_settings.system = setDefaultPrompt()
+		// _settings.system = `I am one user. My name is ${$user.name ?? ''}, I am the ${$user.title ?? '_'} at MBZUAI. My phone number is ${$user.phone ?? '_'}. My email address is ${$user.email ?? ''}. My ID is ${$user.id ?? '_'}`
 		localStorage.setItem('settings', JSON.stringify(_settings))
 		// }
 		settings.set({
@@ -371,7 +388,8 @@
 						: undefined
 			},
 			format: $settings.requestFormat ?? undefined,
-			keep_alive: $settings.keepAlive ?? undefined,
+			// keep_alive: $settings.keepAlive ?? undefined,
+			keep_alive: '60m',
 			docs: docs.length > 0 ? docs : undefined,
 			citations: docs.length > 0
 		});

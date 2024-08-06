@@ -26,6 +26,15 @@
 	let showDownloadChatModal = false;
 	let showDropdown = false;
 
+	const handleSignOut = () => {
+		localStorage.removeItem('token');
+		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+		delete _settings.system;
+		localStorage.setItem('settings', JSON.stringify(_settings))
+		location.href = '/auth';
+		showDropdown = false;
+	}
+
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -142,9 +151,7 @@
 								<button
 									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 									on:click={() => {
-										localStorage.removeItem('token');
-										location.href = '/auth';
-										showDropdown = false;
+										handleSignOut()
 									}}
 								>
 									<div class=" self-center mr-3">

@@ -69,7 +69,7 @@
 				show = false;
 			})
 			.catch((err) => {
-				window.alert('Submission failed. Please try again.');
+				window.alert(err.detail + ' Submission failed.');
 				return;
 			});
 	};
