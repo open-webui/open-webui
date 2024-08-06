@@ -336,8 +336,6 @@ async def pull_model(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
-    r = None
-
     # Admin should be able to pull models from any source
     payload = {**form_data.model_dump(exclude_none=True), "insecure": True}
 
@@ -418,13 +416,13 @@ async def copy_model(
 
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
+    r = requests.request(
+        method="POST",
+        url=f"{url}/api/copy",
+        data=form_data.model_dump_json(exclude_none=True).encode(),
+    )
 
     try:
-        r = requests.request(
-            method="POST",
-            url=f"{url}/api/copy",
-            data=form_data.model_dump_json(exclude_none=True).encode(),
-        )
         r.raise_for_status()
 
         log.debug(f"r.text: {r.text}")
@@ -466,12 +464,12 @@ async def delete_model(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
+    r = requests.request(
+        method="DELETE",
+        url=f"{url}/api/delete",
+        data=form_data.model_dump_json(exclude_none=True).encode(),
+    )
     try:
-        r = requests.request(
-            method="DELETE",
-            url=f"{url}/api/delete",
-            data=form_data.model_dump_json(exclude_none=True).encode(),
-        )
         r.raise_for_status()
 
         log.debug(f"r.text: {r.text}")
@@ -506,12 +504,12 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_verified_us
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
+    r = requests.request(
+        method="POST",
+        url=f"{url}/api/show",
+        data=form_data.model_dump_json(exclude_none=True).encode(),
+    )
     try:
-        r = requests.request(
-            method="POST",
-            url=f"{url}/api/show",
-            data=form_data.model_dump_json(exclude_none=True).encode(),
-        )
         r.raise_for_status()
 
         return r.json()
@@ -563,12 +561,12 @@ async def generate_embeddings(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
+    r = requests.request(
+        method="POST",
+        url=f"{url}/api/embeddings",
+        data=form_data.model_dump_json(exclude_none=True).encode(),
+    )
     try:
-        r = requests.request(
-            method="POST",
-            url=f"{url}/api/embeddings",
-            data=form_data.model_dump_json(exclude_none=True).encode(),
-        )
         r.raise_for_status()
 
         return r.json()
@@ -612,12 +610,12 @@ def generate_ollama_embeddings(
     url = app.state.config.OLLAMA_BASE_URLS[url_idx]
     log.info(f"url: {url}")
 
+    r = requests.request(
+        method="POST",
+        url=f"{url}/api/embeddings",
+        data=form_data.model_dump_json(exclude_none=True).encode(),
+    )
     try:
-        r = requests.request(
-            method="POST",
-            url=f"{url}/api/embeddings",
-            data=form_data.model_dump_json(exclude_none=True).encode(),
-        )
         r.raise_for_status()
 
         data = r.json()
@@ -727,152 +725,121 @@ async def generate_chat_completion(
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
 
-        model_info.params = model_info.params.model_dump()
+        params = model_info.params.model_dump()
 
-        if model_info.params:
+        if params:
             if payload.get("options") is None:
                 payload["options"] = {}
 
             if (
-                model_info.params.get("mirostat", None)
+                params.get("mirostat", None)
                 and payload["options"].get("mirostat") is None
             ):
-                payload["options"]["mirostat"] = model_info.params.get("mirostat", None)
+                payload["options"]["mirostat"] = params.get("mirostat", None)
 
             if (
-                model_info.params.get("mirostat_eta", None)
+                params.get("mirostat_eta", None)
                 and payload["options"].get("mirostat_eta") is None
             ):
-                payload["options"]["mirostat_eta"] = model_info.params.get(
-                    "mirostat_eta", None
-                )
+                payload["options"]["mirostat_eta"] = params.get("mirostat_eta", None)
 
             if (
-                model_info.params.get("mirostat_tau", None)
+                params.get("mirostat_tau", None)
                 and payload["options"].get("mirostat_tau") is None
             ):
-                payload["options"]["mirostat_tau"] = model_info.params.get(
-                    "mirostat_tau", None
-                )
+                payload["options"]["mirostat_tau"] = params.get("mirostat_tau", None)
 
             if (
-                model_info.params.get("num_ctx", None)
+                params.get("num_ctx", None)
                 and payload["options"].get("num_ctx") is None
             ):
-                payload["options"]["num_ctx"] = model_info.params.get("num_ctx", None)
+                payload["options"]["num_ctx"] = params.get("num_ctx", None)
 
             if (
-                model_info.params.get("num_batch", None)
+                params.get("num_batch", None)
                 and payload["options"].get("num_batch") is None
             ):
-                payload["options"]["num_batch"] = model_info.params.get(
-                    "num_batch", None
-                )
+                payload["options"]["num_batch"] = params.get("num_batch", None)
 
             if (
-                model_info.params.get("num_keep", None)
+                params.get("num_keep", None)
                 and payload["options"].get("num_keep") is None
             ):
-                payload["options"]["num_keep"] = model_info.params.get("num_keep", None)
+                payload["options"]["num_keep"] = params.get("num_keep", None)
 
             if (
-                model_info.params.get("repeat_last_n", None)
+                params.get("repeat_last_n", None)
                 and payload["options"].get("repeat_last_n") is None
             ):
-                payload["options"]["repeat_last_n"] = model_info.params.get(
-                    "repeat_last_n", None
-                )
+                payload["options"]["repeat_last_n"] = params.get("repeat_last_n", None)
 
             if (
-                model_info.params.get("frequency_penalty", None)
+                params.get("frequency_penalty", None)
                 and payload["options"].get("frequency_penalty") is None
             ):
-                payload["options"]["repeat_penalty"] = model_info.params.get(
+                payload["options"]["repeat_penalty"] = params.get(
                     "frequency_penalty", None
                 )
 
             if (
-                model_info.params.get("temperature", None) is not None
+                params.get("temperature", None) is not None
                 and payload["options"].get("temperature") is None
             ):
-                payload["options"]["temperature"] = model_info.params.get(
-                    "temperature", None
-                )
+                payload["options"]["temperature"] = params.get("temperature", None)
 
             if (
-                model_info.params.get("seed", None) is not None
+                params.get("seed", None) is not None
                 and payload["options"].get("seed") is None
             ):
-                payload["options"]["seed"] = model_info.params.get("seed", None)
+                payload["options"]["seed"] = params.get("seed", None)
 
-            if (
-                model_info.params.get("stop", None)
-                and payload["options"].get("stop") is None
-            ):
+            if params.get("stop", None) and payload["options"].get("stop") is None:
                 payload["options"]["stop"] = (
                     [
                         bytes(stop, "utf-8").decode("unicode_escape")
-                        for stop in model_info.params["stop"]
+                        for stop in params["stop"]
                     ]
-                    if model_info.params.get("stop", None)
+                    if params.get("stop", None)
                     else None
                 )
 
-            if (
-                model_info.params.get("tfs_z", None)
-                and payload["options"].get("tfs_z") is None
-            ):
-                payload["options"]["tfs_z"] = model_info.params.get("tfs_z", None)
+            if params.get("tfs_z", None) and payload["options"].get("tfs_z") is None:
+                payload["options"]["tfs_z"] = params.get("tfs_z", None)
 
             if (
-                model_info.params.get("max_tokens", None)
+                params.get("max_tokens", None)
                 and payload["options"].get("max_tokens") is None
             ):
-                payload["options"]["num_predict"] = model_info.params.get(
-                    "max_tokens", None
-                )
+                payload["options"]["num_predict"] = params.get("max_tokens", None)
+
+            if params.get("top_k", None) and payload["options"].get("top_k") is None:
+                payload["options"]["top_k"] = params.get("top_k", None)
+
+            if params.get("top_p", None) and payload["options"].get("top_p") is None:
+                payload["options"]["top_p"] = params.get("top_p", None)
+
+            if params.get("min_p", None) and payload["options"].get("min_p") is None:
+                payload["options"]["min_p"] = params.get("min_p", None)
 
             if (
-                model_info.params.get("top_k", None)
-                and payload["options"].get("top_k") is None
-            ):
-                payload["options"]["top_k"] = model_info.params.get("top_k", None)
-
-            if (
-                model_info.params.get("top_p", None)
-                and payload["options"].get("top_p") is None
-            ):
-                payload["options"]["top_p"] = model_info.params.get("top_p", None)
-
-            if (
-                model_info.params.get("min_p", None)
-                and payload["options"].get("min_p") is None
-            ):
-                payload["options"]["min_p"] = model_info.params.get("min_p", None)
-
-            if (
-                model_info.params.get("use_mmap", None)
+                params.get("use_mmap", None)
                 and payload["options"].get("use_mmap") is None
             ):
-                payload["options"]["use_mmap"] = model_info.params.get("use_mmap", None)
+                payload["options"]["use_mmap"] = params.get("use_mmap", None)
 
             if (
-                model_info.params.get("use_mlock", None)
+                params.get("use_mlock", None)
                 and payload["options"].get("use_mlock") is None
             ):
-                payload["options"]["use_mlock"] = model_info.params.get(
-                    "use_mlock", None
-                )
+                payload["options"]["use_mlock"] = params.get("use_mlock", None)
 
             if (
-                model_info.params.get("num_thread", None)
+                params.get("num_thread", None)
                 and payload["options"].get("num_thread") is None
             ):
-                payload["options"]["num_thread"] = model_info.params.get(
-                    "num_thread", None
-                )
+                payload["options"]["num_thread"] = params.get("num_thread", None)
 
-        system = model_info.params.get("system", None)
+        system = params.get("system", None)
         if system:
             system = prompt_template(
                 system,
