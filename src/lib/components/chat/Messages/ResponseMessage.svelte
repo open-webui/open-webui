@@ -77,9 +77,16 @@
 
 	let selectedCitation = null;
 
-	$: tokens = marked.lexer(
-		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
-	);
+	let tokens;
+
+	$: (async () => {
+		if (message?.content) {
+			tokens = marked.lexer(
+				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
+			);
+			// console.log(message?.content, tokens);
+		}
+	})();
 
 	$: if (message) {
 		renderStyling();
@@ -413,7 +420,7 @@
 				{/if}
 
 				<div
-					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-p:my-0 prose-img:my-1 prose-headings:my-1.5 prose-ol:my-1 prose-ul:my-1 whitespace-pre-line"
+					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-p:my-0 prose-img:my-1 prose-headings:my-1.5 prose-ol:my-1 prose-ul:my-1 prose-li:my-0 whitespace-pre-line"
 				>
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
@@ -493,14 +500,13 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full">
+							<div class="w-full flex flex-col">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-
-									{#key tokens}
+									{#key message.id}
 										<MarkdownTokens id={message.id} {tokens} />
 									{/key}
 								{/if}

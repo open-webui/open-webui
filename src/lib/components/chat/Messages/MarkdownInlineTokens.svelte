@@ -1,16 +1,10 @@
 <script lang="ts">
 	import type { Token } from 'marked';
 	import { unescapeHtml } from '$lib/utils';
-	import { onMount } from 'svelte';
-	import { revertSanitizedResponseContent } from '$lib/utils/index.js';
 	import Image from '$lib/components/common/Image.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
-
-	onMount(() => {
-		console.log('MarkdownInlineTokens', id, tokens, top);
-	});
 </script>
 
 {#each tokens as token}
