@@ -452,11 +452,12 @@ async def signin_callback(request: Request):
         raise HTTPException(500, detail="Error in signin_callback")
 
 
-SSO_LOGOUT_REDIRECT_URL = "https://hr.ciai-mbzuai.ac.ae/logout"
+SSO_LOGOUT_REDIRECT_URL = "https://hr.ciai-mbzuai.ac.ae/auth"
 @router.get("/signin/ssoout", )
-async def signin_sso_logout(request: Request, user=Depends(get_current_user)):
+# async def signin_sso_logout(request: Request, user=Depends(get_current_user)):
+async def signin_sso_logout(request: Request):
     """Logout from SSO"""
-    logging.info(f"Signing out from SSO. user: {user}")
+    # logging.info(f"Signing out from SSO. user: {user}")
     redirect_url = f"https://login.microsoftonline.com/{TENANT}/oauth2/v2.0/logout?post_logout_redirect_uri={SSO_LOGOUT_REDIRECT_URL}"
     logging.info(f"Redirecting to {redirect_url}")
     return RedirectResponse(redirect_url)
