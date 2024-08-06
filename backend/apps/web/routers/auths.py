@@ -1,9 +1,9 @@
 import logging
 
-from fastapi import Request, UploadFile, File
+from fastapi import Request
 from fastapi import Depends, HTTPException, status
 from fastapi_sso.sso.microsoft import MicrosoftSSO
-
+from fastapi.responses import RedirectResponse
 from fastapi import APIRouter
 from pydantic import BaseModel
 import re
@@ -450,3 +450,13 @@ async def signin_callback(request: Request):
     except Exception as e:
         logging.error(f"Error in signin_callback: {e}")
         raise HTTPException(500, detail="Error in signin_callback")
+
+
+SSO_LOGOUT_REDIRECT_URL = "https://hr.ciai-mbzuai.ac.ae/logout"
+@router.get("/signin/ssoout", )
+async def signin_sso_logout(request: Request, user=Depends(get_current_user)):
+    """Logout from SSO"""
+    logging.info(f"Signing out from SSO. user: {user}")
+    redirect_url = f"https://login.microsoftonline.com/{TENANT}/oauth2/v2.0/logout?post_logout_redirect_uri={SSO_LOGOUT_REDIRECT_URL}"
+    logging.info(f"Redirecting to {redirect_url}")
+    return RedirectResponse(redirect_url)
