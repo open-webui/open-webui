@@ -12,9 +12,7 @@
 	let showImagePreview = false;
 </script>
 
-<ImagePreview bind:show={showImagePreview} src={_src} {alt} />
-
-<div class="w-full">
+<div class="w-full py-3">
 	<button
 		on:click={() => {
 			showImagePreview = true;
@@ -23,3 +21,5 @@
 		<img src={_src} {alt} class=" max-h-96 rounded-lg" draggable="false" data-cy="image" />
 	</button>
 </div>
+
+<ImagePreview bind:show={showImagePreview} src={_src} {alt} />
