@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
-	import { marked } from 'marked';
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 	import 'katex/dist/katex.min.css';
@@ -38,7 +37,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
-	import MarkdownTokens from './MarkdownTokens.svelte';
+	import Markdown from './Markdown.svelte';
 
 	export let message;
 	export let siblings;
@@ -76,10 +75,6 @@
 	let showCitationModal = false;
 
 	let selectedCitation = null;
-
-	$: tokens = marked.lexer(
-		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
-	);
 
 	$: if (message) {
 		renderStyling();
@@ -500,8 +495,8 @@
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 
-									{#key tokens}
-										<MarkdownTokens id={message.id} {tokens} />
+									{#key message.id}
+										<Markdown id={message.id} {model} content={message.content} />
 									{/key}
 								{/if}
 
