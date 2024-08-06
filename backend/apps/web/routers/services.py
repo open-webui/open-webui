@@ -83,7 +83,7 @@ Sincerely,
             logging.info(f"Email sent to {recipient}")
         except ValueError as e:
             logging.error(f"Error sending email: {e}")
-            raise HTTPException(401, detail=ERROR_MESSAGES.EMAIL_ERROR)
+            raise HTTPException(401, detail=f"Oops! Something went wrong while sending the email. Error: {e}.")
 
         return {
                 "email": session_user.email,

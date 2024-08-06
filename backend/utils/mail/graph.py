@@ -21,6 +21,7 @@ from msgraph.generated.models.file_attachment import FileAttachment
 from kiota_abstractions.base_request_configuration import BaseRequestConfiguration
 from kiota_abstractions.headers_collection import HeadersCollection
         
+from constants import ERROR_MESSAGES
 
 class Graph:
     settings: SectionProxy
@@ -75,5 +76,5 @@ class Graph:
         try:
             await self.user_client.me.send_mail.post(body=request_body, request_configuration=requestConfiguration)
         except ValueError as e:
-            logging.error(f"Error sending email: {e}")
+            logging.error(f"Error sending email: {ERROR_MESSAGES.EMAIL_ERROR}")
             raise e
