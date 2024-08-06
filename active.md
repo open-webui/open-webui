@@ -38,7 +38,7 @@ medium.com subscription needed
 
 - [International Trade Flow SQL Data Prep](/useeio.js/footprint) - Sahil, Himanshu, Song
 - [Python to pull Harmonized Code (HS) lookups into Supabase](/OpenFootprint/harmonized-system/) - Chen and Wenjie
-- [Webhook to create Word Doc from Google Form](https://chatgpt.com/share/4daa1c9e-31e2-42f5-bdcf-c9e1e369391c) - for [our New Member Signup](/community/members/) - Jingyu
+- [Webhook to create Word Doc from Google Form](/webhook) - for [our New Member Signup](/community/members/) - Jingyu
 - [Pull from Supabase (or backup file) into databricks SQL](https://chatgpt.com/share/d610d3e6-ce5f-4e7f-ba9e-4c74ec23abd4) - Apurva, Soham
 - [View DuckDB from Javascript](/OpenFootprint/prep/sql/duckdb/) - Kelly, Gary
 - [Food Nutrition Labels](/data-commons/docs/food) - Shali and Wenwei (Stella)
@@ -67,7 +67,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 
 - [RealityStream](/RealityStream/) - Machine Learning Classification Models - Ivy, Kelvin and many more - TO DO
 - [Process Industry NAICS by Zip Code](/data-pipeline/industries/naics) - TO DO
-- [ML for Community Forecasting Timelines](../data-pipeline/timelines/) - ML Team TO DOs
+- [ML for Community Forecasting Timelines](../data-pipeline/timelines/) - Zip code pipeline TO DO
 - [Open Data Panels - YAML Display](/OpenFootprint) - Microsoft Plug and Play - TO DO
 
 - [Top Commodities by State (hide sort columns)](/data-pipeline/research/economy) - Dinesh
@@ -108,11 +108,11 @@ Pre-processed data for county industry levels, based on employment, establishmen
 <!--- [Image Gallery (React)](/react-gallery/view/) - Anthony -->
 
 **React, Tabulator, Industry Timelines**
-- [React Team - Mosaic column checkboxes](/io/charts)
+- [React Team - Mosaic column checkboxes](/io/charts) - Pallavi
 - [React Team - Commodity Totals](/localsite/info/data/totals/) in [Jobs Reports](/localsite/info/#indicators=JOBS)
-- [Tabulator - Merge in industry year rows using Javascript (1-3)](/data-pipeline/timelines/tabulator/) - Rupesh<!--Vadlamudi-->
+- [Tabulator - Merge in industry year rows using Javascript (1-3)](/data-pipeline/timelines/tabulator/) - DONE<!--Rupesh, Vadlamudi-->
 - [Tabulator - Merge in titles using Javascript (4)](/data-pipeline/timelines/tabulator/) - DONE <!--Dinesh, Fanyi, Rupesh-->
-- [Steps for SQLite in Browser](/data-pipeline/timelines/sqlite/phiresky/) - [Example (Runs SQL)](https://phiresky.github.io/blog/2021/hosting-sqlite-databases-on-github-pages/) - Aashish
+- [Steps for SQLite in Browser](/data-pipeline/timelines/sqlite/phiresky/) - [Example (Runs SQL)](https://phiresky.github.io/blog/2021/hosting-sqlite-databases-on-github-pages/)
 - [Impact Label Pipeline](/apps/impact) - Too optimize and change inputs
 
 <!-- - [React Team - Impact Side Navigation](/io/charts/inflow-outflow/#set=prosperity&indicators=VADD,JOBS) -->
