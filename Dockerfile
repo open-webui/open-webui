@@ -100,6 +100,8 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
         rm -rf /var/lib/apt/lists/*; \
     else \
         apt-get update && \
+        # for using camelot to read tables from pdf
+        apt-get install -y ghostscript python3-opencv && \
         # Install pandoc and netcat
         apt-get install -y --no-install-recommends pandoc netcat-openbsd && \
         # for RAG OCR
