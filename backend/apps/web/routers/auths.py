@@ -406,6 +406,7 @@ async def signin_callback(request: Request):
             sso_user_json_str = json.dumps(sso_user.__dict__)
             logging.info(f"The user info of SSO is {sso_user_json_str}")
             sso_user_email = sso_user.email
+            sso_user_display_name = sso_user.display_name
             user = Users.get_user_by_email(sso_user_email.lower())
             logging.info(f"Got user info by email where email is {sso_user_email.lower()}. User info is {user}")
             if not user:
@@ -413,7 +414,7 @@ async def signin_callback(request: Request):
                 await signup(
                     request,
                     SignupForm(
-                        email=sso_user_email, password=str(uuid.uuid4()), name=sso_user_email, profile_image_url="/user.png", extra_sso=sso_user_json_str
+                        email=sso_user_email, password=str(uuid.uuid4()), name=sso_user_display_name, profile_image_url="/user.png", extra_sso=sso_user_json_str
                     ),
                 )
                 logging.info("Signup done.")
