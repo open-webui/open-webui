@@ -17,7 +17,7 @@
 			{
 				root: null, // viewport
 				rootMargin: '0px',
-				threshold: 1.0 // When 100% of the loader is visible
+				threshold: 0.1 // When 10% of the loader is visible
 			}
 		);
 

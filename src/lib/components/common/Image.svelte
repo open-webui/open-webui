@@ -7,23 +7,24 @@
 	export let isMarkdown = false;
 	export let showImagePreview = false;
 
-	let _src = '';
+	export let className = '';
 
+	let _src = '';
 	$: _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
 </script>
 
-<ImagePreview bind:show={showImagePreview} src={_src} {alt} {isMarkdown} />
-<button
-	on:click={() => {
-		console.log('image preview');
-		showImagePreview = true;
-	}}
->
+<div class={className}>
+	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 	<img
+		on:click={() => {
+			showImagePreview = true;
+		}}
 		src={_src}
 		{alt}
-		class={isMarkdown ? 'w-full hljs' : 'max-h-96 rounded-lg'}
+		class=" rounded-lg cursor-pointer"
 		draggable="false"
 		data-cy="image"
 	/>
-</button>
+</div>
+<ImagePreview bind:show={showImagePreview} src={_src} {alt} {isMarkdown} />

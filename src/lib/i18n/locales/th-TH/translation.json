@@ -509,6 +509,7 @@
 	"Scan": "สแกน",
 	"Scan complete!": "การสแกนเสร็จสมบูรณ์!",
 	"Scan for documents from {{path}}": "สแกนหาเอกสารจาก {{path}}",
+	"Scroll to bottom when switching between branches": "",
 	"Search": "ค้นหา",
 	"Search a model": "ค้นหาโมเดล",
 	"Search Chats": "ค้นหาแชท",
