@@ -729,7 +729,7 @@ async def generate_chat_completion(
     payload = {
         **form_data.model_dump(exclude_none=True, exclude=["metadata"]),
     }
-    payload.pop("metadata")
+    payload.pop("metadata", None)
 
     model_id = form_data.model
     model_info = Models.get_model_by_id(model_id)
@@ -788,7 +788,7 @@ async def generate_openai_chat_completion(
 ):
     completion_form = OpenAIChatCompletionForm(**form_data)
     payload = {**completion_form.model_dump(exclude_none=True, exclude=["metadata"])}
-    payload.pop("metadata")
+    payload.pop("metadata", None)
 
     model_id = completion_form.model
     model_info = Models.get_model_by_id(model_id)

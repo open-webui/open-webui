@@ -359,7 +359,7 @@ async def generate_chat_completion(
 ):
     idx = 0
     payload = {**form_data}
-    payload.pop("metadata")
+    payload.pop("metadata", None)
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
