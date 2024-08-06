@@ -277,18 +277,20 @@ __builtins__.input = input`);
 		<div class="flex items-center">
 			{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
 				{#if executing}
-					<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
+					<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">
+						{$i18n.t('Running')}
+					</div>
 				{:else}
 					<button
 						class="copy-code-button bg-none border-none p-1"
 						on:click={() => {
 							executePython(code);
-						}}>Run</button
+						}}>{$i18n.t('Run')}</button
 					>
 				{/if}
 			{/if}
 			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
-				>{copied ? 'Copied' : 'Copy Code'}</button
+				>{copied ? $i18n.t('Copied') : $i18n.t('Copy Code')}</button
 			>
 		</div>
 	</div>
@@ -314,12 +316,12 @@ __builtins__.input = input`);
 
 		{#if executing}
 			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-				<div class="text-sm">Running...</div>
+				<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+				<div class="text-sm">{$i18n.t('Running') + '...'}</div>
 			</div>
 		{:else if stdout || stderr || result}
 			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-				<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+				<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 				<div class="text-sm">{stdout || stderr || result}</div>
 			</div>
 		{/if}
