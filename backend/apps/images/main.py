@@ -143,33 +143,49 @@ async def get_engine_url(user=Depends(get_admin_user)):
 
 @app.post("/url/update")
 async def update_engine_url(
-    form_data: EngineUrlUpdateForm, user=Depends(get_admin_user)
+    form_data: EngineUrlUpdateForm,
+    request: Request,  # Include Request to get the current app URL
+    user=Depends(get_admin_user)
 ):
-    if form_data.AUTOMATIC1111_BASE_URL == None:
+    # Extract current base URL of the application
+    current_base_url = str(request.url).split(request.url.path)[0].strip("/")
+
+    # Validate and update AUTOMATIC1111_BASE_URL
+    if form_data.AUTOMATIC1111_BASE_URL is None:
         app.state.config.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
     else:
         url = form_data.AUTOMATIC1111_BASE_URL.strip("/")
+        
+        if url == current_base_url:
+            raise HTTPException(status_code=400, detail="The URL cannot be the same as the application's base URL.")
+        
         try:
             r = requests.head(url)
+            r.raise_for_status()  # Ensure the request is successful
             app.state.config.AUTOMATIC1111_BASE_URL = url
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+        except requests.RequestException as e:
+            raise HTTPException(status_code=400, detail=f"Invalid URL: {str(e)}")
 
-    if form_data.COMFYUI_BASE_URL == None:
+    # Validate and update COMFYUI_BASE_URL
+    if form_data.COMFYUI_BASE_URL is None:
         app.state.config.COMFYUI_BASE_URL = COMFYUI_BASE_URL
     else:
         url = form_data.COMFYUI_BASE_URL.strip("/")
-
+        
+        if url == current_base_url:
+            raise HTTPException(status_code=400, detail="The URL cannot be the same as the application's base URL.")
+        
         try:
             r = requests.head(url)
+            r.raise_for_status()
             app.state.config.COMFYUI_BASE_URL = url
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+        except requests.RequestException as e:
+            raise HTTPException(status_code=400, detail=f"Invalid URL: {str(e)}")
 
-    if form_data.AUTOMATIC1111_API_AUTH == None:
-        app.state.config.AUTOMATIC1111_API_AUTH = AUTOMATIC1111_API_AUTH
-    else:
-        app.state.config.AUTOMATIC1111_API_AUTH = form_data.AUTOMATIC1111_API_AUTH
+    # Update API Authorization
+    app.state.config.AUTOMATIC1111_API_AUTH = (
+        form_data.AUTOMATIC1111_API_AUTH or AUTOMATIC1111_API_AUTH
+    )
 
     return {
         "AUTOMATIC1111_BASE_URL": app.state.config.AUTOMATIC1111_BASE_URL,
