@@ -1,23 +1,22 @@
 [Active Projects](../)
 # Location Projects for Open WebUI
 
-Use our [Install Steps](setup) and send Pull Requests for our "[projects/location](https://github.com/ModelEarth/projects/tree/main/location/)" folder.  
+GETTING STARTED
 
-TO DO: Watch this [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) and share some cool findings during our meetup.  
-Use the video's steps for downloading Ollama and Docker was we've documented on our [Docker Setup](setup/docker).  
-If you're installing the buildable version with our [Install for Building Locally](setup), you can skip the Ollama and Docker install.
+If you're contributing code, use our [Install for Building Locally](setup) steps.  
+You can skip the local Docker install. Fork our [projects](https://github.com/ModelEarth/projects/) repo, which is a fork of open-webui.  
 
-TO DO: Figure out how to call our "src-merged" folder during build rather then "src". 
-
+If your not building code, use the local Docker install - This [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) walks through downloading Ollama and Docker like we've documented on our [Docker Setup](setup/docker).
 
 
-TO DO: Create a script to merge files from "location" into "src" and send to "src-merged"
+TO DO: Use Flask in a [projects/backend/location](https://github.com/ModelEarth/projects/tree/main/backend) folder and interact with our Supabase REST API - Nanden
+
+TO DO: Create an example of running .ipynb from our [RealityStream](../../RealityStream/) app.
 
 TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [Supabase International Trade Flow](../../OpenFootprint/prep/sql/supabase/) data.
 
 TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our [superthermal evaporation](../../evaporation-kits/) page and related articles.
 
-TO DO: Create an example of loading a Python util file that is also loaded by our [RealityStream](../../RealityStream/) app.
 
 <!--TO DO: Activate hosting using Cloudflare.-->
 
@@ -27,6 +26,6 @@ TO DO: Provide a button for admins to export the list of members as a CSV file.
 
 TO DO: Update our Readme in localsite.js to one that supports [NOTE], [WARNING], [TIP]
 
-DONE: The localsite.js is commented out in src-merged/app.html until adjustments are made to prevent overlaps.
+DONE: The localsite.js is commented out until adjustments are made to prevent overlapping the top.
 
 	<script type="text/javascript" src="https://model.earth/localsite/js/localsite.js?showheader=true&showsearch=true"></script>
