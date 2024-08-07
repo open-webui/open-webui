@@ -509,6 +509,7 @@
 	"Scan": "Escanear",
 	"Scan complete!": "¡Escaneo completado!",
 	"Scan for documents from {{path}}": "Escanear en busca de documentos desde {{path}}",
+	"Scroll to bottom when switching between branches": "",
 	"Search": "Buscar",
 	"Search a model": "Buscar un modelo",
 	"Search Chats": "Chats de búsqueda",

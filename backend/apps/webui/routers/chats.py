@@ -28,7 +28,7 @@ from apps.webui.models.tags import (
 
 from constants import ERROR_MESSAGES
 
-from config import SRC_LOG_LEVELS, ENABLE_ADMIN_EXPORT
+from config import SRC_LOG_LEVELS, ENABLE_ADMIN_EXPORT, ENABLE_ADMIN_CHAT_ACCESS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -43,9 +43,15 @@ router = APIRouter()
 @router.get("/", response_model=List[ChatTitleIdResponse])
 @router.get("/list", response_model=List[ChatTitleIdResponse])
 async def get_session_user_chat_list(
-    user=Depends(get_verified_user), skip: int = 0, limit: int = 50
+    user=Depends(get_verified_user), page: Optional[int] = None
 ):
-    return Chats.get_chat_title_id_list_by_user_id(user.id, skip=skip, limit=limit)
+    if page is not None:
+        limit = 60
+        skip = (page - 1) * limit
+
+        return Chats.get_chat_title_id_list_by_user_id(user.id, skip=skip, limit=limit)
+    else:
+        return Chats.get_chat_title_id_list_by_user_id(user.id)
 
 
 ############################
@@ -81,6 +87,11 @@ async def get_user_chat_list_by_user_id(
     skip: int = 0,
     limit: int = 50,
 ):
+    if not ENABLE_ADMIN_CHAT_ACCESS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
     return Chats.get_chat_list_by_user_id(
         user_id, include_archived=True, skip=skip, limit=limit
     )
@@ -181,9 +192,9 @@ async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if user.role == "user":
+    if user.role == "user" or (user.role == "admin" and not ENABLE_ADMIN_CHAT_ACCESS):
         chat = Chats.get_chat_by_share_id(share_id)
-    elif user.role == "admin":
+    elif user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS:
         chat = Chats.get_chat_by_id(share_id)
 
     if chat:

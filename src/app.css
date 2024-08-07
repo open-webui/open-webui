@@ -158,3 +158,12 @@ input[type='number'] {
 .password {
 	-webkit-text-security: disc;
 }
+
+.codespan {
+	color: #eb5757;
+	border-width: 0px;
+	padding: 3px 8px;
+	font-size: 0.8em;
+	font-weight: 600;
+	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
+}

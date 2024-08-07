@@ -824,6 +824,10 @@ WEBHOOK_URL = PersistentConfig(
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
 
+ENABLE_ADMIN_CHAT_ACCESS = (
+    os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
+)
+
 ENABLE_COMMUNITY_SHARING = PersistentConfig(
     "ENABLE_COMMUNITY_SHARING",
     "ui.enable_community_sharing",
@@ -1317,7 +1321,7 @@ COMFYUI_FLUX_WEIGHT_DTYPE = PersistentConfig(
 COMFYUI_FLUX_FP8_CLIP = PersistentConfig(
     "COMFYUI_FLUX_FP8_CLIP",
     "image_generation.comfyui.flux_fp8_clip",
-    os.getenv("COMFYUI_FLUX_FP8_CLIP", ""),
+    os.environ.get("COMFYUI_FLUX_FP8_CLIP", "").lower() == "true",
 )
 
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(

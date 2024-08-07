@@ -6,7 +6,7 @@ from typing import Optional
 
 
 def prompt_template(
-    template: str, user_name: str = None, user_location: str = None
+    template: str, user_name: Optional[str] = None, user_location: Optional[str] = None
 ) -> str:
     # Get the current date
     current_date = datetime.now()
@@ -83,7 +83,6 @@ def title_generation_template(
 def search_query_generation_template(
     template: str, prompt: str, user: Optional[dict] = None
 ) -> str:
-
     def replacement_function(match):
         full_match = match.group(0)
         start_length = match.group(1)

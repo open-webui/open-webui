@@ -509,6 +509,7 @@
 	"Scan": "Tarama",
 	"Scan complete!": "Tarama tamamlandı!",
 	"Scan for documents from {{path}}": "{{path}} dizininden belgeleri tarayın",
+	"Scroll to bottom when switching between branches": "",
 	"Search": "Ara",
 	"Search a model": "Bir model ara",
 	"Search Chats": "Sohbetleri Ara",

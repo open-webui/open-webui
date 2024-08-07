@@ -509,6 +509,7 @@
 	"Scan": "スキャン",
 	"Scan complete!": "スキャン完了！",
 	"Scan for documents from {{path}}": "{{path}} からドキュメントをスキャン",
+	"Scroll to bottom when switching between branches": "",
 	"Search": "検索",
 	"Search a model": "モデルを検索",
 	"Search Chats": "チャットの検索",
