@@ -13,18 +13,13 @@
 	let showImagePreview = false;
 </script>
 
-<div class={className}>
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-	<img
-		on:click={() => {
-			showImagePreview = true;
-		}}
-		src={_src}
-		{alt}
-		class=" rounded-lg cursor-pointer"
-		draggable="false"
-		data-cy="image"
-	/>
-</div>
+<button
+	class={className}
+	on:click={() => {
+		showImagePreview = true;
+	}}
+>
+	<img src={_src} {alt} class=" rounded-lg cursor-pointer" draggable="false" data-cy="image" />
+</button>
+
 <ImagePreview bind:show={showImagePreview} src={_src} {alt} />
