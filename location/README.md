@@ -6,8 +6,10 @@ GETTING STARTED
 If you're contributing code, use our [Install for Building Locally](setup) steps.  
 You can skip the local Docker install. Fork our [projects](https://github.com/ModelEarth/projects/) repo, which is a fork of open-webui.  
 
-If your not building code, use the local Docker install - This [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) walks through downloading Ollama and Docker like we've documented on our [Docker Setup](setup/docker).
+If you're not building code, use the local Docker install - This [Open WebUI video](https://www.youtube.com/watch?v=N-aRJe--txs) walks through downloading Ollama and Docker like we've documented on our [Docker Setup](setup/docker).
 
+
+## Our OpenWebUI Projects
 
 TO DO: Use Flask in a [projects/backend/location](https://github.com/ModelEarth/projects/tree/main/backend) folder and interact with our Supabase REST API - Nanden
 
@@ -22,7 +24,7 @@ TO DO: Set up [RAG context](https://docs.openwebui.com/tutorial/rag/) using our 
 
 TO DO: Provide a means to upload a list of members from a Google Sheet link.
 
-TO DO: Provide a button for admins to export the list of members as a CSV file.
+DONE: Provide a button for admins to export the list of members as a CSV file. (In ModelEarthBranch) - Yuxin
 
 TO DO: Update our Readme in localsite.js to one that supports [NOTE], [WARNING], [TIP]
 
