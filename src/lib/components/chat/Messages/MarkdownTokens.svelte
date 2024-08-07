@@ -39,6 +39,10 @@
 			const codeElement = document.getElementById(`code-${codeId}`);
 			if (codeElement) {
 				clearInterval(interval);
+				// If the code is already loaded, don't load it again
+				if (codeElement.innerHTML) {
+					return;
+				}
 
 				new CodeBlock({
 					target: codeElement,
