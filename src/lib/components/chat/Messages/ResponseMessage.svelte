@@ -412,7 +412,7 @@
 						{#each message.files as file}
 							<div>
 								{#if file.type === 'image'}
-									<Image src={file.url} isMarkdown={true} />
+									<Image src={file.url} isMarkdown={false} />
 								{/if}
 							</div>
 						{/each}

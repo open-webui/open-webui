@@ -98,7 +98,7 @@
 					{#each message.files as file}
 						<div class={$settings?.chatBubble ?? true ? 'self-end' : ''}>
 							{#if file.type === 'image'}
-								<Image src={file.url} alt="input" />
+								<Image src={file.url} alt="input" isMarkdown={false} />
 								<!-- <img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" /> -->
 							{:else}
 								<FileItem

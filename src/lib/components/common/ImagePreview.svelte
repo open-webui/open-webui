@@ -4,7 +4,7 @@
 	export let show = false;
 	export let src = '';
 	export let alt = '';
-	export let isMarkdown = false;
+	export let isMarkdown: boolean = true;
 
 	let mounted = false;
 
@@ -37,27 +37,58 @@
 	};
 
 	const downloadImage = (url) => {
-		const urlParts = url.split('/');
-		const fileNameWithExt = urlParts.pop().trim() || '';
-		const splitted = fileNameWithExt.split('.');
-		const extension = `${(splitted[splitted.length - 1] || 'png').toLowerCase()}`;
-		const filename = `${(splitted[splitted.length - 2] || 'Image').toLowerCase()}.${extension}`;
+		const isBase64 = url.startsWith('data:image/');
+		let filename = 'image.png';
+		let mimeType = 'image/png';
 
-		fetch(url)
-			.then((response) => response.blob())
-			.then((blob) => {
-				const mimeType = getMimeType(extension);
-				const newBlob = new Blob([blob], { type: mimeType });
-				const objectUrl = window.URL.createObjectURL(newBlob);
-				const link = document.createElement('a');
-				link.href = objectUrl;
-				link.download = filename;
-				document.body.appendChild(link);
-				link.click();
-				document.body.removeChild(link);
-				window.URL.revokeObjectURL(objectUrl);
-			})
-			.catch((error) => console.error('Error downloading image:', error));
+		if (isBase64) {
+			const base64Parts = url.split(',');
+			const mimeInfo = base64Parts[0].split(';')[0];
+			mimeType = mimeInfo.split(':')[1];
+			const extension = mimeType.split('/')[1];
+			filename = `image.${extension}`;
+
+			const base64Data = base64Parts[1];
+			const binaryData = atob(base64Data);
+			const arrayBuffer = new ArrayBuffer(binaryData.length);
+			const uint8Array = new Uint8Array(arrayBuffer);
+			for (let i = 0; i < binaryData.length; i++) {
+				uint8Array[i] = binaryData.charCodeAt(i);
+			}
+			const blob = new Blob([uint8Array], { type: mimeType });
+
+			const objectUrl = window.URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = objectUrl;
+			link.download = filename;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			window.URL.revokeObjectURL(objectUrl);
+		} else {
+			// Handle normal URL download
+			const urlParts = url.split('/');
+			const fileNameWithExt = urlParts.pop().trim() || '';
+			const splitted = fileNameWithExt.split('.');
+			const extension = `${(splitted[splitted.length - 1] || 'png').toLowerCase()}`;
+			filename = `${(splitted[splitted.length - 2] || 'image').toLowerCase()}.${extension}`;
+
+			fetch(url)
+				.then((response) => response.blob())
+				.then((blob) => {
+					mimeType = getMimeType(extension);
+					const newBlob = new Blob([blob], { type: mimeType });
+					const objectUrl = window.URL.createObjectURL(newBlob);
+					const link = document.createElement('a');
+					link.href = objectUrl;
+					link.download = filename;
+					document.body.appendChild(link);
+					link.click();
+					document.body.removeChild(link);
+					window.URL.revokeObjectURL(objectUrl);
+				})
+				.catch((error) => console.error('Error downloading image:', error));
+		}
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
