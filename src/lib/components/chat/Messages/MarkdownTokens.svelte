@@ -36,11 +36,12 @@
 		const codeId = `${id}-${codes.length}`;
 
 		const interval = setInterval(() => {
-			if (document.getElementById(`code-${codeId}`)) {
+			const codeElement = document.getElementById(`code-${codeId}`);
+			if (codeElement) {
 				clearInterval(interval);
 
 				new CodeBlock({
-					target: document.getElementById(`code-${codeId}`),
+					target: codeElement,
 					props: {
 						id: `${id}-${codes.length}`,
 						lang: lang,
@@ -52,7 +53,7 @@
 			}
 		}, 10);
 
-		return `<div id="code-${id}-${codes.length}" />`;
+		return `<div id="code-${id}-${codes.length}"></div>`;
 	};
 
 	let images = [];
@@ -65,22 +66,29 @@
 		images = images;
 
 		const imageId = `${id}-${images.length}`;
-
 		const interval = setInterval(() => {
-			if (document.getElementById(`image-${imageId}`)) {
+			const imageElement = document.getElementById(`image-${imageId}`);
+			if (imageElement) {
 				clearInterval(interval);
+
+				// If the image is already loaded, don't load it again
+				if (imageElement.innerHTML) {
+					return;
+				}
+
+				console.log('image', href, text);
 				new Image({
-					target: document.getElementById(`image-${imageId}`),
+					target: imageElement,
 					props: {
 						src: href,
 						alt: text
 					},
-					hydrate: true
+					$$inline: true
 				});
 			}
 		}, 10);
 
-		return `<div id="image-${id}-${images.length}" />`;
+		return `<div id="image-${id}-${images.length}"></div>`;
 	};
 
 	// Open all links in a new tab/window (from https://github.com/markedjs/marked/issues/655#issuecomment-383226346)
