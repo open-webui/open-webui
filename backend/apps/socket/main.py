@@ -141,6 +141,8 @@ async def disconnect(sid):
 
 
 def get_event_emitter(request_info):
+    if request_info["session_id"] is None:
+        return None
     async def __event_emitter__(event_data):
         await sio.emit(
             "chat-events",
@@ -156,6 +158,8 @@ def get_event_emitter(request_info):
 
 
 def get_event_call(request_info):
+    if request_info["session_id"] is None:
+        return None
     async def __event_call__(event_data):
         response = await sio.call(
             "chat-events",

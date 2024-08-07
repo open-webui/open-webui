@@ -1177,7 +1177,7 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],
-            "session_id": data["session_id"],
+            "session_id": data["session_id"] or None,
         }
     )
 
@@ -1185,7 +1185,7 @@ async def chat_completed(form_data: dict, user=Depends(get_verified_user)):
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],
-            "session_id": data["session_id"],
+            "session_id": data["session_id"] or None,
         }
     )
 
@@ -1312,14 +1312,14 @@ async def chat_action(action_id: str, form_data: dict, user=Depends(get_verified
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],
-            "session_id": data["session_id"],
+            "session_id": data["session_id"] or None,
         }
     )
     __event_call__ = get_event_call(
         {
             "chat_id": data["chat_id"],
             "message_id": data["id"],
-            "session_id": data["session_id"],
+            "session_id": data["session_id"] or None,
         }
     )
 
