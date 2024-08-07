@@ -30,7 +30,9 @@ Check that you have cmd apps available, include a 3.11 version of python.
 	node --version
 	npm --version
 
-Next run the following to in the root of the "projects" folder. Our [conda-start.sh](https://github.com/ModelEarth/projects/blob/main/location/setup/script/conda-start.sh) script invokes python3.11 so you might need [pyenv](https://model.earth/io/coders/python).
+On Windows: You can run the "start.bat" steps on [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/)
+
+On Mac and Linux: Run the following in the root of the "projects" folder. Our [conda-start.sh](https://github.com/ModelEarth/projects/blob/main/location/setup/script/conda-start.sh) script invokes python3.11 so you might need [pyenv](https://model.earth/io/coders/python).
 	
 	bash location/setup/script/conda-start.sh
 
