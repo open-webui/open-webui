@@ -29,9 +29,11 @@ assignees: ''
 - [ ] I have provided the exact steps to reproduce the bug in the "Steps to Reproduce" section below.
 
 ## Expected Behavior:
+
 [Describe what you expected to happen.]
 
 ## Actual Behavior:
+
 [Describe what actually happened.]
 
 ## Description

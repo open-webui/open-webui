@@ -32,4 +32,5 @@ We regularly audit our internal processes and system architecture for vulnerabil
 For immediate concerns or detailed reports that meet our guidelines, please create an issue in our [issue tracker](/open-webui/open-webui/issues) or contact us on [Discord](https://discord.gg/5rJgQTnV4s).
 
 ---
+
 _Last updated on **2024-08-06**._
