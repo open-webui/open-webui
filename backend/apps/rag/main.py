@@ -542,6 +542,10 @@ def resolve_hostname(hostname):
 
     return ipv4_addresses, ipv6_addresses
 
+def split_by_commas(value):
+    return [item.strip() for item in value.split(',')]
+
+
 def extract_and_process_tables(file_path):
     with lock:  # Ensure that only one instance of this block runs at a time
         # Extract tables using Camelot
@@ -564,8 +568,12 @@ def extract_and_process_tables(file_path):
         table_texts = []
         for entry in structured_data:
             if isinstance(entry, dict):
-                row_text = ' | '.join(f"{k}: {v}" for k, v in entry.items())
-                table_texts.append(row_text)
+                row_text_parts = []
+                for k, v in entry.items():
+                    split_values = split_by_commas(v)
+                    for split_value in split_values:
+                        row_text_parts.append(f"{k}: {split_value}")
+                table_texts.append(' | '.join(row_text_parts))
             else:
                 table_texts.append(entry)
         
