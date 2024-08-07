@@ -114,7 +114,7 @@
 					reconnection: true,
 					reconnectionDelay: 1000,
 					reconnectionDelayMax: 5000,
-					randomizationFactor: 0.5
+					randomizationFactor: 0.5,
 					path: '/ws/socket.io',
 					auth: { token: localStorage.token }
 				});
@@ -123,15 +123,15 @@
 					console.log('connected');
 				});
 
-				_socket.on("reconnect_attempt", (attempt) => {
+				_socket.on('reconnect_attempt', (attempt) => {
 					console.log('reconnect_attempt', attempt);
 				});
 
-				_socket.on("reconnect_failed", () => {
+				_socket.on('reconnect_failed', () => {
 					console.log('reconnect_failed');
 				});
 
-				_socket.on("disconnect", (reason, details) => {
+				_socket.on('disconnect', (reason, details) => {
 					console.log(`Socket ${socket.id} disconnected due to ${reason}`);
 					if (details) {
 						console.log('Additional details:', details);
