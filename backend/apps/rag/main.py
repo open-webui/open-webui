@@ -98,8 +98,9 @@ from config import (
 )
 
 from constants import ERROR_MESSAGES
-from concurrent.futures import ProcessPoolExecutor
+import threading
 
+lock = threading.Lock()
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -541,52 +542,38 @@ def resolve_hostname(hostname):
 
     return ipv4_addresses, ipv6_addresses
 
-
-def process_pdf(file_path):
-    try:
-        log.info(f"Processing {file_path}")
-        return extract_and_process_tables(file_path)
-    except Exception as e:
-        log.error(f"Error processing {file_path}: {e}")
-        raise
-
 def extract_and_process_tables(file_path):
-    # Extract tables using Camelot
-    tables = camelot.read_pdf(file_path, pages='all')
-    
-    structured_data = []
-    for idx, table in enumerate(tables):
-        df = table.df
-        if len(df) > 1 and len(df.columns) > 1:
-            headers = df.iloc[0]
-            if not any(header == '' for header in headers):
-                df = df.drop(0).reset_index(drop=True)
-                df.columns = headers
-                rows = df.values
-                for row in rows:
-                    row_dict = {headers[i]: row[i] for i in range(len(headers))}
-                    structured_data.append(row_dict)
-                structured_data.append("\n\n")
-    
-    table_texts = []
-    for entry in structured_data:
-        if isinstance(entry, dict):
-            row_text = ' | '.join(f"{k}: {v}" for k, v in entry.items())
-            table_texts.append(row_text)
-        else:
-            table_texts.append(entry)
-    
-    return '\n'.join(table_texts)
-
-def extract_and_process_tables_parallel(file_paths, max_workers=4):
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        results = list(executor.map(process_pdf, file_paths))
-    
-    return results
+    with lock:  # Ensure that only one instance of this block runs at a time
+        # Extract tables using Camelot
+        tables = camelot.read_pdf(file_path, pages='all')
+        
+        structured_data = []
+        for idx, table in enumerate(tables):
+            df = table.df
+            if len(df) > 1 and len(df.columns) > 1:
+                headers = df.iloc[0]
+                if not any(header == '' for header in headers):
+                    df = df.drop(0).reset_index(drop=True)
+                    df.columns = headers
+                    rows = df.values
+                    for row in rows:
+                        row_dict = {headers[i]: row[i] for i in range(len(headers))}
+                        structured_data.append(row_dict)
+                    structured_data.append("\n\n")
+        
+        table_texts = []
+        for entry in structured_data:
+            if isinstance(entry, dict):
+                row_text = ' | '.join(f"{k}: {v}" for k, v in entry.items())
+                table_texts.append(row_text)
+            else:
+                table_texts.append(entry)
+        
+        return '\n'.join(table_texts)
 
 def store_data_in_vector_db(data, collection_name, overwrite: bool = False, file_content_type = None, file_path = None) -> bool:
     if file_content_type == 'application/pdf':
-        table_texts = extract_and_process_tables_parallel(file_path)
+        table_texts = extract_and_process_tables(file_path)
         if table_texts:
             new_document = Document(page_content=table_texts, metadata={"source": file_path, "type": "tables"})
             data.append(new_document)
