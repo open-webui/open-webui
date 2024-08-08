@@ -116,6 +116,12 @@ Note that we do not use \~/ in the command above since it already runs in your c
 
 <!-- Docker set-up contributors: Dinesh B, Loren, Yifeng, Yuxin -->
 
+## Installing git while creation of docker image
+
+To be able to run git commands inside a docker container the following command has been used:<!-- Dinesh B -->
+
+	apt-get install -y --no-install-recommends curl jq git
+
 ## Using git inside of docker
 
 **Code in Dockerfile to install Git while creating a Container**
@@ -165,6 +171,17 @@ To run git commands above inside our docker container,
 
 **Areas of future sync issues:**
 We updated our [DockerFile with this PR](https://github.com/ModelEarth/projects/pull/2/files) - Dinesh
+
+## Changes added to run Git in OpenWebUI
+
+From Dinesh B.
+
+Dockerfile (in root of repo) change:
+apt-get install -y --no-install-recommends curl jq && \
+apt-get install -y --no-install-recommends curl jq git && \
+
+apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq && \
+apt-get install -y --no-install-recommends pandoc gcc netcat-openbsd curl jq git && \
 
 ## How we created our Docker "projects" containers on GitHub
 
