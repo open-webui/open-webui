@@ -147,8 +147,8 @@
 					<div class="m-1 overflow-y-auto p-1 rounded-r-lg space-y-0.5 scrollbar-hidden">
 						{#each filteredModels as model, modelIdx}
 							<button
-								class=" px-3 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
-									? '  bg-gray-50 dark:bg-gray-850  selected-command-option-button'
+								class="px-3 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
+									? 'bg-gray-50 dark:bg-gray-850 selected-command-option-button'
 									: ''}"
 								type="button"
 								on:click={() => {
@@ -159,13 +159,18 @@
 								}}
 								on:focus={() => {}}
 							>
-								<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
+								<div class="flex font-medium text-black dark:text-gray-100 line-clamp-1">
+									<img
+										src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+										alt={model?.name ?? model.id}
+										class="rounded-full size-6 items-center mr-2"
+									/>
 									{model.name}
 								</div>
 
 								<!-- <div class=" text-xs text-gray-600 line-clamp-1">
 								{doc.title}
-							</div> -->
+								</div> -->
 							</button>
 						{/each}
 					</div>

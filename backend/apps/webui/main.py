@@ -22,9 +22,9 @@ from apps.webui.utils import load_function_module_by_id
 from utils.misc import (
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
-    add_or_update_system_message,
+    apply_model_params_to_body,
+    apply_model_system_prompt_to_body,
 )
-from utils.task import prompt_template
 
 
 from config import (
@@ -267,47 +267,6 @@ def get_function_params(function_module, form_data, user, extra_params={}):
 
         params["__user__"] = __user__
     return params
-
-
-# inplace function: form_data is modified
-def apply_model_params_to_body(params: dict, form_data: dict) -> dict:
-    if not params:
-        return form_data
-
-    mappings = {
-        "temperature": float,
-        "top_p": int,
-        "max_tokens": int,
-        "frequency_penalty": int,
-        "seed": lambda x: x,
-        "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
-    }
-
-    for key, cast_func in mappings.items():
-        if (value := params.get(key)) is not None:
-            form_data[key] = cast_func(value)
-
-    return form_data
-
-
-# inplace function: form_data is modified
-def apply_model_system_prompt_to_body(params: dict, form_data: dict, user) -> dict:
-    system = params.get("system", None)
-    if not system:
-        return form_data
-
-    if user:
-        template_params = {
-            "user_name": user.name,
-            "user_location": user.info.get("location") if user.info else None,
-        }
-    else:
-        template_params = {}
-    system = prompt_template(system, **template_params)
-    form_data["messages"] = add_or_update_system_message(
-        system, form_data.get("messages", [])
-    )
-    return form_data
 
 
 async def generate_function_chat_completion(form_data, user):

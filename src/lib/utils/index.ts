@@ -90,6 +90,11 @@ export const revertSanitizedResponseContent = (content: string) => {
 	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
 };
 
+export function unescapeHtml(html: string) {
+	const doc = new DOMParser().parseFromString(html, 'text/html');
+	return doc.documentElement.textContent;
+}
+
 export const capitalizeFirstLetter = (string) => {
 	return string.charAt(0).toUpperCase() + string.slice(1);
 };
