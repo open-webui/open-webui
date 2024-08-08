@@ -96,7 +96,7 @@ class UsersTable:
     ) -> Optional[UserModel]:
         with get_db() as db:
             init_settings = UserSettings()
-            init_settings.ui["backgroundImageUrl"] = "new_background_image_url"
+            init_settings.ui["backgroundImageUrl"] = backgroundImageUrl
             user = UserModel(
                 **{
                     "id": id,
