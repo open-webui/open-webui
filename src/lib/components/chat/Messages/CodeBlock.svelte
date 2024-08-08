@@ -12,7 +12,7 @@
 	export let lang = '';
 	export let code = '';
 
-	let i18n = getContext('i18n');
+	const i18n = getContext('i18n');
 
 	const translate = (key) => (i18n && i18n.t ? i18n.t(key) : key);
 
