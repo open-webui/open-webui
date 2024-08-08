@@ -58,6 +58,7 @@ from apps.webui.models.models import Models
 from apps.webui.models.tools import Tools
 from apps.webui.models.users import Users
 from apps.webui.routers.users import change_background_random_image_url
+from apps.webui.models.users import change_init_background_random_image_url
 from apps.webui.utils import load_toolkit_module_by_id, load_function_module_by_id
 
 from utils.utils import (
@@ -226,6 +227,7 @@ app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
 app.state.config.BACKGROUND_RANDOM_IMAGE_URL = BACKGROUND_RANDOM_IMAGE_URL
 
 change_background_random_image_url(app.state.config.BACKGROUND_RANDOM_IMAGE_URL)
+change_init_background_random_image_url(app.state.config.BACKGROUND_RANDOM_IMAGE_URL)
 app.state.MODELS = {}
 
 origins = ["*"]
@@ -1491,6 +1493,7 @@ async def update_task_config(form_data: TaskConfigForm, user=Depends(get_admin_u
     if form_data.BACKGROUND_RANDOM_IMAGE_URL != app.state.config.BACKGROUND_RANDOM_IMAGE_URL:
         app.state.config.BACKGROUND_RANDOM_IMAGE_URL = form_data.BACKGROUND_RANDOM_IMAGE_URL
         change_background_random_image_url(app.state.config.BACKGROUND_RANDOM_IMAGE_URL)
+        change_init_background_random_image_url(app.state.config.BACKGROUND_RANDOM_IMAGE_URL)
 
     return {
         "TASK_MODEL": app.state.config.TASK_MODEL,

@@ -44,6 +44,11 @@ def change_enableBase64(enable: bool):
     global enableBase64
     enableBase64 = enable
 
+
+def get_background_random_image_url():
+    return backgroundImageUrl
+
+
 @router.get("/", response_model=List[UserModel])
 async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)):
     return Users.get_users(skip, limit)

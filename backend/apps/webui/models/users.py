@@ -13,6 +13,13 @@ from apps.webui.models.chats import Chats
 # User DB Schema
 ####################
 
+backgroundImageUrl = ""
+
+
+def change_init_background_random_image_url(url: str):
+    global backgroundImageUrl
+    backgroundImageUrl = url
+
 
 class User(Base):
     __tablename__ = "user"
@@ -78,7 +85,6 @@ class UserUpdateForm(BaseModel):
 
 
 class UsersTable:
-
     def insert_new_user(
         self,
         id: str,
@@ -89,6 +95,7 @@ class UsersTable:
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
+            init_settings = UserSettings().ui.update({"backgroundImageUrl": backgroundImageUrl})
             user = UserModel(
                 **{
                     "id": id,
@@ -99,6 +106,7 @@ class UsersTable:
                     "last_active_at": int(time.time()),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
+                    "settings": init_settings,
                     "oauth_sub": oauth_sub,
                 }
             )
