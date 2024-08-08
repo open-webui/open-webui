@@ -377,9 +377,9 @@ async def comfyui_generate_image(
             comfyui_prompt["12"]["inputs"]["weight_dtype"] = payload.flux_weight_dtype
 
         if payload.flux_fp8_clip:
-            comfyui_prompt["11"]["inputs"]["clip_name2"] = (
-                "t5xxl_fp8_e4m3fn.safetensors"
-            )
+            comfyui_prompt["11"]["inputs"][
+                "clip_name2"
+            ] = "t5xxl_fp8_e4m3fn.safetensors"
 
     comfyui_prompt["5"]["inputs"]["batch_size"] = payload.n
     comfyui_prompt["5"]["inputs"]["width"] = payload.width
