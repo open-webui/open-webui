@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Token } from 'marked';
 	import { unescapeHtml } from '$lib/utils';
+	import { onMount } from 'svelte';
 	import Image from '$lib/components/common/Image.svelte';
-
 	export let id: string;
 	export let tokens: Token[];
 </script>
