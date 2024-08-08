@@ -4,7 +4,7 @@
 
 Linux/MacOS:
 ```
-./location/setup/script/start.sh
+    bash location/setup/script/conda-start.sh
 ```
 
 Windows use 

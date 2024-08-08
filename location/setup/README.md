@@ -30,7 +30,7 @@ Check that you have cmd apps available, include a 3.11 version of python.
 	node --version
 	npm --version
 
-On Windows: You can run the "start.bat" steps on [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/)
+On Windows: You can run the "start.bat" steps on [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/). We've documented how to deploy the [Windows steps with conda](https://github.com/ModelEarth/projects/blob/gcp/location/setup/guides/local.md)
 
 On Mac and Linux: Run the following in the root of the "projects" folder. Our [conda-start.sh](https://github.com/ModelEarth/projects/blob/main/location/setup/script/conda-start.sh) script invokes python3.11 so you might need [pyenv](https://model.earth/io/coders/python).
 	
@@ -114,7 +114,7 @@ Is there a fast way to reopen the conda instance?
 Restarting the server only takes a couple minutes. Use the same command as above.  
 Choose the existing conda environment by saying "no" when asked to reinstall.
 
-	bash location/setup/script/start.sh
+	bash location/setup/script/conda-start.sh
 
 
 ## Edit in our Open WebUI "projects/location" folder
