@@ -13,6 +13,7 @@
 	export let code = '';
 
 	const i18n = getContext('i18n');
+
 	let highlightedCode = null;
 	let executing = false;
 
@@ -277,23 +278,21 @@ __builtins__.input = input`);
 		<div class="flex items-center">
 			{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
 				{#if executing}
-					<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">
-						{$i18n.t('Running')}
-					</div>
+					<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
 				{:else}
 					<button
 						class="copy-code-button bg-none border-none p-1"
 						on:click={() => {
 							executePython(code);
-						}}>{$i18n.t('Run')}</button
+						}}>Run</button
 					>
 				{/if}
 			{/if}
 			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}>
 				{#if copied}
-					{$i18n.t('Copied')}
+					Copied
 				{:else}
-					{$i18n.t('Copy Code')}
+					Copy Code
 				{/if}
 			</button>
 		</div>
