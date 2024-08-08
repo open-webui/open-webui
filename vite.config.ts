@@ -18,13 +18,27 @@ import terser from '@rollup/plugin-terser';
 
 
 export default defineConfig({
-	plugins: [sveltekit(), terser()],
+	plugins: [sveltekit()],
 	define: {
 		APP_VERSION: JSON.stringify(process.env.npm_package_version),
 		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')
 	},
 	build: {
-		sourcemap: true
+		sourcemap: true,  // 如果不需要sourcemap，可以改为 false
+		minify: 'terser',
+		rollupOptions: {
+			plugins: [terser({
+				compress: {
+					drop_console: true, // 移除 console 语句
+					drop_debugger: true // 移除 debugger 语句
+				},
+				mangle: {
+					properties: {
+						regex: /^_/, // 混淆以 _ 开头的私有属性
+					},
+				}
+			})]
+		}
 	},
 	worker: {
 		format: 'es'
