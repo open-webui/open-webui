@@ -15,6 +15,8 @@ from typing import List
 
 from chromadb.utils.batch_utils import create_batches
 
+from langchain.docstore.document import Document
+
 from langchain_community.document_loaders import (
     WebBaseLoader,
     TextLoader,
@@ -29,9 +31,11 @@ from langchain_community.document_loaders import (
     UnstructuredRSTLoader,
     UnstructuredExcelLoader,
     YoutubeLoader,
+    PDFPlumberLoader,
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
+import camelot
 import validators
 import urllib.parse
 import socket
@@ -94,7 +98,9 @@ from config import (
 )
 
 from constants import ERROR_MESSAGES
+import threading
 
+lock = threading.Lock()
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -536,8 +542,49 @@ def resolve_hostname(hostname):
 
     return ipv4_addresses, ipv6_addresses
 
+def split_by_commas(value):
+    return [item.strip() for item in value.split(',')]
 
-def store_data_in_vector_db(data, collection_name, overwrite: bool = False) -> bool:
+
+def extract_and_process_tables(file_path):
+    with lock:  # Ensure that only one instance of this block runs at a time
+        # Extract tables using Camelot
+        tables = camelot.read_pdf(file_path, pages='all')
+        
+        structured_data = []
+        for idx, table in enumerate(tables):
+            df = table.df
+            if len(df) > 1 and len(df.columns) > 1:
+                headers = df.iloc[0]
+                if not any(header == '' for header in headers):
+                    df = df.drop(0).reset_index(drop=True)
+                    df.columns = headers
+                    rows = df.values
+                    for row in rows:
+                        row_dict = {headers[i]: row[i] for i in range(len(headers))}
+                        structured_data.append(row_dict)
+                    structured_data.append("\n\n")
+        
+        table_texts = []
+        for entry in structured_data:
+            if isinstance(entry, dict):
+                row_text_parts = []
+                for k, v in entry.items():
+                    split_values = split_by_commas(v)
+                    for split_value in split_values:
+                        row_text_parts.append(f"{k}: {split_value}")
+                table_texts.append(' | '.join(row_text_parts))
+            else:
+                table_texts.append(entry)
+        
+        return '\n'.join(table_texts)
+
+def store_data_in_vector_db(data, collection_name, overwrite: bool = False, file_content_type = None, file_path = None) -> bool:
+    if file_content_type == 'application/pdf':
+        table_texts = extract_and_process_tables(file_path)
+        if table_texts:
+            new_document = Document(page_content=table_texts, metadata={"source": file_path, "type": "tables"})
+            data.append(new_document)
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.CHUNK_SIZE,
@@ -660,7 +707,7 @@ def get_loader(filename: str, file_content_type: str, file_path: str):
     ]
 
     if file_ext == "pdf":
-        loader = PyPDFLoader(file_path, extract_images=app.state.PDF_EXTRACT_IMAGES)
+        loader = PDFPlumberLoader(file_path, extract_images=app.state.PDF_EXTRACT_IMAGES)
     elif file_ext == "csv":
         loader = CSVLoader(file_path)
     elif file_ext == "rst":
@@ -724,7 +771,7 @@ def store_doc(
         data = loader.load()
 
         try:
-            result = store_data_in_vector_db(data, collection_name, overwrite = True)
+            result = store_data_in_vector_db(data, collection_name, overwrite = True, file_content_type=file.content_type, file_path=file_path)
 
             if result:
                 return {
@@ -803,7 +850,7 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                 data = loader.load()
 
                 try:
-                    result = store_data_in_vector_db(data, collection_name, overwrite = True)
+                    result = store_data_in_vector_db(data, collection_name, overwrite = True, file_content_type=file_content_type[0],file_path=path)
 
                     if result:
                         sanitized_filename = sanitize_filename(filename)
