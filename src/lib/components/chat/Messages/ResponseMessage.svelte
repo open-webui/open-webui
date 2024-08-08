@@ -279,14 +279,14 @@
 		editedContent = '';
 
 		await tick();
-		renderStyling();
+		renderLatex();
 	};
 
 	const cancelEditMessage = async () => {
 		edit = false;
 		editedContent = '';
 		await tick();
-		renderStyling();
+		renderLatex();
 	};
 
 	const generateImage = async (message) => {
@@ -311,7 +311,7 @@
 	$: if (!edit) {
 		(async () => {
 			await tick();
-			renderStyling();
+			renderLatex();
 
 			await mermaid.run({
 				querySelector: '.mermaid'
@@ -321,7 +321,7 @@
 
 	onMount(async () => {
 		await tick();
-		renderStyling();
+		renderLatex();
 
 		await mermaid.run({
 			querySelector: '.mermaid'
