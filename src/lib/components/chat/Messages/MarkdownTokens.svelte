@@ -59,7 +59,7 @@
 					context: context
 				});
 			}
-		}, 10);
+		}, 50);
 
 		return `<div id="code-${id}-${codes.length}"></div>`;
 	};
