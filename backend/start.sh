@@ -30,11 +30,6 @@ if [[ "${USE_CUDA_DOCKER,,}" == "true" ]]; then
   export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib/python3.11/site-packages/torch/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib"
 fi
 
-if [ -n "$EXTRA_MODULES_DOCKER" ]; then
-  echo "Loading extra modules: $EXTRA_MODULES_DOCKER"
-  uv pip install --system $EXTRA_MODULES_DOCKER --no-cache-dir
-fi
-
 # Check if SPACE_ID is set, if so, configure for space
 if [ -n "$SPACE_ID" ]; then
   echo "Configuring for HuggingFace Space deployment"
