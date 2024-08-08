@@ -95,7 +95,8 @@ class UsersTable:
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
-            init_settings = UserSettings().ui.update({"backgroundImageUrl": backgroundImageUrl})
+            init_settings = UserSettings()
+            init_settings.ui["backgroundImageUrl"] = "new_background_image_url"
             user = UserModel(
                 **{
                     "id": id,
