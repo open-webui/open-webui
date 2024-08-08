@@ -230,3 +230,63 @@ export const deleteDocByName = async (token: string, name: string) => {
 
 	return res;
 };
+
+// Function to call the Self-Aware Document Monitoring API and toggle between enable and disable states
+export async function sadmToggleAPISend(token: string, status: boolean) {
+    const SADMapiURL = status
+        ? `${WEBUI_API_BASE_URL}/sadm/enable`
+        : `${WEBUI_API_BASE_URL}/sadm/disable`;
+
+    try {
+        const response = await fetch(SADMapiURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ status }),
+        });
+
+        // Check if response is not okay
+        if (!response.ok) {
+            const errorDetails = await response.text(); // or response.json() if the error response is JSON
+            throw new Error(`HTTP error ${response.status}: ${errorDetails}`);
+        }
+
+        // Handle successful response
+        const data = await response.json();
+        console.log('API response:', data);
+
+    } catch (error) {
+        // Universal error handling
+        if (error instanceof Error) {
+            console.error('Error during API request:', error.message);
+        } else {
+            console.error('Unknown error during API request:', error);
+        }
+    }
+}
+
+// Function to fetch the current status of the Self-Aware Document Monitoring
+export async function sadmStatusAPISend(token: string): Promise<string> {
+    const STATUS_API_URL = `${WEBUI_API_BASE_URL}/sadm/status`;
+    try {
+        const response = await fetch(STATUS_API_URL, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}: ${await response.text()}`);
+        }
+
+        const data = await response.json();
+        return data.status; // "running", "stopped", or "disabled"
+    } catch (error) {
+        console.error('Error fetching monitoring status:', error);
+        throw error;
+    }
+}	

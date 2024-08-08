@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getDocs } from '$lib/apis/documents';
+	import { getDocs, sadmToggleAPISend, sadmStatusAPISend } from '$lib/apis/documents';
 	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
 	import {
 		getQuerySettings,
@@ -55,6 +55,13 @@
 		k: 4,
 		hybrid: false
 	};
+
+	let sadmStatus = {
+		sadmCondition: false
+	}
+
+	let isMonitoringOn: boolean = false;
+
 
 	const scanHandler = async () => {
 		scanDirLoading = true;
@@ -208,29 +215,87 @@
 		}
 	};
 
-	const toggleHybridSearch = async () => {
-		querySettings.hybrid = !querySettings.hybrid;
-		querySettings = await updateQuerySettings(localStorage.token, querySettings);
+    const toggleHybridSearch = async () => {
+        querySettings.hybrid = !querySettings.hybrid;
+        // Make sure this call only updates the hybrid setting
+        await updateQuerySettings(localStorage.token, querySettings);
+    };
+
+
+	// Function to update monitoring status
+	const updateMonitoringStatus = async () => {
+		try {
+			const status = await sadmStatusAPISend(localStorage.token);
+			isMonitoringOn = (status === 'running');
+			sadmStatus.sadmCondition = isMonitoringOn;
+			savesadmStatusinfo(); // Save the status to local storage
+		} catch (error) {
+			console.error('Error updating monitoring status:', error);
+			toast.error($i18n.t('Failed to fetch monitoring status'));
+		}
+	};
+
+	const sadmToggle = async () => {
+		sadmStatus.sadmCondition = !sadmStatus.sadmCondition;
+		const SADMenableMessage = $i18n.t('Self-Aware Document Monitoring has been enabled and is now Active');
+		const SADMdisableMessage = $i18n.t('Self-Aware Document Monitoring has been been disabled and is now inactive');
+		
+		try {
+			await sadmToggleAPISend(localStorage.token, sadmStatus.sadmCondition);
+			savesadmStatusinfo();
+			
+			// Show appropriate message based on the new state
+			if (sadmStatus.sadmCondition) {
+				toast.success(SADMenableMessage, {
+					duration: 1000 * 10 // Show for 10 seconds
+				});
+			} else {
+				toast.error(SADMdisableMessage, {
+					duration: 1000 * 10 // Show for 10 seconds
+				});
+			}
+		} catch (error) {
+			toast.error($i18n.t('Failed to update Self-Aware Document Monitoring'));
+			console.error('Error updating sadmStatusinfo:', error);
+		}
+	};
+
+	const savesadmStatusinfo = () => {
+		localStorage.setItem('sadmStatusinfo', JSON.stringify(sadmStatus.sadmCondition));
+	};
+
+	const loadSADMChoice = () => {
+		const savedChoice = localStorage.getItem('sadmStatusinfo');
+		if (savedChoice !== null) {
+			sadmStatus.sadmCondition = JSON.parse(savedChoice);
+		}
 	};
 
 	onMount(async () => {
+		// Fetch and set the embedding and reranking configuration
 		await setEmbeddingConfig();
 		await setRerankingConfig();
 
+		// Fetch query settings
 		querySettings = await getQuerySettings(localStorage.token);
 
+		// Fetch RAG configuration
 		const res = await getRAGConfig(localStorage.token);
 
 		if (res) {
 			pdfExtractImages = res.pdf_extract_images;
-
 			chunkSize = res.chunk.chunk_size;
 			chunkOverlap = res.chunk.chunk_overlap;
-
 			contentExtractionEngine = res.content_extraction.engine;
 			tikaServerUrl = res.content_extraction.tika_server_url;
 			showTikaServerUrl = contentExtractionEngine === 'tika';
 		}
+
+		// Load choice from local storage
+		loadSADMChoice();
+
+		// Update monitoring status
+		await updateMonitoringStatus();
 	});
 </script>
 
@@ -324,6 +389,25 @@
 					{/if}
 				</button>
 			</div>
+
+			<div class="flex w-full justify-between">
+				<div class="self-center text-xs font-medium">
+					{$i18n.t('Self-Aware Document Monitoring')}
+				</div>
+			
+				<button
+					class="p-1 px-3 text-xs flex rounded transition"
+					on:click={sadmToggle}
+					type="button"
+				>
+					{#if sadmStatus.sadmCondition === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{/if}
+				</button>
+			</div>
+
 
 			<div class=" flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Model Engine')}</div>
