@@ -1,7 +1,7 @@
 <script lang="ts">
 	import hljs from 'highlight.js';
 	import { loadPyodide } from 'pyodide';
-	import { getContext } from 'svelte';
+	import { getContext, getAllContexts } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
@@ -236,12 +236,12 @@ __builtins__.input = input`);
 						class="copy-code-button bg-none border-none p-1"
 						on:click={() => {
 							executePython(code);
-						}}>Run</button
+						}}>{$i18n.t('Run')}</button
 					>
 				{/if}
 			{/if}
 			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
-				>{copied ? 'Copied' : 'Copy Code'}</button
+				>{copied ? $i18n.t('Copied') : $i18n.t('Copy Code')}</button
 			>
 		</div>
 	</div>
