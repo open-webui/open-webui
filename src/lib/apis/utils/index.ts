@@ -1,9 +1,10 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/utils';
 
 export const getGravatarUrl = async (email: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/gravatar?email=${email}`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/utils/gravatar?email=${email}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json'
@@ -25,7 +26,7 @@ export const getGravatarUrl = async (email: string) => {
 export const downloadChatAsPDF = async (chat: object) => {
 	let error = null;
 
-	const blob = await fetch(`${WEBUI_API_BASE_URL}/utils/pdf`, {
+	const blob = await fetchApi(`${WEBUI_API_BASE_URL}/utils/pdf`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
@@ -51,7 +52,7 @@ export const downloadChatAsPDF = async (chat: object) => {
 export const getHTMLFromMarkdown = async (md: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/markdown`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/utils/markdown`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
@@ -76,7 +77,7 @@ export const getHTMLFromMarkdown = async (md: string) => {
 export const downloadDatabase = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/db/download`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/utils/db/download`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',

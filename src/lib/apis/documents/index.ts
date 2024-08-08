@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/utils';
 
 export const createNewDoc = async (
 	token: string,
@@ -10,7 +11,7 @@ export const createNewDoc = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/create`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/documents/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -45,7 +46,7 @@ export const createNewDoc = async (
 export const getDocs = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/documents/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -76,7 +77,7 @@ export const getDocs = async (token: string = '') => {
 export const getDocByName = async (token: string, name: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/name/${name}`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/documents/name/${name}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -113,7 +114,7 @@ type DocUpdateForm = {
 export const updateDocByName = async (token: string, name: string, form: DocUpdateForm) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/name/${name}/update`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/documents/name/${name}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -154,7 +155,7 @@ type TagDocForm = {
 export const tagDocByName = async (token: string, name: string, form: TagDocForm) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/name/${name}/tags`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/documents/name/${name}/tags`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -190,7 +191,7 @@ export const tagDocByName = async (token: string, name: string, form: TagDocForm
 export const deleteDocByName = async (token: string, name: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/name/${name}/delete`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/documents/name/${name}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

@@ -7,6 +7,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { user } from '$lib/stores';
 	import { submitLeaveForm } from '$lib/apis/chats';
+	import { toast } from 'svelte-sonner';
 	// import Select, { Option } from '@smui/select';
 
 	const i18n = getContext('i18n');
@@ -69,7 +70,7 @@
 				show = false;
 			})
 			.catch((err) => {
-				window.alert(err.detail + ' Submission failed.');
+				toast(err.detail + ' Submission failed.');
 				return;
 			});
 	};
