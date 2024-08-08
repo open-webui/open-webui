@@ -11,7 +11,7 @@ medium.com subscription needed
 
 # Active Projects
 
-[Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/) - [Open WebUI](src/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
+[Site Install](../localsite/start/steps/) - [Observable DataCommons](/data-commons/) - [Open WebUI](location/) - [Storyboard Generator](/data-pipeline/research) - [Moonshots](/community/projects/)
 
 
 <!--
@@ -29,7 +29,7 @@ medium.com subscription needed
 - [NASA Feed Viewer](../feed/view/#feed=nasa) - JSON, YAML, CSS, RSS - [Address Lookup](/feed/view/#feed=311)
 
 **LLM Interfaces** - Where we'll be embedding data visualizaions
-- [Open WebUI (Projects)](src) with Python and [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/)
+- [Open WebUI (Projects)](location/) with Python and [Retrieval Augmented Generation (RAG)](https://docs.openwebui.com/tutorial/rag/)
 - [Earthscape for Chatbot UI](/earthscape/app/) - React, Supabase and [NextJS Hosting using GitHub Pages](https://www.freecodecamp.org/news/how-to-deploy-next-js-app-to-github-pages/)
 
 **Charts, SQL, Vite, Supabase, AI Chat**
@@ -75,7 +75,7 @@ Pre-processed data for county industry levels, based on employment, establishmen
 - [USEEIO matrix files with clustering](/machine-learning/python/cluster/) - <!--Honglin-->Rupesh
 
 <!--
-- [CrewAI+Ollama integration](https://lightning.ai/lightning-ai/studios/ai-agents-powered-by-crewai) within our [Open WebUI fork](src)
+- [CrewAI+Ollama integration](https://lightning.ai/lightning-ai/studios/ai-agents-powered-by-crewai) within our [Open WebUI fork](location)
 - [Flowsa RStudio - API to JSON](/localsite/info/data/flowsa/)
 -->
 
