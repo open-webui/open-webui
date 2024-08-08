@@ -1,11 +1,14 @@
 <script lang="ts">
-	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { copyToClipboard } from '$lib/utils';
 	import hljs from 'highlight.js';
-	import 'highlight.js/styles/github-dark.min.css';
 	import { loadPyodide } from 'pyodide';
-	import { onMount, tick } from 'svelte';
+	import { getContext } from 'svelte';
+	import { copyToClipboard } from '$lib/utils';
+
+	import 'highlight.js/styles/github-dark.min.css';
+
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+
+	const i18n = getContext('i18n');
 
 	export let id = '';
 
