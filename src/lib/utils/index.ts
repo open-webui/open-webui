@@ -9,7 +9,7 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 const convertLatexToSingleLine = (content) => {
 	// Patterns to match multiline LaTeX blocks
 	const patterns = [
-		/(\$\$[\s\S]*?\$\$)/g, // Match $$ ... $$
+		/(\$\$\s[\s\S]*?\s\$\$)/g, // Match $$ ... $$
 		/(\\\[[\s\S]*?\\\])/g, // Match \[ ... \]
 		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
 	];
