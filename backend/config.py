@@ -1,24 +1,24 @@
-import os
-import sys
-import logging
+import base64
+import hashlib
 import importlib.metadata
+import json
+import logging
+import os
 import pkgutil
-import chromadb
-from chromadb import Settings
-from bs4 import BeautifulSoup
-from typing import TypeVar, Generic
-from pydantic import BaseModel
+import shutil
+import sys
+from pathlib import Path
 from typing import Optional
 
-from pathlib import Path
-import json
-import yaml
-
+import chromadb
 import markdown
 import requests
-import shutil
-
+import yaml
+from bs4 import BeautifulSoup
+from chromadb.config import Settings
 from constants import ERROR_MESSAGES
+from cryptography.fernet import Fernet, InvalidToken
+from pydantic import BaseModel
 
 ####################################
 # Load .env file
@@ -30,7 +30,7 @@ BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
 print(BASE_DIR)
 
 try:
-    from dotenv import load_dotenv, find_dotenv
+    from dotenv import find_dotenv, load_dotenv
 
     load_dotenv(find_dotenv(str(BASE_DIR / ".env")))
 except ImportError:
@@ -104,7 +104,7 @@ ENV = os.environ.get("ENV", "dev")
 
 try:
     PACKAGE_DATA = json.loads((BASE_DIR / "package.json").read_text())
-except:
+except Exception:
     try:
         PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
     except importlib.metadata.PackageNotFoundError:
@@ -137,7 +137,7 @@ try:
     with open(str(changelog_path.absolute()), "r", encoding="utf8") as file:
         changelog_content = file.read()
 
-except:
+except Exception:
     changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
 
 
@@ -202,18 +202,37 @@ if RESET_CONFIG_ON_START:
         os.remove(f"{DATA_DIR}/config.json")
         with open(f"{DATA_DIR}/config.json", "w") as f:
             f.write("{}")
-    except:
+    except Exception:
         pass
 
 try:
     CONFIG_DATA = json.loads((DATA_DIR / "config.json").read_text())
-except:
+except Exception:
     CONFIG_DATA = {}
+
+####################################
+# WEBUI_SECRET_KEY
+####################################
+
+WEBUI_SECRET_KEY = os.environ.get(
+    "WEBUI_SECRET_KEY",
+    os.environ.get(
+        "WEBUI_JWT_SECRET_KEY", "t0p-s3cr3t"
+    ),  # DEPRECATED: remove at next major version
+)
 
 
 ####################################
 # Config helpers
 ####################################
+
+
+def secret_key_to_fernet(secret_key: str) -> bytes:
+    # convert to bytes
+    encoded = secret_key.encode()
+    # sha256 hash to make sure the key is long enough
+    hashed = hashlib.sha256(encoded).digest()
+    return base64.urlsafe_b64encode(hashed)
 
 
 def save_config():
@@ -235,26 +254,18 @@ def get_config_value(config_path: str):
     return cur_config
 
 
-T = TypeVar("T")
-
-
-class PersistentConfig(Generic[T]):
-    def __init__(self, env_name: str, config_path: str, env_value: T):
+class PersistentConfig:
+    def __init__(self, env_name: str, config_path: str, env_value):
         self.env_name = env_name
         self.config_path = config_path
         self.env_value = env_value
-        self.config_value = get_config_value(config_path)
-        if self.config_value is not None:
-            log.info(f"'{env_name}' loaded from config.json")
-            self.value = self.config_value
-        else:
-            self.value = env_value
+        self.load()
 
     def __str__(self):
         return str(self.value)
 
     @property
-    def __dict__(self):
+    def __dict__(self):  # type: ignore
         raise TypeError(
             "PersistentConfig object cannot be converted to dict, use config_get or .value instead."
         )
@@ -266,21 +277,68 @@ class PersistentConfig(Generic[T]):
             )
         return super().__getattribute__(item)
 
-    def save(self):
-        # Don't save if the value is the same as the env value and the config value
-        if self.env_value == self.value:
-            if self.config_value == self.value:
-                return
+    def load(self):
+        if (config_value := get_config_value(self.config_path)) is not None:
+            self.config_value = self.value = config_value
+            log.info(f"'{self.env_name}' loaded from config.json")
+        else:
+            self.config_value = self.value = self.env_value
+
+    def _save(self, encrypt: bool = False):
+        if self.env_value == self.value == self.config_value:
+            return
         log.info(f"Saving '{self.env_name}' to config.json")
-        path_parts = self.config_path.split(".")
+        config_path = self.config_path_crypt if encrypt else self.config_path
+        path_parts = config_path.split(".")
         config = CONFIG_DATA
         for key in path_parts[:-1]:
             if key not in config:
                 config[key] = {}
             config = config[key]
-        config[path_parts[-1]] = self.value
+        config[path_parts[-1]] = self.encrypt(self.value) if encrypt else self.value
         save_config()
         self.config_value = self.value
+
+    def save(self):
+        self._save()
+
+
+class SecretConfig(PersistentConfig):
+    def __init__(self, env_name: str, config_path: str, env_value):
+        self.encryped_env_name = f"{env_name}_ENCRYPTED"
+        self.fernet = Fernet(secret_key_to_fernet(WEBUI_SECRET_KEY))
+        if not config_path.endswith("_encrypted"):
+            self.config_path_crypt = config_path + "_encrypted"
+        else:
+            self.config_path_crypt = config_path
+        super().__init__(env_name, config_path, env_value)
+
+    def encrypt(self, value):
+        return self.fernet.encrypt(value.encode()).decode()
+
+    def decrypt(self, value):
+        return self.fernet.decrypt(value.encode()).decode()
+
+    def load(self):
+        if (encrypted := get_config_value(self.config_path_crypt)) is not None:
+            try:
+                self.value = self.config_value = self.decrypt(encrypted)
+                log.info(f"'{self.env_name}' loaded from config.json")
+            except InvalidToken:
+                log.error(f"Invalid token for '{self.env_name}' in config.json.")
+                encrypted = None
+        if (unencrypted := get_config_value(self.config_path)) is not None:
+            log.warn(f"Unencrypted value found for '{self.env_name}'.")
+            log.warn(f"For security, delete {self.config_path} from config.json.")
+            self.value = self.config_value = unencrypted
+            log.warn(f"Encrypting '{self.env_name}' and saving to config.json...")
+            self.save()
+        if encrypted is None and unencrypted is None:
+            self.value = self.env_value
+            self.config_value = None
+
+    def save(self):
+        self._save(encrypt=True)
 
 
 class AppConfig:
@@ -337,7 +395,7 @@ GOOGLE_CLIENT_ID = PersistentConfig(
     os.environ.get("GOOGLE_CLIENT_ID", ""),
 )
 
-GOOGLE_CLIENT_SECRET = PersistentConfig(
+GOOGLE_CLIENT_SECRET = SecretConfig(
     "GOOGLE_CLIENT_SECRET",
     "oauth.google.client_secret",
     os.environ.get("GOOGLE_CLIENT_SECRET", ""),
@@ -361,7 +419,7 @@ MICROSOFT_CLIENT_ID = PersistentConfig(
     os.environ.get("MICROSOFT_CLIENT_ID", ""),
 )
 
-MICROSOFT_CLIENT_SECRET = PersistentConfig(
+MICROSOFT_CLIENT_SECRET = SecretConfig(
     "MICROSOFT_CLIENT_SECRET",
     "oauth.microsoft.client_secret",
     os.environ.get("MICROSOFT_CLIENT_SECRET", ""),
@@ -391,7 +449,7 @@ OAUTH_CLIENT_ID = PersistentConfig(
     os.environ.get("OAUTH_CLIENT_ID", ""),
 )
 
-OAUTH_CLIENT_SECRET = PersistentConfig(
+OAUTH_CLIENT_SECRET = SecretConfig(
     "OAUTH_CLIENT_SECRET",
     "oauth.oidc.client_secret",
     os.environ.get("OAUTH_CLIENT_SECRET", ""),
@@ -727,7 +785,7 @@ try:
     OPENAI_API_KEY = OPENAI_API_KEYS.value[
         OPENAI_API_BASE_URLS.value.index("https://api.openai.com/v1")
     ]
-except:
+except Exception:
     pass
 
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
@@ -854,7 +912,7 @@ try:
     banners = json.loads(os.environ.get("WEBUI_BANNERS", "[]"))
     banners = [BannerModel(**banner) for banner in banners]
 except Exception as e:
-    print(f"Error loading WEBUI_BANNERS: {e}")
+    log.error(f"Error loading WEBUI_BANNERS: {e}")
     banners = []
 
 WEBUI_BANNERS = PersistentConfig("WEBUI_BANNERS", "ui.banners", banners)
@@ -946,15 +1004,8 @@ If a function tool doesn't match the query, return an empty string. Else, pick a
 
 
 ####################################
-# WEBUI_SECRET_KEY
+# WEBUI_SESSION_COOKIE_SAME_SITE
 ####################################
-
-WEBUI_SECRET_KEY = os.environ.get(
-    "WEBUI_SECRET_KEY",
-    os.environ.get(
-        "WEBUI_JWT_SECRET_KEY", "t0p-s3cr3t"
-    ),  # DEPRECATED: remove at next major version
-)
 
 WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get(
     "WEBUI_SESSION_COOKIE_SAME_SITE",
@@ -1043,7 +1094,7 @@ RAG_EMBEDDING_MODEL = PersistentConfig(
     "rag.embedding_model",
     os.environ.get("RAG_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
 )
-log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}"),
+log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
 
 RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
     os.environ.get("RAG_EMBEDDING_MODEL_AUTO_UPDATE", "").lower() == "true"
@@ -1065,7 +1116,7 @@ RAG_RERANKING_MODEL = PersistentConfig(
     os.environ.get("RAG_RERANKING_MODEL", ""),
 )
 if RAG_RERANKING_MODEL.value != "":
-    log.info(f"Reranking model set: {RAG_RERANKING_MODEL.value}"),
+    log.info(f"Reranking model set: {RAG_RERANKING_MODEL.value}")
 
 RAG_RERANKING_MODEL_AUTO_UPDATE = (
     os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "").lower() == "true"
