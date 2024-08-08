@@ -12,6 +12,7 @@
 	export let lang = '';
 	export let code = '';
 
+	const i18n = getContext('i18n');
 	let highlightedCode = null;
 	let executing = false;
 
@@ -277,19 +278,23 @@ __builtins__.input = input`);
 			{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
 				{#if executing}
 					<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">
-						'Running'
+						{$i18n.t('Running')}
 					</div>
 				{:else}
 					<button
 						class="copy-code-button bg-none border-none p-1"
 						on:click={() => {
 							executePython(code);
-						}}>'Run'</button
+						}}>{$i18n.t('Run')}</button
 					>
 				{/if}
 			{/if}
 			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}>
-				{copied ? 'Copied' : 'Copy Code'}
+				{#if copied}
+					{$i18n.t('Copied')}
+				{:else}
+					{$i18n.t('Copy Code')}
+				{/if}
 			</button>
 		</div>
 	</div>
@@ -315,12 +320,12 @@ __builtins__.input = input`);
 
 		{#if executing}
 			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-				<div class=" text-gray-500 text-xs mb-1">{'STDOUT/STDERR'}</div>
-				<div class="text-sm">{'Running...'}</div>
+				<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+				<div class="text-sm">{$i18n.t('Running') + '...'}</div>
 			</div>
 		{:else if stdout || stderr || result}
 			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-				<div class=" text-gray-500 text-xs mb-1">{'STDOUT/STDERR'}</div>
+				<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 				<div class="text-sm">{stdout || stderr || result}</div>
 			</div>
 		{/if}
@@ -329,17 +334,17 @@ __builtins__.input = input`);
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 			<div class="text-gray-500 text-white text-xs mb-1 flex justify-between items-center">
 				<button class="p-1" on:click={toggleExpand}>
-					{@html 'Preview'}
+					{@html $i18n.t('Preview')}
 				</button>
 				<div class="flex items-center">
 					<button
 						class="copy-code-button bg-none border-none p-1"
 						on:click={() => {
 							executeHTML(code);
-						}}>{'Refresh'}</button
+						}}>{$i18n.t('Refresh')}</button
 					>
 					<button class="copy-code-button bg-none border-none p-1" on:click={toggleExpand}
-						>{expanded ? 'Collapse' : 'Expand'}</button
+						>{expanded ? $i18n.t('Collapse') : $i18n.t('Expand')}</button
 					>
 				</div>
 			</div>
