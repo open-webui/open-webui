@@ -509,6 +509,7 @@
 	"Scan": "Quét tài liệu",
 	"Scan complete!": "Quét hoàn tất!",
 	"Scan for documents from {{path}}": "Quét tài liệu từ đường dẫn: {{path}}",
+	"Scroll to bottom when switching between branches": "",
 	"Search": "Tìm kiếm",
 	"Search a model": "Tìm model",
 	"Search Chats": "Tìm kiếm các cuộc Chat",

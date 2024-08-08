@@ -6,6 +6,8 @@ from typing import Optional, List, Tuple
 import uuid
 import time
 
+from utils.task import prompt_template
+
 
 def get_last_user_message_item(messages: List[dict]) -> Optional[dict]:
     for message in reversed(messages):
@@ -97,18 +99,60 @@ def openai_chat_message_template(model: str):
     }
 
 
-def openai_chat_chunk_message_template(model: str, message: str):
+def openai_chat_chunk_message_template(model: str, message: str) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion.chunk"
     template["choices"][0]["delta"] = {"content": message}
     return template
 
 
-def openai_chat_completion_message_template(model: str, message: str):
+def openai_chat_completion_message_template(model: str, message: str) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion"
     template["choices"][0]["message"] = {"content": message, "role": "assistant"}
     template["choices"][0]["finish_reason"] = "stop"
+    return template
+
+
+# inplace function: form_data is modified
+def apply_model_system_prompt_to_body(params: dict, form_data: dict, user) -> dict:
+    system = params.get("system", None)
+    if not system:
+        return form_data
+
+    if user:
+        template_params = {
+            "user_name": user.name,
+            "user_location": user.info.get("location") if user.info else None,
+        }
+    else:
+        template_params = {}
+    system = prompt_template(system, **template_params)
+    form_data["messages"] = add_or_update_system_message(
+        system, form_data.get("messages", [])
+    )
+    return form_data
+
+
+# inplace function: form_data is modified
+def apply_model_params_to_body(params: dict, form_data: dict) -> dict:
+    if not params:
+        return form_data
+
+    mappings = {
+        "temperature": float,
+        "top_p": int,
+        "max_tokens": int,
+        "frequency_penalty": int,
+        "seed": lambda x: x,
+        "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
+    }
+
+    for key, cast_func in mappings.items():
+        if (value := params.get(key)) is not None:
+            form_data[key] = cast_func(value)
+
+    return form_data
 
 
 def get_gravatar_url(email):

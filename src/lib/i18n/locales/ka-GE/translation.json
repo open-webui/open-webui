@@ -509,6 +509,7 @@
 	"Scan": "სკანირება",
 	"Scan complete!": "სკანირება დასრულდა!",
 	"Scan for documents from {{path}}": "დოკუმენტების სკანირება {{ path}}-დან",
+	"Scroll to bottom when switching between branches": "",
 	"Search": "ძიება",
 	"Search a model": "მოდელის ძიება",
 	"Search Chats": "ჩატების ძებნა",
