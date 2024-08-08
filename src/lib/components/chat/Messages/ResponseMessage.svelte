@@ -4,7 +4,6 @@
 	import { marked } from 'marked';
 	import tippy from 'tippy.js';
 	import auto_render from 'katex/dist/contrib/auto-render.mjs';
-	import 'katex/dist/katex.min.css';
 	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
@@ -79,18 +78,23 @@
 
 	let tokens;
 
+	import 'katex/dist/katex.min.css';
+
+	import markedKatex from '$lib/utils/katex-extension';
+
+	const options = {
+		throwOnError: false
+	};
+
+	marked.use(markedKatex(options));
+
 	$: (async () => {
 		if (message?.content) {
 			tokens = marked.lexer(
 				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
 			);
-			// console.log(message?.content, tokens);
 		}
 	})();
-
-	$: if (message) {
-		renderStyling();
-	}
 
 	const renderStyling = async () => {
 		await tick();

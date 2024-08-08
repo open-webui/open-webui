@@ -1,17 +1,22 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { Token } from 'marked';
 	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
+
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
-	import { onMount } from 'svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/MarkdownInlineTokens.svelte';
+	import KatexRenderer from './KatexRenderer.svelte';
+
 	export let id: string;
 	export let tokens: Token[];
 	export let top = true;
+
 	const headerComponent = (depth: number) => {
 		return 'h' + depth;
 	};
 </script>
 
+<!-- {JSON.stringify(tokens)} -->
 {#each tokens as token, tokenIdx}
 	{#if token.type === 'hr'}
 		<hr />
@@ -103,6 +108,13 @@
 			<MarkdownInlineTokens id={`${id}-${tokenIdx}-p`} tokens={token.tokens ?? []} />
 		{:else}
 			{unescapeHtml(token.text)}
+		{/if}
+	{:else if token.type === 'inlineKatex'}
+		{#if token.text}
+			<KatexRenderer
+				content={revertSanitizedResponseContent(token.text)}
+				displayMode={token?.displayMode ?? false}
+			/>
 		{/if}
 	{:else if token.type === 'space'}
 		{''}

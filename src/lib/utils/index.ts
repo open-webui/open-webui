@@ -25,7 +25,8 @@ const convertLatexToSingleLine = (content) => {
 
 export const sanitizeResponseContent = (content: string) => {
 	// replace single backslash with double backslash
-	content = content.replace(/\\/g, '\\\\');
+	content = content.replace(/\\\\/g, '\\\\\\\\');
+
 	content = convertLatexToSingleLine(content);
 
 	// First, temporarily replace valid <video> tags with a placeholder
@@ -87,7 +88,7 @@ export const replaceTokens = (content, char, user) => {
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
-	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
+	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('\\\\', '\\');
 };
 
 export function unescapeHtml(html: string) {
