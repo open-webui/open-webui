@@ -432,6 +432,12 @@ OAUTH_PICTURE_CLAIM = PersistentConfig(
     os.environ.get("OAUTH_PICTURE_CLAIM", "picture"),
 )
 
+OAUTH_EMAIL_CLAIM = PersistentConfig(
+    "OAUTH_EMAIL_CLAIM",
+    "oauth.oidc.email_claim",
+    os.environ.get("OAUTH_EMAIL_CLAIM", "email"),
+)
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()

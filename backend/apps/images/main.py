@@ -516,7 +516,7 @@ async def image_generations(
 
             data = ImageGenerationPayload(**data)
 
-            res = comfyui_generate_image(
+            res = await comfyui_generate_image(
                 app.state.config.MODEL,
                 data,
                 user.id,

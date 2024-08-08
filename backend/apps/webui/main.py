@@ -46,6 +46,7 @@ from config import (
     AppConfig,
     OAUTH_USERNAME_CLAIM,
     OAUTH_PICTURE_CLAIM,
+    OAUTH_EMAIL_CLAIM,
 )
 
 from apps.socket.main import get_event_call, get_event_emitter
@@ -86,6 +87,7 @@ app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 
 app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
+app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
 
 app.state.MODELS = {}
 app.state.TOOLS = {}

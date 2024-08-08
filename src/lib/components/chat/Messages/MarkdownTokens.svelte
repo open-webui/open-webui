@@ -3,7 +3,10 @@
 	import type { Token } from 'marked';
 	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
 
-	import { onMount } from 'svelte';
+	import { onMount, getContext, getAllContexts } from 'svelte';
+
+	const context = getAllContexts();
+	const i18n = getContext('i18n');
 
 	import Image from '$lib/components/common/Image.svelte';
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
@@ -44,7 +47,7 @@
 					return;
 				}
 
-				new CodeBlock({
+				const element = new CodeBlock({
 					target: codeElement,
 					props: {
 						id: `${id}-${codes.length}`,
@@ -52,7 +55,8 @@
 						code: revertSanitizedResponseContent(code)
 					},
 					hydrate: true,
-					$$inline: true
+					$$inline: true,
+					context: context
 				});
 			}
 		}, 10);
