@@ -251,5 +251,24 @@ Increased memory limit from 8GB to 24GB
 Increase Swap from 1GB to 3GB
 -->
 
+## How to build with a different "src" file
+
+We're not taking this approach, prepending "team-" instead.
+
+1.) Add to vite.config.js:  root: 'src-merged'
+
+2.) In package.json, replace "src" with "src-merged" (was in one place)
+
+3.) Add to svelt.config.js (Provided by ChatGPT. You might need all these lines.)
+
+, files: {  
+assets: 'src-merged/assets',  
+lib: 'src-merged/lib',  
+params: 'src-merged/params',  
+routes: 'src-merged/routes',  
+serviceWorker: 'src-merged/service-worker',  
+appTemplate: 'src-merged/app.html'
+
+
 ---
 <br>[Install for Building Locally](../) - without Docker

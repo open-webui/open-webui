@@ -1,5 +1,5 @@
 [Location Projects for OpenWebUI](../)
-# Open WebUI from Docker
+# Open WebUI Setup
 <!--Pinecone -->
 
 If you already have an "open-webui" Docker container, your OpenWebUI server may already be running at [localhost:3000](http://localhost:3000) (since Docker restarts it when you start your computer).  You can now [train with a web page](train).
