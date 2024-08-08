@@ -31,8 +31,6 @@ from utils.utils import (
     get_verified_user,
     get_admin_user,
 )
-from utils.task import prompt_template
-
 
 from config import (
     SRC_LOG_LEVELS,
@@ -47,7 +45,6 @@ from config import (
 from utils.misc import (
     apply_model_params_to_body_ollama,
     calculate_sha256,
-    add_or_update_system_message,
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )

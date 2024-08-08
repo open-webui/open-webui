@@ -181,7 +181,12 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
     ]
     mappings = {i: lambda x: x for i in opts}
     mappings = {**mappings, **OPENAI_MAPPINGS}
-    return apply_model_params_to_body(params, form_data, mappings)
+    form_data = apply_model_params_to_body(params, form_data, mappings)
+
+    # only param that changes name
+    if (param := params.get("frequency_penalty", None)) is not None:
+        form_data["repeat_penalty"] = param
+    return form_data
 
 
 def get_gravatar_url(email):
