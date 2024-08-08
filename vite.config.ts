@@ -1,6 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import { terser } from '@rollup/plugin-terser';
+import terser from '@rollup/plugin-terser';
 
 // /** @type {import('vite').Plugin} */
 // const viteServerConfig = {
