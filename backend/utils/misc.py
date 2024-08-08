@@ -192,7 +192,6 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         if (param := params.get(key, None)) is not None:
             form_data[value] = param
 
-    print(form_data)
     return form_data
 
 
