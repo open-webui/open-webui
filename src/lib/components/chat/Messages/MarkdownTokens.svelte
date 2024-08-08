@@ -37,12 +37,13 @@
 		});
 		codes = codes;
 		const codeId = `${id}-${codes.length}`;
+		const divElementId = `code-${codeId}`;
 
-		const interval = setInterval(() => {
-			const codeElement = document.getElementById(`code-${codeId}`);
+		const observer = new MutationObserver((mutations, observer) => {
+			const codeElement = document.getElementById(divElementId);
 			if (codeElement) {
-				clearInterval(interval);
-				// If the code is already loaded, don't load it again
+				observer.disconnect(); // 停止观察
+				// 如果代码已经加载，不要再次加载
 				if (codeElement.innerHTML) {
 					return;
 				}
@@ -50,7 +51,7 @@
 				const element = new CodeBlock({
 					target: codeElement,
 					props: {
-						id: `${id}-${codes.length}`,
+						id: codeId,
 						lang: lang,
 						code: revertSanitizedResponseContent(code)
 					},
@@ -59,9 +60,9 @@
 					context: context
 				});
 			}
-		}, 10);
-
-		return `<div id="code-${id}-${codes.length}"></div>`;
+		});
+		observer.observe(document.body, { childList: true, subtree: true });
+		return `<div id="${divElementId}"></div>`;
 	};
 
 	let images = [];
