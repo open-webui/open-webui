@@ -35,7 +35,6 @@
 		"eslint-plugin-cypress": "^3.4.0",
 		"eslint-plugin-svelte": "^2.43.0",
 		"i18next-parser": "^9.0.1",
-		"javascript-obfuscator": "^4.1.1",
 		"postcss": "^8.4.31",
 		"prettier": "^3.3.3",
 		"prettier-plugin-svelte": "^3.2.6",
@@ -46,7 +45,6 @@
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
 		"vite": "^5.3.5",
-		"vite-plugin-obfuscator": "^1.0.5",
 		"vitest": "^1.6.0"
 	},
 	"type": "module",
