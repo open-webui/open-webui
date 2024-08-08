@@ -57,7 +57,7 @@
 			remarks: remark,
 			leavefrom: dateFormatter(startDate),
 			leaveto: dateFormatter(endDate),
-			days: dayCount,
+			days: String(dayCount),
 			address: address,
 			tele: phone,
 			email: $user.email,
@@ -69,7 +69,7 @@
 				show = false;
 			})
 			.catch((err) => {
-				window.alert('Submission failed. Please try again.');
+				window.alert(err.detail + ' Submission failed.');
 				return;
 			});
 	};

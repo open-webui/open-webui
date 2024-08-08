@@ -455,11 +455,11 @@
 													editMessageConfirmHandler();
 												}}
 												on:cancel={() => {
-													editedContent = 'leave_request_cancled';
+													editedContent = 'leave_request_canceled';
 													editMessageConfirmHandler();
 												}}
 											/>
-										{:else if token.raw.includes('leave_request_cancled')}
+										{:else if token.raw.includes('leave_request_canceled')}
 											<button
 												class="px-4 my-2 rounded-lg bg-[#ffffffaa] hover:bg-[#fff]"
 												on:click={() => {
