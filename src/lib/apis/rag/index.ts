@@ -138,6 +138,7 @@ type QuerySettings = {
 	k: number | null;
 	r: number | null;
 	template: string | null;
+	reranking_provider: string | null;
 };
 
 export const updateQuerySettings = async (token: string, settings: QuerySettings) => {
@@ -300,7 +301,8 @@ export const queryDoc = async (
 	token: string,
 	collection_name: string,
 	query: string,
-	k: number | null = null
+	k: number | null = null,
+	reranking_provider: string
 ) => {
 	let error = null;
 
@@ -314,7 +316,8 @@ export const queryDoc = async (
 		body: JSON.stringify({
 			collection_name: collection_name,
 			query: query,
-			k: k
+			k: k,
+			reranking_provider: reranking_provider
 		})
 	})
 		.then(async (res) => {
@@ -337,7 +340,8 @@ export const queryCollection = async (
 	token: string,
 	collection_names: string,
 	query: string,
-	k: number | null = null
+	k: number | null = null,
+	reranking_provider: string
 ) => {
 	let error = null;
 
@@ -351,7 +355,8 @@ export const queryCollection = async (
 		body: JSON.stringify({
 			collection_names: collection_names,
 			query: query,
-			k: k
+			k: k,
+			reranking_provider: reranking_provider
 		})
 	})
 		.then(async (res) => {
@@ -481,8 +486,20 @@ type OpenAIConfigForm = {
 	batch_size: number;
 };
 
+type CohereAIConfigForm = {
+	key: string;
+	url: string;
+};
+
+type VoyageAICofigForm = {
+	key: string;
+	url: string;
+};
+
 type EmbeddingModelUpdateForm = {
 	openai_config?: OpenAIConfigForm;
+	cohereai_config?: CohereAIConfigForm;
+	voyageai_config?: VoyageAICofigForm;
 	embedding_engine: string;
 	embedding_model: string;
 };
@@ -546,6 +563,9 @@ export const getRerankingConfig = async (token: string) => {
 
 type RerankingModelUpdateForm = {
 	reranking_model: string;
+	reranking_provider: string;
+	cohereai_config?: CohereAIConfigForm;
+	voyageai_config?: VoyageAICofigForm;
 };
 
 export const updateRerankingConfig = async (token: string, payload: RerankingModelUpdateForm) => {

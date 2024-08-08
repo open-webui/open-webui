@@ -1,27 +1,22 @@
-import os
 import logging
-import requests
-
+import os
 from typing import List, Union
+from typing import Optional
 
+import requests
 from apps.ollama.main import (
     generate_ollama_embeddings,
     GenerateEmbeddingsForm,
 )
-
+from config import SRC_LOG_LEVELS, CHROMA_CLIENT
 from huggingface_hub import snapshot_download
-
-from langchain_core.documents import Document
-from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import (
     ContextualCompressionRetriever,
     EnsembleRetriever,
 )
-
-from typing import Optional
-
-from utils.misc import get_last_user_message, add_or_update_system_message
-from config import SRC_LOG_LEVELS, CHROMA_CLIENT
+from langchain_community.retrievers import BM25Retriever
+from langchain_core.documents import Document
+from utils.misc import get_last_user_message
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -55,6 +50,7 @@ def query_doc_with_hybrid_search(
     k: int,
     reranking_function,
     r: float,
+    reranking_provider: str,
 ):
     try:
         collection = CHROMA_CLIENT.get_collection(name=collection_name)
@@ -81,6 +77,7 @@ def query_doc_with_hybrid_search(
             top_n=k,
             reranking_function=reranking_function,
             r_score=r,
+            reranking_provider=reranking_provider,
         )
 
         compression_retriever = ContextualCompressionRetriever(
@@ -169,8 +166,10 @@ def query_collection_with_hybrid_search(
     k: int,
     reranking_function,
     r: float,
+    reranking_provider: str,
 ):
     results = []
+
     for collection_name in collection_names:
         try:
             result = query_doc_with_hybrid_search(
@@ -179,6 +178,7 @@ def query_collection_with_hybrid_search(
                 embedding_function=embedding_function,
                 k=k,
                 reranking_function=reranking_function,
+                reranking_provider=reranking_provider,
                 r=r,
             )
             results.append(result)
@@ -193,6 +193,38 @@ def rag_template(template: str, context: str, query: str):
     return template
 
 
+def generate_embeddings(
+    engine: str,
+    model: str,
+    text: Union[str, list[str]],
+    key: str,
+    url: str = None,
+):
+    log.debug(f"Generating embeddings with engine: {engine}, model: {model}")
+
+    if url is None:
+        url = {
+            "openai": "https://api.openai.com/v1",
+            "cohereai": "https://api.cohere.ai/v1",
+            "voyageai": "https://api.voyageai.com/v1",
+        }.get(engine)
+
+    batch_embedding_func = {
+        "openai": generate_openai_batch_embeddings,
+        "cohereai": generate_cohereai_batch_embeddings,
+        "voyageai": generate_voyageai_batch_embeddings,
+    }.get(engine)
+
+    if batch_embedding_func is None:
+        raise ValueError(f"Unsupported embedding engine: {engine}")
+
+    texts = text if isinstance(text, list) else [text]
+
+    embeddings = batch_embedding_func(model, texts, key, url)
+
+    return embeddings[0] if isinstance(text, str) else embeddings
+
+
 def get_embedding_function(
     embedding_engine,
     embedding_model,
@@ -200,26 +232,23 @@ def get_embedding_function(
     openai_key,
     openai_url,
     batch_size,
+    cohereai_key,
+    cohereai_url,
+    voyageai_key,
+    voyageai_url,
 ):
     if embedding_engine == "":
         return lambda query: embedding_function.encode(query).tolist()
-    elif embedding_engine in ["ollama", "openai"]:
-        if embedding_engine == "ollama":
-            func = lambda query: generate_ollama_embeddings(
-                GenerateEmbeddingsForm(
-                    **{
-                        "model": embedding_model,
-                        "prompt": query,
-                    }
-                )
-            )
-        elif embedding_engine == "openai":
-            func = lambda query: generate_openai_embeddings(
-                model=embedding_model,
-                text=query,
-                key=openai_key,
-                url=openai_url,
-            )
+
+    # Dictionary to map engine to its specific parameters
+    engine_params = {
+        "openai": {"key": openai_key, "url": openai_url},
+        "cohereai": {"key": cohereai_key, "url": cohereai_url},
+        "voyageai": {"key": voyageai_key, "url": voyageai_url},
+    }
+
+    if embedding_engine in engine_params:
+        params = engine_params[embedding_engine]
 
         def generate_multiple(query, f):
             if isinstance(query, list):
@@ -233,7 +262,27 @@ def get_embedding_function(
             else:
                 return f(query)
 
-        return lambda query: generate_multiple(query, func)
+        def func(query):
+            return generate_embeddings(
+                engine=embedding_engine,
+                model=embedding_model,
+                text=query,
+                **params,
+            )
+
+    elif embedding_engine == "ollama":
+        func = lambda query: generate_ollama_embeddings(
+            GenerateEmbeddingsForm(
+                **{
+                    "model": embedding_model,
+                    "prompt": query,
+                }
+            )
+        )
+    else:
+        raise ValueError(f"Unsupported embedding engine: {embedding_engine}")
+
+    return lambda query: generate_multiple(query, func)
 
 
 def get_rag_context(
@@ -244,6 +293,7 @@ def get_rag_context(
     reranking_function,
     r,
     hybrid_search,
+    reranking_provider,
 ):
     log.debug(f"files: {files} {messages} {embedding_function} {reranking_function}")
     query = get_last_user_message(messages)
@@ -276,6 +326,7 @@ def get_rag_context(
                         embedding_function=embedding_function,
                         k=k,
                         reranking_function=reranking_function,
+                        reranking_provider=reranking_provider,
                         r=r,
                     )
                 else:
@@ -358,22 +409,55 @@ def get_model_path(model: str, update_model: bool = False):
         return model
 
 
-def generate_openai_embeddings(
-    model: str,
-    text: Union[str, list[str]],
-    key: str,
-    url: str = "https://api.openai.com/v1",
-):
-    if isinstance(text, list):
-        embeddings = generate_openai_batch_embeddings(model, text, key, url)
-    else:
-        embeddings = generate_openai_batch_embeddings(model, [text], key, url)
-
-    return embeddings[0] if isinstance(text, str) else embeddings
-
-
 def generate_openai_batch_embeddings(
     model: str, texts: list[str], key: str, url: str = "https://api.openai.com/v1"
+) -> Optional[list[list[float]]]:
+    try:
+        r = requests.post(
+            f"{url}/embeddings",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {key}",
+            },
+            json={"input": texts, "model": model},
+        )
+        r.raise_for_status()
+        data = r.json()
+        if "data" in data:
+            return [elem["embedding"] for elem in data["data"]]
+        else:
+            raise "Something went wrong :/"
+    except Exception as e:
+        print(e)
+        return None
+
+
+def generate_cohereai_batch_embeddings(
+    model: str, texts: list[str], key: str, url: str = "https://api.cohere.com/v1"
+) -> Optional[list[list[float]]]:
+    try:
+        r = requests.post(
+            f"{url}/embed",
+            headers={
+                "accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {key}",
+            },
+            json={"model": model, "texts": texts, "input_type": "classification"},
+        )
+        r.raise_for_status()
+        data = r.json()
+        if "embeddings" in data:
+            return data["embeddings"]
+        else:
+            raise "Something went wrong :/"
+    except Exception as e:
+        print(e)
+        return None
+
+
+def generate_voyageai_batch_embeddings(
+    model: str, texts: list[str], key: str, url: str = "https://api.voyageai.com/v1"
 ) -> Optional[list[list[float]]]:
     try:
         r = requests.post(
@@ -448,6 +532,7 @@ class RerankCompressor(BaseDocumentCompressor):
     top_n: int
     reranking_function: Any
     r_score: float
+    reranking_provider: str
 
     class Config:
         extra = Extra.forbid
@@ -462,9 +547,25 @@ class RerankCompressor(BaseDocumentCompressor):
         reranking = self.reranking_function is not None
 
         if reranking:
-            scores = self.reranking_function.predict(
-                [(query, doc.page_content) for doc in documents]
-            )
+            if (
+                self.reranking_provider == "voyageai"
+                or self.reranking_provider == "cohereai"
+            ):
+                docs_with_scores = self.reranking_function.predict(
+                    query=query,
+                    docs=documents,
+                    top_n=self.top_n,
+                    r_score=self.r_score,
+                )
+            elif self.reranking_provider == "sentence-transformers":
+                scores = self.reranking_function.predict(
+                    [(query, doc.page_content) for doc in documents]
+                )
+                docs_with_scores = list(zip(documents, scores.tolist()))
+                if self.r_score:
+                    docs_with_scores = [
+                        (d, s) for d, s in docs_with_scores if s >= self.r_score
+                    ]
         else:
             from sentence_transformers import util
 
@@ -474,11 +575,11 @@ class RerankCompressor(BaseDocumentCompressor):
             )
             scores = util.cos_sim(query_embedding, document_embedding)[0]
 
-        docs_with_scores = list(zip(documents, scores.tolist()))
-        if self.r_score:
-            docs_with_scores = [
-                (d, s) for d, s in docs_with_scores if s >= self.r_score
-            ]
+            docs_with_scores = list(zip(documents, scores.tolist()))
+            if self.r_score:
+                docs_with_scores = [
+                    (d, s) for d, s in docs_with_scores if s >= self.r_score
+                ]
 
         result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
         final_results = []
@@ -490,4 +591,5 @@ class RerankCompressor(BaseDocumentCompressor):
                 metadata=metadata,
             )
             final_results.append(doc)
+
         return final_results

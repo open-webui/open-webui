@@ -1,24 +1,23 @@
 <script lang="ts">
 	import { getDocs } from '$lib/apis/documents';
-	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
+	import { deleteAllFiles } from '$lib/apis/files';
 	import {
-		getQuerySettings,
-		scanDocs,
-		updateQuerySettings,
-		resetVectorDB,
 		getEmbeddingConfig,
-		updateEmbeddingConfig,
-		getRerankingConfig,
-		updateRerankingConfig,
-		resetUploadDir,
+		getQuerySettings,
 		getRAGConfig,
-		updateRAGConfig
+		getRerankingConfig,
+		resetVectorDB,
+		scanDocs,
+		updateEmbeddingConfig,
+		updateQuerySettings,
+		updateRAGConfig,
+		updateRerankingConfig
 	} from '$lib/apis/rag';
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import { documents, models } from '$lib/stores';
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
@@ -49,11 +48,18 @@
 	let OpenAIUrl = '';
 	let OpenAIBatchSize = 1;
 
+	let CohereAIKey = '';
+	let CohereAIUrl = '';
+
+	let VoyageAIKey = '';
+	let VoyageAIUrl = '';
+
 	let querySettings = {
 		template: '',
 		r: 0.0,
 		k: 4,
-		hybrid: false
+		hybrid: false,
+		reranking_provider: ''
 	};
 
 	const scanHandler = async () => {
@@ -99,6 +105,37 @@
 			return;
 		}
 
+		// Support Cohere model for embeddings
+		if (embeddingEngine === 'cohereai' && embeddingModel === '') {
+			toast.error(
+				$i18n.t(
+					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
+				)
+			);
+			return;
+		}
+
+		// Support Cohere model for embeddings
+		if ((embeddingEngine === 'cohereai' && CohereAIKey === '') || CohereAIUrl === '') {
+			toast.error($i18n.t('Cohere URL/Key required.'));
+			return;
+		}
+
+		// Support VoyageAI for embeddings
+		if (embeddingEngine === 'voyageai' && embeddingModel === '') {
+			toast.error(
+				$i18n.t(
+					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
+				)
+			);
+			return;
+		}
+
+		if ((embeddingEngine === 'voyageai' && VoyageAIKey === '') || VoyageAIUrl === '') {
+			toast.error($i18n.t('VoyageAI URL/Key required.'));
+			return;
+		}
+
 		console.log('Update embedding model attempt:', embeddingModel);
 
 		updateEmbeddingModelLoading = true;
@@ -111,6 +148,22 @@
 							key: OpenAIKey,
 							url: OpenAIUrl,
 							batch_size: OpenAIBatchSize
+						}
+				  }
+				: {}),
+			...(embeddingEngine === 'cohereai'
+				? {
+						cohere_config: {
+							key: CohereAIKey,
+							url: CohereAIUrl
+						}
+				  }
+				: {}),
+			...(embeddingEngine === 'voyageai'
+				? {
+						voyage_config: {
+							key: VoyageAIKey,
+							url: VoyageAIUrl
 						}
 				  }
 				: {})
@@ -132,11 +185,44 @@
 	};
 
 	const rerankingModelUpdateHandler = async () => {
+		if (
+			(querySettings.reranking_provider === 'cohereai' && CohereAIKey === '') ||
+			CohereAIUrl === ''
+		) {
+			toast.error($i18n.t('Cohere URL/Key required.'));
+			return;
+		}
+
+		if (
+			(querySettings.reranking_provider === 'voyageai' && VoyageAIKey === '') ||
+			VoyageAIUrl === ''
+		) {
+			toast.error($i18n.t('VoyageAI URL/Key required.'));
+			return;
+		}
+
 		console.log('Update reranking model attempt:', rerankingModel);
 
 		updateRerankingModelLoading = true;
 		const res = await updateRerankingConfig(localStorage.token, {
-			reranking_model: rerankingModel
+			reranking_model: rerankingModel,
+			reranking_provider: querySettings.reranking_provider,
+			...(querySettings.reranking_provider === 'cohereai'
+				? {
+						cohere_config: {
+							key: CohereAIKey,
+							url: CohereAIUrl
+						}
+				  }
+				: {}),
+			...(querySettings.reranking_provider === 'voyageai'
+				? {
+						voyage_config: {
+							key: VoyageAIKey,
+							url: VoyageAIUrl
+						}
+				  }
+				: {})
 		}).catch(async (error) => {
 			toast.error(error);
 			await setRerankingConfig();
@@ -197,6 +283,12 @@
 			OpenAIKey = embeddingConfig.openai_config.key;
 			OpenAIUrl = embeddingConfig.openai_config.url;
 			OpenAIBatchSize = embeddingConfig.openai_config.batch_size ?? 1;
+
+			CohereAIKey = embeddingConfig.cohereai_config.key;
+			CohereAIUrl = embeddingConfig.cohereai_config.url;
+
+			VoyageAIKey = embeddingConfig.voyageai_config.key;
+			VoyageAIUrl = embeddingConfig.voyageai_config.url;
 		}
 	};
 
@@ -213,9 +305,20 @@
 		querySettings = await updateQuerySettings(localStorage.token, querySettings);
 	};
 
+	const handleProviderChange = () => {
+		if (querySettings.reranking_provider === 'cohereai') {
+			rerankingModel = 'rerank-multilingual-v3.0';
+		} else if (querySettings.reranking_provider === 'voyageai') {
+			rerankingModel = 'rerank-1';
+		} else {
+			rerankingModel = '';
+		}
+	};
+
 	onMount(async () => {
 		await setEmbeddingConfig();
 		await setRerankingConfig();
+		await handleProviderChange();
 
 		querySettings = await getQuerySettings(localStorage.token);
 
@@ -339,12 +442,18 @@
 								embeddingModel = 'text-embedding-3-small';
 							} else if (e.target.value === '') {
 								embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
+							} else if (e.target.value == 'cohereai') {
+								embeddingModel = 'embed-multilingual-v3.0';
+							} else if (e.target.value == 'voyageai') {
+								embeddingModel = 'voyage-multilingual-2';
 							}
 						}}
 					>
 						<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
 						<option value="ollama">{$i18n.t('Ollama')}</option>
 						<option value="openai">{$i18n.t('OpenAI')}</option>
+						<option value="cohereai">{$i18n.t('CohereAI')}</option>
+						<option value="voyageai">{$i18n.t('VoyageAI')}</option>
 					</select>
 				</div>
 			</div>
@@ -386,6 +495,32 @@
 				</div>
 			{/if}
 
+			{#if embeddingEngine === 'cohereai'}
+				<div class="my-0.5 flex gap-2">
+					<input
+						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						placeholder={$i18n.t('API Base URL')}
+						bind:value={CohereAIUrl}
+						required
+					/>
+
+					<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={CohereAIKey} />
+				</div>
+			{/if}
+
+			{#if embeddingEngine === 'voyageai'}
+				<div class="my-0.5 flex gap-2">
+					<input
+						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						placeholder={$i18n.t('API Base URL')}
+						bind:value={VoyageAIUrl}
+						required
+					/>
+
+					<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={VoyageAIKey} />
+				</div>
+			{/if}
+
 			<div class=" flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Hybrid Search')}</div>
 
@@ -402,7 +537,50 @@
 						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 					{/if}
 				</button>
+				{#if querySettings.hybrid === true}
+					<div class="flex items-center relative">
+						<select
+							class="dark:bg-gray-900 w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+							bind:value={querySettings.reranking_provider}
+							placeholder="Select an ranking model"
+							on:change={(e) => {
+								querySettings.reranking_provider = e.target.value;
+								handleProviderChange();
+							}}
+						>
+							<option value="cohereai">{$i18n.t('CohereAI')}</option>
+							<option value="voyageai">{$i18n.t('VoyageAI')}</option>
+							<option value="sentence-transformers">{$i18n.t('HuggingFace')}</option>
+						</select>
+					</div>
+				{/if}
 			</div>
+
+			{#if querySettings.reranking_provider === 'cohereai'}
+				<div class="my-0.5 flex gap-2">
+					<input
+						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						placeholder={$i18n.t('API Base URL')}
+						bind:value={CohereAIUrl}
+						required
+					/>
+
+					<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={CohereAIKey} />
+				</div>
+			{/if}
+
+			{#if querySettings.reranking_provider === 'voyageai'}
+				<div class="my-0.5 flex gap-2">
+					<input
+						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+						placeholder={$i18n.t('API Base URL')}
+						bind:value={VoyageAIUrl}
+						required
+					/>
+
+					<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={VoyageAIKey} />
+				</div>
+			{/if}
 		</div>
 
 		<hr class="dark:border-gray-850" />
@@ -429,7 +607,85 @@
 						</select>
 					</div>
 				</div>
-			{:else}
+			{/if}
+
+			{#if embeddingEngine === 'voyageai'}
+				<div class="flex w-full">
+					<div class="flex-1 mr-2">
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							bind:value={embeddingModel}
+							placeholder={$i18n.t('Select a model')}
+							on:change={(e) => {
+								embeddingModel = e.target.value;
+							}}
+							required
+						>
+							<option value="voyage-multilingual-2" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('voyage-multilingual-2')}
+							</option>
+							<option value="voyage-large-2-instruct" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('voyage-large-2-instruct')}
+							</option>
+							<option value="voyage-finance-2" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('voyage-finance-2')}
+							</option>
+							<option value="voyage-law-2" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('voyage-law-2')}
+							</option>
+							<option value="voyage-code-2" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('voyage-code-2')}
+							</option>
+							<option value="voyage-large-2" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('voyage-large-2')}
+							</option>
+							<option value="voyage-2" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('voyage-2')}
+							</option>
+						</select>
+					</div>
+				</div>
+			{/if}
+
+			{#if embeddingEngine === 'cohereai'}
+				<div class="flex w-full">
+					<div class="flex-1 mr-2">
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							bind:value={embeddingModel}
+							placeholder={$i18n.t('Select a model')}
+							on:change={(e) => {
+								embeddingModel = e.target.value;
+							}}
+							required
+						>
+							<option value="embed-english-v3.0" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('embed-english-v3.0')}
+							</option>
+							<option value="embed-english-light-v3.0" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('embed-english-light-v3.0')}
+							</option>
+							<option value="embed-multilingual-v3.0" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('embed-multilingual-v3.0')}
+							</option>
+							<option value="embed-multilingual-light-v3.0" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('embed-multilingual-light-v3.0')}
+							</option>
+							<option value="embed-english-v2.0" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('embed-english-v2.0')}
+							</option>
+							<option value="embed-english-light-v2.0" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('embed-english-light-v2.0')}
+							</option>
+							<option value="embed-multilingual-v2.0" class="bg-gray-50 dark:bg-gray-700">
+								{$i18n.t('embed-multilingual-v2.0')}
+							</option>
+						</select>
+					</div>
+				</div>
+			{/if}
+
+			{#if embeddingEngine === ''}
 				<div class="flex w-full">
 					<div class="flex-1 mr-2">
 						<input
@@ -511,67 +767,113 @@
 
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
-									model: 'BAAI/bge-reranker-v2-m3'
-								})}
-								bind:value={rerankingModel}
-							/>
-						</div>
-						<button
-							class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-							on:click={() => {
-								rerankingModelUpdateHandler();
-							}}
-							disabled={updateRerankingModelLoading}
-						>
-							{#if updateRerankingModelLoading}
-								<div class="self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-									>
-										<style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style>
-										<path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/>
-										<path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/>
-									</svg>
-								</div>
-							{:else}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 16 16"
-									fill="currentColor"
-									class="w-4 h-4"
+							{#if querySettings.reranking_provider === 'voyageai'}
+								<select
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									bind:value={rerankingModel}
+									placeholder={$i18n.t('Select a Reranking Model')}
+									on:change={(e) => {
+										rerankingModel = e.target.value;
+									}}
+									required
 								>
-									<path
-										d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
-									/>
-									<path
-										d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-									/>
-								</svg>
+									<option value="rerank-1" class="bg-gray-50 dark:bg-gray-700">
+										{$i18n.t('rerank-1')}
+									</option>
+									<option value="rerank-lite-1" class="bg-gray-50 dark:bg-gray-700">
+										{$i18n.t('rerank-lite-1')}
+									</option>
+								</select>
 							{/if}
-						</button>
+
+							{#if querySettings.reranking_provider === 'cohereai'}
+								<select
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									bind:value={rerankingModel}
+									placeholder={$i18n.t('Select a Reranking Model')}
+									on:change={(e) => {
+										rerankingModel = e.target.value;
+									}}
+									required
+								>
+									<option value="rerank-english-v3.0" class="bg-gray-50 dark:bg-gray-700">
+										{$i18n.t('rerank-english-v3.0')}
+									</option>
+									<option value="rerank-multilingual-v3.0" class="bg-gray-50 dark:bg-gray-700">
+										{$i18n.t('rerank-multilingual-v3.0')}
+									</option>
+									<option value="rerank-english-v2.0" class="bg-gray-50 dark:bg-gray-700">
+										{$i18n.t('rerank-english-v2.0')}
+									</option>
+									<option value="rerank-multilingual-v2.0" class="bg-gray-50 dark:bg-gray-700">
+										{$i18n.t('rerank-multilingual-v2.0')}
+									</option>
+								</select>
+							{/if}
+
+							{#if querySettings.reranking_provider === 'sentence-transformers'}
+								<div class="flex">
+									<input
+										class="flex-1 mr-2 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+										placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
+											model: 'BAAI/bge-reranker-v2-m3'
+										})}
+										bind:value={rerankingModel}
+									/>
+									<button
+										class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+										on:click={rerankingModelUpdateHandler}
+										disabled={updateRerankingModelLoading}
+									>
+										{#if updateRerankingModelLoading}
+											<div class="self-center">
+												<svg
+													class=" w-4 h-4"
+													viewBox="0 0 24 24"
+													fill="currentColor"
+													xmlns="http://www.w3.org/2000/svg"
+												>
+													<style>
+														.spinner_ajPY {
+															transform-origin: center;
+															animation: spinner_AtaB 0.75s infinite linear;
+														}
+
+														@keyframes spinner_AtaB {
+															100% {
+																transform: rotate(360deg);
+															}
+														}
+													</style>
+													<path
+														d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+														opacity=".25"
+													/>
+													<path
+														d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+														class="spinner_ajPY"
+													/>
+												</svg>
+											</div>
+										{:else}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
+												/>
+												<path
+													d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
+												/>
+											</svg>
+										{/if}
+									</button>
+								</div>
+							{/if}
+						</div>
 					</div>
 				</div>
 			{/if}

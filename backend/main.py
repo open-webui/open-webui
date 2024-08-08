@@ -592,6 +592,7 @@ async def chat_completion_files_handler(body):
             reranking_function=rag_app.state.sentence_transformer_rf,
             r=rag_app.state.config.RELEVANCE_THRESHOLD,
             hybrid_search=rag_app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+            reranking_provider=rag_app.state.config.RAG_RERANKING_PROVIDER,
         )
 
         log.debug(f"rag_contexts: {contexts}, citations: {citations}")

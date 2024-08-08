@@ -1,62 +1,28 @@
-from fastapi import (
-    FastAPI,
-    Depends,
-    HTTPException,
-    status,
-    UploadFile,
-    File,
-    Form,
-)
-from fastapi.middleware.cors import CORSMiddleware
-import requests
-import os, shutil, logging, re
-from datetime import datetime
-
-from pathlib import Path
-from typing import List, Union, Sequence, Iterator, Any
-
-from chromadb.utils.batch_utils import create_batches
-from langchain_core.documents import Document
-
-from langchain_community.document_loaders import (
-    WebBaseLoader,
-    TextLoader,
-    PyPDFLoader,
-    CSVLoader,
-    BSHTMLLoader,
-    Docx2txtLoader,
-    UnstructuredEPubLoader,
-    UnstructuredWordDocumentLoader,
-    UnstructuredMarkdownLoader,
-    UnstructuredXMLLoader,
-    UnstructuredRSTLoader,
-    UnstructuredExcelLoader,
-    UnstructuredPowerPointLoader,
-    YoutubeLoader,
-    OutlookMessageLoader,
-)
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-import validators
-import urllib.parse
-import socket
-
-
-from pydantic import BaseModel
-from typing import Optional
-import mimetypes
-import uuid
 import json
+import logging
+import mimetypes
+import os
+import shutil
+import socket
+import urllib.parse
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import List, Union, Sequence, Iterator, Any, Tuple
+from typing import Optional
 
-from apps.webui.models.documents import (
-    Documents,
-    DocumentForm,
-    DocumentResponse,
-)
-from apps.webui.models.files import (
-    Files,
-)
-
+import requests
+import validators
+from apps.rag.search.brave import search_brave
+from apps.rag.search.duckduckgo import search_duckduckgo
+from apps.rag.search.google_pse import search_google_pse
+from apps.rag.search.jina_search import search_jina
+from apps.rag.search.main import SearchResult
+from apps.rag.search.searxng import search_searxng
+from apps.rag.search.serper import search_serper
+from apps.rag.search.serply import search_serply
+from apps.rag.search.serpstack import search_serpstack
+from apps.rag.search.tavily import search_tavily
 from apps.rag.utils import (
     get_model_path,
     get_embedding_function,
@@ -65,26 +31,14 @@ from apps.rag.utils import (
     query_collection,
     query_collection_with_hybrid_search,
 )
-
-from apps.rag.search.brave import search_brave
-from apps.rag.search.google_pse import search_google_pse
-from apps.rag.search.main import SearchResult
-from apps.rag.search.searxng import search_searxng
-from apps.rag.search.serper import search_serper
-from apps.rag.search.serpstack import search_serpstack
-from apps.rag.search.serply import search_serply
-from apps.rag.search.duckduckgo import search_duckduckgo
-from apps.rag.search.tavily import search_tavily
-from apps.rag.search.jina_search import search_jina
-
-from utils.misc import (
-    calculate_sha256,
-    calculate_sha256_string,
-    sanitize_filename,
-    extract_folders_after_data_docs,
+from apps.webui.models.documents import (
+    Documents,
+    DocumentForm,
 )
-from utils.utils import get_verified_user, get_admin_user
-
+from apps.webui.models.files import (
+    Files,
+)
+from chromadb.utils.batch_utils import create_batches
 from config import (
     AppConfig,
     ENV,
@@ -105,8 +59,13 @@ from config import (
     PDF_EXTRACT_IMAGES,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+    RAG_RERANKING_PROVIDER,
     RAG_OPENAI_API_BASE_URL,
     RAG_OPENAI_API_KEY,
+    RAG_COHEREAI_API_KEY,
+    RAG_COHEREAI_API_BASE_URL,
+    RAG_VOYAGEAI_API_KEY,
+    RAG_VOYAGEAI_API_BASE_URL,
     DEVICE_TYPE,
     CHROMA_CLIENT,
     CHUNK_SIZE,
@@ -130,8 +89,43 @@ from config import (
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     RAG_EMBEDDING_OPENAI_BATCH_SIZE,
 )
-
 from constants import ERROR_MESSAGES
+from fastapi import (
+    FastAPI,
+    Depends,
+    HTTPException,
+    status,
+    UploadFile,
+    File,
+    Form,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import (
+    WebBaseLoader,
+    TextLoader,
+    PyPDFLoader,
+    CSVLoader,
+    BSHTMLLoader,
+    Docx2txtLoader,
+    UnstructuredEPubLoader,
+    UnstructuredMarkdownLoader,
+    UnstructuredXMLLoader,
+    UnstructuredRSTLoader,
+    UnstructuredExcelLoader,
+    UnstructuredPowerPointLoader,
+    YoutubeLoader,
+    OutlookMessageLoader,
+)
+from langchain_core.documents import Document
+from pydantic import BaseModel, Field
+from utils.misc import (
+    calculate_sha256,
+    calculate_sha256_string,
+    sanitize_filename,
+    extract_folders_after_data_docs,
+)
+from utils.utils import get_verified_user, get_admin_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -159,17 +153,21 @@ app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE = RAG_EMBEDDING_OPENAI_BATCH_SIZE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
-
+app.state.config.RAG_RERANKING_PROVIDER = RAG_RERANKING_PROVIDER
 
 app.state.config.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
 app.state.config.OPENAI_API_KEY = RAG_OPENAI_API_KEY
 
-app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
+app.state.config.COHEREAI_API_KEY = RAG_COHEREAI_API_KEY
+app.state.config.COHEREAI_API_BASE_URL = RAG_COHEREAI_API_BASE_URL
 
+app.state.config.VOYAGEAI_API_KEY = RAG_VOYAGEAI_API_KEY
+app.state.config.VOYAGEAI_API_BASE_URL = RAG_VOYAGEAI_API_BASE_URL
+
+app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
 
 app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
 app.state.YOUTUBE_LOADER_TRANSLATION = None
-
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
@@ -195,29 +193,119 @@ def update_embedding_model(
     if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
         import sentence_transformers
 
-        app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
+        app.state.embedding_function = sentence_transformers.SentenceTransformer(
             get_model_path(embedding_model, update_model),
             device=DEVICE_TYPE,
             trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
         )
     else:
-        app.state.sentence_transformer_ef = None
+        app.state.embedding_function = None
+
+
+class Reranking(BaseModel):
+    reranking_provider: str = Field(
+        ..., description="The provider for reranking (e.g., 'voyageai', 'cohereai')"
+    )
+    reranking_model: str = Field(..., description="The specific reranking model to use")
+    api_key: Optional[str] = Field(
+        None,
+        description="The API key (automatically set based on provider if not provided)",
+    )
+    url: Optional[str] = Field(
+        None,
+        description="The API base URL (automatically set based on provider if not provided)",
+    )
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        if self.url is None:
+            self.url = (
+                app.state.config.VOYAGEAI_API_BASE_URL
+                if self.reranking_provider == "voyageai"
+                else app.state.config.COHEREAI_API_BASE_URL
+            )
+        if self.api_key is None:
+            self.api_key = (
+                app.state.config.VOYAGEAI_API_KEY
+                if self.reranking_provider == "voyageai"
+                else app.state.config.COHEREAI_API_KEY
+            )
+
+    def predict(
+        self, query: str, docs: Sequence[Document], top_n: int, r_score: float
+    ) -> Optional[List[Tuple[str, float]]]:
+        """Sends a reranking request to the API and returns documents with scores."""
+
+        try:
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            }
+
+            payload = {
+                "model": self.reranking_model,
+                "query": query,
+                "documents": [doc.page_content for doc in docs],
+            }
+
+            # if self.reranking_provider == "voyageai":
+            #     payload["top_k"] = top_n
+            # else:
+            #     payload["top_n"] = top_n
+
+            response = requests.post(
+                f"{self.url}/rerank", headers=headers, json=payload
+            )
+            response.raise_for_status()
+
+            data = response.json()
+
+            if self.reranking_provider == "voyageai":
+                results = data.get("data", [])
+            else:
+                results = data.get("results", [])
+
+            docs_with_scores = [
+                (docs[i["index"]], i["relevance_score"]) for i in results
+            ]
+
+            if r_score is not None and r_score > 0:
+                docs_with_scores = [(d, s) for d, s in docs_with_scores if s >= r_score]
+
+            return docs_with_scores
+        except requests.RequestException as e:
+            print(f"Error in reranking request: {e}")
+        except KeyError as e:
+            print(f"Unexpected response format: missing key '{e}'")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
+        return None
 
 
 def update_reranking_model(
     reranking_model: str,
+    reranking_provider: str,
     update_model: bool = False,
 ):
-    if reranking_model:
+    print(
+        f"Ranking provider is set to {reranking_provider} with model {reranking_model}"
+    )
+    if reranking_provider == "voyageai" or reranking_provider == "cohereai":
+        app.state.reranking_function = Reranking(
+            reranking_model=reranking_model,
+            reranking_provider=reranking_provider,
+        )
+    elif reranking_provider == "sentence-transformers":
         import sentence_transformers
 
-        app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
+        app.state.reranking_function = sentence_transformers.CrossEncoder(
             get_model_path(reranking_model, update_model),
             device=DEVICE_TYPE,
             trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
         )
     else:
-        app.state.sentence_transformer_rf = None
+        app.state.reranking_function = None
 
 
 update_embedding_model(
@@ -227,21 +315,24 @@ update_embedding_model(
 
 update_reranking_model(
     app.state.config.RAG_RERANKING_MODEL,
+    app.state.config.RAG_RERANKING_PROVIDER,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
 )
-
 
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
-    app.state.sentence_transformer_ef,
+    app.state.embedding_function,
     app.state.config.OPENAI_API_KEY,
     app.state.config.OPENAI_API_BASE_URL,
     app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+    app.state.config.COHEREAI_API_KEY,
+    app.state.config.COHEREAI_API_BASE_URL,
+    app.state.config.VOYAGEAI_API_KEY,
+    app.state.config.VOYAGEAI_API_BASE_URL,
 )
 
 origins = ["*"]
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -274,6 +365,7 @@ async def get_status():
         "embedding_engine": app.state.config.RAG_EMBEDDING_ENGINE,
         "embedding_model": app.state.config.RAG_EMBEDDING_MODEL,
         "reranking_model": app.state.config.RAG_RERANKING_MODEL,
+        "reranking_provider": app.state.config.RAG_RERANKING_PROVIDER,
         "openai_batch_size": app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
     }
 
@@ -289,6 +381,14 @@ async def get_embedding_config(user=Depends(get_admin_user)):
             "key": app.state.config.OPENAI_API_KEY,
             "batch_size": app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
         },
+        "cohereai_config": {
+            "url": app.state.config.COHEREAI_API_BASE_URL,
+            "key": app.state.config.COHEREAI_API_KEY,
+        },
+        "voyageai_config": {
+            "url": app.state.config.VOYAGEAI_API_BASE_URL,
+            "key": app.state.config.VOYAGEAI_API_KEY,
+        },
     }
 
 
@@ -297,6 +397,15 @@ async def get_reraanking_config(user=Depends(get_admin_user)):
     return {
         "status": True,
         "reranking_model": app.state.config.RAG_RERANKING_MODEL,
+        "reranking_provider": app.state.config.RAG_RERANKING_PROVIDER,
+        "cohereai_config": {
+            "url": app.state.config.COHEREAI_API_BASE_URL,
+            "key": app.state.config.COHEREAI_API_KEY,
+        },
+        "voyageai_config": {
+            "url": app.state.config.VOYAGEAI_API_BASE_URL,
+            "key": app.state.config.VOYAGEAI_API_KEY,
+        },
     }
 
 
@@ -306,8 +415,20 @@ class OpenAIConfigForm(BaseModel):
     batch_size: Optional[int] = None
 
 
+class CohereAIConfigForm(BaseModel):
+    url: str
+    key: str
+
+
+class VoyageAIConfigForm(BaseModel):
+    url: str
+    key: str
+
+
 class EmbeddingModelUpdateForm(BaseModel):
     openai_config: Optional[OpenAIConfigForm] = None
+    cohereai_config: Optional[CohereAIConfigForm] = None
+    voyageai_config: Optional[VoyageAIConfigForm] = None
     embedding_engine: str
     embedding_model: str
 
@@ -323,7 +444,12 @@ async def update_embedding_config(
         app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
         app.state.config.RAG_EMBEDDING_MODEL = form_data.embedding_model
 
-        if app.state.config.RAG_EMBEDDING_ENGINE in ["ollama", "openai"]:
+        if app.state.config.RAG_EMBEDDING_ENGINE in [
+            "ollama",
+            "openai",
+            "cohereai",
+            "voyageai",
+        ]:
             if form_data.openai_config is not None:
                 app.state.config.OPENAI_API_BASE_URL = form_data.openai_config.url
                 app.state.config.OPENAI_API_KEY = form_data.openai_config.key
@@ -332,16 +458,26 @@ async def update_embedding_config(
                     if form_data.openai_config.batch_size
                     else 1
                 )
+            if form_data.cohereai_config is not None:
+                app.state.config.COHEREAI_API_BASE_URL = form_data.cohereai_config.url
+                app.state.config.COHEREAI_API_KEY = form_data.cohereai_config.key
+            if form_data.voyageai_config is not None:
+                app.state.config.VOYAGEAI_API_BASE_URL = form_data.voyageai_config.url
+                app.state.config.VOYAGEAI_API_KEY = form_data.voyageai_config.key
 
         update_embedding_model(app.state.config.RAG_EMBEDDING_MODEL)
 
         app.state.EMBEDDING_FUNCTION = get_embedding_function(
             app.state.config.RAG_EMBEDDING_ENGINE,
             app.state.config.RAG_EMBEDDING_MODEL,
-            app.state.sentence_transformer_ef,
+            app.state.embedding_function,
             app.state.config.OPENAI_API_KEY,
             app.state.config.OPENAI_API_BASE_URL,
             app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+            app.state.config.COHEREAI_API_KEY,
+            app.state.config.COHEREAI_API_BASE_URL,
+            app.state.config.VOYAGEAI_API_KEY,
+            app.state.config.VOYAGEAI_API_BASE_URL,
         )
 
         return {
@@ -352,6 +488,14 @@ async def update_embedding_config(
                 "url": app.state.config.OPENAI_API_BASE_URL,
                 "key": app.state.config.OPENAI_API_KEY,
                 "batch_size": app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+            },
+            "cohereai_config": {
+                "url": app.state.config.COHEREAI_API_BASE_URL,
+                "key": app.state.config.COHEREAI_API_KEY,
+            },
+            "voyageai_config": {
+                "url": app.state.config.VOYAGEAI_API_BASE_URL,
+                "key": app.state.config.VOYAGEAI_API_KEY,
             },
         }
     except Exception as e:
@@ -364,6 +508,9 @@ async def update_embedding_config(
 
 class RerankingModelUpdateForm(BaseModel):
     reranking_model: str
+    reranking_provider: str
+    cohereai_config: Optional[CohereAIConfigForm] = None
+    voyageai_config: Optional[VoyageAIConfigForm] = None
 
 
 @app.post("/reranking/update")
@@ -372,15 +519,36 @@ async def update_reranking_config(
 ):
     log.info(
         f"Updating reranking model: {app.state.config.RAG_RERANKING_MODEL} to {form_data.reranking_model}"
+        f"Updating reranking provider: {app.state.config.RAG_RERANKING_PROVIDER} to {form_data.reranking_provider}"
     )
     try:
         app.state.config.RAG_RERANKING_MODEL = form_data.reranking_model
+        app.state.config.RAG_RERANKING_PROVIDER = form_data.reranking_provider
 
-        update_reranking_model(app.state.config.RAG_RERANKING_MODEL), True
+        update_reranking_model(
+            app.state.config.RAG_RERANKING_MODEL,
+            app.state.config.RAG_RERANKING_PROVIDER,
+        ), True
+
+        if form_data.cohereai_config is not None:
+            app.state.config.COHEREAI_API_BASE_URL = form_data.cohereai_config.url
+            app.state.config.COHEREAI_API_KEY = form_data.cohereai_config.key
+        if form_data.voyageai_config is not None:
+            app.state.config.VOYAGEAI_API_BASE_URL = form_data.voyageai_config.url
+            app.state.config.VOYAGEAI_API_KEY = form_data.voyageai_config.key
 
         return {
             "status": True,
             "reranking_model": app.state.config.RAG_RERANKING_MODEL,
+            "reranking_provider": app.state.config.RAG_RERANKING_PROVIDER,
+            "cohereai_config": {
+                "url": app.state.config.COHEREAI_API_BASE_URL,
+                "key": app.state.config.COHEREAI_API_KEY,
+            },
+            "voyageai_config": {
+                "url": app.state.config.VOYAGEAI_API_BASE_URL,
+                "key": app.state.config.VOYAGEAI_API_KEY,
+            },
         }
     except Exception as e:
         log.exception(f"Problem updating reranking model: {e}")
@@ -570,6 +738,7 @@ async def get_query_settings(user=Depends(get_admin_user)):
         "k": app.state.config.TOP_K,
         "r": app.state.config.RELEVANCE_THRESHOLD,
         "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        "reranking_provider": app.state.config.RAG_RERANKING_PROVIDER,
     }
 
 
@@ -578,6 +747,7 @@ class QuerySettingsForm(BaseModel):
     r: Optional[float] = None
     template: Optional[str] = None
     hybrid: Optional[bool] = None
+    reranking_provider: Optional[str] = None
 
 
 @app.post("/query/settings/update")
@@ -592,12 +762,18 @@ async def update_query_settings(
     app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )
+    app.state.config.RAG_RERANKING_PROVIDER = (
+        form_data.reranking_provider
+        if form_data.reranking_provider
+        else RAG_RERANKING_PROVIDER
+    )
     return {
         "status": True,
         "template": app.state.config.RAG_TEMPLATE,
         "k": app.state.config.TOP_K,
         "r": app.state.config.RELEVANCE_THRESHOLD,
         "hybrid": app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        "reranking_provider": app.state.config.RAG_RERANKING_PROVIDER,
     }
 
 
@@ -607,6 +783,7 @@ class QueryDocForm(BaseModel):
     k: Optional[int] = None
     r: Optional[float] = None
     hybrid: Optional[bool] = None
+    reranking_provider: Optional[str] = None
 
 
 @app.post("/query/doc")
@@ -621,7 +798,8 @@ def query_doc_handler(
                 query=form_data.query,
                 embedding_function=app.state.EMBEDDING_FUNCTION,
                 k=form_data.k if form_data.k else app.state.config.TOP_K,
-                reranking_function=app.state.sentence_transformer_rf,
+                reranking_function=app.state.reranking_function,
+                reranking_provider=app.state.config.RAG_RERANKING_PROVIDER,
                 r=(
                     form_data.r if form_data.r else app.state.config.RELEVANCE_THRESHOLD
                 ),
@@ -647,6 +825,7 @@ class QueryCollectionsForm(BaseModel):
     k: Optional[int] = None
     r: Optional[float] = None
     hybrid: Optional[bool] = None
+    reranking_provider: Optional[str] = None
 
 
 @app.post("/query/collection")
@@ -661,7 +840,8 @@ def query_collection_handler(
                 query=form_data.query,
                 embedding_function=app.state.EMBEDDING_FUNCTION,
                 k=form_data.k if form_data.k else app.state.config.TOP_K,
-                reranking_function=app.state.sentence_transformer_rf,
+                reranking_function=app.state.reranking_function,
+                reranking_provider=app.state.config.RAG_RERANKING_PROVIDER,
                 r=(
                     form_data.r if form_data.r else app.state.config.RELEVANCE_THRESHOLD
                 ),
@@ -933,7 +1113,6 @@ def store_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
 def store_data_in_vector_db(
     data, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
 ) -> bool:
-
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.config.CHUNK_SIZE,
         chunk_overlap=app.state.config.CHUNK_OVERLAP,
@@ -988,10 +1167,14 @@ def store_docs_in_vector_db(
         embedding_func = get_embedding_function(
             app.state.config.RAG_EMBEDDING_ENGINE,
             app.state.config.RAG_EMBEDDING_MODEL,
-            app.state.sentence_transformer_ef,
+            app.state.embedding_function,
             app.state.config.OPENAI_API_KEY,
             app.state.config.OPENAI_API_BASE_URL,
             app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+            app.state.config.COHEREAI_API_KEY,
+            app.state.config.COHEREAI_API_BASE_URL,
+            app.state.config.VOYAGEAI_API_KEY,
+            app.state.config.VOYAGEAI_API_BASE_URL,
         )
 
         embedding_texts = list(map(lambda x: x.replace("\n", " "), texts))
@@ -1294,7 +1477,6 @@ def store_text(
     form_data: TextRAGForm,
     user=Depends(get_verified_user),
 ):
-
     collection_name = form_data.collection_name
     if collection_name == None:
         collection_name = calculate_sha256_string(form_data.content)

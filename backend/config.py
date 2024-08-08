@@ -1,22 +1,21 @@
-import os
-import sys
-import logging
 import importlib.metadata
-import pkgutil
-import chromadb
-from chromadb import Settings
-from bs4 import BeautifulSoup
-from typing import TypeVar, Generic
-from pydantic import BaseModel
-from typing import Optional
-
-from pathlib import Path
 import json
-import yaml
+import logging
+import os
+import pkgutil
+import shutil
+import sys
+from pathlib import Path
+from typing import Optional
+from typing import TypeVar, Generic
 
+import chromadb
 import markdown
 import requests
-import shutil
+import yaml
+from bs4 import BeautifulSoup
+from chromadb import Settings
+from pydantic import BaseModel
 
 from constants import ERROR_MESSAGES
 
@@ -35,7 +34,6 @@ try:
     load_dotenv(find_dotenv(str(BASE_DIR / ".env")))
 except ImportError:
     print("dotenv not installed, skipping...")
-
 
 ####################################
 # LOGGING
@@ -86,7 +84,6 @@ class EndpointFilter(logging.Filter):
 # Filter out /endpoint
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
-
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 if WEBUI_NAME != "Open WebUI":
     WEBUI_NAME += " (Open WebUI)"
@@ -94,7 +91,6 @@ if WEBUI_NAME != "Open WebUI":
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
 
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
-
 
 ####################################
 # ENV (dev,test,prod)
@@ -140,7 +136,6 @@ try:
 except:
     changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
 
-
 # Convert markdown content to HTML
 html_content = markdown.markdown(changelog_content)
 
@@ -171,9 +166,7 @@ for version in soup.find_all("h2"):
 
     changelog_json[version_number] = version_data
 
-
 CHANGELOG = changelog_json
-
 
 ####################################
 # SAFE_MODE
@@ -507,7 +500,6 @@ if frontend_splash.exists():
 else:
     logging.warning(f"Frontend splash not found at {frontend_splash}")
 
-
 ####################################
 # CUSTOM_NAME
 ####################################
@@ -550,14 +542,12 @@ if CUSTOM_NAME:
         log.exception(e)
         pass
 
-
 ####################################
 # File Upload DIR
 ####################################
 
 UPLOAD_DIR = f"{DATA_DIR}/uploads"
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-
 
 ####################################
 # Cache DIR
@@ -566,7 +556,6 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 CACHE_DIR = f"{DATA_DIR}/cache"
 Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
-
 ####################################
 # Docs DIR
 ####################################
@@ -574,14 +563,12 @@ Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 DOCS_DIR = os.getenv("DOCS_DIR", f"{DATA_DIR}/docs")
 Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
 
-
 ####################################
 # Tools DIR
 ####################################
 
 TOOLS_DIR = os.getenv("TOOLS_DIR", f"{DATA_DIR}/tools")
 Path(TOOLS_DIR).mkdir(parents=True, exist_ok=True)
-
 
 ####################################
 # Functions DIR
@@ -650,7 +637,6 @@ else:
     except:
         AIOHTTP_CLIENT_TIMEOUT = 300
 
-
 K8S_FLAG = os.environ.get("K8S_FLAG", "")
 USE_OLLAMA_DOCKER = os.environ.get("USE_OLLAMA_DOCKER", "false")
 
@@ -672,7 +658,6 @@ if ENV == "prod":
     elif K8S_FLAG:
         OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
 
-
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != "" else OLLAMA_BASE_URL
 
@@ -692,10 +677,8 @@ ENABLE_OPENAI_API = PersistentConfig(
     os.environ.get("ENABLE_OPENAI_API", "True").lower() == "true",
 )
 
-
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
-
 
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
@@ -731,6 +714,22 @@ except:
     pass
 
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+
+####################################
+# COHEREAI
+####################################
+COHEREAI_API_KEY = os.environ.get("COHEREAI_API_KEY", "")
+COHEREAI_API_BASE_URL = os.environ.get(
+    "COHEREAI_API_BASE_URL", "https://api.cohere.com/v1"
+)
+
+####################################
+# VOYAGEAI
+####################################
+VOYAGEAI_API_KEY = os.environ.get("VOYAGEAI_API_KEY", "")
+VOYAGEAI_API_BASE_URL = os.environ.get(
+    "VOYAGEAI_API_BASE_URL", "https://api.voyageai.com/v1"
+)
 
 ####################################
 # WEBUI
@@ -859,7 +858,6 @@ except Exception as e:
 
 WEBUI_BANNERS = PersistentConfig("WEBUI_BANNERS", "ui.banners", banners)
 
-
 SHOW_ADMIN_DETAILS = PersistentConfig(
     "SHOW_ADMIN_DETAILS",
     "auth.admin.show",
@@ -871,7 +869,6 @@ ADMIN_EMAIL = PersistentConfig(
     "auth.admin.email",
     os.environ.get("ADMIN_EMAIL", None),
 )
-
 
 ####################################
 # TASKS
@@ -910,7 +907,6 @@ Artificial Intelligence in Healthcare
     ),
 )
 
-
 SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
     "task.search.prompt_template",
@@ -943,7 +939,6 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 If a function tool doesn't match the query, return an empty string. Else, pick a function tool, fill in the parameters from the function tool's schema, and return it in the format { "name": \"functionName\", "parameters": { "key": "value" } }. Only pick a function if the user asks.  Only return the object. Do not return any other text.""",
     ),
 )
-
 
 ####################################
 # WEBUI_SECRET_KEY
@@ -1074,7 +1069,11 @@ RAG_RERANKING_MODEL_AUTO_UPDATE = (
 RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "").lower() == "true"
 )
-
+RAG_RERANKING_PROVIDER = PersistentConfig(
+    "RAG_RERANKING_PROVIDER",
+    "rag.reranking_provider",
+    os.getenv("RAG_RERANKING_PROVIDER", "sentence-transformers"),
+)
 
 if CHROMA_HTTP_HOST != "":
     CHROMA_CLIENT = chromadb.HttpClient(
@@ -1093,7 +1092,6 @@ else:
         tenant=CHROMA_TENANT,
         database=CHROMA_DATABASE,
     )
-
 
 # device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
 USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
@@ -1143,6 +1141,28 @@ RAG_OPENAI_API_KEY = PersistentConfig(
     os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+RAG_COHEREAI_API_BASE_URL = PersistentConfig(
+    "RAG_COHEREAI_API_BASE_URL",
+    "rag.cohereai_api_base_url",
+    os.getenv("RAG_COHEREAI_API_BASE_URL", COHEREAI_API_BASE_URL),
+)
+RAG_COHEREAI_API_KEY = PersistentConfig(
+    "RAG_COHEREAI_API_KEY",
+    "rag.cohereai_api_key",
+    os.getenv("RAG_COHEREAI_API_KEY", COHEREAI_API_KEY),
+)
+
+RAG_VOYAGEAI_API_BASE_URL = PersistentConfig(
+    "RAG_VOYAGEAI_API_BASE_URL",
+    "rag.voyageai_api_base_url",
+    os.getenv("RAG_VOYAGEAI_API_BASE_URL", VOYAGEAI_API_BASE_URL),
+)
+RAG_VOYAGEAI_API_KEY = PersistentConfig(
+    "RAG_VOYAGEAI_API_KEY",
+    "rag.voyageai_api_key",
+    os.getenv("RAG_VOYAGEAI_API_KEY", VOYAGEAI_API_KEY),
+)
+
 ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
 )
@@ -1152,7 +1172,6 @@ YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     "rag.youtube_loader_language",
     os.getenv("YOUTUBE_LOADER_LANGUAGE", "en").split(","),
 )
-
 
 ENABLE_RAG_WEB_SEARCH = PersistentConfig(
     "ENABLE_RAG_WEB_SEARCH",
@@ -1244,7 +1263,6 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
 
-
 ####################################
 # Transcribe
 ####################################
@@ -1254,7 +1272,6 @@ WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models"
 WHISPER_MODEL_AUTO_UPDATE = (
     os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
 )
-
 
 ####################################
 # Images
@@ -1406,7 +1423,6 @@ AUDIO_TTS_ENGINE = PersistentConfig(
     os.getenv("AUDIO_TTS_ENGINE", ""),
 )
 
-
 AUDIO_TTS_MODEL = PersistentConfig(
     "AUDIO_TTS_MODEL",
     "audio.tts.model",
@@ -1418,7 +1434,6 @@ AUDIO_TTS_VOICE = PersistentConfig(
     "audio.tts.voice",
     os.getenv("AUDIO_TTS_VOICE", "alloy"),
 )
-
 
 ####################################
 # Database
