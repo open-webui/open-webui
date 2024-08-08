@@ -290,7 +290,11 @@ __builtins__.input = input`);
 				{/if}
 			{/if}
 			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}>
-				{copied ? $i18n.t('Copied') : $i18n.t('Copy Code')}
+				{#if copied}
+					{$i18n.t('Copied')}
+				{:else}
+					{$i18n.t('Copy Code')}
+				{/if}
 			</button>
 		</div>
 	</div>
