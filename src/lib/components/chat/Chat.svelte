@@ -1120,6 +1120,7 @@
 							: undefined,
 					temperature: params?.temperature ?? $settings?.params?.temperature ?? undefined,
 					top_p: params?.top_p ?? $settings?.params?.top_p ?? undefined,
+					min_p: params?.min_p ?? $settings?.params?.min_p ?? undefined,
 					frequency_penalty:
 						params?.frequency_penalty ?? $settings?.params?.frequency_penalty ?? undefined,
 					max_tokens: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
