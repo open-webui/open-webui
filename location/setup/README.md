@@ -10,10 +10,10 @@ Use our [Docker Setup](docker) for a quick install with Ollama for loading model
 
 # Install for Building Locally (without Docker)
 
-### Use our conda-start.sh script to install with one step
+### Use our conda-start.sh script to install with one step for Linux/MacOS. [Reference](./guides/local.md)
 
 These steps are for programmers planning to edit and build locally. Visit [localhost:8080](http://localhost:8080) if you've already install.  
-After the initial one hour or more install, it only take a minute to restart the server using the same conda-start.sh command below.
+After the initial one hour or more install, it only takes a minute to restart the server using the same conda-start.sh command below.
 
 If you machine needs updates, our [node, python and conda upgrade page](https://model.earth/io/coders/python) is helpful.  
 If you're not planning to edit, you can install faster using a [local Docker instance](docker).  
@@ -66,7 +66,7 @@ If none are found, [download from Anaconda.com](https://www.anaconda.com/downloa
 
 The conda-start.sh script uses commands from [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/) for building locally.  
 
-The commands incude the following:
+The commands include the following:
 
 	# Building Frontend Using Node
 	npm i
@@ -120,7 +120,7 @@ Choose the existing conda environment by saying "no" when asked to reinstall.
 ## Edit in our Open WebUI "projects/location" folder
 
 The "projects/location" folder is where we'll edit enhancements to the "src" folder.  
-We'll merge our enhancments into "src-merged" so we don't have sync issues with open-webui.
+We'll merge our enhancements into "src-merged" so we don't have sync issues with open-webui.
 
 We also edit index.html and active.md in our "projects" fork root. We added those files, so they won't have sync conflicts with the parent repo.
 
