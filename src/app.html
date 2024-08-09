@@ -6,6 +6,7 @@
 		<link rel="manifest" href="%sveltekit.assets%/manifest.json" crossorigin="use-credentials" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 		<meta name="robots" content="noindex,nofollow" />
+		<meta name="theme-color" id="themeColor" content="#ffffff" />
 		<link
 			rel="search"
 			type="application/opensearchdescription+xml"
@@ -22,6 +23,7 @@
 		<script>
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
+				const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 				if (localStorage?.theme && localStorage?.theme.includes('oled')) {
 					document.documentElement.style.setProperty('--color-gray-800', '#101010');
 					document.documentElement.style.setProperty('--color-gray-850', '#050505');
@@ -38,13 +40,19 @@
 						document.documentElement.classList.add(e);
 					});
 				} else if (localStorage.theme && localStorage.theme === 'system') {
-					systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
-					document.documentElement.classList.add(systemTheme ? 'dark' : 'light');
+					document.documentElement.classList.add(isSystemDark ? 'dark' : 'light');
 				} else if (localStorage.theme && localStorage.theme === 'her') {
 					document.documentElement.classList.add('dark');
 					document.documentElement.classList.add('her');
 				} else {
 					document.documentElement.classList.add('dark');
+				}
+
+				if (
+					localStorage?.theme.includes('dark') ||
+					(localStorage.theme === 'system' && isSystemDark)
+				) {
+					window.themeColor.content = '#0d0d0d';
 				}
 
 				window.matchMedia('(prefers-color-scheme: dark)').addListener((e) => {
