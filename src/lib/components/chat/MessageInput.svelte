@@ -15,6 +15,7 @@
 	import { blobToFile, calculateSHA256, findWordIndices } from '$lib/utils';
 
 	import {
+		getFileLimitSettings,
 		processDocToVectorDB,
 		uploadDocToVectorDB,
 		uploadWebToVectorDB,
@@ -65,6 +66,7 @@
 	let modelsElement;
 
 	let inputFiles;
+	let fileLimitSettings;
 	let dragged = false;
 
 	let user = null;
@@ -233,7 +235,64 @@
 		}
 	};
 
+	const processFileCountLimit = async (fileLimitSettings, inputFiles) => {
+		const maxFiles = fileLimitSettings.max_file_count;
+		const currentFilesCount = files.length;
+		const inputFilesCount = inputFiles.length;
+		const totalFilesCount = currentFilesCount + inputFilesCount;
+
+		if (currentFilesCount >= maxFiles || totalFilesCount > maxFiles) {
+			toast.error(`File count exceeds the limit of '${maxFiles}'. Please remove some files.`);
+			if (currentFilesCount >= maxFiles) {
+				return [false, null];
+			}
+			if (totalFilesCount > maxFiles) {
+				inputFiles = inputFiles.slice(0, maxFiles - currentFilesCount);
+			}
+		}
+		return [true, inputFiles];
+	};
+
+	const processFileSizeLimit = async (fileLimitSettings, file) => {
+		if (file.size <= fileLimitSettings.max_file_size * 1024 * 1024) {
+			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
+				if (visionCapableModels.length === 0) {
+					toast.error($i18n.t('Selected model(s) do not support image inputs'));
+					return;
+				}
+				let reader = new FileReader();
+				reader.onload = (event) => {
+					files = [
+						...files,
+						{
+							type: 'image',
+							url: `${event.target.result}`
+						}
+					];
+				};
+				reader.readAsDataURL(file);
+			} else {
+				uploadFileHandler(file);
+			}
+		} else {
+			toast.error(
+				$i18n.t('File size exceeds the limit of {{size}}MB', {
+					size: fileLimitSettings.max_file_size
+				})
+			);
+		}
+	};
+
 	onMount(() => {
+		const initFileLimitSettings = async () => {
+			try {
+				fileLimitSettings = await getFileLimitSettings(localStorage.token);
+			} catch (error) {
+				console.error('Error fetching query settings:', error);
+			}
+		};
+		initFileLimitSettings();
+
 		window.setTimeout(() => chatTextAreaElement?.focus(), 0);
 
 		const dropZone = document.querySelector('body');
@@ -262,27 +321,19 @@
 				const inputFiles = Array.from(e.dataTransfer?.files);
 
 				if (inputFiles && inputFiles.length > 0) {
-					inputFiles.forEach((file) => {
+					console.log(inputFiles);
+					const [canProcess, filesToProcess] = await processFileCountLimit(
+						fileLimitSettings,
+						inputFiles
+					);
+					if (!canProcess) {
+						dragged = false;
+						return;
+					}
+					console.log(filesToProcess);
+					filesToProcess.forEach((file) => {
 						console.log(file, file.name.split('.').at(-1));
-						if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
-							if (visionCapableModels.length === 0) {
-								toast.error($i18n.t('Selected model(s) do not support image inputs'));
-								return;
-							}
-							let reader = new FileReader();
-							reader.onload = (event) => {
-								files = [
-									...files,
-									{
-										type: 'image',
-										url: `${event.target.result}`
-									}
-								];
-							};
-							reader.readAsDataURL(file);
-						} else {
-							uploadFileHandler(file);
-						}
+						processFileSizeLimit(fileLimitSettings, file);
 					});
 				} else {
 					toast.error($i18n.t(`File not found.`));
@@ -429,26 +480,19 @@
 					on:change={async () => {
 						if (inputFiles && inputFiles.length > 0) {
 							const _inputFiles = Array.from(inputFiles);
-							_inputFiles.forEach((file) => {
-								if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
-									if (visionCapableModels.length === 0) {
-										toast.error($i18n.t('Selected model(s) do not support image inputs'));
-										return;
-									}
-									let reader = new FileReader();
-									reader.onload = (event) => {
-										files = [
-											...files,
-											{
-												type: 'image',
-												url: `${event.target.result}`
-											}
-										];
-									};
-									reader.readAsDataURL(file);
-								} else {
-									uploadFileHandler(file);
-								}
+							console.log(_inputFiles);
+							const [canProcess, filesToProcess] = await processFileCountLimit(
+								fileLimitSettings,
+								_inputFiles
+							);
+							if (!canProcess) {
+								filesInputElement.value = '';
+								return;
+							}
+							console.log(filesToProcess);
+							filesToProcess.forEach((file) => {
+								console.log(file, file.name.split('.').at(-1));
+								processFileSizeLimit(fileLimitSettings, file);
 							});
 						} else {
 							toast.error($i18n.t(`File not found.`));
@@ -742,37 +786,40 @@
 										}
 									}}
 									rows="1"
-									on:input={(e) => {
+									on:input={async (e) => {
 										e.target.style.height = '';
 										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 										user = null;
 									}}
-									on:focus={(e) => {
+									on:focus={async (e) => {
 										e.target.style.height = '';
 										e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 									}}
-									on:paste={(e) => {
+									on:paste={async (e) => {
 										const clipboardData = e.clipboardData || window.clipboardData;
+										try {
+											if (clipboardData && clipboardData.items) {
+												const inputFiles = Array.from(clipboardData.items)
+													.map((item) => item.getAsFile())
+													.filter((file) => file);
 
-										if (clipboardData && clipboardData.items) {
-											for (const item of clipboardData.items) {
-												if (item.type.indexOf('image') !== -1) {
-													const blob = item.getAsFile();
-													const reader = new FileReader();
-
-													reader.onload = function (e) {
-														files = [
-															...files,
-															{
-																type: 'image',
-																url: `${e.target.result}`
-															}
-														];
-													};
-
-													reader.readAsDataURL(blob);
+												const [canProcess, filesToProcess] = await processFileCountLimit(
+													fileLimitSettings,
+													inputFiles
+												);
+												if (!canProcess) {
+													return;
 												}
+												filesToProcess.forEach((file) => {
+													console.log(file, file.name.split('.').at(-1));
+													processFileSizeLimit(fileLimitSettings, file);
+												});
+											} else {
+												toast.error($i18n.t(`File not found.`));
 											}
+										} catch (error) {
+											console.error('Error processing files:', error);
+											toast.error($i18n.t(`An error occurred while processing files.`));
 										}
 									}}
 								/>
