@@ -95,7 +95,7 @@
 		}
 	})();
 
-	$: if (message?.done ?? false) {
+	$: if (message) {
 		renderLatex();
 	}
 
