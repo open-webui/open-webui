@@ -172,9 +172,9 @@ To run git commands above inside our docker container,
 **Areas of future sync issues:**
 We updated our [DockerFile with this PR](https://github.com/ModelEarth/projects/pull/2/files) - Dinesh
 
-## Changes added to run Git in OpenWebUI
+## Changes to make if we run Git in OpenWebUI
 
-From Dinesh B.
+From Dinesh B. (Not implemented yet since we're debugging Google Cloud setup.)
 
 Dockerfile (in root of repo) change:
 apt-get install -y --no-install-recommends curl jq && \
