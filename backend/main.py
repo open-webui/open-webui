@@ -677,7 +677,8 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         if len(contexts) > 0:
             context_string = "/n".join(contexts).strip()
             prompt = get_last_user_message(body["messages"])
-
+            if prompt is None:
+                raise Exception("No user message found")
             # Workaround for Ollama 2.0+ system prompt issue
             # TODO: replace with add_or_update_system_message
             if model["owned_by"] == "ollama":
@@ -722,9 +723,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                     self.ollama_stream_wrapper(response.body_iterator, data_items),
                 )
 
-            return response
-        else:
-            return response
+        return response
 
     async def _receive(self, body: bytes):
         return {"type": "http.request", "body": body, "more_body": False}
