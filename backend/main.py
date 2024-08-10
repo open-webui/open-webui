@@ -437,7 +437,7 @@ async def get_function_call_response(
     return None, None, False
 
 
-async def chat_completion_functions_handler(
+async def chat_completion_inlets_handler(
     body, model, user, __event_emitter__, __event_call__
 ):
     skip_files = None
@@ -637,14 +637,13 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         __event_call__ = get_event_call(metadata)
 
         # Initialize data_items to store additional data to be sent to the client
+        # Initalize contexts and citation
         data_items = []
-
-        # Initialize context, and citations
         contexts = []
         citations = []
 
         try:
-            body, flags = await chat_completion_functions_handler(
+            body, flags = await chat_completion_inlets_handler(
                 body, model, user, __event_emitter__, __event_call__
             )
         except Exception as e:
