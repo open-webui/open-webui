@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getDocs, sadmToggleAPISend, sadmStatusAPISend } from '$lib/apis/documents';
+	import { getDocs, sadmStateToggler, sadmRetrieveStatus } from '$lib/apis/documents';
 	import { deleteAllFiles, deleteFileById } from '$lib/apis/files';
 	import {
 		getQuerySettings,
@@ -16,6 +16,9 @@
 	} from '$lib/apis/rag';
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+
 
 	import { documents, models } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
@@ -60,7 +63,13 @@
 		sadmCondition: false
 	}
 
+    // Bind state variable to switch
+    let SADM_API_STATUS = sadmStatus.sadmCondition;
+
 	let isMonitoringOn: boolean = false;
+	
+	// variable for the loading state
+	let isLoading = true; 
 
 
 	const scanHandler = async () => {
@@ -222,52 +231,102 @@
     };
 
 
-	// Function to update monitoring status
-	const updateMonitoringStatus = async () => {
-		try {
-			const status = await sadmStatusAPISend(localStorage.token);
-			isMonitoringOn = (status === 'running');
-			sadmStatus.sadmCondition = isMonitoringOn;
-			savesadmStatusinfo(); // Save the status to local storage
-		} catch (error) {
-			console.error('Error updating monitoring status:', error);
-			toast.error($i18n.t('Failed to fetch monitoring status'));
-		}
-	};
-
-	const sadmToggle = async () => {
+	const toggleSADMState = async () => {
 		sadmStatus.sadmCondition = !sadmStatus.sadmCondition;
 		const SADMenableMessage = $i18n.t('Self-Aware Document Monitoring has been enabled and is now Active');
-		const SADMdisableMessage = $i18n.t('Self-Aware Document Monitoring has been been disabled and is now inactive');
+		const SADMdisableMessage = $i18n.t('Self-Aware Document Monitoring has been disabled and is now inactive');
 		
 		try {
-			await sadmToggleAPISend(localStorage.token, sadmStatus.sadmCondition);
-			savesadmStatusinfo();
+			await sadmStateToggler(localStorage.token, sadmStatus.sadmCondition);
 			
-			// Show appropriate message based on the new state
 			if (sadmStatus.sadmCondition) {
 				toast.success(SADMenableMessage, {
-					duration: 1000 * 10 // Show for 10 seconds
+					duration: 1000 * 10
 				});
 			} else {
 				toast.error(SADMdisableMessage, {
-					duration: 1000 * 10 // Show for 10 seconds
+					duration: 1000 * 10
 				});
 			}
+
+			// Save the updated state to local storage
+			saveStringToLocalStorage('sadmStatusinfo', JSON.stringify(sadmStatus.sadmCondition));
+
+
 		} catch (error) {
 			toast.error($i18n.t('Failed to update Self-Aware Document Monitoring'));
-			console.error('Error updating sadmStatusinfo:', error);
+			// console.error('Error updating sadmStatusinfo:', error); // Debug
 		}
 	};
 
-	const savesadmStatusinfo = () => {
-		localStorage.setItem('sadmStatusinfo', JSON.stringify(sadmStatus.sadmCondition));
+
+
+	const initializeSADMStatus = async () => {
+		try {
+			// Fetch status from API
+			const apiStatus = await sadmRetrieveStatus(localStorage.token);
+
+			if (apiStatus !== null) {
+				// Update the SADM status based on API response
+				sadmStatus.sadmCondition = (apiStatus === 'running');
+			} else {
+				// API fetch result is null, so check local storage
+				const savedSADMStatusinfo = localStorage.getItem('sadmStatusinfo');
+				
+				if (savedSADMStatusinfo !== null) {
+					// Fall back to local storage value
+					// console.log('Retrieved from localStorage:', savedSADMStatusinfo); // Debug
+					sadmStatus.sadmCondition = JSON.parse(savedSADMStatusinfo);
+				} else {
+					// If neither API nor local storage has a valid value, set a default
+					sadmStatus.sadmCondition = false; // Or any default value you prefer
+				}
+			}
+			
+			// Update bound variable
+			SADM_API_STATUS = sadmStatus.sadmCondition;
+
+			// Save the status to local storage
+			saveStringToLocalStorage('sadmStatusinfo', JSON.stringify(sadmStatus.sadmCondition));
+
+			// Log the final status
+			// console.log('Final SADM Status:', SADM_API_STATUS); // Debug
+
+		} catch (error) {
+			// Log and handle API fetch errors
+			const errorFetchingStatus = $i18n.t('Failed to fetch Self-Aware Document Monitoring status');
+			toast.error(errorFetchingStatus, {
+				duration: 1000 * 10
+			});
+
+			// Attempt to fallback to local storage
+			const savedSADMStatusinfo = localStorage.getItem('sadmStatusinfo');
+			if (savedSADMStatusinfo !== null) {
+				// Use the local storage value in case of error
+				// console.log('Fallback to localStorage value:', savedSADMStatusinfo); // Debug
+				sadmStatus.sadmCondition = JSON.parse(savedSADMStatusinfo);
+			} else {
+				// Set a default value if local storage is also unavailable
+				sadmStatus.sadmCondition = false;
+			}
+
+			// Update bound variable
+			SADM_API_STATUS = sadmStatus.sadmCondition;
+
+			// Save the fallback status to local storage
+			saveStringToLocalStorage('sadmStatusinfo', JSON.stringify(sadmStatus.sadmCondition));
+
+			// Log the final status after error handling
+			// console.log('Final SADM Status after error:', SADM_API_STATUS); // Debug
+		}
 	};
 
-	const loadSADMChoice = () => {
-		const savedChoice = localStorage.getItem('sadmStatusinfo');
-		if (savedChoice !== null) {
-			sadmStatus.sadmCondition = JSON.parse(savedChoice);
+	// Utility function to save a string value to local storage
+	const saveStringToLocalStorage = (key: string, value: string) => {
+		try {
+			localStorage.setItem(key, value);
+		} catch (error) {
+			console.error(`Error saving to local storage: ${error}`);
 		}
 	};
 
@@ -291,11 +350,12 @@
 			showTikaServerUrl = contentExtractionEngine === 'tika';
 		}
 
-		// Load choice from local storage
-		loadSADMChoice();
+		// Fetch and init SADM Status
+		await initializeSADMStatus();
+		
+		// Set loading to false once all the tasks are completed (this is for hiding the spinner loading indicator)
+		isLoading = false; 
 
-		// Update monitoring status
-		await updateMonitoringStatus();
 	});
 </script>
 
@@ -327,6 +387,14 @@
 	}}
 />
 
+<!-- Conditional Spinner -->
+{#if isLoading}
+	<div class="flex h-full justify-center">
+		<div class="my-auto">
+			<Spinner className="size-6" />
+		</div>
+	</div>
+{:else}
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
@@ -390,25 +458,30 @@
 				</button>
 			</div>
 
-			<div class="flex w-full justify-between">
-				<div class="self-center text-xs font-medium">
+			<div class="flex w-full items-center justify-between">
+				<div class="flex items-center text-xs font-medium">
+				  <span>
 					{$i18n.t('Self-Aware Document Monitoring')}
+				  </span>
+				  
+				  <div class="relative flex items-center ml-2">
+					<span class={`relative flex h-2.5 w-2.5 rounded-full transition-colors duration-300 ${SADM_API_STATUS ? 'bg-green-500' : 'bg-red-500'}`}>
+					  <span class={`absolute inline-flex h-full w-full rounded-full transition-colors duration-300 ${SADM_API_STATUS ? 'bg-green-400' : 'bg-red-400'} opacity-75 animate-ping`}></span>
+					  <span class="relative inline-flex h-2.5 w-2.5 rounded-full"></span>
+					</span>
+				  </div>
 				</div>
+
 			
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					on:click={sadmToggle}
-					type="button"
-				>
-					{#if sadmStatus.sadmCondition === true}
-						<span class="ml-2 self-center">{$i18n.t('On')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-					{/if}
-				</button>
+				<div class="mt-1">
+					<Switch
+						bind:state={SADM_API_STATUS}
+						on:change={async () => {
+							toggleSADMState(); // Call the sadm toggle function
+						}}
+					/>
+				</div>
 			</div>
-
-
 			<div class=" flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Model Engine')}</div>
 				<div class="flex items-center relative">
@@ -874,3 +947,4 @@
 		</button>
 	</div>
 </form>
+{/if}
