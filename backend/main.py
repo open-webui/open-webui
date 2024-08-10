@@ -1087,12 +1087,7 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
     model = app.state.MODELS[model_id]
 
     # `task` field is used to determine the type of the request, e.g. `title_generation`, `query_generation`, etc.
-    task = None
-    if "task" in form_data:
-        task = form_data["task"]
-        del form_data["task"]
-
-    if task:
+    if task := form_data.pop("task", None):
         if "metadata" in form_data:
             form_data["metadata"]["task"] = task
         else:
