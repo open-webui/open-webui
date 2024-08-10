@@ -6,6 +6,8 @@ from datetime import timedelta
 from typing import Optional, List, Tuple
 import uuid
 import time
+import os
+import fnmatch
 
 
 def get_last_user_message_item(messages: List[dict]) -> str:
@@ -164,6 +166,22 @@ def extract_folders_after_data_docs(path):
 
     return tags
 
+def extract_folder_name_from_full_path(path: str) -> str:
+    """
+    extract the folder name from the full folder path.
+    """
+    return os.path.basename(os.path.normpath(path))
+
+def locate_document_in_filesystem(directory: str, file_name: str) -> str:
+    """
+    Search for a file in the given directory that matches the pattern
+    with the given file_name (accounting for prefixes and any files).
+    """
+    pattern = f"*{file_name}"
+    for root, dirs, files in os.walk(directory):
+        for filename in fnmatch.filter(files, pattern):
+            return os.path.join(root, filename)
+    return ""
 
 def parse_duration(duration: str) -> Optional[timedelta]:
     if duration == "-1" or duration == "0":
