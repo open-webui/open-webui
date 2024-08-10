@@ -20,6 +20,8 @@ import shutil
 
 from constants import ERROR_MESSAGES
 
+from utils.misc import extract_folder_name_from_full_path
+
 ####################################
 # Load .env file
 ####################################
@@ -183,6 +185,8 @@ WEBUI_BUILD_HASH = os.environ.get("WEBUI_BUILD_HASH", "dev-build")
 
 DATA_DIR = Path(os.getenv("DATA_DIR", BACKEND_DIR / "data")).resolve()
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
+
+CONFIG_FILE = DATA_DIR / "config.json"
 
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
@@ -521,6 +525,8 @@ if CUSTOM_NAME:
 UPLOAD_DIR = f"{DATA_DIR}/uploads"
 Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
+# Directory Name of UPLOAD_DIR
+UPLOADS_DIR_NAME = extract_folder_name_from_full_path(UPLOAD_DIR)
 
 ####################################
 # Cache DIR
@@ -536,6 +542,18 @@ Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
 
 DOCS_DIR = os.getenv("DOCS_DIR", f"{DATA_DIR}/docs")
 Path(DOCS_DIR).mkdir(parents=True, exist_ok=True)
+
+# Directory Name of DOCS_DIR
+DOCS_DIR_NAME = extract_folder_name_from_full_path(DOCS_DIR)
+
+####################################
+# Vector DataBase Dir
+####################################
+
+VECTOR_DB_DIR = f"{DATA_DIR}/vector_db"
+Path(VECTOR_DB_DIR).mkdir(parents=True, exist_ok=True)
+
+VECTOR_DB_DIR_NAME = extract_folder_name_from_full_path(VECTOR_DB_DIR)
 
 
 ####################################
