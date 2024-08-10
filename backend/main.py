@@ -129,17 +129,9 @@ from config import (
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES, TASKS
 from utils.webhook import post_webhook
 
-#added Self-Aware Document monitoring module
-from apps.webui.routers.sadm import (
-    router as sadm, 
-    read_state,
-    start_monitoring_thread,
-    start_monitoring,
-    DocEventHandler,
-    stop_event,
-    DummyUserIDClass,
+from apps.webui.models.sadm import (
+    SelfAwareDocumentMonitoring,    # For managing the document monitoring thread
     DummyUserIDForMainScript,
-    monitoring_thread
 )
 
 
@@ -195,19 +187,23 @@ def run_migrations():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    log.info("Running alembic migrations...")
     run_migrations()
 
-    state = read_state()
-    log.debug(f"Current monitoring state: {state}")
+    # Use the singleton instance of DocumentMonitoring
+    monitoring_manager = SelfAwareDocumentMonitoring()
+
+    # Read the current state of the monitoring
+    state = monitoring_manager.read_sadm_state()
+    log.debug(f"Current Self-Aware Document Monitoring state: {state}")
 
     if state == "enabled":
+        monitoring_manager.ensure_location_column_exists()
         # Perform directory scan before starting monitoring thread
         if DOCS_DIR:
             log.debug(f"Starting scan of directory: {DOCS_DIR}")
             try:
                 log.info("Scanning for new Documents...")
-                scan_docs_dir(DummyUserIDForMainScript) 
+                scan_docs_dir(DummyUserIDForMainScript)
                 log.info("Scan completed successfully!")
             except Exception as scan_error:
                 log.error(f"Error during scan_docs_dir execution: {scan_error}")
@@ -216,24 +212,25 @@ async def lifespan(app: FastAPI):
         else:
             log.warning("DOCS_DIR is not defined. Skipping scan_docs_dir function.")
 
-        if not (monitoring_thread and monitoring_thread.is_alive()):
+        # Start the monitoring thread if it is not already running
+        if not (monitoring_manager.monitoring_thread and monitoring_manager.monitoring_thread.is_alive()):
             log.info("Starting Self-Aware Document Monitoring thread...")
-            start_monitoring_thread(DOCS_DIR, stop_event)
+            monitoring_manager.start_monitoring_thread(DOCS_DIR)
         else:
             log.info("Self-Aware Document Monitoring thread is already active.")
     else:
-        log.info("Self-Aware Document Monitoring is disabled according to the state.")
+        log.info("Self-Aware Document Monitoring is disabled according to the state and will not start!")
 
     try:
         yield
     finally:
         log.info("Shutting down Self-Aware Document Monitoring...")
-        stop_event.set()  # Signal the monitoring thread to stop
+        monitoring_manager.stop_event.set()  # Signal the monitoring thread to stop
 
-        if monitoring_thread and monitoring_thread.is_alive():
+        if monitoring_manager.monitoring_thread and monitoring_manager.monitoring_thread.is_alive():
             log.info("Joining Self-Aware Document Monitoring thread...")
-            monitoring_thread.join(timeout=10)  # Wait for the thread to finish within the timeout
-            if monitoring_thread.is_alive():
+            monitoring_manager.monitoring_thread.join(timeout=10)  # Wait for the thread to finish within the timeout
+            if monitoring_manager.monitoring_thread.is_alive():
                 log.warning("Self-Aware Document Monitoring thread did not stop within the timeout period.")
             else:
                 log.info("Self-Aware Document Monitoring thread stopped successfully.")
@@ -241,7 +238,7 @@ async def lifespan(app: FastAPI):
             log.info("No active Self-Aware Document Monitoring thread found to join.")
 
         log.info("Self-Aware Document Monitoring stopped and application shutdown completed.")
-
+        
 app = FastAPI(
     docs_url="/docs" if ENV == "dev" else None, redoc_url=None, lifespan=lifespan
 )
