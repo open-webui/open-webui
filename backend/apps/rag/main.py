@@ -91,6 +91,7 @@ from config import (
     SRC_LOG_LEVELS,
     UPLOAD_DIR,
     DOCS_DIR,
+    DOCS_DIR_NAME,
     CONTENT_EXTRACTION_ENGINE,
     TIKA_SERVER_URL,
     RAG_TOP_K,
@@ -1315,6 +1316,7 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                 tags = extract_folders_after_data_docs(path)
                 filename = path.name
                 file_content_type = mimetypes.guess_type(path)
+                file_extension = os.path.splitext(filename)[1].lstrip('.')                
 
                 f = open(path, "rb")
                 collection_name = calculate_sha256(f)[:63]
@@ -1329,6 +1331,7 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                     result = store_data_in_vector_db(data, collection_name)
 
                     if result:
+                        tags.append(f".{file_extension}"),
                         sanitized_filename = sanitize_filename(filename)
                         doc = Documents.get_doc_by_name(sanitized_filename)
 
@@ -1341,20 +1344,8 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                                         "title": filename,
                                         "collection_name": collection_name,
                                         "filename": filename,
-                                        "content": (
-                                            json.dumps(
-                                                {
-                                                    "tags": list(
-                                                        map(
-                                                            lambda name: {"name": name},
-                                                            tags,
-                                                        )
-                                                    )
-                                                }
-                                            )
-                                            if len(tags)
-                                            else "{}"
-                                        ),
+                                        "content": json.dumps({"tags": [{"name": name} for name in tags]}) if tags else "{}",
+                                        "location": DOCS_DIR_NAME,  
                                     }
                                 ),
                             )
