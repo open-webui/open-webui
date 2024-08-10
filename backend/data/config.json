@@ -32,5 +32,8 @@
 				"content": "Check the following sentence for grammar and clarity: \"[sentence]\". Rewrite it for better readability while maintaining its original meaning."
 			}
 		]
+	},
+	"SADM" : {
+		"state" : "enabled"
 	}
 }
