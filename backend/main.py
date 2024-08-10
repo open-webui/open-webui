@@ -532,39 +532,42 @@ async def chat_completion_tools_handler(body, user, __event_emitter__, __event_c
     task_model_id = get_task_model_id(body["model"])
 
     # If tool_ids field is present, call the functions
-    if "tool_ids" in body:
-        print(body["tool_ids"])
-        for tool_id in body["tool_ids"]:
-            print(tool_id)
-            try:
-                response, citation, file_handler = await get_function_call_response(
-                    messages=body["messages"],
-                    files=body.get("files", []),
-                    tool_id=tool_id,
-                    template=app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
-                    task_model_id=task_model_id,
-                    user=user,
-                    __event_emitter__=__event_emitter__,
-                    __event_call__=__event_call__,
-                )
+    if "tool_ids" not in body:
+        return body, {}
 
-                print(file_handler)
-                if isinstance(response, str):
-                    contexts.append(response)
+    print(body["tool_ids"])
+    for tool_id in body["tool_ids"]:
+        print(tool_id)
+        try:
+            response, citation, file_handler = await get_function_call_response(
+                messages=body["messages"],
+                files=body.get("files", []),
+                tool_id=tool_id,
+                template=app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+                task_model_id=task_model_id,
+                user=user,
+                __event_emitter__=__event_emitter__,
+                __event_call__=__event_call__,
+            )
 
-                if citation:
-                    if citations is None:
-                        citations = [citation]
-                    else:
-                        citations.append(citation)
+            print(file_handler)
+            if isinstance(response, str):
+                contexts.append(response)
 
-                if file_handler:
-                    skip_files = True
+            if citation:
+                if citations is None:
+                    citations = [citation]
+                else:
+                    citations.append(citation)
 
-            except Exception as e:
-                print(f"Error: {e}")
-        del body["tool_ids"]
-        print(f"tool_contexts: {contexts}")
+            if file_handler:
+                skip_files = True
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+    del body["tool_ids"]
+    print(f"tool_contexts: {contexts}")
 
     if skip_files:
         if "files" in body:
@@ -1608,41 +1611,6 @@ Message: """{{prompt}}"""
         del payload["chat_id"]
 
     return await generate_chat_completions(form_data=payload, user=user)
-
-
-@app.post("/api/task/tools/completions")
-async def get_tools_function_calling(form_data: dict, user=Depends(get_verified_user)):
-    print("get_tools_function_calling")
-
-    model_id = form_data["model"]
-    if model_id not in app.state.MODELS:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
-        )
-
-    # Check if the user has a custom task model
-    # If the user has a custom task model, use that model
-    model_id = get_task_model_id(model_id)
-
-    print(model_id)
-    template = app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
-
-    try:
-        context, _, _ = await get_function_call_response(
-            form_data["messages"],
-            form_data.get("files", []),
-            form_data["tool_id"],
-            template,
-            model_id,
-            user,
-        )
-        return context
-    except Exception as e:
-        return JSONResponse(
-            status_code=e.args[0],
-            content={"detail": e.args[1]},
-        )
 
 
 ##################################
