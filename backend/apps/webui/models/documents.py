@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 import time
 import logging
+import os
 
 from sqlalchemy import String, Column, BigInteger, Text
 
@@ -9,7 +10,18 @@ from apps.webui.internal.db import Base, get_db
 
 import json
 
-from config import SRC_LOG_LEVELS
+from utils.misc import (
+    locate_document_in_filesystem,
+)
+
+
+from config import(
+    SRC_LOG_LEVELS,
+    UPLOAD_DIR,
+    UPLOADS_DIR_NAME,
+    DOCS_DIR,
+    DOCS_DIR_NAME,
+) 
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -29,6 +41,7 @@ class Document(Base):
     content = Column(Text, nullable=True)
     user_id = Column(String)
     timestamp = Column(BigInteger)
+    location = Column(Text)
 
 
 class DocumentModel(BaseModel):
@@ -41,6 +54,7 @@ class DocumentModel(BaseModel):
     content: Optional[str] = None
     user_id: str
     timestamp: int  # timestamp in epoch
+    location: str
 
 
 ####################
@@ -56,7 +70,7 @@ class DocumentResponse(BaseModel):
     content: Optional[dict] = None
     user_id: str
     timestamp: int  # timestamp in epoch
-
+    location: str
 
 class DocumentUpdateForm(BaseModel):
     name: str
@@ -67,6 +81,7 @@ class DocumentForm(DocumentUpdateForm):
     collection_name: str
     filename: str
     content: Optional[str] = None
+    location: Optional[str] = None  # This field is optional
 
 
 class DocumentsTable:
@@ -81,6 +96,8 @@ class DocumentsTable:
                     **form_data.model_dump(),
                     "user_id": user_id,
                     "timestamp": int(time.time()),
+
+                    
                 }
             )
 
@@ -153,7 +170,52 @@ class DocumentsTable:
             log.exception(e)
             return None
 
+
     def delete_doc_by_name(self, name: str) -> bool:
+        try:
+            with get_db() as db:
+                document = db.query(Document).filter_by(name=name).first()
+                if not document:
+                    log.warning(f"Document with name {name} not found")
+                    return False
+
+                # Log the document details
+                log.debug(f"Document found: {document}")
+
+                # Construct the directory path
+                if document.location == UPLOADS_DIR_NAME:
+                    search_dir = UPLOAD_DIR
+                elif document.location == DOCS_DIR_NAME:
+                    search_dir = DOCS_DIR
+                else:
+                    log.error(f"Invalid location: {document.location}")
+                    return False
+
+                log.debug(f"Searching in directory: {search_dir}")
+
+                # Use the external function to find the file with the possible prefix
+                file_path = locate_document_in_filesystem(search_dir, document.filename)
+
+                log.debug(f"File path found: {file_path}")
+
+                # Delete the file from the filesystem
+                if file_path and os.path.exists(file_path):
+                    os.remove(file_path)
+                    log.debug(f"File {file_path} removed")
+                else:
+                    log.error(f"File not found: {file_path}")
+                    return False
+
+                # Delete the document from the database
+                db.query(Document).filter_by(name=name).delete()
+                db.commit()
+                log.debug(f"Document with name {name} deleted from the database")
+                return True
+        except Exception as e:
+            log.error(f"An error occurred while attempting to delete the document: {e}", exc_info=True)
+            return False
+        
+    def delete_doc_by_name_only_from_db(self, name: str) -> bool:
         try:
             with get_db() as db:
 
