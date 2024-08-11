@@ -72,7 +72,7 @@ from utils.utils import (
 from utils.task import (
     title_generation_template,
     search_query_generation_template,
-    tools_function_calling_generation_template,
+    tool_calling_generation_template,
 )
 from utils.misc import (
     get_last_user_message,
@@ -322,7 +322,7 @@ async def call_tool_from_completion(
         return None
 
 
-def get_function_calling_payload(messages, task_model_id, content):
+def get_tool_calling_payload(messages, task_model_id, content):
     user_message = get_last_user_message(messages)
     history = "\n".join(
         f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
@@ -342,7 +342,7 @@ def get_function_calling_payload(messages, task_model_id, content):
     }
 
 
-async def get_function_call_response(
+async def get_tool_call_response(
     messages, files, tool_id, template, task_model_id, user, extra_params
 ) -> tuple[Optional[str], Optional[dict], bool]:
     tool = Tools.get_tool_by_id(tool_id)
@@ -350,8 +350,8 @@ async def get_function_call_response(
         return None, None, False
 
     tools_specs = json.dumps(tool.specs, indent=2)
-    content = tools_function_calling_generation_template(template, tools_specs)
-    payload = get_function_calling_payload(messages, task_model_id, content)
+    content = tool_calling_generation_template(template, tools_specs)
+    payload = get_tool_calling_payload(messages, task_model_id, content)
 
     try:
         payload = filter_pipeline(payload, user)
@@ -502,7 +502,7 @@ async def chat_completion_tools_handler(body, user, extra_params):
     for tool_id in body["tool_ids"]:
         print(tool_id)
         try:
-            response, citation, file_handler = await get_function_call_response(
+            response, citation, file_handler = await get_tool_call_response(
                 messages=body["messages"],
                 files=body.get("files", []),
                 tool_id=tool_id,
