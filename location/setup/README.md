@@ -23,12 +23,18 @@ We recommend using GitHub Desktop to pull [our projects repo](https://github.com
 	git clone https://github.com/modelearth/projects.git
 	cd projects/
 
-Check that you have cmd apps available, include a 3.11 version of python.
+Check that you have cmd apps available, including a 3.11 version of python.
 
 	conda --version
 	python3.11 --version
 	node --version
 	npm --version
+
+You can add python 3.11 without reverting your current version.
+See the [pyenv install links](/io/coders/python/) on our python notes page, then run:
+
+	pyenv install 3.10
+	pyenv local 3.10
 
 On Windows: You can run the "start.bat" steps on [Open WebUI Getting Started](https://docs.openwebui.com/getting-started/). We've documented how to deploy the [Windows steps with conda](https://github.com/ModelEarth/projects/blob/gcp/location/setup/guides/local.md)
 
