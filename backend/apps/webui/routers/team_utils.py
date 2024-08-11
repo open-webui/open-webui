@@ -1,7 +1,9 @@
 from pathlib import Path
 import site
 
-from apps.webui.models.users import Team_User as Users
+from apps.webui.models.team_users import Team_User as Users
+from apps.webui.internal.db import engine
+from peewee import SqliteDatabase
 
 from fastapi import APIRouter, UploadFile, File, Response
 from fastapi import Depends, HTTPException, status
@@ -32,7 +34,7 @@ async def download_members(user=Depends(get_admin_user)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-    if not isinstance(DB, SqliteDatabase):
+    if not isinstance(engine, SqliteDatabase):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DB_NOT_SQLITE,

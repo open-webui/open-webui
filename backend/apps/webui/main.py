@@ -14,6 +14,7 @@ from apps.webui.routers import (
     utils,
     files,
     functions,
+    team_utils,
 )
 from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
@@ -113,6 +114,8 @@ app.include_router(tools.router, prefix="/tools", tags=["tools"])
 app.include_router(functions.router, prefix="/functions", tags=["functions"])
 
 app.include_router(utils.router, prefix="/utils", tags=["utils"])
+
+app.include_router(team_utils.router, prefix="/team_utils", tags=["team_utils"])
 
 
 @app.get("/")
