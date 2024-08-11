@@ -15,6 +15,13 @@ jobs:
     name: Run Cypress Integration Tests
     runs-on: ubuntu-latest
     steps:
+      - name: Maximize build space
+        uses: AdityaGarg8/remove-unwanted-software@v4.1
+        with:
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
