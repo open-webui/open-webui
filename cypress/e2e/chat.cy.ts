@@ -38,9 +38,10 @@ describe('Settings', () => {
 			// User's message should be visible
 			cy.get('.chat-user').should('exist');
 			// Wait for the response
-			cy.get('.chat-assistant', { timeout: 120_000 }) // .chat-assistant is created after the first token is received
-				.find('div[aria-label="Generation Info"]', { timeout: 120_000 }) // Generation Info is created after the stop token is received
-				.should('exist');
+			// .chat-assistant is created after the first token is received
+			cy.get('.chat-assistant', { timeout: 10_000 }).should('exist');
+			// Generation Info is created after the stop token is received
+			cy.get('div[aria-label="Generation Info"]', { timeout: 120_000 }).should('exist');
 		});
 
 		it('user can share chat', () => {
@@ -57,9 +58,10 @@ describe('Settings', () => {
 			// User's message should be visible
 			cy.get('.chat-user').should('exist');
 			// Wait for the response
-			cy.get('.chat-assistant', { timeout: 120_000 }) // .chat-assistant is created after the first token is received
-				.find('div[aria-label="Generation Info"]', { timeout: 120_000 }) // Generation Info is created after the stop token is received
-				.should('exist');
+			// .chat-assistant is created after the first token is received
+			cy.get('.chat-assistant', { timeout: 10_000 }).should('exist');
+			// Generation Info is created after the stop token is received
+			cy.get('div[aria-label="Generation Info"]', { timeout: 120_000 }).should('exist');
 			// spy on requests
 			const spy = cy.spy();
 			cy.intercept('GET', '/api/v1/chats/*', spy);
@@ -89,9 +91,10 @@ describe('Settings', () => {
 			// User's message should be visible
 			cy.get('.chat-user').should('exist');
 			// Wait for the response
-			cy.get('.chat-assistant', { timeout: 120_000 }) // .chat-assistant is created after the first token is received
-				.find('div[aria-label="Generation Info"]', { timeout: 120_000 }) // Generation Info is created after the stop token is received
-				.should('exist');
+			// .chat-assistant is created after the first token is received
+			cy.get('.chat-assistant', { timeout: 10_000 }).should('exist');
+			// Generation Info is created after the stop token is received
+			cy.get('div[aria-label="Generation Info"]', { timeout: 120_000 }).should('exist');
 			// Click on the generate image button
 			cy.get('[aria-label="Generate Image"]').click();
 			// Wait for image to be visible
