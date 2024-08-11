@@ -190,16 +190,31 @@ def update_embedding_model(
     embedding_model: str,
     update_model: bool = False,
 ):
+    log.info(f"Use sentence transformer embeddings with model: {embedding_model}")
     if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
-        import sentence_transformers
+        try:
+            model_path = get_model_path(embedding_model, update_model)
+            if model_path:
+                import sentence_transformers
 
-        app.state.embedding_function = sentence_transformers.SentenceTransformer(
-            get_model_path(embedding_model, update_model),
-            device=DEVICE_TYPE,
-            trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-        )
+                app.state.embedding_function = (
+                    sentence_transformers.SentenceTransformer(
+                        model_path,
+                        device=DEVICE_TYPE,
+                        trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+                    )
+                )
+            else:
+                app.state.config.embedding_function = None
+        except Exception as e:
+            log.exception(
+                f"Cannot use sentence transformers as embeddings function: {e}"
+            )
+            app.state.config.embedding_function = None
     else:
         app.state.embedding_function = None
+
+    log.info(f"Set embeddings function to: {app.state.embedding_function}")
 
 
 class Reranking(BaseModel):
@@ -288,8 +303,8 @@ def update_reranking_model(
     reranking_provider: str,
     update_model: bool = False,
 ):
-    print(
-        f"Ranking provider is set to {reranking_provider} with model {reranking_model}"
+    log.info(
+        f"Reranking provider is set to: {reranking_provider} with model: {reranking_model}"
     )
     if reranking_provider == "voyageai" or reranking_provider == "cohereai":
         app.state.reranking_function = Reranking(
@@ -297,15 +312,25 @@ def update_reranking_model(
             reranking_provider=reranking_provider,
         )
     elif reranking_provider == "sentence-transformers":
-        import sentence_transformers
+        try:
+            model_path = get_model_path(reranking_model, update_model)
+            if model_path:
+                import sentence_transformers
 
-        app.state.reranking_function = sentence_transformers.CrossEncoder(
-            get_model_path(reranking_model, update_model),
-            device=DEVICE_TYPE,
-            trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
-        )
+                app.state.reranking_function = sentence_transformers.CrossEncoder(
+                    get_model_path(reranking_model, update_model),
+                    device=DEVICE_TYPE,
+                    trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+                )
+            else:
+                app.state.reranking_function = None
+        except Exception as e:
+            log.exception(f"Cannot use sentence transformer as reranking function: {e}")
+            app.state.reranking_function = None
     else:
         app.state.reranking_function = None
+
+    log.info(f"Set reranking function to: {app.state.reranking_function}")
 
 
 update_embedding_model(

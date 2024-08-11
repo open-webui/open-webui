@@ -1084,11 +1084,13 @@ if CHROMA_HTTP_HOST != "":
         tenant=CHROMA_TENANT,
         database=CHROMA_DATABASE,
         settings=Settings(allow_reset=True, anonymized_telemetry=False),
+        collection_metadata={"hnsw:space": "l2"},  # ["l2", "ip", "cosine"]
     )
 else:
     CHROMA_CLIENT = chromadb.PersistentClient(
         path=CHROMA_DATA_PATH,
         settings=Settings(allow_reset=True, anonymized_telemetry=False),
+        collection_metadata={"hnsw:space": "l2"},  # ["l2", "ip", "cosine"]
         tenant=CHROMA_TENANT,
         database=CHROMA_DATABASE,
     )

@@ -589,7 +589,7 @@ async def chat_completion_files_handler(body):
             messages=body["messages"],
             embedding_function=rag_app.state.EMBEDDING_FUNCTION,
             k=rag_app.state.config.TOP_K,
-            reranking_function=rag_app.state.sentence_transformer_rf,
+            reranking_function=rag_app.state.reranking_function,
             r=rag_app.state.config.RELEVANCE_THRESHOLD,
             hybrid_search=rag_app.state.config.ENABLE_RAG_HYBRID_SEARCH,
             reranking_provider=rag_app.state.config.RAG_RERANKING_PROVIDER,
