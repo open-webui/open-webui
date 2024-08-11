@@ -457,10 +457,13 @@ async def chat_completion_inlets_handler(body, model, extra_params):
             # Extra parameters to be passed to the function
             custom_params = {**extra_params, "__model__": model, "__id__": filter_id}
             if hasattr(function_module, "UserValves") and "__user__" in sig.parameters:
-                uid = custom_params["__user__"]["id"]
-                custom_params["__user__"]["valves"] = function_module.UserValves(
-                    **Functions.get_user_valves_by_id_and_user_id(filter_id, uid)
-                )
+                try:
+                    uid = custom_params["__user__"]["id"]
+                    custom_params["__user__"]["valves"] = function_module.UserValves(
+                        **Functions.get_user_valves_by_id_and_user_id(filter_id, uid)
+                    )
+                except Exception as e:
+                    print(e)
 
             # Add extra params in contained in function signature
             for key, value in custom_params.items():
