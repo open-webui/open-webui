@@ -87,7 +87,7 @@ async def update_openai_config(
     form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user)
 ):
     if form_data.key == "":
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
     app.state.OPENAI_API_BASE_URL = form_data.url
     app.state.OPENAI_API_KEY = form_data.key

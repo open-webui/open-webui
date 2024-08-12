@@ -79,9 +79,9 @@ async def update_profile(
         if user:
             return user
         else:
-            raise HTTPException(400, detail=ERROR_MESSAGES.DEFAULT())
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
     else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_CRED)
 
 
 ############################
@@ -94,7 +94,7 @@ async def update_password(
     form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
 ):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
-        raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
     if session_user:
         user = Auths.authenticate_user(session_user.email, form_data.password)
 
@@ -102,9 +102,9 @@ async def update_password(
             hashed = get_password_hash(form_data.new_password)
             return Auths.update_user_password_by_id(user.id, hashed)
         else:
-            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_PASSWORD)
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_PASSWORD)
     else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_CRED)
 
 
 ############################
@@ -116,7 +116,7 @@ async def update_password(
 async def signin(request: Request, form_data: SigninForm):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
-            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
 
         trusted_email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower()
         if not Users.get_user_by_email(trusted_email.lower()):
@@ -147,7 +147,7 @@ async def signin(request: Request, form_data: SigninForm):
             "extra_sso": "",
         }
     else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_CRED)
 
 
 ############################
@@ -168,7 +168,7 @@ async def signup(request: Request, form_data: SignupForm):
         )
 
     if Users.get_user_by_email(form_data.email.lower()):
-        raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
         role = (
@@ -215,9 +215,9 @@ async def signup(request: Request, form_data: SignupForm):
                 "extra_sso": "",
             }
         else:
-            raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
     except Exception as err:
-        raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT(err))
 
 
 ############################
@@ -234,7 +234,7 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         )
 
     if Users.get_user_by_email(form_data.email.lower()):
-        raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
 
@@ -261,9 +261,9 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
                 "extra_sso": "",
             }
         else:
-            raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
     except Exception as err:
-        raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT(err))
 
 
 ############################
@@ -350,7 +350,7 @@ async def create_api_key_(user=Depends(get_current_user)):
             "api_key": api_key,
         }
     else:
-        raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_API_KEY_ERROR)
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.CREATE_API_KEY_ERROR)
 
 
 # delete api key
@@ -369,7 +369,7 @@ async def get_api_key(user=Depends(get_current_user)):
             "api_key": api_key,
         }
     else:
-        raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
 ############################
 # SignIn with Microsoft Entra ID - SSO
@@ -449,7 +449,7 @@ async def signin_callback(request: Request):
             }
     except Exception as e:
         logging.error(f"Error in signin_callback: {e}")
-        raise HTTPException(500, detail="Error in signin_callback")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error in signin_callback")
 
 
 SSO_LOGOUT_REDIRECT_URL = "https://hr.ciai-mbzuai.ac.ae/auth"
