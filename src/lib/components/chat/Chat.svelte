@@ -62,6 +62,7 @@
 	import { error } from '@sveltejs/kit';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
+	import ArtifactsModal from '$lib/components/chat/ArtifactsModal.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -1642,4 +1643,6 @@
 			bind:params
 		/>
 	</div>
+
+	<ArtifactsModal />
 {/if}

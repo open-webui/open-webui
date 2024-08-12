@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import { chats, config, settings, user as _user, mobile } from '$lib/stores';
-	import { tick, getContext, onMount } from 'svelte';
+	import { chats, settings, user as _user, mobile } from '$lib/stores';
+	import { tick, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
@@ -9,11 +9,8 @@
 	import UserMessage from './Messages/UserMessage.svelte';
 	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
-	import Spinner from '../common/Spinner.svelte';
-	import { imageGenerations } from '$lib/apis/images';
-	import { copyToClipboard, findWordIndices } from '$lib/utils';
 	import CompareMessages from './Messages/CompareMessages.svelte';
-	import { stringify } from 'postcss';
+	import { copyToClipboard, findWordIndices } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -26,9 +23,8 @@
 
 	export let user = $_user;
 	export let prompt;
-	export let processing = '';
-	export let bottomPadding = false;
 	export let autoScroll;
+	export let bottomPadding = false;
 	export let history = {};
 	export let messages = [];
 
@@ -298,7 +294,7 @@
 		<div class="w-full pt-2">
 			{#key chatId}
 				{#each messages as message, messageIdx}
-					<div class=" w-full {messageIdx === messages.length - 1 ? ' pb-12' : ''}">
+					<div class="w-full {messageIdx === messages.length - 1 ? 'pb-12' : ''}">
 						<div
 							class="flex flex-col justify-between px-5 mb-3 {$settings?.widescreenMode ?? null
 								? 'max-w-full'
@@ -336,6 +332,7 @@
 										copyToClipboard={copyToClipboardWithToast}
 										{continueGeneration}
 										{regenerateResponse}
+										{chatActionHandler}
 										on:action={async (e) => {
 											await chatActionHandler(chatId, e.detail, message.model, message.id);
 										}}
@@ -389,7 +386,7 @@
 				{/each}
 
 				{#if bottomPadding}
-					<div class="  pb-6" />
+					<div class="pb-6" />
 				{/if}
 			{/key}
 		</div>

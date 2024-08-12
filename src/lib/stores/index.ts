@@ -38,6 +38,7 @@ export const settings: Writable<Settings> = writable({});
 
 export const showSidebar = writable(false);
 export const showSettings = writable(false);
+export const showArtifacts = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 export const showCallOverlay = writable(false);

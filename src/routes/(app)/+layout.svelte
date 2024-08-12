@@ -20,6 +20,7 @@
 	import {
 		user,
 		showSettings,
+		showArtifacts,
 		settings,
 		models,
 		prompts,
@@ -34,6 +35,7 @@
 	} from '$lib/stores';
 
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
+	import ArtifactsModal from '$lib/components/chat/ArtifactsModal.svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
@@ -183,6 +185,7 @@
 </script>
 
 <SettingsModal bind:show={$showSettings} />
+<ArtifactsModal bind:show={$showArtifacts} />
 <ChangelogModal bind:show={$showChangelog} />
 
 <div class="app relative">
