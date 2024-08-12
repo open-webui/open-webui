@@ -14,7 +14,11 @@
 		pinnedChats,
 		scrollPaginationEnabled,
 		currentChatPage,
+<<<<<<< HEAD
 		showArtifacts,
+=======
+		showArtifacts
+>>>>>>> df9dcee3 (Fixes)
 	} from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
