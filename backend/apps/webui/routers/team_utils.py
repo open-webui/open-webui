@@ -1,7 +1,8 @@
 from pathlib import Path
 import site
 
-from apps.webui.models.team_users import Team_User as Users
+from apps.webui.models.users import Users
+
 from apps.webui.internal.db import engine
 from peewee import SqliteDatabase
 
@@ -12,17 +13,9 @@ from pydantic import BaseModel
 
 from io import StringIO
 import csv
-from fpdf import FPDF
-import markdown
-import black
-
-
 from utils.utils import get_admin_user
-from utils.misc import calculate_sha256, get_gravatar_url
-
-from config import OLLAMA_BASE_URLS, DATA_DIR, UPLOAD_DIR, ENABLE_ADMIN_EXPORT
+from config import ENABLE_ADMIN_EXPORT
 from constants import ERROR_MESSAGES
-from typing import List
 
 router = APIRouter()
 
@@ -34,21 +27,16 @@ async def download_members(user=Depends(get_admin_user)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-    if not isinstance(engine, SqliteDatabase):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DB_NOT_SQLITE,
-        )
 
     def iter_csv():
         output = StringIO()
         writer = csv.writer(output)
 
-        # Get the field names from the User model
-        field_names = [field.name for field in Users._meta.sorted_fields]
+        # Get the field names from the Team_User model
+        field_names = Users.get_user_field_names()
         writer.writerow(field_names)
 
-        # set default parameters for the get_users method
+        # Fetch users
         users = Users.get_users()
         for user in users:
             writer.writerow([getattr(user, field) for field in field_names])

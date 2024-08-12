@@ -265,5 +265,8 @@ class UsersTable:
         except Exception as e:
             return None
 
+    def get_user_field_names(self) -> List[str]:
+        return list(UserModel.__fields__.keys())
+
 
 Users = UsersTable()
