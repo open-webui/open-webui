@@ -20,21 +20,22 @@ function escapeDollarNumber(text: string) {
 }
 
 function escapeBrackets(text: string) {
-	const pattern =
-		/(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
-	return text.replace(
-		pattern,
-		(match, codeBlock, squareBracket, roundBracket) => {
-			if (codeBlock) {
-				return codeBlock;
-			} else if (squareBracket) {
-				return `$$ ${squareBracket} $$`;
-			} else if (roundBracket) {
-				return `$ ${roundBracket} $`;
-			}
-			return match;
-		},
-	);
+	let cleanSquareBracket = '';
+	let cleanRoundBracket = '';
+
+	const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
+	return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
+		if (codeBlock) {
+			return codeBlock;
+		} else if (squareBracket !== undefined) {
+			cleanSquareBracket = squareBracket.replace(/\n/g, '\\ ');
+			return `$$${cleanSquareBracket}$$`;
+		} else if (roundBracket !== undefined) {
+			cleanRoundBracket = roundBracket.replace(/\n/g, '\\ ');
+			return `$${cleanRoundBracket}$`;
+		}
+		return match;
+	});
 }
 
 // const convertLatexToSingleLine = (content: string) => {
