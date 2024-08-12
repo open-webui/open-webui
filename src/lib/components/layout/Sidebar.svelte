@@ -12,7 +12,7 @@
 		mobile,
 		showArchivedChats,
 		pinnedChats,
-		showArtifacts  // Add this line
+		showArtifacts
 	} from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
@@ -533,6 +533,8 @@
 
 		<div class="px-2.5">
 			<div class="flex flex-col font-primary">
+				<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
+				 
 				{#if $user !== undefined}
 					<!-- Artifacts button -->
 					<button
@@ -578,19 +580,19 @@
 					>
 						<!-- Existing user menu button -->
 						<button
-							class="flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}
 						>
-							<div class="self-center mr-3">
+							<div class=" self-center mr-3">
 								<img
 									src={$user.profile_image_url}
-									class="max-w-[30px] object-cover rounded-full"
+									class=" max-w-[30px] object-cover rounded-full"
 									alt="User profile"
 								/>
 							</div>
-							<div class="self-center font-medium">{$user.name}</div>
+							<div class=" self-center font-medium">{$user.name}</div>
 						</button>
 					</UserMenu>
 				{/if}
