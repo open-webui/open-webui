@@ -259,7 +259,7 @@
             </div>
         </div>
 
-        <div class="p-4">
+        <div class="p-4 flex-grow overflow-auto">
             {#if error}
                 <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
                     <strong class="font-bold">Error!</strong>
@@ -267,13 +267,13 @@
                 </div>
             {/if}
 
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg">
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg h-full flex flex-col">
                 {#if viewMode === 'full'}
                     {#if renderedContents.length > 0}
-                        <div class={`w-full mx-auto ${
+                        <div class={`w-full mx-auto flex-grow ${
                             renderRatio === 'responsive' ? 'max-w-full' :
                             renderRatio === 'mobile' ? 'mobile-view' :
-                            'w-full h-screen'
+                            'w-full h-full'
                         }`}>
                             <iframe
                                 bind:this={iframeElement}
@@ -342,11 +342,14 @@
         z-index: 9999;
         background-color: rgb(17 24 39);
         color: white;
+        display: flex;
+        flex-direction: column;
     }
 
     iframe {
         max-width: 100%;
         margin: 0 auto;
+        flex-grow: 1;
     }
 
     .mobile-view {
