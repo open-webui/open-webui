@@ -27,14 +27,14 @@ function escapeBrackets(text: string) {
 	return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
 		if (codeBlock) {
 			return codeBlock;
-		} else if (squareBracket !== undefined) {
+		} else if (squareBracket) {
 			cleanSquareBracket = squareBracket.replace(/\s*\n\s*/g, ' ').trim();
-			return `$$ ${cleanSquareBracket} $$`;
-		} else if (roundBracket !== undefined) {
+			return `$$${cleanSquareBracket}$$`;
+		} else if (roundBracket) {
 			cleanRoundBracket = roundBracket.replace(/\s*\n\s*/g, ' ').trim();
-			return `$ ${cleanRoundBracket} $`;
+			return `$${cleanRoundBracket}$`;
 		}
-		return match;
+		return match.replace(/\s*\n\s*/g, ' ').trim();
 	});
 }
 
