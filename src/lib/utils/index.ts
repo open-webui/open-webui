@@ -6,29 +6,60 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 // Helper functions
 //////////////////////////
 
-const convertLatexToSingleLine = (content) => {
-	// Patterns to match multiline LaTeX blocks
-	const patterns = [
-		/(\$\$\s[\s\S]*?\s\$\$)/g, // Match $$ ... $$
-		/(\\\[[\s\S]*?\\\])/g, // Match \[ ... \]
-		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
-	];
+function escapeDollarNumber(text: string) {
+	let escapedText = '';
+	for (let i = 0; i < text.length; i += 1) {
+		let char = text[i];
+		const nextChar = text[i + 1] || ' ';
+		if (char === '$' && nextChar >= '0' && nextChar <= '9') {
+			char = '\\$';
+		}
+		escapedText += char;
+	}
+	return escapedText;
+}
 
-	patterns.forEach((pattern) => {
-		content = content.replace(pattern, (match) => {
-			return match.replace(/\s*\n\s*/g, ' ').trim();
-		});
+function escapeBrackets(text: string) {
+	let cleanSquareBracket = '';
+	let cleanRoundBracket = '';
+
+	const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
+	return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
+		if (codeBlock) {
+			return codeBlock;
+		} else if (squareBracket) {
+			cleanSquareBracket = squareBracket.replace(/\s*\n\s*/g, ' ').trim();
+			return `$$${cleanSquareBracket}$$`;
+		} else if (roundBracket) {
+			cleanRoundBracket = roundBracket.replace(/\s*\n\s*/g, ' ').trim();
+			return `$${cleanRoundBracket}$`;
+		}
+		return match.replace(/\s*\n\s*/g, ' ').trim();
 	});
+}
 
-	return content;
-};
+// const convertLatexToSingleLine = (content: string) => {
+// 	// Patterns to match multiline LaTeX blocks
+// 	const patterns = [
+// 		/(\$\$\s[\s\S]*?\s\$\$)/g, // Match $$ ... $$
+// 		/(\\\[[\s\S]*?\\\])/g, // Match \[ ... \]
+// 		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
+// 	];
+
+// 	patterns.forEach((pattern) => {
+// 		content = content.replace(pattern, (match) => {
+// 			return match.replace(/\s*\n\s*/g, ' ').trim();
+// 		});
+// 	});
+
+// 	return content;
+// };
 
 export const sanitizeResponseContent = (content: string) => {
 	// replace single backslash with double backslash
 	content = content.replace(/\\\\/g, '\\\\\\\\');
-
-	content = convertLatexToSingleLine(content);
-
+	content = escapeBrackets(escapeDollarNumber(content));
+	// content = convertLatexToSingleLine(content);
 	// First, temporarily replace valid <video> tags with a placeholder
 	const videoTagRegex = /<video\s+src="([^"]+)"\s+controls><\/video>/gi;
 	const placeholders: string[] = [];
@@ -227,9 +258,9 @@ export const generateInitialsImage = (name) => {
 	const initials =
 		sanitizedName.length > 0
 			? sanitizedName[0] +
-			  (sanitizedName.split(' ').length > 1
-					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
-					: '')
+			(sanitizedName.split(' ').length > 1
+				? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
+				: '')
 			: '';
 
 	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
@@ -283,10 +314,10 @@ export const compareVersion = (latest, current) => {
 	return current === '0.0.0'
 		? false
 		: current.localeCompare(latest, undefined, {
-				numeric: true,
-				sensitivity: 'case',
-				caseFirst: 'upper'
-		  }) < 0;
+			numeric: true,
+			sensitivity: 'case',
+			caseFirst: 'upper'
+		}) < 0;
 };
 
 export const findWordIndices = (text) => {
