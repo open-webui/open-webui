@@ -1,9 +1,10 @@
 import { LITELLM_API_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/utils';
 
 export const getLiteLLMModels = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${LITELLM_API_BASE_URL}/v1/models`, {
+	const res = await fetchApi(`${LITELLM_API_BASE_URL}/v1/models`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -44,7 +45,7 @@ export const getLiteLLMModels = async (token: string = '') => {
 export const getLiteLLMModelInfo = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${LITELLM_API_BASE_URL}/model/info`, {
+	const res = await fetchApi(`${LITELLM_API_BASE_URL}/model/info`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -83,7 +84,7 @@ type AddLiteLLMModelForm = {
 export const addLiteLLMModel = async (token: string = '', payload: AddLiteLLMModelForm) => {
 	let error = null;
 
-	const res = await fetch(`${LITELLM_API_BASE_URL}/model/new`, {
+	const res = await fetchApi(`${LITELLM_API_BASE_URL}/model/new`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -121,7 +122,7 @@ export const addLiteLLMModel = async (token: string = '', payload: AddLiteLLMMod
 export const deleteLiteLLMModel = async (token: string = '', id: string) => {
 	let error = null;
 
-	const res = await fetch(`${LITELLM_API_BASE_URL}/model/delete`, {
+	const res = await fetchApi(`${LITELLM_API_BASE_URL}/model/delete`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

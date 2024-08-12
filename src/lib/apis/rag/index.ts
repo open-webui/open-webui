@@ -1,9 +1,10 @@
 import { RAG_API_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/utils';
 
 export const getRAGConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/config`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/config`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -40,7 +41,7 @@ type RAGConfigForm = {
 export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/config/update`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/config/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -70,7 +71,7 @@ export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => 
 export const getRAGTemplate = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/template`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/template`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -97,7 +98,7 @@ export const getRAGTemplate = async (token: string) => {
 export const getQuerySettings = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/query/settings`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/query/settings`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -130,7 +131,7 @@ type QuerySettings = {
 export const updateQuerySettings = async (token: string, settings: QuerySettings) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/query/settings/update`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/query/settings/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -164,7 +165,7 @@ export const uploadDocToVectorDB = async (token: string, collection_name: string
 
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/doc`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/doc`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -192,7 +193,7 @@ export const uploadDocToVectorDB = async (token: string, collection_name: string
 export const uploadWebToVectorDB = async (token: string, collection_name: string, url: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/web`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/web`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -224,7 +225,7 @@ export const uploadWebToVectorDB = async (token: string, collection_name: string
 export const uploadYoutubeTranscriptionToVectorDB = async (token: string, url: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/youtube`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/youtube`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -260,7 +261,7 @@ export const queryDoc = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/query/doc`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/query/doc`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -297,7 +298,7 @@ export const queryCollection = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/query/collection`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/query/collection`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -329,7 +330,7 @@ export const queryCollection = async (
 export const scanDocs = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/scan`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/scan`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -355,7 +356,7 @@ export const scanDocs = async (token: string) => {
 export const resetVectorDB = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/reset`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/reset`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -381,7 +382,7 @@ export const resetVectorDB = async (token: string) => {
 export const getEmbeddingConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/embedding`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/embedding`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -419,7 +420,7 @@ type EmbeddingModelUpdateForm = {
 export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/embedding/update`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/embedding/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -449,7 +450,7 @@ export const updateEmbeddingConfig = async (token: string, payload: EmbeddingMod
 export const getRerankingConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/reranking`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/reranking`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -480,7 +481,7 @@ type RerankingModelUpdateForm = {
 export const updateRerankingConfig = async (token: string, payload: RerankingModelUpdateForm) => {
 	let error = null;
 
-	const res = await fetch(`${RAG_API_BASE_URL}/reranking/update`, {
+	const res = await fetchApi(`${RAG_API_BASE_URL}/reranking/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

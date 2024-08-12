@@ -1,9 +1,10 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/utils';
 
 export const getAudioConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/config`, {
+	const res = await fetchApi(`${AUDIO_API_BASE_URL}/config`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -35,7 +36,7 @@ type OpenAIConfigForm = {
 export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
 	let error = null;
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/config/update`, {
+	const res = await fetchApi(`${AUDIO_API_BASE_URL}/config/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -67,7 +68,7 @@ export const transcribeAudio = async (token: string, file: File) => {
 	data.append('file', file);
 
 	let error = null;
-	const res = await fetch(`${AUDIO_API_BASE_URL}/transcriptions`, {
+	const res = await fetchApi(`${AUDIO_API_BASE_URL}/transcriptions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -99,7 +100,7 @@ export const synthesizeOpenAISpeech = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/speech`, {
+	const res = await fetchApi(`${AUDIO_API_BASE_URL}/speech`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,
