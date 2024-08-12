@@ -80,12 +80,12 @@
 
 	import 'katex/dist/katex.min.css';
 
-	import markedKatex from '$lib/utils/katex-extension';
-	const options = {
-		throwOnError: false
-	};
+	// import markedKatex from '$lib/utils/katex-extension';
+	// const options = {
+	// 	throwOnError: false
+	// };
 
-	marked.use(markedKatex(options));
+	// marked.use(markedKatex(options));
 
 	$: (async () => {
 		if (message?.content) {
