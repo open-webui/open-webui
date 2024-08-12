@@ -12,7 +12,7 @@ function escapeDollarNumber(text: string) {
 		let char = text[i];
 		const nextChar = text[i + 1] || ' ';
 		if (char === '$' && nextChar >= '0' && nextChar <= '9') {
-			char = '\\$';
+			char = '\$';
 		}
 		escapedText += char;
 	}
