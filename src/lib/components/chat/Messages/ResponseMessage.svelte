@@ -78,7 +78,7 @@
 
 	let tokens;
 
-	// import 'katex/dist/katex.min.css';
+	import 'katex/dist/katex.min.css';
 
 	// import markedKatex from '$lib/utils/katex-extension';
 	// const options = {
