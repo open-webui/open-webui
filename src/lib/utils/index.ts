@@ -75,8 +75,8 @@ export const sanitizeResponseContent = (content: string) => {
 		.replace(/<\|[a-z]+\|$/, '')
 		.replace(/<$/, '')
 		.replaceAll(/<\|[a-z]+\|>/g, ' ')
-		.replaceAll('<', '&lt;')
-		.replaceAll('>', '&gt;')
+		// .replaceAll('<', '&lt;')
+		// .replaceAll('>', '&gt;')
 		.trim();
 
 	// Replace placeholders with original <video> tags
