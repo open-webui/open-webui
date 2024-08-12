@@ -532,9 +532,9 @@
 		</div>
 
 		<div class="px-2.5">
-			<div class="flex flex-col font-primary">
-				<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
+			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 				 
+			<div class="flex flex-col font-primary">
 				{#if $user !== undefined}
 					<!-- Artifacts button -->
 					<button
