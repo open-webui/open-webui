@@ -28,9 +28,9 @@ function escapeBrackets(text: string) {
 			if (codeBlock) {
 				return codeBlock;
 			} else if (squareBracket) {
-				return `$$${squareBracket}$$`;
+				return `$$ ${squareBracket} $$`;
 			} else if (roundBracket) {
-				return `$${roundBracket}$`;
+				return `$ ${roundBracket} $`;
 			}
 			return match;
 		},
