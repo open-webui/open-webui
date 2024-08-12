@@ -89,9 +89,8 @@
 
 	$: (async () => {
 		if (message?.content) {
-			tokens = marked.lexer(
-				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
-			);
+			message.content = sanitizeResponseContent(message?.content);
+			renderLatex();
 		}
 	})();
 
