@@ -59,7 +59,7 @@ export const sanitizeResponseContent = (content: string) => {
 	// content = content.replace(/\\\\/g, '\\\\\\\\');
 
 	// content = convertLatexToSingleLine(content);
-	content = escapeBrackets(escapeDollarNumber(content));
+	content = escapeBrackets(escapeDollarNumber(content)).trim();
 
 	// First, temporarily replace valid <video> tags with a placeholder
 	const videoTagRegex = /<video\s+src="([^"]+)"\s+controls><\/video>/gi;
