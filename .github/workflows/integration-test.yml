@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - '*'
   pull_request:
     branches:
       - main
@@ -30,18 +31,18 @@ jobs:
         run: |
           docker builder prune --all --force
 
-#      - name: Wait for Ollama to be up
-#        timeout-minutes: 5
-#        run: |
-#          until curl --output /dev/null --silent --fail http://localhost:11434; do
-#            printf '.'
-#            sleep 1
-#          done
-#          echo "Service is up!"
-#
-#      - name: Preload Ollama model
-#        run: |
-#          docker exec ollama ollama pull qwen:0.5b-chat-v1.5-q2_K
+      # - name: Wait for Ollama to be up
+      #   timeout-minutes: 5
+      #   run: |
+      #     until curl --output /dev/null --silent --fail http://localhost:11434; do
+      #       printf '.'
+      #       sleep 1
+      #     done
+      #     echo "Service is up!"
+
+      # - name: Preload Ollama model
+      #   run: |
+      #     docker exec ollama ollama pull qwen:0.5b-chat-v1.5-q2_K
 
       - name: Cypress run
         uses: cypress-io/github-action@v6
@@ -49,6 +50,8 @@ jobs:
           browser: chrome
           wait-on: 'http://localhost:3000'
           config: baseUrl=http://localhost:3000
+        env:
+          SKIP_OLLAMA_TESTS: 'true'
 
       - uses: actions/upload-artifact@v4
         if: always()
