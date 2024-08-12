@@ -13,8 +13,6 @@
 		showArchivedChats,
 		pinnedChats,
 		showArtifacts,
-		scrollPaginationEnabled,
-		currentChatPage
 	} from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
