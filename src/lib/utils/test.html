@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Escape Brackets for LaTeX in Markdown</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.3/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.3/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.3/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body);"></script>
 </head>
 
 <body>
@@ -55,6 +59,19 @@ Here is some text with LaTeX:
             const inputText = document.getElementById("inputText").value;
             const outputText = escapeDollarNumber(escapeBrackets(inputText));
             document.getElementById("outputText").textContent = outputText;
+            renderMathInElement(document.getElementById("outputText"), {
+                delimiters: [{
+                        left: "$$",
+                        right: "$$",
+                        display: true
+                    },
+                    {
+                        left: "$",
+                        right: "$",
+                        display: false
+                    }
+                ]
+            });
         }
     </script>
 </body>
