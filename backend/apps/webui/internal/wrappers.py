@@ -54,13 +54,7 @@ def register_connection(db_url):
         connection = parse(db_url)
 
         # Use our custom database class that supports reconnection
-        db = ReconnectingPostgresqlDatabase(
-            connection["database"],
-            user=connection["user"],
-            password=connection["password"],
-            host=connection["host"],
-            port=connection["port"],
-        )
+        db = ReconnectingPostgresqlDatabase(**connection)
         db.connect(reuse_if_open=True)
     elif isinstance(db, SqliteDatabase):
         # Enable autoconnect for SQLite databases, managed by Peewee
