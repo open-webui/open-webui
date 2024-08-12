@@ -58,7 +58,7 @@ export const sanitizeResponseContent = (content: string) => {
 	// replace single backslash with double backslash
 	content = content.replace(/\\\\/g, '\\\\\\\\');
 	content = escapeBrackets(escapeDollarNumber(content));
-	content = convertLatexToSingleLine(content);
+	// content = convertLatexToSingleLine(content);
 
 	// First, temporarily replace valid <video> tags with a placeholder
 	const videoTagRegex = /<video\s+src="([^"]+)"\s+controls><\/video>/gi;
