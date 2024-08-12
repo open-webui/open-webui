@@ -8,7 +8,7 @@ const blockRule = /^(\${1,2})\n((?:\\[^]|[^\\])+?)\n\1(?:\n|$)/;
 export default function (options = {}) {
   return {
     extensions: [
-      inlineKatex(options, createRenderer(options, false)),
+      // inlineKatex(options, createRenderer(options, false)),
       blockKatex(options, createRenderer(options, true)),
     ],
   };
