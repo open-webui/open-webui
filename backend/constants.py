@@ -89,6 +89,7 @@ class ERROR_MESSAGES(str, Enum):
     OLLAMA_API_DISABLED = (
         "The Ollama API is disabled. Please enable it to use this feature."
     )
+    INVALID_URL = "The URL you provided is invalid. Please double-check and try again."
 
 
 class TASKS(str, Enum):
