@@ -85,7 +85,7 @@
 		throwOnError: false
 	};
 
-	// marked.use(markedKatex(options));
+	marked.use(markedKatex(options));
 
 	$: (async () => {
 		if (message?.content) {
