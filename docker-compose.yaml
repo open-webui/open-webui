@@ -1,11 +1,13 @@
+# docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml up -d --build
+# docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml up -d
 services:
   ollama:
     volumes:
-      - ollama:/root/.ollama
+      - ./domainExpansion/ollama:/root/.ollama  # Bind mount within the domainExpansion directory
     container_name: ollama
     pull_policy: always
     tty: true
-    restart: unless-stopped
+    restart: always
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
 
   open-webui:
@@ -17,7 +19,8 @@ services:
     image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: open-webui
     volumes:
-      - open-webui:/app/backend/data
+      - ./domainExpansion/open-webui:/app/backend/data  # Bind mount within the domainExpansion directory
+      # - ./domainExpansion/docs:/data/docs  # Mount the docs directory within the domainExpansion directory
     depends_on:
       - ollama
     ports:
@@ -27,7 +30,7 @@ services:
       - 'WEBUI_SECRET_KEY='
     extra_hosts:
       - host.docker.internal:host-gateway
-    restart: unless-stopped
+    restart: always
 
 volumes:
   ollama: {}
