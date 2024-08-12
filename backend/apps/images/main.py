@@ -150,10 +150,11 @@ async def update_engine_url(
     else:
         url = form_data.AUTOMATIC1111_BASE_URL.strip("/")
         try:
-            r = requests.head(url) 
+            r = requests.head(url)
+            r.raise_for_status()
             app.state.config.AUTOMATIC1111_BASE_URL = url
         except Exception as e:
-            raise HTTPException(status_code=400, detail="Invalid URL provided.")
+            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
 
     if form_data.COMFYUI_BASE_URL == None:
         app.state.config.COMFYUI_BASE_URL = COMFYUI_BASE_URL
@@ -162,9 +163,10 @@ async def update_engine_url(
 
         try:
             r = requests.head(url)
+            r.raise_for_status()
             app.state.config.COMFYUI_BASE_URL = url
         except Exception as e:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
 
     if form_data.AUTOMATIC1111_API_AUTH == None:
         app.state.config.AUTOMATIC1111_API_AUTH = AUTOMATIC1111_API_AUTH
