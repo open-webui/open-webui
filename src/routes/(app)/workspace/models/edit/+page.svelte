@@ -17,6 +17,7 @@
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
+	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -64,6 +65,7 @@
 	let knowledge = [];
 	let toolIds = [];
 	let filterIds = [];
+	let actionIds = [];
 
 	const updateHandler = async () => {
 		loading = true;
@@ -93,6 +95,14 @@
 		} else {
 			if (info.meta.filterIds) {
 				delete info.meta.filterIds;
+			}
+		}
+
+		if (actionIds.length > 0) {
+			info.meta.actionIds = actionIds;
+		} else {
+			if (info.meta.actionIds) {
+				delete info.meta.actionIds;
 			}
 		}
 
@@ -159,6 +169,10 @@
 
 				if (model?.info?.meta?.filterIds) {
 					filterIds = [...model?.info?.meta?.filterIds];
+				}
+
+				if (model?.info?.meta?.actionIds) {
+					actionIds = [...model?.info?.meta?.actionIds];
 				}
 
 				if (model?.owned_by === 'openai') {
@@ -552,6 +566,13 @@
 				<FiltersSelector
 					bind:selectedFilterIds={filterIds}
 					filters={$functions.filter((func) => func.type === 'filter')}
+				/>
+			</div>
+
+			<div class="my-2">
+				<ActionsSelector
+					bind:selectedActionIds={actionIds}
+					actions={$functions.filter((func) => func.type === 'action')}
 				/>
 			</div>
 

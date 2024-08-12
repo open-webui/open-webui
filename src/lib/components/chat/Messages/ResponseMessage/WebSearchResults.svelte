@@ -20,7 +20,10 @@
 			<ChevronDown strokeWidth="3.5" className="size-3.5 " />
 		{/if}
 	</div>
-	<div class="text-sm border border-gray-300/30 dark:border-gray-700/50 rounded-xl" slot="content">
+	<div
+		class="text-sm border border-gray-300/30 dark:border-gray-700/50 rounded-xl mb-1.5"
+		slot="content"
+	>
 		{#if status?.query}
 			<a
 				href="https://www.google.com/search?q={status.query}"

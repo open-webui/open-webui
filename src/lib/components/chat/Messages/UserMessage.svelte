@@ -100,7 +100,13 @@
 							{#if file.type === 'image'}
 								<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
 							{:else}
-								<FileItem url={file.url} name={file.name} type={file.type} />
+								<FileItem
+									url={file.url}
+									name={file.name}
+									type={file.type}
+									size={file?.size}
+									colorClassName="bg-white dark:bg-gray-850 "
+								/>
 							{/if}
 						</div>
 					{/each}

@@ -1,7 +1,10 @@
 <script lang="ts">
-	import { user, settings, config } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { createEventDispatcher, onMount, getContext } from 'svelte';
+
+	import { user, settings, config } from '$lib/stores';
+	import { getVoices as _getVoices } from '$lib/apis/audio';
+
 	import Switch from '$lib/components/common/Switch.svelte';
 	const dispatch = createEventDispatcher();
 
@@ -20,26 +23,26 @@
 	let voices = [];
 	let voice = '';
 
-	const getOpenAIVoices = () => {
-		voices = [
-			{ name: 'alloy' },
-			{ name: 'echo' },
-			{ name: 'fable' },
-			{ name: 'onyx' },
-			{ name: 'nova' },
-			{ name: 'shimmer' }
-		];
-	};
+	const getVoices = async () => {
+		if ($config.audio.tts.engine === '') {
+			const getVoicesLoop = setInterval(async () => {
+				voices = await speechSynthesis.getVoices();
 
-	const getWebAPIVoices = () => {
-		const getVoicesLoop = setInterval(async () => {
-			voices = await speechSynthesis.getVoices();
+				// do your loop
+				if (voices.length > 0) {
+					clearInterval(getVoicesLoop);
+				}
+			}, 100);
+		} else {
+			const res = await _getVoices(localStorage.token).catch((e) => {
+				toast.error(e);
+			});
 
-			// do your loop
-			if (voices.length > 0) {
-				clearInterval(getVoicesLoop);
+			if (res) {
+				console.log(res);
+				voices = res.voices;
 			}
-		}, 100);
+		}
 	};
 
 	const toggleResponseAutoPlayback = async () => {
@@ -58,14 +61,16 @@
 		responseAutoPlayback = $settings.responseAutoPlayback ?? false;
 
 		STTEngine = $settings?.audio?.stt?.engine ?? '';
-		voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';
+
+		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
+			voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';
+		} else {
+			voice = $config.audio.tts.voice ?? '';
+		}
+
 		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
 
-		if ($config.audio.tts.engine === 'openai') {
-			getOpenAIVoices();
-		} else {
-			getWebAPIVoices();
-		}
+		await getVoices();
 	});
 </script>
 
@@ -79,6 +84,7 @@
 				},
 				tts: {
 					voice: voice !== '' ? voice : undefined,
+					defaultVoice: $config?.audio?.tts?.voice ?? '',
 					nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
 				}
 			}
@@ -181,7 +187,7 @@
 					</div>
 				</div>
 			</div>
-		{:else if $config.audio.tts.engine === 'openai'}
+		{:else if $config.audio.tts.engine !== ''}
 			<div>
 				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
 				<div class="flex w-full">
@@ -195,7 +201,7 @@
 
 						<datalist id="voice-list">
 							{#each voices as voice}
-								<option value={voice.name} />
+								<option value={voice.id}>{voice.name}</option>
 							{/each}
 						</datalist>
 					</div>

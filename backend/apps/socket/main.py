@@ -44,24 +44,26 @@ async def user_join(sid, data):
     print("user-join", sid, data)
 
     auth = data["auth"] if "auth" in data else None
+    if not auth or "token" not in auth:
+        return
 
-    if auth and "token" in auth:
-        data = decode_token(auth["token"])
+    data = decode_token(auth["token"])
+    if data is None or "id" not in data:
+        return
 
-        if data is not None and "id" in data:
-            user = Users.get_user_by_id(data["id"])
+    user = Users.get_user_by_id(data["id"])
+    if not user:
+        return
 
-        if user:
+    SESSION_POOL[sid] = user.id
+    if user.id in USER_POOL:
+        USER_POOL[user.id].append(sid)
+    else:
+        USER_POOL[user.id] = [sid]
 
-            SESSION_POOL[sid] = user.id
-            if user.id in USER_POOL:
-                USER_POOL[user.id].append(sid)
-            else:
-                USER_POOL[user.id] = [sid]
+    print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
-            print(f"user {user.name}({user.id}) connected with session ID {sid}")
-
-            await sio.emit("user-count", {"count": len(set(USER_POOL))})
+    await sio.emit("user-count", {"count": len(set(USER_POOL))})
 
 
 @sio.on("user-count")
@@ -80,7 +82,6 @@ def get_models_in_use():
 
 @sio.on("usage")
 async def usage(sid, data):
-
     model_id = data["model"]
 
     # Cancel previous callback if there is one
@@ -139,7 +140,7 @@ async def disconnect(sid):
         print(f"Unknown session ID {sid} disconnected")
 
 
-async def get_event_emitter(request_info):
+def get_event_emitter(request_info):
     async def __event_emitter__(event_data):
         await sio.emit(
             "chat-events",
@@ -154,7 +155,7 @@ async def get_event_emitter(request_info):
     return __event_emitter__
 
 
-async def get_event_call(request_info):
+def get_event_call(request_info):
     async def __event_call__(event_data):
         response = await sio.call(
             "chat-events",

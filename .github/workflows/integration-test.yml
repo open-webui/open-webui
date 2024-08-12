@@ -26,6 +26,10 @@ jobs:
             --file docker-compose.a1111-test.yaml \
             up --detach --build
 
+      - name: Delete Docker build cache
+        run: |
+          docker builder prune --all --force
+
       - name: Wait for Ollama to be up
         timeout-minutes: 5
         run: |
@@ -34,10 +38,6 @@ jobs:
             sleep 1
           done
           echo "Service is up!"
-
-      - name: Delete Docker build cache
-        run: |
-          docker builder prune --all --force
 
       - name: Preload Ollama model
         run: |

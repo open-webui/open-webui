@@ -88,6 +88,10 @@
 		"title": "Lithuanian (Lietuvių)"
 	},
 	{
+		"code": "ms-MY",
+		"title": "Malay (Bahasa Malaysia)"
+	},
+	{
 		"code": "nb-NO",
 		"title": "Norwegian Bokmål (Norway)"
 	},
@@ -112,6 +116,10 @@
 		"title": "Portuguese (Portugal)"
 	},
 	{
+		"code": "ro-RO",
+		"title": "Romanian (Romania)"
+	},
+	{
 		"code": "ru-RU",
 		"title": "Russian (Russia)"
 	},
@@ -122,6 +130,10 @@
 	{
 		"code": "sr-RS",
 		"title": "Serbian (Српски)"
+	},
+	{
+		"code": "th-TH",
+		"title": "Thailand (ไทย)"
 	},
 	{
 		"code": "tr-TR",
