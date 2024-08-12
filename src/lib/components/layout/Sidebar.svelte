@@ -12,7 +12,9 @@
 		mobile,
 		showArchivedChats,
 		pinnedChats,
-		showArtifacts
+		showArtifacts,
+		scrollPaginationEnabled,
+		currentChatPage
 	} from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
