@@ -80,12 +80,12 @@
 
 	import 'katex/dist/katex.min.css';
 
-	// import markedKatex from '$lib/utils/katex-extension';
-	// const options = {
-	// 	throwOnError: false
-	// };
+	import markedKatex from '$lib/utils/katex-extension';
+	const options = {
+		throwOnError: false
+	};
 
-	// marked.use(markedKatex(options));
+	marked.use(markedKatex(options));
 
 	$: (async () => {
 		if (message?.content) {
@@ -111,7 +111,7 @@
 					// • auto-render specific keys, e.g.:
 					delimiters: [
 						{ left: '$$', right: '$$', display: true },
-						{ left: '$ ', right: ' $', display: false },
+						{ left: '$', right: '$', display: false },
 						{ left: '\\pu{', right: '}', display: false },
 						{ left: '\\ce{', right: '}', display: false },
 						{ left: '\\(', right: '\\)', display: false },

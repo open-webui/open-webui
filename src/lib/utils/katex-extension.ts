@@ -8,7 +8,7 @@ const blockRule = /^(\${1,2})\n((?:\\[^]|[^\\])+?)\n\1(?:\n|$)/;
 export default function (options = {}) {
   return {
     extensions: [
-      inlineKatex(options, createRenderer(options, true)),
+      inlineKatex(options, createRenderer(options, false)),
       blockKatex(options, createRenderer(options, true)),
     ],
   };
@@ -24,27 +24,27 @@ function inlineKatex(options, renderer) {
   return {
     name: 'inlineKatex',
     level: 'inline',
-    start(src) {
-      let index;
-      let indexSrc = src;
+    // start(src) {
+    //   let index;
+    //   let indexSrc = src;
 
-      while (indexSrc) {
-        index = indexSrc.indexOf('$');
-        if (index === -1) {
-          return;
-        }
-        const f = nonStandard ? index > -1 : index === 0 || indexSrc.charAt(index - 1) === ' ';
-        if (f) {
-          const possibleKatex = indexSrc.substring(index);
+    //   while (indexSrc) {
+    //     index = indexSrc.indexOf('$');
+    //     if (index === -1) {
+    //       return;
+    //     }
+    //     const f = nonStandard ? index > -1 : index === 0 || indexSrc.charAt(index - 1) === ' ';
+    //     if (f) {
+    //       const possibleKatex = indexSrc.substring(index);
 
-          if (possibleKatex.match(ruleReg)) {
-            return index;
-          }
-        }
+    //       if (possibleKatex.match(ruleReg)) {
+    //         return index;
+    //       }
+    //     }
 
-        indexSrc = indexSrc.substring(index + 1).replace(/^\$+/, '');
-      }
-    },
+    //     indexSrc = indexSrc.substring(index + 1).replace(/^\$+/, '');
+    //   }
+    // },
     tokenizer(src, tokens) {
       const match = src.match(ruleReg);
       if (match) {
