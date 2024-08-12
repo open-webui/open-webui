@@ -703,5 +703,10 @@
 	"Your username": "Ulanyjy adyňyz",
 	"You're offline.": "Offline.",
 	"You've reached your token limit for the day.": "Günüňize token çägiňize ýetdiňiz.",
-	"ZIP Code": "Poçta Kody"
+	"ZIP Code": "Poçta Kody",
+	"Self-Aware Document Monitoring": "",
+    "Self-Aware Document Monitoring has been enabled and is now Active": "",
+    "Self-Aware Document Monitoring has been disabled and is now inactive": "",
+    "Failed to fetch Self-Aware Document Monitoring status": "",
+    "Failed to update Self-Aware Document Monitoring": ""
 }

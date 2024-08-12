@@ -703,5 +703,10 @@
 	"Your account status is currently pending activation.": "Tài khoản của bạn hiện đang ở trạng thái chờ kích hoạt.",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
-	"Youtube Loader Settings": "Cài đặt Youtube Loader"
+	"Youtube Loader Settings": "Cài đặt Youtube Loader",
+	"Self-Aware Document Monitoring": "",
+    "Self-Aware Document Monitoring has been enabled and is now Active": "",
+    "Self-Aware Document Monitoring has been disabled and is now inactive": "",
+    "Failed to fetch Self-Aware Document Monitoring status": "",
+    "Failed to update Self-Aware Document Monitoring": ""
 }

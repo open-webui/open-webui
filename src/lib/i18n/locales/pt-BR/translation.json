@@ -705,5 +705,10 @@
 	"Your account status is currently pending activation.": "Sua conta está atualmente pendente de ativação.",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Sua contribuição inteira irá diretamente para o desenvolvedor do plugin; Open WebUI não cobra nenhuma porcentagem. No entanto, a plataforma de financiamento escolhida pode ter suas próprias taxas.",
 	"Youtube": "Youtube",
-	"Youtube Loader Settings": "Configurações do carregador do Youtube"
+	"Youtube Loader Settings": "Configurações do carregador do Youtube",
+	"Self-Aware Document Monitoring": "",
+    "Self-Aware Document Monitoring has been enabled and is now Active": "",
+    "Self-Aware Document Monitoring has been disabled and is now inactive": "",
+    "Failed to fetch Self-Aware Document Monitoring status": "",
+    "Failed to update Self-Aware Document Monitoring": ""
 }

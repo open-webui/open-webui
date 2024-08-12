@@ -706,5 +706,10 @@
 	"Your account status is currently pending activation.": "Статус вашого облікового запису наразі очікує на активацію.",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Весь ваш внесок піде безпосередньо розробнику плагіна; Open WebUI не бере жодних відсотків. Однак, обрана платформа фінансування може мати свої власні збори.",
 	"Youtube": "Youtube",
-	"Youtube Loader Settings": "Налаштування завантажувача Youtube"
+	"Youtube Loader Settings": "Налаштування завантажувача Youtube",
+	"Self-Aware Document Monitoring": "",
+    "Self-Aware Document Monitoring has been enabled and is now Active": "",
+    "Self-Aware Document Monitoring has been disabled and is now inactive": "",
+    "Failed to fetch Self-Aware Document Monitoring status": "",
+    "Failed to update Self-Aware Document Monitoring": ""
 }
