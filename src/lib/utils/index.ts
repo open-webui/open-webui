@@ -120,7 +120,7 @@ export const replaceTokens = (content, char, user) => {
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
-	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
+	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('\\\\', '\\');;
 };
 
 export function unescapeHtml(html: string) {

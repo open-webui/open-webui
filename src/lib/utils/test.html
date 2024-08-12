@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escape Brackets for LaTeX in Markdown</title>
+</head>
+
+<body>
+    <h2>Escape Brackets for LaTeX in Markdown</h2>
+    <textarea id="inputText" rows="10" cols="50">
+Here is some text with LaTeX:
+\[ x^2 + y^2 = z^2 \]
+\(\frac{a}{b}\)
+    </textarea>
+    <br>
+    <button onclick="processText()">Process Text</button>
+    <h3>Processed Text:</h3>
+    <pre id="outputText"></pre>
+
+    <script>
+        function escapeBrackets(text) {
+            const pattern =
+                /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
+            return text.replace(
+                pattern,
+                (match, codeBlock, squareBracket, roundBracket) => {
+                    if (codeBlock) {
+                        return codeBlock;
+                    } else if (squareBracket) {
+                        return `$$${squareBracket}$$`;
+                    } else if (roundBracket) {
+                        return `$${roundBracket}$`;
+                    }
+                    return match;
+                },
+            );
+        }
+
+        function escapeDollarNumber(text) {
+            let escapedText = '';
+            for (let i = 0; i < text.length; i += 1) {
+                let char = text[i];
+                const nextChar = text[i + 1] || ' ';
+                if (char === '$' && nextChar >= '0' && nextChar <= '9') {
+                    char = '\\$';
+                }
+                escapedText += char;
+            }
+            return escapedText;
+        }
+
+        function processText() {
+            const inputText = document.getElementById("inputText").value;
+            const outputText = escapeDollarNumber(escapeBrackets(inputText));
+            document.getElementById("outputText").textContent = outputText;
+        }
+    </script>
+</body>
+
+</html>
