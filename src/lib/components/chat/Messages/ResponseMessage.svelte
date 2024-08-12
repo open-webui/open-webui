@@ -92,7 +92,6 @@
 			tokens = marked.lexer(
 				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
 			);
-			renderLatex();
 		}
 	})();
 

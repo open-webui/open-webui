@@ -28,11 +28,11 @@ function escapeBrackets(text: string) {
 		if (codeBlock) {
 			return codeBlock;
 		} else if (squareBracket !== undefined) {
-			cleanSquareBracket = squareBracket.replace(/\n/g, '\\ ');
-			return `$$${cleanSquareBracket}$$`;
+			cleanSquareBracket = squareBracket.replace(/\s*\n\s*/g, ' ').trim();
+			return `$$ ${cleanSquareBracket} $$`;
 		} else if (roundBracket !== undefined) {
-			cleanRoundBracket = roundBracket.replace(/\n/g, '\\ ');
-			return `$${cleanRoundBracket}$`;
+			cleanRoundBracket = roundBracket.replace(/\s*\n\s*/g, ' ').trim();
+			return `$ ${cleanRoundBracket} $`;
 		}
 		return match;
 	});
