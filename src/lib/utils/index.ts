@@ -55,7 +55,7 @@ function escapeBrackets(text: string) {
 
 export const sanitizeResponseContent = (content: string) => {
 	// replace single backslash with double backslash
-	content = content.replace(/\\\\/g, '\\\\\\\\');
+	// content = content.replace(/\\\\/g, '\\\\\\\\');
 	content = escapeBrackets(escapeDollarNumber(content));
 	// content = convertLatexToSingleLine(content);
 
@@ -118,7 +118,7 @@ export const replaceTokens = (content, char, user) => {
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
-	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('\\\\', '\\');;
+	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
 };
 
 export function unescapeHtml(html: string) {
