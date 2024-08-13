@@ -78,10 +78,16 @@
 	let tokens;
 
 	import 'katex/dist/katex.min.css';
+	import markedKatex from 'marked-katex-extension';
 
-	import markedKatex from '$lib/utils/katex-extension';
+	// import markedKatex from '$lib/utils/katex-extension';
+	// const options = {
+	// 	throwOnError: false
+	// };
 
-	marked.use(markedKatex.default({ strict: false }));
+	// marked.use(markedKatex(options));
+	marked.use(markedKatex());
+
 	$: tokens = marked.lexer(
 		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
 	);
