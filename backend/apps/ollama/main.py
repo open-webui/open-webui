@@ -43,8 +43,8 @@ from config import (
     AppConfig,
 )
 from utils.misc import (
-    apply_model_params_to_body_ollama,
     calculate_sha256,
+    apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
