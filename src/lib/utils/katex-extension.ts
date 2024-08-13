@@ -24,25 +24,7 @@ function inlineKatex(options, renderer) {
 		name: 'inlineKatex',
 		level: 'inline',
 		start(src: string) {
-			let index;
-			let indexSrc = src;
-
-			while (indexSrc) {
-				index = indexSrc.indexOf('$');
-				if (index === -1) {
-					return;
-				}
-				const f = nonStandard ? index > -1 : index === 0 || indexSrc.charAt(index - 1) === ' ';
-				if (f) {
-					const possibleKatex = indexSrc.substring(index);
-
-					if (possibleKatex.match(ruleReg)) {
-						return index;
-					}
-				}
-
-				indexSrc = indexSrc.substring(index + 1).replace(/^\$+/, '');
-			}
+			return src.indexOf('$')
 		},
 		tokenizer(src, tokens) {
 			const match = src.match(ruleReg);
