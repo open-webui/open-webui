@@ -124,7 +124,7 @@
 					auto_render(element, {
 						delimiters: [
 							{ left: '$$', right: '$$', display: true },
-							{ left: '$', right: '$', display: true },
+							{ left: '$', right: '$', display: false },
 							{ left: '\\pu{', right: '}', display: false },
 							{ left: '\\ce{', right: '}', display: false },
 							{ left: '\\(', right: '\\)', display: false },
