@@ -22,7 +22,7 @@ function inlineKatex(options, renderer) {
 			return src.indexOf('$')
 		},
 		tokenizer(src: string) {
-			const match = src.match(/^\$+([^$\n]+?)\$+/)
+			const match = src.match(/(\${1,2})([^$\n]+?)\1/)
 			if (match) {
 				return {
 					type: 'inlineKatex',
