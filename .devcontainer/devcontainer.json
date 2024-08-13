@@ -1,0 +1,8 @@
+{
+	"name": "Imagine",
+	"image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {}
+	},
+	"postCreateCommand": "npm install && cd ./backend && pip install --upgrade pip && pip install -r requirements.txt -U"
+}
