@@ -418,6 +418,7 @@
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Notă: Dacă setați un scor minim, căutarea va returna doar documente cu un scor mai mare sau egal cu scorul minim.",
 	"Notifications": "Notificări",
 	"November": "Noiembrie",
+	"num_gpu (Ollama)": "",
 	"num_thread (Ollama)": "num_thread (Ollama)",
 	"OAuth ID": "ID OAuth",
 	"October": "Octombrie",
