@@ -93,7 +93,7 @@
 			renderLatex();
 
 			tokens = marked.lexer(
-				replaceTokens(sanitizeResponseContent(message.content), model?.name, $user?.name)
+				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
 			);
 		}
 	})();
