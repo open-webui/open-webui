@@ -1,9 +1,6 @@
 import katex from 'katex'
 import 'katex/dist/katex.css'
 
-const inlineRule = /^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n\$]))\1(?=[\s?!\.,:？！。，：]|$)/;
-const inlineRuleNonStandard = /^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n\$]))\1/; // Non-standard, even if there are no spaces before and after $ or $$, try to parse
-
 export default function (options = {}) {
 	return {
 		extensions: [
@@ -18,23 +15,21 @@ function createRenderer(options, newlineAfter) {
 }
 
 function inlineKatex(options, renderer) {
-	const nonStandard = options && options.nonStandard;
-	const ruleReg = nonStandard ? inlineRuleNonStandard : inlineRule;
 	return {
 		name: 'inlineKatex',
 		level: 'inline',
 		start(src: string) {
 			return src.indexOf('$')
 		},
-		tokenizer(src, tokens) {
-			const match = src.match(ruleReg);
+		tokenizer(src: string) {
+			const match = src.match(/^\$+([^$\n]+?)\$+/)
 			if (match) {
 				return {
 					type: 'inlineKatex',
 					raw: match[0],
-					text: match[2].trim(),
-					displayMode: match[1].length === 2,
-				};
+					text: match[1].trim(),
+					displayMode: match[0].startsWith('$$')
+				}
 			}
 		},
 		renderer,
