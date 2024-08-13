@@ -19,10 +19,28 @@ function inlineKatex(options, renderer) {
 		name: 'inlineKatex',
 		level: 'inline',
 		start(src: string) {
-			return src.indexOf('$')
+			let index;
+			let indexSrc = src;
+
+			while (indexSrc) {
+				index = indexSrc.indexOf('$');
+				if (index === -1) {
+					return;
+				}
+				const f = nonStandard ? index > -1 : index === 0 || indexSrc.charAt(index - 1) === ' ';
+				if (f) {
+					const possibleKatex = indexSrc.substring(index);
+
+					if (possibleKatex.match(ruleReg)) {
+						return index;
+					}
+				}
+
+				indexSrc = indexSrc.substring(index + 1).replace(/^\$+/, '');
+			}
 		},
 		tokenizer(src: string) {
-			const match = src.match(/(\${1,2})([^$\n]+?)\1/)
+			const match = src.match(/^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n\$]))\1(?=[\s?!\.,:？！。，：]|$)/)
 			if (match) {
 				return {
 					type: 'inlineKatex',
