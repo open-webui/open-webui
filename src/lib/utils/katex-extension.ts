@@ -26,6 +26,7 @@ function inlineKatex(options, renderer) {
     level: 'inline',
     tokenizer(src, tokens) {
       const match = src.match(ruleReg);
+      console.log('inline match:', match);
       if (match) {
         return {
           type: 'inlineKatex',
