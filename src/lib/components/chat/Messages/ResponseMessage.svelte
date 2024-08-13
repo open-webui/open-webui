@@ -87,36 +87,45 @@
 
 	marked.use(markedKatex(options));
 
-	$: tokens = marked.lexer(
-		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
-	);
+	$: (async () => {
+		if (message?.content) {
+			tokens = marked.lexer(
+				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
+			);
+			renderLatex();
+		}
+	})();
 
 	$: if (message?.done ?? false) {
 		renderLatex();
 	}
 
 	const renderLatex = () => {
-		let chatMessageElements = document
-			.getElementById(`message-${message.id}`)
-			?.getElementsByClassName('chat-assistant');
+		try {
+			const chatMessageContainer = document.getElementById(`message-${message.id}`);
+			if (!chatMessageContainer) return;
+			const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
+			if (!chatMessageElements || chatMessageElements.length === 0) return;
 
-		if (chatMessageElements) {
 			for (const element of chatMessageElements) {
-				auto_render(element, {
-					// customised options
-					// • auto-render specific keys, e.g.:
-					delimiters: [
-						{ left: '$$', right: '$$', display: true },
-						{ left: '$', right: '$', display: false },
-						{ left: '\\pu{', right: '}', display: false },
-						{ left: '\\ce{', right: '}', display: false },
-						{ left: '\\(', right: '\\)', display: false },
-						{ left: '\\[', right: '\\]', display: true }
-					],
-					// • rendering keys, e.g.:
-					throwOnError: false
-				});
+				try {
+					auto_render(element, {
+						delimiters: [
+							{ left: '$$', right: '$$', display: true },
+							{ left: '$', right: '$', display: false },
+							{ left: '\\pu{', right: '}', display: false },
+							{ left: '\\ce{', right: '}', display: false },
+							{ left: '\\(', right: '\\)', display: false },
+							{ left: '\\[', right: '\\]', display: true }
+						],
+						throwOnError: false
+					});
+				} catch (err) {
+					console.error(`Error rendering LaTeX for element:`, element, err);
+				}
 			}
+		} catch (err) {
+			console.error('Error in renderLatex function:', err);
 		}
 	};
 
