@@ -3,7 +3,8 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import terser from '@rollup/plugin-terser';
 
 export default defineConfig(({ mode }) => {
-	const isProduction = mode === 'production';
+	// const isProduction = mode === 'production';
+	const isProduction = false;
 
 	return {
 		plugins: [

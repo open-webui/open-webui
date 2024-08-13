@@ -105,16 +105,23 @@
 	const renderLatex = async () => {
 		try {
 			const chatMessageContainer = document.getElementById(`message-${message.id}`);
-			if (!chatMessageContainer) return;
+			if (!chatMessageContainer) {
+				console.warn(`未找到 id 为 'message-${message.id}' 的元素。`);
+				return;
+			}
+
 			const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
-			if (!chatMessageElements || chatMessageElements.length === 0) return;
+			if (!chatMessageElements || chatMessageElements.length === 0) {
+				console.warn(`在容器中未找到带有 'chat-assistant' 类的元素。`);
+				return;
+			}
 
 			for (const element of chatMessageElements) {
 				try {
 					auto_render(element, {
 						delimiters: [
 							{ left: '$$', right: '$$', display: true },
-							{ left: '$', right: '$', display: false },
+							{ left: '$', right: '$', display: true },
 							{ left: '\\pu{', right: '}', display: false },
 							{ left: '\\ce{', right: '}', display: false },
 							{ left: '\\(', right: '\\)', display: false },
@@ -123,11 +130,11 @@
 						throwOnError: false
 					});
 				} catch (err) {
-					console.error(`Error rendering LaTeX for element:`, element, err);
+					console.error(`渲染 LaTeX 时出错，元素：`, element, err);
 				}
 			}
 		} catch (err) {
-			console.error('Error in renderLatex function:', err);
+			console.error('renderLatex 函数中的错误:', err);
 		}
 	};
 
