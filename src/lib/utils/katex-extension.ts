@@ -1,9 +1,8 @@
 import katex from 'katex'
-import 'katex/dist/katex.css'
-import marked from 'marked'
+import 'katex/dist/katex.min.css';
+import 'katex/contrib/mhchem';
 
-export default function (options): marked.MarkedExtension {
-  options.throwOnError = false
+export default function (options = {}) {
   return {
     extensions: [
       inlineKatex(options),
@@ -12,49 +11,51 @@ export default function (options): marked.MarkedExtension {
   }
 }
 
-function inlineKatex(options): marked.TokenizerAndRendererExtension {
+function inlineKatex(options) {
   return {
     name: 'inlineKatex',
     level: 'inline',
     start(src: string) {
       return src.indexOf('$')
     },
-    tokenizer(src: string, _tokens) {
+    tokenizer(src: string) {
       const match = src.match(/^\$+([^$\n]+?)\$+/)
       if (match) {
         return {
           type: 'inlineKatex',
           raw: match[0],
-          text: match[1].trim()
+          text: match[1].trim(),
+          displayMode: match[0].trim().startsWith('$$')
         }
       }
     },
     renderer(token) {
-      return katex.renderToString(token.text, options)
+      return katex.renderToString(token.text, { ...options, displayMode: token.displayMode })
     }
   }
 }
 
-function blockKatex(options): marked.TokenizerAndRendererExtension {
+function blockKatex(options) {
   return {
     name: 'blockKatex',
     level: 'block',
     start(src: string) {
       return src.indexOf('$$')
     },
-    tokenizer(src: string, _tokens) {
+    tokenizer(src: string) {
       const match = src.match(/^\$\$+\n([^$]+?)\n\$\$/)
       if (match) {
         return {
           type: 'blockKatex',
           raw: match[0],
-          text: match[1].trim()
+          text: match[1].trim(),
+          displayMode: match[0].trim().startsWith('$$')
         }
       }
     },
     renderer(token) {
       options.displayMode = true
-      return `<p>${katex.renderToString(token.text, options)}</p>`
+      return katex.renderToString(token.text, { ...options, displayMode: token.displayMode })
     }
   }
 }
