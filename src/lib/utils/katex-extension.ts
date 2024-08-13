@@ -27,7 +27,7 @@ function inlineKatex(options, renderer) {
 				return {
 					type: 'inlineKatex',
 					raw: match[0],
-					text: match[0].trim(),
+					text: match[1].trim(),
 					displayMode: match[0].startsWith('$$')
 				}
 			}
@@ -50,7 +50,7 @@ function blockKatex(options, renderer) {
 				return {
 					type: 'blockKatex',
 					raw: match[0],
-					text: match[0].trim(),
+					text: match[1].trim(),
 					displayMode: match[0].startsWith('$$')
 				}
 			}
