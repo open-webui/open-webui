@@ -29,10 +29,10 @@ function escapeBrackets(text: string) {
 			return codeBlock;
 		} else if (squareBracket) {
 			cleanSquareBracket = squareBracket.replace(/\s*\n\s*/g, ' ').trim();
-			return `$$${cleanSquareBracket}$$`;
+			return `$$ ${cleanSquareBracket} $$`;
 		} else if (roundBracket) {
 			cleanRoundBracket = roundBracket.replace(/\s*\n\s*/g, ' ').trim();
-			return `$${cleanRoundBracket}$`;
+			return `$ ${cleanRoundBracket} $`;
 		}
 		return match.replace(/\s*\n\s*/g, ' ').trim();
 	});
