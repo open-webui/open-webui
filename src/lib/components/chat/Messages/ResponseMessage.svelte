@@ -89,18 +89,20 @@
 
 	$: (async () => {
 		if (message?.content) {
-			message.content = sanitizeResponseContent(message?.content);
-			tokens = marked.lexer(replaceTokens(message.content, model?.name, $user?.name));
-			await tick();
+			await updateMessageContent();
 		}
 	})();
 
-	$: if (message?.content) {
-		message.content = sanitizeResponseContent(message?.content);
-		renderLatex();
-	}
+	const updateMessageContent = async () => {
+		if (message?.content) {
+			message.content = sanitizeResponseContent(message?.content);
+			tokens = marked.lexer(replaceTokens(message.content, model?.name, $user?.name));
+			await tick();
+			await renderLatex();
+		}
+	};
 
-	const renderLatex = () => {
+	const renderLatex = async () => {
 		try {
 			const chatMessageContainer = document.getElementById(`message-${message.id}`);
 			if (!chatMessageContainer) return;
