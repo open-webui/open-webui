@@ -109,7 +109,7 @@
 		{:else}
 			{unescapeHtml(token.text)}
 		{/if}
-	{:else if token.type === 'inlineKatex'}
+		<!-- {:else if token.type === 'inlineKatex'}
 		{#if token.text}
 			<KatexRenderer
 				content={revertSanitizedResponseContent(token.text)}
@@ -122,7 +122,7 @@
 				content={revertSanitizedResponseContent(token.text)}
 				displayMode={token?.displayMode ?? false}
 			/>
-		{/if}
+		{/if} -->
 	{:else if token.type === 'space'}
 		{''}
 	{:else}
