@@ -376,7 +376,7 @@ async def update_reranking_config(
     try:
         app.state.config.RAG_RERANKING_MODEL = form_data.reranking_model
 
-        update_reranking_model(app.state.config.RAG_RERANKING_MODEL), True
+        update_reranking_model(app.state.config.RAG_RERANKING_MODEL, True)
 
         return {
             "status": True,
