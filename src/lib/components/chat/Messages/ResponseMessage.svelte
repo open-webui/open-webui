@@ -78,6 +78,8 @@
 
 	let tokens;
 
+	let lastMessage;
+
 	import 'katex/dist/katex.min.css';
 
 	import markedKatex from '$lib/utils/katex-extension';
@@ -92,6 +94,10 @@
 			tokens = marked.lexer(
 				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
 			);
+			if (lastMessage?.content) {
+				last_renderLatex();
+			}
+			lastMessage = message;
 		}
 	})();
 
@@ -102,6 +108,35 @@
 	const renderLatex = () => {
 		try {
 			const chatMessageContainer = document.getElementById(`message-${message.id}`);
+			if (!chatMessageContainer) return;
+			const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
+			if (!chatMessageElements || chatMessageElements.length === 0) return;
+
+			for (const element of chatMessageElements) {
+				try {
+					auto_render(element, {
+						delimiters: [
+							{ left: '$$', right: '$$', display: true },
+							{ left: '$', right: '$', display: false },
+							{ left: '\\pu{', right: '}', display: false },
+							{ left: '\\ce{', right: '}', display: false },
+							{ left: '\\(', right: '\\)', display: false },
+							{ left: '\\[', right: '\\]', display: true }
+						],
+						throwOnError: false
+					});
+				} catch (err) {
+					console.error(`Error rendering LaTeX for element:`, element, err);
+				}
+			}
+		} catch (err) {
+			console.error('Error in renderLatex function:', err);
+		}
+	};
+
+	const last_renderLatex = () => {
+		try {
+			const chatMessageContainer = document.getElementById(`message-${lastMessage.id}`);
 			if (!chatMessageContainer) return;
 			const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
 			if (!chatMessageElements || chatMessageElements.length === 0) return;
