@@ -425,6 +425,7 @@
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "注意：最小スコアを設定した場合、検索は最小スコア以上のスコアを持つドキュメントのみを返します。",
 	"Notifications": "デスクトップ通知",
 	"November": "11月",
+	"num_gpu (Ollama)": "",
 	"num_thread (Ollama)": "num_thread(オラマ)",
 	"OAuth ID": "",
 	"October": "10月",

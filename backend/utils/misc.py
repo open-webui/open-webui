@@ -2,7 +2,7 @@ from pathlib import Path
 import hashlib
 import re
 from datetime import timedelta
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Callable
 import uuid
 import time
 
@@ -135,10 +135,21 @@ def apply_model_system_prompt_to_body(params: dict, form_data: dict, user) -> di
 
 
 # inplace function: form_data is modified
-def apply_model_params_to_body(params: dict, form_data: dict) -> dict:
+def apply_model_params_to_body(
+    params: dict, form_data: dict, mappings: dict[str, Callable]
+) -> dict:
     if not params:
         return form_data
 
+    for key, cast_func in mappings.items():
+        if (value := params.get(key)) is not None:
+            form_data[key] = cast_func(value)
+
+    return form_data
+
+
+# inplace function: form_data is modified
+def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
     mappings = {
         "temperature": float,
         "top_p": int,
@@ -147,10 +158,40 @@ def apply_model_params_to_body(params: dict, form_data: dict) -> dict:
         "seed": lambda x: x,
         "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
     }
+    return apply_model_params_to_body(params, form_data, mappings)
 
-    for key, cast_func in mappings.items():
-        if (value := params.get(key)) is not None:
-            form_data[key] = cast_func(value)
+
+def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
+    opts = [
+        "temperature",
+        "top_p",
+        "seed",
+        "mirostat",
+        "mirostat_eta",
+        "mirostat_tau",
+        "num_ctx",
+        "num_batch",
+        "num_keep",
+        "repeat_last_n",
+        "tfs_z",
+        "top_k",
+        "min_p",
+        "use_mmap",
+        "use_mlock",
+        "num_thread",
+        "num_gpu",
+    ]
+    mappings = {i: lambda x: x for i in opts}
+    form_data = apply_model_params_to_body(params, form_data, mappings)
+
+    name_differences = {
+        "max_tokens": "num_predict",
+        "frequency_penalty": "repeat_penalty",
+    }
+
+    for key, value in name_differences.items():
+        if (param := params.get(key, None)) is not None:
+            form_data[value] = param
 
     return form_data
 

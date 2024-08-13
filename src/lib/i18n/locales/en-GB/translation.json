@@ -423,6 +423,7 @@
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "",
 	"Notifications": "",
 	"November": "",
+	"num_gpu (Ollama)": "",
 	"num_thread (Ollama)": "",
 	"OAuth ID": "",
 	"October": "",

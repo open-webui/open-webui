@@ -115,7 +115,7 @@
 							url: OpenAIUrl,
 							batch_size: OpenAIBatchSize
 						}
-				  }
+					}
 				: {})
 		}).catch(async (error) => {
 			toast.error(error);

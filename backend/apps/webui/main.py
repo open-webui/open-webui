@@ -22,7 +22,7 @@ from apps.webui.utils import load_function_module_by_id
 from utils.misc import (
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
-    apply_model_params_to_body,
+    apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
 
@@ -299,7 +299,7 @@ async def generate_function_chat_completion(form_data, user):
             form_data["model"] = model_info.base_model_id
 
         params = model_info.params.model_dump()
-        form_data = apply_model_params_to_body(params, form_data)
+        form_data = apply_model_params_to_body_openai(params, form_data)
         form_data = apply_model_system_prompt_to_body(params, form_data, user)
 
     pipe_id = get_pipe_id(form_data)

@@ -425,6 +425,7 @@
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Nota: Si estableces una puntuación mínima, la búsqueda sólo devolverá documentos con una puntuación mayor o igual a la puntuación mínima.",
 	"Notifications": "Notificaciones",
 	"November": "Noviembre",
+	"num_gpu (Ollama)": "",
 	"num_thread (Ollama)": "num_thread (Ollama)",
 	"OAuth ID": "OAuth ID",
 	"October": "Octubre",

@@ -425,6 +425,7 @@
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Catatan: Jika Anda menetapkan skor minimum, pencarian hanya akan mengembalikan dokumen dengan skor yang lebih besar atau sama dengan skor minimum.",
 	"Notifications": "Pemberitahuan",
 	"November": "November",
+	"num_gpu (Ollama)": "",
 	"num_thread (Ollama)": "num_thread (Ollama)",
 	"OAuth ID": "ID OAuth",
 	"October": "Oktober",

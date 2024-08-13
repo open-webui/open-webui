@@ -92,7 +92,7 @@
 				tags?.length > 0
 					? {
 							tags: tags
-					  }
+						}
 					: null
 			).catch((error) => {
 				toast.error(error);

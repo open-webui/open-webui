@@ -425,6 +425,7 @@
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Obs: Om du anger en tröskel kommer sökningen endast att returnera dokument med ett betyg som är större än eller lika med tröskeln.",
 	"Notifications": "Notifikationer",
 	"November": "november",
+	"num_gpu (Ollama)": "",
 	"num_thread (Ollama)": "num_thread (Ollama)",
 	"OAuth ID": "",
 	"October": "oktober",

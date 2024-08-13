@@ -424,6 +424,7 @@
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Huom: Jos asetat vähimmäispisteet, haku palauttaa vain asiakirjat, joiden pisteet ovat suurempia tai yhtä suuria kuin vähimmäispistemäärä.",
 	"Notifications": "Ilmoitukset",
 	"November": "marraskuu",
+	"num_gpu (Ollama)": "",
 	"num_thread (Ollama)": "num_thread (Ollama)",
 	"OAuth ID": "",
 	"October": "lokakuu",

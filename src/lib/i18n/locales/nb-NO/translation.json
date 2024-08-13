@@ -423,6 +423,7 @@
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "Merk: Hvis du setter en minimums poengsum, vil søket kun returnere dokumenter med en poengsum som er større enn eller lik minimums poengsummen.",
 	"Notifications": "Varsler",
 	"November": "november",
+	"num_gpu (Ollama)": "",
 	"num_thread (Ollama)": "num_thread (Ollama)",
 	"OAuth ID": "OAuth-ID",
 	"October": "oktober",

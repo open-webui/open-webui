@@ -425,6 +425,7 @@
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "ਨੋਟ: ਜੇ ਤੁਸੀਂ ਘੱਟੋ-ਘੱਟ ਸਕੋਰ ਸੈੱਟ ਕਰਦੇ ਹੋ, ਤਾਂ ਖੋਜ ਸਿਰਫ਼ ਉਹੀ ਡਾਕੂਮੈਂਟ ਵਾਪਸ ਕਰੇਗੀ ਜਿਨ੍ਹਾਂ ਦਾ ਸਕੋਰ ਘੱਟੋ-ਘੱਟ ਸਕੋਰ ਦੇ ਬਰਾਬਰ ਜਾਂ ਵੱਧ ਹੋਵੇ।",
 	"Notifications": "ਸੂਚਨਾਵਾਂ",
 	"November": "ਨਵੰਬਰ",
+	"num_gpu (Ollama)": "",
 	"num_thread (Ollama)": "num_thread (ਓਲਾਮਾ)",
 	"OAuth ID": "",
 	"October": "ਅਕਤੂਬਰ",

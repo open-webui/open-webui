@@ -425,6 +425,7 @@
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "ملاحظة: إذا قمت بتعيين الحد الأدنى من النقاط، فلن يؤدي البحث إلا إلى إرجاع المستندات التي لها نقاط أكبر من أو تساوي الحد الأدنى من النقاط.",
 	"Notifications": "إشعارات",
 	"November": "نوفمبر",
+	"num_gpu (Ollama)": "",
 	"num_thread (Ollama)": "num_thread (أولاما)",
 	"OAuth ID": "",
 	"October": "اكتوبر",

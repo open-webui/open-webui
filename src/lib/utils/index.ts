@@ -259,9 +259,9 @@ export const generateInitialsImage = (name) => {
 	const initials =
 		sanitizedName.length > 0
 			? sanitizedName[0] +
-			(sanitizedName.split(' ').length > 1
-				? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
-				: '')
+				(sanitizedName.split(' ').length > 1
+					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
+					: '')
 			: '';
 
 	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
@@ -315,10 +315,10 @@ export const compareVersion = (latest, current) => {
 	return current === '0.0.0'
 		? false
 		: current.localeCompare(latest, undefined, {
-			numeric: true,
-			sensitivity: 'case',
-			caseFirst: 'upper'
-		}) < 0;
+				numeric: true,
+				sensitivity: 'case',
+				caseFirst: 'upper'
+			}) < 0;
 };
 
 export const findWordIndices = (text) => {
