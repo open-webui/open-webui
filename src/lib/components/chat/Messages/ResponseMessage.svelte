@@ -88,9 +88,12 @@
 	// marked.use(markedKatex(options));
 	marked.use(markedKatex());
 
-	$: tokens = marked.lexer(
-		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
-	);
+	$: (async () => {
+		if (message?.content) {
+			message.content = sanitizeResponseContent(message?.content);
+			renderLatex();
+		}
+	})();
 
 	$: if (message?.done ?? false) {
 		renderLatex();
