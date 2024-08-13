@@ -95,18 +95,15 @@
 		}
 	})();
 
-	$: if (message) {
-		if (message?.content) {
-			renderLatex();
-		}
+	$: if (message?.done ?? false) {
+		renderLatex();
 	}
 
 	const renderLatex = () => {
 		try {
 			const chatMessageContainer = document.getElementById(`message-${message.id}`);
 			if (!chatMessageContainer) return;
-
-			const chatMessageElements = chatMessageContainer?.getElementsByClassName('chat-assistant');
+			const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
 			if (!chatMessageElements || chatMessageElements.length === 0) return;
 
 			for (const element of chatMessageElements) {
@@ -123,7 +120,7 @@
 						throwOnError: false
 					});
 				} catch (err) {
-					console.error(`Error rendering LaTeX for message ${message.id}, element:`, element, err);
+					console.error(`Error rendering LaTeX for element:`, element, err);
 				}
 			}
 		} catch (err) {
