@@ -66,7 +66,7 @@
 	$: filteredItems = searchValue
 		? fuse.search(searchValue).map((e) => {
 				return e.item;
-		  })
+			})
 		: items.filter((item) => !item.model?.info?.meta?.hidden);
 
 	const pullModelHandler = async () => {
