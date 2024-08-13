@@ -42,8 +42,6 @@ const convertLatexToSingleLine = (content: string) => {
 	// Patterns to match multiline LaTeX blocks
 	const patterns = [
 		/(\$\$\s[\s\S]*?\s\$\$)/g, // Match $$ ... $$
-		/(\\\[[\s\S]*?\\\])/g, // Match \[ ... \]
-		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
 	];
 
 	patterns.forEach((pattern) => {
@@ -57,9 +55,8 @@ const convertLatexToSingleLine = (content: string) => {
 
 export const sanitizeResponseContent = (content: string) => {
 	// replace single backslash with double backslash
-	// content = content.replace(/\\\\/g, '\\\\\\\\');
-	content = escapeBrackets(content);
-	content = convertLatexToSingleLine(content);
+	content = content.replace(/\\\\/g, '\\\\\\\\');
+	content = convertLatexToSingleLine(escapeBrackets(content));
 
 	// First, temporarily replace valid <video> tags with a placeholder
 	const videoTagRegex = /<video\s+src="([^"]+)"\s+controls><\/video>/gi;
@@ -120,7 +117,7 @@ export const replaceTokens = (content, char, user) => {
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
-	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
+	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('\\\\', '\\');
 };
 
 export function unescapeHtml(html: string) {
