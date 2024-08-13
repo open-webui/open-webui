@@ -94,21 +94,16 @@
 			tokens = marked.lexer(
 				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
 			);
+			await tick();
+			renderLatex();
 		}
 	})();
 
-	$: if (message) {
-		if (message?.content) {
-			renderLatex();
-		}
+	$: if (message?.done ?? false) {
+		renderLatex();
 	}
 
-	const renderLatex = async () => {
-		await tick();
-
-		if (tooltipInstance) {
-			tooltipInstance[0]?.destroy();
-		}
+	const renderLatex = () => {
 		try {
 			const chatMessageContainer = document.getElementById(`message-${message.id}`);
 			if (!chatMessageContainer) return;
