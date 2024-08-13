@@ -94,10 +94,6 @@
 			tokens = marked.lexer(
 				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
 			);
-			if (lastMessage?.content) {
-				last_renderLatex();
-			}
-			lastMessage = message;
 		}
 	})();
 
