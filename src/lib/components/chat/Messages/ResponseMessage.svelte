@@ -90,13 +90,11 @@
 		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
 	);
 
-	$: if (message) {
+	$: if (message?.done ?? false) {
 		renderLatex();
 	}
 
-	const renderLatex = async () => {
-		await tick();
-
+	const renderLatex = () => {
 		try {
 			const chatMessageContainer = document.getElementById(`message-${message.id}`);
 			if (!chatMessageContainer) return;
