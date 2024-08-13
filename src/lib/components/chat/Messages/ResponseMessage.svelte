@@ -87,13 +87,14 @@
 
 	marked.use(markedKatex(options));
 
+	$: tokens = marked.lexer(
+		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
+	);
+
 	$: (async () => {
 		if (message?.content) {
-			let tem_message_content = sanitizeResponseContent(message?.content);
-			message.content = tem_message_content;
-			tokens = marked.lexer(
-				replaceTokens(sanitizeResponseContent(tem_message_content), model?.name, $user?.name)
-			);
+			message.content = sanitizeResponseContent(message?.content);
+			await tick();
 			renderLatex();
 		}
 	})();
