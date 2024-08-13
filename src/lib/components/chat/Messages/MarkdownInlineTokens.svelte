@@ -44,6 +44,7 @@
 			/>
 		{/if}
 	{:else if token.type === 'text'}
-		{token.raw}
+		<!-- {token.raw} -->
+		<KatexRenderer content={revertSanitizedResponseContent(token.raw)} displayMode={false} />
 	{/if}
 {/each}
