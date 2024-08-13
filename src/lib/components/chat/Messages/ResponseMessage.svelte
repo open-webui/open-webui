@@ -90,11 +90,7 @@
 	$: (async () => {
 		if (message?.content) {
 			message.content = sanitizeResponseContent(message?.content);
-			if (message.content) {
-				tokens = marked.lexer(
-					replaceTokens(sanitizeResponseContent(message.content), model?.name, $user?.name)
-				);
-			}
+			tokens = marked.lexer(replaceTokens(message.content, model?.name, $user?.name));
 			await tick();
 		}
 	})();
