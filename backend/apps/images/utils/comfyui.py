@@ -170,7 +170,7 @@ FLUX_DEFAULT_PROMPT = """
     },
     "10": {
         "inputs": {
-            "vae_name": "ae.sft"
+            "vae_name": "ae.safetensors"
         },
         "class_type": "VAELoader"
     },
@@ -184,7 +184,7 @@ FLUX_DEFAULT_PROMPT = """
     },
     "12": {
         "inputs": {
-            "unet_name": "flux1-dev.sft",
+            "unet_name": "flux1-dev.safetensors",
             "weight_dtype": "default"
         },
         "class_type": "UNETLoader"
