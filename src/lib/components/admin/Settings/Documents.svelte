@@ -149,7 +149,7 @@
 							url: OpenAIUrl,
 							batch_size: OpenAIBatchSize
 						}
-				  }
+					}
 				: {}),
 			...(embeddingEngine === 'cohereai'
 				? {
