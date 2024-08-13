@@ -89,21 +89,15 @@
 
 	$: (async () => {
 		if (message?.content) {
-			await updateMessageContent();
+			tokens = marked.lexer(
+				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
+			);
 		}
 	})();
 
-	const updateMessageContent = async () => {
-		if (message?.content) {
-			message.content = sanitizeResponseContent(message?.content);
-			// await tick();
-			// await renderLatex();
-			tokens = marked.lexer(replaceTokens(message.content, model?.name, $user?.name));
-		}
-		if (message?.done ?? false) {
-			renderLatex();
-		}
-	};
+	$: if (message?.done ?? false) {
+		renderLatex();
+	}
 
 	const renderLatex = async () => {
 		try {
