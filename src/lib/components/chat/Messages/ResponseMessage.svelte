@@ -62,6 +62,7 @@
 	let edit = false;
 	let editedContent = '';
 	let editTextAreaElement: HTMLTextAreaElement;
+	let tooltipInstance = null;
 
 	let sentencesAudio = {};
 	let speaking = null;
