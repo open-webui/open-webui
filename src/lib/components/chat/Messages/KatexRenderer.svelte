@@ -4,6 +4,17 @@
 
 	export let content: string;
 	export let displayMode: boolean = false;
+
+	let renderedContent: HTMLElement;
+
+	$: {
+		if (renderedContent) {
+			katex.render(content, renderedContent, {
+				displayMode,
+				throwOnError: false
+			});
+		}
+	}
 </script>
 
-{@html katex.renderToString(content, { displayMode, throwOnError: false })}
+<div bind:this={renderedContent}></div>
