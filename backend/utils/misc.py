@@ -179,6 +179,7 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "use_mmap",
         "use_mlock",
         "num_thread",
+        "num_gpu",
     ]
     mappings = {i: lambda x: x for i in opts}
     form_data = apply_model_params_to_body(params, form_data, mappings)
