@@ -853,7 +853,7 @@
 							console.log(line);
 							let data = JSON.parse(line);
 
-							if (navigator.vibrate) {
+							if (navigator.vibrate && $settings.hapticFeedback) {
 								navigator.vibrate(5);
 							}
 
