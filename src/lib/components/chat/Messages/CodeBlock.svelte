@@ -1,11 +1,14 @@
 <script lang="ts">
-	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { copyToClipboard } from '$lib/utils';
 	import hljs from 'highlight.js';
-	import 'highlight.js/styles/github-dark.min.css';
 	import { loadPyodide } from 'pyodide';
-	import { onMount, tick } from 'svelte';
+	import { getContext, getAllContexts } from 'svelte';
+	import { copyToClipboard } from '$lib/utils';
+
+	import 'highlight.js/styles/github-dark.min.css';
+
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+
+	const i18n = getContext('i18n');
 
 	export let id = '';
 
@@ -233,12 +236,12 @@ __builtins__.input = input`);
 						class="copy-code-button bg-none border-none p-1"
 						on:click={() => {
 							executePython(code);
-						}}>Run</button
+						}}>{$i18n.t('Run')}</button
 					>
 				{/if}
 			{/if}
 			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
-				>{copied ? 'Copied' : 'Copy Code'}</button
+				>{copied ? $i18n.t('Copied') : $i18n.t('Copy Code')}</button
 			>
 		</div>
 	</div>

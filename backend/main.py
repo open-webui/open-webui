@@ -2219,7 +2219,8 @@ async def oauth_callback(provider: str, request: Request, response: Response):
         log.warning(f"OAuth callback failed, sub is missing: {user_data}")
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
     provider_sub = f"{provider}@{sub}"
-    email = user_data.get("email", "").lower()
+    email_claim = webui_app.state.config.OAUTH_EMAIL_CLAIM
+    email = user_data.get(email_claim, "").lower()
     # We currently mandate that email addresses are provided
     if not email:
         log.warning(f"OAuth callback failed, email is missing: {user_data}")

@@ -260,7 +260,7 @@ export const getOpenAIModelsDirect = async (
 		throw error;
 	}
 
-	const models = Array.isArray(res) ? res : res?.data ?? null;
+	const models = Array.isArray(res) ? res : (res?.data ?? null);
 
 	return models
 		.map((model) => ({ id: model.id, name: model.name ?? model.id, external: true }))
