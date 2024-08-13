@@ -1,59 +1,60 @@
-import katex from 'katex';
+import katex from 'katex'
+import 'katex/dist/katex.css'
+import marked from 'marked'
 
-const inlineRule = /^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n\$]))\1(?=[\s?!\.,:？！。，：]|$)/;
-const inlineRuleNonStandard = /^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n\$]))\1/; // Non-standard, even if there are no spaces before and after $ or $$, try to parse
-
-const blockRule = /^(\${1,2})\n((?:\\[^]|[^\\])+?)\n\1(?:\n|$)/;
-
-export default function (options = {}) {
+export default function (options): marked.MarkedExtension {
+  options.throwOnError = false
   return {
     extensions: [
-      inlineKatex(options, createRenderer(options, false)),
-      blockKatex(options, createRenderer(options, true)),
-    ],
-  };
+      inlineKatex(options),
+      blockKatex(options)
+    ]
+  }
 }
 
-function createRenderer(options, newlineAfter) {
-  return (token) => katex.renderToString(token.text, { ...options, displayMode: token.displayMode }) + (newlineAfter ? '\n' : '');
-}
-
-function inlineKatex(options, renderer) {
-  const nonStandard = options && options.nonStandard;
-  const ruleReg = nonStandard ? inlineRuleNonStandard : inlineRule;
+function inlineKatex(options): marked.TokenizerAndRendererExtension {
   return {
     name: 'inlineKatex',
     level: 'inline',
-    tokenizer(src) {
-      const match = src.match(ruleReg);
+    start(src: string) {
+      return src.indexOf('$')
+    },
+    tokenizer(src: string, _tokens) {
+      const match = src.match(/^\$+([^$\n]+?)\$+/)
       if (match) {
         return {
           type: 'inlineKatex',
           raw: match[0],
-          text: match[2].trim(),
-          displayMode: match[1].length === 2,
-        };
+          text: match[1].trim()
+        }
       }
     },
-    renderer,
-  };
+    renderer(token) {
+      return katex.renderToString(token.text, options)
+    }
+  }
 }
 
-function blockKatex(options, renderer) {
+function blockKatex(options): marked.TokenizerAndRendererExtension {
   return {
     name: 'blockKatex',
     level: 'block',
-    tokenizer(src) {
-      const match = src.match(blockRule);
+    start(src: string) {
+      return src.indexOf('$$')
+    },
+    tokenizer(src: string, _tokens) {
+      const match = src.match(/^\$\$+\n([^$]+?)\n\$\$/)
       if (match) {
         return {
           type: 'blockKatex',
           raw: match[0],
-          text: match[2].trim(),
-          displayMode: match[1].length === 2,
-        };
+          text: match[1].trim()
+        }
       }
     },
-    renderer,
-  };
+    renderer(token) {
+      options.displayMode = true
+      return `<p>${katex.renderToString(token.text, options)}</p>`
+    }
+  }
 }
