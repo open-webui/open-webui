@@ -96,8 +96,8 @@
 	const updateMessageContent = async () => {
 		if (message?.content) {
 			message.content = sanitizeResponseContent(message?.content);
-			await tick();
-			await renderLatex();
+			// await tick();
+			// await renderLatex();
 			tokens = marked.lexer(replaceTokens(message.content, model?.name, $user?.name));
 		}
 		if (message?.done ?? false) {
