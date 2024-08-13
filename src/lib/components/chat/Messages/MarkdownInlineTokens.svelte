@@ -36,13 +36,13 @@
 		<del>
 			<svelte:self id={`${id}-del`} tokens={token.tokens} />
 		</del>
-	<!-- {:else if token.type === 'inlineKatex'}
+	{:else if token.type === 'inlineKatex'}
 		{#if token.text}
 			<KatexRenderer
 				content={revertSanitizedResponseContent(token.text)}
 				displayMode={token?.displayMode ?? false}
 			/>
-		{/if} -->
+		{/if}
 	{:else if token.type === 'text'}
 		{token.raw}
 	{/if}
