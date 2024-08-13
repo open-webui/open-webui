@@ -418,6 +418,7 @@
 	"Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.": "注意：如果设置了最低分数，搜索只会返回分数大于或等于最低分数的文档。",
 	"Notifications": "桌面通知",
 	"November": "十一月",
+	"num_gpu (Ollama)": "",
 	"num_thread (Ollama)": "num_thread（Ollama）",
 	"OAuth ID": "OAuth ID",
 	"October": "十月",
