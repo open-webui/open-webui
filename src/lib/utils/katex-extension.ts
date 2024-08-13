@@ -45,8 +45,8 @@ function inlineKatex(options, renderer) {
 				return {
 					type: 'inlineKatex',
 					raw: match[0],
-					text: match[1].trim(),
-					displayMode: match[0].startsWith('$$')
+					text: match[2].trim(),
+					displayMode: match[1].length === 2,
 				}
 			}
 		},
