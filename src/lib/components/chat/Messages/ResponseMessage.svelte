@@ -90,14 +90,27 @@
 	// marked.use(markedKatex(options));
 
 	$: (async () => {
+	try {
 		if (message?.content) {
-			tokens = marked.lexer(
-				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
-			);
+			let sanitizedContent = sanitizeResponseContent(message?.content);
+			let replacedContent = replaceTokens(sanitizedContent, model?.name, $user?.name);
+			tokens = marked.lexer(replacedContent);
 			await tick();
-			renderLatex();
+
+			// 在调用 renderLatex 之前，检查 tokens 是否被正确初始化
+			if (tokens) {
+				renderLatex();
+			} else {
+				console.error("Tokens are undefined or null.");
+			}
+		} else {
+			console.error("Message content is undefined or null.");
 		}
-	})();
+	} catch (error) {
+		console.error("An error occurred during processing:", error);
+	}
+})();
+
 
 	$: if (message?.done ?? false) {
 		renderLatex();
