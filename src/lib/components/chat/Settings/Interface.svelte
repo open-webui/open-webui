@@ -68,7 +68,6 @@
 	const toggleHapticFeedback = async () => {
 		hapticFeedback = !hapticFeedback;
 		saveSettings({ hapticFeedback: hapticFeedback });
-		console.log('toggleHapticFeedback: ', $settings?.hapticFeedback)
 	}
 
 	const toggleUserLocation = async () => {
