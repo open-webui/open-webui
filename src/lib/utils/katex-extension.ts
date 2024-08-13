@@ -27,7 +27,7 @@ function inlineKatex(options, renderer) {
     name: 'inlineKatex',
     level: 'inline',
     tokenizer(src) {
-      const match = ruleReg.exec(src);
+      const match = src.match(ruleReg);
       if (match) {
         console.log('inline match:', match);
         const isBlock = match[0].startsWith('$$');
@@ -35,14 +35,17 @@ function inlineKatex(options, renderer) {
         return {
           type: 'inlineKatex',
           raw: match[0],
-          text: content.trim(),
+          text: content ? content.trim() : '',
           displayMode: isBlock,
         };
+      } else {
+        return null;
       }
     },
     renderer,
   };
 }
+
 
 function blockKatex(options, renderer) {
   return {
