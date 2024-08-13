@@ -43,6 +43,13 @@
 				displayMode={token?.displayMode ?? false}
 			/>
 		{/if}
+	{:else if token.type === 'blockKatex'}
+		{#if token.text}
+			<KatexRenderer
+				content={revertSanitizedResponseContent(token.text)}
+				displayMode={token?.displayMode ?? false}
+			/>
+		{/if}
 	{:else if token.type === 'text'}
 		{token.raw}
 	{/if}
