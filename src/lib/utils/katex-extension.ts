@@ -1,8 +1,9 @@
 import katex from 'katex'
-import 'katex/dist/katex.min.css';
-import 'katex/contrib/mhchem';
+import 'katex/dist/katex.css'
+import marked from 'marked'
 
-export default function (options = {}) {
+export default function (options): marked.MarkedExtension {
+  options.throwOnError = false
   return {
     extensions: [
       inlineKatex(options),
@@ -11,51 +12,49 @@ export default function (options = {}) {
   }
 }
 
-function inlineKatex(options) {
+function inlineKatex(options): marked.TokenizerAndRendererExtension {
   return {
     name: 'inlineKatex',
     level: 'inline',
     start(src: string) {
       return src.indexOf('$')
     },
-    tokenizer(src: string) {
+    tokenizer(src: string, _tokens) {
       const match = src.match(/^\$+([^$\n]+?)\$+/)
       if (match) {
         return {
           type: 'inlineKatex',
           raw: match[0],
-          text: match[1].trim(),
-          displayMode: match[0].trim().startsWith('$$')
+          text: match[1].trim()
         }
       }
     },
     renderer(token) {
-      return katex.renderToString(token.text, { ...options, displayMode: token.displayMode })
+      return katex.renderToString(token.text, options)
     }
   }
 }
 
-function blockKatex(options) {
+function blockKatex(options): marked.TokenizerAndRendererExtension {
   return {
     name: 'blockKatex',
     level: 'block',
     start(src: string) {
       return src.indexOf('$$')
     },
-    tokenizer(src: string) {
+    tokenizer(src: string, _tokens) {
       const match = src.match(/^\$\$+\n([^$]+?)\n\$\$/)
       if (match) {
         return {
           type: 'blockKatex',
           raw: match[0],
-          text: match[1].trim(),
-          displayMode: match[0].trim().startsWith('$$')
+          text: match[1].trim()
         }
       }
     },
     renderer(token) {
       options.displayMode = true
-      return katex.renderToString(token.text, { ...options, displayMode: token.displayMode })
+      return `<p>${katex.renderToString(token.text, options)}</p>`
     }
   }
 }

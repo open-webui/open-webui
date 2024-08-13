@@ -81,12 +81,7 @@
 
 	import markedKatex from '$lib/utils/katex-extension';
 
-	const options = {
-		throwOnError: false,
-		strict: false
-	};
-	marked.use(markedKatex(options));
-	
+	marked.use(markedKatex.default({ strict: false }));
 	$: tokens = marked.lexer(
 		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
 	);
