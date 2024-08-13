@@ -4,7 +4,8 @@ import terser from '@rollup/plugin-terser';
 
 export default defineConfig(({ mode }) => {
 	// const isProduction = mode === 'production';
-	const isProduction = true;
+	const isProduction = false;
+	// const isProduction = true;
 
 	return {
 		plugins: [

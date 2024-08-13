@@ -6,18 +6,18 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 // Helper functions
 //////////////////////////
 
-function escapeDollarNumber(text: string) {
-	let escapedText = '';
-	for (let i = 0; i < text.length; i += 1) {
-		let char = text[i];
-		const nextChar = text[i + 1] || ' ';
-		if (char === '$' && nextChar >= '0' && nextChar <= '9') {
-			char = '\\$';
-		}
-		escapedText += char;
-	}
-	return escapedText;
-}
+// function escapeDollarNumber(text: string) {
+// 	let escapedText = '';
+// 	for (let i = 0; i < text.length; i += 1) {
+// 		let char = text[i];
+// 		const nextChar = text[i + 1] || ' ';
+// 		if (char === '$' && nextChar >= '0' && nextChar <= '9') {
+// 			char = '\\$';
+// 		}
+// 		escapedText += char;
+// 	}
+// 	return escapedText;
+// }
 
 function escapeBrackets(text: string) {
 	let cleanSquareBracket = '';
@@ -28,8 +28,10 @@ function escapeBrackets(text: string) {
 		if (codeBlock) {
 			return codeBlock;
 		} else if (squareBracket) {
+			cleanSquareBracket = squareBracket.replace(/\s*\n\s*/g, ' ').trim();
 			return `$$${cleanSquareBracket}$$`;
 		} else if (roundBracket) {
+			cleanRoundBracket = roundBracket.replace(/\s*\n\s*/g, ' ').trim();
 			return `$${cleanRoundBracket}$`;
 		}
 		return match.replace(/\s*\n\s*/g, ' ').trim();
@@ -56,7 +58,7 @@ function escapeBrackets(text: string) {
 export const sanitizeResponseContent = (content: string) => {
 	// replace single backslash with double backslash
 	// content = content.replace(/\\\\/g, '\\\\\\\\');
-	content = escapeBrackets(escapeDollarNumber(content));
+	content = escapeBrackets(content);
 	// content = convertLatexToSingleLine(content);
 
 	// First, temporarily replace valid <video> tags with a placeholder
