@@ -62,7 +62,6 @@
 	let edit = false;
 	let editedContent = '';
 	let editTextAreaElement: HTMLTextAreaElement;
-	let tooltipInstance = null;
 
 	let sentencesAudio = {};
 	let speaking = null;
@@ -78,8 +77,6 @@
 
 	let tokens;
 
-	let lastMessage;
-
 	import 'katex/dist/katex.min.css';
 
 	// import markedKatex from '$lib/utils/katex-extension';
@@ -89,34 +86,17 @@
 
 	// marked.use(markedKatex(options));
 
-	$: (async () => {
-	try {
-		if (message?.content) {
-			let sanitizedContent = sanitizeResponseContent(message?.content);
-			let replacedContent = replaceTokens(sanitizedContent, model?.name, $user?.name);
-			tokens = marked.lexer(replacedContent);
-			await tick();
+	$: tokens = marked.lexer(
+		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
+	);
 
-			// 在调用 renderLatex 之前，检查 tokens 是否被正确初始化
-			if (tokens) {
-				renderLatex();
-			} else {
-				console.error("Tokens are undefined or null.");
-			}
-		} else {
-			console.error("Message content is undefined or null.");
-		}
-	} catch (error) {
-		console.error("An error occurred during processing:", error);
-	}
-})();
-
-
-	$: if (message?.done ?? false) {
+	$: if (message) {
 		renderLatex();
 	}
 
-	const renderLatex = () => {
+	const renderLatex = async () => {
+		await tick();
+
 		try {
 			const chatMessageContainer = document.getElementById(`message-${message.id}`);
 			if (!chatMessageContainer) return;
