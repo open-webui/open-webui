@@ -109,7 +109,7 @@ class TagTable:
         self, user_id: str, form_data: ChatIdTagForm
     ) -> Optional[ChatIdTagModel]:
         tag = self.get_tag_by_name_and_user_id(form_data.tag_name, user_id)
-        if tag == None:
+        if tag is None:
             tag = self.insert_new_tag(form_data.tag_name, user_id)
 
         id = str(uuid.uuid4())
