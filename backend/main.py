@@ -460,10 +460,13 @@ def get_configured_tools(
 
 
 # Mutation on body
-def add_tools_to_body(body, user, extra_params, model) -> dict:
+def add_tools_to_body(body, user, extra_params, model) -> tuple[dict, dict]:
+    """
+    returns a tuple of body and configured_tools
+    """
     tool_ids = body.pop("tool_ids", None)
     if not tool_ids:
-        return body
+        return body, {}
 
     log.debug(f"{tool_ids=}")
     custom_params = {
@@ -478,7 +481,7 @@ def add_tools_to_body(body, user, extra_params, model) -> dict:
         for tool in configured_tools.values()
     ]
     body["tools"] = tools
-    return body
+    return body, configured_tools
 
 
 async def chat_completion_tools_handler(
@@ -636,9 +639,11 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 content={"detail": str(e)},
             )
 
+        # TODO: Temporary, also this is disgusting from a type checking perspective
+        # Needs refactoring!!!!
+        configured_tools = {}
         try:
-            # TODO: Temporary
-            prepend_tools = True
+            prepend_tools = False
             if prepend_tools:
                 body, flags = await chat_completion_tools_handler(
                     body, user, extra_params
@@ -646,7 +651,9 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 contexts.extend(flags.get("contexts", []))
                 citations.extend(flags.get("citations", []))
             else:
-                body = add_tools_to_body(body, user, extra_params, model)
+                body, configured_tools = add_tools_to_body(
+                    body, user, extra_params, model
+                )
         except Exception as e:
             log.exception(e)
 
@@ -700,24 +707,66 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             content_type = response.headers["Content-Type"]
             if "text/event-stream" in content_type:
                 return StreamingResponse(
-                    self.openai_stream_wrapper(response.body_iterator, data_items),
+                    self.openai_stream_wrapper(
+                        response.body_iterator, data_items, configured_tools
+                    ),
                 )
             if "application/x-ndjson" in content_type:
                 return StreamingResponse(
                     self.ollama_stream_wrapper(response.body_iterator, data_items),
                 )
 
+        print(f"{response=}")
         return response
 
     async def _receive(self, body: bytes):
         return {"type": "http.request", "body": body, "more_body": False}
 
-    async def openai_stream_wrapper(self, original_generator, data_items):
+    # TODO: FIX THIS!
+    async def openai_stream_wrapper(
+        self, original_generator, data_items, configured_tools
+    ):
         for item in data_items:
             yield f"data: {json.dumps(item)}\n\n"
 
+        final_message = ""
         async for data in original_generator:
+            a = data.decode("utf-8")
+            a = a.strip().strip("data: ")
+            if a == "":
+                continue
+            if a == "[DONE]":
+                break
+            a = json.loads(a)
+            choice = a["choices"][0]
+            if "delta" in choice:
+                content = choice["delta"]["content"]
+            else:
+                content = choice["message"]["content"]
+            final_message += content or ""
             yield data
+        print("FINAL MESSAGE")
+        final_message = json.loads(final_message)
+        choice = final_message["choices"][0]
+        if choice["finish_reason"] == "tool_calls":
+            tools = choice["message"]["tool_calls"]
+            for tool in tools:
+                tool_call_id = tool["id"]
+                func = tool["function"]
+                name = func["name"]
+                params = json.loads(func["arguments"])
+                result = await configured_tools[name]["callable"](**params)
+                message = {
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "name": name,
+                    "content": result,
+                }
+                yield "data: [TOOL]"
+                yield f"data: {json.dumps(message)}\n\n"
+                print(f"{message=}")
+        print(final_message)
+        yield "data: [DONE]"
 
     async def ollama_stream_wrapper(self, original_generator, data_items):
         for item in data_items:
@@ -1077,6 +1126,7 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
         )
     model = app.state.MODELS[model_id]
 
+    form_data["stream"] = False
     if model.get("pipe"):
         return await generate_function_chat_completion(form_data, user=user)
     if model["owned_by"] == "ollama":
