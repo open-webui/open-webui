@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Free up Disk Space
-        run: bash script/free-disk-space.sh
+        run: bash ./.github/script/free-disk-space.sh
 
       - name: Build and run Compose Stack
         run: |
