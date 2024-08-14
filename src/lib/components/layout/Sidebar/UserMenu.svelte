@@ -19,6 +19,7 @@
 	const dispatch = createEventDispatcher();
 	let modelStatus = '';
 	let lobeChat_url = '';
+	let midjourney_url = '';
 
 	const init = async () => {
 		try {
@@ -26,6 +27,7 @@
 			if (backendConfig) {
 				modelStatus = backendConfig.model_status;
 				lobeChat_url = backendConfig.lobeChat_url;
+				midjourney_url = backendConfig.midjourney_url;
 			} else {
 				console.log('backendConfig is null or undefined');
 			}
@@ -147,6 +149,32 @@
 						</svg>
 					</div>
 					<div class=" self-center font-medium">{$i18n.t('Lobe Chat')}</div>
+				</button>
+			{/if}
+
+			{#if midjourney_url}
+				<button
+					class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+					on:click={() => {
+						window.open(midjourney_url, '_blank');
+						showDropdown = false;
+					}}
+				>
+					<div class="self-center mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 15 15"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="w-5 h-5"
+						>
+							<path
+								d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center font-medium">{$i18n.t('Midjourney')}</div>
 				</button>
 			{/if}
 

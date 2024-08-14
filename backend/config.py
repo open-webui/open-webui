@@ -553,6 +553,8 @@ MODEL_STATUS = os.environ.get("MODEL_STATUS", "")
 
 LOBECHAT_URL = os.environ.get("LOBECHAT_URL", "")
 
+MIDJOURNEY_URL = os.environ.get("MIDJOURNEY_URL", "")
+
 ####################################
 # File Upload DIR
 ####################################
