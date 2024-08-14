@@ -886,6 +886,8 @@ async def generate_chat_completion(
                         if request_id in REQUEST_POOL:
                             REQUEST_POOL.remove(request_id)
 
+            log.info(f'ACTUAL PAYLOAD: {form_data.model_dump_json(exclude_none=True)}')
+
             r = requests.request(
                 method="POST",
                 url=f"{url}/api/chat",
@@ -990,6 +992,8 @@ async def generate_openai_chat_completion(
                         r.close()
                         if request_id in REQUEST_POOL:
                             REQUEST_POOL.remove(request_id)
+            
+            log.info(f'TOOLS PAYLOAD: {form_data.model_dump_json(exclude_none=True)}')
 
             r = requests.request(
                 method="POST",
