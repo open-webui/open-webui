@@ -27,7 +27,7 @@
 					on:click={() => {
 						valves[property] =
 							(valves[property] ?? null) === null
-								? valvesSpec.properties[property]?.default ?? ''
+								? (valvesSpec.properties[property]?.default ?? '')
 								: null;
 
 						dispatch('change');

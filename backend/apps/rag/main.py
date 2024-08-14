@@ -13,7 +13,7 @@ import os, shutil, logging, re
 from datetime import datetime
 
 from pathlib import Path
-from typing import List, Union, Sequence, Iterator, Any
+from typing import Union, Sequence, Iterator, Any
 
 from chromadb.utils.batch_utils import create_batches
 from langchain_core.documents import Document
@@ -380,7 +380,7 @@ async def update_reranking_config(
     try:
         app.state.config.RAG_RERANKING_MODEL = form_data.reranking_model
 
-        update_reranking_model(app.state.config.RAG_RERANKING_MODEL), True
+        update_reranking_model(app.state.config.RAG_RERANKING_MODEL, True)
 
         return {
             "status": True,
@@ -443,7 +443,7 @@ class ChunkParamUpdateForm(BaseModel):
 
 
 class YoutubeLoaderConfig(BaseModel):
-    language: List[str]
+    language: list[str]
     translation: Optional[str] = None
 
 
@@ -667,7 +667,7 @@ def query_doc_handler(
 
 
 class QueryCollectionsForm(BaseModel):
-    collection_names: List[str]
+    collection_names: list[str]
     query: str
     k: Optional[int] = None
     r: Optional[float] = None
@@ -1046,7 +1046,7 @@ class TikaLoader:
         self.file_path = file_path
         self.mime_type = mime_type
 
-    def load(self) -> List[Document]:
+    def load(self) -> list[Document]:
         with open(self.file_path, "rb") as f:
             data = f.read()
 
@@ -1210,7 +1210,7 @@ def store_doc(
             f.close()
 
         f = open(file_path, "rb")
-        if collection_name == None:
+        if collection_name is None:
             collection_name = calculate_sha256(f)[:63]
         f.close()
 
@@ -1263,7 +1263,7 @@ def process_doc(
         f = open(file_path, "rb")
 
         collection_name = form_data.collection_name
-        if collection_name == None:
+        if collection_name is None:
             collection_name = calculate_sha256(f)[:63]
         f.close()
 
@@ -1321,7 +1321,7 @@ def store_text(
 ):
 
     collection_name = form_data.collection_name
-    if collection_name == None:
+    if collection_name is None:
         collection_name = calculate_sha256_string(form_data.content)
 
     result = store_text_in_vector_db(
@@ -1364,7 +1364,7 @@ def scan_docs_dir(user=Depends(get_admin_user)):
                         sanitized_filename = sanitize_filename(filename)
                         doc = Documents.get_doc_by_name(sanitized_filename)
 
-                        if doc == None:
+                        if doc is None:
                             doc = Documents.insert_new_doc(
                                 user.id,
                                 DocumentForm(

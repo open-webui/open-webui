@@ -10,7 +10,9 @@
 #   universal: false
 
 -e file:.
-aiohttp==3.9.5
+aiohappyeyeballs==2.3.5
+    # via aiohttp
+aiohttp==3.10.2
     # via langchain
     # via langchain-community
     # via open-webui
@@ -57,13 +59,13 @@ beautifulsoup4==4.12.3
     # via unstructured
 bidict==0.23.1
     # via python-socketio
-black==24.4.2
+black==24.8.0
     # via open-webui
 blinker==1.8.2
     # via flask
-boto3==1.34.110
+boto3==1.34.153
     # via open-webui
-botocore==1.34.110
+botocore==1.34.155
     # via boto3
     # via s3transfer
 build==1.2.1
@@ -84,9 +86,9 @@ chardet==5.2.0
 charset-normalizer==3.3.2
     # via requests
     # via unstructured-client
-chroma-hnswlib==0.7.5
+chroma-hnswlib==0.7.6
     # via chromadb
-chromadb==0.5.4
+chromadb==0.5.5
     # via langchain-chroma
     # via open-webui
 click==8.1.7
@@ -179,7 +181,7 @@ frozenlist==1.4.1
 fsspec==2024.3.1
     # via huggingface-hub
     # via torch
-google-ai-generativelanguage==0.6.4
+google-ai-generativelanguage==0.6.6
     # via google-generativeai
 google-api-core==2.19.0
     # via google-ai-generativelanguage
@@ -196,7 +198,7 @@ google-auth==2.29.0
     # via kubernetes
 google-auth-httplib2==0.2.0
     # via google-api-python-client
-google-generativeai==0.5.4
+google-generativeai==0.7.2
     # via open-webui
 googleapis-common-protos==1.63.0
     # via google-api-core
@@ -269,7 +271,7 @@ jsonpointer==2.4
     # via jsonpatch
 kubernetes==29.0.0
     # via chromadb
-langchain==0.2.11
+langchain==0.2.12
     # via langchain-community
     # via open-webui
 langchain-chroma==0.1.2
@@ -285,7 +287,7 @@ langchain-text-splitters==0.2.0
     # via langchain
 langdetect==1.0.9
     # via unstructured
-langfuse==2.39.2
+langfuse==2.43.3
     # via open-webui
 langsmith==0.1.96
     # via langchain
@@ -491,7 +493,7 @@ pydub==0.25.1
     # via open-webui
 pygments==2.18.0
     # via rich
-pyjwt==2.8.0
+pyjwt==2.9.0
     # via open-webui
 pymongo==4.8.0
     # via open-webui
@@ -502,7 +504,7 @@ pypandoc==1.13
 pyparsing==2.4.7
     # via httplib2
     # via oletools
-pypdf==4.2.0
+pypdf==4.3.1
     # via open-webui
     # via unstructured-client
 pypika==0.48.9
@@ -533,7 +535,7 @@ python-magic==0.4.27
 python-multipart==0.0.9
     # via fastapi
     # via open-webui
-python-pptx==0.6.23
+python-pptx==1.0.0
     # via open-webui
 python-socketio==5.11.3
     # via open-webui
@@ -684,6 +686,7 @@ typing-extensions==4.11.0
     # via opentelemetry-sdk
     # via pydantic
     # via pydantic-core
+    # via python-pptx
     # via sqlalchemy
     # via torch
     # via typer
@@ -718,7 +721,7 @@ uvicorn==0.22.0
     # via open-webui
 uvloop==0.19.0
     # via uvicorn
-validators==0.28.1
+validators==0.33.0
     # via open-webui
 watchfiles==0.21.0
     # via uvicorn

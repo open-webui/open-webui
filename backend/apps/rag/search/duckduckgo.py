@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import Optional
 from apps.rag.search.main import SearchResult, get_filtered_results
 from duckduckgo_search import DDGS
 from config import SRC_LOG_LEVELS
@@ -9,7 +9,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_duckduckgo(
-    query: str, count: int, filter_list: Optional[List[str]] = None
+    query: str, count: int, filter_list: Optional[list[str]] = None
 ) -> list[SearchResult]:
     """
     Search using DuckDuckGo's Search API and return the results as a list of SearchResult objects.
@@ -18,7 +18,7 @@ def search_duckduckgo(
         count (int): The number of results to return
 
     Returns:
-        List[SearchResult]: A list of search results
+        list[SearchResult]: A list of search results
     """
     # Use the DDGS context manager to create a DDGS object
     with DDGS() as ddgs:

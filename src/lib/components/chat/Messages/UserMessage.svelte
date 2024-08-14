@@ -62,8 +62,8 @@
 	{#if !($settings?.chatBubble ?? true)}
 		<ProfileImage
 			src={message.user
-				? $models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ?? '/user.png'
-				: user?.profile_image_url ?? '/user.png'}
+				? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ?? '/user.png')
+				: (user?.profile_image_url ?? '/user.png')}
 		/>
 	{/if}
 	<div class="w-full overflow-hidden pl-1">
@@ -96,7 +96,7 @@
 			{#if message.files}
 				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
 					{#each message.files as file}
-						<div class={$settings?.chatBubble ?? true ? 'self-end' : ''}>
+						<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
 							{#if file.type === 'image'}
 								<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
 							{:else}
@@ -162,12 +162,12 @@
 				</div>
 			{:else}
 				<div class="w-full">
-					<div class="flex {$settings?.chatBubble ?? true ? 'justify-end' : ''} mb-2">
+					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end' : ''} mb-2">
 						<div
-							class="rounded-3xl {$settings?.chatBubble ?? true
+							class="rounded-3xl {($settings?.chatBubble ?? true)
 								? `max-w-[90%] px-5 py-2  bg-gray-50 dark:bg-gray-850 ${
 										message.files ? 'rounded-tr-lg' : ''
-								  }`
+									}`
 								: ''}  "
 						>
 							<pre id="user-message">{message.content}</pre>
@@ -175,7 +175,7 @@
 					</div>
 
 					<div
-						class=" flex {$settings?.chatBubble ?? true
+						class=" flex {($settings?.chatBubble ?? true)
 							? 'justify-end'
 							: ''}  text-gray-600 dark:text-gray-500"
 					>

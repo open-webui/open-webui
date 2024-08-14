@@ -2,10 +2,6 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
-	import tippy from 'tippy.js';
-	import auto_render from 'katex/dist/contrib/auto-render.mjs';
-	import 'katex/dist/katex.min.css';
-	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
@@ -38,7 +34,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
-	import TokenRenderer from './TokenRenderer.svelte';
+	import MarkdownTokens from './MarkdownTokens.svelte';
 
 	export let message;
 	export let siblings;
@@ -77,98 +73,25 @@
 
 	let selectedCitation = null;
 
-	$: tokens = marked.lexer(
-		replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
-	);
+	let tokens;
 
-	$: if (message) {
-		renderStyling();
-	}
+	import 'katex/dist/katex.min.css';
 
-	const renderStyling = async () => {
-		await tick();
+	import markedKatex from '$lib/utils/katex-extension';
 
-		if (tooltipInstance) {
-			tooltipInstance[0]?.destroy();
-		}
-
-		renderLatex();
-
-		if (message.info) {
-			let tooltipContent = '';
-			if (message.info.openai) {
-				tooltipContent = `prompt_tokens: ${message.info.prompt_tokens ?? 'N/A'}<br/>
-													completion_tokens: ${message.info.completion_tokens ?? 'N/A'}<br/>
-													total_tokens: ${message.info.total_tokens ?? 'N/A'}`;
-			} else {
-				tooltipContent = `response_token/s: ${
-					`${
-						Math.round(
-							((message.info.eval_count ?? 0) / (message.info.eval_duration / 1000000000)) * 100
-						) / 100
-					} tokens` ?? 'N/A'
-				}<br/>
-					prompt_token/s: ${
-						Math.round(
-							((message.info.prompt_eval_count ?? 0) /
-								(message.info.prompt_eval_duration / 1000000000)) *
-								100
-						) / 100 ?? 'N/A'
-					} tokens<br/>
-                    total_duration: ${
-											Math.round(((message.info.total_duration ?? 0) / 1000000) * 100) / 100 ??
-											'N/A'
-										}ms<br/>
-                    load_duration: ${
-											Math.round(((message.info.load_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
-										}ms<br/>
-                    prompt_eval_count: ${message.info.prompt_eval_count ?? 'N/A'}<br/>
-                    prompt_eval_duration: ${
-											Math.round(((message.info.prompt_eval_duration ?? 0) / 1000000) * 100) /
-												100 ?? 'N/A'
-										}ms<br/>
-                    eval_count: ${message.info.eval_count ?? 'N/A'}<br/>
-                    eval_duration: ${
-											Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
-										}ms<br/>
-                    approximate_total: ${approximateToHumanReadable(message.info.total_duration)}`;
-			}
-			tooltipInstance = tippy(`#info-${message.id}`, {
-				content: `<span class="text-xs" id="tooltip-${message.id}">${tooltipContent}</span>`,
-				allowHTML: true,
-				theme: 'dark',
-				arrow: false,
-				offset: [0, 4]
-			});
-		}
+	const options = {
+		throwOnError: false
 	};
 
-	const renderLatex = () => {
-		let chatMessageElements = document
-			.getElementById(`message-${message.id}`)
-			?.getElementsByClassName('chat-assistant');
+	marked.use(markedKatex(options));
 
-		if (chatMessageElements) {
-			for (const element of chatMessageElements) {
-				auto_render(element, {
-					// customised options
-					// • auto-render specific keys, e.g.:
-					delimiters: [
-						{ left: '$$', right: '$$', display: false },
-						{ left: '$ ', right: ' $', display: false },
-						{ left: '\\pu{', right: '}', display: false },
-						{ left: '\\ce{', right: '}', display: false },
-						{ left: '\\(', right: '\\)', display: false },
-						{ left: '( ', right: ' )', display: false },
-						{ left: '\\[', right: '\\]', display: false },
-						{ left: '[ ', right: ' ]', display: false }
-					],
-					// • rendering keys, e.g.:
-					throwOnError: false
-				});
-			}
+	$: (async () => {
+		if (message?.content) {
+			tokens = marked.lexer(
+				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
+			);
 		}
-	};
+	})();
 
 	const playAudio = (idx) => {
 		return new Promise((res) => {
@@ -235,7 +158,7 @@
 							const res = await synthesizeOpenAISpeech(
 								localStorage.token,
 								$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-									? $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
+									? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
 									: $config?.audio?.tts?.voice,
 								sentence
 							).catch((error) => {
@@ -323,14 +246,12 @@
 		editedContent = '';
 
 		await tick();
-		renderStyling();
 	};
 
 	const cancelEditMessage = async () => {
 		edit = false;
 		editedContent = '';
 		await tick();
-		renderStyling();
 	};
 
 	const generateImage = async (message) => {
@@ -355,21 +276,11 @@
 	$: if (!edit) {
 		(async () => {
 			await tick();
-			renderStyling();
-
-			await mermaid.run({
-				querySelector: '.mermaid'
-			});
 		})();
 	}
 
 	onMount(async () => {
 		await tick();
-		renderStyling();
-
-		await mermaid.run({
-			querySelector: '.mermaid'
-		});
 	});
 </script>
 
@@ -413,7 +324,7 @@
 				{/if}
 
 				<div
-					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-headings:my-0 prose-headings:-mb-4 prose-p:m-0 prose-p:-mb-6 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-8 prose-ol:p-0 prose-li:-mb-4 whitespace-pre-line"
+					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line"
 				>
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
@@ -493,15 +404,15 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full">
+							<div class="w-full flex flex-col">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-									{#each tokens as token, tokenIdx}
-										<TokenRenderer {token} {tokenIdx} id={message.id} />
-									{/each}
+									{#key message.id}
+										<MarkdownTokens id={message.id} {tokens} />
+									{/key}
 								{/if}
 
 								{#if message.error}
@@ -834,31 +745,71 @@
 								{/if}
 
 								{#if message.info}
-									<Tooltip content={$i18n.t('Generation Info')} placement="bottom">
-										<button
-											class=" {isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
-											on:click={() => {
-												console.log(message);
-											}}
-											id="info-{message.id}"
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="2.3"
-												stroke="currentColor"
-												class="w-4 h-4"
+									<Tooltip
+										content={message.info.openai
+											? `prompt_tokens: ${message.info.prompt_tokens ?? 'N/A'}<br/>
+													completion_tokens: ${message.info.completion_tokens ?? 'N/A'}<br/>
+													total_tokens: ${message.info.total_tokens ?? 'N/A'}`
+											: `response_token/s: ${
+													`${
+														Math.round(
+															((message.info.eval_count ?? 0) /
+																(message.info.eval_duration / 1000000000)) *
+																100
+														) / 100
+													} tokens` ?? 'N/A'
+												}<br/>
+					prompt_token/s: ${
+						Math.round(
+							((message.info.prompt_eval_count ?? 0) /
+								(message.info.prompt_eval_duration / 1000000000)) *
+								100
+						) / 100 ?? 'N/A'
+					} tokens<br/>
+		            total_duration: ${
+									Math.round(((message.info.total_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
+								}ms<br/>
+		            load_duration: ${
+									Math.round(((message.info.load_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
+								}ms<br/>
+		            prompt_eval_count: ${message.info.prompt_eval_count ?? 'N/A'}<br/>
+		            prompt_eval_duration: ${
+									Math.round(((message.info.prompt_eval_duration ?? 0) / 1000000) * 100) / 100 ??
+									'N/A'
+								}ms<br/>
+		            eval_count: ${message.info.eval_count ?? 'N/A'}<br/>
+		            eval_duration: ${
+									Math.round(((message.info.eval_duration ?? 0) / 1000000) * 100) / 100 ?? 'N/A'
+								}ms<br/>
+		            approximate_total: ${approximateToHumanReadable(message.info.total_duration)}`}
+										placement="top"
+									>
+										<Tooltip content={$i18n.t('Generation Info')} placement="bottom">
+											<button
+												class=" {isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
+												on:click={() => {
+													console.log(message);
+												}}
+												id="info-{message.id}"
 											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
-												/>
-											</svg>
-										</button>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="2.3"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
 									</Tooltip>
 								{/if}
 

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, Optional
+from typing import Optional
 import time
 
 from sqlalchemy import String, Column, BigInteger, Text
@@ -79,10 +79,10 @@ class PromptsTable:
 
                 prompt = db.query(Prompt).filter_by(command=command).first()
                 return PromptModel.model_validate(prompt)
-        except:
+        except Exception:
             return None
 
-    def get_prompts(self) -> List[PromptModel]:
+    def get_prompts(self) -> list[PromptModel]:
         with get_db() as db:
 
             return [
@@ -101,7 +101,7 @@ class PromptsTable:
                 prompt.timestamp = int(time.time())
                 db.commit()
                 return PromptModel.model_validate(prompt)
-        except:
+        except Exception:
             return None
 
     def delete_prompt_by_command(self, command: str) -> bool:
@@ -112,7 +112,7 @@ class PromptsTable:
                 db.commit()
 
                 return True
-        except:
+        except Exception:
             return False
 
 
