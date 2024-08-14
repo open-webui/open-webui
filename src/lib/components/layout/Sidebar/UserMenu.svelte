@@ -165,7 +165,7 @@
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
 							viewBox="0 0 15 15"
-							stroke-width="1.5"
+							stroke-width="1"
 							stroke="currentColor"
 							class="w-5 h-5"
 						>
