@@ -146,7 +146,7 @@ class ModelsTable:
             with get_db() as db:
                 model = db.get(Model, id)
                 return ModelModel.model_validate(model)
-        except:
+        except Exception:
             return None
 
     def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
@@ -175,7 +175,7 @@ class ModelsTable:
                 db.commit()
 
                 return True
-        except:
+        except Exception:
             return False
 
 

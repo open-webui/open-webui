@@ -235,7 +235,7 @@ async def delete_function_by_id(
         function_path = os.path.join(FUNCTIONS_DIR, f"{id}.py")
         try:
             os.remove(function_path)
-        except:
+        except Exception:
             pass
 
     return result

@@ -93,7 +93,7 @@ class DocumentsTable:
                     return DocumentModel.model_validate(result)
                 else:
                     return None
-            except:
+            except Exception:
                 return None
 
     def get_doc_by_name(self, name: str) -> Optional[DocumentModel]:
@@ -102,7 +102,7 @@ class DocumentsTable:
 
                 document = db.query(Document).filter_by(name=name).first()
                 return DocumentModel.model_validate(document) if document else None
-        except:
+        except Exception:
             return None
 
     def get_docs(self) -> List[DocumentModel]:
@@ -160,7 +160,7 @@ class DocumentsTable:
                 db.query(Document).filter_by(name=name).delete()
                 db.commit()
                 return True
-        except:
+        except Exception:
             return False
 
 

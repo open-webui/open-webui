@@ -115,7 +115,7 @@ class ToolsTable:
 
                 tool = db.get(Tool, id)
                 return ToolModel.model_validate(tool)
-        except:
+        except Exception:
             return None
 
     def get_tools(self) -> List[ToolModel]:
@@ -141,7 +141,7 @@ class ToolsTable:
                 )
                 db.commit()
                 return self.get_tool_by_id(id)
-        except:
+        except Exception:
             return None
 
     def get_user_valves_by_id_and_user_id(
@@ -196,7 +196,7 @@ class ToolsTable:
                 tool = db.query(Tool).get(id)
                 db.refresh(tool)
                 return ToolModel.model_validate(tool)
-        except:
+        except Exception:
             return None
 
     def delete_tool_by_id(self, id: str) -> bool:
@@ -206,7 +206,7 @@ class ToolsTable:
                 db.commit()
 
                 return True
-        except:
+        except Exception:
             return False
 
 
