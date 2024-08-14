@@ -1,9 +1,10 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/utils';
 
 export const getUserPermissions = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/permissions/user`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/users/permissions/user`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -30,7 +31,7 @@ export const getUserPermissions = async (token: string) => {
 export const updateUserPermissions = async (token: string, permissions: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/permissions/user`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/users/permissions/user`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -60,7 +61,7 @@ export const updateUserPermissions = async (token: string, permissions: object) 
 export const updateUserRole = async (token: string, id: string, role: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/update/role`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/users/update/role`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -91,7 +92,7 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 export const getUsers = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/users/`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -118,7 +119,7 @@ export const getUsers = async (token: string) => {
 export const deleteUserById = async (token: string, userId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/users/${userId}`, {
 		method: 'DELETE',
 		headers: {
 			'Content-Type': 'application/json',
@@ -152,7 +153,7 @@ type UserUpdateForm = {
 export const updateUserById = async (token: string, userId: string, user: UserUpdateForm) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/update`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/users/${userId}/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

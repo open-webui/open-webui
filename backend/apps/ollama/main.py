@@ -112,7 +112,7 @@ async def cancel_ollama_request(request_id: str, user=Depends(get_current_user))
             REQUEST_POOL.remove(request_id)
         return True
     else:
-        raise HTTPException(status_code=401, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
 
 
 async def fetch_url(url):
@@ -198,7 +198,7 @@ async def get_ollama_tags(
                     error_detail = f"Ollama: {e}"
 
             raise HTTPException(
-                status_code=r.status_code if r else 500,
+                status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=error_detail,
             )
 
@@ -225,7 +225,7 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
             return {"version": lowest_version["version"]}
         else:
             raise HTTPException(
-                status_code=500,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=ERROR_MESSAGES.OLLAMA_NOT_FOUND,
             )
     else:
@@ -247,7 +247,7 @@ async def get_ollama_versions(url_idx: Optional[int] = None):
                     error_detail = f"Ollama: {e}"
 
             raise HTTPException(
-                status_code=r.status_code if r else 500,
+                status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=error_detail,
             )
 
@@ -322,7 +322,7 @@ async def pull_model(
                 error_detail = f"Ollama: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r else 500,
+            status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail,
         )
 
@@ -345,7 +345,7 @@ async def push_model(
             url_idx = app.state.MODELS[form_data.name]["urls"][0]
         else:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
             )
 
@@ -393,7 +393,7 @@ async def push_model(
                 error_detail = f"Ollama: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r else 500,
+            status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail,
         )
 
@@ -458,7 +458,7 @@ async def create_model(
                 error_detail = f"Ollama: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r else 500,
+            status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail,
         )
 
@@ -480,7 +480,7 @@ async def copy_model(
             url_idx = app.state.MODELS[form_data.source]["urls"][0]
         else:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.source),
             )
 
@@ -510,7 +510,7 @@ async def copy_model(
                 error_detail = f"Ollama: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r else 500,
+            status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail,
         )
 
@@ -527,7 +527,7 @@ async def delete_model(
             url_idx = app.state.MODELS[form_data.name]["urls"][0]
         else:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
             )
 
@@ -557,7 +557,7 @@ async def delete_model(
                 error_detail = f"Ollama: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r else 500,
+            status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail,
         )
 
@@ -566,7 +566,7 @@ async def delete_model(
 async def show_model_info(form_data: ModelNameForm, user=Depends(get_current_user)):
     if form_data.name not in app.state.MODELS:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.name),
         )
 
@@ -595,7 +595,7 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_current_use
                 error_detail = f"Ollama: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r else 500,
+            status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail,
         )
 
@@ -624,7 +624,7 @@ async def generate_embeddings(
             url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
@@ -652,7 +652,7 @@ async def generate_embeddings(
                 error_detail = f"Ollama: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r else 500,
+            status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail,
         )
 
@@ -674,7 +674,7 @@ def generate_ollama_embeddings(
             url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
@@ -743,7 +743,7 @@ async def generate_completion(
             url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
@@ -807,7 +807,7 @@ async def generate_completion(
                 error_detail = f"Ollama: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r else 500,
+            status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail,
         )
 
@@ -846,7 +846,7 @@ async def generate_chat_completion(
             url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
@@ -917,7 +917,7 @@ async def generate_chat_completion(
                 error_detail = f"Ollama: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r else 500,
+            status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail,
         )
 
@@ -955,7 +955,7 @@ async def generate_openai_chat_completion(
             url_idx = random.choice(app.state.MODELS[model]["urls"])
         else:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
             )
 
@@ -1021,7 +1021,7 @@ async def generate_openai_chat_completion(
                 error_detail = f"Ollama: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r else 500,
+            status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail,
         )
 
@@ -1117,7 +1117,7 @@ async def download_model(
 
     if not any(form_data.url.startswith(host) for host in allowed_hosts):
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid file_url. Only URLs from allowed hosts are permitted.",
         )
 
@@ -1331,6 +1331,6 @@ async def deprecated_proxy(path: str, request: Request, user=Depends(get_current
                 error_detail = f"Ollama: {e}"
 
         raise HTTPException(
-            status_code=r.status_code if r else 500,
+            status_code=r.status_code if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail,
         )

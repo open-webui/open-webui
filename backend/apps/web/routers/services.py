@@ -51,7 +51,7 @@ async def submit_leave_form(
     logging.info(f"Received leave form data: {form_data}")
     if session_user:
         if not session_user.extra_sso:
-            raise HTTPException(401, detail=ERROR_MESSAGES.INVALID_ACCOUNT)
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_ACCOUNT)
         access_token = json.loads(session_user.extra_sso)["access_token"]
         logging.info(f"SSO access_token: {access_token}")
 
@@ -81,9 +81,15 @@ Sincerely,
             logging.info(f"Preparing to send email to {recipient}")
             await mail.send_mail(subject, body, recipient, form_data)
             logging.info(f"Email sent to {recipient}")
+        except PermissionError as e:
+            logging.error(f"Error sending email: {e}")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=f"Oops! Something went wrong while sending the email. Error: {e}.")
         except ValueError as e:
             logging.error(f"Error sending email: {e}")
-            raise HTTPException(401, detail=f"Oops! Something went wrong while sending the email. Error: {e}.")
+            raise HTTPException(status.HTTP_406_NOT_ACCEPTABLE, detail=f"Oops! Something went wrong. {e}")
+        except Exception as e:
+            logging.error(f"Error sending email: {e}")
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Oops! Something went wrong while sending the email.")
 
         return {
                 "email": session_user.email,
@@ -91,4 +97,4 @@ Sincerely,
                 "recipient": recipient,
             }
     else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_CRED)

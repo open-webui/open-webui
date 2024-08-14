@@ -520,3 +520,25 @@ export const approximateToHumanReadable = (nanoseconds: number) => {
 
 	return results.reverse().join(' ');
 };
+
+export const fetchApi = async (url, options) => {
+	let error = null
+	const result = await fetch(url, options).then(async (response) => {
+		if (!response.ok) throw response;
+		return response
+	}).catch(err => {
+		error = err
+		return err
+	})
+	if (error) {
+		if (error.status == 401) {
+			localStorage.removeItem('token');
+			window.alert('Session expired. Please login again.')
+			location.href = '/auth';
+			return null
+		} else {
+			window.alert('Request failed. Please try again.')
+		}
+	}
+	return result
+}

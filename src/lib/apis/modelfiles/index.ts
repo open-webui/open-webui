@@ -1,9 +1,10 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/utils';
 
 export const createNewModelfile = async (token: string, modelfile: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/modelfiles/create`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/modelfiles/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -34,7 +35,7 @@ export const createNewModelfile = async (token: string, modelfile: object) => {
 export const getModelfiles = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/modelfiles/`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/modelfiles/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -65,7 +66,7 @@ export const getModelfiles = async (token: string = '') => {
 export const getModelfileByTagName = async (token: string, tagName: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/modelfiles/`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/modelfiles/`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -104,7 +105,7 @@ export const updateModelfileByTagName = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/modelfiles/update`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/modelfiles/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -140,7 +141,7 @@ export const updateModelfileByTagName = async (
 export const deleteModelfileByTagName = async (token: string, tagName: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/modelfiles/delete`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/modelfiles/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

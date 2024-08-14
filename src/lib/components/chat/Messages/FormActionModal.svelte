@@ -7,6 +7,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { user } from '$lib/stores';
 	import { submitLeaveForm } from '$lib/apis/chats';
+	import { toast } from 'svelte-sonner';
 	// import Select, { Option } from '@smui/select';
 
 	const i18n = getContext('i18n');
@@ -26,6 +27,7 @@
 	let type = '';
 	let address = '';
 	let dayCount = 0;
+	let days = 0;
 	const leaves = ['Annual Leave', 'Sick Leave'];
 
 	$: if (citation) {
@@ -37,15 +39,23 @@
 			};
 		});
 	}
-	$: dayCount =
-		(new Date(endDate).getTime() - new Date(startDate).getTime()) / 1000 / 60 / 60 / 24 + 1;
-
+	$: dayCount = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 1000 / 60 / 60 / 24 + 1;
+	$: if (new Date(startDate).getTime() - new Date(endDate).getTime() > 0) {
+		endDate = new Date(startDate)
+	}
+	$: if (dayCount) {
+		days = dayCount
+	}
 	const dateFormatter = (val) => {
-		const date = val ? new Date(val) : new Date();
-		const day = String(date.getDate()).padStart(2, '0'); // 获取日，并确保两位数格式
-		const month = String(date.getMonth() + 1).padStart(2, '0'); // 获取月，并确保两位数格式（月份从0开始，所以需要+1）
-		const year = String(date.getFullYear()).slice(-2); // 获取年的最后两位
-		return `${day}-${month}-${year}`;
+		// const date = val ? new Date(val) : new Date();
+		// const day = String(date.getDate()).padStart(2, '0'); // 获取日，并确保两位数格式
+		// const month = String(date.getMonth() + 1).padStart(2, '0'); // 获取月，并确保两位数格式（月份从0开始，所以需要+1）
+		// const year = String(date.getFullYear()).slice(-2); // 获取年的最后两位
+		// return `${day}-${month}-${year}`;
+		const date = val ? new Date(val) : new Date()
+		const dateString = date.toDateString().split(' ')
+		dateString.splice(0,1)
+		return `${dateString[1]} ${dateString[0]} ${dateString[2]}`
 	};
 	const handleConfirm = () => {
 		const formData = {
@@ -57,7 +67,7 @@
 			remarks: remark,
 			leavefrom: dateFormatter(startDate),
 			leaveto: dateFormatter(endDate),
-			days: String(dayCount),
+			days: String(days),
 			address: address,
 			tele: phone,
 			email: $user.email,
@@ -69,14 +79,14 @@
 				show = false;
 			})
 			.catch((err) => {
-				window.alert(err.detail + ' Submission failed.');
+				toast(err.detail + ' Submission failed.');
 				return;
 			});
 	};
 </script>
 
 <!-- <Modal size="lg" bind:show> -->
-<div class="w-2/3 bg-[#ffffffee] rounded-lg my-4 mx-2">
+<div class="w-3/4 bg-[#ffffffee] rounded-lg my-4 mx-2">
 	<!-- <div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center capitalize">
 				{$i18n.t('Citation')}
@@ -109,7 +119,7 @@
 			>
 				<!-- Leave Type & ID  -->
 				<div class="flex w-full">
-					<div class="w-2/3 mr-10">
+					<div class="w-1/2 mr-16">
 						<div class="mb-2 text-sm">Type of Leave</div>
 						<div class="flex items-center">
 							<img src="/icon/type.png" alt="icon-form" class="h-[22px] mr-2" />
@@ -160,7 +170,8 @@
 						<div class="mt-4 text-sm">Leave Days</div>
 						<div class="my-2 flex items-center">
 							<img src="/icon/calendar1.png" alt="icon-form" class="h-[24px] mr-2" />
-							{dayCount} Day(s)
+							<Textfield required variant="outlined" bind:value={days} class="w-1/2 mr-2" />
+							<span>Day(s)</span>
 						</div>
 					</div>
 				</div>

@@ -120,7 +120,7 @@ async def update_engine_url(
             r = requests.head(url)
             app.state.AUTOMATIC1111_BASE_URL = url
         except Exception as e:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT(e))
 
     if form_data.COMFYUI_BASE_URL == None:
         app.state.COMFYUI_BASE_URL = COMFYUI_BASE_URL
@@ -131,7 +131,7 @@ async def update_engine_url(
             r = requests.head(url)
             app.state.COMFYUI_BASE_URL = url
         except Exception as e:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT(e))
 
     return {
         "AUTOMATIC1111_BASE_URL": app.state.AUTOMATIC1111_BASE_URL,
@@ -158,7 +158,7 @@ async def update_openai_config(
     form_data: OpenAIConfigUpdateForm, user=Depends(get_admin_user)
 ):
     if form_data.key == "":
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
     app.state.OPENAI_API_BASE_URL = form_data.url
     app.state.OPENAI_API_KEY = form_data.key
@@ -192,7 +192,7 @@ async def update_image_size(
         }
     else:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.INCORRECT_FORMAT("  (e.g., 512x512)."),
         )
 
@@ -218,7 +218,7 @@ async def update_image_size(
         }
     else:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.INCORRECT_FORMAT("  (e.g., 50)."),
         )
 
@@ -256,7 +256,7 @@ def get_models(user=Depends(get_current_user)):
             )
     except Exception as e:
         app.state.ENABLED = False
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 @app.get("/models/default")
@@ -272,7 +272,7 @@ async def get_default_model(user=Depends(get_admin_user)):
             return {"model": options["sd_model_checkpoint"]}
     except Exception as e:
         app.state.ENABLED = False
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT(e))
 
 
 class UpdateModelForm(BaseModel):
@@ -503,4 +503,4 @@ def generate_image(
             data = r.json()
             if "error" in data:
                 error = data["error"]["message"]
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(error))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT(error))
