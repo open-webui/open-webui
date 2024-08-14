@@ -25,9 +25,9 @@
 		try {
 			const backendConfig = await getBackendConfig(localStorage.token);
 			if (backendConfig) {
-				modelStatus = backendConfig.model_status;
-				lobeChat_url = backendConfig.lobeChat_url;
-				midjourney_url = backendConfig.midjourney_url;
+				modelStatus = backendConfig?.model_status ?? '';
+				lobeChat_url = backendConfig?.lobeChat_url ?? '';
+				midjourney_url = backendConfig?.midjourney_url ?? '';
 			} else {
 				console.log('backendConfig is null or undefined');
 			}
