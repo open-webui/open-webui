@@ -63,7 +63,7 @@ async def create_new_function(
     form_data.id = form_data.id.lower()
 
     function = Functions.get_function_by_id(form_data.id)
-    if function == None:
+    if function is None:
         function_path = os.path.join(FUNCTIONS_DIR, f"{form_data.id}.py")
         try:
             with open(function_path, "w") as function_file:

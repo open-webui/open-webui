@@ -31,7 +31,7 @@ async def get_prompts(user=Depends(get_verified_user)):
 @router.post("/create", response_model=Optional[PromptModel])
 async def create_new_prompt(form_data: PromptForm, user=Depends(get_admin_user)):
     prompt = Prompts.get_prompt_by_command(form_data.command)
-    if prompt == None:
+    if prompt is None:
         prompt = Prompts.insert_new_prompt(user.id, form_data)
 
         if prompt:
