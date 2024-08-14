@@ -438,7 +438,7 @@ def transcribe(
         )
 
 
-def get_available_models() -> List[dict]:
+def get_available_models() -> list[dict]:
     if app.state.config.TTS_ENGINE == "openai":
         return [{"id": "tts-1"}, {"id": "tts-1-hd"}]
     elif app.state.config.TTS_ENGINE == "elevenlabs":
@@ -466,7 +466,7 @@ async def get_models(user=Depends(get_verified_user)):
     return {"models": get_available_models()}
 
 
-def get_available_voices() -> List[dict]:
+def get_available_voices() -> list[dict]:
     if app.state.config.TTS_ENGINE == "openai":
         return [
             {"name": "alloy", "id": "alloy"},

@@ -137,7 +137,7 @@ class ModelsTable:
             print(e)
             return None
 
-    def get_all_models(self) -> List[ModelModel]:
+    def get_all_models(self) -> list[ModelModel]:
         with get_db() as db:
             return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 

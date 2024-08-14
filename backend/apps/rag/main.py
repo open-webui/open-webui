@@ -641,7 +641,7 @@ class ChunkParamUpdateForm(BaseModel):
 
 
 class YoutubeLoaderConfig(BaseModel):
-    language: List[str]
+    language: list[str]
     translation: Optional[str] = None
 
 
@@ -854,7 +854,7 @@ def query_doc_handler(
 
 
 class QueryCollectionsForm(BaseModel):
-    collection_names: List[str]
+    collection_names: list[str]
     query: str
     k: Optional[int] = None
     r: Optional[float] = None
@@ -1238,7 +1238,7 @@ class TikaLoader:
         self.file_path = file_path
         self.mime_type = mime_type
 
-    def load(self) -> List[Document]:
+    def load(self) -> list[Document]:
         with open(self.file_path, "rb") as f:
             data = f.read()
 

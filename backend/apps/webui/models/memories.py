@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from sqlalchemy import Column, String, BigInteger, Text
 
@@ -83,7 +83,7 @@ class MemoriesTable:
             except Exception:
                 return None
 
-    def get_memories(self) -> List[MemoryModel]:
+    def get_memories(self) -> list[MemoryModel]:
         with get_db() as db:
 
             try:
@@ -92,7 +92,7 @@ class MemoriesTable:
             except Exception:
                 return None
 
-    def get_memories_by_user_id(self, user_id: str) -> List[MemoryModel]:
+    def get_memories_by_user_id(self, user_id: str) -> list[MemoryModel]:
         with get_db() as db:
 
             try:

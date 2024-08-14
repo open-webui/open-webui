@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException, status
 from datetime import datetime, timedelta
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -24,7 +24,7 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=List[DocumentResponse])
+@router.get("/", response_model=list[DocumentResponse])
 async def get_documents(user=Depends(get_verified_user)):
     docs = [
         DocumentResponse(
@@ -102,7 +102,7 @@ class TagItem(BaseModel):
 
 class TagDocumentForm(BaseModel):
     name: str
-    tags: List[dict]
+    tags: list[dict]
 
 
 @router.post("/doc/tags", response_model=Optional[DocumentResponse])

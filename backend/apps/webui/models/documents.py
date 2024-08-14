@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, Optional
+from typing import Optional
 import time
 import logging
 
@@ -105,7 +105,7 @@ class DocumentsTable:
         except Exception:
             return None
 
-    def get_docs(self) -> List[DocumentModel]:
+    def get_docs(self) -> list[DocumentModel]:
         with get_db() as db:
 
             return [

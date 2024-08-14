@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, parse_obj_as
-from typing import List, Union, Optional
+from typing import Union, Optional
 import time
 
 from sqlalchemy import String, Column, BigInteger, Text
@@ -146,7 +146,7 @@ class UsersTable:
         except Exception:
             return None
 
-    def get_users(self, skip: int = 0, limit: int = 50) -> List[UserModel]:
+    def get_users(self, skip: int = 0, limit: int = 50) -> list[UserModel]:
         with get_db() as db:
             users = (
                 db.query(User)

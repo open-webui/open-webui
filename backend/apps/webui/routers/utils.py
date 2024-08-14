@@ -57,7 +57,7 @@ async def get_html_from_markdown(
 
 class ChatForm(BaseModel):
     title: str
-    messages: List[dict]
+    messages: list[dict]
 
 
 @router.post("/pdf")

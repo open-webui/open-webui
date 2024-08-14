@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, Union, Optional
+from typing import Union, Optional
 import time
 import logging
 
@@ -93,7 +93,7 @@ class FilesTable:
             except Exception:
                 return None
 
-    def get_files(self) -> List[FileModel]:
+    def get_files(self) -> list[FileModel]:
         with get_db() as db:
 
             return [FileModel.model_validate(file) for file in db.query(File).all()]
