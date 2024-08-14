@@ -3,6 +3,8 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
+	import mermaid from 'mermaid';
+
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
@@ -178,6 +180,7 @@
 			await tick();
 		}
 
+		await mermaid.initialize({ startOnLoad: false });
 		loaded = true;
 	});
 </script>
