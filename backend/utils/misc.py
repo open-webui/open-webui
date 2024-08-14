@@ -10,6 +10,7 @@ from utils.task import prompt_template
 
 
 def get_last_user_message_item(messages: list[dict]) -> Optional[dict]:
+def get_last_user_message_item(messages: list[dict]) -> Optional[dict]:
     for message in reversed(messages):
         if message["role"] == "user":
             return message
@@ -27,6 +28,7 @@ def get_content_from_message(message: dict) -> Optional[str]:
 
 
 def get_last_user_message(messages: list[dict]) -> Optional[str]:
+def get_last_user_message(messages: list[dict]) -> Optional[str]:
     message = get_last_user_message_item(messages)
     if message is None:
         return None
@@ -35,12 +37,14 @@ def get_last_user_message(messages: list[dict]) -> Optional[str]:
 
 
 def get_last_assistant_message(messages: list[dict]) -> Optional[str]:
+def get_last_assistant_message(messages: list[dict]) -> Optional[str]:
     for message in reversed(messages):
         if message["role"] == "assistant":
             return get_content_from_message(message)
     return None
 
 
+def get_system_message(messages: list[dict]) -> Optional[dict]:
 def get_system_message(messages: list[dict]) -> Optional[dict]:
     for message in messages:
         if message["role"] == "system":
@@ -49,14 +53,17 @@ def get_system_message(messages: list[dict]) -> Optional[dict]:
 
 
 def remove_system_message(messages: list[dict]) -> list[dict]:
+def remove_system_message(messages: list[dict]) -> list[dict]:
     return [message for message in messages if message["role"] != "system"]
 
 
-def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]]:
+def pop_system_message(messages: list[dict]) -> Tuple[Optional[dict], list[dict]]:
     return get_system_message(messages), remove_system_message(messages)
 
 
 def prepend_to_first_user_message_content(
+    content: str, messages: list[dict]
+) -> list[dict]:
     content: str, messages: list[dict]
 ) -> list[dict]:
     for message in messages:
@@ -71,6 +78,7 @@ def prepend_to_first_user_message_content(
     return messages
 
 
+def add_or_update_system_message(content: str, messages: list[dict]):
 def add_or_update_system_message(content: str, messages: list[dict]):
     """
     Adds a new system message at the beginning of the messages list
