@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from typing import List
+
 import uuid
 import requests
 import hashlib
