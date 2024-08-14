@@ -292,7 +292,7 @@
 			>
 				<div class=" self-start w-8 pt-0.5">
 					<div
-						class=" rounded-full bg-stone-700 {model?.info?.meta?.hidden ?? false
+						class=" rounded-full bg-stone-700 {(model?.info?.meta?.hidden ?? false)
 							? 'brightness-90 dark:brightness-50'
 							: ''} "
 					>
@@ -305,7 +305,7 @@
 				</div>
 
 				<div
-					class=" flex-1 self-center {model?.info?.meta?.hidden ?? false ? 'text-gray-500' : ''}"
+					class=" flex-1 self-center {(model?.info?.meta?.hidden ?? false) ? 'text-gray-500' : ''}"
 				>
 					<div class="  font-semibold line-clamp-1">{model.name}</div>
 					<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">

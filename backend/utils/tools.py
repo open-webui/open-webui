@@ -1,5 +1,5 @@
 import inspect
-from typing import get_type_hints, List, Dict, Any
+from typing import get_type_hints
 
 
 def doc_to_dict(docstring):
@@ -16,7 +16,7 @@ def doc_to_dict(docstring):
     return ret_dict
 
 
-def get_tools_specs(tools) -> List[dict]:
+def get_tools_specs(tools) -> list[dict]:
     function_list = [
         {"name": func, "function": getattr(tools, func)}
         for func in dir(tools)

@@ -17,7 +17,10 @@ from utils.utils import (
     get_verified_user,
     get_admin_user,
 )
-from utils.misc import apply_model_params_to_body, apply_model_system_prompt_to_body
+from utils.misc import (
+    apply_model_params_to_body_openai,
+    apply_model_system_prompt_to_body,
+)
 
 from config import (
     SRC_LOG_LEVELS,
@@ -30,7 +33,7 @@ from config import (
     MODEL_FILTER_LIST,
     AppConfig,
 )
-from typing import List, Optional, Literal, overload
+from typing import Optional, Literal, overload
 
 
 import hashlib
@@ -86,11 +89,11 @@ async def update_config(form_data: OpenAIConfigForm, user=Depends(get_admin_user
 
 
 class UrlsUpdateForm(BaseModel):
-    urls: List[str]
+    urls: list[str]
 
 
 class KeysUpdateForm(BaseModel):
-    keys: List[str]
+    keys: list[str]
 
 
 @app.get("/urls")
@@ -368,7 +371,7 @@ async def generate_chat_completion(
             payload["model"] = model_info.base_model_id
 
         params = model_info.params.model_dump()
-        payload = apply_model_params_to_body(params, payload)
+        payload = apply_model_params_to_body_openai(params, payload)
         payload = apply_model_system_prompt_to_body(params, payload, user)
 
     model = app.state.MODELS[payload.get("model")]

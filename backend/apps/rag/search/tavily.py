@@ -17,7 +17,7 @@ def search_tavily(api_key: str, query: str, count: int) -> list[SearchResult]:
         query (str): The query to search for
 
     Returns:
-        List[SearchResult]: A list of search results
+        list[SearchResult]: A list of search results
     """
     url = "https://api.tavily.com/search"
     data = {"query": query, "api_key": api_key}

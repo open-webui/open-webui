@@ -579,8 +579,8 @@
 		let selectedModelIds = modelId
 			? [modelId]
 			: atSelectedModel !== undefined
-			? [atSelectedModel.id]
-			: selectedModels;
+				? [atSelectedModel.id]
+				: selectedModels;
 
 		// Create response messages for each selected model
 		const responseMessageIds = {};
@@ -739,11 +739,11 @@
 								? await getAndUpdateUserLocation(localStorage.token)
 								: undefined
 						)}${
-							responseMessage?.userContext ?? null
+							(responseMessage?.userContext ?? null)
 								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 								: ''
 						}`
-				  }
+					}
 				: undefined,
 			...messages
 		]
@@ -811,10 +811,10 @@
 			options: {
 				...(params ?? $settings.params ?? {}),
 				stop:
-					params?.stop ?? $settings?.params?.stop ?? undefined
+					(params?.stop ?? $settings?.params?.stop ?? undefined)
 						? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
 								(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-						  )
+							)
 						: undefined,
 				num_predict: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
 				repeat_penalty:
@@ -876,6 +876,10 @@
 									continue;
 								} else {
 									responseMessage.content += data.message.content;
+
+									if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+										navigator.vibrate(5);
+									}
 
 									const sentences = extractSentencesForAudio(responseMessage.content);
 									sentences.pop();
@@ -1056,10 +1060,10 @@
 					stream: true,
 					model: model.id,
 					stream_options:
-						model.info?.meta?.capabilities?.usage ?? false
+						(model.info?.meta?.capabilities?.usage ?? false)
 							? {
 									include_usage: true
-							  }
+								}
 							: undefined,
 					messages: [
 						params?.system || $settings.system || (responseMessage?.userContext ?? null)
@@ -1072,11 +1076,11 @@
 											? await getAndUpdateUserLocation(localStorage.token)
 											: undefined
 									)}${
-										responseMessage?.userContext ?? null
+										(responseMessage?.userContext ?? null)
 											? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 											: ''
 									}`
-							  }
+								}
 							: undefined,
 						...messages
 					]
@@ -1092,7 +1096,7 @@
 												text:
 													arr.length - 1 !== idx
 														? message.content
-														: message?.raContent ?? message.content
+														: (message?.raContent ?? message.content)
 											},
 											...message.files
 												.filter((file) => file.type === 'image')
@@ -1103,20 +1107,20 @@
 													}
 												}))
 										]
-								  }
+									}
 								: {
 										content:
 											arr.length - 1 !== idx
 												? message.content
-												: message?.raContent ?? message.content
-								  })
+												: (message?.raContent ?? message.content)
+									})
 						})),
 					seed: params?.seed ?? $settings?.params?.seed ?? undefined,
 					stop:
-						params?.stop ?? $settings?.params?.stop ?? undefined
+						(params?.stop ?? $settings?.params?.stop ?? undefined)
 							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
 									(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-							  )
+								)
 							: undefined,
 					temperature: params?.temperature ?? $settings?.params?.temperature ?? undefined,
 					top_p: params?.top_p ?? $settings?.params?.top_p ?? undefined,
@@ -1176,6 +1180,10 @@
 						continue;
 					} else {
 						responseMessage.content += value;
+
+						if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+							navigator.vibrate(5);
+						}
 
 						const sentences = extractSentencesForAudio(responseMessage.content);
 						sentences.pop();
