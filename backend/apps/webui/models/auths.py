@@ -140,7 +140,7 @@ class AuthsTable:
                         return None
                 else:
                     return None
-        except:
+        except Exception:
             return None
 
     def authenticate_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
@@ -152,7 +152,7 @@ class AuthsTable:
         try:
             user = Users.get_user_by_api_key(api_key)
             return user if user else None
-        except:
+        except Exception:
             return False
 
     def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
@@ -163,7 +163,7 @@ class AuthsTable:
                 if auth:
                     user = Users.get_user_by_id(auth.id)
                     return user
-        except:
+        except Exception:
             return None
 
     def update_user_password_by_id(self, id: str, new_password: str) -> bool:
@@ -174,7 +174,7 @@ class AuthsTable:
                 )
                 db.commit()
                 return True if result == 1 else False
-        except:
+        except Exception:
             return False
 
     def update_email_by_id(self, id: str, email: str) -> bool:
@@ -183,7 +183,7 @@ class AuthsTable:
                 result = db.query(Auth).filter_by(id=id).update({"email": email})
                 db.commit()
                 return True if result == 1 else False
-        except:
+        except Exception:
             return False
 
     def delete_auth_by_id(self, id: str) -> bool:
@@ -200,7 +200,7 @@ class AuthsTable:
                     return True
                 else:
                     return False
-        except:
+        except Exception:
             return False
 
 

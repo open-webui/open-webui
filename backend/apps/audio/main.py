@@ -244,7 +244,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     res = r.json()
                     if "error" in res:
                         error_detail = f"External: {res['error']['message']}"
-                except:
+                except Exception:
                     error_detail = f"External: {e}"
 
             raise HTTPException(
@@ -299,7 +299,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     res = r.json()
                     if "error" in res:
                         error_detail = f"External: {res['error']['message']}"
-                except:
+                except Exception:
                     error_detail = f"External: {e}"
 
             raise HTTPException(
@@ -353,7 +353,7 @@ def transcribe(
 
             try:
                 model = WhisperModel(**whisper_kwargs)
-            except:
+            except Exception:
                 log.warning(
                     "WhisperModel initialization failed, attempting download with local_files_only=False"
                 )
@@ -421,7 +421,7 @@ def transcribe(
                         res = r.json()
                         if "error" in res:
                             error_detail = f"External: {res['error']['message']}"
-                    except:
+                    except Exception:
                         error_detail = f"External: {e}"
 
                 raise HTTPException(

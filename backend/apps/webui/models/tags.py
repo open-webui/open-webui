@@ -132,7 +132,7 @@ class TagTable:
                     return ChatIdTagModel.model_validate(result)
                 else:
                     return None
-        except:
+        except Exception:
             return None
 
     def get_tags_by_user_id(self, user_id: str) -> List[TagModel]:

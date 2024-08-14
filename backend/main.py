@@ -1883,7 +1883,7 @@ async def get_pipeline_valves(
                 res = r.json()
                 if "detail" in res:
                     detail = res["detail"]
-            except:
+            except Exception:
                 pass
 
         raise HTTPException(

@@ -90,7 +90,7 @@ class FilesTable:
             try:
                 file = db.get(File, id)
                 return FileModel.model_validate(file)
-            except:
+            except Exception:
                 return None
 
     def get_files(self) -> List[FileModel]:
@@ -107,7 +107,7 @@ class FilesTable:
                 db.commit()
 
                 return True
-            except:
+            except Exception:
                 return False
 
     def delete_all_files(self) -> bool:
@@ -119,7 +119,7 @@ class FilesTable:
                 db.commit()
 
                 return True
-            except:
+            except Exception:
                 return False
 
 

@@ -157,7 +157,7 @@ def query_collection(
                 embedding_function=embedding_function,
             )
             results.append(result)
-        except:
+        except Exception:
             pass
     return merge_and_sort_query_results(results, k=k)
 
@@ -182,7 +182,7 @@ def query_collection_with_hybrid_search(
                 r=r,
             )
             results.append(result)
-        except:
+        except Exception:
             pass
     return merge_and_sort_query_results(results, k=k, reverse=True)
 

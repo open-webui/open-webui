@@ -164,7 +164,7 @@ class ChatTable:
                 db.refresh(chat)
 
                 return self.get_chat_by_id(chat.share_id)
-        except:
+        except Exception:
             return None
 
     def delete_shared_chat_by_chat_id(self, chat_id: str) -> bool:
@@ -175,7 +175,7 @@ class ChatTable:
                 db.commit()
 
                 return True
-        except:
+        except Exception:
             return False
 
     def update_chat_share_id_by_id(
@@ -189,7 +189,7 @@ class ChatTable:
                 db.commit()
                 db.refresh(chat)
                 return ChatModel.model_validate(chat)
-        except:
+        except Exception:
             return None
 
     def toggle_chat_archive_by_id(self, id: str) -> Optional[ChatModel]:
@@ -201,7 +201,7 @@ class ChatTable:
                 db.commit()
                 db.refresh(chat)
                 return ChatModel.model_validate(chat)
-        except:
+        except Exception:
             return None
 
     def archive_all_chats_by_user_id(self, user_id: str) -> bool:
@@ -210,7 +210,7 @@ class ChatTable:
                 db.query(Chat).filter_by(user_id=user_id).update({"archived": True})
                 db.commit()
                 return True
-        except:
+        except Exception:
             return False
 
     def get_archived_chat_list_by_user_id(
@@ -297,7 +297,7 @@ class ChatTable:
 
                 chat = db.get(Chat, id)
                 return ChatModel.model_validate(chat)
-        except:
+        except Exception:
             return None
 
     def get_chat_by_share_id(self, id: str) -> Optional[ChatModel]:
@@ -319,7 +319,7 @@ class ChatTable:
 
                 chat = db.query(Chat).filter_by(id=id, user_id=user_id).first()
                 return ChatModel.model_validate(chat)
-        except:
+        except Exception:
             return None
 
     def get_chats(self, skip: int = 0, limit: int = 50) -> List[ChatModel]:
@@ -360,7 +360,7 @@ class ChatTable:
                 db.commit()
 
                 return True and self.delete_shared_chat_by_chat_id(id)
-        except:
+        except Exception:
             return False
 
     def delete_chat_by_id_and_user_id(self, id: str, user_id: str) -> bool:
@@ -371,7 +371,7 @@ class ChatTable:
                 db.commit()
 
                 return True and self.delete_shared_chat_by_chat_id(id)
-        except:
+        except Exception:
             return False
 
     def delete_chats_by_user_id(self, user_id: str) -> bool:
@@ -385,7 +385,7 @@ class ChatTable:
                 db.commit()
 
                 return True
-        except:
+        except Exception:
             return False
 
     def delete_shared_chats_by_user_id(self, user_id: str) -> bool:
@@ -400,7 +400,7 @@ class ChatTable:
                 db.commit()
 
                 return True
-        except:
+        except Exception:
             return False
 
 
