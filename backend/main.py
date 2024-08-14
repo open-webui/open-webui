@@ -2049,7 +2049,7 @@ async def get_app_config():
         "name": WEBUI_NAME,
         "model_status": MODEL_STATUS,
         "lobeChat_url": LOBECHAT_URL,
-        "Midjourney_url": MIDJOURNEY_URL,
+        "midjourney_url": MIDJOURNEY_URL,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),
         "default_models": webui_app.state.config.DEFAULT_MODELS,
