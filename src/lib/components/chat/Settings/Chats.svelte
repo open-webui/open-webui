@@ -2,7 +2,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { chats, user, settings, scrollPaginationEnabled, currentChatPage } from '$lib/stores';
+	import { chats, user, settings } from '$lib/stores';
 
 	import {
 		archiveAllChats,
@@ -62,9 +62,7 @@
 			}
 		}
 
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		scrollPaginationEnabled.set(true);
+		await chats.set(await getChatList(localStorage.token));
 	};
 
 	const exportChats = async () => {
@@ -79,10 +77,7 @@
 		await archiveAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
 		});
-
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		scrollPaginationEnabled.set(true);
+		await chats.set(await getChatList(localStorage.token));
 	};
 
 	const deleteAllChatsHandler = async () => {
@@ -90,10 +85,7 @@
 		await deleteAllChats(localStorage.token).catch((error) => {
 			toast.error(error);
 		});
-
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		scrollPaginationEnabled.set(true);
+		await chats.set(await getChatList(localStorage.token));
 	};
 
 	const toggleSaveChatHistory = async () => {

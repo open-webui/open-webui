@@ -11,9 +11,7 @@
 		showSidebar,
 		mobile,
 		showArchivedChats,
-		pinnedChats,
-		scrollPaginationEnabled,
-		currentChatPage
+		pinnedChats
 	} from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
@@ -36,8 +34,6 @@
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import Spinner from '../common/Spinner.svelte';
-	import Loader from '../common/Loader.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -53,10 +49,6 @@
 	let showDropdown = false;
 
 	let filteredChatList = [];
-
-	// Pagination variables
-	let chatListLoading = false;
-	let allChatsLoaded = false;
 
 	$: filteredChatList = $chats.filter((chat) => {
 		if (search === '') {
@@ -78,29 +70,6 @@
 		}
 	});
 
-	const enablePagination = async () => {
-		// Reset pagination variables
-		currentChatPage.set(1);
-		allChatsLoaded = false;
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-
-		// Enable pagination
-		scrollPaginationEnabled.set(true);
-	};
-
-	const loadMoreChats = async () => {
-		chatListLoading = true;
-
-		currentChatPage.set($currentChatPage + 1);
-		const newChatList = await getChatList(localStorage.token, $currentChatPage);
-
-		// once the bottom of the list has been reached (no results) there is no need to continue querying
-		allChatsLoaded = newChatList.length === 0;
-		await chats.set([...$chats, ...newChatList]);
-
-		chatListLoading = false;
-	};
-
 	onMount(async () => {
 		mobile.subscribe((e) => {
 			if ($showSidebar && e) {
@@ -113,8 +82,9 @@
 		});
 
 		showSidebar.set(window.innerWidth > BREAKPOINT);
+
 		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
-		await enablePagination();
+		await chats.set(await getChatList(localStorage.token));
 
 		let touchstart;
 		let touchend;
@@ -215,11 +185,7 @@
 				await tick();
 				goto('/');
 			}
-
-			allChatsLoaded = false;
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-
+			await chats.set(await getChatList(localStorage.token));
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
@@ -444,10 +410,7 @@
 						class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-none"
 						placeholder={$i18n.t('Search')}
 						bind:value={search}
-						on:focus={async () => {
-							// TODO: migrate backend for more scalable search mechanism
-							scrollPaginationEnabled.set(false);
-							await chats.set(await getChatList(localStorage.token)); // when searching, load all chats
+						on:focus={() => {
 							enrichChatsWithContent($chats);
 						}}
 					/>
@@ -459,7 +422,7 @@
 					<button
 						class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 						on:click={async () => {
-							await enablePagination();
+							await chats.set(await getChatList(localStorage.token));
 						}}
 					>
 						{$i18n.t('all')}
@@ -468,17 +431,12 @@
 						<button
 							class="px-2.5 text-xs font-medium bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800 transition rounded-full"
 							on:click={async () => {
-								scrollPaginationEnabled.set(false);
 								let chatIds = await getChatListByTagName(localStorage.token, tag.name);
 								if (chatIds.length === 0) {
 									await tags.set(await getAllChatTags(localStorage.token));
-
-									// if the tag we deleted is no longer a valid tag, return to main chat list view
-									await enablePagination();
+									chatIds = await getChatList(localStorage.token);
 								}
 								await chats.set(chatIds);
-
-								chatListLoading = false;
 							}}
 						>
 							{tag.name}
@@ -569,21 +527,6 @@
 						}}
 					/>
 				{/each}
-
-				{#if $scrollPaginationEnabled && !allChatsLoaded}
-					<Loader
-						on:visible={(e) => {
-							if (!chatListLoading) {
-								loadMoreChats();
-							}
-						}}
-					>
-						<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-							<Spinner className=" size-4" />
-							<div class=" ">Loading...</div>
-						</div>
-					</Loader>
-				{/if}
 			</div>
 		</div>
 

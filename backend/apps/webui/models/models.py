@@ -137,7 +137,7 @@ class ModelsTable:
             print(e)
             return None
 
-    def get_all_models(self) -> list[ModelModel]:
+    def get_all_models(self) -> List[ModelModel]:
         with get_db() as db:
             return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 
@@ -146,7 +146,7 @@ class ModelsTable:
             with get_db() as db:
                 model = db.get(Model, id)
                 return ModelModel.model_validate(model)
-        except Exception:
+        except:
             return None
 
     def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
@@ -175,7 +175,7 @@ class ModelsTable:
                 db.commit()
 
                 return True
-        except Exception:
+        except:
             return False
 
 

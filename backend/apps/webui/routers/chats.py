@@ -1,6 +1,6 @@
 from fastapi import Depends, Request, HTTPException, status
 from datetime import datetime, timedelta
-from typing import Union, Optional
+from typing import List, Union, Optional
 from utils.utils import get_verified_user, get_admin_user
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -28,7 +28,7 @@ from apps.webui.models.tags import (
 
 from constants import ERROR_MESSAGES
 
-from config import SRC_LOG_LEVELS, ENABLE_ADMIN_EXPORT, ENABLE_ADMIN_CHAT_ACCESS
+from config import SRC_LOG_LEVELS, ENABLE_ADMIN_EXPORT
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -40,18 +40,12 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=list[ChatTitleIdResponse])
-@router.get("/list", response_model=list[ChatTitleIdResponse])
+@router.get("/", response_model=List[ChatTitleIdResponse])
+@router.get("/list", response_model=List[ChatTitleIdResponse])
 async def get_session_user_chat_list(
-    user=Depends(get_verified_user), page: Optional[int] = None
+    user=Depends(get_verified_user), skip: int = 0, limit: int = 50
 ):
-    if page is not None:
-        limit = 60
-        skip = (page - 1) * limit
-
-        return Chats.get_chat_title_id_list_by_user_id(user.id, skip=skip, limit=limit)
-    else:
-        return Chats.get_chat_title_id_list_by_user_id(user.id)
+    return Chats.get_chat_title_id_list_by_user_id(user.id, skip=skip, limit=limit)
 
 
 ############################
@@ -80,18 +74,13 @@ async def delete_all_user_chats(request: Request, user=Depends(get_verified_user
 ############################
 
 
-@router.get("/list/user/{user_id}", response_model=list[ChatTitleIdResponse])
+@router.get("/list/user/{user_id}", response_model=List[ChatTitleIdResponse])
 async def get_user_chat_list_by_user_id(
     user_id: str,
     user=Depends(get_admin_user),
     skip: int = 0,
     limit: int = 50,
 ):
-    if not ENABLE_ADMIN_CHAT_ACCESS:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
     return Chats.get_chat_list_by_user_id(
         user_id, include_archived=True, skip=skip, limit=limit
     )
@@ -119,7 +108,7 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/all", response_model=list[ChatResponse])
+@router.get("/all", response_model=List[ChatResponse])
 async def get_user_chats(user=Depends(get_verified_user)):
     return [
         ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
@@ -132,7 +121,7 @@ async def get_user_chats(user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/all/archived", response_model=list[ChatResponse])
+@router.get("/all/archived", response_model=List[ChatResponse])
 async def get_user_archived_chats(user=Depends(get_verified_user)):
     return [
         ChatResponse(**{**chat.model_dump(), "chat": json.loads(chat.chat)})
@@ -145,7 +134,7 @@ async def get_user_archived_chats(user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/all/db", response_model=list[ChatResponse])
+@router.get("/all/db", response_model=List[ChatResponse])
 async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
     if not ENABLE_ADMIN_EXPORT:
         raise HTTPException(
@@ -163,7 +152,7 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
 ############################
 
 
-@router.get("/archived", response_model=list[ChatTitleIdResponse])
+@router.get("/archived", response_model=List[ChatTitleIdResponse])
 async def get_archived_session_user_chat_list(
     user=Depends(get_verified_user), skip: int = 0, limit: int = 50
 ):
@@ -192,9 +181,9 @@ async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if user.role == "user" or (user.role == "admin" and not ENABLE_ADMIN_CHAT_ACCESS):
+    if user.role == "user":
         chat = Chats.get_chat_by_share_id(share_id)
-    elif user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS:
+    elif user.role == "admin":
         chat = Chats.get_chat_by_id(share_id)
 
     if chat:
@@ -216,7 +205,7 @@ class TagNameForm(BaseModel):
     limit: Optional[int] = 50
 
 
-@router.post("/tags", response_model=list[ChatTitleIdResponse])
+@router.post("/tags", response_model=List[ChatTitleIdResponse])
 async def get_user_chat_list_by_tag_name(
     form_data: TagNameForm, user=Depends(get_verified_user)
 ):
@@ -241,7 +230,7 @@ async def get_user_chat_list_by_tag_name(
 ############################
 
 
-@router.get("/tags/all", response_model=list[TagModel])
+@router.get("/tags/all", response_model=List[TagModel])
 async def get_all_tags(user=Depends(get_verified_user)):
     try:
         tags = Tags.get_tags_by_user_id(user.id)
@@ -417,7 +406,7 @@ async def delete_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/{id}/tags", response_model=list[TagModel])
+@router.get("/{id}/tags", response_model=List[TagModel])
 async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user)):
     tags = Tags.get_tags_by_chat_id_and_user_id(id, user.id)
 

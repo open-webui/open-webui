@@ -1,8 +1,6 @@
 from importlib import util
 import os
 import re
-import sys
-import subprocess
 
 from config import TOOLS_DIR, FUNCTIONS_DIR
 
@@ -54,7 +52,6 @@ def load_toolkit_module_by_id(toolkit_id):
     frontmatter = extract_frontmatter(toolkit_path)
 
     try:
-        install_frontmatter_requirements(frontmatter.get("requirements", ""))
         spec.loader.exec_module(module)
         print(f"Loaded module: {module.__name__}")
         if hasattr(module, "Tools"):
@@ -76,7 +73,6 @@ def load_function_module_by_id(function_id):
     frontmatter = extract_frontmatter(function_path)
 
     try:
-        install_frontmatter_requirements(frontmatter.get("requirements", ""))
         spec.loader.exec_module(module)
         print(f"Loaded module: {module.__name__}")
         if hasattr(module, "Pipe"):
@@ -92,13 +88,3 @@ def load_function_module_by_id(function_id):
         # Move the file to the error folder
         os.rename(function_path, f"{function_path}.error")
         raise e
-
-
-def install_frontmatter_requirements(requirements):
-    if requirements:
-        req_list = [req.strip() for req in requirements.split(",")]
-        for req in req_list:
-            print(f"Installing requirement: {req}")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", req])
-    else:
-        print("No requirements found in frontmatter.")
