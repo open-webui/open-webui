@@ -1105,7 +1105,8 @@ async def get_models(user=Depends(get_verified_user)):
     models = [
         model
         for model in models
-        if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
+        if ("pipeline" not in model or model["pipeline"].get("type", None) != "filter")
+        and not model.get("name", "").startswith("mj_")
     ]
 
     if app.state.config.ENABLE_MODEL_FILTER:
