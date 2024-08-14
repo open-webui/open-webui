@@ -138,7 +138,7 @@
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
-							viewBox="0 0 17 17"
+							viewBox="0 0 18 15"
 							stroke-width="1.5"
 							stroke="currentColor"
 							class="w-5 h-5"
@@ -164,7 +164,7 @@
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
-							viewBox="0 0 15 15"
+							viewBox="0 0 17.2 16.5"
 							stroke-width="1"
 							stroke="currentColor"
 							class="w-5 h-5"
