@@ -2,7 +2,6 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
-	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
@@ -277,18 +276,11 @@
 	$: if (!edit) {
 		(async () => {
 			await tick();
-
-			await mermaid.run({
-				querySelector: '.mermaid'
-			});
 		})();
 	}
 
 	onMount(async () => {
 		await tick();
-		await mermaid.run({
-			querySelector: '.mermaid'
-		});
 	});
 </script>
 
