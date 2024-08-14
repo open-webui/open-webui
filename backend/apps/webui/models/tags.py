@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, Optional
+from typing import Optional
 
 import json
 import uuid
@@ -69,11 +69,11 @@ class ChatIdTagForm(BaseModel):
 
 
 class TagChatIdsResponse(BaseModel):
-    chat_ids: List[str]
+    chat_ids: list[str]
 
 
 class ChatTagsResponse(BaseModel):
-    tags: List[str]
+    tags: list[str]
 
 
 class TagTable:
@@ -109,7 +109,7 @@ class TagTable:
         self, user_id: str, form_data: ChatIdTagForm
     ) -> Optional[ChatIdTagModel]:
         tag = self.get_tag_by_name_and_user_id(form_data.tag_name, user_id)
-        if tag == None:
+        if tag is None:
             tag = self.insert_new_tag(form_data.tag_name, user_id)
 
         id = str(uuid.uuid4())
@@ -132,10 +132,10 @@ class TagTable:
                     return ChatIdTagModel.model_validate(result)
                 else:
                     return None
-        except:
+        except Exception:
             return None
 
-    def get_tags_by_user_id(self, user_id: str) -> List[TagModel]:
+    def get_tags_by_user_id(self, user_id: str) -> list[TagModel]:
         with get_db() as db:
             tag_names = [
                 chat_id_tag.tag_name
@@ -159,7 +159,7 @@ class TagTable:
 
     def get_tags_by_chat_id_and_user_id(
         self, chat_id: str, user_id: str
-    ) -> List[TagModel]:
+    ) -> list[TagModel]:
         with get_db() as db:
 
             tag_names = [
@@ -184,7 +184,7 @@ class TagTable:
 
     def get_chat_ids_by_tag_name_and_user_id(
         self, tag_name: str, user_id: str
-    ) -> List[ChatIdTagModel]:
+    ) -> list[ChatIdTagModel]:
         with get_db() as db:
 
             return [

@@ -2,9 +2,6 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
-	import tippy from 'tippy.js';
-	import auto_render from 'katex/dist/contrib/auto-render.mjs';
-	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
@@ -81,6 +78,7 @@
 	import 'katex/dist/katex.min.css';
 
 	import markedKatex from '$lib/utils/katex-extension';
+
 	const options = {
 		throwOnError: false
 	};
@@ -94,46 +92,6 @@
 			);
 		}
 	})();
-
-	$: if (message?.done ?? false) {
-		renderLatex();
-	}
-
-	const renderLatex = async () => {
-		try {
-			const chatMessageContainer = document.getElementById(`message-${message.id}`);
-			if (!chatMessageContainer) {
-				console.warn(`未找到 id 为 'message-${message.id}' 的元素。`);
-				return;
-			}
-
-			const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
-			if (!chatMessageElements || chatMessageElements.length === 0) {
-				console.warn(`在容器中未找到带有 'chat-assistant' 类的元素。`);
-				return;
-			}
-
-			for (const element of chatMessageElements) {
-				try {
-					auto_render(element, {
-						delimiters: [
-							{ left: '$$', right: '$$', display: true },
-							{ left: '$', right: '$', display: false },
-							{ left: '\\pu{', right: '}', display: false },
-							{ left: '\\ce{', right: '}', display: false },
-							{ left: '\\(', right: '\\)', display: false },
-							{ left: '\\[', right: '\\]', display: true }
-						],
-						throwOnError: false
-					});
-				} catch (err) {
-					console.error(`渲染 LaTeX 时出错，元素：`, element, err);
-				}
-			}
-		} catch (err) {
-			console.error('renderLatex 函数中的错误:', err);
-		}
-	};
 
 	const playAudio = (idx) => {
 		return new Promise((res) => {
@@ -288,14 +246,12 @@
 		editedContent = '';
 
 		await tick();
-		renderLatex();
 	};
 
 	const cancelEditMessage = async () => {
 		edit = false;
 		editedContent = '';
 		await tick();
-		renderLatex();
 	};
 
 	const generateImage = async (message) => {
@@ -320,21 +276,11 @@
 	$: if (!edit) {
 		(async () => {
 			await tick();
-			renderLatex();
-
-			await mermaid.run({
-				querySelector: '.mermaid'
-			});
 		})();
 	}
 
 	onMount(async () => {
 		await tick();
-		renderLatex();
-
-		await mermaid.run({
-			querySelector: '.mermaid'
-		});
 	});
 </script>
 
@@ -370,7 +316,7 @@
 						{#each message.files as file}
 							<div>
 								{#if file.type === 'image'}
-									<Image src={file.url} isMarkdown={false} />
+									<Image src={file.url} />
 								{/if}
 							</div>
 						{/each}

@@ -35,6 +35,7 @@
 
 	let showEmojiInCall = false;
 	let voiceInterruption = false;
+	let hapticFeedback = false;
 
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
@@ -69,6 +70,11 @@
 	const toggleVoiceInterruption = async () => {
 		voiceInterruption = !voiceInterruption;
 		saveSettings({ voiceInterruption: voiceInterruption });
+	};
+
+	const toggleHapticFeedback = async () => {
+		hapticFeedback = !hapticFeedback;
+		saveSettings({ hapticFeedback: hapticFeedback });
 	};
 
 	const toggleUserLocation = async () => {
@@ -158,7 +164,12 @@
 		userLocation = $settings.userLocation ?? false;
 		enableFileUpdateBase64 = $settings.enableFileUpdateBase64 ?? false;
 
-		defaultModelId = ($settings?.models ?? ['']).at(0);
+		hapticFeedback = $settings.hapticFeedback ?? false;
+
+		defaultModelId = $settings?.models?.at(0) ?? '';
+		if ($config?.default_models) {
+			defaultModelId = $config.default_models.split(',')[0];
+		}
 
 		backgroundImageUrl = $settings.backgroundImageUrl ?? null;
 	});
@@ -486,6 +497,26 @@
 						type="button"
 					>
 						{#if userLocation === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Haptic Feedback')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleHapticFeedback();
+						}}
+						type="button"
+					>
+						{#if hapticFeedback === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>

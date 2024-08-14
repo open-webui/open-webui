@@ -885,6 +885,10 @@
 								} else {
 									responseMessage.content += data.message.content;
 
+									if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+										navigator.vibrate(5);
+									}
+
 									const sentences = extractSentencesForAudio(responseMessage.content);
 									sentences.pop();
 
@@ -1186,6 +1190,10 @@
 						continue;
 					} else {
 						responseMessage.content += value;
+
+						if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+							navigator.vibrate(5);
+						}
 
 						const sentences = extractSentencesForAudio(responseMessage.content);
 						sentences.pop();

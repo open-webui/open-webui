@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException, status, Request
 from datetime import datetime, timedelta
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -18,7 +18,7 @@ router = APIRouter()
 ###########################
 
 
-@router.get("/", response_model=List[ModelResponse])
+@router.get("/", response_model=list[ModelResponse])
 async def get_models(user=Depends(get_verified_user)):
     return Models.get_all_models()
 

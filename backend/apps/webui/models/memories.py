@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from sqlalchemy import Column, String, BigInteger, Text
 
@@ -80,25 +80,25 @@ class MemoriesTable:
                 )
                 db.commit()
                 return self.get_memory_by_id(id)
-            except:
+            except Exception:
                 return None
 
-    def get_memories(self) -> List[MemoryModel]:
+    def get_memories(self) -> list[MemoryModel]:
         with get_db() as db:
 
             try:
                 memories = db.query(Memory).all()
                 return [MemoryModel.model_validate(memory) for memory in memories]
-            except:
+            except Exception:
                 return None
 
-    def get_memories_by_user_id(self, user_id: str) -> List[MemoryModel]:
+    def get_memories_by_user_id(self, user_id: str) -> list[MemoryModel]:
         with get_db() as db:
 
             try:
                 memories = db.query(Memory).filter_by(user_id=user_id).all()
                 return [MemoryModel.model_validate(memory) for memory in memories]
-            except:
+            except Exception:
                 return None
 
     def get_memory_by_id(self, id: str) -> Optional[MemoryModel]:
@@ -107,7 +107,7 @@ class MemoriesTable:
             try:
                 memory = db.get(Memory, id)
                 return MemoryModel.model_validate(memory)
-            except:
+            except Exception:
                 return None
 
     def delete_memory_by_id(self, id: str) -> bool:
@@ -119,7 +119,7 @@ class MemoriesTable:
 
                 return True
 
-            except:
+            except Exception:
                 return False
 
     def delete_memories_by_user_id(self, user_id: str) -> bool:
@@ -130,7 +130,7 @@ class MemoriesTable:
                 db.commit()
 
                 return True
-            except:
+            except Exception:
                 return False
 
     def delete_memory_by_id_and_user_id(self, id: str, user_id: str) -> bool:
@@ -141,7 +141,7 @@ class MemoriesTable:
                 db.commit()
 
                 return True
-            except:
+            except Exception:
                 return False
 
 

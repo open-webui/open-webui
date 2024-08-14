@@ -27,6 +27,7 @@
 	{:else if token.type === 'code'}
 		<CodeBlock
 			{id}
+			{token}
 			lang={token?.lang ?? ''}
 			code={revertSanitizedResponseContent(token?.text ?? '')}
 		/>
@@ -110,6 +111,13 @@
 			{unescapeHtml(token.text)}
 		{/if}
 	{:else if token.type === 'inlineKatex'}
+		{#if token.text}
+			<KatexRenderer
+				content={revertSanitizedResponseContent(token.text)}
+				displayMode={token?.displayMode ?? false}
+			/>
+		{/if}
+	{:else if token.type === 'blockKatex'}
 		{#if token.text}
 			<KatexRenderer
 				content={revertSanitizedResponseContent(token.text)}

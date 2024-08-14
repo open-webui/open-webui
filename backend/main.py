@@ -21,7 +21,6 @@ from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -52,6 +51,10 @@ from apps.webui.main import (
     get_pipe_models,
     generate_function_chat_completion,
 )
+
+from pydantic import BaseModel
+from typing import Optional
+
 from apps.webui.models.auths import Auths
 from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
@@ -1943,7 +1946,7 @@ async def get_pipeline_valves(
                 res = r.json()
                 if "detail" in res:
                     detail = res["detail"]
-            except:
+            except Exception:
                 pass
 
         raise HTTPException(
@@ -2090,7 +2093,7 @@ async def get_model_filter_config(user=Depends(get_admin_user)):
 
 class ModelFilterConfigForm(BaseModel):
     enabled: bool
-    models: List[str]
+    models: list[str]
 
 
 @app.post("/api/config/model/filter")

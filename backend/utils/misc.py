@@ -2,14 +2,14 @@ from pathlib import Path
 import hashlib
 import re
 from datetime import timedelta
-from typing import Optional, List, Tuple, Callable
+from typing import Optional, Callable
 import uuid
 import time
 
 from utils.task import prompt_template
 
 
-def get_last_user_message_item(messages: List[dict]) -> Optional[dict]:
+def get_last_user_message_item(messages: list[dict]) -> Optional[dict]:
     for message in reversed(messages):
         if message["role"] == "user":
             return message
@@ -26,7 +26,7 @@ def get_content_from_message(message: dict) -> Optional[str]:
     return None
 
 
-def get_last_user_message(messages: List[dict]) -> Optional[str]:
+def get_last_user_message(messages: list[dict]) -> Optional[str]:
     message = get_last_user_message_item(messages)
     if message is None:
         return None
@@ -34,31 +34,31 @@ def get_last_user_message(messages: List[dict]) -> Optional[str]:
     return get_content_from_message(message)
 
 
-def get_last_assistant_message(messages: List[dict]) -> Optional[str]:
+def get_last_assistant_message(messages: list[dict]) -> Optional[str]:
     for message in reversed(messages):
         if message["role"] == "assistant":
             return get_content_from_message(message)
     return None
 
 
-def get_system_message(messages: List[dict]) -> Optional[dict]:
+def get_system_message(messages: list[dict]) -> Optional[dict]:
     for message in messages:
         if message["role"] == "system":
             return message
     return None
 
 
-def remove_system_message(messages: List[dict]) -> List[dict]:
+def remove_system_message(messages: list[dict]) -> list[dict]:
     return [message for message in messages if message["role"] != "system"]
 
 
-def pop_system_message(messages: List[dict]) -> Tuple[Optional[dict], List[dict]]:
+def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]]:
     return get_system_message(messages), remove_system_message(messages)
 
 
 def prepend_to_first_user_message_content(
-    content: str, messages: List[dict]
-) -> List[dict]:
+    content: str, messages: list[dict]
+) -> list[dict]:
     for message in messages:
         if message["role"] == "user":
             if isinstance(message["content"], list):
@@ -71,7 +71,7 @@ def prepend_to_first_user_message_content(
     return messages
 
 
-def add_or_update_system_message(content: str, messages: List[dict]):
+def add_or_update_system_message(content: str, messages: list[dict]):
     """
     Adds a new system message at the beginning of the messages list
     or updates the existing system message at the beginning.

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import hljs from 'highlight.js';
 	import { loadPyodide } from 'pyodide';
+	import mermaid from 'mermaid';
+
 	import { getContext, getAllContexts } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 
@@ -13,6 +15,7 @@
 
 	export let id = '';
 
+	export let token;
 	export let lang = '';
 	export let code = '';
 
@@ -255,80 +258,95 @@ __builtins__.input = input`);
 	}
 
 	let debounceTimeout;
+
 	$: if (code) {
-		// Function to perform the code highlighting
-		const highlightCode = () => {
-			highlightedCode = hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value || code;
-		};
+		if (lang === 'mermaid' && (token?.raw ?? '').endsWith('```')) {
+			// Function to perform the code highlighting
+			const renderMermaid = async () => {
+				// mermaid.initialize({ startOnLoad: true });
+				await mermaid.run({
+					querySelector: `.mermaid-${id}`
+				});
+			};
+			// Clear the previous timeout if it exists
+			clearTimeout(debounceTimeout);
+			// Set a new timeout to debounce the code highlighting
+			debounceTimeout = setTimeout(renderMermaid, 50);
+		} else {
+			// Function to perform the code highlighting
+			const highlightCode = () => {
+				highlightedCode = hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value || code;
+			};
 
-		// Clear the previous timeout if it exists
-		clearTimeout(debounceTimeout);
-
-		// Set a new timeout to debounce the code highlighting
-		debounceTimeout = setTimeout(highlightCode, 10);
+			// Clear the previous timeout if it exists
+			clearTimeout(debounceTimeout);
+			// Set a new timeout to debounce the code highlighting
+			debounceTimeout = setTimeout(highlightCode, 10);
+		}
 	}
 </script>
 
 <div class="my-2" dir="ltr">
-	<div
-		class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg overflow-x-auto"
-	>
-		<button class="p-1" on:click={toggleAllExpand}>
-			{@html lang}
-		</button>
+	{#if lang === 'mermaid'}
+		{#key code}
+			<pre class="mermaid-{id}">{code}</pre>
+		{/key}
+	{:else}
+		<div
+			class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg overflow-x-auto"
+		>
+			<div class="p-1">{@html lang}</div>
 
-		<div class="flex items-center">
-			{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
-				{#if executing}
-					<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">
-						{$i18n.t('Running')}
-					</div>
-				{:else}
-					<button
-						class="copy-code-button bg-none border-none p-1"
-						on:click={() => {
-							executePython(code);
-						}}>{$i18n.t('Run')}</button
-					>
+			<div class="flex items-center">
+				{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
+					{#if executing}
+						<div class="copy-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
+					{:else}
+						<button
+							class="copy-code-button bg-none border-none p-1"
+							on:click={() => {
+								executePython(code);
+							}}>{$i18n.t('Run')}</button
+						>
+					{/if}
 				{/if}
-			{/if}
-			<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
-				>{copied ? $i18n.t('Copied') : $i18n.t('Copy Code')}</button
-			>
+				<button class="copy-code-button bg-none border-none p-1" on:click={copyCode}
+					>{copied ? $i18n.t('Copied') : $i18n.t('Copy Code')}</button
+				>
+			</div>
 		</div>
-	</div>
-
-	<div style="display: {all_expanded ? 'block' : 'none'};">
-		<pre
-			class=" hljs p-4 px-5 overflow-x-auto"
-			style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
-				stdout ||
-				stderr ||
-				result ||
-				enableHTML) &&
-				'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
-				class="language-{lang} rounded-t-none whitespace-pre"
-				>{#if highlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
-			>
+		<div style="display: {all_expanded ? 'block' : 'none'};">
+			<pre
+				class=" hljs p-4 px-5 overflow-x-auto"
+				style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
+					stdout ||
+					stderr ||
+					result ||
+					enableHTML) &&
+					'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
+					class="language-{lang} rounded-t-none whitespace-pre"
+					>{#if highlightedCode}{@html highlightedCode}{:else}{code}{/if}</code
+				>
 		</pre>
 
-		<div
-			id="plt-canvas-{id}"
-			class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
-		/>
+			<div
+				id="plt-canvas-{id}"
+				class="bg-[#202123] text-white max-w-full overflow-x-auto scrollbar-hidden"
+			/>
 
-		{#if executing}
-			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-				<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
-				<div class="text-sm">{$i18n.t('Running') + '...'}</div>
-			</div>
-		{:else if stdout || stderr || result}
-			<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
-				<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
-				<div class="text-sm">{stdout || stderr || result}</div>
-			</div>
-		{/if}
-	</div>
+			{#if executing}
+				<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+					<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+					<div class="text-sm">{$i18n.t('Running') + '...'}</div>
+				</div>
+			{:else if stdout || stderr || result}
+				<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
+					<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+					<div class="text-sm">{stdout || stderr || result}</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
 	{#if lang.toLowerCase() == 'php' || lang.toLowerCase() == 'html'}
 		<div class="bg-[#202123] text-white px-4 py-4 rounded-b-lg">
 			<div class="text-gray-500 text-white text-xs mb-1 flex justify-between items-center">
