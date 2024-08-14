@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, Union, Optional
+from typing import Union, Optional
 import time
 import logging
 
@@ -122,10 +122,10 @@ class FunctionsTable:
 
                 function = db.get(Function, id)
                 return FunctionModel.model_validate(function)
-        except:
+        except Exception:
             return None
 
-    def get_functions(self, active_only=False) -> List[FunctionModel]:
+    def get_functions(self, active_only=False) -> list[FunctionModel]:
         with get_db() as db:
 
             if active_only:
@@ -141,7 +141,7 @@ class FunctionsTable:
 
     def get_functions_by_type(
         self, type: str, active_only=False
-    ) -> List[FunctionModel]:
+    ) -> list[FunctionModel]:
         with get_db() as db:
 
             if active_only:
@@ -157,7 +157,7 @@ class FunctionsTable:
                     for function in db.query(Function).filter_by(type=type).all()
                 ]
 
-    def get_global_filter_functions(self) -> List[FunctionModel]:
+    def get_global_filter_functions(self) -> list[FunctionModel]:
         with get_db() as db:
 
             return [
@@ -167,7 +167,7 @@ class FunctionsTable:
                 .all()
             ]
 
-    def get_global_action_functions(self) -> List[FunctionModel]:
+    def get_global_action_functions(self) -> list[FunctionModel]:
         with get_db() as db:
             return [
                 FunctionModel.model_validate(function)
@@ -198,7 +198,7 @@ class FunctionsTable:
                 db.commit()
                 db.refresh(function)
                 return self.get_function_by_id(id)
-            except:
+            except Exception:
                 return None
 
     def get_user_valves_by_id_and_user_id(
@@ -256,7 +256,7 @@ class FunctionsTable:
                 )
                 db.commit()
                 return self.get_function_by_id(id)
-            except:
+            except Exception:
                 return None
 
     def deactivate_all_functions(self) -> Optional[bool]:
@@ -271,7 +271,7 @@ class FunctionsTable:
                 )
                 db.commit()
                 return True
-            except:
+            except Exception:
                 return None
 
     def delete_function_by_id(self, id: str) -> bool:
@@ -281,7 +281,7 @@ class FunctionsTable:
                 db.commit()
 
                 return True
-            except:
+            except Exception:
                 return False
 
 

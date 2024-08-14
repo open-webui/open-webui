@@ -17,7 +17,7 @@ from utils.misc import calculate_sha256, get_gravatar_url
 
 from config import OLLAMA_BASE_URLS, DATA_DIR, UPLOAD_DIR, ENABLE_ADMIN_EXPORT
 from constants import ERROR_MESSAGES
-from typing import List
+
 
 router = APIRouter()
 
@@ -57,7 +57,7 @@ async def get_html_from_markdown(
 
 class ChatForm(BaseModel):
     title: str
-    messages: List[dict]
+    messages: list[dict]
 
 
 @router.post("/pdf")

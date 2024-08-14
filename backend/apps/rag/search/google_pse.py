@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Optional
+from typing import Optional
 import requests
 
 from apps.rag.search.main import SearchResult, get_filtered_results
@@ -15,7 +15,7 @@ def search_google_pse(
     search_engine_id: str,
     query: str,
     count: int,
-    filter_list: Optional[List[str]] = None,
+    filter_list: Optional[list[str]] = None,
 ) -> list[SearchResult]:
     """Search using Google's Programmable Search Engine API and return the results as a list of SearchResult objects.
 

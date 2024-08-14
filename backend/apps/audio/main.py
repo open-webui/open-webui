@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from typing import List
+
 import uuid
 import requests
 import hashlib
@@ -244,7 +244,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     res = r.json()
                     if "error" in res:
                         error_detail = f"External: {res['error']['message']}"
-                except:
+                except Exception:
                     error_detail = f"External: {e}"
 
             raise HTTPException(
@@ -299,7 +299,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     res = r.json()
                     if "error" in res:
                         error_detail = f"External: {res['error']['message']}"
-                except:
+                except Exception:
                     error_detail = f"External: {e}"
 
             raise HTTPException(
@@ -353,7 +353,7 @@ def transcribe(
 
             try:
                 model = WhisperModel(**whisper_kwargs)
-            except:
+            except Exception:
                 log.warning(
                     "WhisperModel initialization failed, attempting download with local_files_only=False"
                 )
@@ -421,7 +421,7 @@ def transcribe(
                         res = r.json()
                         if "error" in res:
                             error_detail = f"External: {res['error']['message']}"
-                    except:
+                    except Exception:
                         error_detail = f"External: {e}"
 
                 raise HTTPException(
@@ -438,7 +438,7 @@ def transcribe(
         )
 
 
-def get_available_models() -> List[dict]:
+def get_available_models() -> list[dict]:
     if app.state.config.TTS_ENGINE == "openai":
         return [{"id": "tts-1"}, {"id": "tts-1-hd"}]
     elif app.state.config.TTS_ENGINE == "elevenlabs":
@@ -466,7 +466,7 @@ async def get_models(user=Depends(get_verified_user)):
     return {"models": get_available_models()}
 
 
-def get_available_voices() -> List[dict]:
+def get_available_voices() -> list[dict]:
     if app.state.config.TTS_ENGINE == "openai":
         return [
             {"name": "alloy", "id": "alloy"},
