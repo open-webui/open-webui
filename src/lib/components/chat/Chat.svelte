@@ -862,6 +862,10 @@
 							console.log(line);
 							let data = JSON.parse(line);
 
+							if (navigator.vibrate && $settings.hapticFeedback) {
+								navigator.vibrate(5);
+							}
+
 							if ('citations' in data) {
 								responseMessage.citations = data.citations;
 								continue;
