@@ -21,7 +21,7 @@ import asyncio
 import logging
 import time
 from urllib.parse import urlparse
-from typing import Optional, List, Union
+from typing import Optional, Union
 
 from starlette.background import BackgroundTask
 
