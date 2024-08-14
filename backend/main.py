@@ -146,14 +146,14 @@ class SPAStaticFiles(StaticFiles):
 
 print(
     rf"""
-  ___                    __        __   _     _   _ ___ 
+  ___                    __        __   _     _   _ ___
  / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
-| | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || | 
-| |_| | |_) |  __/ | | |   \ V  V /  __/ |_) | |_| || | 
+| | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || |
+| |_| | |_) |  __/ | | |   \ V  V /  __/ |_) | |_| || |
  \___/| .__/ \___|_| |_|    \_/\_/ \___|_.__/ \___/|___|
-      |_|                                               
+      |_|
 
-      
+
 v{VERSION} - building the best open-source AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
@@ -2271,20 +2271,7 @@ async def get_manifest_json():
         "display": "standalone",
         "background_color": "#343541",
         "orientation": "portrait-primary",
-        "icons": [
-            {
-                "src": "/static/logo.png",
-                "type": "image/png",
-                "sizes": "500x500",
-                "purpose": "any",
-            },
-            {
-                "src": "/static/logo.png",
-                "type": "image/png",
-                "sizes": "500x500",
-                "purpose": "maskable",
-            },
-        ],
+        "icons": [{"src": "/static/logo.png", "type": "image/png", "sizes": "500x500", "purpose": "any maskable"}],
     }
 
 
