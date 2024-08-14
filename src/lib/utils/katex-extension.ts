@@ -95,7 +95,6 @@ function inlineKatex(options, renderer) {
       const match = src.match(ruleReg);
 
       if (match) {
-        console.log(match)
         const text = match.slice(2).filter((item) => item).find((item) => item.trim());
 
         return {
@@ -115,11 +114,14 @@ function blockKatex(options, renderer) {
     level: 'block',
     tokenizer(src, tokens) {
       const match = src.match(blockRule);
+
       if (match) {
+        const text = match.slice(2).filter((item) => item).find((item) => item.trim());
+
         return {
           type: 'blockKatex',
           raw: match[0],
-          text: match[0],
+          text: text,
         };
       }
     },
