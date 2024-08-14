@@ -3,7 +3,7 @@
 	import { loadPyodide } from 'pyodide';
 	import mermaid from 'mermaid';
 
-	import { getContext, getAllContexts, onMount } from 'svelte';
+	import { getContext, getAllContexts } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
@@ -14,6 +14,7 @@
 
 	export let id = '';
 
+	export let token;
 	export let token;
 	export let lang = '';
 	export let code = '';
@@ -213,16 +214,20 @@ __builtins__.input = input`);
 
 	let debounceTimeout;
 
+
 	$: if (code) {
 		if (lang === 'mermaid' && (token?.raw ?? '').endsWith('```')) {
-			(async () => {
-				try {
-					const { svg } = await mermaid.render(`mermaid-${id}`, code);
-					mermaidHtml = svg;
-				} catch (error) {
-					console.error('Error:', error);
-				}
-			})();
+			// Function to perform the code highlighting
+			const renderMermaid = async () => {
+				// mermaid.initialize({ startOnLoad: true });
+				await mermaid.run({
+					querySelector: `.mermaid-${id}`
+				});
+			};
+			// Clear the previous timeout if it exists
+			clearTimeout(debounceTimeout);
+			// Set a new timeout to debounce the code highlighting
+			debounceTimeout = setTimeout(renderMermaid, 50);
 		} else {
 			// Function to perform the code highlighting
 			const highlightCode = () => {
@@ -235,24 +240,13 @@ __builtins__.input = input`);
 			debounceTimeout = setTimeout(highlightCode, 10);
 		}
 	}
-
-	onMount(async () => {
-		await mermaid.initialize({ startOnLoad: true });
-
-		if (lang === 'mermaid' && (token?.raw ?? '').endsWith('```')) {
-			try {
-				const { svg } = await mermaid.render(`mermaid-${id}`, code);
-				mermaidHtml = svg;
-			} catch (error) {
-				console.error('Error:', error);
-			}
-		}
-	});
 </script>
 
 <div class="my-2" dir="ltr">
 	{#if lang === 'mermaid'}
-		<pre class="mermaid">{code}</pre>
+		{#key code}
+			<pre class="mermaid-{id}">{code}</pre>
+		{/key}
 	{:else}
 		<div
 			class="flex justify-between bg-[#202123] text-white text-xs px-4 pt-1 pb-0.5 rounded-t-lg overflow-x-auto"
