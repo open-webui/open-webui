@@ -18,8 +18,7 @@
 		approximateToHumanReadable,
 		extractSentences,
 		replaceTokens,
-		revertSanitizedResponseContent,
-		sanitizeResponseContent
+		processResponseContent
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -88,7 +87,7 @@
 	$: (async () => {
 		if (message?.content) {
 			tokens = marked.lexer(
-				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
+				replaceTokens(processResponseContent(message?.content), model?.name, $user?.name)
 			);
 		}
 	})();

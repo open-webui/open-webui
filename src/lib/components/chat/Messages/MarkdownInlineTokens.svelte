@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DOMPurify from 'dompurify';
 	import type { Token } from 'marked';
 	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
 	import { onMount } from 'svelte';
@@ -14,7 +15,12 @@
 	{#if token.type === 'escape'}
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}
-		{@html token.text}
+		{@const html = DOMPurify.sanitize(token.text)}
+		{#if html}
+			{@html html}
+		{:else}
+			{token.text}
+		{/if}
 	{:else if token.type === 'link'}
 		<a href={token.href} target="_blank" rel="nofollow" title={token.title}>{token.text}</a>
 	{:else if token.type === 'image'}
