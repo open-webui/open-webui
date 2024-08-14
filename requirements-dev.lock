@@ -10,7 +10,9 @@
 #   universal: false
 
 -e file:.
-aiohttp==3.9.5
+aiohappyeyeballs==2.3.5
+    # via aiohttp
+aiohttp==3.10.2
     # via langchain
     # via langchain-community
     # via open-webui
@@ -84,9 +86,9 @@ chardet==5.2.0
 charset-normalizer==3.3.2
     # via requests
     # via unstructured-client
-chroma-hnswlib==0.7.5
+chroma-hnswlib==0.7.6
     # via chromadb
-chromadb==0.5.4
+chromadb==0.5.5
     # via langchain-chroma
     # via open-webui
 click==8.1.7
@@ -269,7 +271,7 @@ jsonpointer==2.4
     # via jsonpatch
 kubernetes==29.0.0
     # via chromadb
-langchain==0.2.11
+langchain==0.2.12
     # via langchain-community
     # via open-webui
 langchain-chroma==0.1.2
@@ -285,7 +287,7 @@ langchain-text-splitters==0.2.0
     # via langchain
 langdetect==1.0.9
     # via unstructured
-langfuse==2.39.2
+langfuse==2.43.3
     # via open-webui
 langsmith==0.1.96
     # via langchain
@@ -491,7 +493,7 @@ pydub==0.25.1
     # via open-webui
 pygments==2.18.0
     # via rich
-pyjwt==2.8.0
+pyjwt==2.9.0
     # via open-webui
 pymongo==4.8.0
     # via open-webui
