@@ -9,8 +9,6 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
-	import { user } from '$lib/stores';
-
 	export let models = [];
 
 	export let chatFiles = [];
@@ -80,7 +78,7 @@
 		<Collapsible title={$i18n.t('Advanced Params')} open={true}>
 			<div class="text-sm mt-1.5" slot="content">
 				<div>
-					<AdvancedParams admin={$user?.role === 'admin'} bind:params />
+					<AdvancedParams bind:params />
 				</div>
 			</div>
 		</Collapsible>

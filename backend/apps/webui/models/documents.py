@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import List, Optional
 import time
 import logging
 
@@ -93,7 +93,7 @@ class DocumentsTable:
                     return DocumentModel.model_validate(result)
                 else:
                     return None
-            except Exception:
+            except:
                 return None
 
     def get_doc_by_name(self, name: str) -> Optional[DocumentModel]:
@@ -102,10 +102,10 @@ class DocumentsTable:
 
                 document = db.query(Document).filter_by(name=name).first()
                 return DocumentModel.model_validate(document) if document else None
-        except Exception:
+        except:
             return None
 
-    def get_docs(self) -> list[DocumentModel]:
+    def get_docs(self) -> List[DocumentModel]:
         with get_db() as db:
 
             return [
@@ -160,7 +160,7 @@ class DocumentsTable:
                 db.query(Document).filter_by(name=name).delete()
                 db.commit()
                 return True
-        except Exception:
+        except:
             return False
 
 

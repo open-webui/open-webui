@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import { chats, config, settings, user as _user, mobile, currentChatPage } from '$lib/stores';
+	import { chats, config, settings, user as _user, mobile } from '$lib/stores';
 	import { tick, getContext, onMount } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -90,8 +90,7 @@
 			history: history
 		});
 
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		await chats.set(await getChatList(localStorage.token));
 	};
 
 	const confirmEditResponseMessage = async (messageId, content) => {
@@ -147,14 +146,12 @@
 
 		await tick();
 
-		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+		const element = document.getElementById('messages-container');
+		autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
-		}
+		setTimeout(() => {
+			scrollToBottom();
+		}, 100);
 	};
 
 	const showNextMessage = async (message) => {
@@ -198,14 +195,12 @@
 
 		await tick();
 
-		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+		const element = document.getElementById('messages-container');
+		autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
-		}
+		setTimeout(() => {
+			scrollToBottom();
+		}, 100);
 	};
 
 	const deleteMessageHandler = async (messageId) => {
@@ -305,7 +300,7 @@
 				{#each messages as message, messageIdx}
 					<div class=" w-full {messageIdx === messages.length - 1 ? ' pb-12' : ''}">
 						<div
-							class="flex flex-col justify-between px-5 mb-3 {($settings?.widescreenMode ?? null)
+							class="flex flex-col justify-between px-5 mb-3 {$settings?.widescreenMode ?? null
 								? 'max-w-full'
 								: 'max-w-5xl'} mx-auto rounded-lg group"
 						>
@@ -317,10 +312,10 @@
 									{message}
 									isFirstMessage={messageIdx === 0}
 									siblings={message.parentId !== null
-										? (history.messages[message.parentId]?.childrenIds ?? [])
-										: (Object.values(history.messages)
+										? history.messages[message.parentId]?.childrenIds ?? []
+										: Object.values(history.messages)
 												.filter((message) => message.parentId === null)
-												.map((message) => message.id) ?? [])}
+												.map((message) => message.id) ?? []}
 									{confirmEditMessage}
 									{showPreviousMessage}
 									{showNextMessage}

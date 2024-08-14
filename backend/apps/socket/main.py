@@ -44,26 +44,23 @@ async def user_join(sid, data):
     print("user-join", sid, data)
 
     auth = data["auth"] if "auth" in data else None
-    if not auth or "token" not in auth:
-        return
 
-    data = decode_token(auth["token"])
-    if data is None or "id" not in data:
-        return
+    if auth and "token" in auth:
+        data = decode_token(auth["token"])
 
-    user = Users.get_user_by_id(data["id"])
-    if not user:
-        return
+        if data is not None and "id" in data:
+            user = Users.get_user_by_id(data["id"])
 
-    SESSION_POOL[sid] = user.id
-    if user.id in USER_POOL:
-        USER_POOL[user.id].append(sid)
-    else:
-        USER_POOL[user.id] = [sid]
+        if user:
+            SESSION_POOL[sid] = user.id
+            if user.id in USER_POOL:
+                USER_POOL[user.id].append(sid)
+            else:
+                USER_POOL[user.id] = [sid]
 
-    print(f"user {user.name}({user.id}) connected with session ID {sid}")
+            print(f"user {user.name}({user.id}) connected with session ID {sid}")
 
-    await sio.emit("user-count", {"count": len(set(USER_POOL))})
+            await sio.emit("user-count", {"count": len(set(USER_POOL))})
 
 
 @sio.on("user-count")
