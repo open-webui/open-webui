@@ -36,3 +36,10 @@
 - Commented out jobs `Wait for Ollama to be up` and `Preload Ollama model` in `integration-test.yml`
 - Disabled `Release to PyPI` workflow
 - Formatted `backend/apps/images/main.py`
+
+## 2024-08-14
+
+### Added
+
+- Added `script/free-disk-space.sh` under `.github` folder
+- Added `Free up Disk Space` workflow in `integratio-test.yml`.
