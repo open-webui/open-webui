@@ -159,7 +159,7 @@
 							const res = await synthesizeOpenAISpeech(
 								localStorage.token,
 								$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-									? $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
+									? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
 									: $config?.audio?.tts?.voice,
 								sentence
 							).catch((error) => {
@@ -766,7 +766,7 @@
 																100
 														) / 100
 													} tokens` ?? 'N/A'
-											  }<br/>
+												}<br/>
 					prompt_token/s: ${
 						Math.round(
 							((message.info.prompt_eval_count ?? 0) /
