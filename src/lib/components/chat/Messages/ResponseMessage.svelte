@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { marked } from 'marked';
+	import mermaid from 'mermaid';
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
@@ -77,6 +78,7 @@
 	import 'katex/dist/katex.min.css';
 
 	import markedKatex from '$lib/utils/katex-extension';
+
 
 	const options = {
 		throwOnError: false
@@ -157,7 +159,7 @@
 							const res = await synthesizeOpenAISpeech(
 								localStorage.token,
 								$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-									? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+									? $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
 									: $config?.audio?.tts?.voice,
 								sentence
 							).catch((error) => {
@@ -275,11 +277,18 @@
 	$: if (!edit) {
 		(async () => {
 			await tick();
+
+			await mermaid.run({
+				querySelector: '.mermaid'
+			});
 		})();
 	}
 
 	onMount(async () => {
 		await tick();
+		await mermaid.run({
+			querySelector: '.mermaid'
+		});
 	});
 </script>
 
@@ -757,7 +766,7 @@
 																100
 														) / 100
 													} tokens` ?? 'N/A'
-												}<br/>
+											  }<br/>
 					prompt_token/s: ${
 						Math.round(
 							((message.info.prompt_eval_count ?? 0) /
