@@ -33,7 +33,7 @@ from config import (
     MODEL_FILTER_LIST,
     AppConfig,
 )
-from typing import List, Optional, Literal, overload
+from typing import Optional, Literal, overload
 
 
 import hashlib
@@ -89,11 +89,11 @@ async def update_config(form_data: OpenAIConfigForm, user=Depends(get_admin_user
 
 
 class UrlsUpdateForm(BaseModel):
-    urls: List[str]
+    urls: list[str]
 
 
 class KeysUpdateForm(BaseModel):
-    keys: List[str]
+    keys: list[str]
 
 
 @app.get("/urls")

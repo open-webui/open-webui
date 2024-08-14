@@ -2,7 +2,7 @@ import os
 import logging
 import requests
 
-from typing import List, Union
+from typing import Union
 
 from apps.ollama.main import (
     generate_ollama_embeddings,
@@ -142,7 +142,7 @@ def merge_and_sort_query_results(query_results, k, reverse=False):
 
 
 def query_collection(
-    collection_names: List[str],
+    collection_names: list[str],
     query: str,
     embedding_function,
     k: int,
@@ -163,7 +163,7 @@ def query_collection(
 
 
 def query_collection_with_hybrid_search(
-    collection_names: List[str],
+    collection_names: list[str],
     query: str,
     embedding_function,
     k: int,
@@ -411,7 +411,7 @@ class ChromaRetriever(BaseRetriever):
         query: str,
         *,
         run_manager: CallbackManagerForRetrieverRun,
-    ) -> List[Document]:
+    ) -> list[Document]:
         query_embeddings = self.embedding_function(query)
 
         results = self.collection.query(

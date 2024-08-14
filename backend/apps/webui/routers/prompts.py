@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException, status
 from datetime import datetime, timedelta
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -18,7 +18,7 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=List[PromptModel])
+@router.get("/", response_model=list[PromptModel])
 async def get_prompts(user=Depends(get_verified_user)):
     return Prompts.get_prompts()
 

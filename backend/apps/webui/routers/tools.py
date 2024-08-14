@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status, Request
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter
 
@@ -27,7 +27,7 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=List[ToolResponse])
+@router.get("/", response_model=list[ToolResponse])
 async def get_toolkits(user=Depends(get_verified_user)):
     toolkits = [toolkit for toolkit in Tools.get_tools()]
     return toolkits
@@ -38,7 +38,7 @@ async def get_toolkits(user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/export", response_model=List[ToolModel])
+@router.get("/export", response_model=list[ToolModel])
 async def get_toolkits(user=Depends(get_admin_user)):
     toolkits = [toolkit for toolkit in Tools.get_tools()]
     return toolkits

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 import json
 import uuid
@@ -215,7 +215,7 @@ class ChatTable:
 
     def get_archived_chat_list_by_user_id(
         self, user_id: str, skip: int = 0, limit: int = 50
-    ) -> List[ChatModel]:
+    ) -> list[ChatModel]:
         with get_db() as db:
 
             all_chats = (
@@ -233,7 +233,7 @@ class ChatTable:
         include_archived: bool = False,
         skip: int = 0,
         limit: int = 50,
-    ) -> List[ChatModel]:
+    ) -> list[ChatModel]:
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id)
             if not include_archived:
@@ -251,7 +251,7 @@ class ChatTable:
         include_archived: bool = False,
         skip: int = 0,
         limit: int = -1,
-    ) -> List[ChatTitleIdResponse]:
+    ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id)
             if not include_archived:
@@ -279,8 +279,8 @@ class ChatTable:
             ]
 
     def get_chat_list_by_chat_ids(
-        self, chat_ids: List[str], skip: int = 0, limit: int = 50
-    ) -> List[ChatModel]:
+        self, chat_ids: list[str], skip: int = 0, limit: int = 50
+    ) -> list[ChatModel]:
         with get_db() as db:
             all_chats = (
                 db.query(Chat)
@@ -322,7 +322,7 @@ class ChatTable:
         except Exception:
             return None
 
-    def get_chats(self, skip: int = 0, limit: int = 50) -> List[ChatModel]:
+    def get_chats(self, skip: int = 0, limit: int = 50) -> list[ChatModel]:
         with get_db() as db:
 
             all_chats = (
@@ -332,7 +332,7 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
-    def get_chats_by_user_id(self, user_id: str) -> List[ChatModel]:
+    def get_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
         with get_db() as db:
 
             all_chats = (
@@ -342,7 +342,7 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
-    def get_archived_chats_by_user_id(self, user_id: str) -> List[ChatModel]:
+    def get_archived_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
         with get_db() as db:
 
             all_chats = (

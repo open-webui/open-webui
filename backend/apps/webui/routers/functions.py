@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException, status, Request
 from datetime import datetime, timedelta
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -30,7 +30,7 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=List[FunctionResponse])
+@router.get("/", response_model=list[FunctionResponse])
 async def get_functions(user=Depends(get_verified_user)):
     return Functions.get_functions()
 
@@ -40,7 +40,7 @@ async def get_functions(user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/export", response_model=List[FunctionModel])
+@router.get("/export", response_model=list[FunctionModel])
 async def get_functions(user=Depends(get_admin_user)):
     return Functions.get_functions()
 

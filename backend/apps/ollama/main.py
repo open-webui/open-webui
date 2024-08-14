@@ -114,7 +114,7 @@ async def get_ollama_api_urls(user=Depends(get_admin_user)):
 
 
 class UrlUpdateForm(BaseModel):
-    urls: List[str]
+    urls: list[str]
 
 
 @app.post("/urls/update")
@@ -646,7 +646,7 @@ def generate_ollama_embeddings(
 class GenerateCompletionForm(BaseModel):
     model: str
     prompt: str
-    images: Optional[List[str]] = None
+    images: Optional[list[str]] = None
     format: Optional[str] = None
     options: Optional[dict] = None
     system: Optional[str] = None
@@ -689,12 +689,12 @@ async def generate_completion(
 class ChatMessage(BaseModel):
     role: str
     content: str
-    images: Optional[List[str]] = None
+    images: Optional[list[str]] = None
 
 
 class GenerateChatCompletionForm(BaseModel):
     model: str
-    messages: List[ChatMessage]
+    messages: list[ChatMessage]
     format: Optional[str] = None
     options: Optional[dict] = None
     template: Optional[str] = None
@@ -772,7 +772,7 @@ class OpenAIChatMessage(BaseModel):
 
 class OpenAIChatCompletionForm(BaseModel):
     model: str
-    messages: List[OpenAIChatMessage]
+    messages: list[OpenAIChatMessage]
 
     model_config = ConfigDict(extra="allow")
 
