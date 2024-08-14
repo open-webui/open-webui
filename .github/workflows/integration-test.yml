@@ -18,6 +18,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+      
+      - name: Free up Disk Space
+        run: bash ./.github/script/free-disk-space.sh
 
       - name: Build and run Compose Stack
         run: |
