@@ -1,0 +1,10 @@
+model_list:
+  - model_name: gemini-pro
+    litellm_params:
+      model: gemini/gemini-1.5-pro
+      api_key: os.environ/GEMINI_API_KEY
+
+general_settings: {}
+litellm_settings:
+  success_callback: ["langfuse"]
+  failure_callback: ["langfuse"]
