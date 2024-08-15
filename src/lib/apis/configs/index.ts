@@ -1,9 +1,10 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchApi } from '$lib/utils';
 
 export const setDefaultModels = async (token: string, models: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/default/models`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/configs/default/models`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -33,7 +34,7 @@ export const setDefaultModels = async (token: string, models: string) => {
 export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/default/suggestions`, {
+	const res = await fetchApi(`${WEBUI_API_BASE_URL}/configs/default/suggestions`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

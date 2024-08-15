@@ -1,10 +1,11 @@
 import { OPENAI_API_BASE_URL } from '$lib/constants';
 import { promptTemplate } from '$lib/utils';
+import { fetchApi } from '$lib/utils';
 
 export const getOpenAIUrls = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/urls`, {
+	const res = await fetchApi(`${OPENAI_API_BASE_URL}/urls`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -36,7 +37,7 @@ export const getOpenAIUrls = async (token: string = '') => {
 export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/urls/update`, {
+	const res = await fetchApi(`${OPENAI_API_BASE_URL}/urls/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -71,7 +72,7 @@ export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 export const getOpenAIKeys = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/keys`, {
+	const res = await fetchApi(`${OPENAI_API_BASE_URL}/keys`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -103,7 +104,7 @@ export const getOpenAIKeys = async (token: string = '') => {
 export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/keys/update`, {
+	const res = await fetchApi(`${OPENAI_API_BASE_URL}/keys/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -138,7 +139,7 @@ export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 export const getOpenAIModels = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/models`, {
+	const res = await fetchApi(`${OPENAI_API_BASE_URL}/models`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -176,7 +177,7 @@ export const getOpenAIModelsDirect = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${base_url}/models`, {
+	const res = await fetchApi(`${base_url}/models`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -215,7 +216,7 @@ export const generateOpenAIChatCompletion = async (
 	const controller = new AbortController();
 	let error = null;
 
-	const res = await fetch(`${url}/chat/completions`, {
+	const res = await fetchApi(`${url}/chat/completions`, {
 		signal: controller.signal,
 		method: 'POST',
 		headers: {
@@ -243,7 +244,7 @@ export const synthesizeOpenAISpeech = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/audio/speech`, {
+	const res = await fetchApi(`${OPENAI_API_BASE_URL}/audio/speech`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -280,7 +281,7 @@ export const generateTitle = async (
 
 	console.log(template);
 
-	const res = await fetch(`${url}/chat/completions`, {
+	const res = await fetchApi(`${url}/chat/completions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
