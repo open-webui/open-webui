@@ -74,13 +74,15 @@ async def generate_replicate_chat_completion(form_data: dict, user=Depends(get_v
                 media_type="text/event-stream"
             )
         else:
+            input = {
+                "prompt": prompt,
+                # "temperature": form_data.get("temperature") or 0.75,
+                # "max_length": form_data.get("max_tokens") or 500,
+            }
             output = replicate.run(
                 model,
-                input={
-                    "prompt": prompt,
-                    "temperature": form_data.get("temperature", 0.75),
-                    "max_length": form_data.get("max_tokens", 500),
-                }
+                input
+
             )
             return {
                 "choices": [{
@@ -115,13 +117,10 @@ async def stream_replicate_response(client, model: str, prompt: str, form_data: 
                 model,
                 input={
                     "prompt": prompt,
-                    "temperature": form_data.get("temperature", 0.75),
-                    "max_length": form_data.get("max_tokens", 500),
                 },
                 stream=True,
         ):
             yield f"data: {json.dumps({'choices': [{'delta': {'content': event}}]})}\n\n"
-        yield "data: [DONE]\n\n"
     except Exception as e:
         log.exception(f"Error in stream_replicate_response: {e}")
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -154,6 +153,13 @@ async def get_all_models():
                 "created": int(time.time()),
                 "owned_by": "replicate",
             },
+            {
+                "id": "meta/meta-llama-3-8b-instruct",
+                "name": "meta-llama-3-8b-instruct",
+                "object": "model",
+                "created": int(time.time()),
+                "owned_by": "replicate",
+            }
         ]
         app.state.MODELS = {model["id"]: model for model in models}
         return models
