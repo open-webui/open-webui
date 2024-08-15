@@ -55,6 +55,7 @@ class ChatCompletionRequest(BaseModel):
 def is_enabled() -> bool:
     return app.state.config.ENABLE_REPLICATE_API
 
+
 async def generate_replicate_chat_completion(form_data: dict, user=Depends(get_verified_user)):
     if not app.state.config.ENABLE_REPLICATE_API:
         raise HTTPException(status_code=400, detail="Replicate API is not enabled")
@@ -141,28 +142,31 @@ async def get_all_models():
         models = [
             {
                 "id": "meta/meta-llama-3.1-405b-instruct",
-                "name": "meta-llama-3.1-405b-instruct",
+                "name": "replicate: llama-3.1 [405b, instruct]",
                 "object": "model",
                 "created": int(time.time()),
                 "owned_by": "replicate",
             },
             {
                 "id": "meta/meta-llama-3-70b-instruct",
-                "name": "meta-llama-3-70b-instruct",
+                "name": "replicate: llama-3 [70b, instruct]",
                 "object": "model",
                 "created": int(time.time()),
                 "owned_by": "replicate",
             },
             {
                 "id": "meta/meta-llama-3-8b-instruct",
-                "name": "meta-llama-3-8b-instruct",
+                "name": "replicate: llama-3 [8b, instruct]",
                 "object": "model",
                 "created": int(time.time()),
                 "owned_by": "replicate",
             }
         ]
-        app.state.MODELS = {model["id"]: model for model in models}
-        return models
+        if str(REPLICATE_API_TOKEN) != '': # only add models if the API token is set, otherwise return empty list
+            app.state.MODELS = {model["id"]: model for model in models}
+            return models
+        else:
+            return []
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
