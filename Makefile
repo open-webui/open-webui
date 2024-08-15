@@ -5,6 +5,14 @@ else
     DOCKER_COMPOSE := docker compose
 endif
 
+.PHONY: frontend/run
+frontend/run:
+	@npm run dev
+
+.PHONY: backend/run
+backend/run:
+	@bash -c "source activate open-webui-env && cd backend && bash dev.sh"
+
 install:
 	$(DOCKER_COMPOSE) up -d
 
