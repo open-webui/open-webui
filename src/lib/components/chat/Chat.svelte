@@ -167,6 +167,14 @@
 				message.content += data.content;
 			} else if (type === 'replace') {
 				message.content = data.content;
+			} else if (type === 'action') {
+				if (data.action === 'continue') {
+					const continueButton = document.getElementById('continue-response-button');
+
+					if (continueButton) {
+						continueButton.click();
+					}
+				}
 			} else if (type === 'confirmation') {
 				eventCallback = cb;
 
