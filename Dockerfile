@@ -136,7 +136,7 @@ RUN curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/so
 
 RUN exit
 RUN apt-get update
-RUN env ACCEPT_EULA=Y apt-get install -y msodbcsql18 
+RUN env ACCEPT_EULA=Y DEBIAN_FRONTEND=noninteractive apt-get install -y debconf msodbcsql18 
 
 COPY data/odbc.ini / 
 RUN odbcinst -i -s -f /odbc.ini -l
