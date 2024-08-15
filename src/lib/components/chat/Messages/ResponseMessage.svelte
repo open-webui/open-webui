@@ -451,7 +451,7 @@
 											<FormActionModal
 												on:confirm={(e) => {
 													const data = e.detail ?? {};
-													editedContent = `${data['type_of_leave']} request submitted. Date: ${data.leavefrom} to ${data.leaveto}`;
+													editedContent = `Leave request submitted. You have applied for Sick leave from date ${data.leavefrom} to ${data.leaveto} for ${data.days} days.`
 													editMessageConfirmHandler();
 												}}
 												on:cancel={() => {
