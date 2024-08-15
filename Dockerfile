@@ -131,12 +131,12 @@ RUN apt-get update && \
 
 RUN apt-get update
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-RUN curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list 
+RUN curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
 
 
 RUN exit
 RUN apt-get update
-RUN env ACCEPT_EULA=Y DEBIAN_FRONTEND=noninteractive apt-get install -y debconf msodbcsql18 
+RUN env ACCEPT_EULA=Y apt-get install -y msodbcsql18 
 
 COPY data/odbc.ini / 
 RUN odbcinst -i -s -f /odbc.ini -l
