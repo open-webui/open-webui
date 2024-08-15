@@ -342,7 +342,13 @@
 										{continueGeneration}
 										{regenerateResponse}
 										on:action={async (e) => {
-											await chatActionHandler(chatId, e.detail, message.model, message.id);
+											console.log('action', e);
+											if (typeof e.detail === 'string') {
+												await chatActionHandler(chatId, e.detail, message.model, message.id);
+											} else {
+												const { id, event } = e.detail;
+												await chatActionHandler(chatId, id, message.model, message.id, event);
+											}
 										}}
 										on:save={async (e) => {
 											console.log('save', e);
