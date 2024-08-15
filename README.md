@@ -19,7 +19,7 @@ Open WebUI is an [extensible](https://github.com/open-webui/pipelines), feature-
 
 - 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience with support for both `:ollama` and `:cuda` tagged images.
 
-- 🤝 **Ollama/OpenAI API Integration**: Effortlessly integrate OpenAI-compatible APIs for versatile conversations alongside Ollama models. Customize the OpenAI API URL to link with **LMStudio, GroqCloud, Mistral, OpenRouter, and more**.
+- 🤝 Ollama/OpenAI/Replicate API Integration: Effortlessly integrate Ollama, OpenAI-compatible APIs, and Replicate for versatile conversations. Customize the OpenAI API URL to link with LMStudio, GroqCloud, Mistral, OpenRouter, and more. Connect to [Replicate's extensive model catalog](https://replicate.com/collections/language-models) for even more options.
 
 - 🧩 **Pipelines, Open WebUI Plugin Support**: Seamlessly integrate custom logic and Python libraries into Open WebUI using [Pipelines Plugin Framework](https://github.com/open-webui/pipelines). Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. [Examples](https://github.com/open-webui/pipelines/tree/main/examples) include **Function Calling**, User **Rate Limiting** to control access, **Usage Monitoring** with tools like Langfuse, **Live Translation with LibreTranslate** for multilingual support, **Toxic Message Filtering** and much more.
 
@@ -100,6 +100,17 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
   docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
+> Make sure to replace `your_secret_key` with your actual OpenAI API key.
+
+### Installation for Replicate API Usage
+
+To use Open WebUI with Replicate, you need to set the `REPLICATE_API_TOKEN` environment variable. You can obtain this token after creating an account from your Replicate account settings at [https://replicate.com/account/api-tokens].
+
+```bash
+docker run -d -p 3000:8080 -e REPLICATE_API_TOKEN=your_replicate_api_token -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+```
+
+> Make sure to replace `your_replicate_api_token` with your actual Replicate API token.
 ### Installing Open WebUI with Bundled Ollama Support
 
 This installation method uses a single container image that bundles Open WebUI with Ollama, allowing for a streamlined setup via a single command. Choose the appropriate command based on your hardware setup:
