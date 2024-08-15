@@ -393,9 +393,11 @@
 		</table>
 	</div>
 
-	<div class=" text-gray-500 text-xs mt-2 text-right">
-		ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
-	</div>
+	{#if isProAdmin}
+		<div class=" text-gray-500 text-xs mt-2 text-right">
+			ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
+		</div>
+	{/if}
 
 	<Pagination bind:page count={users.length} />
 {/if}
