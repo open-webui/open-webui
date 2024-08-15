@@ -8,8 +8,7 @@ import urllib.parse
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union, Sequence, Iterator, Any, Tuple
-from typing import Optional
+from typing import Any, Iterator, List, Optional, Sequence, Tuple, Union
 
 import requests
 import validators
@@ -24,16 +23,16 @@ from apps.rag.search.serply import search_serply
 from apps.rag.search.serpstack import search_serpstack
 from apps.rag.search.tavily import search_tavily
 from apps.rag.utils import (
-    get_model_path,
     get_embedding_function,
-    query_doc,
-    query_doc_with_hybrid_search,
+    get_model_path,
     query_collection,
     query_collection_with_hybrid_search,
+    query_doc,
+    query_doc_with_hybrid_search,
 )
 from apps.webui.models.documents import (
-    Documents,
     DocumentForm,
+    Documents,
 )
 from apps.webui.models.files import (
     Files,
@@ -69,16 +68,6 @@ from config import (
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_RERANKING_PROVIDER,
-    RAG_OPENAI_API_BASE_URL,
-    RAG_OPENAI_API_KEY,
-    RAG_COHEREAI_API_KEY,
-    RAG_COHEREAI_API_BASE_URL,
-    RAG_VOYAGEAI_API_KEY,
-    RAG_VOYAGEAI_API_BASE_URL,
-    DEVICE_TYPE,
-    CHROMA_CLIENT,
-    CHUNK_SIZE,
-    CHUNK_OVERLAP,
     RAG_TEMPLATE,
     RAG_TOP_K,
     RAG_VOYAGEAI_API_BASE_URL,
@@ -94,47 +83,44 @@ from config import (
     SERPSTACK_HTTPS,
     SRC_LOG_LEVELS,
     TAVILY_API_KEY,
-    RAG_WEB_SEARCH_RESULT_COUNT,
-    RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
-    RAG_EMBEDDING_OPENAI_BATCH_SIZE,
 )
 from constants import ERROR_MESSAGES
 from fastapi import (
-    FastAPI,
     Depends,
-    HTTPException,
-    status,
-    UploadFile,
+    FastAPI,
     File,
     Form,
+    HTTPException,
+    UploadFile,
+    status,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
-    WebBaseLoader,
-    TextLoader,
-    PyPDFLoader,
-    CSVLoader,
     BSHTMLLoader,
+    CSVLoader,
     Docx2txtLoader,
-    UnstructuredEPubLoader,
-    UnstructuredMarkdownLoader,
-    UnstructuredXMLLoader,
-    UnstructuredRSTLoader,
-    UnstructuredExcelLoader,
-    UnstructuredPowerPointLoader,
-    YoutubeLoader,
     OutlookMessageLoader,
+    PyPDFLoader,
+    TextLoader,
+    UnstructuredEPubLoader,
+    UnstructuredExcelLoader,
+    UnstructuredMarkdownLoader,
+    UnstructuredPowerPointLoader,
+    UnstructuredRSTLoader,
+    UnstructuredXMLLoader,
+    WebBaseLoader,
+    YoutubeLoader,
 )
 from langchain_core.documents import Document
 from pydantic import BaseModel, Field
 from utils.misc import (
     calculate_sha256,
     calculate_sha256_string,
-    sanitize_filename,
     extract_folders_after_data_docs,
+    sanitize_filename,
 )
-from utils.utils import get_verified_user, get_admin_user
+from utils.utils import get_admin_user, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -562,7 +548,8 @@ async def update_reranking_config(
         update_reranking_model(
             app.state.config.RAG_RERANKING_MODEL,
             app.state.config.RAG_RERANKING_PROVIDER,
-        ), True
+            True,
+        )
 
         if form_data.cohereai_config is not None:
             app.state.config.COHEREAI_API_BASE_URL = form_data.cohereai_config.url
