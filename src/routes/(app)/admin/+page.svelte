@@ -320,9 +320,9 @@
 							{dayjs(user.created_at * 1000).format($i18n.t('MMMM DD, YYYY'))}
 						</td>
 
-						<td class="px-3 py-2 text-right">
-							<div class="flex justify-end w-full">
-								{#if isProAdmin}
+						{#if isProAdmin}
+							<td class="px-3 py-2 text-right">
+								<div class="flex justify-end w-full">
 									<Tooltip content={$i18n.t('Chats')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
@@ -334,34 +334,32 @@
 											<ChatBubbles />
 										</button>
 									</Tooltip>
-								{/if}
 
-								<Tooltip content={$i18n.t('Edit User')}>
-									<button
-										class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-										on:click={async () => {
-											showEditUserModal = !showEditUserModal;
-											selectedUser = user;
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="1.5"
-											stroke="currentColor"
-											class="w-4 h-4"
+									<Tooltip content={$i18n.t('Edit User')}>
+										<button
+											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											on:click={async () => {
+												showEditUserModal = !showEditUserModal;
+												selectedUser = user;
+											}}
 										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-											/>
-										</svg>
-									</button>
-								</Tooltip>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="1.5"
+												stroke="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+												/>
+											</svg>
+										</button>
+									</Tooltip>
 
-								{#if user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Delete User')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
@@ -386,9 +384,9 @@
 											</svg>
 										</button>
 									</Tooltip>
-								{/if}
-							</div>
-						</td>
+								</div>
+							</td>
+						{/if}
 					</tr>
 				{/each}
 			</tbody>
