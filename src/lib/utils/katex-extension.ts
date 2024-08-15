@@ -1,7 +1,7 @@
 import katex from 'katex';
 
 const DELIMITER_LIST = [
-	{ left: '$$', right: '$$', display: false },
+	{ left: '$$', right: '$$', display: true },
 	{ left: '$', right: '$', display: false },
 	{ left: '\\pu{', right: '}', display: false },
 	{ left: '\\ce{', right: '}', display: false },

@@ -26,7 +26,7 @@
 		</svelte:element>
 	{:else if token.type === 'code'}
 		<CodeBlock
-			{id}
+			id={`${id}-${tokenIdx}`}
 			{token}
 			lang={token?.lang ?? ''}
 			code={revertSanitizedResponseContent(token?.text ?? '')}
