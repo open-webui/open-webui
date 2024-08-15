@@ -101,17 +101,12 @@ function inlineKatex(options, renderer) {
 			const match = src.match(/^\$+([^$\n]+?)\$+/)
 
 			if (match) {
-				const text = match
-					.slice(2)
-					.filter((item) => item)
-					.find((item) => item.trim());
-
 				return {
 					type: 'inlineKatex',
 					raw: match[0],
-					text: text,
-					displayMode: match[0].startsWith('$$') || match[0].startsWith('\\[')
-				};
+					text: match[1].trim(),
+					displayMode: match[0].startsWith('$$')
+				}
 			}
 		},
 		renderer
