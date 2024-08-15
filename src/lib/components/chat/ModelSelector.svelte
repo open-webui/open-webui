@@ -46,6 +46,7 @@
 							label: model.name,
 							model: model
 						}))}
+						showTemporaryChatControl={true}
 						bind:value={selectedModel}
 					/>
 				</div>

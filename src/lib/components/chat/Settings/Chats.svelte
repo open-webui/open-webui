@@ -20,8 +20,8 @@
 	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
+
 	// Chats
-	let saveChatHistory = true;
 	let importFiles;
 
 	let showArchiveConfirm = false;
@@ -95,82 +95,10 @@
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		scrollPaginationEnabled.set(true);
 	};
-
-	const toggleSaveChatHistory = async () => {
-		saveChatHistory = !saveChatHistory;
-		console.log(saveChatHistory);
-
-		if (saveChatHistory === false) {
-			await goto('/');
-		}
-		saveSettings({ saveChatHistory: saveChatHistory });
-	};
-
-	onMount(async () => {
-		saveChatHistory = $settings.saveChatHistory ?? true;
-	});
 </script>
 
 <div class="flex flex-col h-full justify-between space-y-3 text-sm max-h-[22rem]">
 	<div class=" space-y-2">
-		<div
-			class="flex flex-col justify-between rounded-md items-center py-2 px-3.5 w-full transition"
-		>
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-sm font-medium">{$i18n.t('Chat History')}</div>
-
-				<button
-					class="p-1 px-3 text-xs flex rounded transition"
-					type="button"
-					on:click={() => {
-						toggleSaveChatHistory();
-					}}
-				>
-					{#if saveChatHistory === true}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
-							<path
-								fill-rule="evenodd"
-								d="M1.38 8.28a.87.87 0 0 1 0-.566 7.003 7.003 0 0 1 13.238.006.87.87 0 0 1 0 .566A7.003 7.003 0 0 1 1.379 8.28ZM11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-
-						<span class="ml-2 self-center"> {$i18n.t('On')} </span>
-					{:else}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l10.5 10.5a.75.75 0 1 0 1.06-1.06l-1.322-1.323a7.012 7.012 0 0 0 2.16-3.11.87.87 0 0 0 0-.567A7.003 7.003 0 0 0 4.82 3.76l-1.54-1.54Zm3.196 3.195 1.135 1.136A1.502 1.502 0 0 1 9.45 8.389l1.136 1.135a3 3 0 0 0-4.109-4.109Z"
-								clip-rule="evenodd"
-							/>
-							<path
-								d="m7.812 10.994 1.816 1.816A7.003 7.003 0 0 1 1.38 8.28a.87.87 0 0 1 0-.566 6.985 6.985 0 0 1 1.113-2.039l2.513 2.513a3 3 0 0 0 2.806 2.806Z"
-							/>
-						</svg>
-
-						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-					{/if}
-				</button>
-			</div>
-
-			<div class="text-xs text-left w-full font-medium mt-0.5">
-				{$i18n.t('This setting does not sync across browsers or devices.')}
-			</div>
-		</div>
-
-		<hr class=" dark:border-gray-850" />
-
 		<div class="flex flex-col">
 			<input
 				id="chat-import-input"
