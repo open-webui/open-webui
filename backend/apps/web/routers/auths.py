@@ -24,6 +24,7 @@ from apps.web.models.auths import (
     ApiKey,
 )
 from apps.web.models.users import Users
+from apps.web.models.staffs import Staffs
 
 from utils.utils import (
     get_password_hash,
@@ -392,7 +393,7 @@ async def signin_with_sso():
     with sso:
         return await sso.get_login_redirect()
 
-
+ACCESS_TOKEN="access_token"
 @router.get("/signin/callback", response_model=SigninResponse)
 async def signin_callback(request: Request):
     """Verify login"""
@@ -402,11 +403,14 @@ async def signin_callback(request: Request):
         with sso:
             sso_user = await sso.verify_and_process(request)
             logging.debug(f"sso.access_token(): {sso.access_token}")
-            sso_user.__dict__["access_token"] = sso.access_token
-            sso_user_json_str = json.dumps(sso_user.__dict__)
-            logging.info(f"The user info of SSO is {sso_user_json_str}")
             sso_user_email = sso_user.email
             sso_user_display_name = sso_user.display_name
+            staff = Staffs.get_staff_by_email(sso_user_email.lower())
+            staff_dict = staff.__dict__.copy()
+            staff_dict.pop("_sa_instance_state")
+            staff_dict[ACCESS_TOKEN] = sso.access_token
+            staff_dict_json = json.dumps(staff_dict)
+            logging.info(f"Got staff info from MSSQL by email where email is {sso_user_email}. Staff info is {staff_dict_json}")
             user = Users.get_user_by_email(sso_user_email.lower())
             logging.info(f"Got user info by email where email is {sso_user_email.lower()}. User info is {user}")
             if not user:
@@ -414,7 +418,7 @@ async def signin_callback(request: Request):
                 await signup(
                     request,
                     SignupForm(
-                        email=sso_user_email, password=str(uuid.uuid4()), name=sso_user_display_name, profile_image_url="/user.png", extra_sso=sso_user_json_str
+                        email=sso_user_email, password=str(uuid.uuid4()), name=sso_user_display_name, profile_image_url="/user.png", extra_sso=staff_dict_json
                     ),
                 )
                 logging.info("Signup done.")
@@ -429,7 +433,7 @@ async def signin_callback(request: Request):
             else:
                 logging.info("User found. Then going to update user's extra_sso.")
                 user = Users.update_user_by_id(
-                    user.id, {"extra_sso": sso_user_json_str}
+                    user.id, {"extra_sso": staff_dict_json}
                 )
 
             token = create_token(

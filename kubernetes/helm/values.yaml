@@ -1,8 +1,8 @@
 nameOverride: ""
 
 ollama:
-  externalHost: "http://192.168.100.14:31774"
-  # externalHost: "http://192.168.100.14:32383"
+  # externalHost: "http://192.168.100.14:31774"
+  externalHost: "http://192.168.100.14:32381"
   annotations: {}
   podAnnotations: {}
   replicaCount: 1
@@ -83,7 +83,7 @@ hrwebui:
   replicaCount: 1
   image:
     repository: ghcr.io/ciai-engineering/open-webui
-    tag: "git-15cfa2b"
+    tag: "git-e77e249"
     pullPolicy: Always
   resources: {}
   imagePullSecrets: 
@@ -115,7 +115,7 @@ hrwebui:
     annotations: {}
     port: 80
     containerPort: 8080
-    nodePort: 31031
+    nodePort: 31032
     labels: {}
     loadBalancerClass: "" 
   sso:
@@ -128,3 +128,10 @@ hrwebui:
   mail:
     enabled: false
     hr: "Qinghao.Zhang@mbzuai.ac.ae"
+  mssql:
+    enabled: true
+    server: "10.127.129.4"
+    user: "ciai_rag"
+    password: "******"
+    database: "ADERP"
+    view: "EMPLOYEE_INFO_V"
