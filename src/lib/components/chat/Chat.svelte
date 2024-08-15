@@ -430,7 +430,7 @@
 		}
 	};
 
-	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId) => {
+	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
 		const res = await chatAction(localStorage.token, actionId, {
 			model: modelId,
 			messages: messages.map((m) => ({
@@ -440,6 +440,7 @@
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp
 			})),
+			...(event ? { event: event } : {}),
 			chat_id: chatId,
 			session_id: $socket?.id,
 			id: responseMessageId

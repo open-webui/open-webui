@@ -1027,6 +1027,10 @@ async def get_all_models():
                 function_module, _, _ = load_function_module_by_id(action_id)
                 webui_app.state.FUNCTIONS[action_id] = function_module
 
+            __webui__ = False
+            if hasattr(function_module, "__webui__"):
+                __webui__ = function_module.__webui__
+
             if hasattr(function_module, "actions"):
                 actions = function_module.actions
                 model["actions"].extend(
@@ -1040,6 +1044,7 @@ async def get_all_models():
                             "icon_url": _action.get(
                                 "icon_url", action.meta.manifest.get("icon_url", None)
                             ),
+                            **({"__webui__": __webui__} if __webui__ else {}),
                         }
                         for _action in actions
                     ]
@@ -1051,6 +1056,7 @@ async def get_all_models():
                         "name": action.name,
                         "description": action.meta.description,
                         "icon_url": action.meta.manifest.get("icon_url", None),
+                        **({"__webui__": __webui__} if __webui__ else {}),
                     }
                 )
 
