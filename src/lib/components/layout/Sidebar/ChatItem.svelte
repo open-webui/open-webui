@@ -14,7 +14,7 @@
 		getChatListByTagName,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { chatId, chats, mobile, pinnedChats, showSidebar } from '$lib/stores';
+	import { chatId, chats, mobile, pinnedChats, showSidebar, currentChatPage } from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
@@ -40,7 +40,9 @@
 			await updateChatById(localStorage.token, id, {
 				title: _title
 			});
-			await chats.set(await getChatList(localStorage.token));
+
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
@@ -53,14 +55,18 @@
 
 		if (res) {
 			goto(`/c/${res.id}`);
-			await chats.set(await getChatList(localStorage.token));
+
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 		}
 	};
 
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
-		await chats.set(await getChatList(localStorage.token));
+
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		await pinnedChats.set(await getChatListByTagName(localStorage.token, 'pinned'));
 	};
 
@@ -77,8 +83,8 @@
 			class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
-				? 'bg-gray-100 dark:bg-gray-950'
-				: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					? 'bg-gray-100 dark:bg-gray-950'
+					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 		>
 			<input
 				use:focusEdit
@@ -91,8 +97,8 @@
 			class=" w-full flex justify-between rounded-xl px-3 py-2 {chat.id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
-				? 'bg-gray-100 dark:bg-gray-950'
-				: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					? 'bg-gray-100 dark:bg-gray-950'
+					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 			href="/c/{chat.id}"
 			on:click={() => {
 				dispatch('select');
@@ -128,8 +134,8 @@
         {chat.id === $chatId || confirmEdit
 			? 'from-gray-200 dark:from-gray-900'
 			: selected
-			? 'from-gray-100 dark:from-gray-950'
-			: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+				? 'from-gray-100 dark:from-gray-950'
+				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute right-[10px] top-[6px] py-1 pr-2 pl-5 bg-gradient-to-l from-80%
 
               to-transparent"

@@ -42,6 +42,9 @@ from config import (
     COMFYUI_SAMPLER,
     COMFYUI_SCHEDULER,
     COMFYUI_SD3,
+    COMFYUI_FLUX,
+    COMFYUI_FLUX_WEIGHT_DTYPE,
+    COMFYUI_FLUX_FP8_CLIP,
     IMAGES_OPENAI_API_BASE_URL,
     IMAGES_OPENAI_API_KEY,
     IMAGE_GENERATION_MODEL,
@@ -85,10 +88,13 @@ app.state.config.COMFYUI_CFG_SCALE = COMFYUI_CFG_SCALE
 app.state.config.COMFYUI_SAMPLER = COMFYUI_SAMPLER
 app.state.config.COMFYUI_SCHEDULER = COMFYUI_SCHEDULER
 app.state.config.COMFYUI_SD3 = COMFYUI_SD3
+app.state.config.COMFYUI_FLUX = COMFYUI_FLUX
+app.state.config.COMFYUI_FLUX_WEIGHT_DTYPE = COMFYUI_FLUX_WEIGHT_DTYPE
+app.state.config.COMFYUI_FLUX_FP8_CLIP = COMFYUI_FLUX_FP8_CLIP
 
 
 def get_automatic1111_api_auth():
-    if app.state.config.AUTOMATIC1111_API_AUTH == None:
+    if app.state.config.AUTOMATIC1111_API_AUTH is None:
         return ""
     else:
         auth1111_byte_string = app.state.config.AUTOMATIC1111_API_AUTH.encode("utf-8")
@@ -139,28 +145,30 @@ async def get_engine_url(user=Depends(get_admin_user)):
 async def update_engine_url(
     form_data: EngineUrlUpdateForm, user=Depends(get_admin_user)
 ):
-    if form_data.AUTOMATIC1111_BASE_URL == None:
+    if form_data.AUTOMATIC1111_BASE_URL is None:
         app.state.config.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
     else:
         url = form_data.AUTOMATIC1111_BASE_URL.strip("/")
         try:
             r = requests.head(url)
+            r.raise_for_status()
             app.state.config.AUTOMATIC1111_BASE_URL = url
         except Exception as e:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
 
-    if form_data.COMFYUI_BASE_URL == None:
+    if form_data.COMFYUI_BASE_URL is None:
         app.state.config.COMFYUI_BASE_URL = COMFYUI_BASE_URL
     else:
         url = form_data.COMFYUI_BASE_URL.strip("/")
 
         try:
             r = requests.head(url)
+            r.raise_for_status()
             app.state.config.COMFYUI_BASE_URL = url
         except Exception as e:
-            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
 
-    if form_data.AUTOMATIC1111_API_AUTH == None:
+    if form_data.AUTOMATIC1111_API_AUTH is None:
         app.state.config.AUTOMATIC1111_API_AUTH = AUTOMATIC1111_API_AUTH
     else:
         app.state.config.AUTOMATIC1111_API_AUTH = form_data.AUTOMATIC1111_API_AUTH
@@ -497,9 +505,18 @@ async def image_generations(
             if app.state.config.COMFYUI_SD3 is not None:
                 data["sd3"] = app.state.config.COMFYUI_SD3
 
+            if app.state.config.COMFYUI_FLUX is not None:
+                data["flux"] = app.state.config.COMFYUI_FLUX
+
+            if app.state.config.COMFYUI_FLUX_WEIGHT_DTYPE is not None:
+                data["flux_weight_dtype"] = app.state.config.COMFYUI_FLUX_WEIGHT_DTYPE
+
+            if app.state.config.COMFYUI_FLUX_FP8_CLIP is not None:
+                data["flux_fp8_clip"] = app.state.config.COMFYUI_FLUX_FP8_CLIP
+
             data = ImageGenerationPayload(**data)
 
-            res = comfyui_generate_image(
+            res = await comfyui_generate_image(
                 app.state.config.MODEL,
                 data,
                 user.id,

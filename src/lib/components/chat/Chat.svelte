@@ -25,7 +25,8 @@
 		user,
 		socket,
 		showCallOverlay,
-		tools
+		tools,
+		currentChatPage
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -80,6 +81,7 @@
 	let eventConfirmationMessage = '';
 	let eventConfirmationInput = false;
 	let eventConfirmationInputPlaceholder = '';
+	let eventConfirmationInputValue = '';
 	let eventCallback = null;
 
 	let showModelSelector = true;
@@ -108,7 +110,6 @@
 	};
 
 	let params = {};
-	let valves = {};
 
 	$: if (history.currentId !== null) {
 		let _messages = [];
@@ -182,6 +183,7 @@
 				eventConfirmationTitle = data.title;
 				eventConfirmationMessage = data.message;
 				eventConfirmationInputPlaceholder = data.placeholder;
+				eventConfirmationInputValue = data?.value ?? '';
 			} else {
 				console.log('Unknown message type', data);
 			}
@@ -281,6 +283,10 @@
 
 		if ($page.url.searchParams.get('q')) {
 			prompt = $page.url.searchParams.get('q') ?? '';
+			selectedToolIds = ($page.url.searchParams.get('tool_ids') ?? '')
+				.split(',')
+				.map((id) => id.trim())
+				.filter((id) => id);
 
 			if (prompt) {
 				await tick();
@@ -416,7 +422,9 @@
 					params: params,
 					files: chatFiles
 				});
-				await chats.set(await getChatList(localStorage.token));
+
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
 	};
@@ -462,7 +470,9 @@
 					params: params,
 					files: chatFiles
 				});
-				await chats.set(await getChatList(localStorage.token));
+
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
 	};
@@ -569,8 +579,8 @@
 		let selectedModelIds = modelId
 			? [modelId]
 			: atSelectedModel !== undefined
-			? [atSelectedModel.id]
-			: selectedModels;
+				? [atSelectedModel.id]
+				: selectedModels;
 
 		// Create response messages for each selected model
 		const responseMessageIds = {};
@@ -622,7 +632,9 @@
 					tags: [],
 					timestamp: Date.now()
 				});
-				await chats.set(await getChatList(localStorage.token));
+
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 				await chatId.set(chat.id);
 			} else {
 				await chatId.set('local');
@@ -698,7 +710,9 @@
 			})
 		);
 
-		await chats.set(await getChatList(localStorage.token));
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+
 		return _responses;
 	};
 
@@ -706,6 +720,7 @@
 		let _response = null;
 
 		const responseMessage = history.messages[responseMessageId];
+		const userMessage = history.messages[responseMessage.parentId];
 
 		// Wait until history/message have been updated
 		await tick();
@@ -724,11 +739,11 @@
 								? await getAndUpdateUserLocation(localStorage.token)
 								: undefined
 						)}${
-							responseMessage?.userContext ?? null
+							(responseMessage?.userContext ?? null)
 								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 								: ''
 						}`
-				  }
+					}
 				: undefined,
 			...messages
 		]
@@ -772,11 +787,12 @@
 		if (model?.info?.meta?.knowledge ?? false) {
 			files.push(...model.info.meta.knowledge);
 		}
-		if (responseMessage?.files) {
-			files.push(
-				...responseMessage?.files.filter((item) => ['web_search_results'].includes(item.type))
-			);
-		}
+		files.push(
+			...(userMessage?.files ?? []).filter((item) =>
+				['doc', 'file', 'collection'].includes(item.type)
+			),
+			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
+		);
 
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:start', {
@@ -795,10 +811,10 @@
 			options: {
 				...(params ?? $settings.params ?? {}),
 				stop:
-					params?.stop ?? $settings?.params?.stop ?? undefined
-						? (params?.stop ?? $settings.params.stop).map((str) =>
-								decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-						  )
+					(params?.stop ?? $settings?.params?.stop ?? undefined)
+						? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
+								(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+							)
 						: undefined,
 				num_predict: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
 				repeat_penalty:
@@ -808,7 +824,6 @@
 			keep_alive: $settings.keepAlive ?? undefined,
 			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 			files: files.length > 0 ? files : undefined,
-			...(Object.keys(valves).length ? { valves } : {}),
 			session_id: $socket?.id,
 			chat_id: $chatId,
 			id: responseMessageId
@@ -861,6 +876,10 @@
 									continue;
 								} else {
 									responseMessage.content += data.message.content;
+
+									if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+										navigator.vibrate(5);
+									}
 
 									const sentences = extractSentencesForAudio(responseMessage.content);
 									sentences.pop();
@@ -943,7 +962,9 @@
 						params: params,
 						files: chatFiles
 					});
-					await chats.set(await getChatList(localStorage.token));
+
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
 				}
 			}
 		} else {
@@ -1006,17 +1027,20 @@
 
 	const sendPromptOpenAI = async (model, userPrompt, responseMessageId, _chatId) => {
 		let _response = null;
+
 		const responseMessage = history.messages[responseMessageId];
+		const userMessage = history.messages[responseMessage.parentId];
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		if (model?.info?.meta?.knowledge ?? false) {
 			files.push(...model.info.meta.knowledge);
 		}
-		if (responseMessage?.files) {
-			files.push(
-				...responseMessage?.files.filter((item) => ['web_search_results'].includes(item.type))
-			);
-		}
+		files.push(
+			...(userMessage?.files ?? []).filter((item) =>
+				['doc', 'file', 'collection'].includes(item.type)
+			),
+			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
+		);
 
 		scrollToBottom();
 
@@ -1036,10 +1060,10 @@
 					stream: true,
 					model: model.id,
 					stream_options:
-						model.info?.meta?.capabilities?.usage ?? false
+						(model.info?.meta?.capabilities?.usage ?? false)
 							? {
 									include_usage: true
-							  }
+								}
 							: undefined,
 					messages: [
 						params?.system || $settings.system || (responseMessage?.userContext ?? null)
@@ -1052,11 +1076,11 @@
 											? await getAndUpdateUserLocation(localStorage.token)
 											: undefined
 									)}${
-										responseMessage?.userContext ?? null
+										(responseMessage?.userContext ?? null)
 											? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 											: ''
 									}`
-							  }
+								}
 							: undefined,
 						...messages
 					]
@@ -1072,7 +1096,7 @@
 												text:
 													arr.length - 1 !== idx
 														? message.content
-														: message?.raContent ?? message.content
+														: (message?.raContent ?? message.content)
 											},
 											...message.files
 												.filter((file) => file.type === 'image')
@@ -1083,20 +1107,20 @@
 													}
 												}))
 										]
-								  }
+									}
 								: {
 										content:
 											arr.length - 1 !== idx
 												? message.content
-												: message?.raContent ?? message.content
-								  })
+												: (message?.raContent ?? message.content)
+									})
 						})),
 					seed: params?.seed ?? $settings?.params?.seed ?? undefined,
 					stop:
-						params?.stop ?? $settings?.params?.stop ?? undefined
-							? (params?.stop ?? $settings.params.stop).map((str) =>
-									decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-							  )
+						(params?.stop ?? $settings?.params?.stop ?? undefined)
+							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
+									(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+								)
 							: undefined,
 					temperature: params?.temperature ?? $settings?.params?.temperature ?? undefined,
 					top_p: params?.top_p ?? $settings?.params?.top_p ?? undefined,
@@ -1105,7 +1129,6 @@
 					max_tokens: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
 					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 					files: files.length > 0 ? files : undefined,
-					...(Object.keys(valves).length ? { valves } : {}),
 					session_id: $socket?.id,
 					chat_id: $chatId,
 					id: responseMessageId
@@ -1120,7 +1143,6 @@
 
 			if (res && res.ok && res.body) {
 				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
-				let lastUsage = null;
 
 				for await (const update of textStream) {
 					const { value, done, citations, error, usage } = update;
@@ -1146,7 +1168,7 @@
 					}
 
 					if (usage) {
-						lastUsage = usage;
+						responseMessage.info = { ...usage, openai: true };
 					}
 
 					if (citations) {
@@ -1158,6 +1180,10 @@
 						continue;
 					} else {
 						responseMessage.content += value;
+
+						if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+							navigator.vibrate(5);
+						}
 
 						const sentences = extractSentencesForAudio(responseMessage.content);
 						sentences.pop();
@@ -1200,10 +1226,6 @@
 					document.getElementById(`speak-button-${responseMessage.id}`)?.click();
 				}
 
-				if (lastUsage) {
-					responseMessage.info = { ...lastUsage, openai: true };
-				}
-
 				if ($chatId == _chatId) {
 					if ($settings.saveChatHistory ?? true) {
 						chat = await updateChatById(localStorage.token, _chatId, {
@@ -1213,7 +1235,9 @@
 							params: params,
 							files: chatFiles
 						});
-						await chats.set(await getChatList(localStorage.token));
+
+						currentChatPage.set(1);
+						await chats.set(await getChatList(localStorage.token, $currentChatPage));
 					}
 				}
 			} else {
@@ -1378,7 +1402,9 @@
 
 		if ($settings.saveChatHistory ?? true) {
 			chat = await updateChatById(localStorage.token, _chatId, { title: _title });
-			await chats.set(await getChatList(localStorage.token));
+
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		}
 	};
 
@@ -1484,6 +1510,7 @@
 	message={eventConfirmationMessage}
 	input={eventConfirmationInput}
 	inputPlaceholder={eventConfirmationInputPlaceholder}
+	inputValue={eventConfirmationInputValue}
 	on:confirm={(e) => {
 		if (e.detail) {
 			eventCallback(e.detail);
@@ -1631,7 +1658,6 @@
 			bind:show={showControls}
 			bind:chatFiles
 			bind:params
-			bind:valves
 		/>
 	</div>
 {/if}

@@ -20,6 +20,7 @@
 		mirostat_tau: null,
 		top_k: null,
 		top_p: null,
+		min_p: null,
 		tfs_z: null,
 		num_ctx: null,
 		num_batch: null,
@@ -28,6 +29,7 @@
 		use_mmap: null,
 		use_mlock: null,
 		num_thread: null,
+		num_gpu: null,
 		template: null
 	};
 
@@ -374,6 +376,52 @@
 				<div>
 					<input
 						bind:value={params.top_p}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="0"
+						max="1"
+						step="any"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<div class="flex w-full justify-between">
+			<div class=" self-center text-xs font-medium">{$i18n.t('Min P')}</div>
+
+			<button
+				class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+				type="button"
+				on:click={() => {
+					params.min_p = (params?.min_p ?? null) === null ? 0.0 : null;
+				}}
+			>
+				{#if (params?.min_p ?? null) === null}
+					<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+				{:else}
+					<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+				{/if}
+			</button>
+		</div>
+
+		{#if (params?.min_p ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="0"
+						max="1"
+						step="0.05"
+						bind:value={params.min_p}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div>
+					<input
+						bind:value={params.min_p}
 						type="number"
 						class=" bg-transparent text-center w-14"
 						min="0"
@@ -809,6 +857,52 @@
 							type="number"
 							class=" bg-transparent text-center w-14"
 							min="1"
+							max="256"
+							step="1"
+						/>
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class=" py-0.5 w-full justify-between">
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('num_gpu (Ollama)')}</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					type="button"
+					on:click={() => {
+						params.num_gpu = (params?.num_gpu ?? null) === null ? 0 : null;
+					}}
+				>
+					{#if (params?.num_gpu ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+
+			{#if (params?.num_gpu ?? null) !== null}
+				<div class="flex mt-0.5 space-x-2">
+					<div class=" flex-1">
+						<input
+							id="steps-range"
+							type="range"
+							min="0"
+							max="256"
+							step="1"
+							bind:value={params.num_gpu}
+							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						/>
+					</div>
+					<div class="">
+						<input
+							bind:value={params.num_gpu}
+							type="number"
+							class=" bg-transparent text-center w-14"
+							min="0"
 							max="256"
 							step="1"
 						/>

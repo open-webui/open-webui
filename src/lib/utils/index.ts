@@ -6,7 +6,29 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 // Helper functions
 //////////////////////////
 
+const convertLatexToSingleLine = (content) => {
+	// Patterns to match multiline LaTeX blocks
+	const patterns = [
+		/(\$\$\s[\s\S]*?\s\$\$)/g, // Match $$ ... $$
+		/(\\\[[\s\S]*?\\\])/g, // Match \[ ... \]
+		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
+	];
+
+	patterns.forEach((pattern) => {
+		content = content.replace(pattern, (match) => {
+			return match.replace(/\s*\n\s*/g, ' ').trim();
+		});
+	});
+
+	return content;
+};
+
 export const sanitizeResponseContent = (content: string) => {
+	// replace single backslash with double backslash
+	content = content.replace(/\\\\/g, '\\\\\\\\');
+
+	content = convertLatexToSingleLine(content);
+
 	// First, temporarily replace valid <video> tags with a placeholder
 	const videoTagRegex = /<video\s+src="([^"]+)"\s+controls><\/video>/gi;
 	const placeholders: string[] = [];
@@ -66,8 +88,13 @@ export const replaceTokens = (content, char, user) => {
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
-	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
+	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('\\\\', '\\');
 };
+
+export function unescapeHtml(html: string) {
+	const doc = new DOMParser().parseFromString(html, 'text/html');
+	return doc.documentElement.textContent;
+}
 
 export const capitalizeFirstLetter = (string) => {
 	return string.charAt(0).toUpperCase() + string.slice(1);
@@ -200,7 +227,7 @@ export const generateInitialsImage = (name) => {
 	const initials =
 		sanitizedName.length > 0
 			? sanitizedName[0] +
-			  (sanitizedName.split(' ').length > 1
+				(sanitizedName.split(' ').length > 1
 					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
 					: '')
 			: '';
@@ -259,7 +286,7 @@ export const compareVersion = (latest, current) => {
 				numeric: true,
 				sensitivity: 'case',
 				caseFirst: 'upper'
-		  }) < 0;
+			}) < 0;
 };
 
 export const findWordIndices = (text) => {

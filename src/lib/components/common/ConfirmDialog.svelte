@@ -15,12 +15,12 @@
 
 	export let input = false;
 	export let inputPlaceholder = '';
+	export let inputValue = '';
 
 	export let show = false;
 
 	let modalElement = null;
 	let mounted = false;
-	let inputValue = '';
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
