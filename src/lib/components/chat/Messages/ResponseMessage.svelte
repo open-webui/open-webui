@@ -34,6 +34,7 @@
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import MarkdownTokens from './MarkdownTokens.svelte';
+	import auto_render from 'katex/dist/contrib/auto-render.mjs';
 
 	export let message;
 	export let siblings;
@@ -89,8 +90,49 @@
 			tokens = marked.lexer(
 				replaceTokens(processResponseContent(message?.content), model?.name, $user?.name)
 			);
+			await renderLatex();
+		}
+		if (message?.done ?? false) {
+			await renderLatex();
 		}
 	})();
+
+	const renderLatex = async () => {
+		try {
+			await tick();
+			const chatMessageContainer = document.getElementById(`message-${message.id}`);
+			if (!chatMessageContainer) {
+				console.warn(`未找到 id 为 'message-${message.id}' 的元素。`);
+				return;
+			}
+
+			const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
+			if (!chatMessageElements || chatMessageElements.length === 0) {
+				console.warn(`在容器中未找到带有 'chat-assistant' 类的元素。`);
+				return;
+			}
+
+			for (const element of chatMessageElements) {
+				try {
+					auto_render(element, {
+						delimiters: [
+							{ left: '$$', right: '$$', display: true },
+							{ left: '$', right: '$', display: true },
+							{ left: '\\pu{', right: '}', display: false },
+							{ left: '\\ce{', right: '}', display: false },
+							{ left: '\\(', right: '\\)', display: false },
+							{ left: '\\[', right: '\\]', display: true }
+						],
+						throwOnError: false
+					});
+				} catch (err) {
+					console.error(`渲染 LaTeX 时出错，元素：`, element, err);
+				}
+			}
+		} catch (err) {
+			console.error('renderLatex 函数中的错误:', err);
+		}
+	};
 
 	const playAudio = (idx) => {
 		return new Promise((res) => {
