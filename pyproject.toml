@@ -38,6 +38,7 @@ dependencies = [
 
     "openai",
     "anthropic",
+    "replicate",
     "google-generativeai==0.7.2",
     "tiktoken",
 
