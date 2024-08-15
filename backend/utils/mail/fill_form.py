@@ -164,8 +164,8 @@ class FillLeaveForm:
         :return: str: The path to the output file
         '''
 
-        required_keys = ['{NAME}','{ID}','{JOBTITLE}','{DEPT}','{LEAVETYPE}','{REMARKS}','{LEAVEFROM}','{LEAVETO}','{DAYS}','{ADDRESS}','{TELE}','{EMAIL}','{DATE}']
-        self.validate_context(self.data, required_keys)
+        # required_keys = ['{NAME}','{ID}','{JOBTITLE}','{DEPT}','{LEAVETYPE}','{REMARKS}','{LEAVEFROM}','{LEAVETO}','{DAYS}','{ADDRESS}','{TELE}','{EMAIL}','{DATE}']
+        # self.validate_context(self.data, required_keys)
         
         packet = io.BytesIO()
         can = canvas.Canvas(packet, pagesize=letter)
