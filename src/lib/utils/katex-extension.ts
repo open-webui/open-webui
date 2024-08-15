@@ -63,9 +63,9 @@ export default function (options = {}) {
 
 function createRenderer(options, newlineAfter) {
 	return (token) =>
-		katex.renderToString(token.text, { ...options, displayMode: token.displayMode }) +
-		(newlineAfter ? '\n' : '');
-	katex.renderToString(token.text, { ...options, displayMode: token.displayMode });
+		// katex.renderToString(token.text, { ...options, displayMode: token.displayMode }) +
+		// (newlineAfter ? '\n' : '');
+		katex.renderToString(token.text, { ...options, displayMode: token.displayMode });
 }
 
 function inlineKatex(options, renderer) {
@@ -94,6 +94,9 @@ function inlineKatex(options, renderer) {
 		// 		indexSrc = indexSrc.substring(index + 1).replace(/^\$+/, '');
 		// 	}
 		// },
+		start(src: string) {
+			return src.indexOf('$')
+		},
 		tokenizer(src, tokens) {
 			const match = src.match(/^\$+([^$\n]+?)\$+/)
 
