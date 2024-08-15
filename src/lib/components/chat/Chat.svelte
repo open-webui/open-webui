@@ -49,6 +49,7 @@
 		updateChatById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { generateReplicateChatCompletion } from '$lib/apis/replicate';
 	import { runWebSearch } from '$lib/apis/rag';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
@@ -696,7 +697,9 @@
 					}
 
 					let _response = null;
-					if (model?.owned_by === 'openai') {
+					if (model?.owned_by === 'replicate') {
+						_response = await sendPromptReplicate(model, prompt, responseMessageId, _chatId);
+					} else if (model?.owned_by === 'openai') {
 						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
 					} else if (model) {
 						_response = await sendPromptOllama(model, prompt, responseMessageId, _chatId);
@@ -1283,6 +1286,268 @@
 		return _response;
 	};
 
+	const sendPromptReplicate = async (model, userPrompt, responseMessageId, _chatId) => {
+		let _response = null;
+
+		const responseMessage = history.messages[responseMessageId];
+		const userMessage = history.messages[responseMessage.parentId];
+
+		// Wait until history/message have been updated
+		await tick();
+
+		// Scroll down
+		scrollToBottom();
+
+		const messagesBody = [
+			params?.system || $settings.system || (responseMessage?.userContext ?? null)
+				? {
+					role: 'system',
+					content: `${promptTemplate(
+						params?.system ?? $settings?.system ?? '',
+						$user.name,
+						$settings?.userLocation
+							? await getAndUpdateUserLocation(localStorage.token)
+							: undefined
+					)}${
+						(responseMessage?.userContext ?? null)
+							? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
+							: ''
+					}`
+				}
+				: undefined,
+			...messages
+		]
+			.filter((message) => message?.content?.trim())
+			.map((message) => ({
+				role: message.role,
+				content: message.content
+			}));
+
+		let files = JSON.parse(JSON.stringify(chatFiles));
+		if (model?.info?.meta?.knowledge ?? false) {
+			files.push(...model.info.meta.knowledge);
+		}
+		files.push(
+			...(userMessage?.files ?? []).filter((item) =>
+				['doc', 'file', 'collection'].includes(item.type)
+			),
+			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
+		);
+
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:start', {
+				detail: {
+					id: responseMessageId
+				}
+			})
+		);
+
+		await tick();
+
+		const [res, controller] = await generateReplicateChatCompletion(localStorage.token, {
+			stream: true,
+			model: model.id,
+			messages: messagesBody,
+			options: {
+				...(params ?? $settings.params ?? {}),
+				stop: (params?.stop ?? $settings?.params?.stop ?? undefined)
+					? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
+						(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
+					)
+					: undefined,
+				max_tokens: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
+				temperature: params?.temperature ?? $settings?.params?.temperature ?? undefined,
+				top_p: params?.top_p ?? $settings?.params?.top_p ?? undefined
+			},
+			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+			files: files.length > 0 ? files : undefined,
+			session_id: $socket?.id,
+			chat_id: $chatId,
+			id: responseMessageId
+		});
+
+		if (res && res.ok) {
+			console.log('controller', controller);
+
+			const reader = res.body
+				.pipeThrough(new TextDecoderStream())
+				.pipeThrough(splitStream('\n'))
+				.getReader();
+
+			while (true) {
+				const { value, done } = await reader.read();
+				if (done || stopResponseFlag || _chatId !== $chatId) {
+					responseMessage.done = true;
+					messages = messages;
+
+					if (stopResponseFlag) {
+						controller.abort('User: Stop Response');
+					} else {
+						const messages = createMessagesList(responseMessageId);
+						await chatCompletedHandler(_chatId, model.id, responseMessageId, messages);
+					}
+
+					_response = responseMessage.content;
+					break;
+				}
+
+				try {
+					if (value.startsWith('data: ')) {
+						const jsonData = JSON.parse(value.slice(6)); // Remove 'data: ' prefix
+						if (jsonData.choices && jsonData.choices.length > 0) {
+							const content = jsonData.choices[0].delta.content;
+
+							if (content) {
+								if (responseMessage.content === '' && content === '\n\n') {
+									continue;
+								}
+
+								responseMessage.content += content;
+
+								if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+									navigator.vibrate(5);
+								}
+
+								const sentences = extractSentencesForAudio(responseMessage.content);
+								sentences.pop();
+
+								if (
+									sentences.length > 0 &&
+									sentences[sentences.length - 1] !== responseMessage.lastSentence
+								) {
+									responseMessage.lastSentence = sentences[sentences.length - 1];
+									eventTarget.dispatchEvent(
+										new CustomEvent('chat', {
+											detail: { id: responseMessageId, content: sentences[sentences.length - 1] }
+										})
+									);
+								}
+
+								messages = messages;
+							}
+						}
+
+						if (jsonData.done) {
+							responseMessage.done = true;
+
+							if (responseMessage.content === '') {
+								responseMessage.error = {
+									code: 400,
+									content: `Oops! No text generated from Replicate, Please try again.`
+								};
+							}
+
+							// Add any additional info if available in the response
+							if (jsonData.info) {
+								responseMessage.info = jsonData.info;
+							}
+
+							messages = messages;
+
+							if ($settings.notificationEnabled && !document.hasFocus()) {
+								const notification = new Notification(`${model.id}`, {
+									body: responseMessage.content,
+									icon: `${WEBUI_BASE_URL}/static/favicon.png`
+								});
+							}
+
+							if ($settings?.responseAutoCopy ?? false) {
+								copyToClipboard(responseMessage.content);
+							}
+
+							if ($settings.responseAutoPlayback && !$showCallOverlay) {
+								await tick();
+								document.getElementById(`speak-button-${responseMessage.id}`)?.click();
+							}
+
+							break;
+						}
+					}
+				} catch (error) {
+					console.log(error);
+					if ('detail' in error) {
+						toast.error(error.detail);
+					}
+					break;
+				}
+
+				if (autoScroll) {
+					scrollToBottom();
+				}
+			}
+
+			if ($chatId == _chatId) {
+				if ($settings.saveChatHistory ?? true) {
+					chat = await updateChatById(localStorage.token, _chatId, {
+						messages: messages,
+						history: history,
+						models: selectedModels,
+						params: params,
+						files: chatFiles
+					});
+
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				}
+			}
+		} else {
+			if (res !== null) {
+				const error = await res.json();
+				console.log(error);
+				if ('detail' in error) {
+					toast.error(error.detail);
+					responseMessage.error = { content: error.detail };
+				} else {
+					toast.error(error.error);
+					responseMessage.error = { content: error.error };
+				}
+			} else {
+				toast.error(
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: 'Replicate' })
+				);
+				responseMessage.error = {
+					content: $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
+						provider: 'Replicate'
+					})
+				};
+			}
+			responseMessage.done = true;
+			messages = messages;
+		}
+
+		stopResponseFlag = false;
+		await tick();
+
+		let lastSentence = extractSentencesForAudio(responseMessage.content)?.at(-1) ?? '';
+		if (lastSentence) {
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: { id: responseMessageId, content: lastSentence }
+				})
+			);
+		}
+		eventTarget.dispatchEvent(
+			new CustomEvent('chat:finish', {
+				detail: {
+					id: responseMessageId,
+					content: responseMessage.content
+				}
+			})
+		);
+
+		if (autoScroll) {
+			scrollToBottom();
+		}
+
+		if (messages.length == 2 && messages.at(1).content !== '' && selectedModels[0] === model.id) {
+			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			const _title = await generateChatTitle(userPrompt);
+			await setChatTitle(_chatId, _title);
+		}
+
+		return _response;
+	};
+
 	const handleOpenAIError = async (error, res: Response | null, model, responseMessage) => {
 		let errorMessage = '';
 		let innerError;
@@ -1356,7 +1621,14 @@
 
 			const model = $models.filter((m) => m.id === responseMessage.model).at(0);
 
-			if (model) {
+			if (model?.owned_by === 'replicate') {
+				await sendPromptReplicate(
+					model,
+					history.messages[responseMessage.parentId].content,
+					responseMessage.id,
+					_chatId
+				);
+			} else if (model) {
 				if (model?.owned_by === 'openai') {
 					await sendPromptOpenAI(
 						model,
