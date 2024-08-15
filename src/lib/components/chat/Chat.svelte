@@ -26,7 +26,8 @@
 		socket,
 		showCallOverlay,
 		tools,
-		currentChatPage
+		currentChatPage,
+		temporaryChatEnabled
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -238,7 +239,7 @@
 				}
 			});
 		} else {
-			if (!($settings.saveChatHistory ?? true)) {
+			if ($temporaryChatEnabled) {
 				await goto('/');
 			}
 		}
@@ -414,7 +415,7 @@
 		}
 
 		if ($chatId == chatId) {
-			if ($settings.saveChatHistory ?? true) {
+			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, chatId, {
 					models: selectedModels,
 					messages: messages,
@@ -429,7 +430,7 @@
 		}
 	};
 
-	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId) => {
+	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
 		const res = await chatAction(localStorage.token, actionId, {
 			model: modelId,
 			messages: messages.map((m) => ({
@@ -439,6 +440,7 @@
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp
 			})),
+			...(event ? { event: event } : {}),
 			chat_id: chatId,
 			session_id: $socket?.id,
 			id: responseMessageId
@@ -462,7 +464,7 @@
 		}
 
 		if ($chatId == chatId) {
-			if ($settings.saveChatHistory ?? true) {
+			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, chatId, {
 					models: selectedModels,
 					messages: messages,
@@ -620,7 +622,7 @@
 
 		// Create new chat if only one message in messages
 		if (newChat && messages.length == 2) {
-			if ($settings.saveChatHistory ?? true) {
+			if (!$temporaryChatEnabled) {
 				chat = await createNewChat(localStorage.token, {
 					id: $chatId,
 					title: $i18n.t('New Chat'),
@@ -954,7 +956,7 @@
 			}
 
 			if ($chatId == _chatId) {
-				if ($settings.saveChatHistory ?? true) {
+				if (!$temporaryChatEnabled) {
 					chat = await updateChatById(localStorage.token, _chatId, {
 						messages: messages,
 						history: history,
@@ -1227,7 +1229,7 @@
 				}
 
 				if ($chatId == _chatId) {
-					if ($settings.saveChatHistory ?? true) {
+					if (!$temporaryChatEnabled) {
 						chat = await updateChatById(localStorage.token, _chatId, {
 							models: selectedModels,
 							messages: messages,
@@ -1400,7 +1402,7 @@
 			title = _title;
 		}
 
-		if ($settings.saveChatHistory ?? true) {
+		if (!$temporaryChatEnabled) {
 			chat = await updateChatById(localStorage.token, _chatId, { title: _title });
 
 			currentChatPage.set(1);

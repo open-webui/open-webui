@@ -980,9 +980,9 @@ async def get_all_models():
                 function_module, _, _ = load_function_module_by_id(action_id)
                 webui_app.state.FUNCTIONS[action_id] = function_module
 
-            icon_url = None
-            if action.meta.manifest is not None:
-                icon_url = action.meta.manifest.get("icon_url", None)
+            __webui__ = False
+            if hasattr(function_module, "__webui__"):
+                __webui__ = function_module.__webui__
 
             if hasattr(function_module, "actions"):
                 actions = function_module.actions
@@ -994,7 +994,10 @@ async def get_all_models():
                                 "name", f"{action.name} ({_action['id']})"
                             ),
                             "description": action.meta.description,
-                            "icon_url": _action.get("icon_url", icon_url),
+                            "icon_url": _action.get(
+                                "icon_url", action.meta.manifest.get("icon_url", None)
+                            ),
+                            **({"__webui__": __webui__} if __webui__ else {}),
                         }
                         for _action in actions
                     ]
@@ -1005,7 +1008,8 @@ async def get_all_models():
                         "id": action_id,
                         "name": action.name,
                         "description": action.meta.description,
-                        "icon_url": icon_url,
+                        "icon_url": action.meta.manifest.get("icon_url", None),
+                        **({"__webui__": __webui__} if __webui__ else {}),
                     }
                 )
 
@@ -2176,7 +2180,20 @@ async def get_manifest_json():
         "display": "standalone",
         "background_color": "#343541",
         "orientation": "portrait-primary",
-        "icons": [{"src": "/static/logo.png", "type": "image/png", "sizes": "500x500"}],
+        "icons": [
+            {
+                "src": "/static/logo.png",
+                "type": "image/png",
+                "sizes": "500x500",
+                "purpose": "any",
+            },
+            {
+                "src": "/static/logo.png",
+                "type": "image/png",
+                "sizes": "500x500",
+                "purpose": "maskable",
+            },
+        ],
     }
 
 
