@@ -23,6 +23,25 @@ const convertLatexToSingleLine = (content) => {
 	return content;
 };
 
+function escapeBrackets(text: string) {
+	let cleanSquareBracket = '';
+	let cleanRoundBracket = '';
+
+	const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g;
+	return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
+		if (codeBlock) {
+			return codeBlock;
+		} else if (squareBracket) {
+			cleanSquareBracket = squareBracket.replace(/\s*\n\s*/g, ' ').trim();
+			return `$$ ${cleanSquareBracket} $$`;
+		} else if (roundBracket) {
+			cleanRoundBracket = roundBracket.replace(/\s*\n\s*/g, ' ').trim();
+			return `$ ${cleanRoundBracket} $`;
+		}
+		return match.replace(/\s*\n\s*/g, ' ').trim();
+	});
+}
+
 export const replaceTokens = (content, char, user) => {
 	const charToken = /{{char}}/gi;
 	const userToken = /{{user}}/gi;
@@ -60,13 +79,13 @@ export const sanitizeResponseContent = (content: string) => {
 		.replace(/<\|[a-z]+\|$/, '')
 		.replace(/<$/, '')
 		.replaceAll(/<\|[a-z]+\|>/g, ' ')
-		.replaceAll('<', '&lt;')
-		.replaceAll('>', '&gt;')
+		// .replaceAll('<', '&lt;')
+		// .replaceAll('>', '&gt;')
 		.trim();
 };
 
 export const processResponseContent = (content: string) => {
-	content = convertLatexToSingleLine(content);
+	content = convertLatexToSingleLine(escapeBrackets(content));
 	return content.trim();
 };
 

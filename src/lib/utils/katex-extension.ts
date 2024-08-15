@@ -63,8 +63,9 @@ export default function (options = {}) {
 
 function createRenderer(options, newlineAfter) {
 	return (token) =>
-		katex.renderToString(token.text, { ...options, displayMode: token.displayMode }) +
-		(newlineAfter ? '\n' : '');
+		// katex.renderToString(token.text, { ...options, displayMode: token.displayMode }) +
+		// (newlineAfter ? '\n' : '');
+		katex.renderToString(token.text, { ...options, displayMode: token.displayMode });
 }
 
 function inlineKatex(options, renderer) {
@@ -105,7 +106,8 @@ function inlineKatex(options, renderer) {
 				return {
 					type: 'inlineKatex',
 					raw: match[0],
-					text: text
+					text: text,
+					displayMode: match[0].startsWith('$$') || match[0].startsWith('\\[')
 				};
 			}
 		},
@@ -129,7 +131,8 @@ function blockKatex(options, renderer) {
 				return {
 					type: 'blockKatex',
 					raw: match[0],
-					text: text
+					text: text,
+					displayMode: match[0].startsWith('$$') || match[0].startsWith('\\[')
 				};
 			}
 		},
