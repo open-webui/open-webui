@@ -90,7 +90,6 @@
 			tokens = marked.lexer(
 				replaceTokens(processResponseContent(message?.content), model?.name, $user?.name)
 			);
-			await renderLatex();
 		}
 		if (message?.done ?? false) {
 			await renderLatex();
