@@ -42,6 +42,7 @@ export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 export const showCallOverlay = writable(false);
 
+export const temporaryChatEnabled = writable(false);
 export const scrollPaginationEnabled = writable(false);
 export const currentChatPage = writable(1);
 
@@ -83,7 +84,6 @@ type Settings = {
 	responseAutoPlayback?: boolean;
 	audio?: AudioSettings;
 	showUsername?: boolean;
-	saveChatHistory?: boolean;
 	notificationEnabled?: boolean;
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
