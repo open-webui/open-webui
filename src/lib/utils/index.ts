@@ -9,7 +9,7 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 const convertLatexToSingleLine = (content) => {
 	// Patterns to match multiline LaTeX blocks
 	const patterns = [
-		/(\$\$[\s\S]*?\$\$)/g, // Match $$ ... $$
+		/(\$\$\s[\s\S]*?\s\$\$)/g, // Match $$ ... $$
 		/(\\\[[\s\S]*?\\\])/g, // Match \[ ... \]
 		/(\\begin\{[a-z]+\}[\s\S]*?\\end\{[a-z]+\})/g // Match \begin{...} ... \end{...}
 	];
@@ -25,7 +25,8 @@ const convertLatexToSingleLine = (content) => {
 
 export const sanitizeResponseContent = (content: string) => {
 	// replace single backslash with double backslash
-	content = content.replace(/\\/g, '\\\\');
+	content = content.replace(/\\\\/g, '\\\\\\\\');
+
 	content = convertLatexToSingleLine(content);
 
 	// First, temporarily replace valid <video> tags with a placeholder
@@ -87,7 +88,7 @@ export const replaceTokens = (content, char, user) => {
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
-	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
+	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('\\\\', '\\');
 };
 
 export function unescapeHtml(html: string) {
@@ -226,7 +227,7 @@ export const generateInitialsImage = (name) => {
 	const initials =
 		sanitizedName.length > 0
 			? sanitizedName[0] +
-			  (sanitizedName.split(' ').length > 1
+				(sanitizedName.split(' ').length > 1
 					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
 					: '')
 			: '';
@@ -285,7 +286,7 @@ export const compareVersion = (latest, current) => {
 				numeric: true,
 				sensitivity: 'case',
 				caseFirst: 'upper'
-		  }) < 0;
+			}) < 0;
 };
 
 export const findWordIndices = (text) => {

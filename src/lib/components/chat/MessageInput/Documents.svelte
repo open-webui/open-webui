@@ -27,7 +27,7 @@
 						title: $i18n.t('All Documents'),
 						collection_names: $documents.map((doc) => doc.collection_name)
 					}
-			  ]
+				]
 			: []),
 		...$documents
 			.reduce((a, e, i, arr) => {

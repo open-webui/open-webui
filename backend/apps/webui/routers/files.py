@@ -11,7 +11,7 @@ from fastapi import (
 
 
 from datetime import datetime, timedelta
-from typing import List, Union, Optional
+from typing import Union, Optional
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -104,7 +104,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/", response_model=List[FileModel])
+@router.get("/", response_model=list[FileModel])
 async def list_files(user=Depends(get_verified_user)):
     files = Files.get_files()
     return files

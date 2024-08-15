@@ -1,7 +1,10 @@
 <script lang="ts">
 	import type { Token } from 'marked';
-	import { unescapeHtml } from '$lib/utils';
+	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
+	import { onMount } from 'svelte';
 	import Image from '$lib/components/common/Image.svelte';
+
+	import KatexRenderer from './KatexRenderer.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -25,14 +28,18 @@
 			<svelte:self id={`${id}-em`} tokens={token.tokens} />
 		</em>
 	{:else if token.type === 'codespan'}
-		<code class="codespan">{unescapeHtml(token.text.replaceAll('&amp;', '&'))}</code>
+		<code class="codespan">{revertSanitizedResponseContent(token.raw)}</code>
 	{:else if token.type === 'br'}
 		<br />
 	{:else if token.type === 'del'}
 		<del>
 			<svelte:self id={`${id}-del`} tokens={token.tokens} />
 		</del>
+	{:else if token.type === 'inlineKatex'}
+		{#if token.text}
+			<KatexRenderer content={revertSanitizedResponseContent(token.text)} displayMode={false} />
+		{/if}
 	{:else if token.type === 'text'}
-		{unescapeHtml(token.text)}
+		{token.raw}
 	{/if}
 {/each}

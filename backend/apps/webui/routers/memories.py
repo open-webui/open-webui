@@ -1,7 +1,7 @@
 from fastapi import Response, Request
 from fastapi import Depends, FastAPI, HTTPException, status
 from datetime import datetime, timedelta
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -30,7 +30,7 @@ async def get_embeddings(request: Request):
 ############################
 
 
-@router.get("/", response_model=List[MemoryModel])
+@router.get("/", response_model=list[MemoryModel])
 async def get_memories(user=Depends(get_verified_user)):
     return Memories.get_memories_by_user_id(user.id)
 

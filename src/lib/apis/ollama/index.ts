@@ -1,5 +1,4 @@
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
-import { titleGenerationTemplate } from '$lib/utils';
 
 export const getOllamaConfig = async (token: string = '') => {
 	let error = null;
@@ -201,55 +200,6 @@ export const getOllamaModels = async (token: string = '') => {
 		.sort((a, b) => {
 			return a.name.localeCompare(b.name);
 		});
-};
-
-// TODO: migrate to backend
-export const generateTitle = async (
-	token: string = '',
-	template: string,
-	model: string,
-	prompt: string
-) => {
-	let error = null;
-
-	template = titleGenerationTemplate(template, prompt);
-
-	console.log(template);
-
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/generate`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			model: model,
-			prompt: template,
-			stream: false,
-			options: {
-				// Restrict the number of tokens generated to 50
-				num_predict: 50
-			}
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res?.response.replace(/["']/g, '') ?? 'New Chat';
 };
 
 export const generatePrompt = async (token: string = '', model: string, conversation: string) => {

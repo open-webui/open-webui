@@ -22,7 +22,7 @@ from apps.webui.utils import load_function_module_by_id
 from utils.misc import (
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
-    apply_model_params_to_body,
+    apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
 
@@ -46,6 +46,7 @@ from config import (
     AppConfig,
     OAUTH_USERNAME_CLAIM,
     OAUTH_PICTURE_CLAIM,
+    OAUTH_EMAIL_CLAIM,
 )
 
 from apps.socket.main import get_event_call, get_event_emitter
@@ -84,6 +85,7 @@ app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 
 app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
+app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
 
 app.state.MODELS = {}
 app.state.TOOLS = {}
@@ -289,7 +291,7 @@ async def generate_function_chat_completion(form_data, user):
             form_data["model"] = model_info.base_model_id
 
         params = model_info.params.model_dump()
-        form_data = apply_model_params_to_body(params, form_data)
+        form_data = apply_model_params_to_body_openai(params, form_data)
         form_data = apply_model_system_prompt_to_body(params, form_data, user)
 
     pipe_id = get_pipe_id(form_data)

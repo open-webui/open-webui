@@ -352,8 +352,23 @@
 
 <style>
 	.font-mona {
-		font-family: 'Mona Sans', -apple-system, 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto,
-			Ubuntu, Cantarell, 'Noto Sans', sans-serif, 'Helvetica Neue', Arial, 'Apple Color Emoji',
-			'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+		font-family:
+			'Mona Sans',
+			-apple-system,
+			'Inter',
+			ui-sans-serif,
+			system-ui,
+			'Segoe UI',
+			Roboto,
+			Ubuntu,
+			Cantarell,
+			'Noto Sans',
+			sans-serif,
+			'Helvetica Neue',
+			Arial,
+			'Apple Color Emoji',
+			'Segoe UI Emoji',
+			'Segoe UI Symbol',
+			'Noto Color Emoji';
 	}
 </style>
