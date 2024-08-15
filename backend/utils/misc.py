@@ -2,14 +2,14 @@ from pathlib import Path
 import hashlib
 import re
 from datetime import timedelta
-from typing import Optional, List, Tuple
+from typing import Optional, Callable
 import uuid
 import time
 
 from utils.task import prompt_template
 
 
-def get_last_user_message_item(messages: List[dict]) -> Optional[dict]:
+def get_last_user_message_item(messages: list[dict]) -> Optional[dict]:
     for message in reversed(messages):
         if message["role"] == "user":
             return message
@@ -26,7 +26,7 @@ def get_content_from_message(message: dict) -> Optional[str]:
     return None
 
 
-def get_last_user_message(messages: List[dict]) -> Optional[str]:
+def get_last_user_message(messages: list[dict]) -> Optional[str]:
     message = get_last_user_message_item(messages)
     if message is None:
         return None
@@ -34,31 +34,31 @@ def get_last_user_message(messages: List[dict]) -> Optional[str]:
     return get_content_from_message(message)
 
 
-def get_last_assistant_message(messages: List[dict]) -> Optional[str]:
+def get_last_assistant_message(messages: list[dict]) -> Optional[str]:
     for message in reversed(messages):
         if message["role"] == "assistant":
             return get_content_from_message(message)
     return None
 
 
-def get_system_message(messages: List[dict]) -> Optional[dict]:
+def get_system_message(messages: list[dict]) -> Optional[dict]:
     for message in messages:
         if message["role"] == "system":
             return message
     return None
 
 
-def remove_system_message(messages: List[dict]) -> List[dict]:
+def remove_system_message(messages: list[dict]) -> list[dict]:
     return [message for message in messages if message["role"] != "system"]
 
 
-def pop_system_message(messages: List[dict]) -> Tuple[Optional[dict], List[dict]]:
+def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]]:
     return get_system_message(messages), remove_system_message(messages)
 
 
 def prepend_to_first_user_message_content(
-    content: str, messages: List[dict]
-) -> List[dict]:
+    content: str, messages: list[dict]
+) -> list[dict]:
     for message in messages:
         if message["role"] == "user":
             if isinstance(message["content"], list):
@@ -71,7 +71,7 @@ def prepend_to_first_user_message_content(
     return messages
 
 
-def add_or_update_system_message(content: str, messages: List[dict]):
+def add_or_update_system_message(content: str, messages: list[dict]):
     """
     Adds a new system message at the beginning of the messages list
     or updates the existing system message at the beginning.
@@ -135,10 +135,21 @@ def apply_model_system_prompt_to_body(params: dict, form_data: dict, user) -> di
 
 
 # inplace function: form_data is modified
-def apply_model_params_to_body(params: dict, form_data: dict) -> dict:
+def apply_model_params_to_body(
+    params: dict, form_data: dict, mappings: dict[str, Callable]
+) -> dict:
     if not params:
         return form_data
 
+    for key, cast_func in mappings.items():
+        if (value := params.get(key)) is not None:
+            form_data[key] = cast_func(value)
+
+    return form_data
+
+
+# inplace function: form_data is modified
+def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
     mappings = {
         "temperature": float,
         "top_p": int,
@@ -147,10 +158,40 @@ def apply_model_params_to_body(params: dict, form_data: dict) -> dict:
         "seed": lambda x: x,
         "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
     }
+    return apply_model_params_to_body(params, form_data, mappings)
 
-    for key, cast_func in mappings.items():
-        if (value := params.get(key)) is not None:
-            form_data[key] = cast_func(value)
+
+def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
+    opts = [
+        "temperature",
+        "top_p",
+        "seed",
+        "mirostat",
+        "mirostat_eta",
+        "mirostat_tau",
+        "num_ctx",
+        "num_batch",
+        "num_keep",
+        "repeat_last_n",
+        "tfs_z",
+        "top_k",
+        "min_p",
+        "use_mmap",
+        "use_mlock",
+        "num_thread",
+        "num_gpu",
+    ]
+    mappings = {i: lambda x: x for i in opts}
+    form_data = apply_model_params_to_body(params, form_data, mappings)
+
+    name_differences = {
+        "max_tokens": "num_predict",
+        "frequency_penalty": "repeat_penalty",
+    }
+
+    for key, value in name_differences.items():
+        if (param := params.get(key, None)) is not None:
+            form_data[value] = param
 
     return form_data
 

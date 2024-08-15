@@ -143,7 +143,7 @@
 								: {
 										id: model.id,
 										name: model.name
-								  }
+									}
 						)
 					)
 				};
@@ -154,9 +154,9 @@
 
 				params = { ...params, ...model?.info?.params };
 				params.stop = params?.stop
-					? (typeof params.stop === 'string' ? params.stop.split(',') : params?.stop ?? []).join(
+					? (typeof params.stop === 'string' ? params.stop.split(',') : (params?.stop ?? [])).join(
 							','
-					  )
+						)
 					: null;
 
 				if (model?.info?.meta?.knowledge) {
