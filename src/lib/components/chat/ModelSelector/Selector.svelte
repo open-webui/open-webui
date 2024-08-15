@@ -59,7 +59,8 @@
 				return _item;
 			}),
 		{
-			keys: ['value', 'label', 'tags', 'desc', 'modelName']
+			keys: ['value', 'tags', 'modelName'],
+			threshold: 0.3
 		}
 	);
 
