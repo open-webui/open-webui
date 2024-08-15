@@ -104,7 +104,7 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 
 ### Installation for Replicate API Usage
 
-To use Open WebUI with Replicate, you need to set the `REPLICATE_API_TOKEN` environment variable. You can obtain this token after creating an account from your Replicate account settings at [https://replicate.com/account/api-tokens].
+To use Open WebUI with Replicate, you need to set the `REPLICATE_API_TOKEN` environment variable. You can obtain this token after creating an account from your Replicate account settings at [Replicate API Tokens](https://replicate.com/account/api-tokens).
 
 ```bash
 docker run -d -p 3000:8080 -e REPLICATE_API_TOKEN=your_replicate_api_token -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
