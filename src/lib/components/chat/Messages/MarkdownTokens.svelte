@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DOMPurify from 'dompurify';
 	import { onMount } from 'svelte';
 	import type { Token } from 'marked';
 	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
@@ -91,7 +92,12 @@
 			</ul>
 		{/if}
 	{:else if token.type === 'html'}
-		{@html token.text}
+		{@const html = DOMPurify.sanitize(token.text)}
+		{#if html}
+			{@html html}
+		{:else}
+			{token.text}
+		{/if}
 	{:else if token.type === 'paragraph'}
 		<p>
 			<MarkdownInlineTokens id={`${id}-${tokenIdx}-p`} tokens={token.tokens ?? []} />
