@@ -147,13 +147,17 @@ async def cleanup_response(
         await session.close()
 
 
-async def post_streaming_url(url: str, payload: str, stream: bool = True):
+async def post_streaming_url(url: str, payload: Union[str, bytes], stream: bool = True):
     r = None
     try:
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
-        r = await session.post(url, data=payload)
+        r = await session.post(
+            url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
         r.raise_for_status()
 
         if stream:
@@ -422,6 +426,7 @@ async def copy_model(
     r = requests.request(
         method="POST",
         url=f"{url}/api/copy",
+        headers={"Content-Type": "application/json"},
         data=form_data.model_dump_json(exclude_none=True).encode(),
     )
 
@@ -470,6 +475,7 @@ async def delete_model(
     r = requests.request(
         method="DELETE",
         url=f"{url}/api/delete",
+        headers={"Content-Type": "application/json"},
         data=form_data.model_dump_json(exclude_none=True).encode(),
     )
     try:
@@ -510,6 +516,7 @@ async def show_model_info(form_data: ModelNameForm, user=Depends(get_verified_us
     r = requests.request(
         method="POST",
         url=f"{url}/api/show",
+        headers={"Content-Type": "application/json"},
         data=form_data.model_dump_json(exclude_none=True).encode(),
     )
     try:
@@ -567,6 +574,7 @@ async def generate_embeddings(
     r = requests.request(
         method="POST",
         url=f"{url}/api/embeddings",
+        headers={"Content-Type": "application/json"},
         data=form_data.model_dump_json(exclude_none=True).encode(),
     )
     try:
@@ -616,6 +624,7 @@ def generate_ollama_embeddings(
     r = requests.request(
         method="POST",
         url=f"{url}/api/embeddings",
+        headers={"Content-Type": "application/json"},
         data=form_data.model_dump_json(exclude_none=True).encode(),
     )
     try:
