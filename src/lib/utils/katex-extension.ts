@@ -6,9 +6,9 @@ const DELIMITER_LIST = [
 	{ left: '\\pu{', right: '}', display: false },
 	{ left: '\\ce{', right: '}', display: false },
 	{ left: '\\(', right: '\\)', display: false },
-	{ left: '( ', right: ' )', display: false },
+	// { left: '( ', right: ' )', display: false },
 	{ left: '\\[', right: '\\]', display: true },
-	{ left: '[ ', right: ' ]', display: true }
+	// { left: '[ ', right: ' ]', display: true }
 ];
 
 // const DELIMITER_LIST = [
@@ -23,7 +23,7 @@ let inlinePatterns = [];
 let blockPatterns = [];
 
 function escapeRegex(string) {
-	return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+	return string.replace(/[-\/\\^$*+?.()|[\]{}（）]/g, '\\$&');
 }
 
 function generateRegexRules(delimiters) {
@@ -72,27 +72,27 @@ function inlineKatex(options, renderer) {
 	return {
 		name: 'inlineKatex',
 		level: 'inline',
-		start(src) {
-			let index;
-			let indexSrc = src;
+		// start(src) {
+		// 	let index;
+		// 	let indexSrc = src;
 
-			while (indexSrc) {
-				index = indexSrc.indexOf('$');
-				if (index === -1) {
-					return;
-				}
-				const f = index === 0 || indexSrc.charAt(index - 1) === ' ';
-				if (f) {
-					const possibleKatex = indexSrc.substring(index);
+		// 	while (indexSrc) {
+		// 		index = indexSrc.indexOf('$');
+		// 		if (index === -1) {
+		// 			return;
+		// 		}
+		// 		const f = index === 0 || indexSrc.charAt(index - 1) === ' ';
+		// 		if (f) {
+		// 			const possibleKatex = indexSrc.substring(index);
 
-					if (possibleKatex.match(ruleReg)) {
-						return index;
-					}
-				}
+		// 			if (possibleKatex.match(ruleReg)) {
+		// 				return index;
+		// 			}
+		// 		}
 
-				indexSrc = indexSrc.substring(index + 1).replace(/^\$+/, '');
-			}
-		},
+		// 		indexSrc = indexSrc.substring(index + 1).replace(/^\$+/, '');
+		// 	}
+		// },
 		tokenizer(src, tokens) {
 			const match = src.match(ruleReg);
 
