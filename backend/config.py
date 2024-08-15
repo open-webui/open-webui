@@ -1348,6 +1348,24 @@ COMFYUI_WORKFLOW = PersistentConfig(
     os.getenv("COMFYUI_WORKFLOW", ""),
 )
 
+COMFYUI_CUSTOM_WORKFLOW_PATH = PersistentConfig(
+    "COMFYUI_CUSTOM_WORKFLOW_PATH",
+    "image_generation.comfyui.custom_workflow_path",
+    os.getenv("COMFYUI_CUSTOM_WORKFLOW_PATH", ""),
+)
+
+COMFYUI_CUSTOM_WORKFLOW_SEED_INDEX = PersistentConfig(
+    "COMFYUI_CUSTOM_WORKFLOW_SEED_INDEX",
+    "image_generation.comfyui.custom_workflow_seed_index",
+    os.getenv("COMFYUI_CUSTOM_WORKFLOW_SEED_INDEX", ""),
+)
+
+COMFYUI_CUSTOM_WORKFLOW_PROMPT_INDEX = PersistentConfig(
+    "COMFYUI_CUSTOM_WORKFLOW_PROMPT_INDEX",
+    "image_generation.comfyui.custom_workflow_prompt_index",
+    os.getenv("COMFYUI_CUSTOM_WORKFLOW_PROMPT_INDEX", ""),
+)
+
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
     "IMAGES_OPENAI_API_BASE_URL",
     "image_generation.openai.api_base_url",
