@@ -1,5 +1,12 @@
-import os
+import hashlib
+import json
 import logging
+import os
+import uuid
+from functools import lru_cache
+from pathlib import Path
+
+import requests
 from fastapi import (
     FastAPI,
     Request,
@@ -8,34 +15,14 @@ from fastapi import (
     status,
     UploadFile,
     File,
-    Form,
 )
-from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
-
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
-
-
-import uuid
-import requests
-import hashlib
-from pathlib import Path
-import json
-
-from constants import ERROR_MESSAGES
-from utils.utils import (
-    decode_token,
-    get_current_user,
-    get_verified_user,
-    get_admin_user,
-)
-from utils.misc import calculate_sha256
-
 
 from config import (
     SRC_LOG_LEVELS,
     CACHE_DIR,
-    UPLOAD_DIR,
     WHISPER_MODEL,
     WHISPER_MODEL_DIR,
     WHISPER_MODEL_AUTO_UPDATE,
@@ -51,6 +38,12 @@ from config import (
     AUDIO_TTS_MODEL,
     AUDIO_TTS_VOICE,
     AppConfig,
+)
+from constants import ERROR_MESSAGES
+from utils.utils import (
+    get_current_user,
+    get_verified_user,
+    get_admin_user,
 )
 
 log = logging.getLogger(__name__)
