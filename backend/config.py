@@ -1410,13 +1410,13 @@ AUDIO_TTS_ENGINE = PersistentConfig(
 AUDIO_TTS_MODEL = PersistentConfig(
     "AUDIO_TTS_MODEL",
     "audio.tts.model",
-    os.getenv("AUDIO_TTS_MODEL", "tts-1"),
+    os.getenv("AUDIO_TTS_MODEL", "tts-1"),  # OpenAI default model
 )
 
 AUDIO_TTS_VOICE = PersistentConfig(
     "AUDIO_TTS_VOICE",
     "audio.tts.voice",
-    os.getenv("AUDIO_TTS_VOICE", "alloy"),
+    os.getenv("AUDIO_TTS_VOICE", "alloy"),  # OpenAI default voice
 )
 
 
