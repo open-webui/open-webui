@@ -133,23 +133,21 @@
 		files = [...files, fileItem];
 
 		try {
+			// 改用传递base64_url的形式
 			let uploadedFile = null;
-
-			if (!enableBase64) {
-				fileItem.type = 'file';
-				uploadedFile = await uploadFile(localStorage.token, file);
-			}
+			fileItem.type = 'file';
+			uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile || enableBase64) {
 				fileItem.status = 'uploaded';
-				fileItem.url = URL.createObjectURL(file);
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/content`;
 				const fileType = file['type'];
 				const fileExtension = file.name.split('.').pop();
 
 				if (!enableBase64) {
 					fileItem.file = uploadedFile;
 					fileItem.id = uploadedFile.id;
-					// fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
 					if (
 						SUPPORTED_FILE_TYPE.includes(fileType) ||
 						SUPPORTED_FILE_EXTENSIONS.includes(fileExtension)
@@ -170,7 +168,7 @@
 					fileItem.type = fileExtension;
 					fileItem.id = uuidv4();
 					fileItem.base64 = true;
-					fileItem.base64_url = base64_url;
+					fileItem.base64_url = fileItem.url;
 					fileItem.status = 'processed';
 					files = files;
 				}
