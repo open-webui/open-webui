@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { onMount, tick } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	import { updateChatById } from '$lib/apis/chats';
-	import { onMount, tick } from 'svelte';
+
 	import ResponseMessage from './ResponseMessage.svelte';
 
 	export let chatId;
@@ -107,7 +108,7 @@
 					<div
 						class=" snap-center min-w-80 w-full max-w-full m-1 border {history.messages[
 							currentMessageId
-						].modelIdx === modelIdx
+						]?.modelIdx == modelIdx
 							? 'border-gray-100 dark:border-gray-800 border-[1.5px]'
 							: 'border-gray-50 dark:border-gray-850 '} transition p-5 rounded-3xl"
 						on:click={() => {
