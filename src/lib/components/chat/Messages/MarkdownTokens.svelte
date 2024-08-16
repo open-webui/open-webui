@@ -7,6 +7,7 @@
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -98,6 +99,14 @@
 		{:else}
 			{token.text}
 		{/if}
+	{:else if token.type === 'iframe'}
+		<iframe
+			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"
+			title={token.fileId}
+			width="100%"
+			frameborder="0"
+			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
+		></iframe>
 	{:else if token.type === 'paragraph'}
 		<p>
 			<MarkdownInlineTokens id={`${id}-${tokenIdx}-p`} tokens={token.tokens ?? []} />

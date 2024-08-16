@@ -76,13 +76,15 @@
 
 	import 'katex/dist/katex.min.css';
 
-	import markedKatex from '$lib/utils/katex-extension';
+	import markedKatex from '$lib/utils/marked/katex-extension';
+	import markedToken from '$lib/utils/marked/token-extension';
 
 	const options = {
 		throwOnError: false
 	};
 
 	marked.use(markedKatex(options));
+	marked.use(markedToken({ WEBUI_BASE_URL }));
 
 	$: (async () => {
 		if (message?.content) {

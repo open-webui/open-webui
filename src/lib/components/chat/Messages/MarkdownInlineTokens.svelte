@@ -45,6 +45,14 @@
 		{#if token.text}
 			<KatexRenderer content={revertSanitizedResponseContent(token.text)} displayMode={false} />
 		{/if}
+	{:else if token.type === 'iframe'}
+		<iframe
+			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"
+			title={token.fileId}
+			width="100%"
+			frameborder="0"
+			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
+		></iframe>
 	{:else if token.type === 'text'}
 		{token.raw}
 	{/if}
