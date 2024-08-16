@@ -64,7 +64,7 @@
 			role: 'user',
 			content: userPrompt,
 			...(history.messages[messageId].files && { files: history.messages[messageId].files }),
-			models: selectedModels.filter((m, mIdx) => selectedModels.indexOf(m) === mIdx)
+			models: selectedModels
 		};
 
 		let messageParentId = history.messages[messageId].parentId;
