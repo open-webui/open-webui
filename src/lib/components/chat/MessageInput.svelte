@@ -168,7 +168,7 @@
 					fileItem.type = fileExtension;
 					fileItem.id = uuidv4();
 					fileItem.base64 = true;
-					fileItem.base64_url = fileItem.url;
+					fileItem.base64_url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}/preview`;
 					fileItem.status = 'processed';
 					files = files;
 				}
