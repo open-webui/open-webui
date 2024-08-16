@@ -32,6 +32,11 @@ services:
       - 'TENANT='
       - 'REDIRECT_URI='
       - 'HR_EMAIL='
+      - 'MSSQL_SERVER='
+      - 'MSSQL_USER='
+      - 'MSSQL_PASSWORD='
+      - 'MSSQL_DATABASE='
+      - 'MSSQL_VIEW='
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped

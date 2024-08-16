@@ -2,7 +2,7 @@ nameOverride: ""
 
 ollama:
   externalHost: "http://192.168.100.14:31774"
-  # externalHost: "http://192.168.100.14:32383"
+  # externalHost: "http://192.168.100.14:32381"
   annotations: {}
   podAnnotations: {}
   replicaCount: 1
@@ -83,7 +83,7 @@ hrwebui:
   replicaCount: 1
   image:
     repository: ghcr.io/ciai-engineering/open-webui
-    tag: "git-15cfa2b"
+    tag: "git-bb01763"
     pullPolicy: Always
   resources: {}
   imagePullSecrets: 
@@ -122,9 +122,16 @@ hrwebui:
     azure:
       enabled: true
       clientId: "2b0e50f6-6937-4a32-9501-94bf7357e883"
-      clientSecret: "3e38Q~beYBGdElt-x7Y.ueqsO2u_lGm3y-dSha2w"
+      clientSecret: "********"
       tenant: "c93272d3-1b07-4b3d-a3b6-19b34a973915"
       redirectUri: "https://hr.ciai-mbzuai.ac.ae/login"
   mail:
     enabled: false
     hr: "Qinghao.Zhang@mbzuai.ac.ae"
+  mssql:
+    enabled: true
+    server: "10.127.129.4"
+    user: "ciai_rag"
+    password: "******"
+    database: "ADERP"
+    view: "EMPLOYEE_INFO_V"

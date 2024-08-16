@@ -25,6 +25,8 @@ from config import (
     HR_EMAIL,
 )
 
+from apps.web.routers.auths import ACCESS_TOKEN
+
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 router = APIRouter()
 
@@ -52,7 +54,7 @@ async def submit_leave_form(
     if session_user:
         if not session_user.extra_sso:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_ACCOUNT)
-        access_token = json.loads(session_user.extra_sso)["access_token"]
+        access_token = json.loads(session_user.extra_sso)[ACCESS_TOKEN]
         logging.info(f"SSO access_token: {access_token}")
 
         mail = Mail(client_id=CLIENT_ID, tenant_id=TENANT, authorization=f"Bearer {access_token}")

@@ -41,7 +41,7 @@
 	import { LITELLM_API_BASE_URL, OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL } from '$lib/constants';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
-	
+
 	import { setDefaultModels } from '$lib/apis/configs';
 
 	const i18n = getContext('i18n');
@@ -110,18 +110,52 @@
 	//////////////////////////
 
 	const setDefaultPrompt = () => {
-		if (!$user) return ''
-		let result = ''
+		if (!$user) return '';
+		let result = '';
 		if ($user.extra_sso) {
-			const ssoData = JSON.parse($user.extra_sso)
-			result = `RAG system’s information: “You are RAG system for supporting MBZUAI HR service.”
-			User’s information: “I am one user. My name is ${$user.name}, I am the ${ssoData.title ?? '_'} at MBZUAI. My phone number is ${ssoData.phone ?? '_'}. My email address is ${$user.email}. My ID is ${ssoData.id ?? '_'}"`
+			const ssoData = JSON.parse($user.extra_sso);
+			// result = `RAG system’s information: “You are RAG system for supporting MBZUAI HR service.”
+			// User’s information: “I am one user. My name is ${$user.name}, I am the ${ssoData.title ?? '_'} at MBZUAI. My phone number is ${ssoData.phone ?? '_'}. My email address is ${$user.email}. My ID is ${ssoData.id ?? '_'}"`
+			result = `
+				**System Prompt:**
+				You are a RAG system designed to support HR services for MBZUAI university. You possess knowledge about the university's HR policies, procedures, and guidelines, and are capable of addressing various HR-related queries, including employee details, leave policies, benefits, onboarding processes, and more. Your goal is to assist users efficiently and effectively with any HR-related needs, prioritizing the retrieval of accurate and relevant information from the database.
+
+				**User Information:**
+				- Name: ${$user.name}
+				- Role: ${ssoData.job_title ?? '_'}
+				- Email Address: ${$user.email}
+				- ID: ${ssoData.emp_id}
+				- Line Manager Name: ${ssoData.line_manager_name ?? '_'}
+				- Line Manager Email Address: ${ssoData.line_manager_email ?? '_'}
+				- Department: ${ssoData.new_department}
+
+				**Instructions to the Model:**
+				1. Address the user's query with accurate and relevant information.
+				2. Provide guidance or next steps if the query requires further action.
+				3. Maintain a supportive and professional tone throughout the conversation.
+				4. Prioritize retrieving information directly from the HR database for user queries.
+			`;
 		} else {
-			result = `RAG system’s information: “You are RAG system for supporting MBZUAI HR service.”
-			User’s information: “I am one user. My name is ${$user.name}. My email address is ${$user.email}."`
+			// result = `RAG system’s information: “You are RAG system for supporting MBZUAI HR service.”
+			// User’s information: “I am one user. My name is ${$user.name}. My email address is ${$user.email}."`
+			result = `
+				**System Prompt:**
+				You are a RAG system designed to support HR services for MBZUAI university. You possess knowledge about the university's HR policies, procedures, and guidelines, and are capable of addressing various HR-related queries, including employee details, leave policies, benefits, onboarding processes, and more. Your goal is to assist users efficiently and effectively with any HR-related needs.
+				
+				**User Information:**
+				- Name: ${$user.name}
+				- Email Address: ${$user.email}
+				
+				**Instructions to the Model:**
+				**Instructions to the Model:**
+				1. Address the user's query with accurate and relevant information.
+				2. Provide guidance or next steps if the query requires further action.
+				3. Maintain a supportive and professional tone throughout the conversation.
+				4. Prioritize retrieving information directly from the HR database for user queries.
+			`;
 		}
-		return result
-	}
+		return result;
+	};
 
 	const initNewChat = async () => {
 		if (currentRequestId !== null) {
@@ -158,9 +192,9 @@
 
 		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
 		// if (!_settings.system) {
-		_settings.system = setDefaultPrompt()
+		_settings.system = setDefaultPrompt();
 		// _settings.system = `I am one user. My name is ${$user.name ?? ''}, I am the ${$user.title ?? '_'} at MBZUAI. My phone number is ${$user.phone ?? '_'}. My email address is ${$user.email ?? ''}. My ID is ${$user.id ?? '_'}`
-		localStorage.setItem('settings', JSON.stringify(_settings))
+		localStorage.setItem('settings', JSON.stringify(_settings));
 		// }
 		settings.set({
 			..._settings

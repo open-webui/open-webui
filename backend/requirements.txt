@@ -232,3 +232,6 @@ reportlab==4.2.2
 
 regex
 # All of the libs above is for the Microsoft Graph API to send email
+
+SQLAlchemy>=2.0.31
+pyodbc>=5.1.0

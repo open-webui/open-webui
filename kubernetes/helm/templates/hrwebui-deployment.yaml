@@ -79,6 +79,38 @@ spec:
           value: 
           {{- end}}
         # SSO Configuration
+        # MSSQL Database Configuration
+        - name: MSSQL_SERVER
+          {{- if .Values.hrwebui.mssql.enabled}}
+          value: {{ .Values.hrwebui.mssql.server}}
+          {{- else}}
+          value: 
+          {{- end}}
+        - name: MSSQL_USER
+          {{- if .Values.hrwebui.mssql.enabled}}
+          value: {{ .Values.hrwebui.mssql.user}}
+          {{- else}}
+          value: 
+          {{- end}}
+        - name: MSSQL_PASSWORD
+          {{- if .Values.hrwebui.mssql.enabled}}
+          value: {{ .Values.hrwebui.mssql.password}}
+          {{- else}}
+          value: 
+          {{- end}}
+        - name: MSSQL_DATABASE
+          {{- if .Values.hrwebui.mssql.enabled}}
+          value: {{ .Values.hrwebui.mssql.database}}
+          {{- else}}
+          value: 
+          {{- end}}
+        - name: MSSQL_VIEW
+          {{- if .Values.hrwebui.mssql.enabled}}
+          value: {{ .Values.hrwebui.mssql.view}}
+          {{- else}}
+          value: 
+          {{- end}}
+        # MSSQL Database Configuration
         tty: true
       imagePullSecrets:
       - name: {{.Values.hrwebui.imagePullSecrets.name}}

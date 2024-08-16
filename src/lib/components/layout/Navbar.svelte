@@ -74,7 +74,7 @@
 							showDropdown = !showDropdown;
 						}}
 					>
-						<div class=" self-center mr-3">
+						<div class="self-center">
 							<img
 								src="/user-ava.png"
 								class=" max-w-[30px] object-cover rounded-full"
@@ -248,7 +248,7 @@
 						</button>
 					</Menu>
 				{/if} -->
-				<!-- <Tooltip content={$i18n.t('New Chat')}>
+				<Tooltip content={$i18n.t('New Chat')}>
 					<button
 						id="new-chat-button"
 						class=" cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
@@ -272,7 +272,7 @@
 							</svg>
 						</div>
 					</button>
-				</Tooltip> -->
+				</Tooltip>
 			</div>
 		</div>
 	</div>

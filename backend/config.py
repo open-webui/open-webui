@@ -657,3 +657,15 @@ INITIAL_TOOLKITS = os.environ.get(
 )
 
 INITIAL_TOOLKITS = json.loads(INITIAL_TOOLKITS)
+
+
+####################################
+# Microsoft SQL Server Database
+####################################
+
+MSSQL_SERVER = os.environ.get("MSSQL_SERVER")
+MSSQL_USER = os.environ.get("MSSQL_USER")
+MSSQL_PASSWORD = os.environ.get("MSSQL_PASSWORD")
+MSSQL_DATABASE = os.environ.get("MSSQL_DATABASE")
+MSSQL_VIEW = os.environ.get("MSSQL_VIEW")
+log.info(f"Microsoft SQL Server Database set. MSSQL_SERVER: \"{MSSQL_SERVER}\"; MSSQL_USER: \"{MSSQL_USER}\"; MSSQL_PASSWORD: \"******\"; MSSQL_DATABASE: \"{MSSQL_DATABASE}\"; MSSQL_VIEW: \"{MSSQL_VIEW}\"")

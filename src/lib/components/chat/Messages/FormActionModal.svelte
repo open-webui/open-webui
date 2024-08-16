@@ -46,23 +46,44 @@
 	$: if (dayCount) {
 		days = dayCount
 	}
+
 	const dateFormatter = (val) => {
-		// const date = val ? new Date(val) : new Date();
-		// const day = String(date.getDate()).padStart(2, '0'); // 获取日，并确保两位数格式
-		// const month = String(date.getMonth() + 1).padStart(2, '0'); // 获取月，并确保两位数格式（月份从0开始，所以需要+1）
-		// const year = String(date.getFullYear()).slice(-2); // 获取年的最后两位
-		// return `${day}-${month}-${year}`;
 		const date = val ? new Date(val) : new Date()
-		const dateString = date.toDateString().split(' ')
-		dateString.splice(0,1)
-		return `${dateString[1]} ${dateString[0]} ${dateString[2]}`
+		// const dateString = date.toDateString().split(' ')
+		// dateString.splice(0,1)
+		// return `${dateString[1]} ${dateString[0]} ${dateString[2]}`
+		const months = [
+			"January", "February", "March", "April", "May", "June",
+			"July", "August", "September", "October", "November", "December"
+		];
+		
+		const day = date.getDate();
+		const month = months[date.getMonth()];
+		const year = date.getFullYear();
+
+		// 添加后缀
+		let suffix = "th";
+		if (day % 10 === 1 && day !== 11) {
+			suffix = "st";
+		} else if (day % 10 === 2 && day !== 12) {
+			suffix = "nd";
+		} else if (day % 10 === 3 && day !== 13) {
+			suffix = "rd";
+		}
+
+		return `${month} ${day}${suffix}, ${year}`;
 	};
 	const handleConfirm = () => {
+		if (!$user.extra_sso) {
+			window.alert('User type error. Only supports users login with outlook account.').
+			return;
+		};
+		const ssoData = JSON.parse($user.extra_sso)
 		const formData = {
 			name: $user.name,
-			employee_id: employeeID,
-			job_title: 'NLP Engineer',
-			dept: 'CIAI Engineering Team',
+			employee_id: ssoData.emp_id,
+			job_title: ssoData.job_title,
+			dept: ssoData.department,
 			type_of_leave: type,
 			remarks: remark,
 			leavefrom: dateFormatter(startDate),
@@ -86,7 +107,7 @@
 </script>
 
 <!-- <Modal size="lg" bind:show> -->
-<div class="w-3/4 bg-[#ffffffee] rounded-lg my-4 mx-2">
+<div class="w-3/4 bg-[#ffffffdd] rounded-lg my-4 mx-2">
 	<!-- <div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center capitalize">
 				{$i18n.t('Citation')}
@@ -135,13 +156,13 @@
 							</select>
 						</div>
 					</div>
-					<div class="w-1/3">
+					<!-- <div class="w-1/3">
 						<div class="mb-2 text-sm">ID #</div>
 						<div class="flex items-center">
 							<img src="/icon/id.png" alt="icon-form" class="h-[29px] mr-2" />
 							<Textfield required variant="outlined" bind:value={employeeID} class="w-full" />
 						</div>
-					</div>
+					</div> -->
 				</div>
 				<!-- Start & End Date  -->
 				<div class="flex w-full items-center">

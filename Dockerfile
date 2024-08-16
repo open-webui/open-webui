@@ -67,6 +67,13 @@ ENV CLIENT_ID="" \
 # Use to send emails to HR
 ENV HR_EMAIL=""
 
+# Use to connect with Microsoft SQL Server Database
+ENV MSSQL_SERVER="" \
+    MSSQL_USER="" \
+    MSSQL_PASSWORD="" \
+    MSSQL_DATABASE="" \
+    MSSQL_VIEW=""
+
 #### Other models #########################################################
 ## whisper TTS model settings ##
 ENV WHISPER_MODEL="base" \
@@ -112,6 +119,29 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
         # cleanup
         rm -rf /var/lib/apt/lists/*; \
     fi
+
+# Install Microsoft ODBC Driver for SQL Server
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential \
+    curl \
+    apt-utils \
+    gnupg2 &&\
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --upgrade pip
+
+RUN apt-get update
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+RUN curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
+
+
+RUN exit
+RUN apt-get update
+RUN env ACCEPT_EULA=Y apt-get install -y msodbcsql18 
+
+COPY data/odbc.ini / 
+RUN odbcinst -i -s -f /odbc.ini -l
+RUN cat /etc/odbc.ini
+
 
 # install python dependencies
 COPY ./backend/requirements.txt ./requirements.txt
