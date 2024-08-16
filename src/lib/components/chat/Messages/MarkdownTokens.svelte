@@ -1,7 +1,7 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 	import { onMount } from 'svelte';
-	import type { Token } from 'marked';
+	import { marked, type Token } from 'marked';
 	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
@@ -96,6 +96,8 @@
 		{@const html = DOMPurify.sanitize(token.text)}
 		{#if html && html.includes('<video')}
 			{@html html}
+		{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
+			{@html `${token.text}`}
 		{:else}
 			{token.text}
 		{/if}

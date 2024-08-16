@@ -18,6 +18,8 @@
 		{@const html = DOMPurify.sanitize(token.text)}
 		{#if html && html.includes('<video')}
 			{@html html}
+		{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
+			{@html `${token.text}`}
 		{:else}
 			{token.text}
 		{/if}
