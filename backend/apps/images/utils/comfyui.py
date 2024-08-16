@@ -212,6 +212,7 @@ class ComfyUIGenerateImageForm(BaseModel):
     flux: Optional[bool] = None
     flux_weight_dtype: Optional[str] = None
     flux_fp8_clip: Optional[bool] = None
+    custom_workflow: Optional[str] = None
     custom_workflow_path: Optional[str] = None
     custom_workflow_seed_index: Optional[str] = None
     custom_workflow_prompt_index: Optional[str] = None
@@ -248,14 +249,17 @@ async def comfyui_generate_image(
         else:
             workflow[node.node_id]["inputs"][node.key] = node.value
 
-    if payload.custom_workflow_path:
-        custom_workflow_file = open(payload.custom_workflow_path)
-        comfyui_prompt = json.loads(custom_workflow_file.read())
+    if payload.custom_workflow or payload.custom_workflow_path:
+        if payload.custom_workflow:
+            comfyui_prompt = json.loads(payload.custom_workflow)
+        elif payload.custom_workflow_path:
+            custom_workflow_file = open(payload.custom_workflow_path)
+            comfyui_prompt = json.loads(custom_workflow_file.read())
+            custom_workflow_file.close()
         if 'prompt' in comfyui_prompt:
             # in the ComfyUI API call, the prompt is stored in the "prompt" key
             # but for the user's sake, let's accept the prompt as-is too
             comfyui_prompt = comfyui_prompt['prompt']
-        custom_workflow_file.close()
         if payload.custom_workflow_seed_index:
             index = payload.custom_workflow_seed_index
             # we must iterate and find any key that includes "seed"

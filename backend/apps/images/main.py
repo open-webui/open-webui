@@ -435,6 +435,7 @@ def save_url_image(url):
 async def image_generations(
     form_data: GenerateImageForm,
     user=Depends(get_verified_user),
+    prompt_override={},
 ):
     width, height = tuple(map(int, app.state.config.IMAGE_SIZE.split("x")))
 
@@ -527,6 +528,13 @@ async def image_generations(
             if app.state.config.COMFYUI_CUSTOM_WORKFLOW_PROMPT_INDEX is not None:
                 data["custom_workflow_prompt_index"] = app.state.config.COMFYUI_CUSTOM_WORKFLOW_PROMPT_INDEX
 
+            # allow override of the prompt, but make it invisible to the UI itself
+            # this allows custom tools to manipulate all sorts of options
+            # this way we also avoid the user being able to run workflows they're not supposed to
+            if prompt_override:
+                for key, value in prompt_override.items():
+                    data[key] = value
+
             data = ImageGenerationPayload(**data)
 
             res = await comfyui_generate_image(
@@ -565,6 +573,13 @@ async def image_generations(
 
             if form_data.negative_prompt is not None:
                 data["negative_prompt"] = form_data.negative_prompt
+
+            # allow override of the prompt, but make it invisible to the UI itself
+            # this allows custom tools to manipulate all sorts of options
+            # this way we also avoid the user being able to run workflows they're not supposed to
+            if prompt_override:
+                for key, value in prompt_override.items():
+                    data[key] = value
 
             r = requests.post(
                 url=f"{app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/txt2img",
