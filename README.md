@@ -40,10 +40,6 @@ Falcor is an [extensible](https://github.com/dangerpotter/falcor-pipelines), fea
 
 Want to learn more about Falcor's features? Check out our [Falcor documentation](https://docs.falcor.com/features) for a comprehensive overview!
 
-## 🔗 Also Check Out Falcor Community!
-
-Don't forget to explore our sibling project, [Falcor Community](https://falcor.com/), where you can discover, download, and explore customized Modelfiles. Falcor Community offers a wide range of exciting possibilities for enhancing your chat interactions with Falcor! 🚀
-
 ## How to Install 🚀
 
 > [!NOTE]  
