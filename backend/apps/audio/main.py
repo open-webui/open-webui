@@ -477,26 +477,45 @@ def get_available_voices() -> list[dict]:
             {"name": "shimmer", "id": "shimmer"},
         ]
     elif app.state.config.TTS_ENGINE == "elevenlabs":
-        headers = {
-            "xi-api-key": app.state.config.TTS_API_KEY,
-            "Content-Type": "application/json",
-        }
-
         try:
-            response = requests.get(
-                "https://api.elevenlabs.io/v1/voices", headers=headers
-            )
-            response.raise_for_status()
-            voices_data = response.json()
+            ret = get_elevenlabs_voices()
+        except Exception as e:
+            # Avoided @lru_cache with exception
+            pass
 
-            voices = []
-            for voice in voices_data.get("voices", []):
-                voices.append({"name": voice["name"], "id": voice["voice_id"]})
-            return voices
-        except requests.RequestException as e:
-            log.error(f"Error fetching voices: {str(e)}")
+    return ret
 
-    return []
+
+@lru_cache
+def get_elevenlabs_voices() -> dict:
+    """
+    Note, set the following in your .env file to use Elevenlabs:
+    AUDIO_TTS_ENGINE=elevenlabs
+    AUDIO_TTS_API_KEY=sk_...  # Your Elevenlabs API key
+    AUDIO_TTS_VOICE=EXAVITQu4vr4xnSDxMaL  # From https://api.elevenlabs.io/v1/voices
+    AUDIO_TTS_MODEL=eleven_multilingual_v2
+    """
+    headers = {
+        "xi-api-key": app.state.config.TTS_API_KEY,
+        "Content-Type": "application/json",
+    }
+    try:
+        # TODO: Add retries
+        response = requests.get(
+            "https://api.elevenlabs.io/v1/voices", headers=headers
+        )
+        response.raise_for_status()
+        voices_data = response.json()
+
+        voices = {}
+        for voice in voices_data.get("voices", []):
+            voices[voice["voice_id"]] = voice["name"]
+    except requests.RequestException as e:
+        # Avoid @lru_cache with exception
+        log.error(f"Error fetching voices: {str(e)}")
+        raise RuntimeError(f"Error fetching voices: {str(e)}")
+
+    return voices
 
 
 @app.get("/voices")
