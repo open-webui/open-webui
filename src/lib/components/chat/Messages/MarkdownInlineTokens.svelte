@@ -16,7 +16,7 @@
 		{unescapeHtml(token.text)}
 	{:else if token.type === 'html'}
 		{@const html = DOMPurify.sanitize(token.text)}
-		{#if html}
+		{#if html && html.includes('<video')}
 			{@html html}
 		{:else}
 			{token.text}
