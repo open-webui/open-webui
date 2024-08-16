@@ -4,8 +4,8 @@ from fastapi import FastAPI
 
 
 @contextmanager
-def mock_webui_user(**kwargs):
-    from apps.webui.main import app
+def mock_Falcor_user(**kwargs):
+    from apps.Falcor.main import app
 
     with mock_user(app, **kwargs):
         yield
@@ -19,13 +19,13 @@ def mock_user(app: FastAPI, **kwargs):
         get_admin_user,
         get_current_user_by_api_key,
     )
-    from apps.webui.models.users import User
+    from apps.Falcor.models.users import User
 
     def create_user():
         user_parameters = {
             "id": "1",
             "name": "John Doe",
-            "email": "john.doe@openwebui.com",
+            "email": "john.doe@Falcor.com",
             "role": "user",
             "profile_image_url": "/user.png",
             "last_active_at": 1627351200,

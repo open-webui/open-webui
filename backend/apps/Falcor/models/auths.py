@@ -4,10 +4,10 @@ import uuid
 import logging
 from sqlalchemy import String, Column, Boolean, Text
 
-from apps.webui.models.users import UserModel, Users
+from apps.Falcor.models.users import UserModel, Users
 from utils.utils import verify_password
 
-from apps.webui.internal.db import Base, get_db
+from apps.Falcor.internal.db import Base, get_db
 
 from config import SRC_LOG_LEVELS
 

@@ -6,8 +6,8 @@ from sqlalchemy import String, Column, BigInteger, Text
 
 from utils.misc import get_gravatar_url
 
-from apps.webui.internal.db import Base, JSONField, Session, get_db
-from apps.webui.models.chats import Chats
+from apps.Falcor.internal.db import Base, JSONField, Session, get_db
+from apps.Falcor.models.chats import Chats
 
 ####################
 # User DB Schema

@@ -1,5 +1,5 @@
 from test.util.abstract_integration_test import AbstractPostgresTest
-from test.util.mock_user import mock_webui_user
+from test.util.mock_user import mock_Falcor_user
 
 
 class TestPrompts(AbstractPostgresTest):
@@ -8,13 +8,13 @@ class TestPrompts(AbstractPostgresTest):
 
     def test_prompts(self):
         # Get all prompts
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 0
 
         # Create a two new prompts
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.post(
                 self.create_url("/create"),
                 json={
@@ -24,7 +24,7 @@ class TestPrompts(AbstractPostgresTest):
                 },
             )
         assert response.status_code == 200
-        with mock_webui_user(id="3"):
+        with mock_Falcor_user(id="3"):
             response = self.fast_api_client.post(
                 self.create_url("/create"),
                 json={
@@ -36,13 +36,13 @@ class TestPrompts(AbstractPostgresTest):
         assert response.status_code == 200
 
         # Get all prompts
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 2
 
         # Get prompt by command
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/command/my-command"))
         assert response.status_code == 200
         data = response.json()
@@ -52,7 +52,7 @@ class TestPrompts(AbstractPostgresTest):
         assert data["user_id"] == "2"
 
         # Update prompt
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.post(
                 self.create_url("/command/my-command2/update"),
                 json={
@@ -69,7 +69,7 @@ class TestPrompts(AbstractPostgresTest):
         assert data["user_id"] == "3"
 
         # Get prompt by command
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/command/my-command2"))
         assert response.status_code == 200
         data = response.json()
@@ -79,14 +79,14 @@ class TestPrompts(AbstractPostgresTest):
         assert data["user_id"] == "3"
 
         # Delete prompt
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.delete(
                 self.create_url("/command/my-command/delete")
             )
         assert response.status_code == 200
 
         # Get all prompts
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 1

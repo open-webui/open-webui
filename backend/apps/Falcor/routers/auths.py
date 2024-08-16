@@ -10,7 +10,7 @@ import re
 import uuid
 import csv
 
-from apps.webui.models.auths import (
+from apps.Falcor.models.auths import (
     SigninForm,
     SignupForm,
     AddUserForm,
@@ -21,7 +21,7 @@ from apps.webui.models.auths import (
     Auths,
     ApiKey,
 )
-from apps.webui.models.users import Users
+from apps.Falcor.models.users import Users
 
 from utils.utils import (
     get_password_hash,
@@ -34,9 +34,9 @@ from utils.misc import parse_duration, validate_email_format
 from utils.webhook import post_webhook
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from config import (
-    WEBUI_AUTH,
-    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
-    WEBUI_AUTH_TRUSTED_NAME_HEADER,
+    Falcor_AUTH,
+    Falcor_AUTH_TRUSTED_EMAIL_HEADER,
+    Falcor_AUTH_TRUSTED_NAME_HEADER,
 )
 
 router = APIRouter()
@@ -102,7 +102,7 @@ async def update_profile(
 async def update_password(
     form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
 ):
-    if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+    if Falcor_AUTH_TRUSTED_EMAIL_HEADER:
         raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
     if session_user:
         user = Auths.authenticate_user(session_user.email, form_data.password)
@@ -123,15 +123,15 @@ async def update_password(
 
 @router.post("/signin", response_model=SigninResponse)
 async def signin(request: Request, response: Response, form_data: SigninForm):
-    if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
-        if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
+    if Falcor_AUTH_TRUSTED_EMAIL_HEADER:
+        if Falcor_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
 
-        trusted_email = request.headers[WEBUI_AUTH_TRUSTED_EMAIL_HEADER].lower()
+        trusted_email = request.headers[Falcor_AUTH_TRUSTED_EMAIL_HEADER].lower()
         trusted_name = trusted_email
-        if WEBUI_AUTH_TRUSTED_NAME_HEADER:
+        if Falcor_AUTH_TRUSTED_NAME_HEADER:
             trusted_name = request.headers.get(
-                WEBUI_AUTH_TRUSTED_NAME_HEADER, trusted_email
+                Falcor_AUTH_TRUSTED_NAME_HEADER, trusted_email
             )
         if not Users.get_user_by_email(trusted_email.lower()):
             await signup(
@@ -142,7 +142,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 ),
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
-    elif WEBUI_AUTH == False:
+    elif Falcor_AUTH == False:
         admin_email = "admin@localhost"
         admin_password = "admin"
 
@@ -195,7 +195,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
 @router.post("/signup", response_model=SigninResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
-    if not request.app.state.config.ENABLE_SIGNUP and WEBUI_AUTH:
+    if not request.app.state.config.ENABLE_SIGNUP and Falcor_AUTH:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
         )

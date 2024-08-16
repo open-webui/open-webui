@@ -2,7 +2,7 @@ import socketio
 import asyncio
 
 
-from apps.webui.models.users import Users
+from apps.Falcor.models.users import Users
 from utils.utils import decode_token
 
 sio = socketio.AsyncServer(cors_allowed_origins=[], async_mode="asgi")

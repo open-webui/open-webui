@@ -7,7 +7,7 @@ import time
 
 from sqlalchemy import Column, String, BigInteger, Boolean, Text
 
-from apps.webui.internal.db import Base, get_db
+from apps.Falcor.internal.db import Base, get_db
 
 
 ####################

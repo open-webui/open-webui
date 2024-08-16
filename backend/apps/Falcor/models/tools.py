@@ -4,8 +4,8 @@ import time
 import logging
 from sqlalchemy import String, Column, BigInteger, Text
 
-from apps.webui.internal.db import Base, JSONField, get_db
-from apps.webui.models.users import Users
+from apps.Falcor.internal.db import Base, JSONField, get_db
+from apps.Falcor.models.users import Users
 
 import json
 import copy

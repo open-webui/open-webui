@@ -3,8 +3,8 @@ from typing import Optional
 
 from fastapi import APIRouter
 
-from apps.webui.models.tools import Tools, ToolForm, ToolModel, ToolResponse
-from apps.webui.utils import load_toolkit_module_by_id
+from apps.Falcor.models.tools import Tools, ToolForm, ToolModel, ToolResponse
+from apps.Falcor.utils import load_toolkit_module_by_id
 
 from utils.utils import get_admin_user, get_verified_user
 from utils.tools import get_tools_specs

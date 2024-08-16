@@ -1,5 +1,5 @@
 from test.util.abstract_integration_test import AbstractPostgresTest
-from test.util.mock_user import mock_webui_user
+from test.util.mock_user import mock_Falcor_user
 
 
 class TestDocuments(AbstractPostgresTest):
@@ -8,20 +8,20 @@ class TestDocuments(AbstractPostgresTest):
 
     def setup_class(cls):
         super().setup_class()
-        from apps.webui.models.documents import Documents
+        from apps.Falcor.models.documents import Documents
 
         cls.documents = Documents
 
     def test_documents(self):
         # Empty database
         assert len(self.documents.get_docs()) == 0
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 0
 
         # Create a new document
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.post(
                 self.create_url("/create"),
                 json={
@@ -37,7 +37,7 @@ class TestDocuments(AbstractPostgresTest):
         assert len(self.documents.get_docs()) == 1
 
         # Get the document
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/doc?name=doc_name"))
         assert response.status_code == 200
         data = response.json()
@@ -48,7 +48,7 @@ class TestDocuments(AbstractPostgresTest):
         assert data["content"] == {}
 
         # Create another document
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.post(
                 self.create_url("/create"),
                 json={
@@ -64,13 +64,13 @@ class TestDocuments(AbstractPostgresTest):
         assert len(self.documents.get_docs()) == 2
 
         # Get all documents
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 2
 
         # Update the first document
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.post(
                 self.create_url("/doc/update?name=doc_name"),
                 json={"name": "doc_name rework", "title": "updated title"},
@@ -81,7 +81,7 @@ class TestDocuments(AbstractPostgresTest):
         assert data["title"] == "updated title"
 
         # Tag the first document
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.post(
                 self.create_url("/doc/tags"),
                 json={
@@ -98,7 +98,7 @@ class TestDocuments(AbstractPostgresTest):
         assert len(self.documents.get_docs()) == 2
 
         # Delete the first document
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.delete(
                 self.create_url("/doc/delete?name=doc_name rework")
             )

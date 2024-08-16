@@ -8,7 +8,7 @@ import uvicorn
 
 app = typer.Typer()
 
-KEY_FILE = Path.cwd() / ".webui_secret_key"
+KEY_FILE = Path.cwd() / ".Falcor_secret_key"
 if (frontend_build_dir := Path(__file__).parent / "frontend").exists():
     os.environ["FRONTEND_BUILD_DIR"] = str(frontend_build_dir)
 
@@ -18,15 +18,15 @@ def serve(
     host: str = "0.0.0.0",
     port: int = 8080,
 ):
-    if os.getenv("WEBUI_SECRET_KEY") is None:
+    if os.getenv("Falcor_SECRET_KEY") is None:
         typer.echo(
-            "Loading WEBUI_SECRET_KEY from file, not provided as an environment variable."
+            "Loading Falcor_SECRET_KEY from file, not provided as an environment variable."
         )
         if not KEY_FILE.exists():
             typer.echo(f"Generating a new secret key and saving it to {KEY_FILE}")
             KEY_FILE.write_bytes(base64.b64encode(random.randbytes(12)))
-        typer.echo(f"Loading WEBUI_SECRET_KEY from {KEY_FILE}")
-        os.environ["WEBUI_SECRET_KEY"] = KEY_FILE.read_text()
+        typer.echo(f"Loading Falcor_SECRET_KEY from {KEY_FILE}")
+        os.environ["Falcor_SECRET_KEY"] = KEY_FILE.read_text()
 
     if os.getenv("USE_CUDA_DOCKER", "false") == "true":
         typer.echo(

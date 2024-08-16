@@ -8,7 +8,7 @@ import logging
 
 from sqlalchemy import String, Column, BigInteger, Text
 
-from apps.webui.internal.db import Base, get_db
+from apps.Falcor.internal.db import Base, get_db
 
 from config import SRC_LOG_LEVELS
 

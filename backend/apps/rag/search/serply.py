@@ -45,7 +45,7 @@ def search_serply(
     headers = {
         "X-API-KEY": api_key,
         "X-User-Agent": device_type,
-        "User-Agent": "open-webui",
+        "User-Agent": "Falcor",
         "X-Proxy-Location": proxy_location,
     }
 

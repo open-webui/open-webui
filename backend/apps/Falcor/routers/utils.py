@@ -76,7 +76,7 @@ async def download_chat_as_pdf(
     if not FONTS_DIR.exists():
         FONTS_DIR = Path(site.getsitepackages()[0]) / "static/fonts"
     # When running using `pip install -e .` the static directory is in the site packages.
-    # This path only works if `open-webui serve` is run from the root of this project.
+    # This path only works if `Falcor serve` is run from the root of this project.
     if not FONTS_DIR.exists():
         FONTS_DIR = Path("./backend/static/fonts")
 
@@ -125,7 +125,7 @@ async def download_db(user=Depends(get_admin_user)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-    from apps.webui.internal.db import engine
+    from apps.Falcor.internal.db import engine
 
     if engine.name != "sqlite":
         raise HTTPException(
@@ -135,7 +135,7 @@ async def download_db(user=Depends(get_admin_user)):
     return FileResponse(
         engine.url.database,
         media_type="application/octet-stream",
-        filename="webui.db",
+        filename="Falcor.db",
     )
 
 

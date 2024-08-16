@@ -73,7 +73,7 @@ class AbstractPostgresTest(AbstractIntegrationTest):
             env_vars_postgres = {
                 "POSTGRES_USER": "user",
                 "POSTGRES_PASSWORD": "example",
-                "POSTGRES_DB": "openwebui",
+                "POSTGRES_DB": "Falcor",
             }
             cls.docker_client = docker.from_env()
             cls.docker_client.containers.run(
@@ -115,7 +115,7 @@ class AbstractPostgresTest(AbstractIntegrationTest):
             pytest.fail(f"Could not setup test environment: {ex}")
 
     def _check_db_connection(self):
-        from apps.webui.internal.db import Session
+        from apps.Falcor.internal.db import Session
 
         retries = 10
         while retries > 0:
@@ -139,7 +139,7 @@ class AbstractPostgresTest(AbstractIntegrationTest):
         cls.docker_client.containers.get(cls.DOCKER_CONTAINER_NAME).remove(force=True)
 
     def teardown_method(self):
-        from apps.webui.internal.db import Session
+        from apps.Falcor.internal.db import Session
 
         # rollback everything not yet committed
         Session.commit()

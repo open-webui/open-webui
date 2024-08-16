@@ -7,8 +7,8 @@ from pydantic import BaseModel
 import json
 import logging
 
-from apps.webui.models.users import Users
-from apps.webui.models.chats import (
+from apps.Falcor.models.users import Users
+from apps.Falcor.models.chats import (
     ChatModel,
     ChatResponse,
     ChatTitleForm,
@@ -18,7 +18,7 @@ from apps.webui.models.chats import (
 )
 
 
-from apps.webui.models.tags import (
+from apps.Falcor.models.tags import (
     TagModel,
     ChatIdTagModel,
     ChatIdTagForm,

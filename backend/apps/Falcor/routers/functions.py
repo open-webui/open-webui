@@ -6,13 +6,13 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import json
 
-from apps.webui.models.functions import (
+from apps.Falcor.models.functions import (
     Functions,
     FunctionForm,
     FunctionModel,
     FunctionResponse,
 )
-from apps.webui.utils import load_function_module_by_id
+from apps.Falcor.utils import load_function_module_by_id
 from utils.utils import get_verified_user, get_admin_user
 from constants import ERROR_MESSAGES
 
