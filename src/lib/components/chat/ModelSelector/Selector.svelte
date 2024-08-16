@@ -528,6 +528,10 @@
 						on:click={async () => {
 							temporaryChatEnabled.set(!$temporaryChatEnabled);
 							await goto('/');
+							const newChatButton = document.getElementById('new-chat-button');
+							setTimeout(() => {
+								newChatButton?.click();
+							}, 0);
 							show = false;
 						}}
 					>
