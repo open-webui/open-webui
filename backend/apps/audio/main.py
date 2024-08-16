@@ -459,16 +459,18 @@ async def get_models(user=Depends(get_verified_user)):
     return {"models": get_available_models()}
 
 
-def get_available_voices() -> list[dict]:
+def get_available_voices() -> dict:
+    """Returns {voice_id: voice_name} dict"""
+    ret = {}
     if app.state.config.TTS_ENGINE == "openai":
-        return [
-            {"name": "alloy", "id": "alloy"},
-            {"name": "echo", "id": "echo"},
-            {"name": "fable", "id": "fable"},
-            {"name": "onyx", "id": "onyx"},
-            {"name": "nova", "id": "nova"},
-            {"name": "shimmer", "id": "shimmer"},
-        ]
+        ret = {
+            "alloy": "alloy",
+            "echo": "echo",
+            "fable": "fable",
+            "onyx": "onyx",
+            "nova": "nova",
+            "shimmer": "shimmer",
+        }
     elif app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             ret = get_elevenlabs_voices()
@@ -513,4 +515,4 @@ def get_elevenlabs_voices() -> dict:
 
 @app.get("/voices")
 async def get_voices(user=Depends(get_verified_user)):
-    return {"voices": get_available_voices()}
+    return {"voices": [{"id": k, "name": v} for k, v in get_available_voices().items()]}
