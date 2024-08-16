@@ -34,7 +34,7 @@
 			<svelte:self id={`${id}-em`} tokens={token.tokens} />
 		</em>
 	{:else if token.type === 'codespan'}
-		<code class="codespan">{revertSanitizedResponseContent(token.raw)}</code>
+		<code class="codespan">{token.text}</code>
 	{:else if token.type === 'br'}
 		<br />
 	{:else if token.type === 'del'}
