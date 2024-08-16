@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import json
 
-from apps.webui.models.models import Models, ModelModel, ModelForm, ModelResponse
+from apps.Falcor.models.models import Models, ModelModel, ModelForm, ModelResponse
 
 from utils.utils import get_verified_user, get_admin_user
 from constants import ERROR_MESSAGES

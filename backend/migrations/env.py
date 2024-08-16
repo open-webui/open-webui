@@ -6,17 +6,17 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from apps.webui.models.auths import Auth
-from apps.webui.models.chats import Chat
-from apps.webui.models.documents import Document
-from apps.webui.models.memories import Memory
-from apps.webui.models.models import Model
-from apps.webui.models.prompts import Prompt
-from apps.webui.models.tags import Tag, ChatIdTag
-from apps.webui.models.tools import Tool
-from apps.webui.models.users import User
-from apps.webui.models.files import File
-from apps.webui.models.functions import Function
+from apps.Falcor.models.auths import Auth
+from apps.Falcor.models.chats import Chat
+from apps.Falcor.models.documents import Document
+from apps.Falcor.models.memories import Memory
+from apps.Falcor.models.models import Model
+from apps.Falcor.models.prompts import Prompt
+from apps.Falcor.models.tags import Tag, ChatIdTag
+from apps.Falcor.models.tools import Tool
+from apps.Falcor.models.users import User
+from apps.Falcor.models.files import File
+from apps.Falcor.models.functions import Function
 
 from config import DATABASE_URL
 

@@ -1,5 +1,5 @@
 from test.util.abstract_integration_test import AbstractPostgresTest
-from test.util.mock_user import mock_webui_user
+from test.util.mock_user import mock_Falcor_user
 
 
 def _get_user_by_id(data, param):
@@ -11,7 +11,7 @@ def _assert_user(data, id, **kwargs):
     assert user is not None
     comparison_data = {
         "name": f"user {id}",
-        "email": f"user{id}@openwebui.com",
+        "email": f"user{id}@Falcor.com",
         "profile_image_url": f"/user{id}.png",
         "role": "user",
         **kwargs,
@@ -26,7 +26,7 @@ class TestUsers(AbstractPostgresTest):
 
     def setup_class(cls):
         super().setup_class()
-        from apps.webui.models.users import Users
+        from apps.Falcor.models.users import Users
 
         cls.users = Users
 
@@ -35,21 +35,21 @@ class TestUsers(AbstractPostgresTest):
         self.users.insert_new_user(
             id="1",
             name="user 1",
-            email="user1@openwebui.com",
+            email="user1@Falcor.com",
             profile_image_url="/user1.png",
             role="user",
         )
         self.users.insert_new_user(
             id="2",
             name="user 2",
-            email="user2@openwebui.com",
+            email="user2@Falcor.com",
             profile_image_url="/user2.png",
             role="user",
         )
 
     def test_users(self):
         # Get all users
-        with mock_webui_user(id="3"):
+        with mock_Falcor_user(id="3"):
             response = self.fast_api_client.get(self.create_url(""))
         assert response.status_code == 200
         assert len(response.json()) == 2
@@ -58,7 +58,7 @@ class TestUsers(AbstractPostgresTest):
         _assert_user(data, "2")
 
         # update role
-        with mock_webui_user(id="3"):
+        with mock_Falcor_user(id="3"):
             response = self.fast_api_client.post(
                 self.create_url("/update/role"), json={"id": "2", "role": "admin"}
             )
@@ -66,7 +66,7 @@ class TestUsers(AbstractPostgresTest):
         _assert_user([response.json()], "2", role="admin")
 
         # Get all users
-        with mock_webui_user(id="3"):
+        with mock_Falcor_user(id="3"):
             response = self.fast_api_client.get(self.create_url(""))
         assert response.status_code == 200
         assert len(response.json()) == 2
@@ -75,13 +75,13 @@ class TestUsers(AbstractPostgresTest):
         _assert_user(data, "2", role="admin")
 
         # Get (empty) user settings
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/user/settings"))
         assert response.status_code == 200
         assert response.json() is None
 
         # Update user settings
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.post(
                 self.create_url("/user/settings/update"),
                 json={
@@ -92,7 +92,7 @@ class TestUsers(AbstractPostgresTest):
         assert response.status_code == 200
 
         # Get user settings
-        with mock_webui_user(id="2"):
+        with mock_Falcor_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/user/settings"))
         assert response.status_code == 200
         assert response.json() == {
@@ -101,13 +101,13 @@ class TestUsers(AbstractPostgresTest):
         }
 
         # Get (empty) user info
-        with mock_webui_user(id="1"):
+        with mock_Falcor_user(id="1"):
             response = self.fast_api_client.get(self.create_url("/user/info"))
         assert response.status_code == 200
         assert response.json() is None
 
         # Update user info
-        with mock_webui_user(id="1"):
+        with mock_Falcor_user(id="1"):
             response = self.fast_api_client.post(
                 self.create_url("/user/info/update"),
                 json={"attr1": "value1", "attr2": "value2"},
@@ -115,31 +115,31 @@ class TestUsers(AbstractPostgresTest):
         assert response.status_code == 200
 
         # Get user info
-        with mock_webui_user(id="1"):
+        with mock_Falcor_user(id="1"):
             response = self.fast_api_client.get(self.create_url("/user/info"))
         assert response.status_code == 200
         assert response.json() == {"attr1": "value1", "attr2": "value2"}
 
         # Get user by id
-        with mock_webui_user(id="1"):
+        with mock_Falcor_user(id="1"):
             response = self.fast_api_client.get(self.create_url("/2"))
         assert response.status_code == 200
         assert response.json() == {"name": "user 2", "profile_image_url": "/user2.png"}
 
         # Update user by id
-        with mock_webui_user(id="1"):
+        with mock_Falcor_user(id="1"):
             response = self.fast_api_client.post(
                 self.create_url("/2/update"),
                 json={
                     "name": "user 2 updated",
-                    "email": "user2-updated@openwebui.com",
+                    "email": "user2-updated@Falcor.com",
                     "profile_image_url": "/user2-updated.png",
                 },
             )
         assert response.status_code == 200
 
         # Get all users
-        with mock_webui_user(id="3"):
+        with mock_Falcor_user(id="3"):
             response = self.fast_api_client.get(self.create_url(""))
         assert response.status_code == 200
         assert len(response.json()) == 2
@@ -150,17 +150,17 @@ class TestUsers(AbstractPostgresTest):
             "2",
             role="admin",
             name="user 2 updated",
-            email="user2-updated@openwebui.com",
+            email="user2-updated@Falcor.com",
             profile_image_url="/user2-updated.png",
         )
 
         # Delete user by id
-        with mock_webui_user(id="1"):
+        with mock_Falcor_user(id="1"):
             response = self.fast_api_client.delete(self.create_url("/2"))
         assert response.status_code == 200
 
         # Get all users
-        with mock_webui_user(id="3"):
+        with mock_Falcor_user(id="3"):
             response = self.fast_api_client.get(self.create_url(""))
         assert response.status_code == 200
         assert len(response.json()) == 1

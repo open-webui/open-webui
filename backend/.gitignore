@@ -13,4 +13,4 @@ Pipfile
 !data/litellm/config.yaml
 
 !data/config.json
-.webui_secret_key
+.Falcor_secret_key

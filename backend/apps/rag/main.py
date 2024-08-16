@@ -48,12 +48,12 @@ import mimetypes
 import uuid
 import json
 
-from apps.webui.models.documents import (
+from apps.Falcor.models.documents import (
     Documents,
     DocumentForm,
     DocumentResponse,
 )
-from apps.webui.models.files import (
+from apps.Falcor.models.files import (
     Files,
 )
 

@@ -10,7 +10,7 @@ import uuid
 
 from config import BannerModel
 
-from apps.webui.models.users import Users
+from apps.Falcor.models.users import Users
 
 from utils.utils import (
     get_password_hash,

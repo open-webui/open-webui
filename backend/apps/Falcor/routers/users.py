@@ -9,15 +9,15 @@ import time
 import uuid
 import logging
 
-from apps.webui.models.users import (
+from apps.Falcor.models.users import (
     UserModel,
     UserUpdateForm,
     UserRoleUpdateForm,
     UserSettings,
     Users,
 )
-from apps.webui.models.auths import Auths
-from apps.webui.models.chats import Chats
+from apps.Falcor.models.auths import Auths
+from apps.Falcor.models.chats import Chats
 
 from utils.utils import (
     get_verified_user,

@@ -4,7 +4,7 @@ import json
 from contextlib import contextmanager
 
 from peewee_migrate import Router
-from apps.webui.internal.wrappers import register_connection
+from apps.Falcor.internal.wrappers import register_connection
 
 from typing import Optional, Any
 from typing_extensions import Self
@@ -45,8 +45,8 @@ class JSONField(types.TypeDecorator):
 # Check if the file exists
 if os.path.exists(f"{DATA_DIR}/ollama.db"):
     # Rename the file
-    os.rename(f"{DATA_DIR}/ollama.db", f"{DATA_DIR}/webui.db")
-    log.info("Database migrated from Ollama-WebUI successfully.")
+    os.rename(f"{DATA_DIR}/ollama.db", f"{DATA_DIR}/Falcor.db")
+    log.info("Database migrated from Ollama-Falcor successfully.")
 else:
     pass
 
@@ -59,7 +59,7 @@ def handle_peewee_migration(DATABASE_URL):
         db = register_connection(
             DATABASE_URL.replace("postgresql://", "postgres://").replace("%40", "@")
         )
-        migrate_dir = BACKEND_DIR / "apps" / "webui" / "internal" / "migrations"
+        migrate_dir = BACKEND_DIR / "apps" / "Falcor" / "internal" / "migrations"
         router = Router(db, logger=log, migrate_dir=migrate_dir)
         router.run()
         db.close()

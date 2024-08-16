@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import json
 
-from apps.webui.models.documents import (
+from apps.Falcor.models.documents import (
     Documents,
     DocumentForm,
     DocumentUpdateForm,

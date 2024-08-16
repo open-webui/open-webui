@@ -5,7 +5,7 @@ import logging
 
 from sqlalchemy import Column, String, BigInteger, Text
 
-from apps.webui.internal.db import JSONField, Base, get_db
+from apps.Falcor.internal.db import JSONField, Base, get_db
 
 import json
 

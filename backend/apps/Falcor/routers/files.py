@@ -20,7 +20,7 @@ from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from pydantic import BaseModel
 import json
 
-from apps.webui.models.files import (
+from apps.Falcor.models.files import (
     Files,
     FileForm,
     FileModel,

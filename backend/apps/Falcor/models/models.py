@@ -4,7 +4,7 @@ from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Column, BigInteger, Text
 
-from apps.webui.internal.db import Base, JSONField, get_db
+from apps.Falcor.internal.db import Base, JSONField, get_db
 
 from config import SRC_LOG_LEVELS
 

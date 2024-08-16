@@ -87,13 +87,13 @@ class EndpointFilter(logging.Filter):
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
-if WEBUI_NAME != "Open WebUI":
-    WEBUI_NAME += " (Open WebUI)"
+Falcor_NAME = os.environ.get("Falcor_NAME", "Falcor")
+if Falcor_NAME != "Falcor":
+    Falcor_NAME += " (Falcor)"
 
-WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
+Falcor_URL = os.environ.get("Falcor_URL", "http://localhost:3000")
 
-WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+Falcor_FAVICON_URL = "https://Falcor.com/favicon.png"
 
 
 ####################################
@@ -106,7 +106,7 @@ try:
     PACKAGE_DATA = json.loads((BASE_DIR / "package.json").read_text())
 except Exception:
     try:
-        PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
+        PACKAGE_DATA = {"version": importlib.metadata.version("Falcor")}
     except importlib.metadata.PackageNotFoundError:
         PACKAGE_DATA = {"version": "0.0.0"}
 
@@ -138,7 +138,7 @@ try:
         changelog_content = file.read()
 
 except Exception:
-    changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
+    changelog_content = (pkgutil.get_data("open_Falcor", "CHANGELOG.md") or b"").decode()
 
 
 # Convert markdown content to HTML
@@ -182,10 +182,10 @@ CHANGELOG = changelog_json
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 
 ####################################
-# WEBUI_BUILD_HASH
+# Falcor_BUILD_HASH
 ####################################
 
-WEBUI_BUILD_HASH = os.environ.get("WEBUI_BUILD_HASH", "dev-build")
+Falcor_BUILD_HASH = os.environ.get("Falcor_BUILD_HASH", "dev-build")
 
 ####################################
 # DATA/FRONTEND BUILD DIR
@@ -301,14 +301,14 @@ class AppConfig:
 
 
 ####################################
-# WEBUI_AUTH (Required for security)
+# Falcor_AUTH (Required for security)
 ####################################
 
-WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
-WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
-    "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
+Falcor_AUTH = os.environ.get("Falcor_AUTH", "True").lower() == "true"
+Falcor_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
+    "Falcor_AUTH_TRUSTED_EMAIL_HEADER", None
 )
-WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER", None)
+Falcor_AUTH_TRUSTED_NAME_HEADER = os.environ.get("Falcor_AUTH_TRUSTED_NAME_HEADER", None)
 JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
 )
@@ -516,12 +516,12 @@ CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
 
 if CUSTOM_NAME:
     try:
-        r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
+        r = requests.get(f"https://api.Falcor.com/api/v1/custom/{CUSTOM_NAME}")
         data = r.json()
         if r.ok:
             if "logo" in data:
-                WEBUI_FAVICON_URL = url = (
-                    f"https://api.openwebui.com{data['logo']}"
+                Falcor_FAVICON_URL = url = (
+                    f"https://api.Falcor.com{data['logo']}"
                     if data["logo"][0] == "/"
                     else data["logo"]
                 )
@@ -534,7 +534,7 @@ if CUSTOM_NAME:
 
             if "splash" in data:
                 url = (
-                    f"https://api.openwebui.com{data['splash']}"
+                    f"https://api.Falcor.com{data['splash']}"
                     if data["splash"][0] == "/"
                     else data["splash"]
                 )
@@ -545,7 +545,7 @@ if CUSTOM_NAME:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
 
-            WEBUI_NAME = data["name"]
+            Falcor_NAME = data["name"]
     except Exception as e:
         log.exception(e)
         pass
@@ -664,13 +664,13 @@ if OLLAMA_BASE_URL == "" and OLLAMA_API_BASE_URL != "":
 if ENV == "prod":
     if OLLAMA_BASE_URL == "/ollama" and not K8S_FLAG:
         if USE_OLLAMA_DOCKER.lower() == "true":
-            # if you use all-in-one docker container (Open WebUI + Ollama)
+            # if you use all-in-one docker container (Falcor + Ollama)
             # with the docker build arg USE_OLLAMA=true (--build-arg="USE_OLLAMA=true") this only works with http://localhost:11434
             OLLAMA_BASE_URL = "http://localhost:11434"
         else:
             OLLAMA_BASE_URL = "http://host.docker.internal:11434"
     elif K8S_FLAG:
-        OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
+        OLLAMA_BASE_URL = "http://ollama-service.Falcor.svc.cluster.local:11434"
 
 
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
@@ -733,7 +733,7 @@ except Exception:
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 ####################################
-# WEBUI
+# Falcor
 ####################################
 
 ENABLE_SIGNUP = PersistentConfig(
@@ -741,7 +741,7 @@ ENABLE_SIGNUP = PersistentConfig(
     "ui.enable_signup",
     (
         False
-        if not WEBUI_AUTH
+        if not Falcor_AUTH
         else os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
     ),
 )
@@ -851,13 +851,13 @@ class BannerModel(BaseModel):
 
 
 try:
-    banners = json.loads(os.environ.get("WEBUI_BANNERS", "[]"))
+    banners = json.loads(os.environ.get("Falcor_BANNERS", "[]"))
     banners = [BannerModel(**banner) for banner in banners]
 except Exception as e:
-    print(f"Error loading WEBUI_BANNERS: {e}")
+    print(f"Error loading Falcor_BANNERS: {e}")
     banners = []
 
-WEBUI_BANNERS = PersistentConfig("WEBUI_BANNERS", "ui.banners", banners)
+Falcor_BANNERS = PersistentConfig("Falcor_BANNERS", "ui.banners", banners)
 
 
 SHOW_ADMIN_DETAILS = PersistentConfig(
@@ -946,27 +946,27 @@ If a function tool doesn't match the query, return an empty string. Else, pick a
 
 
 ####################################
-# WEBUI_SECRET_KEY
+# Falcor_SECRET_KEY
 ####################################
 
-WEBUI_SECRET_KEY = os.environ.get(
-    "WEBUI_SECRET_KEY",
+Falcor_SECRET_KEY = os.environ.get(
+    "Falcor_SECRET_KEY",
     os.environ.get(
-        "WEBUI_JWT_SECRET_KEY", "t0p-s3cr3t"
+        "Falcor_JWT_SECRET_KEY", "t0p-s3cr3t"
     ),  # DEPRECATED: remove at next major version
 )
 
-WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get(
-    "WEBUI_SESSION_COOKIE_SAME_SITE",
-    os.environ.get("WEBUI_SESSION_COOKIE_SAME_SITE", "lax"),
+Falcor_SESSION_COOKIE_SAME_SITE = os.environ.get(
+    "Falcor_SESSION_COOKIE_SAME_SITE",
+    os.environ.get("Falcor_SESSION_COOKIE_SAME_SITE", "lax"),
 )
 
-WEBUI_SESSION_COOKIE_SECURE = os.environ.get(
-    "WEBUI_SESSION_COOKIE_SECURE",
-    os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false").lower() == "true",
+Falcor_SESSION_COOKIE_SECURE = os.environ.get(
+    "Falcor_SESSION_COOKIE_SECURE",
+    os.environ.get("Falcor_SESSION_COOKIE_SECURE", "false").lower() == "true",
 )
 
-if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
+if Falcor_AUTH and Falcor_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 
 ####################################
@@ -1424,7 +1424,7 @@ AUDIO_TTS_VOICE = PersistentConfig(
 # Database
 ####################################
 
-DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/Falcor.db")
 
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:

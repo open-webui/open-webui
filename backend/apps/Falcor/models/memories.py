@@ -3,7 +3,7 @@ from typing import Union, Optional
 
 from sqlalchemy import Column, String, BigInteger, Text
 
-from apps.webui.internal.db import Base, get_db
+from apps.Falcor.internal.db import Base, get_db
 
 import time
 import uuid

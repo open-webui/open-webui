@@ -2,7 +2,7 @@ import json
 import requests
 import logging
 
-from config import SRC_LOG_LEVELS, VERSION, WEBUI_FAVICON_URL, WEBUI_NAME
+from config import SRC_LOG_LEVELS, VERSION, Falcor_FAVICON_URL, Falcor_NAME
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["WEBHOOK"])
@@ -33,8 +33,8 @@ def post_webhook(url: str, message: str, event_data: dict) -> bool:
                 "sections": [
                     {
                         "activityTitle": message,
-                        "activitySubtitle": f"{WEBUI_NAME} ({VERSION}) - {action}",
-                        "activityImage": WEBUI_FAVICON_URL,
+                        "activitySubtitle": f"{Falcor_NAME} ({VERSION}) - {action}",
+                        "activityImage": Falcor_FAVICON_URL,
                         "facts": facts,
                         "markdown": True,
                     }
