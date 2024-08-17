@@ -39,7 +39,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 
     @migrator.create_model
     class Model(pw.Model):
-        id = pw.TextField(unique=True)
+        id = pw.CharField(max_length=255, unique=True)
         user_id = pw.TextField()
         base_model_id = pw.TextField(null=True)
 

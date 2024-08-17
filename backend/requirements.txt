@@ -20,6 +20,7 @@ peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
 PyMySQL==1.1.1
 bcrypt==4.2.0
+mysqlclient==2.2.4
 
 pymongo
 redis
