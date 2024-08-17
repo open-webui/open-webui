@@ -2,7 +2,7 @@
 	import DOMPurify from 'dompurify';
 	import { onMount } from 'svelte';
 	import { marked, type Token } from 'marked';
-	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
+	import { revertSanitizedResponseContent, revertSanitizedCodeResponseContent, unescapeHtml } from '$lib/utils';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/MarkdownInlineTokens.svelte';
@@ -31,7 +31,7 @@
 			id={`${id}-${tokenIdx}`}
 			{token}
 			lang={token?.lang ?? ''}
-			code={revertSanitizedResponseContent(token?.text ?? '')}
+			code={revertSanitizedCodeResponseContent(token?.text ?? '')}
 		/>
 	{:else if token.type === 'table'}
 		<table>

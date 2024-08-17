@@ -1,7 +1,11 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 	import type { Token } from 'marked';
-	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
+	import {
+		revertSanitizedResponseContent,
+		revertSanitizedCodeResponseContent,
+		unescapeHtml
+	} from '$lib/utils';
 	import { onMount } from 'svelte';
 	import Image from '$lib/components/common/Image.svelte';
 
@@ -36,7 +40,7 @@
 			<svelte:self id={`${id}-em`} tokens={token.tokens} />
 		</em>
 	{:else if token.type === 'codespan'}
-		<code class="codespan">{revertSanitizedResponseContent(token.text)}</code>
+		<code class="codespan">{revertSanitizedCodeResponseContent(token.text)}</code>
 	{:else if token.type === 'br'}
 		<br />
 	{:else if token.type === 'del'}

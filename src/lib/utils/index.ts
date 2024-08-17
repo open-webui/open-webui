@@ -90,6 +90,10 @@ export const processResponseContent = (content: string) => {
 };
 
 export const revertSanitizedResponseContent = (content: string) => {
+	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&#39;', "'");
+};
+
+export const revertSanitizedCodeResponseContent = (content: string) => {
 	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&#39;', "'").replaceAll('\\\\', '\\');
 };
 
