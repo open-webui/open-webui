@@ -86,7 +86,7 @@ dependencies = [
     "pytest-docker~=3.1.1"
 ]
 readme = "README.md"
-requires-python = ">= 3.11, < 3.12.0a1"
+requires-python = ">= 3.11, < 3.13.0a1"
 dynamic = ["version"]
 classifiers = [
     "Development Status :: 4 - Beta",
