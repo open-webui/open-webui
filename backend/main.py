@@ -384,10 +384,6 @@ def get_tools(
             webui_app.state.TOOLS[tool_id] = module
 
         extra_params["__id__"] = tool_id
-
-        has_citation = hasattr(module, "citation") and module.citation
-        handles_files = hasattr(module, "file_handler") and module.file_handler
-
         if hasattr(module, "valves") and hasattr(module, "Valves"):
             valves = Tools.get_tool_valves_by_id(tool_id) or {}
             module.valves = module.Valves(**valves)
@@ -411,11 +407,11 @@ def get_tools(
 
             # TODO: This needs to be a pydantic model
             tool_dict = {
-                "spec": spec,
-                "citation": has_citation,
-                "file_handler": handles_files,
                 "toolkit_id": tool_id,
                 "callable": callable,
+                "spec": spec,
+                "file_handler": hasattr(module, "file_handler") and module.file_handler,
+                "citation": hasattr(module, "citation") and module.citation,
             }
 
             # TODO: if collision, prepend toolkit name
@@ -507,7 +503,7 @@ async def chat_completion_tools_handler(
         if tools[tool_function_name]["citation"]:
             citations.append(
                 {
-                    "source": {"name": f"TOOL:{tools[tool_function_name]["toolkit_id"]}/{tool_function_name}"},
+                    "source": {"name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"},
                     "document": [tool_output],
                     "metadata": [{"source": tool_function_name}],
                 }
