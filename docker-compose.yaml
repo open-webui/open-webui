@@ -1,7 +1,7 @@
 services:
   ollama:
     volumes:
-      - ollama:/root/.ollama
+      - /app/.ollama:/root/.ollama
     container_name: ollama
     pull_policy: always
     tty: true
@@ -14,22 +14,18 @@ services:
       args:
         OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
-    image: ghcr.io/c0sogi/open-webui:latest
+    image: ghcr.io/c0sogi/open-webui:${OPEN_WEBUI_DOCKER_TAG-latest}
     container_name: open-webui
     volumes:
-      - open-webui:/app/backend/data
+      - /app:/app
     depends_on:
       - ollama
     ports:
-      - ${OPEN_WEBUI_PORT-80}:8080
+      - 80:8080
     environment:
-      - 'WEBUI_NAME=T-intelligence'
+      - 'WEBUI_NAME=${WEBUI_NAME-T-intelligence}'
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
-
-volumes:
-  ollama: {}
-  open-webui: {}
