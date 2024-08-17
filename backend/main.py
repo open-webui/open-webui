@@ -318,7 +318,7 @@ def get_tool_call_payload(messages, task_model_id, content):
     }
 
 
-async def chat_completion_inlets_handler(body, model, extra_params):
+async def chat_completion_filter_functions_handler(body, model, extra_params):
     skip_files = None
 
     filter_ids = get_filter_function_ids(model)
@@ -606,7 +606,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         citations = []
 
         try:
-            body, flags = await chat_completion_inlets_handler(
+            body, flags = await chat_completion_filter_functions_handler(
                 body, model, extra_params
             )
         except Exception as e:
