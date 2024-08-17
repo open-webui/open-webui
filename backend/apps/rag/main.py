@@ -943,7 +943,7 @@ def store_data_in_vector_db(
     docs = text_splitter.split_documents(data)
 
     if len(docs) > 0:
-        log.info(f"store_data_in_vector_db {docs}")
+        log.info(f"store_data_in_vector_db {str(docs)[:1000]}... {collection_name}")
         return store_docs_in_vector_db(docs, collection_name, metadata, overwrite), None
     else:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
@@ -964,7 +964,7 @@ def store_text_in_vector_db(
 def store_docs_in_vector_db(
     docs, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
 ) -> bool:
-    log.info(f"store_docs_in_vector_db {docs} {collection_name}")
+    log.info(f"store_docs_in_vector_db {str(docs)[:1000]}... {collection_name}")
 
     texts = [doc.page_content for doc in docs]
     metadatas = [{**doc.metadata, **(metadata if metadata else {})} for doc in docs]

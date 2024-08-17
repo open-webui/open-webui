@@ -1,12 +1,13 @@
 services:
   ollama:
     volumes:
-      - /app/.ollama:/root/.ollama
+      - ollama:/root/.ollama
     container_name: ollama
     pull_policy: always
     tty: true
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+
 
   open-webui:
     build:
@@ -17,7 +18,7 @@ services:
     image: ghcr.io/c0sogi/open-webui:${OPEN_WEBUI_DOCKER_TAG-latest}
     container_name: open-webui
     volumes:
-      - /app:/app
+      - /app/backend/data:/app/backend/data
     depends_on:
       - ollama
     ports:
@@ -29,3 +30,6 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+
+volumes:
+  ollama: {}

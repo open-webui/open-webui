@@ -9,6 +9,7 @@ from apps.ollama.main import (
     GenerateEmbeddingsForm,
 )
 
+
 from huggingface_hub import snapshot_download
 
 from langchain_core.documents import Document
@@ -42,7 +43,7 @@ def query_doc(
             n_results=k,
         )
 
-        log.info(f"query_doc:result {result}")
+        log.info(f"query_doc:result {str(result)[:1000]}")
         return result
     except Exception as e:
         raise e
@@ -376,22 +377,10 @@ def generate_openai_batch_embeddings(
     model: str, texts: list[str], key: str, url: str = "https://api.openai.com/v1"
 ) -> Optional[list[list[float]]]:
     try:
-        r = requests.post(
-            f"{url}/embeddings",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {key}",
-            },
-            json={"input": texts, "model": model},
-        )
-        r.raise_for_status()
-        data = r.json()
-        if "data" in data:
-            return [elem["embedding"] for elem in data["data"]]
-        else:
-            raise "Something went wrong :/"
+        from apps.rag.batch_utils import generate_openai_batch_embeddings
+        return generate_openai_batch_embeddings(model=model, texts=texts, key=key, url=url)
     except Exception as e:
-        print(e)
+        log.exception(e)
         return None
 
 
