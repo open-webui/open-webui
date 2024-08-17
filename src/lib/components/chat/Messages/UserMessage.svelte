@@ -102,7 +102,16 @@
 						<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
 							{#if file.type === 'image'}
 								<img src={file.url} alt="input" class=" max-h-96 rounded-lg" draggable="false" />
-							{:else}
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
+			{#if message.files}
+				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
+					{#each message.files as file}
+						<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
+							{#if file.type !== 'image'}
 								<FileItem
 									url={file.url}
 									name={file.name}
