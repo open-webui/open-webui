@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { onMount, tick } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	import { updateChatById } from '$lib/apis/chats';
-	import { onMount, tick } from 'svelte';
+
 	import ResponseMessage from './ResponseMessage.svelte';
 
 	export let chatId;
@@ -26,24 +27,24 @@
 	const dispatch = createEventDispatcher();
 
 	let currentMessageId;
-
-	let groupedMessagesIdx = {};
 	let groupedMessages = {};
+	let groupedMessagesIdx = {};
 
-	$: groupedMessages = parentMessage?.models.reduce((a, model) => {
+	$: groupedMessages = parentMessage?.models.reduce((a, model, modelIdx) => {
+		// Find all messages that are children of the parent message and have the same model
 		const modelMessages = parentMessage?.childrenIds
 			.map((id) => history.messages[id])
-			.filter((m) => m.model === model);
+			.filter((m) => m.modelIdx === modelIdx);
 
 		return {
 			...a,
-			[model]: { messages: modelMessages }
+			[modelIdx]: { messages: modelMessages }
 		};
 	}, {});
 
-	const showPreviousMessage = (model) => {
-		groupedMessagesIdx[model] = Math.max(0, groupedMessagesIdx[model] - 1);
-		let messageId = groupedMessages[model].messages[groupedMessagesIdx[model]].id;
+	const showPreviousMessage = (modelIdx) => {
+		groupedMessagesIdx[modelIdx] = Math.max(0, groupedMessagesIdx[modelIdx] - 1);
+		let messageId = groupedMessages[modelIdx].messages[groupedMessagesIdx[modelIdx]].id;
 
 		console.log(messageId);
 		let messageChildrenIds = history.messages[messageId].childrenIds;
@@ -54,17 +55,16 @@
 		}
 
 		history.currentId = messageId;
-
 		dispatch('change');
 	};
 
-	const showNextMessage = (model) => {
-		groupedMessagesIdx[model] = Math.min(
-			groupedMessages[model].messages.length - 1,
-			groupedMessagesIdx[model] + 1
+	const showNextMessage = (modelIdx) => {
+		groupedMessagesIdx[modelIdx] = Math.min(
+			groupedMessages[modelIdx].messages.length - 1,
+			groupedMessagesIdx[modelIdx] + 1
 		);
 
-		let messageId = groupedMessages[model].messages[groupedMessagesIdx[model]].id;
+		let messageId = groupedMessages[modelIdx].messages[groupedMessagesIdx[modelIdx]].id;
 		console.log(messageId);
 
 		let messageChildrenIds = history.messages[messageId].childrenIds;
@@ -75,7 +75,6 @@
 		}
 
 		history.currentId = messageId;
-
 		dispatch('change');
 	};
 
@@ -83,13 +82,12 @@
 		await tick();
 		currentMessageId = messages[messageIdx].id;
 
-		for (const model of parentMessage?.models) {
-			const idx = groupedMessages[model].messages.findIndex((m) => m.id === currentMessageId);
-
+		for (const [modelIdx, model] of parentMessage?.models.entries()) {
+			const idx = groupedMessages[modelIdx].messages.findIndex((m) => m.id === currentMessageId);
 			if (idx !== -1) {
-				groupedMessagesIdx[model] = idx;
+				groupedMessagesIdx[modelIdx] = idx;
 			} else {
-				groupedMessagesIdx[model] = 0;
+				groupedMessagesIdx[modelIdx] = 0;
 			}
 		}
 	});
@@ -101,16 +99,16 @@
 		id="responses-container-{parentMessage.id}"
 	>
 		{#key currentMessageId}
-			{#each Object.keys(groupedMessages) as model}
-				{#if groupedMessagesIdx[model] !== undefined && groupedMessages[model].messages.length > 0}
+			{#each Object.keys(groupedMessages) as modelIdx}
+				{#if groupedMessagesIdx[modelIdx] !== undefined && groupedMessages[modelIdx].messages.length > 0}
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
-					{@const message = groupedMessages[model].messages[groupedMessagesIdx[model]]}
+					{@const message = groupedMessages[modelIdx].messages[groupedMessagesIdx[modelIdx]]}
 
 					<div
 						class=" snap-center min-w-80 w-full max-w-full m-1 border {history.messages[
 							currentMessageId
-						].model === model
+						]?.modelIdx == modelIdx
 							? 'border-gray-100 dark:border-gray-800 border-[1.5px]'
 							: 'border-gray-50 dark:border-gray-850 '} transition p-5 rounded-3xl"
 						on:click={() => {
@@ -131,13 +129,13 @@
 					>
 						{#key history.currentId}
 							<ResponseMessage
-								message={groupedMessages[model].messages[groupedMessagesIdx[model]]}
-								siblings={groupedMessages[model].messages.map((m) => m.id)}
+								message={groupedMessages[modelIdx].messages[groupedMessagesIdx[modelIdx]]}
+								siblings={groupedMessages[modelIdx].messages.map((m) => m.id)}
 								isLastMessage={true}
 								{updateChatMessages}
 								{confirmEditResponseMessage}
-								showPreviousMessage={() => showPreviousMessage(model)}
-								showNextMessage={() => showNextMessage(model)}
+								showPreviousMessage={() => showPreviousMessage(modelIdx)}
+								showNextMessage={() => showNextMessage(modelIdx)}
 								{readOnly}
 								{rateMessage}
 								{copyToClipboard}
@@ -145,7 +143,7 @@
 								regenerateResponse={async (message) => {
 									regenerateResponse(message);
 									await tick();
-									groupedMessagesIdx[model] = groupedMessages[model].messages.length - 1;
+									groupedMessagesIdx[modelIdx] = groupedMessages[modelIdx].messages.length - 1;
 								}}
 								on:save={async (e) => {
 									console.log('save', e);

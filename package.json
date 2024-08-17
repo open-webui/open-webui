@@ -73,7 +73,6 @@
 		"js-sha256": "^0.10.1",
 		"katex": "^0.16.11",
 		"marked": "^9.1.0",
-		"marked-katex-extension": "^5.1.1",
 		"mermaid": "^10.9.1",
 		"pyodide": "^0.26.1",
 		"socket.io-client": "^4.2.0",

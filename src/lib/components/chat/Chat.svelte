@@ -570,7 +570,7 @@
 				content: userPrompt,
 				files: _files.length > 0 ? _files : undefined,
 				timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-				models: selectedModels.filter((m, mIdx) => selectedModels.indexOf(m) === mIdx)
+				models: selectedModels
 			};
 
 			// Add message to history and Set currentId to messageId
@@ -590,7 +590,11 @@
 		return _responses;
 	};
 
-	const sendPrompt = async (prompt, parentId, { modelId = null, newChat = false } = {}) => {
+	const sendPrompt = async (
+		prompt,
+		parentId,
+		{ modelId = null, modelIdx = null, newChat = false } = {}
+	) => {
 		let _responses = [];
 
 		// If modelId is provided, use it, else use selected model
@@ -602,7 +606,7 @@
 
 		// Create response messages for each selected model
 		const responseMessageIds = {};
-		for (const modelId of selectedModelIds) {
+		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
 			if (model) {
@@ -615,6 +619,7 @@
 					content: '',
 					model: model.id,
 					modelName: model.name ?? model.id,
+					modelIdx: modelIdx ? modelIdx : _modelIdx,
 					userContext: null,
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
@@ -631,7 +636,7 @@
 					];
 				}
 
-				responseMessageIds[modelId] = responseMessageId;
+				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
 			}
 		}
 		await tick();
@@ -663,7 +668,7 @@
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 
 		await Promise.all(
-			selectedModelIds.map(async (modelId) => {
+			selectedModelIds.map(async (modelId, _modelIdx) => {
 				console.log('modelId', modelId);
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -681,7 +686,8 @@
 						);
 					}
 
-					let responseMessageId = responseMessageIds[modelId];
+					let responseMessageId =
+						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
 					let responseMessage = history.messages[responseMessageId];
 
 					let userContext = null;
@@ -1360,7 +1366,10 @@
 			} else {
 				// If there are multiple models selected, use the model of the response message for regeneration
 				// e.g. many model chat
-				await sendPrompt(userPrompt, userMessage.id, { modelId: message.model });
+				await sendPrompt(userPrompt, userMessage.id, {
+					modelId: message.model,
+					modelIdx: message.modelIdx
+				});
 			}
 		}
 	};
