@@ -1116,8 +1116,4 @@
 		scrollbar-width: none; /* Firefox */
 	}
 
-	.katex-display {
-		overflow-x: auto;
-		overflow-y: hidden;
-	}
 </style>

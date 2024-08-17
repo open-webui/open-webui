@@ -104,6 +104,18 @@ select {
 	display: none;
 }
 
+.katex-display > .katex {
+	white-space: normal
+}
+
+.katex-display > .base {
+	margin: 0.25em 0
+}
+
+.katex-display {
+	 margin: 0.5em 0;
+}
+
 .scrollbar-hidden:active::-webkit-scrollbar-thumb,
 .scrollbar-hidden:focus::-webkit-scrollbar-thumb,
 .scrollbar-hidden:hover::-webkit-scrollbar-thumb {
