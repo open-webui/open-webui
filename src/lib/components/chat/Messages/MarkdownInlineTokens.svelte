@@ -6,6 +6,7 @@
 	import Image from '$lib/components/common/Image.svelte';
 
 	import KatexRenderer from './KatexRenderer.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let id: string;
 	export let tokens: Token[];
