@@ -72,7 +72,7 @@ from utils.utils import (
 from utils.task import (
     title_generation_template,
     search_query_generation_template,
-    tool_calling_generation_template,
+    tools_function_calling_generation_template,
 )
 from utils.misc import (
     get_last_user_message,
@@ -466,11 +466,12 @@ async def chat_completion_tools_handler(
     specs = [tool["spec"] for tool in tools.values()]
     tools_specs = json.dumps(specs)
 
-    content = tool_calling_generation_template(
+    tools_function_calling_prompt = tools_function_calling_generation_template(
         app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE, tools_specs
     )
+    log.info(f"{tools_function_calling_prompt=}")
     payload = get_tools_function_calling_payload(
-        body["messages"], task_model_id, content
+        body["messages"], task_model_id, tools_function_calling_prompt
     )
 
     try:
@@ -496,14 +497,18 @@ async def chat_completion_tools_handler(
         tool_function_params = result.get("parameters", {})
 
         try:
-            tool_output = await tools[tool_function_name]["callable"](**tool_function_params)
+            tool_output = await tools[tool_function_name]["callable"](
+                **tool_function_params
+            )
         except Exception as e:
             tool_output = str(e)
 
         if tools[tool_function_name]["citation"]:
             citations.append(
                 {
-                    "source": {"name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"},
+                    "source": {
+                        "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                    },
                     "document": [tool_output],
                     "metadata": [{"source": tool_function_name}],
                 }

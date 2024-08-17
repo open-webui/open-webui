@@ -121,6 +121,6 @@ def search_query_generation_template(
     return template
 
 
-def tool_calling_generation_template(template: str, tools_specs: str) -> str:
+def tools_function_calling_generation_template(template: str, tools_specs: str) -> str:
     template = template.replace("{{TOOLS}}", tools_specs)
     return template
