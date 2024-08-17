@@ -283,7 +283,7 @@ def get_filter_function_ids(model):
     return filter_ids
 
 
-def get_tool_call_payload(messages, task_model_id, content):
+def get_tools_function_calling_payload(messages, task_model_id, content):
     user_message = get_last_user_message(messages)
     history = "\n".join(
         f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
@@ -486,9 +486,9 @@ async def chat_completion_tools_handler(
 
     specs = [tool["spec"] for tool in tools.values()]
     tools_specs = json.dumps(specs)
-    template = app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
-    content = tool_calling_generation_template(template, tools_specs)
-    payload = get_tool_call_payload(body["messages"], task_model_id, content)
+
+    content = tool_calling_generation_template(app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE, tools_specs)
+    payload = get_tools_function_calling_payload(body["messages"], task_model_id, content)
 
     try:
         payload = filter_pipeline(payload, user)
@@ -500,6 +500,8 @@ async def chat_completion_tools_handler(
         log.debug(f"{response=}")
         content = await get_content_from_response(response)
         log.debug(f"{content=}")
+
+
         if content is None:
             return body, {}
 
@@ -510,7 +512,7 @@ async def chat_completion_tools_handler(
 
         tool_params = result.get("parameters", {})
         toolkit_id = tools[tool_name]["toolkit_id"]
-
+        
         try:
             tool_output = await tools[tool_name]["callable"](**tool_params)
         except Exception as e:
