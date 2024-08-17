@@ -116,6 +116,8 @@ select {
 	 margin: 0.5em 0;
 }
 
+.katex-display { overflow: auto hidden }
+
 .scrollbar-hidden:active::-webkit-scrollbar-thumb,
 .scrollbar-hidden:focus::-webkit-scrollbar-thumb,
 .scrollbar-hidden:hover::-webkit-scrollbar-thumb {
