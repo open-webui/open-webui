@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, prompts } from '$lib/stores';
+	import { Falcor_NAME, prompts } from '$lib/stores';
 	import { createNewPrompt, deletePromptByCommand, getPrompts } from '$lib/apis/prompts';
 	import { error } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
@@ -22,9 +22,9 @@
 	let deletePrompt = null;
 
 	const shareHandler = async (prompt) => {
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		toast.success($i18n.t('Redirecting you to Falcor Community'));
 
-		const url = 'https://openwebui.com';
+		const url = 'https://Falcor.com';
 
 		const tab = await window.open(`${url}/prompts/create`, '_blank');
 		window.addEventListener(
@@ -60,7 +60,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Prompts')} | {$WEBUI_NAME}
+		{$i18n.t('Prompts')} | {$Falcor_NAME}
 	</title>
 </svelte:head>
 
@@ -272,39 +272,6 @@
 						dd
 					</button> -->
 	</div>
-</div>
-
-<div class=" my-16">
-	<div class=" text-lg font-semibold mb-3 line-clamp-1">
-		{$i18n.t('Made by OpenWebUI Community')}
-	</div>
-
-	<a
-		class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2"
-		href="https://openwebui.com/#open-webui-community"
-		target="_blank"
-	>
-		<div class=" self-center w-10 flex-shrink-0">
-			<div
-				class="w-full h-10 flex justify-center rounded-full bg-transparent dark:bg-gray-700 border border-dashed border-gray-200"
-			>
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6">
-					<path
-						fill-rule="evenodd"
-						d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
-		</div>
-
-		<div class=" self-center">
-			<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a prompt')}</div>
-			<div class=" text-sm line-clamp-1">
-				{$i18n.t('Discover, download, and explore custom prompts')}
-			</div>
-		</div>
-	</a>
 </div>
 
 <DeleteConfirmDialog

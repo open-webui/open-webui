@@ -8,27 +8,27 @@ services:
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
 
-  open-webui:
+  Falcor:
     build:
       context: .
       args:
         OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
-    container_name: open-webui
+    image: ghcr.io/Falcor/Falcor:${Falcor_DOCKER_TAG-main}
+    container_name: Falcor
     volumes:
-      - open-webui:/app/backend/data
+      - Falcor:/app/backend/data
     depends_on:
       - ollama
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      - ${OPEN_Falcor_PORT-3000}:8080
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
+      - 'Falcor_SECRET_KEY='
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
 
 volumes:
   ollama: {}
-  open-webui: {}
+  Falcor: {}

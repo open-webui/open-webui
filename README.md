@@ -8,7 +8,7 @@ Falcor is an [extensible](https://github.com/dangerpotter/falcor-pipelines), fea
 
 - 🤝 **Ollama/OpenAI API Integration**: Effortlessly integrate OpenAI-compatible APIs for versatile conversations alongside Ollama models. Customize the OpenAI API URL to link with **LMStudio, GroqCloud, Mistral, OpenRouter, and more**.
 
-- 🧩 **Pipelines, Falcor Plugin Support**: Seamlessly integrate custom logic and Python libraries into Falcor using [Pipelines Plugin Framework](https://github.com/dangerpotter/falcor-pipelines). Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. [Examples](https://github.com/dangerpotter/falcor-pipelines/tree/main/examples) include **Function Calling**, User **Rate Limiting** to control access, **Usage Monitoring** with tools like Langfuse, **Live Translation with LibreTranslate** for multilingual support, **Toxic Message Filtering** and much more.
+- 🧩 **Pipelines, Open WebUI Plugin Support**: Seamlessly integrate custom logic and Python libraries into Open WebUI using [Pipelines Plugin Framework](https://github.com/open-webui/pipelines). Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. [Examples](https://github.com/open-webui/pipelines/tree/main/examples) include **Function Calling**, User **Rate Limiting** to control access, **Usage Monitoring** with tools like Langfuse, **Live Translation with LibreTranslate** for multilingual support, **Toxic Message Filtering** and much more.
 
 - 📱 **Responsive Design**: Enjoy a seamless experience across Desktop PC, Laptop, and Mobile devices.
 
@@ -18,7 +18,7 @@ Falcor is an [extensible](https://github.com/dangerpotter/falcor-pipelines), fea
 
 - 🎤📹 **Hands-Free Voice/Video Call**: Experience seamless communication with integrated hands-free voice and video call features, allowing for a more dynamic and interactive chat environment.
 
-- 🛠️ **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [Falcor Community](https://falcor.com/) integration.
+- 🛠️ **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [Open WebUI Community](https://openwebui.com/) integration.
 
 - 🐍 **Native Python Function Calling Tool**: Enhance your LLMs with built-in code editor support in the tools workspace. Bring Your Own Function (BYOF) by simply adding your pure Python functions, enabling seamless integration with LLMs.
 
@@ -38,17 +38,21 @@ Falcor is an [extensible](https://github.com/dangerpotter/falcor-pipelines), fea
 
 - 🌟 **Continuous Updates**: We are committed to improving Falcor with regular updates, fixes, and new features.
 
-Want to learn more about Falcor's features? Check out our [Falcor documentation](https://docs.falcor.com/features) for a comprehensive overview!
+Want to learn more about Open WebUI's features? Check out our [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
+
+## 🔗 Also Check Out Open WebUI Community!
+
+Don't forget to explore our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Open WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with Open WebUI! 🚀
 
 ## How to Install 🚀
 
 > [!NOTE]  
-> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Falcor Documentation] is ready to assist you.
+> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Open WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
 
 ### Quick Start with Docker 🐳
 
 > [!WARNING]
-> When using Docker to install Falcor, make sure to include the `-v falcor:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
+> When using Docker to install Open WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
 
 > [!TIP]  
 > If you wish to utilize Falcor with Ollama included or CUDA acceleration, we recommend utilizing our official images tagged with either `:cuda` or `:ollama`. To enable CUDA, you must install the [Nvidia CUDA container toolkit](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/) on your Linux/WSL system.
@@ -58,7 +62,7 @@ Want to learn more about Falcor's features? Check out our [Falcor documentation]
 - **If Ollama is on your computer**, use this command:
 
   ```bash
-  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v falcor:/app/backend/data --name falcor --restart always ghcr.io/dangerpotter/falcor:main
+  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
 - **If Ollama is on a Different Server**, use this command:
@@ -66,13 +70,13 @@ Want to learn more about Falcor's features? Check out our [Falcor documentation]
   To connect to Ollama on another server, change the `OLLAMA_BASE_URL` to the server's URL:
 
   ```bash
-  docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://example.com -v falcor:/app/backend/data --name falcor --restart always ghcr.io/dangerpotter/falcor:main
+  docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://example.com -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
   - **To run Falcor with Nvidia GPU support**, use this command:
 
   ```bash
-  docker run -d -p 3000:8080 --gpus all --add-host=host.docker.internal:host-gateway -v falcor:/app/backend/data --name falcor --restart always ghcr.io/dangerpotter/falcor:cuda
+  docker run -d -p 3000:8080 --gpus all --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:cuda
   ```
 
 ### Installation for OpenAI API Usage Only
@@ -80,7 +84,7 @@ Want to learn more about Falcor's features? Check out our [Falcor documentation]
 - **If you're only using OpenAI API**, use this command:
 
   ```bash
-  docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v falcor:/app/backend/data --name falcor --restart always ghcr.io/dangerpotter/falcor:main
+  docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
 ### Installing Falcor with Bundled Ollama Support
@@ -93,14 +97,14 @@ This installation method uses a single container image that bundles Falcor with 
  running the following command:
 
   ```bash
-  docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v falcor:/app/backend/data --name falcor --restart always ghcr.io/dangerpotter/falcor:ollama
+  docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
   ```
 
 - **For CPU Only**:
   If you're not using a GPU, use this command instead:
 
   ```bash
-  docker run -d -p 3000:8080 -v ollama:/root/.ollama -v falcor:/app/backend/data --name falcor --restart always ghcr.io/dangerpotter/falcor:ollama
+  docker run -d -p 3000:8080 -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
   ```
 
 Both commands facilitate a built-in, hassle-free installation of both Falcor and Ollama, ensuring that you can get everything up and running swiftly.
@@ -109,20 +113,20 @@ After installation, you can access Falcor at [http://localhost:3000](http://loca
 
 ### Other Installation Methods
 
-We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Falcor Documentation](https://docs.falcor.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
+We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
 
 ### Troubleshooting
 
-Encountering connection issues? Our [Falcor Documentation](https://docs.falcor.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Falcor Discord](https://discord.gg/5rJgQTnV4s).
+Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).
 
 #### Falcor: Server Connection Error
 
-If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
+If you're experiencing connection issues, it’s often due to the Falcor docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
 
 **Example Docker Command**:
 
 ```bash
-docker run -d --network=host -v falcor:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name falcor --restart always ghcr.io/dangerpotter/falcor:main
+docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
 ```
 
 ### Keeping Your Docker Installation Up-to-Date
@@ -130,12 +134,12 @@ docker run -d --network=host -v falcor:/app/backend/data -e OLLAMA_BASE_URL=http
 In case you want to update your local Docker installation to the latest version, you can do it with [Watchtower](https://containrrr.dev/watchtower/):
 
 ```bash
-docker run --rm --volume /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --run-once falcor
+docker run --rm --volume /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --run-once open-webui
 ```
 
-In the last part of the command, replace `falcor` with your container name if it is different.
+In the last part of the command, replace `open-webui` with your container name if it is different.
 
-Check our Migration Guide available in our [Falcor Documentation](https://docs.falcor.com/migration/).
+Check our Migration Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/migration/).
 
 ### Using the Dev Branch 🌙
 
@@ -145,10 +149,24 @@ Check our Migration Guide available in our [Falcor Documentation](https://docs.f
 If you want to try out the latest bleeding-edge features and are okay with occasional instability, you can use the `:dev` tag like this:
 
 ```bash
-docker run -d -p 3000:8080 -v falcor:/app/backend/data --name falcor --add-host=host.docker.internal:host-gateway --restart always ghcr.io/dangerpotter/falcor:dev
+docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --add-host=host.docker.internal:host-gateway --restart always ghcr.io/open-webui/open-webui:dev
 ```
 
 ## What's Next? 🌟
+
+Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
+
+## Supporters ✨
+
+A big shoutout to our amazing supporters who's helping to make this project possible! 🙏
+
+### Platinum Sponsors 🤍
+
+- We're looking for Sponsors!
+
+### Acknowledgments
+
+Special thanks to [Prof. Lawrence Kim](https://www.lhkim.com/) and [Prof. Nick Vincent](https://www.nickmvincent.com/) for their invaluable support and guidance in shaping this project into a research endeavor. Grateful for your mentorship throughout the journey! 🙌
 
 ## License 📜
 
@@ -156,19 +174,19 @@ This project is licensed under the [MIT License](LICENSE) - see the [LICENSE](LI
 
 ## Support 💬
 
-If you have any questions, suggestions, or need assistance, please open an issue
+If you have any questions, suggestions, or need assistance, please open an issue or join our
+[Open WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
 
 ## Star History
 
-<a href="https://star-history.com/#dangerpotter/falcor&Date">
+<a href="https://star-history.com/#open-webui/open-webui&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=dangerpotter/falcor&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=dangerpotter/falcor&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=dangerpotter/falcor&type=Date" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
   </picture>
 </a>
 
 ---
 
-Created by [Austin Potter](https://github.com/dangerpotter) - Release the Luck Dragon! Let's make Falcor even more amazing together! 💪
-
+Created by [Timothy J. Baek](https://github.com/tjbck) - Let's make Open WebUI even more amazing together! 💪

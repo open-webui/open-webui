@@ -1,4 +1,4 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { Falcor_API_BASE_URL } from '$lib/constants';
 
 export const createNewPrompt = async (
 	token: string,
@@ -8,7 +8,7 @@ export const createNewPrompt = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/create`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/prompts/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -41,7 +41,7 @@ export const createNewPrompt = async (
 export const getPrompts = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/prompts/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -72,7 +72,7 @@ export const getPrompts = async (token: string = '') => {
 export const getPromptByCommand = async (token: string, command: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/prompts/command/${command}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -109,7 +109,7 @@ export const updatePromptByCommand = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}/update`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/prompts/command/${command}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -148,7 +148,7 @@ export const deletePromptByCommand = async (token: string, command: string) => {
 
 	command = command.charAt(0) === '/' ? command.slice(1) : command;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}/delete`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/prompts/command/${command}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

@@ -1,4 +1,4 @@
-### Installing Both Ollama and Open WebUI Using Kustomize
+### Installing Both Ollama and Falcor Using Kustomize
 
 For cpu-only pod
 
@@ -12,7 +12,7 @@ For gpu-enabled pod
 kubectl apply -k ./kubernetes/manifest
 ```
 
-### Installing Both Ollama and Open WebUI Using Helm
+### Installing Both Ollama and Falcor Using Helm
 
 Package Helm file first
 
@@ -23,13 +23,13 @@ helm package ./kubernetes/helm/
 For cpu-only pod
 
 ```bash
-helm install ollama-webui ./ollama-webui-*.tgz
+helm install ollama-Falcor ./ollama-Falcor-*.tgz
 ```
 
 For gpu-enabled pod
 
 ```bash
-helm install ollama-webui ./ollama-webui-*.tgz --set ollama.resources.limits.nvidia.com/gpu="1"
+helm install ollama-Falcor ./ollama-Falcor-*.tgz --set ollama.resources.limits.nvidia.com/gpu="1"
 ```
 
 Check the `kubernetes/helm/values.yaml` file to know which parameters are available for customization

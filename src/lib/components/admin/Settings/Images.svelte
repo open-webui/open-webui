@@ -268,13 +268,13 @@
 			</div>
 
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				{$i18n.t('Include `--api` flag when running stable-diffusion-webui')}
+				{$i18n.t('Include `--api` flag when running stable-diffusion-Falcor')}
 				<a
 					class=" text-gray-300 font-medium"
-					href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734"
+					href="https://github.com/AUTOMATIC1111/stable-diffusion-Falcor/discussions/3734"
 					target="_blank"
 				>
-					{$i18n.t('(e.g. `sh webui.sh --api`)')}
+					{$i18n.t('(e.g. `sh Falcor.sh --api`)')}
 				</a>
 			</div>
 
@@ -286,13 +286,13 @@
 			/>
 
 			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				{$i18n.t('Include `--api-auth` flag when running stable-diffusion-webui')}
+				{$i18n.t('Include `--api-auth` flag when running stable-diffusion-Falcor')}
 				<a
 					class=" text-gray-300 font-medium"
-					href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/13993"
+					href="https://github.com/AUTOMATIC1111/stable-diffusion-Falcor/discussions/13993"
 					target="_blank"
 				>
-					{$i18n.t('(e.g. `sh webui.sh --api --api-auth username_password`)').replace('_', ':')}
+					{$i18n.t('(e.g. `sh Falcor.sh --api --api-auth username_password`)').replace('_', ':')}
 				</a>
 			</div>
 		{:else if imageGenerationEngine === 'comfyui'}

@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, documents, showSidebar } from '$lib/stores';
+	import { Falcor_NAME, documents, showSidebar } from '$lib/stores';
 	import { createNewDoc, deleteDocByName, getDocs } from '$lib/apis/documents';
 
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS } from '$lib/constants';
@@ -179,7 +179,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Documents')} | {$WEBUI_NAME}
+		{$i18n.t('Documents')} | {$Falcor_NAME}
 	</title>
 </svelte:head>
 

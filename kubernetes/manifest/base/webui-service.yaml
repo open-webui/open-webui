@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: open-webui-service
-  namespace: open-webui
+  name: Falcor-service
+  namespace: Falcor
 spec:
   type: NodePort  # Use LoadBalancer if you're on a cloud that supports it
   selector:
-    app: open-webui
+    app: Falcor
   ports:
     - protocol: TCP
       port: 8080

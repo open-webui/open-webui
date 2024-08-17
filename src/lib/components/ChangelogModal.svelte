@@ -2,9 +2,9 @@
 	import { onMount, getContext } from 'svelte';
 	import { Confetti } from 'svelte-confetti';
 
-	import { WEBUI_NAME, config } from '$lib/stores';
+	import { Falcor_NAME, config } from '$lib/stores';
 
-	import { WEBUI_VERSION } from '$lib/constants';
+	import { Falcor_VERSION } from '$lib/constants';
 	import { getChangelog } from '$lib/apis';
 
 	import Modal from './common/Modal.svelte';
@@ -26,7 +26,7 @@
 		<div class="flex justify-between items-start">
 			<div class="text-xl font-semibold">
 				{$i18n.t('What’s New in')}
-				{$WEBUI_NAME}
+				{$Falcor_NAME}
 				<Confetti x={[-1, -0.25]} y={[0, 0.5]} />
 			</div>
 			<button
@@ -52,7 +52,7 @@
 			<div class="text-sm dark:text-gray-200">{$i18n.t('Release Notes')}</div>
 			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
 			<div class="text-sm dark:text-gray-200">
-				v{WEBUI_VERSION}
+				v{Falcor_VERSION}
 			</div>
 		</div>
 	</div>

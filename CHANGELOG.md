@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **🎨 Enhanced Markdown Rendering**: Significant improvements in rendering markdown, ensuring smooth and reliable display of LaTeX and Mermaid charts, enhancing user experience with more robust visual content.
-- **🔄 Auto-Install Tools & Functions Python Dependencies**: For 'Tools' and 'Functions', Open WebUI now automatically install extra python requirements specified in the frontmatter, streamlining setup processes and customization.
+- **🔄 Auto-Install Tools & Functions Python Dependencies**: For 'Tools' and 'Functions', Falcor now automatically install extra python requirements specified in the frontmatter, streamlining setup processes and customization.
 - **🌀 OAuth Email Claim Customization**: Introduced an 'OAUTH_EMAIL_CLAIM' variable to allow customization of the default "email" claim within OAuth configurations, providing greater flexibility in authentication processes.
 - **📶 Websocket Reconnection**: Enhanced reliability with the capability to automatically reconnect when a websocket is closed, ensuring consistent and stable communication.
 - **🤳 Haptic Feedback on Support Devices**: Android devices now support haptic feedback for an immersive tactile experience during certain interactions.
@@ -161,7 +161,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🕵️‍♂️ Browser Language Detection**: Corrected the issue where the application was not properly detecting and adapting to the browser's language settings.
 - **🔐 OIDC Admin Role Assignment**: Fixed a bug where the admin role was not being assigned to the first user who signed up via OpenID Connect (OIDC).
 - **💬 Chat/Completions Endpoint**: Resolved an issue where the chat/completions endpoint was non-functional when the stream option was set to False.
-- **🚫 'WEBUI_AUTH' Configuration**: Addressed the problem where setting 'WEBUI_AUTH' to False was not being applied correctly.
+- **🚫 'Falcor_AUTH' Configuration**: Addressed the problem where setting 'Falcor_AUTH' to False was not being applied correctly.
 
 ### Changed
 
@@ -171,7 +171,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **✨ "Functions" Feature**: You can now utilize "Functions" like filters (middleware) and pipe (model) functions directly within the WebUI. While largely compatible with Pipelines, these native functions can be executed easily within Open WebUI. Example use cases for filter functions include usage monitoring, real-time translation, moderation, and automemory. For pipe functions, the scope ranges from Cohere and Anthropic integration directly within Open WebUI, enabling "Valves" for per-user OpenAI API key usage, and much more. If you encounter issues, SAFE_MODE has been introduced.
+- **✨ "Functions" Feature**: You can now utilize "Functions" like filters (middleware) and pipe (model) functions directly within the Falcor. While largely compatible with Pipelines, these native functions can be executed easily within Falcor. Example use cases for filter functions include usage monitoring, real-time translation, moderation, and automemory. For pipe functions, the scope ranges from Cohere and Anthropic integration directly within Falcor, enabling "Valves" for per-user OpenAI API key usage, and much more. If you encounter issues, SAFE_MODE has been introduced.
 - **📁 Files API**: Compatible with OpenAI, this feature allows for custom Retrieval-Augmented Generation (RAG) in conjunction with the Filter Function. More examples will be shared on our community platform and official documentation website.
 - **🛠️ Tool Enhancements**: Tools now support citations and "Valves". Documentation will be available shortly.
 - **🔗 Iframe Support via Files API**: Enables rendering HTML directly into your chat interface using functions and tools. Use cases include playing games like DOOM and Snake, displaying a weather applet, and implementing Anthropic "artifacts"-like features. Stay tuned for updates on our community platform and documentation.
@@ -233,7 +233,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🛠️ Native Python Function Calling**: Introducing native Python function calling within Open WebUI. We’ve also included a built-in code editor to seamlessly develop and integrate function code within the 'Tools' workspace. With this, you can significantly enhance your LLM’s capabilities by creating custom RAG pipelines, web search tools, and even agent-like features such as sending Discord messages.
+- **🛠️ Native Python Function Calling**: Introducing native Python function calling within Falcor. We’ve also included a built-in code editor to seamlessly develop and integrate function code within the 'Tools' workspace. With this, you can significantly enhance your LLM’s capabilities by creating custom RAG pipelines, web search tools, and even agent-like features such as sending Discord messages.
 - **🌐 DuckDuckGo Integration**: Added DuckDuckGo as a web search provider, giving you more search options.
 - **🌏 Enhanced Translations**: Improved translations for Vietnamese and Chinese languages, making the interface more accessible.
 
@@ -284,7 +284,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **📝 Prompt Input Clearing**: Resolved prompt input textarea not being cleared right away, ensuring a clean slate for new inputs.
 - **✨ Various UI Styling Issues**: Fixed numerous user interface styling problems for a more cohesive look.
 - **👥 Active Users Display**: Fixed active users showing active sessions instead of actual users, now reflecting accurate user activity.
-- **🌐 Community Platform Compatibility**: The Community Platform is back online and fully compatible with Open WebUI.
+- **🌐 Community Platform Compatibility**: The Community Platform is back online and fully compatible with Falcor.
 
 ### Changed
 
@@ -315,7 +315,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **👤 Improved Account Pending Page**: The account pending page now displays admin details by default to avoid confusion. You can disable this feature in the admin settings if needed.
 - **🌐 HTTP Proxy Support**: We have enabled the use of the 'http_proxy' environment variable in OpenAI and Ollama API calls, making it easier to configure network settings.
-- **❓ Quick Access to Documentation**: You can now easily access Open WebUI documents via a question mark button located at the bottom right corner of the screen (available on larger screens like PCs).
+- **❓ Quick Access to Documentation**: You can now easily access Falcor documents via a question mark button located at the bottom right corner of the screen (available on larger screens like PCs).
 - **🌍 Enhanced Translation**: Improvements have been made to translations.
 
 ### Fixed
@@ -341,7 +341,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🌊 Mermaid Rendering Support**: We've included support for Mermaid rendering. This allows you to create beautiful diagrams and flowcharts directly within Open WebUI.
+- **🌊 Mermaid Rendering Support**: We've included support for Mermaid rendering. This allows you to create beautiful diagrams and flowcharts directly within Falcor.
 - **🔄 New Environment Variable 'RESET_CONFIG_ON_START'**: Introducing a new environment variable: 'RESET_CONFIG_ON_START'. Set this variable to reset your configuration settings upon starting the application, making it easier to revert to default settings.
 
 ### Fixed
@@ -369,7 +369,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🔧 Pipelines Support**: Open WebUI now includes a plugin framework for enhanced customization and functionality (https://github.com/open-webui/pipelines). Easily add custom logic and integrate Python libraries, from AI agents to home automation APIs.
+- **🔧 Pipelines Support**: Falcor now includes a plugin framework for enhanced customization and functionality (https://github.com/Falcor/pipelines). Easily add custom logic and integrate Python libraries, from AI agents to home automation APIs.
 - **🔗 Function Calling via Pipelines**: Integrate function calling seamlessly through Pipelines.
 - **⚖️ User Rate Limiting via Pipelines**: Implement user-specific rate limits to manage API usage efficiently.
 - **📊 Usage Monitoring with Langfuse**: Track and analyze usage statistics with Langfuse integration through Pipelines.
@@ -430,10 +430,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **🖼️ Improved Chat Sidebar**: Now conveniently displays time ranges and organizes chats by today, yesterday, and more.
 - **📜 Citations in RAG Feature**: Easily track the context fed to the LLM with added citations in the RAG feature.
-- **🔒 Auth Disable Option**: Introducing the ability to disable authentication. Set 'WEBUI_AUTH' to False to disable authentication. Note: Only applicable for fresh installations without existing users.
+- **🔒 Auth Disable Option**: Introducing the ability to disable authentication. Set 'Falcor_AUTH' to False to disable authentication. Note: Only applicable for fresh installations without existing users.
 - **📹 Enhanced YouTube RAG Pipeline**: Now supports non-English videos for an enriched experience.
 - **🔊 Specify OpenAI TTS Models**: Customize your TTS experience by specifying OpenAI TTS models.
-- **🔧 Additional Environment Variables**: Discover more environment variables in our comprehensive documentation at Open WebUI Documentation (https://docs.openwebui.com).
+- **🔧 Additional Environment Variables**: Discover more environment variables in our comprehensive documentation at Falcor Documentation (https://docs.Falcor.com).
 - **🌐 Language Support**: Arabic, Finnish, and Hindi added; Improved support for German, Vietnamese, and Chinese.
 
 ### Fixed
@@ -444,7 +444,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **📝 Title Generation**: Limited output to 50 tokens.
-- **📦 Helm Charts**: Removed Helm charts, now available in a separate repository (https://github.com/open-webui/helm-charts).
+- **📦 Helm Charts**: Removed Helm charts, now available in a separate repository (https://github.com/Falcor/helm-charts).
 
 ## [0.1.123] - 2024-05-02
 
@@ -483,7 +483,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🎨 Splash Screen**: Introducing a loading splash screen for a smoother user experience.
 - **🌍 Language Support Expansion**: Added support for Bangla (bn-BD), along with enhancements to Chinese, Spanish, and Ukrainian translations.
 - **💻 Improved LaTeX Rendering Performance**: Enjoy faster rendering times for LaTeX equations.
-- **🔧 More Environment Variables**: Explore additional environment variables in our documentation (https://docs.openwebui.com), including the 'ENABLE_LITELLM' option to manage memory usage.
+- **🔧 More Environment Variables**: Explore additional environment variables in our documentation (https://docs.Falcor.com), including the 'ENABLE_LITELLM' option to manage memory usage.
 
 ### Fixed
 
@@ -570,7 +570,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - 🗨️ **Local Chat Sharing**: Share chat links seamlessly between users.
-- 🔑 **API Key Generation Support**: Generate secret keys to leverage Open WebUI with OpenAI libraries.
+- 🔑 **API Key Generation Support**: Generate secret keys to leverage Falcor with OpenAI libraries.
 - 📄 **Chat Download as PDF**: Easily download chats in PDF format.
 - 📝 **Improved Logging**: Enhancements to logging functionality.
 - 📧 **Trusted Email Authentication**: Authenticate using a trusted email header.
@@ -639,7 +639,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- 🌍 **Localization**: You can now change the UI language in Settings > General. We support Ukrainian, German, Farsi (Persian), Traditional and Simplified Chinese and French translations. You can help us to translate the UI into your language! More info in our [CONTRIBUTION.md](https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization).
+- 🌍 **Localization**: You can now change the UI language in Settings > General. We support Ukrainian, German, Farsi (Persian), Traditional and Simplified Chinese and French translations. You can help us to translate the UI into your language! More info in our [CONTRIBUTION.md](https://github.com/Falcor/Falcor/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization).
 - 🎨 **System-wide Theme**: Introducing a new system-wide theme for enhanced visual experience.
 
 ### Fixed
@@ -696,7 +696,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🔄 Multiple Ollama Servers Support**: Enjoy enhanced scalability and performance with support for multiple Ollama servers in a single WebUI. Load balancing features are now available, providing improved efficiency (#788, #278).
+- **🔄 Multiple Ollama Servers Support**: Enjoy enhanced scalability and performance with support for multiple Ollama servers in a single Falcor. Load balancing features are now available, providing improved efficiency (#788, #278).
 - **🔧 Support for Claude 3 and Gemini**: Responding to user requests, we've expanded our toolset to include Claude 3 and Gemini, offering a wider range of functionalities within our platform (#1064).
 - **🔍 OCR Functionality for PDF Loader**: We've augmented our PDF loader with Optical Character Recognition (OCR) capabilities. Now, extract text from scanned documents and images within PDFs, broadening the scope of content processing (#1050).
 
@@ -717,7 +717,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **🎮 Playground Feature (Beta)**: Explore the full potential of the raw API through an intuitive UI with our new playground feature, accessible to admins. Simply click on the bottom name area of the sidebar to access it. The playground feature offers two modes text completion (notebook) and chat completion. As it's in beta, please report any issues you encounter.
-- **🛠️ Direct Database Download for Admins**: Admins can now download the database directly from the WebUI via the admin settings.
+- **🛠️ Direct Database Download for Admins**: Admins can now download the database directly from the Falcor via the admin settings.
 - **🎨 Additional RAG Settings**: Customize your RAG process with the ability to edit the TOP K value. Navigate to Documents > Settings > General to make changes.
 - **🖥️ UI Improvements**: Tooltips now available in the input area and sidebar handle. More tooltips will be added across other parts of the UI.
 
@@ -730,7 +730,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Simplified Ollama Settings**: Ollama settings now don't require the `/api` suffix. You can now utilize the Ollama base URL directly, e.g., `http://localhost:11434`. Also, an `OLLAMA_BASE_URL` environment variable has been added.
-- **Database Renaming**: Starting from this release, `ollama.db` will be automatically renamed to `webui.db`.
+- **Database Renaming**: Starting from this release, `ollama.db` will be automatically renamed to `Falcor.db`.
 
 ## [0.1.107] - 2024-03-01
 
@@ -787,10 +787,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **🔗 Built-in LiteLLM Proxy**: Now includes LiteLLM proxy within Open WebUI for enhanced functionality.
+- **🔗 Built-in LiteLLM Proxy**: Now includes LiteLLM proxy within Falcor for enhanced functionality.
 
   - Easily integrate existing LiteLLM configurations using `-v /path/to/config.yaml:/app/backend/data/litellm/config.yaml` flag.
-  - When utilizing Docker container to run Open WebUI, ensure connections to localhost use `host.docker.internal`.
+  - When utilizing Docker container to run Falcor, ensure connections to localhost use `host.docker.internal`.
 
 - **🖼️ Image Generation Enhancements**: Introducing Advanced Settings with Image Preview Feature.
   - Customize image generation by setting the number of steps; defaults to A1111 value.
@@ -801,14 +801,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Ollama is no longer required to run Open WebUI.
-- Access our comprehensive documentation at [Open WebUI Documentation](https://docs.openwebui.com/).
+- Ollama is no longer required to run Falcor.
+- Access our comprehensive documentation at [Falcor Documentation](https://docs.Falcor.com/).
 
 ## [0.1.102] - 2024-02-22
 
 ### Added
 
-- **🖼️ Image Generation**: Generate Images using the AUTOMATIC1111/stable-diffusion-webui API. You can set this up in Settings > Images.
+- **🖼️ Image Generation**: Generate Images using the AUTOMATIC1111/stable-diffusion-Falcor API. You can set this up in Settings > Images.
 - **📝 Change title generation prompt**: Change the prompt used to generate titles for your chats. You can set this up in the Settings > Interface.
 - **🤖 Change embedding model**: Change the embedding model used to generate embeddings for your chats in the Dockerfile. Use any sentence transformer model from huggingface.co.
 - **📢 CHANGELOG.md/Popup**: This popup will show you the latest changes.

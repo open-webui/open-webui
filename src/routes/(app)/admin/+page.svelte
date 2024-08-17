@@ -1,6 +1,6 @@
 <script>
-	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
+	import { Falcor_BASE_URL } from '$lib/constants';
+	import { Falcor_NAME, config, user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
 
@@ -282,7 +282,7 @@
 							<div class="flex flex-row w-max">
 								<img
 									class=" rounded-full w-6 h-6 object-cover mr-2.5"
-									src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
+									src={user.profile_image_url.startsWith(Falcor_BASE_URL) ||
 									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
 									user.profile_image_url.startsWith('data:')
 										? user.profile_image_url

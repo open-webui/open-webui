@@ -14,7 +14,7 @@ assignees: ''
 
 ## Environment
 
-- **Open WebUI Version:** [e.g., v0.3.11]
+- **Falcor Version:** [e.g., v0.3.11]
 - **Ollama (if applicable):** [e.g., v0.2.0, v0.1.32-rc1]
 
 - **Operating System:** [e.g., Windows 10, macOS Big Sur, Ubuntu 20.04]
@@ -23,7 +23,7 @@ assignees: ''
 **Confirmation:**
 
 - [ ] I have read and followed all the instructions provided in the README.md.
-- [ ] I am on the latest version of both Open WebUI and Ollama.
+- [ ] I am on the latest version of both Falcor and Ollama.
 - [ ] I have included the browser console logs.
 - [ ] I have included the Docker container logs.
 - [ ] I have provided the exact steps to reproduce the bug in the "Steps to Reproduce" section below.

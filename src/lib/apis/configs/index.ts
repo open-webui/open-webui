@@ -1,10 +1,10 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { Falcor_API_BASE_URL } from '$lib/constants';
 import type { Banner } from '$lib/types';
 
 export const setDefaultModels = async (token: string, models: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/default/models`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/configs/default/models`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -34,7 +34,7 @@ export const setDefaultModels = async (token: string, models: string) => {
 export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/default/suggestions`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/configs/default/suggestions`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -64,7 +64,7 @@ export const setDefaultPromptSuggestions = async (token: string, promptSuggestio
 export const getBanners = async (token: string): Promise<Banner[]> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/banners`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/configs/banners`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -91,7 +91,7 @@ export const getBanners = async (token: string): Promise<Banner[]> => {
 export const setBanners = async (token: string, banners: Banner[]) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/banners`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/configs/banners`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

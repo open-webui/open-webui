@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, showSidebar, functions, user } from '$lib/stores';
+	import { Falcor_NAME, showSidebar, functions, user } from '$lib/stores';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
@@ -20,7 +20,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Workspace')} | {$WEBUI_NAME}
+		{$i18n.t('Workspace')} | {$Falcor_NAME}
 	</title>
 </svelte:head>
 

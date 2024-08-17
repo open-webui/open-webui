@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: open-webui-deployment
-  namespace: open-webui
+  name: Falcor-deployment
+  namespace: Falcor
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: open-webui
+      app: Falcor
   template:
     metadata:
       labels:
-        app: open-webui
+        app: Falcor
     spec:
       containers:
-      - name: open-webui
-        image: ghcr.io/open-webui/open-webui:main
+      - name: Falcor
+        image: ghcr.io/Falcor/Falcor:main
         ports:
         - containerPort: 8080
         resources:
@@ -27,12 +27,12 @@ spec:
             memory: "1Gi"
         env:
         - name: OLLAMA_BASE_URL
-          value: "http://ollama-service.open-webui.svc.cluster.local:11434"
+          value: "http://ollama-service.Falcor.svc.cluster.local:11434"
         tty: true
         volumeMounts:
-        - name: webui-volume
+        - name: Falcor-volume
           mountPath: /app/backend/data
       volumes:
-      - name: webui-volume
+      - name: Falcor-volume
         persistentVolumeClaim:
-          claimName: open-webui-pvc          
+          claimName: Falcor-pvc          

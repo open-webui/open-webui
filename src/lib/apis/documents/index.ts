@@ -1,4 +1,4 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { Falcor_API_BASE_URL } from '$lib/constants';
 
 export const createNewDoc = async (
 	token: string,
@@ -10,7 +10,7 @@ export const createNewDoc = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/create`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/documents/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -45,7 +45,7 @@ export const createNewDoc = async (
 export const getDocs = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/documents/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -79,7 +79,7 @@ export const getDocByName = async (token: string, name: string) => {
 	const searchParams = new URLSearchParams();
 	searchParams.append('name', name);
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/docs?${searchParams.toString()}`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/documents/docs?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -119,7 +119,7 @@ export const updateDocByName = async (token: string, name: string, form: DocUpda
 	const searchParams = new URLSearchParams();
 	searchParams.append('name', name);
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/doc/update?${searchParams.toString()}`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/documents/doc/update?${searchParams.toString()}`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -163,7 +163,7 @@ export const tagDocByName = async (token: string, name: string, form: TagDocForm
 	const searchParams = new URLSearchParams();
 	searchParams.append('name', name);
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/doc/tags?${searchParams.toString()}`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/documents/doc/tags?${searchParams.toString()}`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -202,7 +202,7 @@ export const deleteDocByName = async (token: string, name: string) => {
 	const searchParams = new URLSearchParams();
 	searchParams.append('name', name);
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/doc/delete?${searchParams.toString()}`, {
+	const res = await fetch(`${Falcor_API_BASE_URL}/documents/doc/delete?${searchParams.toString()}`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

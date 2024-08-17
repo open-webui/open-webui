@@ -304,7 +304,7 @@
 									</div>
 								</div>
 								<div class=" mb-1 text-xs text-gray-400 dark:text-gray-500">
-									{$i18n.t('WebUI will make requests to')}
+									{$i18n.t('Falcor will make requests to')}
 									<span class=" text-gray-200">'{url}/models'</span>
 								</div>
 							{/each}
@@ -418,7 +418,7 @@
 						{$i18n.t('Trouble accessing Ollama?')}
 						<a
 							class=" text-gray-300 font-medium underline"
-							href="https://github.com/open-webui/open-webui#troubleshooting"
+							href="https://github.com/Falcor/Falcor#troubleshooting"
 							target="_blank"
 						>
 							{$i18n.t('Click here for help.')}

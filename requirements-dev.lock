@@ -15,15 +15,15 @@ aiohappyeyeballs==2.3.5
 aiohttp==3.10.2
     # via langchain
     # via langchain-community
-    # via open-webui
+    # via Falcor
 aiosignal==1.3.1
     # via aiohttp
 alembic==1.13.2
-    # via open-webui
+    # via Falcor
 annotated-types==0.6.0
     # via pydantic
 anthropic==0.32.0
-    # via open-webui
+    # via Falcor
 anyio==4.4.0
     # via anthropic
     # via httpx
@@ -32,9 +32,9 @@ anyio==4.4.0
     # via starlette
     # via watchfiles
 apscheduler==3.10.4
-    # via open-webui
+    # via Falcor
 argon2-cffi==23.1.0
-    # via open-webui
+    # via Falcor
 argon2-cffi-bindings==21.2.0
     # via argon2-cffi
 asgiref==3.8.1
@@ -43,7 +43,7 @@ attrs==23.2.0
     # via aiohttp
     # via pytest-docker
 authlib==1.3.1
-    # via open-webui
+    # via Falcor
 av==11.0.0
     # via faster-whisper
 backoff==2.2.1
@@ -52,7 +52,7 @@ backoff==2.2.1
     # via unstructured
 bcrypt==4.1.3
     # via chromadb
-    # via open-webui
+    # via Falcor
     # via passlib
 beautifulsoup4==4.12.3
     # via extract-msg
@@ -60,11 +60,11 @@ beautifulsoup4==4.12.3
 bidict==0.23.1
     # via python-socketio
 black==24.8.0
-    # via open-webui
+    # via Falcor
 blinker==1.8.2
     # via flask
 boto3==1.34.153
-    # via open-webui
+    # via Falcor
 botocore==1.34.155
     # via boto3
     # via s3transfer
@@ -90,7 +90,7 @@ chroma-hnswlib==0.7.6
     # via chromadb
 chromadb==0.5.5
     # via langchain-chroma
-    # via open-webui
+    # via Falcor
 click==8.1.7
     # via black
     # via duckduckgo-search
@@ -129,11 +129,11 @@ dnspython==2.6.1
     # via email-validator
     # via pymongo
 docker==7.1.0
-    # via open-webui
+    # via Falcor
 docx2txt==0.8
-    # via open-webui
+    # via Falcor
 duckduckgo-search==6.2.6
-    # via open-webui
+    # via Falcor
 easygui==0.98.3
     # via oletools
 ebcdic==1.1.1
@@ -147,17 +147,17 @@ emoji==2.11.1
 et-xmlfile==1.1.0
     # via openpyxl
 extract-msg==0.48.5
-    # via open-webui
+    # via Falcor
 fake-useragent==1.5.1
-    # via open-webui
+    # via Falcor
 fastapi==0.111.0
     # via chromadb
     # via langchain-chroma
-    # via open-webui
+    # via Falcor
 fastapi-cli==0.0.4
     # via fastapi
 faster-whisper==1.0.2
-    # via open-webui
+    # via Falcor
 filelock==3.14.0
     # via huggingface-hub
     # via torch
@@ -166,15 +166,15 @@ filetype==1.2.0
     # via unstructured
 flask==3.0.3
     # via flask-cors
-    # via open-webui
+    # via Falcor
 flask-cors==4.0.1
-    # via open-webui
+    # via Falcor
 flatbuffers==24.3.25
     # via onnxruntime
 fonttools==4.51.0
     # via fpdf2
 fpdf2==2.7.9
-    # via open-webui
+    # via Falcor
 frozenlist==1.4.1
     # via aiohttp
     # via aiosignal
@@ -199,7 +199,7 @@ google-auth==2.29.0
 google-auth-httplib2==0.2.0
     # via google-api-python-client
 google-generativeai==0.7.2
-    # via open-webui
+    # via Falcor
 googleapis-common-protos==1.63.0
     # via google-api-core
     # via grpcio-status
@@ -273,11 +273,11 @@ kubernetes==29.0.0
     # via chromadb
 langchain==0.2.12
     # via langchain-community
-    # via open-webui
+    # via Falcor
 langchain-chroma==0.1.2
-    # via open-webui
+    # via Falcor
 langchain-community==0.2.10
-    # via open-webui
+    # via Falcor
 langchain-core==0.2.28
     # via langchain
     # via langchain-chroma
@@ -288,7 +288,7 @@ langchain-text-splitters==0.2.0
 langdetect==1.0.9
     # via unstructured
 langfuse==2.43.3
-    # via open-webui
+    # via Falcor
 langsmith==0.1.96
     # via langchain
     # via langchain-community
@@ -301,7 +301,7 @@ lxml==5.2.2
 mako==1.3.5
     # via alembic
 markdown==3.6
-    # via open-webui
+    # via Falcor
 markdown-it-py==3.0.0
     # via rich
 markupsafe==2.1.5
@@ -366,13 +366,13 @@ onnxruntime==1.17.3
     # via faster-whisper
     # via rapidocr-onnxruntime
 openai==1.38.0
-    # via open-webui
+    # via Falcor
 opencv-python==4.9.0.80
     # via rapidocr-onnxruntime
 opencv-python-headless==4.10.0.84
-    # via open-webui
+    # via Falcor
 openpyxl==3.1.5
-    # via open-webui
+    # via Falcor
 opentelemetry-api==1.24.0
     # via chromadb
     # via opentelemetry-exporter-otlp-proto-grpc
@@ -424,18 +424,18 @@ packaging==23.2
     # via transformers
     # via unstructured-client
 pandas==2.2.2
-    # via open-webui
+    # via Falcor
 passlib==1.7.4
-    # via open-webui
+    # via Falcor
 pathspec==0.12.1
     # via black
 pcodedmp==1.2.6
     # via oletools
 peewee==3.17.6
-    # via open-webui
+    # via Falcor
     # via peewee-migrate
 peewee-migrate==1.12.2
-    # via open-webui
+    # via Falcor
 pillow==10.3.0
     # via fpdf2
     # via python-pptx
@@ -462,10 +462,10 @@ protobuf==4.25.3
     # via opentelemetry-proto
     # via proto-plus
 psutil==6.0.0
-    # via open-webui
+    # via Falcor
     # via unstructured
 psycopg2-binary==2.9.9
-    # via open-webui
+    # via Falcor
 pyasn1==0.6.0
     # via pyasn1-modules
     # via python-jose
@@ -485,37 +485,37 @@ pydantic==2.8.2
     # via langchain-core
     # via langfuse
     # via langsmith
-    # via open-webui
+    # via Falcor
     # via openai
 pydantic-core==2.20.1
     # via pydantic
 pydub==0.25.1
-    # via open-webui
+    # via Falcor
 pygments==2.18.0
     # via rich
 pyjwt==2.9.0
-    # via open-webui
+    # via Falcor
 pymongo==4.8.0
-    # via open-webui
+    # via Falcor
 pymysql==1.1.1
-    # via open-webui
+    # via Falcor
 pypandoc==1.13
-    # via open-webui
+    # via Falcor
 pyparsing==2.4.7
     # via httplib2
     # via oletools
 pypdf==4.3.1
-    # via open-webui
+    # via Falcor
     # via unstructured-client
 pypika==0.48.9
     # via chromadb
 pyproject-hooks==1.1.0
     # via build
 pytest==8.2.2
-    # via open-webui
+    # via Falcor
     # via pytest-docker
 pytest-docker==3.1.1
-    # via open-webui
+    # via Falcor
 python-dateutil==2.9.0.post0
     # via botocore
     # via kubernetes
@@ -529,23 +529,23 @@ python-engineio==4.9.0
 python-iso639==2024.4.27
     # via unstructured
 python-jose==3.3.0
-    # via open-webui
+    # via Falcor
 python-magic==0.4.27
     # via unstructured
 python-multipart==0.0.9
     # via fastapi
-    # via open-webui
+    # via Falcor
 python-pptx==1.0.0
-    # via open-webui
+    # via Falcor
 python-socketio==5.11.3
-    # via open-webui
+    # via Falcor
 pytube==15.0.0
-    # via open-webui
+    # via Falcor
 pytz==2024.1
     # via apscheduler
     # via pandas
 pyxlsb==1.0.10
-    # via open-webui
+    # via Falcor
 pyyaml==6.0.1
     # via chromadb
     # via ctranslate2
@@ -558,15 +558,15 @@ pyyaml==6.0.1
     # via transformers
     # via uvicorn
 rank-bm25==0.2.2
-    # via open-webui
+    # via Falcor
 rapidfuzz==3.9.0
     # via unstructured
 rapidocr-onnxruntime==1.3.24
-    # via open-webui
+    # via Falcor
 red-black-tree-mod==1.20
     # via extract-msg
 redis==5.0.8
-    # via open-webui
+    # via Falcor
 regex==2024.5.10
     # via nltk
     # via tiktoken
@@ -579,7 +579,7 @@ requests==2.32.3
     # via langchain
     # via langchain-community
     # via langsmith
-    # via open-webui
+    # via Falcor
     # via posthog
     # via requests-oauthlib
     # via tiktoken
@@ -606,7 +606,7 @@ scipy==1.13.0
     # via scikit-learn
     # via sentence-transformers
 sentence-transformers==3.0.1
-    # via open-webui
+    # via Falcor
 setuptools==69.5.1
     # via ctranslate2
     # via opentelemetry-instrumentation
@@ -636,7 +636,7 @@ sqlalchemy==2.0.31
     # via alembic
     # via langchain
     # via langchain-community
-    # via open-webui
+    # via Falcor
 starlette==0.37.2
     # via fastapi
 sympy==1.12
@@ -652,7 +652,7 @@ tenacity==8.3.0
 threadpoolctl==3.5.0
     # via scikit-learn
 tiktoken==0.7.0
-    # via open-webui
+    # via Falcor
 tokenizers==0.15.2
     # via anthropic
     # via chromadb
@@ -704,7 +704,7 @@ tzlocal==5.2
 ujson==5.10.0
     # via fastapi
 unstructured==0.15.0
-    # via open-webui
+    # via Falcor
 unstructured-client==0.22.0
     # via unstructured
 uritemplate==4.1.1
@@ -718,11 +718,11 @@ urllib3==2.2.1
 uvicorn==0.22.0
     # via chromadb
     # via fastapi
-    # via open-webui
+    # via Falcor
 uvloop==0.19.0
     # via uvicorn
 validators==0.33.0
-    # via open-webui
+    # via Falcor
 watchfiles==0.21.0
     # via uvicorn
 websocket-client==1.8.0
@@ -739,12 +739,12 @@ wrapt==1.16.0
 wsproto==1.2.0
     # via simple-websocket
 xlrd==2.0.1
-    # via open-webui
+    # via Falcor
 xlsxwriter==3.2.0
     # via python-pptx
 yarl==1.9.4
     # via aiohttp
 youtube-transcript-api==0.6.2
-    # via open-webui
+    # via Falcor
 zipp==3.18.1
     # via importlib-metadata

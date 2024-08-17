@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { Falcor_BASE_URL } from '$lib/constants';
 	import ImagePreview from './ImagePreview.svelte';
 
 	export let src = '';
@@ -8,7 +8,7 @@
 	export let className = '';
 
 	let _src = '';
-	$: _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
+	$: _src = src.startsWith('/') ? `${Falcor_BASE_URL}${src}` : src;
 
 	let showImagePreview = false;
 </script>

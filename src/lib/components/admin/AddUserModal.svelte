@@ -5,7 +5,7 @@
 	import { addUser } from '$lib/apis/auths';
 
 	import Modal from '../common/Modal.svelte';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { Falcor_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -260,7 +260,7 @@
 									)}
 									<a
 										class="underline dark:text-gray-200"
-										href="{WEBUI_BASE_URL}/static/user-import.csv"
+										href="{Falcor_BASE_URL}/static/user-import.csv"
 									>
 										{$i18n.t('Click here to download user import template file.')}
 									</a>

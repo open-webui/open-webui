@@ -2,8 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
+	import { Falcor_API_BASE_URL, Falcor_BASE_URL } from '$lib/constants';
+	import { Falcor_NAME, config, user, socket } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
@@ -98,7 +98,7 @@
 
 <svelte:head>
 	<title>
-		{`${$WEBUI_NAME}`}
+		{`${$Falcor_NAME}`}
 	</title>
 </svelte:head>
 
@@ -108,7 +108,7 @@
 			<div class=" self-center">
 				<img
 					crossorigin="anonymous"
-					src="{WEBUI_BASE_URL}/static/favicon.png"
+					src="{Falcor_BASE_URL}/static/favicon.png"
 					class=" w-8 rounded-full"
 					alt="logo"
 				/>
@@ -140,7 +140,7 @@
 						<div>
 							{$i18n.t('Signing in')}
 							{$i18n.t('to')}
-							{$WEBUI_NAME}
+							{$Falcor_NAME}
 						</div>
 
 						<div>
@@ -160,12 +160,12 @@
 							<div class=" text-2xl font-medium">
 								{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Sign up')}
 								{$i18n.t('to')}
-								{$WEBUI_NAME}
+								{$Falcor_NAME}
 							</div>
 
 							{#if mode === 'signup'}
 								<div class=" mt-1 text-xs font-medium text-gray-500">
-									ⓘ {$WEBUI_NAME}
+									ⓘ {$Falcor_NAME}
 									{$i18n.t(
 										'does not make any external connections, and your data stays securely on your locally hosted server.'
 									)}
@@ -267,7 +267,7 @@
 								<button
 									class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
 									on:click={() => {
-										window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
+										window.location.href = `${Falcor_BASE_URL}/oauth/google/login`;
 									}}
 								>
 									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="size-6 mr-3">
@@ -292,7 +292,7 @@
 								<button
 									class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
 									on:click={() => {
-										window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
+										window.location.href = `${Falcor_BASE_URL}/oauth/microsoft/login`;
 									}}
 								>
 									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" class="size-6 mr-3">
@@ -317,7 +317,7 @@
 								<button
 									class="flex items-center px-6 border-2 dark:border-gray-800 duration-300 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 w-full rounded-2xl dark:text-white text-sm py-3 transition"
 									on:click={() => {
-										window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
+										window.location.href = `${Falcor_BASE_URL}/oauth/oidc/login`;
 									}}
 								>
 									<svg

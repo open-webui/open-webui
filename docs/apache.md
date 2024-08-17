@@ -2,7 +2,7 @@
 
 Sometimes, its beneficial to host Ollama, separate from the UI, but retain the RAG and RBAC support features shared across users:
 
-# Open WebUI Configuration
+# Falcor Configuration
 
 ## UI Configuration
 
@@ -194,6 +194,6 @@ If you encounter any misconfiguration or errors, please file an issue or engage 
 
 Let's make this UI much more user friendly for everyone!
 
-Thanks for making open-webui your UI Choice for AI!
+Thanks for making Falcor your UI Choice for AI!
 
-This doc is made by **Bob Reyes**, your **Open-WebUI** fan from the Philippines.
+This doc is made by **Bob Reyes**, your **Falcor** fan from the Philippines.

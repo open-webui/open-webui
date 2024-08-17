@@ -30,7 +30,7 @@
 		archiveChatById,
 		cloneChatById
 	} from '$lib/apis/chats';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { Falcor_BASE_URL } from '$lib/constants';
 
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
@@ -290,7 +290,7 @@
 				<div class="self-center mx-1.5">
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
+						src="{Falcor_BASE_URL}/static/favicon.png"
 						class=" size-6 -translate-x-1.5 rounded-full"
 						alt="logo"
 					/>

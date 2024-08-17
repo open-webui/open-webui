@@ -8,7 +8,7 @@
 	import FunctionEditor from '$lib/components/workspace/Functions/FunctionEditor.svelte';
 	import { getModels } from '$lib/apis';
 	import { compareVersion, extractFrontmatter } from '$lib/utils';
-	import { WEBUI_VERSION } from '$lib/constants';
+	import { Falcor_VERSION } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -20,14 +20,14 @@
 		console.log(data);
 
 		const manifest = extractFrontmatter(data.content);
-		if (compareVersion(manifest?.required_open_webui_version ?? '0.0.0', WEBUI_VERSION)) {
+		if (compareVersion(manifest?.required_open_Falcor_version ?? '0.0.0', Falcor_VERSION)) {
 			console.log('Version is lower than required');
 			toast.error(
 				$i18n.t(
-					'Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})',
+					'Falcor version (v{{OPEN_Falcor_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})',
 					{
-						OPEN_WEBUI_VERSION: WEBUI_VERSION,
-						REQUIRED_VERSION: manifest?.required_open_webui_version ?? '0.0.0'
+						OPEN_Falcor_VERSION: Falcor_VERSION,
+						REQUIRED_VERSION: manifest?.required_open_Falcor_version ?? '0.0.0'
 					}
 				)
 			);
@@ -56,7 +56,7 @@
 	onMount(() => {
 		window.addEventListener('message', async (event) => {
 			if (
-				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
+				!['https://Falcor.com', 'https://www.Falcor.com', 'http://localhost:9999'].includes(
 					event.origin
 				)
 			)

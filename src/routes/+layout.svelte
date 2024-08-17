@@ -11,7 +11,7 @@
 		config,
 		user,
 		theme,
-		WEBUI_NAME,
+		Falcor_NAME,
 		mobile,
 		socket,
 		activeUserCount,
@@ -29,7 +29,7 @@
 
 	import 'tippy.js/dist/tippy.css';
 
-	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
+	import { Falcor_BASE_URL, Falcor_HOSTNAME } from '$lib/constants';
 	import i18n, { initI18n, getLanguages } from '$lib/i18n';
 	import { bestMatchingLanguage } from '$lib/utils';
 
@@ -107,10 +107,10 @@
 		if (backendConfig) {
 			// Save Backend Status to Store
 			await config.set(backendConfig);
-			await WEBUI_NAME.set(backendConfig.name);
+			await Falcor_NAME.set(backendConfig.name);
 
 			if ($config) {
-				const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
+				const _socket = io(`${Falcor_BASE_URL}` || undefined, {
 					reconnection: true,
 					reconnectionDelay: 1000,
 					reconnectionDelayMax: 5000,
@@ -217,8 +217,8 @@
 </script>
 
 <svelte:head>
-	<title>{$WEBUI_NAME}</title>
-	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<title>{$Falcor_NAME}</title>
+	<link crossorigin="anonymous" rel="icon" href="{Falcor_BASE_URL}/static/favicon.png" />
 
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
 	<!-- feel free to make a PR to fix if anyone wants to see it return -->

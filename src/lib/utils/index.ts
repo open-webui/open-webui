@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
-import { WEBUI_BASE_URL } from '$lib/constants';
+import { Falcor_BASE_URL } from '$lib/constants';
 
 //////////////////////////
 // Helper functions
@@ -74,13 +74,13 @@ export const replaceTokens = (content, char, user) => {
 
 	// Replace video ID tags with corresponding <video> elements
 	content = content.replace(videoIdToken, (match, fileId) => {
-		const videoUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`;
+		const videoUrl = `${Falcor_BASE_URL}/api/v1/files/${fileId}/content`;
 		return `<video src="${videoUrl}" controls></video>`;
 	});
 
 	// Replace HTML ID tags with corresponding HTML content
 	content = content.replace(htmlIdToken, (match, fileId) => {
-		const htmlUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`;
+		const htmlUrl = `${Falcor_BASE_URL}/api/v1/files/${fileId}/content`;
 		return `<iframe src="${htmlUrl}" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`;
 	});
 
@@ -375,7 +375,7 @@ export const getImportOrigin = (_chats) => {
 	if ('mapping' in _chats[0]) {
 		return 'openai';
 	}
-	return 'webui';
+	return 'Falcor';
 };
 
 export const getUserPosition = async (raw = false) => {

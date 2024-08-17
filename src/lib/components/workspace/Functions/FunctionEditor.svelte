@@ -29,9 +29,9 @@
 	let codeEditor;
 	let boilerplate = `"""
 title: Example Filter
-author: open-webui
-author_url: https://github.com/open-webui
-funding_url: https://github.com/open-webui
+author: Falcor
+author_url: https://github.com/Falcor
+funding_url: https://github.com/Falcor
 version: 0.1
 """
 
@@ -57,7 +57,7 @@ class Filter:
 
     def __init__(self):
         # Indicates custom file handling logic. This flag helps disengage default routines in favor of custom
-        # implementations, informing the WebUI to defer file-related operations to designated methods within this class.
+        # implementations, informing the Falcor to defer file-related operations to designated methods within this class.
         # Alternatively, you can remove the files directly from the body in from the inlet hook
         # self.file_handler = True
 
@@ -114,7 +114,7 @@ class Filter:
 
     def __init__(self):
         # Indicates custom file handling logic. This flag helps disengage default routines in favor of custom
-        # implementations, informing the WebUI to defer file-related operations to designated methods within this class.
+        # implementations, informing the Falcor to defer file-related operations to designated methods within this class.
         # Alternatively, you can remove the files directly from the body in from the inlet hook
         self.file_handler = True
 

@@ -1,8 +1,8 @@
 [project]
-name = "open-webui"
-description = "Open WebUI"
+name = "Falcor"
+description = "Falcor"
 authors = [
-    { name = "Timothy Jaeryang Baek", email = "tim@openwebui.com" }
+    { name = "Timothy Jaeryang Baek", email = "tim@Falcor.com" }
 ]
 license = { file = "LICENSE" }
 dependencies = [
@@ -98,7 +98,7 @@ classifiers = [
 ]
 
 [project.scripts]
-open-webui = "open_webui:app"
+Falcor = "open_Falcor:app"
 
 [build-system]
 requires = ["hatchling"]
@@ -122,12 +122,12 @@ sources = ["backend"]
 exclude = [
     ".dockerignore",
     ".gitignore",
-    ".webui_secret_key",
+    ".Falcor_secret_key",
     "dev.sh",
     "requirements.txt",
     "start.sh",
     "start_windows.bat",
-    "webui.db",
+    "Falcor.db",
     "chroma.sqlite3",
 ]
-force-include = { "CHANGELOG.md" = "open_webui/CHANGELOG.md", build = "open_webui/frontend" }
+force-include = { "CHANGELOG.md" = "open_Falcor/CHANGELOG.md", build = "open_Falcor/frontend" }

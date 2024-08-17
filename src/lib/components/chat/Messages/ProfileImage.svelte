@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { settings } from '$lib/stores';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { Falcor_BASE_URL } from '$lib/constants';
 
 	export let className = 'size-8';
 
@@ -10,7 +10,7 @@
 <div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
 	<img
 		crossorigin="anonymous"
-		src={src.startsWith(WEBUI_BASE_URL) ||
+		src={src.startsWith(Falcor_BASE_URL) ||
 		src.startsWith('https://www.gravatar.com/avatar/') ||
 		src.startsWith('data:') ||
 		src.startsWith('/')

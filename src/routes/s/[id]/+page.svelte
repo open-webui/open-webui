@@ -5,7 +5,7 @@
 
 	import dayjs from 'dayjs';
 
-	import { settings, chatId, WEBUI_NAME, models } from '$lib/stores';
+	import { settings, chatId, Falcor_NAME, models } from '$lib/stores';
 	import { convertMessagesToHistory } from '$lib/utils';
 
 	import { getChatByShareId } from '$lib/apis/chats';
@@ -117,8 +117,8 @@
 <svelte:head>
 	<title>
 		{title
-			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} | ${$WEBUI_NAME}`
-			: `${$WEBUI_NAME}`}
+			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} | ${$Falcor_NAME}`
+			: `${$Falcor_NAME}`}
 	</title>
 </svelte:head>
 

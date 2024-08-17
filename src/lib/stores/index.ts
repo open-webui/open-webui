@@ -5,7 +5,7 @@ import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
 
 // Backend
-export const WEBUI_NAME = writable(APP_NAME);
+export const Falcor_NAME = writable(APP_NAME);
 export const config: Writable<Config | undefined> = writable(undefined);
 export const user: Writable<SessionUser | undefined> = writable(undefined);
 
