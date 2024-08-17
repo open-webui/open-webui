@@ -35,7 +35,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 
     migrator.add_fields(
         "user",
-        oauth_sub=pw.TextField(null=True, unique=True),
+        oauth_sub=pw.CharField(max_length=255, null=True, unique=True),
     )
 
 

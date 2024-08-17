@@ -33,10 +33,19 @@ from peewee_migrate import Migrator
 with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
+def get_database_type(database: pw.Database) -> str:
+    if isinstance(database, pw.PostgresqlDatabase):
+        return 'postgres'
+    elif isinstance(database, pw.MySQLDatabase):
+        return 'mysql'
+    else:
+        return 'other'
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
+    db_type = get_database_type(database)
+    
     # Adding fields created_at and updated_at to the 'user' table
     migrator.add_fields(
         "user",
@@ -46,9 +55,14 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     )
 
     # Populate the new fields from an existing 'timestamp' field
-    migrator.sql(
-        'UPDATE "user" SET created_at = timestamp, updated_at = timestamp, last_active_at = timestamp WHERE timestamp IS NOT NULL'
-    )
+    if db_type == 'mysql':
+        migrator.sql(
+            'UPDATE `user` SET created_at = timestamp, updated_at = timestamp, last_active_at = timestamp WHERE timestamp IS NOT NULL'
+        )
+    else:
+        migrator.sql(
+            'UPDATE "user" SET created_at = timestamp, updated_at = timestamp, last_active_at = timestamp WHERE timestamp IS NOT NULL'
+        )
 
     # Now that the data has been copied, remove the original 'timestamp' field
     migrator.remove_fields("user", "timestamp")
@@ -65,12 +79,17 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your rollback migrations here."""
 
+    db_type = get_database_type(database)
+    
     # Recreate the timestamp field initially allowing null values for safe transition
     migrator.add_fields("user", timestamp=pw.BigIntegerField(null=True))
 
     # Copy the earliest created_at date back into the new timestamp field
     # This assumes created_at was originally a copy of timestamp
-    migrator.sql('UPDATE "user" SET timestamp = created_at')
+    if db_type == 'mysql':
+        migrator.sql('UPDATE `user` SET timestamp = created_at')
+    else:
+        migrator.sql('UPDATE "user" SET timestamp = created_at')
 
     # Remove the created_at and updated_at fields
     migrator.remove_fields("user", "created_at", "updated_at", "last_active_at")
