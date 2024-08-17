@@ -503,9 +503,7 @@ def get_elevenlabs_voices() -> dict:
     }
     try:
         # TODO: Add retries
-        response = requests.get(
-            "https://api.elevenlabs.io/v1/voices", headers=headers
-        )
+        response = requests.get("https://api.elevenlabs.io/v1/voices", headers=headers)
         response.raise_for_status()
         voices_data = response.json()
 
