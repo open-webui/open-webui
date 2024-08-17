@@ -1115,4 +1115,9 @@
 		-ms-overflow-style: none; /* IE and Edge */
 		scrollbar-width: none; /* Firefox */
 	}
+
+	.katex-display {
+		overflow-x: auto;
+		overflow-y: hidden;
+	}
 </style>
