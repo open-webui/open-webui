@@ -10,17 +10,18 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from typing import List, Optional
+from typing import Optional, Callable, Awaitable
 
 import aiohttp
 import requests
 from authlib.integrations.starlette_client import OAuth
 from authlib.oidc.core import UserInfo
-
 from fastapi import FastAPI, Request, Depends, status, UploadFile, File, Form
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -30,8 +31,6 @@ from starlette.responses import StreamingResponse, Response, RedirectResponse
 from apps.audio.main import app as audio_app
 from apps.filter.main import app as filter_app, filter_message, app_start
 from apps.images.main import app as images_app
-
-from apps.socket.main import app as socket_app, get_event_emitter, get_event_call
 from apps.ollama.main import (
     app as ollama_app,
     get_all_models as get_ollama_models,
@@ -44,6 +43,8 @@ from apps.openai.main import (
 )
 from apps.rag.main import app as rag_app
 from apps.rag.utils import get_rag_context, rag_template
+from apps.rag.utils import get_rag_context, rag_template
+from apps.socket.main import app as socket_app, get_event_emitter, get_event_call
 from apps.socket.main import app as socket_app, get_event_emitter, get_event_call
 from apps.webui.internal.db import Session
 from apps.webui.main import (
@@ -51,41 +52,15 @@ from apps.webui.main import (
     get_pipe_models,
     generate_function_chat_completion,
 )
-
-from pydantic import BaseModel
-from typing import Optional, Callable, Awaitable
-
 from apps.webui.models.auths import Auths
+from apps.webui.models.functions import Functions
 from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
 from apps.webui.models.tools import Tools
-from apps.webui.models.functions import Functions
 from apps.webui.models.users import Users, UserModel
-
+from apps.webui.models.users import change_init_background_random_image_url
+from apps.webui.routers.users import change_background_random_image_url
 from apps.webui.utils import load_toolkit_module_by_id, load_function_module_by_id
-
-from utils.utils import (
-    get_admin_user,
-    get_verified_user,
-    get_current_user,
-    get_http_authorization_cred,
-    get_password_hash,
-    create_token,
-)
-from utils.task import (
-    title_generation_template,
-    search_query_generation_template,
-    tools_function_calling_generation_template,
-)
-from utils.misc import (
-    get_last_user_message,
-    add_or_update_system_message,
-    prepend_to_first_user_message_content,
-    parse_duration,
-)
-
-from apps.rag.utils import get_rag_context, rag_template
-
 from config import (
     WEBUI_NAME,
     WEBUI_URL,
@@ -132,10 +107,29 @@ from utils.misc import (
     add_or_update_system_message,
     parse_duration,
 )
+from utils.misc import (
+    get_last_user_message,
+    add_or_update_system_message,
+    prepend_to_first_user_message_content,
+    parse_duration,
+)
 from utils.task import (
     title_generation_template,
     search_query_generation_template,
     tools_function_calling_generation_template,
+)
+from utils.task import (
+    title_generation_template,
+    search_query_generation_template,
+    tools_function_calling_generation_template,
+)
+from utils.utils import (
+    get_admin_user,
+    get_verified_user,
+    get_current_user,
+    get_http_authorization_cred,
+    get_password_hash,
+    create_token,
 )
 from utils.utils import (
     get_admin_user,
@@ -377,7 +371,7 @@ def get_tools_function_calling_payload(messages, task_model_id, content):
 
 
 def apply_extra_params_to_tool_function(
-    function: Callable, extra_params: dict
+        function: Callable, extra_params: dict
 ) -> Callable[..., Awaitable]:
     sig = inspect.signature(function)
     extra_params = {
@@ -396,7 +390,7 @@ def apply_extra_params_to_tool_function(
 
 # Mutation on extra_params
 def get_tools(
-    tool_ids: list[str], user: UserModel, extra_params: dict
+        tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
     tools = {}
     for tool_id in tool_ids:
@@ -466,7 +460,7 @@ async def get_content_from_response(response) -> Optional[str]:
 
 
 async def chat_completion_tools_handler(
-    body: dict, user: UserModel, extra_params: dict
+        body: dict, user: UserModel, extra_params: dict
 ) -> tuple[dict, dict]:
     skip_files = False
     contexts = []
@@ -628,7 +622,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             setting_enableFileUpdateBase64 = user.settings.ui.get("enableFileUpdateBase64", False)
         except AttributeError:
             setting_enableFileUpdateBase64 = False
-        
+
         __user__ = {
             "id": user.id,
             "email": user.email,
@@ -1073,7 +1067,7 @@ async def get_models(user=Depends(get_verified_user)):
         model
         for model in models
         if ("pipeline" not in model or model["pipeline"].get("type", None) != "filter")
-        and not model.get("name", "").startswith("mj_")
+           and not model.get("name", "").startswith("mj_")
     ]
 
     if app.state.config.ENABLE_MODEL_FILTER:
@@ -1358,7 +1352,7 @@ async def chat_action(action_id: str, form_data: dict, user=Depends(get_verified
             for key, value in extra_params.items():
                 if key in sig.parameters:
                     params[key] = value
-            
+
             try:
                 setting_enableFileUpdateBase64 = user.settings.ui.get("enableFileUpdateBase64", False)
             except AttributeError:
