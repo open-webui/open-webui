@@ -87,6 +87,13 @@
 		params.stop = $settings?.params?.stop ? ($settings?.params?.stop ?? []).join(',') : null;
 	});
 
+	const updateThemeColor = (isDarkMode: boolean) => {
+		const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+		if (themeColorMeta) {
+			themeColorMeta.setAttribute('content', isDarkMode ? '#000000' : '#ffffff');
+		}
+	};
+
 	const applyTheme = (_theme: string) => {
 		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
 
@@ -94,7 +101,10 @@
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		}
 
-		if (themeToApply === 'dark' && !_theme.includes('oled')) {
+		const isDarkMode = themeToApply === 'dark' && !_theme.includes('oled');
+		updateThemeColor(isDarkMode);
+
+		if (isDarkMode) {
 			document.documentElement.style.setProperty('--color-gray-800', '#333');
 			document.documentElement.style.setProperty('--color-gray-850', '#262626');
 			document.documentElement.style.setProperty('--color-gray-900', '#171717');
@@ -119,14 +129,18 @@
 	const themeChangeHandler = (_theme: string) => {
 		theme.set(_theme);
 		localStorage.setItem('theme', _theme);
-		if (_theme.includes('oled')) {
+
+		const isOledTheme = _theme.includes('oled');
+		if (isOledTheme) {
 			document.documentElement.style.setProperty('--color-gray-800', '#101010');
 			document.documentElement.style.setProperty('--color-gray-850', '#050505');
 			document.documentElement.style.setProperty('--color-gray-900', '#000000');
 			document.documentElement.style.setProperty('--color-gray-950', '#000000');
 			document.documentElement.classList.add('dark');
+			updateThemeColor(true); // OLED 主题使用深色模式
+		} else {
+			applyTheme(_theme);
 		}
-		applyTheme(_theme);
 	};
 </script>
 
