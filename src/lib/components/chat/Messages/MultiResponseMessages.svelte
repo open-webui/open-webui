@@ -1,8 +1,12 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { updateChatById } from '$lib/apis/chats';
 	import ResponseMessage from './ResponseMessage.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Merge from '$lib/components/icons/Merge.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let chatId;
 
@@ -122,7 +126,7 @@
 							currentMessageId
 						]?.modelIdx == modelIdx
 							? 'border-gray-100 dark:border-gray-800 border-[1.5px]'
-							: 'border-gray-50 dark:border-gray-850 '} transition p-5 rounded-3xl"
+							: 'border-gray-50 dark:border-gray-850 border-dashed '} transition p-5 rounded-2xl"
 						on:click={() => {
 							if (currentMessageId != message.id) {
 								currentMessageId = message.id;
@@ -176,4 +180,25 @@
 			{/each}
 		{/key}
 	</div>
+
+	{#if !readOnly}
+		{#if !parentMessage?.childrenIds.map((id) => history.messages[id]).find((m) => !m.done)}
+			<div class=" flex justify-end overflow-x-auto buttons text-gray-500 dark:text-gray-400 mt-1">
+				<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
+					<button
+						type="button"
+						id="merge-response-button"
+						class="{true
+							? 'visible'
+							: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+						on:click={() => {
+							// continueGeneration();
+						}}
+					>
+						<Merge className=" size-5 " />
+					</button>
+				</Tooltip>
+			</div>
+		{/if}
+	{/if}
 </div>
