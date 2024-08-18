@@ -323,7 +323,7 @@
 									{showNextMessage}
 									copyToClipboard={copyToClipboardWithToast}
 								/>
-							{:else if $mobile || (history.messages[message.parentId]?.models?.length ?? 1) === 1}
+							{:else if (history.messages[message.parentId]?.models?.length ?? 1) === 1}
 								{#key message.id && history.currentId}
 									<ResponseMessage
 										{message}
