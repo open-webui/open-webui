@@ -33,7 +33,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
-	import MarkdownTokens from './MarkdownTokens.svelte';
+	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 
 	export let message;
 	export let siblings;
