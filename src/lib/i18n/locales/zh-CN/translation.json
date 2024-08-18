@@ -621,6 +621,7 @@
 	"System": "系统",
 	"System Prompt": "系统提示词 (System Prompt)",
 	"Tags": "标签",
+	"Talking to ": "当前对话模型：",
 	"Tap to interrupt": "点击以中断",
 	"Tavily API Key": "Tavily API 密钥",
 	"Tell us more:": "请告诉我们更多细节",

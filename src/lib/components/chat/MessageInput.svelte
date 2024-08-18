@@ -477,7 +477,8 @@
 										: `${WEBUI_BASE_URL}/static/favicon.png`)}
 							/>
 							<div>
-								Talking to <span class=" font-medium">{atSelectedModel.name}</span>
+								<!-- <span>{$i18n.t('Talking to')} </span><span class="font-medium">{$jobTitle}</span> -->
+								<span>{$i18n.t('Talking to ')}</span><strong>{$jobTitle}</strong>
 							</div>
 						</div>
 						<div>
