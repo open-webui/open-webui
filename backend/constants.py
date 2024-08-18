@@ -100,3 +100,4 @@ class TASKS(str, Enum):
     EMOJI_GENERATION = "emoji_generation"
     QUERY_GENERATION = "query_generation"
     FUNCTION_CALLING = "function_calling"
+    MOA_RESPONSE_GENERATION = "moa_response_generation"
