@@ -5,6 +5,7 @@
 	import ResponseMessage from './ResponseMessage.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Merge from '$lib/components/icons/Merge.svelte';
+	import { mobile } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -123,9 +124,8 @@
 					{@const message = groupedMessages[modelIdx].messages[groupedMessagesIdx[modelIdx]]}
 
 					<div
-						class=" snap-center min-w-80 w-full max-w-full m-1 border {history.messages[
-							currentMessageId
-						]?.modelIdx == modelIdx
+						class=" snap-center {$mobile ? '' : 'min-w-80'} w-full max-w-full m-1 border {history
+							.messages[currentMessageId]?.modelIdx == modelIdx
 							? 'border-gray-100 dark:border-gray-800 border-[1.5px]'
 							: 'border-gray-50 dark:border-gray-850 border-dashed '} transition p-5 rounded-2xl"
 						on:click={() => {
