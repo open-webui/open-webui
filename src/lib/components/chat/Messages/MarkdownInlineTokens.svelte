@@ -6,6 +6,7 @@
 	import Image from '$lib/components/common/Image.svelte';
 
 	import KatexRenderer from './KatexRenderer.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -36,7 +37,7 @@
 			<svelte:self id={`${id}-em`} tokens={token.tokens} />
 		</em>
 	{:else if token.type === 'codespan'}
-		<code class="codespan">{token.text}</code>
+		<code class="codespan">{unescapeHtml(token.text)}</code>
 	{:else if token.type === 'br'}
 		<br />
 	{:else if token.type === 'del'}

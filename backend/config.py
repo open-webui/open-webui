@@ -939,8 +939,7 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     "task.tools.prompt_template",
     os.environ.get(
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
-        """Tools: {{TOOLS}}
-If a function tool doesn't match the query, return an empty string. Else, pick a function tool, fill in the parameters from the function tool's schema, and return it in the format { "name": \"functionName\", "parameters": { "key": "value" } }. Only pick a function if the user asks.  Only return the object. Do not return any other text.""",
+        """Available Tools: {{TOOLS}}\nReturn an empty string if no tools match the query. If a function tool matches, construct and return a JSON object in the format {\"name\": \"functionName\", \"parameters\": {\"requiredFunctionParamKey\": \"requiredFunctionParamValue\"}} using the appropriate tool and its parameters. Only return the object and limit the response to the JSON object without additional text.""",
     ),
 )
 
@@ -1410,13 +1409,13 @@ AUDIO_TTS_ENGINE = PersistentConfig(
 AUDIO_TTS_MODEL = PersistentConfig(
     "AUDIO_TTS_MODEL",
     "audio.tts.model",
-    os.getenv("AUDIO_TTS_MODEL", "tts-1"),
+    os.getenv("AUDIO_TTS_MODEL", "tts-1"),  # OpenAI default model
 )
 
 AUDIO_TTS_VOICE = PersistentConfig(
     "AUDIO_TTS_VOICE",
     "audio.tts.voice",
-    os.getenv("AUDIO_TTS_VOICE", "alloy"),
+    os.getenv("AUDIO_TTS_VOICE", "alloy"),  # OpenAI default voice
 )
 
 
