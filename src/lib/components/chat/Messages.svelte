@@ -5,15 +5,12 @@
 
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
+	import { copyToClipboard, findWordIndices } from '$lib/utils';
 
 	import UserMessage from './Messages/UserMessage.svelte';
 	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
-	import Spinner from '../common/Spinner.svelte';
-	import { imageGenerations } from '$lib/apis/images';
-	import { copyToClipboard, findWordIndices } from '$lib/utils';
-	import CompareMessages from './Messages/CompareMessages.svelte';
-	import { stringify } from 'postcss';
+	import MultiResponseMessages from './Messages/MultiResponseMessages.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -364,7 +361,7 @@
 								{/key}
 							{:else}
 								{#key message.parentId}
-									<CompareMessages
+									<MultiResponseMessages
 										bind:history
 										{messages}
 										{readOnly}
