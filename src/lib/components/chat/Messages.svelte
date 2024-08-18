@@ -363,6 +363,7 @@
 								{#key message.parentId}
 									<MultiResponseMessages
 										bind:history
+										isLastMessage={messageIdx + 1 === messages.length}
 										{messages}
 										{readOnly}
 										{chatId}

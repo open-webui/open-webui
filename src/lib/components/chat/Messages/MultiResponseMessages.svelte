@@ -15,6 +15,7 @@
 	export let messageIdx;
 
 	export let parentMessage;
+	export let isLastMessage;
 
 	export let readOnly = false;
 
@@ -181,9 +182,9 @@
 		{/key}
 	</div>
 
-	{#if !readOnly}
+	{#if !readOnly && isLastMessage}
 		{#if !parentMessage?.childrenIds.map((id) => history.messages[id]).find((m) => !m.done)}
-			<div class=" flex justify-end overflow-x-auto buttons text-gray-500 dark:text-gray-400 mt-1">
+			<div class=" flex justify-end overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-1">
 				<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
 					<button
 						type="button"
