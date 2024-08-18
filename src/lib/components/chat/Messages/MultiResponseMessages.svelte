@@ -1,9 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
-
 	import { updateChatById } from '$lib/apis/chats';
-
 	import ResponseMessage from './ResponseMessage.svelte';
 
 	export let chatId;
@@ -30,17 +28,9 @@
 	let groupedMessages = {};
 	let groupedMessagesIdx = {};
 
-	$: groupedMessages = parentMessage?.models.reduce((a, model, modelIdx) => {
-		// Find all messages that are children of the parent message and have the same model
-		const modelMessages = parentMessage?.childrenIds
-			.map((id) => history.messages[id])
-			.filter((m) => m.modelIdx === modelIdx);
-
-		return {
-			...a,
-			[modelIdx]: { messages: modelMessages }
-		};
-	}, {});
+	$: if (parentMessage) {
+		initHandler();
+	}
 
 	const showPreviousMessage = (modelIdx) => {
 		groupedMessagesIdx[modelIdx] = Math.max(0, groupedMessagesIdx[modelIdx] - 1);
@@ -78,25 +68,47 @@
 		dispatch('change');
 	};
 
-	onMount(async () => {
+	const initHandler = async () => {
 		await tick();
 		currentMessageId = messages[messageIdx].id;
 
-		for (const [modelIdx, model] of parentMessage?.models.entries()) {
+		groupedMessages = parentMessage?.models.reduce((a, model, modelIdx) => {
+			// Find all messages that are children of the parent message and have the same model
+			const modelMessages = parentMessage?.childrenIds
+				.map((id) => history.messages[id])
+				.filter((m) => m.modelIdx === modelIdx);
+
+			return {
+				...a,
+				[modelIdx]: { messages: modelMessages }
+			};
+		}, {});
+
+		groupedMessagesIdx = parentMessage?.models.reduce((a, model, modelIdx) => {
 			const idx = groupedMessages[modelIdx].messages.findIndex((m) => m.id === currentMessageId);
 			if (idx !== -1) {
-				groupedMessagesIdx[modelIdx] = idx;
+				return {
+					...a,
+					[modelIdx]: idx
+				};
 			} else {
-				groupedMessagesIdx[modelIdx] = 0;
+				return {
+					...a,
+					[modelIdx]: 0
+				};
 			}
-		}
+		}, {});
+	};
+
+	onMount(async () => {
+		initHandler();
 	});
 </script>
 
 <div>
 	<div
 		class="flex snap-x snap-mandatory overflow-x-auto scrollbar-hidden"
-		id="responses-container-{parentMessage.id}"
+		id="responses-container-{chatId}-{parentMessage.id}"
 	>
 		{#key currentMessageId}
 			{#each Object.keys(groupedMessages) as modelIdx}
@@ -128,34 +140,36 @@
 						}}
 					>
 						{#key history.currentId}
-							<ResponseMessage
-								message={groupedMessages[modelIdx].messages[groupedMessagesIdx[modelIdx]]}
-								siblings={groupedMessages[modelIdx].messages.map((m) => m.id)}
-								isLastMessage={true}
-								{updateChatMessages}
-								{confirmEditResponseMessage}
-								showPreviousMessage={() => showPreviousMessage(modelIdx)}
-								showNextMessage={() => showNextMessage(modelIdx)}
-								{readOnly}
-								{rateMessage}
-								{copyToClipboard}
-								{continueGeneration}
-								regenerateResponse={async (message) => {
-									regenerateResponse(message);
-									await tick();
-									groupedMessagesIdx[modelIdx] = groupedMessages[modelIdx].messages.length - 1;
-								}}
-								on:save={async (e) => {
-									console.log('save', e);
+							{#if message}
+								<ResponseMessage
+									{message}
+									siblings={groupedMessages[modelIdx].messages.map((m) => m.id)}
+									isLastMessage={true}
+									{updateChatMessages}
+									{confirmEditResponseMessage}
+									showPreviousMessage={() => showPreviousMessage(modelIdx)}
+									showNextMessage={() => showNextMessage(modelIdx)}
+									{readOnly}
+									{rateMessage}
+									{copyToClipboard}
+									{continueGeneration}
+									regenerateResponse={async (message) => {
+										regenerateResponse(message);
+										await tick();
+										groupedMessagesIdx[modelIdx] = groupedMessages[modelIdx].messages.length - 1;
+									}}
+									on:save={async (e) => {
+										console.log('save', e);
 
-									const message = e.detail;
-									history.messages[message.id] = message;
-									await updateChatById(localStorage.token, chatId, {
-										messages: messages,
-										history: history
-									});
-								}}
-							/>
+										const message = e.detail;
+										history.messages[message.id] = message;
+										await updateChatById(localStorage.token, chatId, {
+											messages: messages,
+											history: history
+										});
+									}}
+								/>
+							{/if}
 						{/key}
 					</div>
 				{/if}
