@@ -8,6 +8,7 @@ from apps.ollama.main import (
     generate_ollama_embeddings,
     GenerateEmbeddingsForm,
 )
+from apps.rag.batch_utils import generate_openai_batch_embeddings
 
 from huggingface_hub import snapshot_download
 
@@ -370,29 +371,6 @@ def generate_openai_embeddings(
         embeddings = generate_openai_batch_embeddings(model, [text], key, url)
 
     return embeddings[0] if isinstance(text, str) else embeddings
-
-
-def generate_openai_batch_embeddings(
-    model: str, texts: list[str], key: str, url: str = "https://api.openai.com/v1"
-) -> Optional[list[list[float]]]:
-    try:
-        r = requests.post(
-            f"{url}/embeddings",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {key}",
-            },
-            json={"input": texts, "model": model},
-        )
-        r.raise_for_status()
-        data = r.json()
-        if "data" in data:
-            return [elem["embedding"] for elem in data["data"]]
-        else:
-            raise "Something went wrong :/"
-    except Exception as e:
-        print(e)
-        return None
 
 
 from typing import Any
