@@ -5,7 +5,7 @@
 	import { revertSanitizedResponseContent, unescapeHtml } from '$lib/utils';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
-	import MarkdownInlineTokens from '$lib/components/chat/Messages/MarkdownInlineTokens.svelte';
+	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
