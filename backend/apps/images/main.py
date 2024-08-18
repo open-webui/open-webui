@@ -51,6 +51,7 @@ from config import (
     IMAGE_SIZE,
     IMAGE_STEPS,
     AppConfig,
+    CORS_ALLOW_ORIGIN,
 )
 
 log = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ALLOW_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -120,6 +120,7 @@ from config import (
     WEBUI_SESSION_COOKIE_SECURE,
     ENABLE_ADMIN_CHAT_ACCESS,
     AppConfig,
+    CORS_ALLOW_ORIGIN,
 )
 
 from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES, TASKS
@@ -209,8 +210,6 @@ app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
 )
 
 app.state.MODELS = {}
-
-origins = ["*"]
 
 
 ##################################
@@ -754,7 +753,7 @@ app.add_middleware(PipelineMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=CORS_ALLOW_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
