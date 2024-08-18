@@ -1528,8 +1528,9 @@
 			status: true,
 			content: ''
 		};
-
 		message.merged = mergedResponse;
+		messages = messages;
+
 		try {
 			const [res, controller] = await generateMoACompletion(
 				localStorage.token,
