@@ -3,12 +3,10 @@
 	import { toast } from 'svelte-sonner';
 	import mermaid from 'mermaid';
 
-	import { getContext, onMount, tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import type { Writable } from 'svelte/store';
-	import type { i18n as i18nType } from 'i18next';
 	import { OLLAMA_API_BASE_URL, OPENAI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import {
@@ -64,8 +62,7 @@
 	import { error } from '@sveltejs/kit';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
-
-	const i18n: Writable<i18nType> = getContext('i18n');
+	import i18n from '$lib/i18n';
 
 	export let chatIdProp = '';
 	let loaded = false;

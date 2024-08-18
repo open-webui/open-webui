@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
+	import { onMount } from 'svelte';
 
 	import { user } from '$lib/stores';
 	import { updateUserProfile, createAPIKey, getAPIKey } from '$lib/apis/auths';
@@ -12,8 +12,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
-
-	const i18n = getContext('i18n');
+	import i18n from '$lib/i18n';
 
 	export let saveHandler: Function;
 

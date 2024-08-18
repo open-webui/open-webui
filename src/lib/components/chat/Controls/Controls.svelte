@@ -1,7 +1,7 @@
 <script>
-	import { createEventDispatcher, getContext } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
+	import i18n from '$lib/i18n';
 	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import AdvancedParams from '../Settings/Advanced/AdvancedParams.svelte';

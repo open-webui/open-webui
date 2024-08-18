@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
 	import { models, config } from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
 	import { copyToClipboard } from '$lib/utils';
+	import i18n from '$lib/i18n';
 
 	import Modal from '../common/Modal.svelte';
 	import Link from '../icons/Link.svelte';
@@ -13,7 +13,6 @@
 
 	let chat = null;
 	let shareUrl = null;
-	const i18n = getContext('i18n');
 
 	const shareLocalChat = async () => {
 		const _chat = chat;

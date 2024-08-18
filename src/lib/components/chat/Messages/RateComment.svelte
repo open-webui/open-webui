@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 
-	const i18n = getContext('i18n');
+	import i18n from '$lib/i18n';
 
 	const dispatch = createEventDispatcher();
 

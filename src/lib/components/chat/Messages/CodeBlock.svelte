@@ -3,14 +3,14 @@
 	import { loadPyodide } from 'pyodide';
 	import mermaid from 'mermaid';
 
-	import { getContext, getAllContexts, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 
-	const i18n = getContext('i18n');
+	import i18n from '$lib/i18n';
 
 	export let id = '';
 

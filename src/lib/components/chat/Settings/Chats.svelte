@@ -13,11 +13,9 @@
 		getChatList
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
-	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-
-	const i18n = getContext('i18n');
+	import i18n from '$lib/i18n';
 
 	export let saveSettings: Function;
 

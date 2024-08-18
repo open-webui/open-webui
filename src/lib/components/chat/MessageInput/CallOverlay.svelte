@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { config, models, settings, showCallOverlay } from '$lib/stores';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
 	import {
 		blobToFile,
@@ -16,7 +16,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
 
-	const i18n = getContext('i18n');
+	import i18n from '$lib/i18n';
 
 	export let eventTarget: EventTarget;
 

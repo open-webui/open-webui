@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { config, functions, models, settings, tools, user } from '$lib/stores';
-	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
+	import { createEventDispatcher, tick } from 'svelte';
 
 	import {
 		getUserValvesSpecById as getToolUserValvesSpecById,
@@ -19,9 +19,9 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Valves from '$lib/components/common/Valves.svelte';
 
-	const dispatch = createEventDispatcher();
+	import i18n from '$lib/i18n';
 
-	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	let tab = 'tools';
 	let selectedId = '';

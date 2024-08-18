@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 
 	import { user, settings, config } from '$lib/stores';
 	import { getVoices as _getVoices } from '$lib/apis/audio';
 
 	import Switch from '$lib/components/common/Switch.svelte';
-	const dispatch = createEventDispatcher();
+	import i18n from '$lib/i18n';
 
-	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	export let saveSettings: Function;
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import {
 		type Model,
 		mobile,
@@ -42,8 +42,7 @@
 	import { transcribeAudio } from '$lib/apis/audio';
 	import FileItem from '../common/FileItem.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
-
-	const i18n = getContext('i18n');
+	import i18n from '$lib/i18n';
 
 	export let transparentBackground = false;
 

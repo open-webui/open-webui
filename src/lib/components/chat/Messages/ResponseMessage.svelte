@@ -5,9 +5,9 @@
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
-	const i18n = getContext('i18n');
+	import i18n from '$lib/i18n';
 
 	const dispatch = createEventDispatcher();
 

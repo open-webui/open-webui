@@ -4,10 +4,9 @@
 	import { generatePrompt } from '$lib/apis/ollama';
 	import { models } from '$lib/stores';
 	import { splitStream } from '$lib/utils';
-	import { tick, getContext } from 'svelte';
+	import { tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-
-	const i18n = getContext('i18n');
+	import i18n from '$lib/i18n';
 
 	const dispatch = createEventDispatcher();
 

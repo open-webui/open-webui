@@ -1,7 +1,7 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 
-	import { tick, createEventDispatcher, getContext } from 'svelte';
+	import { tick, createEventDispatcher } from 'svelte';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import { models, settings } from '$lib/stores';
@@ -14,7 +14,7 @@
 	import { processResponseContent, replaceTokens } from '$lib/utils';
 	import MarkdownTokens from './MarkdownTokens.svelte';
 
-	const i18n = getContext('i18n');
+	import i18n from '$lib/i18n';
 
 	const dispatch = createEventDispatcher();
 
