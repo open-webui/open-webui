@@ -842,6 +842,7 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
 )
 
+
 def validate_cors_origins(origins):
     for origin in origins:
         if origin != "*":
@@ -853,7 +854,9 @@ def validate_cors_origin(origin):
 
     # Check if the scheme is either http or https
     if parsed_url.scheme not in ["http", "https"]:
-        raise ValueError(f"Invalid scheme in CORS_ALLOW_ORIGIN: '{origin}'. Only 'http' and 'https' are allowed.")
+        raise ValueError(
+            f"Invalid scheme in CORS_ALLOW_ORIGIN: '{origin}'. Only 'http' and 'https' are allowed."
+        )
 
     # Ensure that the netloc (domain + port) is present, indicating it's a valid URL
     if not parsed_url.netloc:
@@ -868,9 +871,12 @@ def validate_cors_origin(origin):
 CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
 
 if "*" in CORS_ALLOW_ORIGIN:
-    log.warning("\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n")
+    log.warning(
+        "\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n"
+    )
 
 validate_cors_origins(CORS_ALLOW_ORIGIN)
+
 
 class BannerModel(BaseModel):
     id: str
