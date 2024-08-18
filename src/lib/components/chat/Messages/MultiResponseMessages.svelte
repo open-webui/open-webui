@@ -122,7 +122,7 @@
 			const { messages } = groupedMessages[modelIdx];
 			return messages[groupedMessagesIdx[modelIdx]].content;
 		});
-		mergeResponses(currentMessageId, responses);
+		mergeResponses(currentMessageId, responses, chatId);
 	};
 
 	onMount(async () => {

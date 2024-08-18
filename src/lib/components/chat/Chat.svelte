@@ -975,20 +975,7 @@
 				}
 			}
 
-			if ($chatId == _chatId) {
-				if (!$temporaryChatEnabled) {
-					chat = await updateChatById(localStorage.token, _chatId, {
-						messages: messages,
-						history: history,
-						models: selectedModels,
-						params: params,
-						files: chatFiles
-					});
-
-					currentChatPage.set(1);
-					await chats.set(await getChatList(localStorage.token, $currentChatPage));
-				}
-			}
+			await saveChatHandler(_chatId);
 		} else {
 			if (res !== null) {
 				const error = await res.json();
@@ -1518,7 +1505,23 @@
 		});
 	};
 
-	const mergeResponses = async (messageId, responses) => {
+	const saveChatHandler = async (_chatId) => {
+		if ($chatId == _chatId) {
+			if (!$temporaryChatEnabled) {
+				chat = await updateChatById(localStorage.token, _chatId, {
+					messages: messages,
+					history: history,
+					models: selectedModels,
+					params: params,
+					files: chatFiles
+				});
+
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			}
+		}
+	};
+	const mergeResponses = async (messageId, responses, _chatId) => {
 		console.log('mergeResponses', messageId, responses);
 		const message = history.messages[messageId];
 		const mergedResponse = {
@@ -1554,6 +1557,8 @@
 						scrollToBottom();
 					}
 				}
+
+				await saveChatHandler(_chatId);
 			} else {
 				console.error(res);
 			}
