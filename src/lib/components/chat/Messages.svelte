@@ -19,6 +19,7 @@
 	export let sendPrompt: Function;
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
+	export let mergeResponses: Function;
 	export let chatActionHandler: Function;
 
 	export let user = $_user;
@@ -374,6 +375,7 @@
 										{rateMessage}
 										copyToClipboard={copyToClipboardWithToast}
 										{continueGeneration}
+										{mergeResponses}
 										{regenerateResponse}
 										on:change={async () => {
 											await updateChatById(localStorage.token, chatId, {

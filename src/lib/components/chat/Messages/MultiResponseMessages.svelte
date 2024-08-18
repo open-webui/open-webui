@@ -1,11 +1,21 @@
 <script lang="ts">
+	import dayjs from 'dayjs';
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
+
+	import { mobile, settings } from '$lib/stores';
+
+	import { generateMoACompletion } from '$lib/apis';
 	import { updateChatById } from '$lib/apis/chats';
+	import { createOpenAITextStream } from '$lib/apis/streaming';
+
 	import ResponseMessage from './ResponseMessage.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Merge from '$lib/components/icons/Merge.svelte';
-	import { mobile } from '$lib/stores';
+
+	import Markdown from './Markdown.svelte';
+	import Name from './Name.svelte';
+	import Skeleton from './Skeleton.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -26,6 +36,7 @@
 
 	export let copyToClipboard: Function;
 	export let continueGeneration: Function;
+	export let mergeResponses: Function;
 	export let regenerateResponse: Function;
 
 	const dispatch = createEventDispatcher();
@@ -104,6 +115,14 @@
 				};
 			}
 		}, {});
+	};
+
+	const mergeResponsesHandler = async () => {
+		const responses = Object.keys(groupedMessages).map((modelIdx) => {
+			const { messages } = groupedMessages[modelIdx];
+			return messages[groupedMessagesIdx[modelIdx]].content;
+		});
+		mergeResponses(currentMessageId, responses);
 	};
 
 	onMount(async () => {
@@ -185,22 +204,55 @@
 	</div>
 
 	{#if !readOnly && isLastMessage}
-		{#if !parentMessage?.childrenIds.map((id) => history.messages[id]).find((m) => !m.done)}
-			<div class=" flex justify-end overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-1">
-				<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
-					<button
-						type="button"
-						id="merge-response-button"
-						class="{true
-							? 'visible'
-							: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
-						on:click={() => {
-							// continueGeneration();
-						}}
-					>
-						<Merge className=" size-5 " />
-					</button>
-				</Tooltip>
+		{#if !Object.keys(groupedMessages).find((modelIdx) => {
+			const { messages } = groupedMessages[modelIdx];
+			return !messages[groupedMessagesIdx[modelIdx]].done;
+		})}
+			<div class="flex justify-end">
+				<div class="w-full">
+					{#if history.messages[currentMessageId]?.merged?.status}
+						{@const message = history.messages[currentMessageId]?.merged}
+
+						<div class="w-full rounded-xl pl-5 pr-2 py-2">
+							<Name>
+								Merged Response
+
+								{#if message.timestamp}
+									<span
+										class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
+									>
+										{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
+									</span>
+								{/if}
+							</Name>
+
+							<div class="mt-1 markdown-prose w-full min-w-full">
+								{#if (message?.content ?? '') === ''}
+									<Skeleton />
+								{:else}
+									<Markdown id={`merged`} content={message.content ?? ''} />
+								{/if}
+							</div>
+						</div>
+					{/if}
+				</div>
+
+				<div class=" flex-shrink-0 text-gray-600 dark:text-gray-500 mt-1">
+					<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
+						<button
+							type="button"
+							id="merge-response-button"
+							class="{true
+								? 'visible'
+								: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+							on:click={() => {
+								mergeResponsesHandler();
+							}}
+						>
+							<Merge className=" size-5 " />
+						</button>
+					</Tooltip>
+				</div>
 			</div>
 		{/if}
 	{/if}

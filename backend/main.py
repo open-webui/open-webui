@@ -73,6 +73,7 @@ from utils.task import (
     title_generation_template,
     search_query_generation_template,
     tools_function_calling_generation_template,
+    moa_response_generation_template,
 )
 from utils.misc import (
     get_last_user_message,
@@ -1552,6 +1553,58 @@ Message: """{{prompt}}"""
         "max_tokens": 4,
         "chat_id": form_data.get("chat_id", None),
         "metadata": {"task": str(TASKS.EMOJI_GENERATION)},
+    }
+
+    log.debug(payload)
+
+    try:
+        payload = filter_pipeline(payload, user)
+    except Exception as e:
+        return JSONResponse(
+            status_code=e.args[0],
+            content={"detail": e.args[1]},
+        )
+
+    if "chat_id" in payload:
+        del payload["chat_id"]
+
+    return await generate_chat_completions(form_data=payload, user=user)
+
+
+@app.post("/api/task/moa/completions")
+async def generate_moa_response(form_data: dict, user=Depends(get_verified_user)):
+    print("generate_moa_response")
+
+    model_id = form_data["model"]
+    if model_id not in app.state.MODELS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+
+    # Check if the user has a custom task model
+    # If the user has a custom task model, use that model
+    model_id = get_task_model_id(model_id)
+    print(model_id)
+
+    template = """You have been provided with a set of responses from various models to the latest user query: "{{prompt}}"
+
+Your task is to synthesize these responses into a single, high-quality response. It is crucial to critically evaluate the information provided in these responses, recognizing that some of it may be biased or incorrect. Your response should not simply replicate the given answers but should offer a refined, accurate, and comprehensive reply to the instruction. Ensure your response is well-structured, coherent, and adheres to the highest standards of accuracy and reliability.
+
+Responses from models: {{responses}}"""
+
+    content = moa_response_generation_template(
+        template,
+        form_data["prompt"],
+        form_data["responses"],
+    )
+
+    payload = {
+        "model": model_id,
+        "messages": [{"role": "user", "content": content}],
+        "stream": form_data.get("stream", False),
+        "chat_id": form_data.get("chat_id", None),
+        "metadata": {"task": str(TASKS.MOA_RESPONSE_GENERATION)},
     }
 
     log.debug(payload)
