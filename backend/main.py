@@ -453,7 +453,7 @@ async def chat_completion_tools_handler(
             contexts.append(tool_output)
 
     except Exception as e:
-        print(f"Error: {e}")
+        log.exception(f"Error: {e}")
         content = None
 
     log.debug(f"tool_contexts: {contexts}")
@@ -997,6 +997,10 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
 
     if model.get("pipe"):
         return await generate_function_chat_completion(form_data, user=user)
+
+    for key in ["tool_ids", "files"]:
+        if key in form_data:
+            del form_data[key]
     if model["owned_by"] == "ollama":
         return await generate_ollama_chat_completion(form_data, user=user)
     else:
