@@ -241,6 +241,22 @@ __builtins__.input = input`);
 			debounceTimeout = setTimeout(highlightCode, 10);
 		}
 	}
+
+	onMount(async () => {
+		if (document.documentElement.classList.contains('dark')) {
+			mermaid.initialize({
+				startOnLoad: true,
+				theme: 'dark',
+				securityLevel: 'loose'
+			});
+		} else {
+			mermaid.initialize({
+				startOnLoad: true,
+				theme: 'default',
+				securityLevel: 'loose'
+			});
+		}
+	});
 </script>
 
 <div class="my-2" dir="ltr">
