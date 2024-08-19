@@ -47,6 +47,7 @@ from config import (
     OAUTH_USERNAME_CLAIM,
     OAUTH_PICTURE_CLAIM,
     OAUTH_EMAIL_CLAIM,
+    CORS_ALLOW_ORIGIN,
 )
 
 from apps.socket.main import get_event_call, get_event_emitter
@@ -58,8 +59,6 @@ from typing import Iterator, Generator, AsyncGenerator
 from pydantic import BaseModel
 
 app = FastAPI()
-
-origins = ["*"]
 
 app.state.config = AppConfig()
 
@@ -93,7 +92,7 @@ app.state.FUNCTIONS = {}
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=CORS_ALLOW_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
