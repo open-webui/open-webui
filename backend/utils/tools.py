@@ -6,6 +6,8 @@ from apps.webui.models.tools import Tools
 from apps.webui.models.users import UserModel
 from apps.webui.utils import load_toolkit_module_by_id
 
+from utils.schemas import json_schema_to_model
+
 log = logging.getLogger(__name__)
 
 
@@ -70,6 +72,7 @@ def get_tools(
                 "toolkit_id": tool_id,
                 "callable": callable,
                 "spec": spec,
+                "pydantic_model": json_schema_to_model(spec),
                 "file_handler": hasattr(module, "file_handler") and module.file_handler,
                 "citation": hasattr(module, "citation") and module.citation,
             }
