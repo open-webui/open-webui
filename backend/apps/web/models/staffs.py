@@ -38,7 +38,9 @@ class StaffsTable:
     def get_staff_by_email(self, email: str) -> Optional[Staff]:
         try:
             self.db.create_all()
-            staff = self.db.query(Staff).filter(Staff.email == email).first()
+            staff: Staff = self.db.query(Staff).filter(Staff.email == email).first()
+            # remove leading and trailing whitespaces, and also new line characters. Because this field's value is not clean.
+            staff.emp_type= staff.emp_type.strip()
             self.db.close()
             return staff
         except Exception as e:
