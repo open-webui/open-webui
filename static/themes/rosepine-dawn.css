@@ -252,11 +252,15 @@
 }
 
 .rose-pine-dawn .bg-gray-200 {
-    background-color: rgb(235 188 186);
+    background-color: rgb(221 221 221);
 }
 
 .rose-pine-dawn .from-gray-200 {
     --tw-gradient-from: rgb(235 188 186);
+}
+
+.rose-pine-dawn .bg-gray-50\/90 {
+    background-color: #f2e9e1;
 }
 /* .rose-pine-dawn .bg-white {
     --tw-bg-opacity: 1;
