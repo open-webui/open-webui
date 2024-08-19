@@ -530,6 +530,7 @@ DEFAULT_RAG_TEMPLATE = """Use the following context as your learned knowledge, i
 When answer to user:
 - If you don't know, just say that you don't know.
 - If you don't know when you are not sure, ask for clarification.
+- If you find any relevant links or urls, then make sure to include that in your answer. Don't create own url.
 Avoid mentioning that you obtained the information from the context.
 And answer according to the language of the user's question.
 
@@ -646,7 +647,7 @@ INITIAL_TOOLKITS = os.environ.get(
             "        pass\n\n"
             "    def display_annual_leave_form(self, user_type):\n"
             "        \"\"\"\n"
-            "        Displays the URL for submitting an annual leave form. Use this function **only when the user explicitly asks** for submitting, applying for, or requesting an annual leave form. The query must clearly indicate the user's intent to take action regarding annual leave. Avoid using this function for general inquiries or questions about annual leave policies.\n"
+            "        This function is used to assist users in **initiating** a leave application process (e.g., sick leave, maternity leave, annual leave) by providing a relevant form or URL. It should be triggered **only when the user's query clearly indicates an intent to apply for or request leave**. Simple mentions of a leave type (e.g., 'sick leave', 'maternity leave') without a clear request to apply or take action should **not** trigger this function. This function is **not** intended for queries that merely mention leave, confirm submission, or inquire about the status of previous leave requests, nor for general job titles, occupational roles, or unrelated HR inquiries (e.g., probation periods). The query must explicitly request to begin the leave application process. If the query does not explicitly request to begin the leave application process, this function should not be triggered.\n"
             "        \"\"\"\n"
             "        if user_type == \"contractual\":\n"
             "            return \"annual_leave_form=True\"\n"
