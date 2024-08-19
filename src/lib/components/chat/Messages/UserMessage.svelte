@@ -12,8 +12,7 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import { marked } from 'marked';
 	import { processResponseContent, replaceTokens } from '$lib/utils';
-	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
-	import Markdown from './Markdown.svelte';
+	import MarkdownTokens from './MarkdownTokens.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -85,7 +84,7 @@
 
 					{#if message.timestamp}
 						<span
-							class=" invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
+							class=" invisible group-hover:visible text-gray-400 text-xs font-medium uppercase"
 						>
 							{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
 						</span>
@@ -94,7 +93,9 @@
 			</div>
 		{/if}
 
-		<div class="chat-{message.role} w-full min-w-full markdown-prose">
+		<div
+			class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line"
+		>
 			{#if message.files}
 				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
 					{#each message.files as file}
@@ -182,7 +183,14 @@
 								: ' w-full'}"
 						>
 							{#if message.content}
-								<Markdown id={message.id} content={message.content} />
+								<div class="">
+									{#key message.id}
+										<MarkdownTokens
+											id={message.id}
+											tokens={marked.lexer(processResponseContent(message?.content))}
+										/>
+									{/key}
+								</div>
 							{/if}
 						</div>
 					</div>

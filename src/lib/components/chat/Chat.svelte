@@ -54,13 +54,7 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
-	import {
-		chatCompleted,
-		generateTitle,
-		generateSearchQuery,
-		chatAction,
-		generateMoACompletion
-	} from '$lib/apis';
+	import { chatCompleted, generateTitle, generateSearchQuery, chatAction } from '$lib/apis';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -983,7 +977,20 @@
 				}
 			}
 
-			await saveChatHandler(_chatId);
+			if ($chatId == _chatId) {
+				if (!$temporaryChatEnabled) {
+					chat = await updateChatById(localStorage.token, _chatId, {
+						messages: messages,
+						history: history,
+						models: selectedModels,
+						params: params,
+						files: chatFiles
+					});
+
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				}
+			}
 		} else {
 			if (res !== null) {
 				const error = await res.json();
@@ -1514,69 +1521,6 @@
 			return [];
 		});
 	};
-
-	const saveChatHandler = async (_chatId) => {
-		if ($chatId == _chatId) {
-			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
-					messages: messages,
-					history: history,
-					models: selectedModels,
-					params: params,
-					files: chatFiles
-				});
-
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			}
-		}
-	};
-	const mergeResponses = async (messageId, responses, _chatId) => {
-		console.log('mergeResponses', messageId, responses);
-		const message = history.messages[messageId];
-		const mergedResponse = {
-			status: true,
-			content: ''
-		};
-		message.merged = mergedResponse;
-		messages = messages;
-
-		try {
-			const [res, controller] = await generateMoACompletion(
-				localStorage.token,
-				message.model,
-				history.messages[message.parentId].content,
-				responses
-			);
-
-			if (res && res.ok && res.body) {
-				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
-				for await (const update of textStream) {
-					const { value, done, citations, error, usage } = update;
-					if (error || done) {
-						break;
-					}
-
-					if (mergedResponse.content == '' && value == '\n') {
-						continue;
-					} else {
-						mergedResponse.content += value;
-						messages = messages;
-					}
-
-					if (autoScroll) {
-						scrollToBottom();
-					}
-				}
-
-				await saveChatHandler(_chatId);
-			} else {
-				console.error(res);
-			}
-		} catch (e) {
-			console.error(e);
-		}
-	};
 </script>
 
 <svelte:head>
@@ -1703,7 +1647,6 @@
 						{sendPrompt}
 						{continueGeneration}
 						{regenerateResponse}
-						{mergeResponses}
 						{chatActionHandler}
 					/>
 				</div>
