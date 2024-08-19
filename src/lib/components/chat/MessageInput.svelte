@@ -595,7 +595,7 @@
 						}}
 					/>
 					<form
-						class=" flex flex-col relative w-full rounded-3xl px-1.5 border border-gray-100 dark:border-gray-850 bg-[#f1f1f1] dark:bg-gray-900 dark:text-gray-100"
+						class=" flex flex-col relative w-full rounded-3xl px-1.5 border border-gray-100 dark:border-gray-850 bg-white dark:bg-gray-900 dark:text-gray-100"
 						on:submit|preventDefault={() => {
 							submitPrompt(prompt, user);
 						}}
@@ -767,7 +767,7 @@
 							<textarea
 								id="chat-textarea"
 								bind:this={chatTextAreaElement}
-								class="scrollbar-none bg-[#f1f1f1] dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
+								class="scrollbar-none bg-white dark:bg-gray-900 dark:text-gray-100 outline-none w-full py-3 px-3 {fileUploadEnabled
 									? ''
 									: ' pl-4'} rounded-xl resize-none h-[48px]"
 								placeholder={chatInputPlaceholder !== ''
