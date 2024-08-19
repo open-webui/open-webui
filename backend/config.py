@@ -808,10 +808,24 @@ USER_PERMISSIONS_CHAT_DELETION = (
     os.environ.get("USER_PERMISSIONS_CHAT_DELETION", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_EDITING = (
+    os.environ.get("USER_PERMISSIONS_CHAT_EDITING", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_TEMPORARY = (
+    os.environ.get("USER_PERMISSIONS_CHAT_TEMPORARY", "True").lower() == "true"
+)
+
 USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
     "ui.user_permissions",
-    {"chat": {"deletion": USER_PERMISSIONS_CHAT_DELETION}},
+    {
+        "chat": {
+            "deletion": USER_PERMISSIONS_CHAT_DELETION,
+            "editing": USER_PERMISSIONS_CHAT_EDITING,
+            "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
+        }
+    },
 )
 
 ENABLE_MODEL_FILTER = PersistentConfig(

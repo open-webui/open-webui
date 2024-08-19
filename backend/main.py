@@ -68,6 +68,7 @@ from utils.utils import (
     get_http_authorization_cred,
     get_password_hash,
     create_token,
+    decode_token,
 )
 from utils.task import (
     title_generation_template,
@@ -1957,41 +1958,61 @@ async def update_pipeline_valves(
 
 
 @app.get("/api/config")
-async def get_app_config():
+async def get_app_config(request: Request):
+    user = None
+    if "token" in request.cookies:
+        token = request.cookies.get("token")
+        data = decode_token(token)
+        if data is not None and "id" in data:
+            user = Users.get_user_by_id(data["id"])
+
     return {
         "status": True,
         "name": WEBUI_NAME,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),
-        "default_models": webui_app.state.config.DEFAULT_MODELS,
-        "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
-        "features": {
-            "auth": WEBUI_AUTH,
-            "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
-            "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
-            "enable_login_form": webui_app.state.config.ENABLE_LOGIN_FORM,
-            "enable_web_search": rag_app.state.config.ENABLE_RAG_WEB_SEARCH,
-            "enable_image_generation": images_app.state.config.ENABLED,
-            "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
-            "enable_message_rating": webui_app.state.config.ENABLE_MESSAGE_RATING,
-            "enable_admin_export": ENABLE_ADMIN_EXPORT,
-            "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
-        },
-        "audio": {
-            "tts": {
-                "engine": audio_app.state.config.TTS_ENGINE,
-                "voice": audio_app.state.config.TTS_VOICE,
-            },
-            "stt": {
-                "engine": audio_app.state.config.STT_ENGINE,
-            },
-        },
         "oauth": {
             "providers": {
                 name: config.get("name", name)
                 for name, config in OAUTH_PROVIDERS.items()
             }
         },
+        "features": {
+            "auth": WEBUI_AUTH,
+            "auth_trusted_header": bool(webui_app.state.AUTH_TRUSTED_EMAIL_HEADER),
+            "enable_signup": webui_app.state.config.ENABLE_SIGNUP,
+            "enable_login_form": webui_app.state.config.ENABLE_LOGIN_FORM,
+            **(
+                {
+                    "enable_web_search": rag_app.state.config.ENABLE_RAG_WEB_SEARCH,
+                    "enable_image_generation": images_app.state.config.ENABLED,
+                    "enable_community_sharing": webui_app.state.config.ENABLE_COMMUNITY_SHARING,
+                    "enable_message_rating": webui_app.state.config.ENABLE_MESSAGE_RATING,
+                    "enable_admin_export": ENABLE_ADMIN_EXPORT,
+                    "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
+                }
+                if user is not None
+                else {}
+            ),
+        },
+        **(
+            {
+                "default_models": webui_app.state.config.DEFAULT_MODELS,
+                "default_prompt_suggestions": webui_app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                "audio": {
+                    "tts": {
+                        "engine": audio_app.state.config.TTS_ENGINE,
+                        "voice": audio_app.state.config.TTS_VOICE,
+                    },
+                    "stt": {
+                        "engine": audio_app.state.config.STT_ENGINE,
+                    },
+                },
+                "permissions": {**webui_app.state.config.USER_PERMISSIONS},
+            }
+            if user is not None
+            else {}
+        ),
     }
 
 
