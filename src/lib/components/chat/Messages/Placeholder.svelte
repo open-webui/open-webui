@@ -72,7 +72,7 @@
 				placement="top-start"
 			>
 				<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
-					<EyeSlash strokeWidth="2.5" className="size-5" /> Temporary Chat
+					<EyeSlash strokeWidth="2.5" className="size-5" /> {$i18n.t('Temporary Chat')}
 				</div>
 			</Tooltip>
 		{/if}
