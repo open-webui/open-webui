@@ -14,6 +14,7 @@ import requests
 import mimetypes
 import shutil
 import inspect
+from typing import Optional
 
 from fastapi import FastAPI, Request, Depends, status, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
@@ -375,15 +376,16 @@ async def chat_completion_tools_handler(
     if not ENABLE_TOOLS_FILTER:
         return body, {}
 
+    # If tool_ids field is present, call the functions
+    tool_ids = body.pop("tool_ids", None)
+    if not tool_ids:
+        return body, {}
+
     skip_files = False
     contexts = []
     citations = []
 
     task_model_id = get_task_model_id(body["model"])
-    # If tool_ids field is present, call the functions
-    tool_ids = body.pop("tool_ids", None)
-    if not tool_ids:
-        return body, {}
 
     log.debug(f"{tool_ids=}")
 
