@@ -262,7 +262,7 @@ __builtins__.input = input`);
 	let debounceTimeout;
 
 	$: if (code) {
-		if (lang.toLowerCase() === 'mermaid') {
+		if (lang.toLowerCase() === 'mermaid' && (token?.raw ?? '').endsWith('```')) {
 			(async () => {
 				try {
 					const { svg } = await mermaid.render(`mermaid-${id}`, code);
@@ -272,17 +272,17 @@ __builtins__.input = input`);
 				}
 			})();
 		}
-		// else {
-		// 	// Function to perform the code highlighting
-		// 	const highlightCode = () => {
-		// 		highlightedCode = hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value || code;
-		// 	};
+		else {
+			// Function to perform the code highlighting
+			const highlightCode = () => {
+				highlightedCode = hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value || code;
+			};
 
-		// 	// Clear the previous timeout if it exists
-		// 	clearTimeout(debounceTimeout);
-		// 	// Set a new timeout to debounce the code highlighting
-		// 	debounceTimeout = setTimeout(highlightCode, 10);
-		// }
+			// Clear the previous timeout if it exists
+			clearTimeout(debounceTimeout);
+			// Set a new timeout to debounce the code highlighting
+			debounceTimeout = setTimeout(highlightCode, 10);
+		}
 	}
 
 	// onMount(async () => {
@@ -300,7 +300,7 @@ __builtins__.input = input`);
 </script>
 
 <div class="my-2" dir="ltr">
-	{#if lang === 'mermaid'}
+	{#if lang.toLowerCase() == 'mermaid'}
 		{#if mermaidHtml}
 			{@html mermaidHtml}
 		{:else}
