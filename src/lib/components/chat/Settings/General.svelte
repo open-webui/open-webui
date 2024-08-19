@@ -102,7 +102,11 @@
 		}
 
 		const isDarkMode = themeToApply === 'dark' && !_theme.includes('oled');
-		updateThemeColor(isDarkMode);
+		if (_theme.includes('rose-pine dark')) {
+			updateThemeColor(true);
+		} else {
+			updateThemeColor(isDarkMode);
+		}
 
 		if (isDarkMode) {
 			document.documentElement.style.setProperty('--color-gray-800', '#333');

@@ -36,8 +36,8 @@
 
 				function applyTheme(theme) {
 					document.documentElement.className = ''; 
-					document.documentElement.classList.add(theme);
-					const isDarkMode = theme === 'dark' || theme.includes('oled') || window.matchMedia('(prefers-color-scheme: dark)').matches;
+					document.documentElement.className = theme;
+					const isDarkMode = theme.includes('dark') || theme.includes('oled') || window.matchMedia('(prefers-color-scheme: dark)').matches;
 					updateThemeColor(isDarkMode ? '#000000' : '#ffffff');
 				}
 
