@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
-	import { marked } from 'marked';
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
@@ -33,8 +32,9 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
-	import MarkdownTokens from './MarkdownTokens.svelte';
-	import auto_render from 'katex/dist/contrib/auto-render.mjs';
+	import Markdown from './Markdown.svelte';
+	import Error from './Error.svelte';
+	import Citations from './Citations.svelte';
 
 	export let message;
 	export let siblings;
@@ -59,7 +59,6 @@
 	let edit = false;
 	let editedContent = '';
 	let editTextAreaElement: HTMLTextAreaElement;
-	let tooltipInstance = null;
 
 	let sentencesAudio = {};
 	let speaking = null;
@@ -69,68 +68,43 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
-	let showCitationModal = false;
 
-	let selectedCitation = null;
+	// const renderLatex = async () => {
+	// 	try {
+	// 		await tick();
+	// 		const chatMessageContainer = document.getElementById(`message-${message.id}`);
+	// 		if (!chatMessageContainer) {
+	// 			console.warn(`未找到 id 为 'message-${message.id}' 的元素。`);
+	// 			return;
+	// 		}
 
-	let tokens;
+	// 		const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
+	// 		if (!chatMessageElements || chatMessageElements.length === 0) {
+	// 			console.warn(`在容器中未找到带有 'chat-assistant' 类的元素。`);
+	// 			return;
+	// 		}
 
-	import 'katex/dist/katex.min.css';
-	import markedKatex from '$lib/utils/marked/katex-extension';
-
-	const options = {
-		throwOnError: false
-	};
-
-	marked.use(markedKatex(options));
-
-	$: (async () => {
-		if (message?.content) {
-			tokens = marked.lexer(
-				replaceTokens(processResponseContent(message?.content), model?.name, $user?.name)
-			);
-		}
-		if (message?.done ?? false) {
-			await renderLatex();
-		}
-	})();
-
-	const renderLatex = async () => {
-		try {
-			await tick();
-			const chatMessageContainer = document.getElementById(`message-${message.id}`);
-			if (!chatMessageContainer) {
-				console.warn(`未找到 id 为 'message-${message.id}' 的元素。`);
-				return;
-			}
-
-			const chatMessageElements = chatMessageContainer.getElementsByClassName('chat-assistant');
-			if (!chatMessageElements || chatMessageElements.length === 0) {
-				console.warn(`在容器中未找到带有 'chat-assistant' 类的元素。`);
-				return;
-			}
-
-			for (const element of chatMessageElements) {
-				try {
-					auto_render(element, {
-						delimiters: [
-							{ left: '$$', right: '$$', display: true },
-							{ left: '$', right: '$', display: false },
-							{ left: '\\pu{', right: '}', display: false },
-							{ left: '\\ce{', right: '}', display: false },
-							{ left: '\\(', right: '\\)', display: false },
-							{ left: '\\[', right: '\\]', display: true }
-						],
-						throwOnError: false
-					});
-				} catch (err) {
-					console.error(`渲染 LaTeX 时出错，元素：`, element, err);
-				}
-			}
-		} catch (err) {
-			console.error('renderLatex 函数中的错误:', err);
-		}
-	};
+	// 		for (const element of chatMessageElements) {
+	// 			try {
+	// 				auto_render(element, {
+	// 					delimiters: [
+	// 						{ left: '$$', right: '$$', display: true },
+	// 						{ left: '$', right: '$', display: false },
+	// 						{ left: '\\pu{', right: '}', display: false },
+	// 						{ left: '\\ce{', right: '}', display: false },
+	// 						{ left: '\\(', right: '\\)', display: false },
+	// 						{ left: '\\[', right: '\\]', display: true }
+	// 					],
+	// 					throwOnError: false
+	// 				});
+	// 			} catch (err) {
+	// 				console.error(`渲染 LaTeX 时出错，元素：`, element, err);
+	// 			}
+	// 		}
+	// 	} catch (err) {
+	// 		console.error('renderLatex 函数中的错误:', err);
+	// 	}
+	// };
 
 	const playAudio = (idx) => {
 		return new Promise((res) => {
@@ -323,8 +297,6 @@
 	});
 </script>
 
-<CitationsModal bind:show={showCitationModal} citation={selectedCitation} />
-
 {#key message.id}
 	<div
 		class=" flex w-full message-{message.id}"
@@ -342,7 +314,7 @@
 
 				{#if message.timestamp}
 					<span
-						class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase"
+						class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
 					>
 						{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
 					</span>
@@ -362,9 +334,7 @@
 					</div>
 				{/if}
 
-				<div
-					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line"
-				>
+				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
 							{@const status = (
@@ -449,82 +419,15 @@
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-									{#key message.id}
-										<MarkdownTokens id={message.id} {tokens} />
-									{/key}
+									<Markdown id={message.id} content={message.content} {model} />
 								{/if}
 
 								{#if message.error}
-									<div
-										class="flex mt-2 mb-4 space-x-2 border px-4 py-3 border-red-800 bg-red-800/30 font-medium rounded-lg"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="1.5"
-											stroke="currentColor"
-											class="w-5 h-5 self-center"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-											/>
-										</svg>
-
-										<div class=" self-center">
-											{message?.error?.content ?? message.content}
-										</div>
-									</div>
+									<Error content={message?.error?.content ?? message.content} />
 								{/if}
 
 								{#if message.citations}
-									<div class="mt-1 mb-2 w-full flex gap-1 items-center flex-wrap">
-										{#each message.citations.reduce((acc, citation) => {
-											citation.document.forEach((document, index) => {
-												const metadata = citation.metadata?.[index];
-												const id = metadata?.source ?? 'N/A';
-												let source = citation?.source;
-
-												if (metadata?.name) {
-													source = { ...source, name: metadata.name };
-												}
-
-												// Check if ID looks like a URL
-												if (id.startsWith('http://') || id.startsWith('https://')) {
-													source = { name: id };
-												}
-
-												const existingSource = acc.find((item) => item.id === id);
-
-												if (existingSource) {
-													existingSource.document.push(document);
-													existingSource.metadata.push(metadata);
-												} else {
-													acc.push( { id: id, source: source, document: [document], metadata: metadata ? [metadata] : [] } );
-												}
-											});
-											return acc;
-										}, []) as citation, idx}
-											<div class="flex gap-1 text-xs font-semibold">
-												<button
-													class="flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl"
-													on:click={() => {
-														showCitationModal = true;
-														selectedCitation = citation;
-													}}
-												>
-													<div class="bg-white dark:bg-gray-700 rounded-full size-4">
-														{idx + 1}
-													</div>
-													<div class="flex-1 mx-2 line-clamp-1">
-														{citation.source.name}
-													</div>
-												</button>
-											</div>
-										{/each}
-									</div>
+									<Citations citations={message.citations} />
 								{/if}
 							</div>
 						{/if}

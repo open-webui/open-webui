@@ -5,15 +5,12 @@
 
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
+	import { copyToClipboard, findWordIndices } from '$lib/utils';
 
 	import UserMessage from './Messages/UserMessage.svelte';
 	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
-	import Spinner from '../common/Spinner.svelte';
-	import { imageGenerations } from '$lib/apis/images';
-	import { copyToClipboard, findWordIndices } from '$lib/utils';
-	import CompareMessages from './Messages/CompareMessages.svelte';
-	import { stringify } from 'postcss';
+	import MultiResponseMessages from './Messages/MultiResponseMessages.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -22,6 +19,7 @@
 	export let sendPrompt: Function;
 	export let continueGeneration: Function;
 	export let regenerateResponse: Function;
+	export let mergeResponses: Function;
 	export let chatActionHandler: Function;
 
 	export let user = $_user;
@@ -326,7 +324,7 @@
 									{showNextMessage}
 									copyToClipboard={copyToClipboardWithToast}
 								/>
-							{:else if $mobile || (history.messages[message.parentId]?.models?.length ?? 1) === 1}
+							{:else if (history.messages[message.parentId]?.models?.length ?? 1) === 1}
 								{#key message.id && history.currentId}
 									<ResponseMessage
 										{message}
@@ -364,8 +362,9 @@
 								{/key}
 							{:else}
 								{#key message.parentId}
-									<CompareMessages
+									<MultiResponseMessages
 										bind:history
+										isLastMessage={messageIdx + 1 === messages.length}
 										{messages}
 										{readOnly}
 										{chatId}
@@ -376,6 +375,7 @@
 										{rateMessage}
 										copyToClipboard={copyToClipboardWithToast}
 										{continueGeneration}
+										{mergeResponses}
 										{regenerateResponse}
 										on:change={async () => {
 											await updateChatById(localStorage.token, chatId, {
