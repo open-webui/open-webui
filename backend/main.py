@@ -118,6 +118,8 @@ from config import (
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
     ENABLE_ADMIN_CHAT_ACCESS,
+    ENABLE_TOOLS_FILTER,
+    ENABLE_FILES_FILTER,
     AppConfig,
 )
 
@@ -443,6 +445,10 @@ async def get_content_from_response(response) -> Optional[str]:
 async def chat_completion_tools_handler(
     body: dict, user: UserModel, extra_params: dict
 ) -> tuple[dict, dict]:
+    log.debug(f"{ENABLE_TOOLS_FILTER=}")
+    if not ENABLE_TOOLS_FILTER:
+        return body, {}
+
     skip_files = False
     contexts = []
     citations = []
@@ -533,6 +539,10 @@ async def chat_completion_tools_handler(
 
 
 async def chat_completion_files_handler(body) -> tuple[dict, dict[str, list]]:
+    log.debug(f"{ENABLE_FILES_FILTER=}")
+    if not ENABLE_FILES_FILTER:
+        return body, {}
+
     contexts = []
     citations = []
 
