@@ -3,6 +3,8 @@
 	import { loadPyodide } from 'pyodide';
 	import mermaid from 'mermaid';
 
+	import { v4 as uuidv4 } from 'uuid';
+
 	import { getContext, getAllContexts, onMount } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 
@@ -214,20 +216,19 @@ __builtins__.input = input`);
 	let debounceTimeout;
 
 	const drawMermaidDiagram = async () => {
+		console.log('drawMermaidDiagram');
 		try {
-			const { svg } = await mermaid.render(`mermaid-${id}`, code);
+			const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
 			mermaidHtml = svg;
 		} catch (error) {
-			console.error('Error:', error);
+			console.log('Error:', error);
 		}
 	};
 
-	$: if (code) {
-		if (lang === 'mermaid' && (token?.raw ?? '').endsWith('```')) {
+	$: if (token.raw) {
+		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			(async () => {
-				if (!mermaidHtml) {
-					await drawMermaidDiagram();
-				}
+				await drawMermaidDiagram();
 			})();
 		} else {
 			// Function to perform the code highlighting
@@ -241,12 +242,18 @@ __builtins__.input = input`);
 			debounceTimeout = setTimeout(highlightCode, 10);
 		}
 	}
+
+	onMount(async () => {
+		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
+			await drawMermaidDiagram();
+		}
+	});
 </script>
 
 <div class="my-2" dir="ltr">
 	{#if lang === 'mermaid'}
 		{#if mermaidHtml}
-			{@html mermaidHtml}
+			{@html `${mermaidHtml}`}
 		{:else}
 			<pre class="mermaid">{code}</pre>
 		{/if}
