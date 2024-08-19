@@ -293,16 +293,15 @@ async def generate_function_chat_completion(form_data, user, files, tool_ids):
         "__event_call__": __event_call__,
         "__task__": __task__,
     }
-    if not ENABLE_TOOLS_FILTER:
-        tools_params = {
-            **extra_params,
-            "__model__": app.state.MODELS[form_data["model"]],
-            "__messages__": form_data["messages"],
-            "__files__": files,
-        }
-        configured_tools = get_tools(app, tool_ids, user, tools_params)
+    tools_params = {
+        **extra_params,
+        "__model__": app.state.MODELS[form_data["model"]],
+        "__messages__": form_data["messages"],
+        "__files__": files,
+    }
+    configured_tools = get_tools(app, tool_ids, user, tools_params)
 
-        extra_params["__tools__"] = configured_tools
+    extra_params["__tools__"] = configured_tools
     if model_info:
         if model_info.base_model_id:
             form_data["model"] = model_info.base_model_id

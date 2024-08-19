@@ -175,13 +175,6 @@ for version in soup.find_all("h2"):
 CHANGELOG = changelog_json
 
 ####################################
-# FILTERS
-####################################
-
-ENABLE_TOOLS_FILTER = os.environ.get("ENABLE_TOOLS_FILTER", "True").lower() == "true"
-ENABLE_FILES_FILTER = os.environ.get("ENABLE_FILES_FILTER", "True").lower() == "true"
-
-####################################
 # SAFE_MODE
 ####################################
 
