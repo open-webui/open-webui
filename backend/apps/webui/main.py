@@ -48,7 +48,6 @@ from config import (
     OAUTH_USERNAME_CLAIM,
     OAUTH_PICTURE_CLAIM,
     OAUTH_EMAIL_CLAIM,
-    ENABLE_TOOLS_FILTER,
 )
 
 from apps.socket.main import get_event_call, get_event_emitter
