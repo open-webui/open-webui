@@ -213,14 +213,20 @@ __builtins__.input = input`);
 
 	let debounceTimeout;
 
+	const drawMermaidDiagram = async () => {
+		try {
+			const { svg } = await mermaid.render(`mermaid-${id}`, code);
+			mermaidHtml = svg;
+		} catch (error) {
+			console.error('Error:', error);
+		}
+	};
+
 	$: if (code) {
 		if (lang === 'mermaid' && (token?.raw ?? '').endsWith('```')) {
 			(async () => {
-				try {
-					const { svg } = await mermaid.render(`mermaid-${id}`, code);
-					mermaidHtml = svg;
-				} catch (error) {
-					console.error('Error:', error);
+				if (!mermaidHtml) {
+					await drawMermaidDiagram();
 				}
 			})();
 		} else {
@@ -235,19 +241,6 @@ __builtins__.input = input`);
 			debounceTimeout = setTimeout(highlightCode, 10);
 		}
 	}
-
-	onMount(async () => {
-		await mermaid.initialize({ startOnLoad: true });
-
-		if (lang === 'mermaid' && (token?.raw ?? '').endsWith('```')) {
-			try {
-				const { svg } = await mermaid.render(`mermaid-${id}`, code);
-				mermaidHtml = svg;
-			} catch (error) {
-				console.error('Error:', error);
-			}
-		}
-	});
 </script>
 
 <div class="my-2" dir="ltr">
@@ -255,7 +248,7 @@ __builtins__.input = input`);
 		{#if mermaidHtml}
 			{@html mermaidHtml}
 		{:else}
-			<pre class=" mermaid-{id}">{code}</pre>
+			<pre class="mermaid">{code}</pre>
 		{/if}
 	{:else}
 		<div
