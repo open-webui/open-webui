@@ -952,7 +952,7 @@ TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "task.title.prompt_template",
     os.environ.get(
         "TITLE_GENERATION_PROMPT_TEMPLATE",
-        """Create a concise, 3-5 word title with an emoji as a title for the prompt in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT IN THE GIVEN LANGUAGE.
+        """Create a concise, 3-5 word title with an emoji as a title for the prompt in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
 
 Examples of titles:
 📉 Stock Market Trends
