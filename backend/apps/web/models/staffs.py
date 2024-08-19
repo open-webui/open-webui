@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from peewee import *
 from playhouse.shortcuts import model_to_dict
 from typing import List, Union, Optional
-import time
+import logging
 
 from apps.web.internal.db import MSSQL_DB
 from config import MSSQL_VIEW
@@ -37,10 +37,12 @@ class StaffsTable:
 
     def get_staff_by_email(self, email: str) -> Optional[Staff]:
         try:
+            self.db.create_all()
             staff = self.db.query(Staff).filter(Staff.email == email).first()
+            self.db.close()
             return staff
         except Exception as e:
-            print(f"Error getting staff by email: {email}. Exception: {e}")
+            logging.error(f"Error getting staff by email: {email}. Exception: {e}")
             return None
 
 
