@@ -32,6 +32,7 @@ from config import (
     ENABLE_MODEL_FILTER,
     MODEL_FILTER_LIST,
     AppConfig,
+    CORS_ALLOW_ORIGIN,
 )
 from typing import Optional, Literal, overload
 
@@ -45,7 +46,7 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ALLOW_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

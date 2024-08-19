@@ -1,15 +1,10 @@
 import re
 import requests
-import base64
 from fastapi import (
     FastAPI,
     Request,
     Depends,
     HTTPException,
-    status,
-    UploadFile,
-    File,
-    Form,
 )
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,7 +15,6 @@ from utils.utils import (
 )
 
 from apps.images.utils.comfyui import ImageGenerationPayload, comfyui_generate_image
-from utils.misc import calculate_sha256
 from typing import Optional
 from pydantic import BaseModel
 from pathlib import Path
@@ -51,6 +45,7 @@ from config import (
     IMAGE_SIZE,
     IMAGE_STEPS,
     AppConfig,
+    CORS_ALLOW_ORIGIN,
 )
 
 log = logging.getLogger(__name__)
@@ -62,7 +57,7 @@ IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ALLOW_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

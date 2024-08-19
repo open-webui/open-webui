@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
-	import { marked } from 'marked';
 
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
@@ -18,8 +17,7 @@
 		approximateToHumanReadable,
 		extractSentences,
 		replaceTokens,
-		revertSanitizedResponseContent,
-		sanitizeResponseContent
+		processResponseContent
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -34,7 +32,9 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
-	import MarkdownTokens from './MarkdownTokens.svelte';
+	import Markdown from './Markdown.svelte';
+	import Error from './Error.svelte';
+	import Citations from './Citations.svelte';
 
 	export let message;
 	export let siblings;
@@ -59,7 +59,6 @@
 	let edit = false;
 	let editedContent = '';
 	let editTextAreaElement: HTMLTextAreaElement;
-	let tooltipInstance = null;
 
 	let sentencesAudio = {};
 	let speaking = null;
@@ -69,29 +68,6 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
-	let showCitationModal = false;
-
-	let selectedCitation = null;
-
-	let tokens;
-
-	import 'katex/dist/katex.min.css';
-
-	import markedKatex from '$lib/utils/katex-extension';
-
-	const options = {
-		throwOnError: false
-	};
-
-	marked.use(markedKatex(options));
-
-	$: (async () => {
-		if (message?.content) {
-			tokens = marked.lexer(
-				replaceTokens(sanitizeResponseContent(message?.content), model?.name, $user?.name)
-			);
-		}
-	})();
 
 	const playAudio = (idx) => {
 		return new Promise((res) => {
@@ -284,8 +260,6 @@
 	});
 </script>
 
-<CitationsModal bind:show={showCitationModal} citation={selectedCitation} />
-
 {#key message.id}
 	<div
 		class=" flex w-full message-{message.id}"
@@ -303,7 +277,7 @@
 
 				{#if message.timestamp}
 					<span
-						class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase"
+						class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
 					>
 						{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
 					</span>
@@ -323,9 +297,7 @@
 					</div>
 				{/if}
 
-				<div
-					class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line"
-				>
+				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
 							{@const status = (
@@ -410,82 +382,15 @@
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-									{#key message.id}
-										<MarkdownTokens id={message.id} {tokens} />
-									{/key}
+									<Markdown id={message.id} content={message.content} {model} />
 								{/if}
 
 								{#if message.error}
-									<div
-										class="flex mt-2 mb-4 space-x-2 border px-4 py-3 border-red-800 bg-red-800/30 font-medium rounded-lg"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="1.5"
-											stroke="currentColor"
-											class="w-5 h-5 self-center"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-											/>
-										</svg>
-
-										<div class=" self-center">
-											{message?.error?.content ?? message.content}
-										</div>
-									</div>
+									<Error content={message?.error?.content ?? message.content} />
 								{/if}
 
 								{#if message.citations}
-									<div class="mt-1 mb-2 w-full flex gap-1 items-center flex-wrap">
-										{#each message.citations.reduce((acc, citation) => {
-											citation.document.forEach((document, index) => {
-												const metadata = citation.metadata?.[index];
-												const id = metadata?.source ?? 'N/A';
-												let source = citation?.source;
-
-												if (metadata?.name) {
-													source = { ...source, name: metadata.name };
-												}
-
-												// Check if ID looks like a URL
-												if (id.startsWith('http://') || id.startsWith('https://')) {
-													source = { name: id };
-												}
-
-												const existingSource = acc.find((item) => item.id === id);
-
-												if (existingSource) {
-													existingSource.document.push(document);
-													existingSource.metadata.push(metadata);
-												} else {
-													acc.push( { id: id, source: source, document: [document], metadata: metadata ? [metadata] : [] } );
-												}
-											});
-											return acc;
-										}, []) as citation, idx}
-											<div class="flex gap-1 text-xs font-semibold">
-												<button
-													class="flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl"
-													on:click={() => {
-														showCitationModal = true;
-														selectedCitation = citation;
-													}}
-												>
-													<div class="bg-white dark:bg-gray-700 rounded-full size-4">
-														{idx + 1}
-													</div>
-													<div class="flex-1 mx-2 line-clamp-1">
-														{citation.source.name}
-													</div>
-												</button>
-											</div>
-										{/each}
-									</div>
+									<Citations citations={message.citations} />
 								{/if}
 							</div>
 						{/if}
@@ -495,7 +400,7 @@
 				{#if !edit}
 					{#if message.done || siblings.length > 1}
 						<div
-							class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500"
+							class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
 						>
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit" dir="ltr">
@@ -553,31 +458,33 @@
 
 							{#if message.done}
 								{#if !readOnly}
-									<Tooltip content={$i18n.t('Edit')} placement="bottom">
-										<button
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												editMessageHandler();
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="2.3"
-												stroke="currentColor"
-												class="w-4 h-4"
+									{#if $user.role === 'user' ? ($config?.permissions?.chat?.editing ?? true) : true}
+										<Tooltip content={$i18n.t('Edit')} placement="bottom">
+											<button
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													editMessageHandler();
+												}}
 											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-												/>
-											</svg>
-										</button>
-									</Tooltip>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="2.3"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
+									{/if}
 								{/if}
 
 								<Tooltip content={$i18n.t('Copy')} placement="bottom">
@@ -814,84 +721,130 @@
 								{/if}
 
 								{#if !readOnly}
-									<Tooltip content={$i18n.t('Good Response')} placement="bottom">
-										<button
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(message
-												?.annotation?.rating ?? null) === 1
-												? 'bg-gray-100 dark:bg-gray-800'
-												: ''} dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												rateMessage(message.id, 1);
-												showRateComment = true;
+									{#if $config?.features.enable_message_rating ?? true}
+										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
+											<button
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(message
+													?.annotation?.rating ?? null) === 1
+													? 'bg-gray-100 dark:bg-gray-800'
+													: ''} dark:hover:text-white hover:text-black transition"
+												on:click={async () => {
+													await rateMessage(message.id, 1);
 
-												window.setTimeout(() => {
-													document
-														.getElementById(`message-feedback-${message.id}`)
-														?.scrollIntoView();
-												}, 0);
-											}}
-										>
-											<svg
-												stroke="currentColor"
-												fill="none"
-												stroke-width="2.3"
-												viewBox="0 0 24 24"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												class="w-4 h-4"
-												xmlns="http://www.w3.org/2000/svg"
-												><path
-													d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-												/></svg
-											>
-										</button>
-									</Tooltip>
+													(model?.actions ?? [])
+														.filter((action) => action?.__webui__ ?? false)
+														.forEach((action) => {
+															dispatch('action', {
+																id: action.id,
+																event: {
+																	id: 'good-response',
+																	data: {
+																		messageId: message.id
+																	}
+																}
+															});
+														});
 
-									<Tooltip content={$i18n.t('Bad Response')} placement="bottom">
-										<button
-											class="{isLastMessage
-												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(message
-												?.annotation?.rating ?? null) === -1
-												? 'bg-gray-100 dark:bg-gray-800'
-												: ''} dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												rateMessage(message.id, -1);
-												showRateComment = true;
-												window.setTimeout(() => {
-													document
-														.getElementById(`message-feedback-${message.id}`)
-														?.scrollIntoView();
-												}, 0);
-											}}
-										>
-											<svg
-												stroke="currentColor"
-												fill="none"
-												stroke-width="2.3"
-												viewBox="0 0 24 24"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												class="w-4 h-4"
-												xmlns="http://www.w3.org/2000/svg"
-												><path
-													d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
-												/></svg
+													showRateComment = true;
+													window.setTimeout(() => {
+														document
+															.getElementById(`message-feedback-${message.id}`)
+															?.scrollIntoView();
+													}, 0);
+												}}
 											>
-										</button>
-									</Tooltip>
+												<svg
+													stroke="currentColor"
+													fill="none"
+													stroke-width="2.3"
+													viewBox="0 0 24 24"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													class="w-4 h-4"
+													xmlns="http://www.w3.org/2000/svg"
+													><path
+														d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
+													/></svg
+												>
+											</button>
+										</Tooltip>
+
+										<Tooltip content={$i18n.t('Bad Response')} placement="bottom">
+											<button
+												class="{isLastMessage
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(message
+													?.annotation?.rating ?? null) === -1
+													? 'bg-gray-100 dark:bg-gray-800'
+													: ''} dark:hover:text-white hover:text-black transition"
+												on:click={async () => {
+													await rateMessage(message.id, -1);
+
+													(model?.actions ?? [])
+														.filter((action) => action?.__webui__ ?? false)
+														.forEach((action) => {
+															dispatch('action', {
+																id: action.id,
+																event: {
+																	id: 'bad-response',
+																	data: {
+																		messageId: message.id
+																	}
+																}
+															});
+														});
+
+													showRateComment = true;
+													window.setTimeout(() => {
+														document
+															.getElementById(`message-feedback-${message.id}`)
+															?.scrollIntoView();
+													}, 0);
+												}}
+											>
+												<svg
+													stroke="currentColor"
+													fill="none"
+													stroke-width="2.3"
+													viewBox="0 0 24 24"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													class="w-4 h-4"
+													xmlns="http://www.w3.org/2000/svg"
+													><path
+														d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"
+													/></svg
+												>
+											</button>
+										</Tooltip>
+									{/if}
 
 									{#if isLastMessage}
 										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 											<button
 												type="button"
+												id="continue-response-button"
 												class="{isLastMessage
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 												on:click={() => {
 													continueGeneration();
+
+													(model?.actions ?? [])
+														.filter((action) => action?.__webui__ ?? false)
+														.forEach((action) => {
+															dispatch('action', {
+																id: action.id,
+																event: {
+																	id: 'continue-response',
+																	data: {
+																		messageId: message.id
+																	}
+																}
+															});
+														});
 												}}
 											>
 												<svg
@@ -925,6 +878,20 @@
 												on:click={() => {
 													showRateComment = false;
 													regenerateResponse(message);
+
+													(model?.actions ?? [])
+														.filter((action) => action?.__webui__ ?? false)
+														.forEach((action) => {
+															dispatch('action', {
+																id: action.id,
+																event: {
+																	id: 'regenerate-response',
+																	data: {
+																		messageId: message.id
+																	}
+																}
+															});
+														});
 												}}
 											>
 												<svg
@@ -944,7 +911,7 @@
 											</button>
 										</Tooltip>
 
-										{#each model?.actions ?? [] as action}
+										{#each (model?.actions ?? []).filter((action) => !(action?.__webui__ ?? false)) as action}
 											<Tooltip content={action.name} placement="bottom">
 												<button
 													type="button"
@@ -981,8 +948,24 @@
 							messageId={message.id}
 							bind:show={showRateComment}
 							bind:message
-							on:submit={() => {
+							on:submit={(e) => {
 								updateChatMessages();
+
+								(model?.actions ?? [])
+									.filter((action) => action?.__webui__ ?? false)
+									.forEach((action) => {
+										dispatch('action', {
+											id: action.id,
+											event: {
+												id: 'rate-comment',
+												data: {
+													messageId: message.id,
+													comment: e.detail.comment,
+													reason: e.detail.reason
+												}
+											}
+										});
+									});
 							}}
 						/>
 					{/if}

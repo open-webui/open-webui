@@ -10,6 +10,10 @@
 	import { user as _user } from '$lib/stores';
 	import { getFileContentById } from '$lib/apis/files';
 	import FileItem from '$lib/components/common/FileItem.svelte';
+	import { marked } from 'marked';
+	import { processResponseContent, replaceTokens } from '$lib/utils';
+	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
+	import Markdown from './Markdown.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -81,7 +85,7 @@
 
 					{#if message.timestamp}
 						<span
-							class=" invisible group-hover:visible text-gray-400 text-xs font-medium uppercase"
+							class=" invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
 						>
 							{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
 						</span>
@@ -90,9 +94,7 @@
 			</div>
 		{/if}
 
-		<div
-			class="prose chat-{message.role} w-full max-w-full flex flex-col justify-end dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-p:-mb-4 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-img:my-0 prose-ul:-my-4 prose-ol:-my-4 prose-li:-my-3 prose-ul:-mb-6 prose-ol:-mb-6 prose-li:-mb-4 whitespace-pre-line"
-		>
+		<div class="chat-{message.role} w-full min-w-full markdown-prose">
 			{#if message.files}
 				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
 					{#each message.files as file}
@@ -162,15 +164,17 @@
 				</div>
 			{:else}
 				<div class="w-full">
-					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end' : ''} mb-2">
+					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
 							class="rounded-3xl {($settings?.chatBubble ?? true)
 								? `max-w-[90%] px-5 py-2  bg-gray-50 dark:bg-gray-850 ${
 										message.files ? 'rounded-tr-lg' : ''
 									}`
-								: ''}  "
+								: ' w-full'}"
 						>
-							<pre id="user-message">{message.content}</pre>
+							{#if message.content}
+								<Markdown id={message.id} content={message.content} />
+							{/if}
 						</div>
 					</div>
 

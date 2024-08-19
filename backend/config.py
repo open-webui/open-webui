@@ -3,6 +3,8 @@ import sys
 import logging
 import importlib.metadata
 import pkgutil
+from urllib.parse import urlparse
+
 import chromadb
 from chromadb import Settings
 from bs4 import BeautifulSoup
@@ -806,10 +808,24 @@ USER_PERMISSIONS_CHAT_DELETION = (
     os.environ.get("USER_PERMISSIONS_CHAT_DELETION", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_EDITING = (
+    os.environ.get("USER_PERMISSIONS_CHAT_EDITING", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_TEMPORARY = (
+    os.environ.get("USER_PERMISSIONS_CHAT_TEMPORARY", "True").lower() == "true"
+)
+
 USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
     "ui.user_permissions",
-    {"chat": {"deletion": USER_PERMISSIONS_CHAT_DELETION}},
+    {
+        "chat": {
+            "deletion": USER_PERMISSIONS_CHAT_DELETION,
+            "editing": USER_PERMISSIONS_CHAT_EDITING,
+            "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
+        }
+    },
 )
 
 ENABLE_MODEL_FILTER = PersistentConfig(
@@ -839,6 +855,47 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     "ui.enable_community_sharing",
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
 )
+
+ENABLE_MESSAGE_RATING = PersistentConfig(
+    "ENABLE_MESSAGE_RATING",
+    "ui.enable_message_rating",
+    os.environ.get("ENABLE_MESSAGE_RATING", "True").lower() == "true",
+)
+
+
+def validate_cors_origins(origins):
+    for origin in origins:
+        if origin != "*":
+            validate_cors_origin(origin)
+
+
+def validate_cors_origin(origin):
+    parsed_url = urlparse(origin)
+
+    # Check if the scheme is either http or https
+    if parsed_url.scheme not in ["http", "https"]:
+        raise ValueError(
+            f"Invalid scheme in CORS_ALLOW_ORIGIN: '{origin}'. Only 'http' and 'https' are allowed."
+        )
+
+    # Ensure that the netloc (domain + port) is present, indicating it's a valid URL
+    if not parsed_url.netloc:
+        raise ValueError(f"Invalid URL structure in CORS_ALLOW_ORIGIN: '{origin}'.")
+
+
+# For production, you should only need one host as
+# fastapi serves the svelte-kit built frontend and backend from the same host and port.
+# To test CORS_ALLOW_ORIGIN locally, you can set something like
+# CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
+# in your .env file depending on your frontend port, 5173 in this case.
+CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
+
+if "*" in CORS_ALLOW_ORIGIN:
+    log.warning(
+        "\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n"
+    )
+
+validate_cors_origins(CORS_ALLOW_ORIGIN)
 
 
 class BannerModel(BaseModel):
@@ -939,8 +996,7 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
     "task.tools.prompt_template",
     os.environ.get(
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE",
-        """Tools: {{TOOLS}}
-If a function tool doesn't match the query, return an empty string. Else, pick a function tool, fill in the parameters from the function tool's schema, and return it in the format { "name": \"functionName\", "parameters": { "key": "value" } }. Only pick a function if the user asks.  Only return the object. Do not return any other text.""",
+        """Available Tools: {{TOOLS}}\nReturn an empty string if no tools match the query. If a function tool matches, construct and return a JSON object in the format {\"name\": \"functionName\", \"parameters\": {\"requiredFunctionParamKey\": \"requiredFunctionParamValue\"}} using the appropriate tool and its parameters. Only return the object and limit the response to the JSON object without additional text.""",
     ),
 )
 
@@ -1068,7 +1124,7 @@ RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE = (
 RAG_EMBEDDING_OPENAI_BATCH_SIZE = PersistentConfig(
     "RAG_EMBEDDING_OPENAI_BATCH_SIZE",
     "rag.embedding_openai_batch_size",
-    os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", 1),
+    int(os.environ.get("RAG_EMBEDDING_OPENAI_BATCH_SIZE", "1")),
 )
 
 RAG_RERANKING_MODEL = PersistentConfig(
@@ -1422,13 +1478,13 @@ AUDIO_TTS_ENGINE = PersistentConfig(
 AUDIO_TTS_MODEL = PersistentConfig(
     "AUDIO_TTS_MODEL",
     "audio.tts.model",
-    os.getenv("AUDIO_TTS_MODEL", "tts-1"),
+    os.getenv("AUDIO_TTS_MODEL", "tts-1"),  # OpenAI default model
 )
 
 AUDIO_TTS_VOICE = PersistentConfig(
     "AUDIO_TTS_VOICE",
     "audio.tts.voice",
-    os.getenv("AUDIO_TTS_VOICE", "alloy"),
+    os.getenv("AUDIO_TTS_VOICE", "alloy"),  # OpenAI default voice
 )
 
 
