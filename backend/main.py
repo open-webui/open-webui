@@ -996,8 +996,8 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
             detail="Model not found",
         )
     model = app.state.MODELS[model_id]
-    files = form_data.pop("files", None)
-    tool_ids = form_data.pop("tool_ids", None)
+    files = form_data.pop("files", [])
+    tool_ids = form_data.pop("tool_ids", [])
 
     if model.get("pipe"):
         return await generate_function_chat_completion(form_data, user, files, tool_ids)
