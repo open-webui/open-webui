@@ -143,12 +143,14 @@
 					{@const message = groupedMessages[modelIdx].messages[groupedMessagesIdx[modelIdx]]}
 
 					<div
-						class=" snap-center {$mobile
-							? 'min-w-full'
-							: 'min-w-80'} w-full max-w-full m-1 border {history.messages[currentMessageId]
+						class=" snap-center w-full max-w-full m-1 border {history.messages[currentMessageId]
 							?.modelIdx == modelIdx
-							? 'border-gray-100 dark:border-gray-800 border-[1.5px]'
-							: 'border-gray-50 dark:border-gray-850 border-dashed '} transition p-5 rounded-2xl"
+							? `border-gray-100 dark:border-gray-800 border-[1.5px] ${
+									$mobile ? 'min-w-full' : 'min-w-[32rem]'
+								}`
+							: `border-gray-50 dark:border-gray-850 border-dashed ${
+									$mobile ? 'min-w-full' : 'min-w-80'
+								}`}  transition-[width] transform duration-300 p-5 rounded-2xl"
 						on:click={() => {
 							if (currentMessageId != message.id) {
 								currentMessageId = message.id;
