@@ -64,5 +64,4 @@ log.info("Creating a connection to the MSSQL database.")
 params = urllib.parse.quote_plus(f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={MSSQL_SERVER};DATABASE={MSSQL_DATABASE};UID={MSSQL_USER};PWD={MSSQL_PASSWORD};Encrypt=Yes;TrustServerCertificate=Yes')
 connection_string = f"mssql+pyodbc:///?odbc_connect=%s" %  params
 MSSQL_DB = DatabaseConnection(connection_string)
-MSSQL_DB.create_all()
 log.info("Connected to the MSSQL database.")
