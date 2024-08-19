@@ -955,7 +955,7 @@ TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
         """Here is the query:
 {{prompt:middletruncate:8000}}
 
-Create a concise, 3-5 word phrase with an emoji as a title for the previous query. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
+Create a concise, 3-5 word title with an emoji as a title for the previous query in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
 
 Examples of titles:
 📉 Stock Market Trends
