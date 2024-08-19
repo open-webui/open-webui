@@ -994,13 +994,11 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
             detail="Model not found",
         )
     model = app.state.MODELS[model_id]
+    files = form_data.pop("files", None)
+    tool_ids = form_data.pop("tool_ids", None)
 
     if model.get("pipe"):
-        return await generate_function_chat_completion(form_data, user=user)
-
-    for key in ["tool_ids", "files"]:
-        if key in form_data:
-            del form_data[key]
+        return await generate_function_chat_completion(form_data, user, files, tool_ids)
     if model["owned_by"] == "ollama":
         return await generate_ollama_chat_completion(form_data, user=user)
     else:
