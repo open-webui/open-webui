@@ -371,7 +371,7 @@ async def chat_completion_tools_handler(
     body: dict, user: UserModel, extra_params: dict
 ) -> tuple[dict, dict]:
     # If tool_ids field is present, call the functions
-    tool_ids = body.pop("tool_ids", None)
+    tool_ids = body.get("tool_ids", None)
     if not tool_ids:
         return body, {}
 
@@ -464,7 +464,7 @@ async def chat_completion_files_handler(body) -> tuple[dict, dict[str, list]]:
     contexts = []
     citations = []
 
-    if files := body.pop("files", None):
+    if files := body.get("files", None):
         contexts, citations = get_rag_context(
             files=files,
             messages=body["messages"],
