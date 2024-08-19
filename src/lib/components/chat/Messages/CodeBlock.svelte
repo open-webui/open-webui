@@ -216,7 +216,6 @@ __builtins__.input = input`);
 	let debounceTimeout;
 
 	const drawMermaidDiagram = async () => {
-		console.log('drawMermaidDiagram');
 		try {
 			const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
 			mermaidHtml = svg;
@@ -242,12 +241,6 @@ __builtins__.input = input`);
 			debounceTimeout = setTimeout(highlightCode, 10);
 		}
 	}
-
-	onMount(async () => {
-		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
-			await drawMermaidDiagram();
-		}
-	});
 </script>
 
 <div class="my-2" dir="ltr">
