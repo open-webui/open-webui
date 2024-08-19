@@ -150,7 +150,7 @@
 								}`
 							: `border-gray-50 dark:border-gray-850 border-dashed ${
 									$mobile ? 'min-w-full' : 'min-w-80'
-								}`}  transition-[width] transform duration-300 p-5 rounded-2xl"
+								}`} transition-all p-5 rounded-2xl"
 						on:click={() => {
 							if (currentMessageId != message.id) {
 								currentMessageId = message.id;
