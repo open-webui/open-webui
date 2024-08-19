@@ -262,7 +262,7 @@ __builtins__.input = input`);
 	let debounceTimeout;
 
 	$: if (code) {
-		if (lang === 'mermaid' && (token?.raw ?? '').endsWith('```')) {
+		if (lang.toLowerCase() === 'mermaid') {
 			(async () => {
 				try {
 					const { svg } = await mermaid.render(`mermaid-${id}`, code);
