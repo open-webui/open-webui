@@ -414,7 +414,7 @@ async def chat_completion_tools_handler(
         content = await get_content_from_response(response)
         log.debug(f"{content=}")
 
-        if content is None:
+        if not content:
             return body, {}
 
         result = json.loads(content)
