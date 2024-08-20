@@ -35,9 +35,10 @@
 	export let items: {
 		label: string;
 		value: string;
+		model: Model;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		[key: string]: any;
-	} = [];
+	}[] = [];
 
 	export let className = 'w-[32rem]';
 

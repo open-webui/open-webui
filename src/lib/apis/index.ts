@@ -665,6 +665,7 @@ export const getBackendConfig = async () => {
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/config`, {
 		method: 'GET',
+		credentials: 'include',
 		headers: {
 			'Content-Type': 'application/json'
 		}
@@ -949,6 +950,7 @@ export interface ModelConfig {
 export interface ModelMeta {
 	description?: string;
 	capabilities?: object;
+	profile_image_url?: string;
 }
 
 export interface ModelParams {}

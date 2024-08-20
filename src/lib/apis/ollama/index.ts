@@ -396,7 +396,7 @@ export const deleteModel = async (token: string, tagName: string, urlIdx: string
 	return res;
 };
 
-export const pullModel = async (token: string, tagName: string, urlIdx: string | null = null) => {
+export const pullModel = async (token: string, tagName: string, urlIdx: number | null = null) => {
 	let error = null;
 	const controller = new AbortController();
 

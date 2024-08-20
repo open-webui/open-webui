@@ -44,10 +44,12 @@ from config import (
     JWT_EXPIRES_IN,
     WEBUI_BANNERS,
     ENABLE_COMMUNITY_SHARING,
+    ENABLE_MESSAGE_RATING,
     AppConfig,
     OAUTH_USERNAME_CLAIM,
     OAUTH_PICTURE_CLAIM,
     OAUTH_EMAIL_CLAIM,
+    CORS_ALLOW_ORIGIN,
 )
 
 from apps.socket.main import get_event_call, get_event_emitter
@@ -59,8 +61,6 @@ from typing import Iterator, Generator, AsyncGenerator
 from pydantic import BaseModel
 
 app = FastAPI()
-
-origins = ["*"]
 
 app.state.config = AppConfig()
 
@@ -83,6 +83,7 @@ app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
 
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
+app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
 
 app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
@@ -94,7 +95,7 @@ app.state.FUNCTIONS = {}
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=CORS_ALLOW_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -3,6 +3,8 @@ import sys
 import logging
 import importlib.metadata
 import pkgutil
+from urllib.parse import urlparse
+
 import chromadb
 from chromadb import Settings
 from bs4 import BeautifulSoup
@@ -805,10 +807,24 @@ USER_PERMISSIONS_CHAT_DELETION = (
     os.environ.get("USER_PERMISSIONS_CHAT_DELETION", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_EDITING = (
+    os.environ.get("USER_PERMISSIONS_CHAT_EDITING", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_TEMPORARY = (
+    os.environ.get("USER_PERMISSIONS_CHAT_TEMPORARY", "True").lower() == "true"
+)
+
 USER_PERMISSIONS = PersistentConfig(
     "USER_PERMISSIONS",
     "ui.user_permissions",
-    {"chat": {"deletion": USER_PERMISSIONS_CHAT_DELETION}},
+    {
+        "chat": {
+            "deletion": USER_PERMISSIONS_CHAT_DELETION,
+            "editing": USER_PERMISSIONS_CHAT_EDITING,
+            "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
+        }
+    },
 )
 
 ENABLE_MODEL_FILTER = PersistentConfig(
@@ -838,6 +854,47 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     "ui.enable_community_sharing",
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
 )
+
+ENABLE_MESSAGE_RATING = PersistentConfig(
+    "ENABLE_MESSAGE_RATING",
+    "ui.enable_message_rating",
+    os.environ.get("ENABLE_MESSAGE_RATING", "True").lower() == "true",
+)
+
+
+def validate_cors_origins(origins):
+    for origin in origins:
+        if origin != "*":
+            validate_cors_origin(origin)
+
+
+def validate_cors_origin(origin):
+    parsed_url = urlparse(origin)
+
+    # Check if the scheme is either http or https
+    if parsed_url.scheme not in ["http", "https"]:
+        raise ValueError(
+            f"Invalid scheme in CORS_ALLOW_ORIGIN: '{origin}'. Only 'http' and 'https' are allowed."
+        )
+
+    # Ensure that the netloc (domain + port) is present, indicating it's a valid URL
+    if not parsed_url.netloc:
+        raise ValueError(f"Invalid URL structure in CORS_ALLOW_ORIGIN: '{origin}'.")
+
+
+# For production, you should only need one host as
+# fastapi serves the svelte-kit built frontend and backend from the same host and port.
+# To test CORS_ALLOW_ORIGIN locally, you can set something like
+# CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
+# in your .env file depending on your frontend port, 5173 in this case.
+CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
+
+if "*" in CORS_ALLOW_ORIGIN:
+    log.warning(
+        "\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n"
+    )
+
+validate_cors_origins(CORS_ALLOW_ORIGIN)
 
 
 class BannerModel(BaseModel):
@@ -894,10 +951,7 @@ TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "task.title.prompt_template",
     os.environ.get(
         "TITLE_GENERATION_PROMPT_TEMPLATE",
-        """Here is the query:
-{{prompt:middletruncate:8000}}
-
-Create a concise, 3-5 word phrase with an emoji as a title for the previous query. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
+        """Create a concise, 3-5 word title with an emoji as a title for the prompt in the given language. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
 
 Examples of titles:
 📉 Stock Market Trends
@@ -905,7 +959,9 @@ Examples of titles:
 Evolution of Music Streaming
 Remote Work Productivity Tips
 Artificial Intelligence in Healthcare
-🎮 Video Game Development Insights""",
+🎮 Video Game Development Insights
+
+Prompt: {{prompt:middletruncate:8000}}""",
     ),
 )
 

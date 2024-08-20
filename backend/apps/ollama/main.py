@@ -41,6 +41,7 @@ from config import (
     MODEL_FILTER_LIST,
     UPLOAD_DIR,
     AppConfig,
+    CORS_ALLOW_ORIGIN,
 )
 from utils.misc import (
     calculate_sha256,
@@ -55,7 +56,7 @@ log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ALLOW_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
