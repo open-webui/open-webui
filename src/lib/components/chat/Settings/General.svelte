@@ -17,7 +17,7 @@
 	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
 	let selectedTheme = 'system';
 
-	let languages = [];
+	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 	let lang = $i18n.language;
 	let notificationEnabled = false;
 	let system = '';
@@ -41,7 +41,7 @@
 
 	// Advanced
 	let requestFormat = '';
-	let keepAlive = null;
+	let keepAlive: string | null = null;
 
 	let params = {
 		// Advanced
