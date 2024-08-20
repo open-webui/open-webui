@@ -1342,46 +1342,10 @@ COMFYUI_BASE_URL = PersistentConfig(
     os.getenv("COMFYUI_BASE_URL", ""),
 )
 
-COMFYUI_CFG_SCALE = PersistentConfig(
-    "COMFYUI_CFG_SCALE",
-    "image_generation.comfyui.cfg_scale",
-    os.getenv("COMFYUI_CFG_SCALE", ""),
-)
-
-COMFYUI_SAMPLER = PersistentConfig(
-    "COMFYUI_SAMPLER",
-    "image_generation.comfyui.sampler",
-    os.getenv("COMFYUI_SAMPLER", ""),
-)
-
-COMFYUI_SCHEDULER = PersistentConfig(
-    "COMFYUI_SCHEDULER",
-    "image_generation.comfyui.scheduler",
-    os.getenv("COMFYUI_SCHEDULER", ""),
-)
-
-COMFYUI_SD3 = PersistentConfig(
-    "COMFYUI_SD3",
-    "image_generation.comfyui.sd3",
-    os.environ.get("COMFYUI_SD3", "").lower() == "true",
-)
-
-COMFYUI_FLUX = PersistentConfig(
-    "COMFYUI_FLUX",
-    "image_generation.comfyui.flux",
-    os.environ.get("COMFYUI_FLUX", "").lower() == "true",
-)
-
-COMFYUI_FLUX_WEIGHT_DTYPE = PersistentConfig(
-    "COMFYUI_FLUX_WEIGHT_DTYPE",
-    "image_generation.comfyui.flux_weight_dtype",
-    os.getenv("COMFYUI_FLUX_WEIGHT_DTYPE", ""),
-)
-
-COMFYUI_FLUX_FP8_CLIP = PersistentConfig(
-    "COMFYUI_FLUX_FP8_CLIP",
-    "image_generation.comfyui.flux_fp8_clip",
-    os.environ.get("COMFYUI_FLUX_FP8_CLIP", "").lower() == "true",
+COMFYUI_WORKFLOW = PersistentConfig(
+    "COMFYUI_WORKFLOW",
+    "image_generation.comfyui.workflow",
+    os.getenv("COMFYUI_WORKFLOW", ""),
 )
 
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
