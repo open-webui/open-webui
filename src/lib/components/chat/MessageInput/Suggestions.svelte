@@ -7,11 +7,16 @@
 
 	let prompts = [];
 
-	const iconList = ['sent-mail.gif','holidays.gif','approved.gif','task.gif','business-plan.gif']
+	const iconList = [
+		'sent-mail.gif',
+		'holidays.gif',
+		'approved.gif',
+		'task.gif',
+		'business-plan.gif'
+	];
 
-	$: prompts = suggestionPrompts
-		.reduce((acc, current) => [...acc, ...[current]], [])
-		// .sort(() => Math.random() - 0.5);
+	$: prompts = suggestionPrompts.reduce((acc, current) => [...acc, ...[current]], []);
+	// .sort(() => Math.random() - 0.5);
 	// suggestionPrompts.length <= 4
 	// 	? suggestionPrompts
 	// 	: suggestionPrompts.sort(() => Math.random() - 0.5).slice(0, 4);
@@ -79,7 +84,7 @@
 						<div
 							class="self-end p-1 rounded-lg text-gray-300 group-hover:text-gray-800 dark:text-gray-700 dark:group-hover:text-gray-100 transition"
 						>
-						<img class="w-10 h-10" src={`/icon/${iconList[promptIdx]}`} alt="icon" />
+							<img class="w-10 h-10" src={`/icon/${iconList[promptIdx % 5]}`} alt="icon" />
 							<!-- <svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 16 16"

@@ -361,32 +361,29 @@ DEFAULT_PROMPT_SUGGESTIONS = (
     and type(CONFIG_DATA["ui"]["prompt_suggestions"]) is list
     else [
         {
-            "title": ["Help me study", "vocabulary for a college entrance exam"],
-            "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            "title": ["",""],
+            "content": "What are the email contacts of HR?",
         },
         {
-            "title": ["Give me ideas", "for what to do with my kids' art"],
-            "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            "title": ["",""],
+            "content": "What types of leaves are available to employees?",
         },
         {
-            "title": ["Tell me a fun fact", "about the Roman Empire"],
-            "content": "Tell me a random fun fact about the Roman Empire",
+            "title": ["",""],
+            "content": "How can I apply for annual leave?",
         },
         {
-            "title": ["Show me a code snippet", "of a website's sticky header"],
-            "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            "title": ["",""],
+            "content": "How to complete my performance review?",
         },
         {
-            "title": [
-                "Explain options trading",
-                "if I'm familiar with buying and selling stocks",
-            ],
-            "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+            "title": ["",""],
+            "content": "How to make my training and development plan?",
         },
-        {
-            "title": ["Overcome procrastination", "give me tips"],
-            "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
-        },
+        # {
+        #     "title": ["Overcome procrastination", "give me tips"],
+        #     "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
+        # },
     ]
 )
 
