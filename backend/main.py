@@ -526,6 +526,8 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             "message_id": body.pop("id", None),
             "session_id": body.pop("session_id", None),
             "valves": body.pop("valves", None),
+            "tool_ids": body.pop("tool_ids", None),
+            "files": body.pop("files", None),
         }
 
         __user__ = {
