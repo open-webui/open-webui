@@ -844,10 +844,8 @@
 			},
 			format: $settings.requestFormat ?? undefined,
 			keep_alive: $settings.keepAlive ?? undefined,
-			metadata: {
-				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-				files: files.length > 0 ? files : undefined
-			},
+			tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+			files: files.length > 0 ? files : undefined,
 			session_id: $socket?.id,
 			chat_id: $chatId,
 			id: responseMessageId
@@ -1138,10 +1136,8 @@
 					frequency_penalty:
 						params?.frequency_penalty ?? $settings?.params?.frequency_penalty ?? undefined,
 					max_tokens: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
-					metadata: {
-						tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-						files: files.length > 0 ? files : undefined
-					},
+					tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
+					files: files.length > 0 ? files : undefined,
 					session_id: $socket?.id,
 					chat_id: $chatId,
 					id: responseMessageId
