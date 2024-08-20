@@ -37,6 +37,7 @@ from config import (
     AUTOMATIC1111_API_AUTH,
     COMFYUI_BASE_URL,
     COMFYUI_WORKFLOW,
+    COMFYUI_WORKFLOW_NODES,
     IMAGES_OPENAI_API_BASE_URL,
     IMAGES_OPENAI_API_KEY,
     IMAGE_GENERATION_MODEL,
@@ -75,6 +76,7 @@ app.state.config.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
 app.state.config.AUTOMATIC1111_API_AUTH = AUTOMATIC1111_API_AUTH
 app.state.config.COMFYUI_BASE_URL = COMFYUI_BASE_URL
 app.state.config.COMFYUI_WORKFLOW = COMFYUI_WORKFLOW
+app.state.config.COMFYUI_WORKFLOW_NODES = COMFYUI_WORKFLOW_NODES
 
 app.state.config.IMAGE_SIZE = IMAGE_SIZE
 app.state.config.IMAGE_STEPS = IMAGE_STEPS
@@ -211,9 +213,9 @@ def get_image_model():
 
 
 class ImageConfigForm(BaseModel):
-    model: str
-    size: str
-    steps: int
+    MODEL: str
+    IMAGE_SIZE: str
+    IMAGE_STEPS: int
 
 
 @app.get("/image/config")
@@ -227,19 +229,19 @@ async def get_image_config(user=Depends(get_admin_user)):
 
 @app.post("/image/config/update")
 async def update_image_config(form_data: ImageConfigForm, user=Depends(get_admin_user)):
-    app.state.config.MODEL = form_data.model
+    app.state.config.MODEL = form_data.MODEL
 
     pattern = r"^\d+x\d+$"
-    if re.match(pattern, form_data.size):
-        app.state.config.IMAGE_SIZE = form_data.size
+    if re.match(pattern, form_data.IMAGE_SIZE):
+        app.state.config.IMAGE_SIZE = form_data.IMAGE_SIZE
     else:
         raise HTTPException(
             status_code=400,
             detail=ERROR_MESSAGES.INCORRECT_FORMAT("  (e.g., 512x512)."),
         )
 
-    if form_data.steps >= 0:
-        app.state.config.IMAGE_STEPS = form_data.steps
+    if form_data.IMAGE_STEPS >= 0:
+        app.state.config.IMAGE_STEPS = form_data.IMAGE_STEPS
     else:
         raise HTTPException(
             status_code=400,
