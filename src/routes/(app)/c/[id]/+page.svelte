@@ -15,7 +15,8 @@
 		config,
 		WEBUI_NAME,
 		tags as _tags,
-		showSidebar
+		showSidebar,
+		documents
 	} from '$lib/stores';
 	import { copyToClipboard, splitStream, convertMessagesToHistory } from '$lib/utils';
 
@@ -227,6 +228,17 @@
 
 			// Create new chat if only one message in messages
 			if (messages.length == 1) {
+				if (!history.messages[userMessageId].files) {
+					history.messages[userMessageId].files = [
+						{
+							name: 'All Documents',
+							type: 'collection',
+							title: 'All Documents',
+							collection_names: $documents.map((doc) => doc.collection_name),
+							upload_status: true
+						}
+					];
+				}
 				if ($settings.saveChatHistory ?? true) {
 					chat = await createNewChat(localStorage.token, {
 						id: $chatId,

@@ -7,9 +7,11 @@
 
 	let prompts = [];
 
+	const iconList = ['sent-mail.gif','holidays.gif','approved.gif','task.gif','business-plan.gif']
+
 	$: prompts = suggestionPrompts
 		.reduce((acc, current) => [...acc, ...[current]], [])
-		.sort(() => Math.random() - 0.5);
+		// .sort(() => Math.random() - 0.5);
 	// suggestionPrompts.length <= 4
 	// 	? suggestionPrompts
 	// 	: suggestionPrompts.sort(() => Math.random() - 0.5).slice(0, 4);
@@ -30,22 +32,22 @@
 	});
 </script>
 
-{#if prompts.length > 0}
+<!-- {#if prompts.length > 0}
 	<div class="mb-2 flex gap-1 text-sm font-medium items-center text-gray-400 dark:text-gray-600">
 		<Bolt />
 		Suggested
 	</div>
-{/if}
+{/if} -->
 
 <div class="w-full">
 	<div
-		class="relative w-full flex gap-2 snap-x snap-mandatory md:snap-none overflow-x-auto tabs"
+		class="relative w-full flex gap-2 snap-x snap-mandatory md:snap-none overflow-x-auto tabs mask"
 		id="suggestions-container"
 	>
 		{#each prompts as prompt, promptIdx}
 			<div class="snap-center shrink-0">
 				<button
-					class="flex flex-col flex-1 shrink-0 w-64 justify-between h-36 p-5 px-6 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 rounded-3xl transition group"
+					class="flex flex-col flex-1 shrink-0 w-64 justify-between h-36 p-5 px-6 bg-white rounded-3xl transition group"
 					on:click={() => {
 						submitPrompt(prompt.content);
 					}}
@@ -60,7 +62,7 @@
 							<div class="text-sm text-gray-600 font-normal line-clamp-2">{prompt.title[1]}</div>
 						{:else}
 							<div
-								class=" self-center text-sm font-medium dark:text-gray-300 dark:group-hover:text-gray-100 transition line-clamp-2"
+								class=" self-center text-base font-medium dark:text-gray-300 dark:group-hover:text-gray-100 transition line-clamp-2"
 							>
 								{prompt.content}
 							</div>
@@ -71,13 +73,14 @@
 						<div
 							class="text-xs text-gray-400 group-hover:text-gray-500 dark:text-gray-600 dark:group-hover:text-gray-500 transition self-center"
 						>
-							Prompt
+							<!-- Prompt -->
 						</div>
 
 						<div
 							class="self-end p-1 rounded-lg text-gray-300 group-hover:text-gray-800 dark:text-gray-700 dark:group-hover:text-gray-100 transition"
 						>
-							<svg
+						<img class="w-10 h-10" src={`/icon/${iconList[promptIdx]}`} alt="icon" />
+							<!-- <svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 16 16"
 								fill="currentColor"
@@ -88,7 +91,7 @@
 									d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
 									clip-rule="evenodd"
 								/>
-							</svg>
+							</svg> -->
 						</div>
 					</div>
 				</button>
@@ -112,5 +115,10 @@
 	.tabs {
 		-ms-overflow-style: none; /* IE and Edge */
 		scrollbar-width: none; /* Firefox */
+	}
+	.mask {
+		mask-image: linear-gradient(to left, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 10%);
+		padding-right: 6rem;
+		-webkit-mask-image: linear-gradient(to left, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 10%);
 	}
 </style>

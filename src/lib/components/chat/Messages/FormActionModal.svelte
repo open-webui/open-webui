@@ -28,7 +28,22 @@
 	let address = '';
 	let dayCount = 0;
 	let days = 0;
-	const leaves = ['Annual Leave', 'Sick Leave'];
+	const leaves = [
+		'Annual Leave',
+		'Sick Leave',
+		'Maternity Leave',
+		'Paternity Leave',
+		'Unpaid Leave',
+		'Compassionate Leave',
+		'Administrative Leave',
+		'Emergency Leave',
+		'Educational Leave',
+		'Lecture, Course/Exams',
+		'Escort Leave',
+		'Military Service',
+		'Iddah Leave',
+		'Haj Leave'
+	];
 
 	$: if (citation) {
 		mergedDocuments = citation.document?.map((c, i) => {
@@ -39,46 +54,76 @@
 			};
 		});
 	}
-	$: dayCount = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 1000 / 60 / 60 / 24 + 1;
+	// $: dayCount = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 1000 / 60 / 60 / 24 + 1;
+	$: dayCount = countWeekdays(startDate, endDate);
 	$: if (new Date(startDate).getTime() - new Date(endDate).getTime() > 0) {
-		endDate = new Date(startDate)
+		endDate = new Date(startDate);
 	}
 	$: if (dayCount) {
-		days = dayCount
+		days = dayCount;
 	}
 
+	const countWeekdays = (startDate, endDate) => {
+		// 确保日期是正确顺序
+		if (endDate < startDate) return 0;
+
+		let count = 0;
+		let currentDate = new Date(startDate);
+
+		while (currentDate <= endDate) {
+			const dayOfWeek = currentDate.getDay();
+			// 跳过周六和周日
+			if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+				count++;
+			}
+			// 日期加一天
+			currentDate.setDate(currentDate.getDate() + 1);
+		}
+		return count;
+	};
+
 	const dateFormatter = (val) => {
-		const date = val ? new Date(val) : new Date()
+		const date = val ? new Date(val) : new Date();
 		// const dateString = date.toDateString().split(' ')
 		// dateString.splice(0,1)
 		// return `${dateString[1]} ${dateString[0]} ${dateString[2]}`
 		const months = [
-			"January", "February", "March", "April", "May", "June",
-			"July", "August", "September", "October", "November", "December"
+			'January',
+			'February',
+			'March',
+			'April',
+			'May',
+			'June',
+			'July',
+			'August',
+			'September',
+			'October',
+			'November',
+			'December'
 		];
-		
+
 		const day = date.getDate();
 		const month = months[date.getMonth()];
 		const year = date.getFullYear();
 
 		// 添加后缀
-		let suffix = "th";
+		let suffix = 'th';
 		if (day % 10 === 1 && day !== 11) {
-			suffix = "st";
+			suffix = 'st';
 		} else if (day % 10 === 2 && day !== 12) {
-			suffix = "nd";
+			suffix = 'nd';
 		} else if (day % 10 === 3 && day !== 13) {
-			suffix = "rd";
+			suffix = 'rd';
 		}
 
 		return `${month} ${day}${suffix}, ${year}`;
 	};
 	const handleConfirm = () => {
 		if (!$user.extra_sso) {
-			window.alert('User type error. Only supports users login with outlook account.').
+			window.alert('User type error. Only supports users login with outlook account.');
 			return;
-		};
-		const ssoData = JSON.parse($user.extra_sso)
+		}
+		const ssoData = JSON.parse($user.extra_sso);
 		const formData = {
 			name: $user.name,
 			employee_id: ssoData.emp_id,
