@@ -70,8 +70,8 @@ class ERROR_MESSAGES(str, Enum):
     RATE_LIMIT_EXCEEDED = "API rate limit exceeded"
 
     MODEL_NOT_FOUND = lambda name="": f"Model '{name}' was not found"
-    OPENAI_NOT_FOUND = lambda name="": "OpenAI API was not found"
-    OLLAMA_NOT_FOUND = "WebUI could not connect to Ollama"
+    OPENAI_NOT_FOUND = lambda name="": "Voltron API was not found"
+    OLLAMA_NOT_FOUND = "Voltron could not connect to Ollama"
     CREATE_API_KEY_ERROR = "Oops! Something went wrong while creating your API key. Please try again later. If the issue persists, contact support for assistance."
 
     EMPTY_CONTENT = "The content provided is empty. Please ensure that there is text or data present before proceeding."

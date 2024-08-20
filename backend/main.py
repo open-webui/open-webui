@@ -146,15 +146,15 @@ class SPAStaticFiles(StaticFiles):
 
 print(
     rf"""
-  ___                    __        __   _     _   _ ___ 
- / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
-| | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || | 
-| |_| | |_) |  __/ | | |   \ V  V /  __/ |_) | |_| || | 
- \___/| .__/ \___|_| |_|    \_/\_/ \___|_.__/ \___/|___|
-      |_|                                               
+   _____ _____________________ _______    ____   ____    .__   __                        
+  /  _  \\______   \_   _____/ \      \   \   \ /   /___ |  |_/  |________  ____   ____  
+ /  /_\  \|     ___/|    __)_  /   |   \   \   Y   /  _ \|  |\   __\_  __ \/  _ \ /    \ 
+/    |    \    |    |        \/    |    \   \     (  <_> )  |_|  |  |  | \(  <_> )   |  \
+\____|__  /____|   /_______  /\____|__  /    \___/ \____/|____/__|  |__|   \____/|___|  /
+        \/                 \/         \/                                              \/                                               
 
       
-v{VERSION} - building the best open-source AI user interface.
+v{VERSION} - building the best Army AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
 """
