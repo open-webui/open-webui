@@ -273,10 +273,12 @@ def get_function_params(function_module, form_data, user, extra_params={}):
     return params
 
 
-async def generate_function_chat_completion(form_data, user, files, tool_ids):
+async def generate_function_chat_completion(form_data, user):
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
-    metadata = form_data.pop("metadata", None)
+    metadata = form_data.pop("metadata", {})
+    files = metadata.get("files", [])
+    tool_ids = metadata.get("tool_ids", [])
 
     __event_emitter__ = None
     __event_call__ = None
