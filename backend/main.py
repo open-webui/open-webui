@@ -529,6 +529,7 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             "tool_ids": body.pop("tool_ids", None),
             "files": body.pop("files", None),
         }
+        body["metadata"] = metadata
 
         __user__ = {
             "id": user.id,
@@ -600,7 +601,6 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         if len(citations) > 0:
             data_items.append({"citations": citations})
 
-        body["metadata"] = metadata
         modified_body_bytes = json.dumps(body).encode("utf-8")
         # Replace the request body with the modified one
         request._body = modified_body_bytes
