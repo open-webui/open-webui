@@ -120,7 +120,7 @@
 			ENABLE_OLLAMA_API = false;
 			await updateOllamaConfig(localStorage.token, ENABLE_OLLAMA_API);
 
-			toast.info($i18n.t('Ollama API disabled'));
+			toast.info($i18n.t('Voltron API disabled'));
 		} else {
 			OLLAMA_BASE_URLS = await updateOllamaUrls(localStorage.token, OLLAMA_BASE_URLS);
 
@@ -317,7 +317,7 @@
 
 			<div class="pr-1.5 space-y-2">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('Ollama API')}</div>
+					<div class="  font-medium">{$i18n.t('Voltron API')}</div>
 
 					<div class="mt-1">
 						<Switch
@@ -415,10 +415,10 @@
 					</div>
 
 					<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-						{$i18n.t('Trouble accessing Ollama?')}
+						{$i18n.t('Trouble accessing Voltron?')}
 						<a
 							class=" text-gray-300 font-medium underline"
-							href="https://github.com/open-webui/open-webui#troubleshooting"
+							href="https://blcseportal.blcse.mil"
 							target="_blank"
 						>
 							{$i18n.t('Click here for help.')}

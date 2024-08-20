@@ -68,7 +68,7 @@
 		for (const model of $models.filter(
 			(m) =>
 				!(m?.preset ?? false) &&
-				m.owned_by === 'ollama' &&
+				m.owned_by === 'APEN' &&
 				(selectedOllamaUrlIdx === null
 					? true
 					: (m?.ollama?.urls ?? []).includes(selectedOllamaUrlIdx))
@@ -541,7 +541,7 @@
 			]);
 		} else {
 			ollamaEnabled = false;
-			toast.error($i18n.t('Ollama API is disabled'));
+			toast.error($i18n.t('Voltron API is disabled'));
 		}
 	});
 </script>
@@ -559,7 +559,7 @@
 								<select
 									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 									bind:value={selectedOllamaUrlIdx}
-									placeholder={$i18n.t('Select an Ollama instance')}
+									placeholder={$i18n.t('Select a Voltron instance')}
 								>
 									{#each OLLAMA_URLS as url, idx}
 										<option value={idx} class="bg-gray-100 dark:bg-gray-700">{url}</option>
@@ -672,7 +672,7 @@
 								{$i18n.t('To access the available model names for downloading,')}
 								<a
 									class=" text-gray-500 dark:text-gray-300 font-medium underline"
-									href="https://ollama.com/library"
+									href="https://apen-model/library"
 									target="_blank">{$i18n.t('click here.')}</a
 								>
 							</div>
@@ -934,7 +934,7 @@
 													type="url"
 													required
 													bind:value={modelFileUrl}
-													placeholder={$i18n.t('Type Hugging Face Resolve (Download) URL')}
+													placeholder={$i18n.t('Contact CESC to Resolve (Download) URL')}
 												/>
 											</div>
 										{/if}
@@ -1063,7 +1063,7 @@
 				</div>
 			{/if}
 		{:else if ollamaEnabled === false}
-			<div>{$i18n.t('Ollama API is disabled')}</div>
+			<div>{$i18n.t('Voltron API is disabled')}</div>
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">

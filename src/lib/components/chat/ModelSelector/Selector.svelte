@@ -342,7 +342,7 @@
 
 								<!-- {JSON.stringify(item.info)} -->
 
-								{#if item.model.owned_by === 'openai'}
+								{#if item.model.owned_by === 'APEN'}
 									<Tooltip content={`${'External'}`}>
 										<div class="translate-y-[1px]">
 											<svg
@@ -431,7 +431,7 @@
 							pullModelHandler();
 						}}
 					>
-						{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}
+						{$i18n.t(`Pull "{{searchValue}}" from blcse.mil`, { searchValue: searchValue })}
 					</button>
 				{/if}
 

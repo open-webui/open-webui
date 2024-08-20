@@ -46,13 +46,13 @@
 					<div class="px-1 text-sm">
 						<div class="my-2">
 							{$i18n.t(
-								'The developers behind this plugin are passionate volunteers from the community. If you find this plugin helpful, please consider contributing to its development.'
+								'The APEN CESC team are behind this mess.'
 							)}
 						</div>
 
 						<div class="my-2">
 							{$i18n.t(
-								'Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.'
+								'Youre thanks is enough, now get to work.'
 							)}
 						</div>
 

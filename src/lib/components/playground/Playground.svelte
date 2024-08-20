@@ -126,7 +126,7 @@
 					...messages
 				].filter((message) => message)
 			},
-			model?.owned_by === 'openai' ? `${OPENAI_API_BASE_URL}` : `${OLLAMA_API_BASE_URL}/v1`
+			model?.owned_by === 'APEN' ? `${OPENAI_API_BASE_URL}` : `${OLLAMA_API_BASE_URL}/v1`
 		);
 
 		let responseMessage;

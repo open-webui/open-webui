@@ -508,7 +508,7 @@
 			// Error in response
 			toast.error(
 				$i18n.t(
-					`Oops! There was an error in the previous response. Please try again or contact admin.`
+					`Oops! There was an error in the previous response. Please try again or contact the APEN CESC.`
 				)
 			);
 		} else if (
@@ -696,7 +696,7 @@
 					}
 
 					let _response = null;
-					if (model?.owned_by === 'openai') {
+					if (model?.owned_by === 'APEN') {
 						_response = await sendPromptOpenAI(model, prompt, responseMessageId, _chatId);
 					} else if (model) {
 						_response = await sendPromptOllama(model, prompt, responseMessageId, _chatId);
@@ -905,7 +905,7 @@
 								if (responseMessage.content == '') {
 									responseMessage.error = {
 										code: 400,
-										content: `Oops! No text generated from Ollama, Please try again.`
+										content: `Oops! No text generated from Voltron, Please try again.`
 									};
 								}
 
@@ -980,11 +980,11 @@
 				}
 			} else {
 				toast.error(
-					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: 'Ollama' })
+					$i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, { provider: 'Voltron' })
 				);
 				responseMessage.error = {
 					content: $i18n.t(`Uh-oh! There was an issue connecting to {{provider}}.`, {
-						provider: 'Ollama'
+						provider: 'Voltron'
 					})
 				};
 			}
@@ -1357,7 +1357,7 @@
 			const model = $models.filter((m) => m.id === responseMessage.model).at(0);
 
 			if (model) {
-				if (model?.owned_by === 'openai') {
+				if (model?.owned_by === 'Voltron') {
 					await sendPromptOpenAI(
 						model,
 						history.messages[responseMessage.parentId].content,

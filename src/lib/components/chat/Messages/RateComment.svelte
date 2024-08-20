@@ -59,7 +59,7 @@
 
 		dispatch('submit');
 
-		toast.success($i18n.t('Thanks for your feedback!'));
+		toast.success($i18n.t('Thanks for helping to improve Voltron!'));
 		show = false;
 	};
 </script>

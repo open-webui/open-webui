@@ -29,9 +29,8 @@
 	let codeEditor;
 	let boilerplate = `"""
 title: Example Filter
-author: open-webui
-author_url: https://github.com/open-webui
-funding_url: https://github.com/open-webui
+author: APEN CESC
+author_url: https://github.com/APEN-CESC
 version: 0.1
 """
 

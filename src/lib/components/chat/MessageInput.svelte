@@ -394,7 +394,7 @@
 								src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
 									?.profile_image_url ??
 									($i18n.language === 'dg-DG'
-										? `/doge.png`
+										? `/logo.png`
 										: `${WEBUI_BASE_URL}/static/favicon.png`)}
 							/>
 							<div>

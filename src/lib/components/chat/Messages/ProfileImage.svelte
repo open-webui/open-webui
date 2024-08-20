@@ -11,7 +11,7 @@
 	<img
 		crossorigin="anonymous"
 		src={src.startsWith(WEBUI_BASE_URL) ||
-		src.startsWith('https://www.gravatar.com/avatar/') ||
+		src.startsWith('https://www.blcseportal.blcse.mil') ||
 		src.startsWith('data:') ||
 		src.startsWith('/')
 			? src

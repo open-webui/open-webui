@@ -386,10 +386,10 @@
 						<div class=" font-medium">{$i18n.t('Chat History is off for this browser.')}</div>
 						<div class="text-xs mt-2">
 							{$i18n.t(
-								"When history is turned off, new chats on this browser won't appear in your history on any of your devices."
+								"When history is turned off, new chats on this browser won't appear in your history."
 							)}
 							<span class=" font-semibold"
-								>{$i18n.t('This setting does not sync across browsers or devices.')}</span
+								>{$i18n.t('There is no sync across browsers or devices on the APEN.')}</span
 							>
 						</div>
 

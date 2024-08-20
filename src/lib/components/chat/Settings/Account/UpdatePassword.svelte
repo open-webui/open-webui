@@ -28,7 +28,7 @@
 			newPasswordConfirm = '';
 		} else {
 			toast.error(
-				`The passwords you entered don't quite match. Please double-check and try again.`
+				`The passwords you entered do not match. Please double-check and try again.`
 			);
 			newPassword = '';
 			newPasswordConfirm = '';

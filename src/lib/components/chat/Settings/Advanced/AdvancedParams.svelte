@@ -757,7 +757,7 @@
 	{#if admin}
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('use_mmap (Ollama)')}</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('use_mmap (Voltron)')}</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
@@ -789,7 +789,7 @@
 
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('use_mlock (Ollama)')}</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('use_mlock (Voltron)')}</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
@@ -821,7 +821,7 @@
 
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('num_thread (Ollama)')}</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('num_thread (Voltron)')}</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
@@ -867,7 +867,7 @@
 
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('num_gpu (Ollama)')}</div>
+				<div class=" self-center text-xs font-medium">{$i18n.t('num_gpu (Voltron)')}</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"

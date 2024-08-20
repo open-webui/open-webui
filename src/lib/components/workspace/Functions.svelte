@@ -50,9 +50,9 @@
 			return null;
 		});
 
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		toast.success($i18n.t('Redirecting you to the APEN Portal'));
 
-		const url = 'https://openwebui.com';
+		const url = 'https://blcseportal.blcse.mil';
 
 		const tab = await window.open(`${url}/functions/create`, '_blank');
 
@@ -412,12 +412,12 @@
 
 <div class=" my-16">
 	<div class=" text-lg font-semibold mb-3 line-clamp-1">
-		{$i18n.t('Made by OpenWebUI Community')}
+		{$i18n.t('Made by the APEN CESC')}
 	</div>
 
 	<a
 		class=" flex space-x-4 cursor-pointer w-full mb-2 px-3 py-2"
-		href="https://openwebui.com/#open-webui-community"
+		href="https://blcseportal.blcse.mil"
 		target="_blank"
 	>
 		<div class=" self-center w-10 flex-shrink-0">
