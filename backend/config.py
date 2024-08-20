@@ -87,7 +87,7 @@ class EndpointFilter(logging.Filter):
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "APEN Voltron")
+WEBUI_NAME = os.environ.get("APEN Voltron", "APEN Voltron")
 if WEBUI_NAME != "APEN Voltron":
     WEBUI_NAME += " (APEN Voltron)"
 
