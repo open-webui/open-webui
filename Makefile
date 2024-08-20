@@ -1,9 +1,12 @@
+export WORKSPACE=$(shell pwd)
 
 ifneq ($(shell which docker-compose 2>/dev/null),)
     DOCKER_COMPOSE := docker-compose
 else
     DOCKER_COMPOSE := docker compose
 endif
+
+include infra/Makefile
 
 .PHONY: frontend/run
 frontend/run:

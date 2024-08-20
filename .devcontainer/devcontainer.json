@@ -2,7 +2,16 @@
 	"name": "Imagine",
 	"image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
 	"features": {
-		"ghcr.io/devcontainers/features/node:1": {}
+		"ghcr.io/devcontainers/features/node:1": {},
+		"ghcr.io/devcontainers/features/aws-cli": {},
+		"ghcr.io/devcontainers-contrib/features/terraform-docs:1": {},
+		"ghcr.io/devcontainers-contrib/features/terraform-asdf:2": {},
+		"ghcr.io/devcontainers-contrib/features/terraform-ls-asdf:2": {},
+		"ghcr.io/devcontainers-contrib/features/tfsec:1": {},
+		"ghcr.io/devcontainers/features/terraform": {},
+		"ghcr.io/hspaans/devcontainer-features/ansible-lint": {},
+		"ghcr.io/devcontainers-contrib/features/packer-asdf": {},
+		"ghcr.io/devcontainers-contrib/features/pre-commit": {}
 	},
 	"postCreateCommand": "npm install && cd ./backend && pip install --upgrade pip && pip install -r requirements.txt -U"
 }

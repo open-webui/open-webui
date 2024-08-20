@@ -1,0 +1,117 @@
+---
+- name: Install and Configure Open WebUI
+  hosts: local
+  become: yes  # Use sudo for administrative tasks
+  tasks:
+    - name: Install AWS Systems Manager Agent
+      yum:
+        name: amazon-ssm-agent
+        state: present
+        
+    - name: Enable and start the SSM Agent
+      systemd:
+        name: amazon-ssm-agent
+        enabled: yes
+        state: started
+
+    - name: Configure EC2 Detailed Monitoring
+      aws_ec2_instance:
+        instance_id: "{{ ansible_ec2_instance_id }}"
+        monitoring: yes
+        
+    - name: Clone Open WebUI repository
+      git:
+        repo: 'https://github.com/open-webui/open-webui.git'
+        dest: '/opt/open-webui'
+        force: yes  # Forces a clean clone if the repo already exists
+  
+    - name: Copy the .env.example to .env
+      copy:
+        src: '/opt/open-webui/.env.example'
+        dest: '/opt/open-webui/.env'
+        remote_src: yes  # Source file already exists on the target machine
+
+    - name: Install Node.js and npm
+      apt:
+        name: 
+          - nodejs
+          - npm
+        state: present
+        update_cache: yes
+
+    - name: Build the frontend
+      command: npm run build
+      args:
+        chdir: '/opt/open-webui'  # Change directory to the Open WebUI folder
+      
+    - name: Create the systemd service for Frontend
+      copy:
+        dest: /etc/systemd/system/open-webui-frontend.service
+        content: |
+          [Unit]
+          Description=Open WebUI Frontend
+          After=network.target
+
+          [Service]
+          ExecStart=/usr/bin/npm start
+          WorkingDirectory=/opt/open-webui
+          Restart=always
+          StandardOutput=syslog
+          StandardError=syslog
+          SyslogIdentifier=open-webui-frontend
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Create the systemd service for Backend
+      copy:
+        dest: /etc/systemd/system/open-webui-backend.service
+        content: |
+          [Unit]
+          Description=Open WebUI Backend
+          After=network.target
+
+          [Service]
+          ExecStart=/bin/bash -c "cd /opt/open-webui/backend && ./start.sh"
+          Restart=always
+          StandardOutput=syslog
+          StandardError=syslog
+          SyslogIdentifier=open-webui-backend
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start the Open WebUI Frontend service
+      systemd:
+        name: open-webui-frontend
+        enabled: yes
+        state: started
+
+    - name: Enable and start the Open WebUI Backend service
+      systemd:
+        name: open-webui-backend
+        enabled: yes
+        state: started
+
+    - name: Install Conda
+      shell: |
+        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+        bash miniconda.sh -b -p /opt/miniconda
+        echo 'export PATH="/opt/miniconda/bin:$PATH"' >> ~/.bashrc
+        source ~/.bashrc
+
+    - name: Create and activate conda environment
+      shell: |
+        source /opt/miniconda/bin/activate
+        conda create --name open-webui-env python=3.11 -y
+        conda activate open-webui-env
+
+    - name: Install Python dependencies
+      pip:
+        requirements: /opt/open-webui/backend/requirements.txt
+        virtualenv: /opt/miniconda/envs/open-webui-env
+
+    - name: Start Open WebUI application via Service
+      command: bash start.sh
+      args:
+        chdir: '/opt/open-webui/backend'
