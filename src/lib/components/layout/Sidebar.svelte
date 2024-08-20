@@ -363,6 +363,7 @@
 			</div>
 		{/if} -->
 
+		<!-- hide documents in sidebar before finish download function -->
 		<!-- <button 
 			class="ml-5 my-2 py-2 w-2/3 px-1.5 py-0.75 bg-gray-200 rounded-3xl hover:bg-gray-300"
 			on:click={() => {
@@ -403,9 +404,10 @@
 							}
 						}}
 					/>
-		<div class="px-5 py-2 text-[#555] dark:text-[#aaa]">Recent Documents</div>
+		<!-- hide recent documents before finish download function -->
+		<!-- <div class="px-5 py-2 text-[#555] dark:text-[#aaa]">Recent Documents</div> -->
 			<!-- FILE LIST -->
-		<div class="relative flex flex-col overflow-y-auto px-4 max-h-[38%]">
+		<div class="relative flex flex-col overflow-y-auto px-4 max-h-[38%]" style="display: none !important;">
 			{#each filteredDocs as doc}
 				<div 
 				class=" flex items-center space-x-3 rounded-xl px-3.5 py-1.5 hover:bg-gray-100 dark:hover:bg-[#33333320]"
@@ -422,9 +424,7 @@
 							</defs>
 							</svg>
 					</div>
-					<!-- <Tooltip content={doc.name}> -->
-						<div class="overflow-hidden whitespace-nowrap text-ellipsis">{doc.name}</div>
-					<!-- </Tooltip> -->
+					<div class="overflow-hidden whitespace-nowrap text-ellipsis">{doc.name}</div>
 				</div>
 			{/each}
 			<!-- {#if !($settings.saveChatHistory ?? true)}
@@ -469,14 +469,10 @@
 					</div>
 				</div>
 			{/if} -->
-
-			
-
-			
 		</div>
 
 		<!-- SHOW MORE -->
-		{#if $documents.length > 5}
+		<!-- {#if $documents.length > 5}
 		<button
 			class="px-5 py-2 text-gray flex items-center"
 			on:click={() => {
@@ -494,7 +490,7 @@
 			</div>
 			<div class="ml-2 text-[#555]">{showMoreDoc ? 'Show less' : 'Show more'}</div>
 		</button>
-		{/if}
+		{/if} -->
 
 		<!-- New Chat -->
 		<div class="px-2 mt-4 flex space-x-2">
