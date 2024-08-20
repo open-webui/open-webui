@@ -1,10 +1,15 @@
 import re
 import requests
+import base64
 from fastapi import (
     FastAPI,
     Request,
     Depends,
     HTTPException,
+    status,
+    UploadFile,
+    File,
+    Form,
 )
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -14,7 +19,8 @@ from utils.utils import (
     get_admin_user,
 )
 
-from apps.images.utils.comfyui import ComfyUIGenerateImageForm, comfyui_generate_image
+from apps.images.utils.comfyui import ImageGenerationPayload, comfyui_generate_image
+from utils.misc import calculate_sha256
 from typing import Optional
 from pydantic import BaseModel
 from pathlib import Path
@@ -32,14 +38,6 @@ from config import (
     AUTOMATIC1111_BASE_URL,
     AUTOMATIC1111_API_AUTH,
     COMFYUI_BASE_URL,
-    COMFYUI_WORKFLOW,
-    COMFYUI_CFG_SCALE,
-    COMFYUI_SAMPLER,
-    COMFYUI_SCHEDULER,
-    COMFYUI_SD3,
-    COMFYUI_FLUX,
-    COMFYUI_FLUX_WEIGHT_DTYPE,
-    COMFYUI_FLUX_FP8_CLIP,
     COMFYUI_CUSTOM_WORKFLOW_PATH,
     COMFYUI_CUSTOM_WORKFLOW_SEED_INDEX,
     COMFYUI_CUSTOM_WORKFLOW_PROMPT_INDEX,
@@ -48,7 +46,6 @@ from config import (
     IMAGE_GENERATION_MODEL,
     IMAGE_SIZE,
     IMAGE_STEPS,
-    CORS_ALLOW_ORIGIN,
     AppConfig,
 )
 
@@ -61,7 +58,7 @@ IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ALLOW_ORIGIN,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -80,18 +77,9 @@ app.state.config.MODEL = IMAGE_GENERATION_MODEL
 app.state.config.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
 app.state.config.AUTOMATIC1111_API_AUTH = AUTOMATIC1111_API_AUTH
 app.state.config.COMFYUI_BASE_URL = COMFYUI_BASE_URL
-app.state.config.COMFYUI_WORKFLOW = COMFYUI_WORKFLOW
 
 app.state.config.IMAGE_SIZE = IMAGE_SIZE
 app.state.config.IMAGE_STEPS = IMAGE_STEPS
-
-app.state.config.COMFYUI_CFG_SCALE = COMFYUI_CFG_SCALE
-app.state.config.COMFYUI_SAMPLER = COMFYUI_SAMPLER
-app.state.config.COMFYUI_SCHEDULER = COMFYUI_SCHEDULER
-app.state.config.COMFYUI_SD3 = COMFYUI_SD3
-app.state.config.COMFYUI_FLUX = COMFYUI_FLUX
-app.state.config.COMFYUI_FLUX_WEIGHT_DTYPE = COMFYUI_FLUX_WEIGHT_DTYPE
-app.state.config.COMFYUI_FLUX_FP8_CLIP = COMFYUI_FLUX_FP8_CLIP
 app.state.config.COMFYUI_CUSTOM_WORKFLOW_PATH = COMFYUI_CUSTOM_WORKFLOW_PATH
 app.state.config.COMFYUI_CUSTOM_WORKFLOW_SEED_INDEX = COMFYUI_CUSTOM_WORKFLOW_SEED_INDEX
 app.state.config.COMFYUI_CUSTOM_WORKFLOW_PROMPT_INDEX = COMFYUI_CUSTOM_WORKFLOW_PROMPT_INDEX
@@ -497,28 +485,6 @@ async def image_generations(
             if form_data.negative_prompt is not None:
                 data["negative_prompt"] = form_data.negative_prompt
 
-            form_data = ComfyUIGenerateImageForm(**data)
-            if app.state.config.COMFYUI_CFG_SCALE:
-                data["cfg_scale"] = app.state.config.COMFYUI_CFG_SCALE
-
-            if app.state.config.COMFYUI_SAMPLER is not None:
-                data["sampler"] = app.state.config.COMFYUI_SAMPLER
-
-            if app.state.config.COMFYUI_SCHEDULER is not None:
-                data["scheduler"] = app.state.config.COMFYUI_SCHEDULER
-
-            if app.state.config.COMFYUI_SD3 is not None:
-                data["sd3"] = app.state.config.COMFYUI_SD3
-
-            if app.state.config.COMFYUI_FLUX is not None:
-                data["flux"] = app.state.config.COMFYUI_FLUX
-
-            if app.state.config.COMFYUI_FLUX_WEIGHT_DTYPE is not None:
-                data["flux_weight_dtype"] = app.state.config.COMFYUI_FLUX_WEIGHT_DTYPE
-
-            if app.state.config.COMFYUI_FLUX_FP8_CLIP is not None:
-                data["flux_fp8_clip"] = app.state.config.COMFYUI_FLUX_FP8_CLIP
-
             if app.state.config.COMFYUI_CUSTOM_WORKFLOW_PATH is not None:
                 data["custom_workflow_path"] = app.state.config.COMFYUI_CUSTOM_WORKFLOW_PATH
 
@@ -539,7 +505,7 @@ async def image_generations(
 
             res = await comfyui_generate_image(
                 app.state.config.MODEL,
-                form_data,
+                data,
                 user.id,
                 app.state.config.COMFYUI_BASE_URL,
             )
