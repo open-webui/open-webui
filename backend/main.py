@@ -326,8 +326,8 @@ async def chat_completion_filter_functions_handler(body, model, extra_params):
             print(f"Error: {e}")
             raise e
 
-    if skip_files and "files" in body:
-        del body["files"]
+    if skip_files and "files" in body.get("metadata", {}):
+        del body["metadata"]["files"]
 
     return body, {}
 
@@ -371,7 +371,8 @@ async def chat_completion_tools_handler(
     body: dict, user: UserModel, extra_params: dict
 ) -> tuple[dict, dict]:
     # If tool_ids field is present, call the functions
-    tool_ids = body.get("tool_ids", None)
+    metadata = body.get("metadata", {})
+    tool_ids = metadata.get("tool_ids", None)
     if not tool_ids:
         return body, {}
 
@@ -387,7 +388,7 @@ async def chat_completion_tools_handler(
         **extra_params,
         "__model__": app.state.MODELS[task_model_id],
         "__messages__": body["messages"],
-        "__files__": body.get("files", []),
+        "__files__": metadata.get("files", []),
     }
     tools = get_tools(webui_app, tool_ids, user, custom_params)
     log.info(f"{tools=}")
@@ -454,8 +455,8 @@ async def chat_completion_tools_handler(
 
     log.debug(f"tool_contexts: {contexts}")
 
-    if skip_files and "files" in body:
-        del body["files"]
+    if skip_files and "files" in body.get("metadata", {}):
+        del body["metadata"]["files"]
 
     return body, {"contexts": contexts, "citations": citations}
 
@@ -464,7 +465,7 @@ async def chat_completion_files_handler(body) -> tuple[dict, dict[str, list]]:
     contexts = []
     citations = []
 
-    if files := body.get("files", None):
+    if files := body.get("metadata", {}).get("files", None):
         contexts, citations = get_rag_context(
             files=files,
             messages=body["messages"],
@@ -986,11 +987,8 @@ async def generate_chat_completions(form_data: dict, user=Depends(get_verified_u
             detail="Model not found",
         )
     model = app.state.MODELS[model_id]
-    files = form_data.pop("files", [])
-    tool_ids = form_data.pop("tool_ids", [])
-
     if model.get("pipe"):
-        return await generate_function_chat_completion(form_data, user, files, tool_ids)
+        return await generate_function_chat_completion(form_data, user=user)
     if model["owned_by"] == "ollama":
         return await generate_ollama_chat_completion(form_data, user=user)
     else:

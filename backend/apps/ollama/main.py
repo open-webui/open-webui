@@ -731,12 +731,10 @@ async def generate_chat_completion(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    log.debug(f"{form_data.model_dump_json(exclude_none=True).encode()}=")
-
     payload = {**form_data.model_dump(exclude_none=True)}
-    for key in ["metadata", "files", "tool_ids"]:
-        if key in payload:
-            del payload[key]
+    log.debug(f"{payload = }")
+    if "metadata" in payload:
+        del payload["metadata"]
 
     model_id = form_data.model
     model_info = Models.get_model_by_id(model_id)
