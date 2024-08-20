@@ -8,3 +8,14 @@ terraform {
     }
   }
 }
+
+provider "aws" {
+  region = var.region
+  default_tags {
+    tags = {
+      "TerraformManaged" = "true",
+      "BusinessUnit"     = "PER1",
+      "Snapshot"         = "true"
+    }
+  }
+}

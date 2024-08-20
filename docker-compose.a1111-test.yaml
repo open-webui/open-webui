@@ -7,10 +7,10 @@ services:
     image: ghcr.io/neggles/sd-webui-docker:latest
     restart: unless-stopped
     environment:
-      CLI_ARGS: "--api --use-cpu all --precision full --no-half --skip-torch-cuda-test --ckpt /empty.pt --do-not-download-clip --disable-nan-check --disable-opt-split-attention"
-      PYTHONUNBUFFERED: "1"
-      TERM: "vt100"
-      SD_WEBUI_VARIANT: "default"
+      CLI_ARGS: '--api --use-cpu all --precision full --no-half --skip-torch-cuda-test --ckpt /empty.pt --do-not-download-clip --disable-nan-check --disable-opt-split-attention'
+      PYTHONUNBUFFERED: '1'
+      TERM: 'vt100'
+      SD_WEBUI_VARIANT: 'default'
     # Hack to get container working on Apple Silicon
     # Rosetta creates a conflict ${HOME}/.cache folder
     entrypoint: /bin/bash
@@ -25,7 +25,7 @@ services:
 
   open-webui:
     environment:
-      ENABLE_IMAGE_GENERATION: "true"
+      ENABLE_IMAGE_GENERATION: 'true'
       AUTOMATIC1111_BASE_URL: http://stable-diffusion-webui:7860
-      IMAGE_SIZE: "64x64"
-      IMAGE_STEPS: "3"
+      IMAGE_SIZE: '64x64'
+      IMAGE_STEPS: '3'

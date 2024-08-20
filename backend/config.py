@@ -917,7 +917,7 @@ SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get(
         "SEARCH_QUERY_GENERATION_PROMPT_TEMPLATE",
         """You are tasked with generating web search queries. Give me an appropriate query to answer my question for google search. Answer with only the query. Today is {{CURRENT_DATE}}.
-        
+
 Question:
 {{prompt:end:4000}}""",
     ),

@@ -1,13 +1,13 @@
 ---
 - name: Install and Configure Open WebUI
   hosts: local
-  become: yes  # Use sudo for administrative tasks
+  become: yes # Use sudo for administrative tasks
   tasks:
     - name: Install AWS Systems Manager Agent
       yum:
         name: amazon-ssm-agent
         state: present
-        
+
     - name: Enable and start the SSM Agent
       systemd:
         name: amazon-ssm-agent
@@ -16,24 +16,24 @@
 
     - name: Configure EC2 Detailed Monitoring
       aws_ec2_instance:
-        instance_id: "{{ ansible_ec2_instance_id }}"
+        instance_id: '{{ ansible_ec2_instance_id }}'
         monitoring: yes
-        
+
     - name: Clone Open WebUI repository
       git:
         repo: 'https://github.com/open-webui/open-webui.git'
         dest: '/opt/open-webui'
-        force: yes  # Forces a clean clone if the repo already exists
-  
+        force: yes # Forces a clean clone if the repo already exists
+
     - name: Copy the .env.example to .env
       copy:
         src: '/opt/open-webui/.env.example'
         dest: '/opt/open-webui/.env'
-        remote_src: yes  # Source file already exists on the target machine
+        remote_src: yes # Source file already exists on the target machine
 
     - name: Install Node.js and npm
       apt:
-        name: 
+        name:
           - nodejs
           - npm
         state: present
@@ -42,8 +42,8 @@
     - name: Build the frontend
       command: npm run build
       args:
-        chdir: '/opt/open-webui'  # Change directory to the Open WebUI folder
-      
+        chdir: '/opt/open-webui' # Change directory to the Open WebUI folder
+
     - name: Create the systemd service for Frontend
       copy:
         dest: /etc/systemd/system/open-webui-frontend.service

@@ -1,11 +1,17 @@
-provider "aws" {
-  region = var.region
-}
+module "label" {
+  source  = "cloudposse/label/null"
+  version = "0.25.0"
 
+  namespace = "miai"
+  stage     = "dev"
+  name      = "imagine"
+
+
+}
 
 module "vpc" {
   source                  = "cloudposse/vpc/aws"
-  version = "2.1.1"
+  version                 = "2.1.1"
   ipv4_primary_cidr_block = "172.16.0.0/16"
   ipv4_additional_cidr_block_associations = {
     "172.22.0.0/16" = {

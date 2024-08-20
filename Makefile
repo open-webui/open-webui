@@ -25,7 +25,7 @@ remove:
 
 start:
 	$(DOCKER_COMPOSE) start
-startAndBuild: 
+startAndBuild:
 	$(DOCKER_COMPOSE) up -d --build
 
 stop:
@@ -41,4 +41,3 @@ update:
 	@docker stop open-webui || true
 	$(DOCKER_COMPOSE) up --build -d
 	$(DOCKER_COMPOSE) start
-

@@ -1,0 +1,47 @@
+exclude: "^$"
+fail_fast: false
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      # forbid files which have a UTF-8 byte-order marker
+      - id: fix-byte-order-marker
+      # Check for files that would conflict in case-insensitive filesystems
+      - id: check-case-conflict
+      # This hook checks json files for parseable syntax.
+      - id: check-json
+      # Check for files that contain merge conflict strings.
+      - id: check-merge-conflict
+      # Checks for symlinks which do not point to anything.
+      - id: check-symlinks
+      # This hook checks toml files for parseable syntax.
+      - id: check-toml
+      # Ensures that links to vcs websites are permalinks.
+      - id: check-vcs-permalinks
+      # This hook checks xml files for parseable syntax.
+      - id: check-xml
+      # This hook checks yaml files for parseable syntax.
+      - id: check-yaml
+      # Detects symlinks which are changed to regular files with a content of a path which that symlink was pointing to.
+      - id: destroyed-symlinks
+      # Detects the presence of private keys
+      - id: detect-private-key
+      # Ensures that a file is either empty, or ends with one newline.
+      - id: end-of-file-fixer
+        exclude: README.md|CHANGELOG.md
+      # Replaces or checks mixed line ending
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+        description: Forces to replace line ending by the UNIX 'lf' character.
+      # This hook trims trailing whitespace.
+      - id: trailing-whitespace
+
+  # Prettier is an opinionated code formatter.
+  # It enforces a consistent style by parsing your code and re-printing it with its own rules that take the maximum line length into account, wrapping code when necessary.
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: "v4.0.0-alpha.8"
+    hooks:
+      - id: prettier
+        exclude: CHANGELOG.md
