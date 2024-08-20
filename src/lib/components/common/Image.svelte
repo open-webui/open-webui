@@ -5,7 +5,7 @@
 	export let src = '';
 	export let alt = '';
 
-	export let className = '';
+	export let className = ' w-full';
 
 	let _src = '';
 	$: _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;

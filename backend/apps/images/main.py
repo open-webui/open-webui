@@ -14,7 +14,7 @@ from utils.utils import (
     get_admin_user,
 )
 
-from apps.images.utils.comfyui import ImageGenerationPayload, comfyui_generate_image
+from apps.images.utils.comfyui import ComfyUIGenerateImageForm, comfyui_generate_image
 from typing import Optional
 from pydantic import BaseModel
 from pathlib import Path
@@ -32,20 +32,14 @@ from config import (
     AUTOMATIC1111_BASE_URL,
     AUTOMATIC1111_API_AUTH,
     COMFYUI_BASE_URL,
-    COMFYUI_CFG_SCALE,
-    COMFYUI_SAMPLER,
-    COMFYUI_SCHEDULER,
-    COMFYUI_SD3,
-    COMFYUI_FLUX,
-    COMFYUI_FLUX_WEIGHT_DTYPE,
-    COMFYUI_FLUX_FP8_CLIP,
+    COMFYUI_WORKFLOW,
     IMAGES_OPENAI_API_BASE_URL,
     IMAGES_OPENAI_API_KEY,
     IMAGE_GENERATION_MODEL,
     IMAGE_SIZE,
     IMAGE_STEPS,
-    AppConfig,
     CORS_ALLOW_ORIGIN,
+    AppConfig,
 )
 
 log = logging.getLogger(__name__)
@@ -76,16 +70,10 @@ app.state.config.MODEL = IMAGE_GENERATION_MODEL
 app.state.config.AUTOMATIC1111_BASE_URL = AUTOMATIC1111_BASE_URL
 app.state.config.AUTOMATIC1111_API_AUTH = AUTOMATIC1111_API_AUTH
 app.state.config.COMFYUI_BASE_URL = COMFYUI_BASE_URL
+app.state.config.COMFYUI_WORKFLOW = COMFYUI_WORKFLOW
 
 app.state.config.IMAGE_SIZE = IMAGE_SIZE
 app.state.config.IMAGE_STEPS = IMAGE_STEPS
-app.state.config.COMFYUI_CFG_SCALE = COMFYUI_CFG_SCALE
-app.state.config.COMFYUI_SAMPLER = COMFYUI_SAMPLER
-app.state.config.COMFYUI_SCHEDULER = COMFYUI_SCHEDULER
-app.state.config.COMFYUI_SD3 = COMFYUI_SD3
-app.state.config.COMFYUI_FLUX = COMFYUI_FLUX
-app.state.config.COMFYUI_FLUX_WEIGHT_DTYPE = COMFYUI_FLUX_WEIGHT_DTYPE
-app.state.config.COMFYUI_FLUX_FP8_CLIP = COMFYUI_FLUX_FP8_CLIP
 
 
 def get_automatic1111_api_auth():
@@ -488,32 +476,10 @@ async def image_generations(
             if form_data.negative_prompt is not None:
                 data["negative_prompt"] = form_data.negative_prompt
 
-            if app.state.config.COMFYUI_CFG_SCALE:
-                data["cfg_scale"] = app.state.config.COMFYUI_CFG_SCALE
-
-            if app.state.config.COMFYUI_SAMPLER is not None:
-                data["sampler"] = app.state.config.COMFYUI_SAMPLER
-
-            if app.state.config.COMFYUI_SCHEDULER is not None:
-                data["scheduler"] = app.state.config.COMFYUI_SCHEDULER
-
-            if app.state.config.COMFYUI_SD3 is not None:
-                data["sd3"] = app.state.config.COMFYUI_SD3
-
-            if app.state.config.COMFYUI_FLUX is not None:
-                data["flux"] = app.state.config.COMFYUI_FLUX
-
-            if app.state.config.COMFYUI_FLUX_WEIGHT_DTYPE is not None:
-                data["flux_weight_dtype"] = app.state.config.COMFYUI_FLUX_WEIGHT_DTYPE
-
-            if app.state.config.COMFYUI_FLUX_FP8_CLIP is not None:
-                data["flux_fp8_clip"] = app.state.config.COMFYUI_FLUX_FP8_CLIP
-
-            data = ImageGenerationPayload(**data)
-
+            form_data = ComfyUIGenerateImageForm(**data)
             res = await comfyui_generate_image(
                 app.state.config.MODEL,
-                data,
+                form_data,
                 user.id,
                 app.state.config.COMFYUI_BASE_URL,
             )

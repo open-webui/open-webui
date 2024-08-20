@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from typing import Optional
 
-COMFYUI_DEFAULT_PROMPT = """
+COMFYUI_DEFAULT_WORKFLOW = """
 {
   "3": {
     "inputs": {
@@ -82,7 +82,7 @@ COMFYUI_DEFAULT_PROMPT = """
   },
   "7": {
     "inputs": {
-      "text": "Negative Prompt",
+      "text": "",
       "clip": [
         "4",
         1
@@ -122,135 +122,6 @@ COMFYUI_DEFAULT_PROMPT = """
       "title": "Save Image"
     }
   }
-}
-"""
-
-FLUX_DEFAULT_PROMPT = """
-{
-    "5": {
-        "inputs": {
-            "width": 1024,
-            "height": 1024,
-            "batch_size": 1
-        },
-        "class_type": "EmptyLatentImage"
-    },
-    "6": {
-        "inputs": {
-            "text": "Input Text Here",
-            "clip": [
-                "11",
-                0
-            ]
-        },
-        "class_type": "CLIPTextEncode"
-    },
-    "8": {
-        "inputs": {
-            "samples": [
-                "13",
-                0
-            ],
-            "vae": [
-                "10",
-                0
-            ]
-        },
-        "class_type": "VAEDecode"
-    },
-    "9": {
-        "inputs": {
-            "filename_prefix": "ComfyUI",
-            "images": [
-                "8",
-                0
-            ]
-        },
-        "class_type": "SaveImage"
-    },
-    "10": {
-        "inputs": {
-            "vae_name": "ae.safetensors"
-        },
-        "class_type": "VAELoader"
-    },
-    "11": {
-        "inputs": {
-            "clip_name1": "clip_l.safetensors",
-            "clip_name2": "t5xxl_fp16.safetensors",
-            "type": "flux"
-        },
-        "class_type": "DualCLIPLoader"
-    },
-    "12": {
-        "inputs": {
-            "unet_name": "flux1-dev.safetensors",
-            "weight_dtype": "default"
-        },
-        "class_type": "UNETLoader"
-    },
-    "13": {
-        "inputs": {
-            "noise": [
-                "25",
-                0
-            ],
-            "guider": [
-                "22",
-                0
-            ],
-            "sampler": [
-                "16",
-                0
-            ],
-            "sigmas": [
-                "17",
-                0
-            ],
-            "latent_image": [
-                "5",
-                0
-            ]
-        },
-        "class_type": "SamplerCustomAdvanced"
-    },
-    "16": {
-        "inputs": {
-            "sampler_name": "euler"
-        },
-        "class_type": "KSamplerSelect"
-    },
-    "17": {
-        "inputs": {
-            "scheduler": "simple",
-            "steps": 20,
-            "denoise": 1,
-            "model": [
-                "12",
-                0
-            ]
-        },
-        "class_type": "BasicScheduler"
-    },
-    "22": {
-        "inputs": {
-            "model": [
-                "12",
-                0
-            ],
-            "conditioning": [
-                "6",
-                0
-            ]
-        },
-        "class_type": "BasicGuider"
-    },
-    "25": {
-        "inputs": {
-            "noise_seed": 778937779713005
-        },
-        "class_type": "RandomNoise"
-    }
 }
 """
 
@@ -311,82 +182,61 @@ def get_images(ws, prompt, client_id, base_url):
     return {"data": output_images}
 
 
-class ImageGenerationPayload(BaseModel):
+class ComfyUINodeInput(BaseModel):
+    field: Optional[str] = None
+    node_id: str
+    key: Optional[str] = "text"
+    value: Optional[str] = None
+
+
+class ComfyUIWorkflow(BaseModel):
+    workflow: str
+    nodes: list[ComfyUINodeInput]
+
+
+class ComfyUIGenerateImageForm(BaseModel):
+    workflow: ComfyUIWorkflow
+
     prompt: str
-    negative_prompt: Optional[str] = ""
-    steps: Optional[int] = None
-    seed: Optional[int] = None
+    negative_prompt: Optional[str] = None
     width: int
     height: int
     n: int = 1
-    cfg_scale: Optional[float] = None
-    sampler: Optional[str] = None
-    scheduler: Optional[str] = None
-    sd3: Optional[bool] = None
-    flux: Optional[bool] = None
-    flux_weight_dtype: Optional[str] = None
-    flux_fp8_clip: Optional[bool] = None
+
+    steps: Optional[int] = None
+    seed: Optional[int] = None
 
 
 async def comfyui_generate_image(
-    model: str, payload: ImageGenerationPayload, client_id, base_url
+    model: str, payload: ComfyUIGenerateImageForm, client_id, base_url
 ):
     ws_url = base_url.replace("http://", "ws://").replace("https://", "wss://")
+    workflow = json.loads(payload.workflow.workflow)
 
-    comfyui_prompt = json.loads(COMFYUI_DEFAULT_PROMPT)
-
-    if payload.cfg_scale:
-        comfyui_prompt["3"]["inputs"]["cfg"] = payload.cfg_scale
-
-    if payload.sampler:
-        comfyui_prompt["3"]["inputs"]["sampler"] = payload.sampler
-
-    if payload.scheduler:
-        comfyui_prompt["3"]["inputs"]["scheduler"] = payload.scheduler
-
-    if payload.sd3:
-        comfyui_prompt["5"]["class_type"] = "EmptySD3LatentImage"
-
-    if payload.steps:
-        comfyui_prompt["3"]["inputs"]["steps"] = payload.steps
-
-    comfyui_prompt["4"]["inputs"]["ckpt_name"] = model
-    comfyui_prompt["7"]["inputs"]["text"] = payload.negative_prompt
-    comfyui_prompt["3"]["inputs"]["seed"] = (
-        payload.seed if payload.seed else random.randint(0, 18446744073709551614)
-    )
-
-    # as Flux uses a completely different workflow, we must treat it specially
-    if payload.flux:
-        comfyui_prompt = json.loads(FLUX_DEFAULT_PROMPT)
-        comfyui_prompt["12"]["inputs"]["unet_name"] = model
-        comfyui_prompt["25"]["inputs"]["noise_seed"] = (
-            payload.seed if payload.seed else random.randint(0, 18446744073709551614)
-        )
-
-        if payload.sampler:
-            comfyui_prompt["16"]["inputs"]["sampler_name"] = payload.sampler
-
-        if payload.steps:
-            comfyui_prompt["17"]["inputs"]["steps"] = payload.steps
-
-        if payload.scheduler:
-            comfyui_prompt["17"]["inputs"]["scheduler"] = payload.scheduler
-
-        if payload.flux_weight_dtype:
-            comfyui_prompt["12"]["inputs"]["weight_dtype"] = payload.flux_weight_dtype
-
-        if payload.flux_fp8_clip:
-            comfyui_prompt["11"]["inputs"][
-                "clip_name2"
-            ] = "t5xxl_fp8_e4m3fn.safetensors"
-
-    comfyui_prompt["5"]["inputs"]["batch_size"] = payload.n
-    comfyui_prompt["5"]["inputs"]["width"] = payload.width
-    comfyui_prompt["5"]["inputs"]["height"] = payload.height
-
-    # set the text prompt for our positive CLIPTextEncode
-    comfyui_prompt["6"]["inputs"]["text"] = payload.prompt
+    for node in payload.workflow.nodes:
+        if node.field:
+            if node.field == "model":
+                workflow[node.node_id]["inputs"][node.key] = model
+            elif node.field == "prompt":
+                workflow[node.node_id]["inputs"]["text"] = payload.prompt
+            elif node.field == "negative_prompt":
+                workflow[node.node_id]["inputs"]["text"] = payload.negative_prompt
+            elif node.field == "width":
+                workflow[node.node_id]["inputs"]["width"] = payload.width
+            elif node.field == "height":
+                workflow[node.node_id]["inputs"]["height"] = payload.height
+            elif node.field == "n":
+                workflow[node.node_id]["inputs"]["batch_size"] = payload.n
+            elif node.field == "steps":
+                workflow[node.node_id]["inputs"]["steps"] = payload.steps
+            elif node.field == "seed":
+                workflow[node.node_id]["inputs"]["seed"] = (
+                    payload.seed
+                    if payload.seed
+                    else random.randint(0, 18446744073709551614)
+                )
+        else:
+            workflow[node.node_id]["inputs"][node.key] = node.value
 
     try:
         ws = websocket.WebSocket()
@@ -397,9 +247,7 @@ async def comfyui_generate_image(
         return None
 
     try:
-        images = await asyncio.to_thread(
-            get_images, ws, comfyui_prompt, client_id, base_url
-        )
+        images = await asyncio.to_thread(get_images, ws, workflow, client_id, base_url)
     except Exception as e:
         log.exception(f"Error while receiving images: {e}")
         images = None
