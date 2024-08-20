@@ -24,8 +24,6 @@
 					<div class="text-center text-2xl font-medium z-50">
 						{$i18n.t('{{webUIName}} Backend Required', { webUIName: $WEBUI_NAME })}
 					</div>
-
-					
 					</div>
 
 					<div class=" mt-6 mx-auto relative group w-fit">
@@ -41,5 +39,4 @@
 				</div>
 			</div>
 		</div>
-	</div>
 {/if}
