@@ -56,7 +56,7 @@
 	onMount(() => {
 		document.addEventListener('click', handleOutsideClick);
 		return () => {
-			document.removeEventListener('click');
+			document.removeEventListener('click', handleOutsideClick);
 		};
 	});
 </script>
