@@ -60,17 +60,17 @@
 	}
 
 	// customization: auto select for all uploaded docs
-	$: if ($documents.length) {
-		files = [
-			{
-				name: 'All Documents',
-				type: 'collection',
-				title: 'All Documents',
-				collection_names: $documents.map((doc) => doc.collection_name),
-				upload_status: true
-			},
-		];
-	}
+	// $: if ($documents.length) {
+	// 	files = [
+	// 		{
+	// 			name: 'All Documents',
+	// 			type: 'collection',
+	// 			title: 'All Documents',
+	// 			collection_names: $documents.map((doc) => doc.collection_name),
+	// 			upload_status: true
+	// 		},
+	// 	];
+	// }
 
 	let mediaRecorder;
 	let audioChunks = [];
