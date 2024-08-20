@@ -323,7 +323,46 @@
 						<div class="">
 							<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow Nodes')}</div>
 
-							<div>hi</div>
+							<div class="text-xs">
+								<div class="flex gap-2">
+									<div>Prompt Node</div>
+									<div>Node Ids</div>
+									<div>"text"</div>
+									<div>Default</div>
+								</div>
+
+								<div class="flex gap-2">
+									<div>Model Node</div>
+									<div>Node Ids</div>
+									<div>"text"</div>
+									<div>Default</div>
+								</div>
+
+								<div class="flex gap-2">
+									<div>Image Size Node</div>
+									<div>Node Ids</div>
+									<div>"text"</div>
+									<div>Default</div>
+								</div>
+
+								<div class="flex gap-2">
+									<div>Image Steps Node</div>
+									<div>Node Ids</div>
+									<div>"text"</div>
+									<div>Default</div>
+								</div>
+							</div>
+
+							<hr class=" dark:border-gray-850 my-2" />
+
+							<div class="text-xs">
+								<div class="flex gap-2">
+									<div>Custom Node</div>
+									<div>Node Ids</div>
+									<div>Key</div>
+									<div>Value</div>
+								</div>
+							</div>
 						</div>
 					{/if}
 				{:else if config?.engine === 'openai'}
