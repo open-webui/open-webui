@@ -635,24 +635,23 @@ If a function tool doesn't match the query, return an empty string. Else, pick a
 INITIAL_TOOLKITS = os.environ.get(
     "INITIAL_TOOLKITS",
     json.dumps({
-        "id": "annual_leave_toolkit",
-        "name": "annual leave toolkit",
-        "meta": {"description": "annual leave toolkit"},
+        "id": "hr_application_toolkit",
+        "name": "HR Application Toolkit",
+        "meta": {"description": "Toolkit for initiating various applications"},
         "content": (
-            "import os\n"
-            "import requests\n"
-            "from datetime import datetime\n\n\n"
             "class Tools:\n"
             "    def __init__(self):\n"
             "        pass\n\n"
-            "    def display_annual_leave_form(self, user_type):\n"
+            "    def display_leave_application(self, user_type):\n"
             "        \"\"\"\n"
             "        This function is used to assist users in **initiating** a leave application process (e.g., sick leave, maternity leave, annual leave) by providing a relevant form or URL. It should be triggered **only when the user's query clearly indicates an intent to apply for or request leave**. Simple mentions of a leave type (e.g., 'sick leave', 'maternity leave') without a clear request to apply or take action should **not** trigger this function. This function is **not** intended for queries that merely mention leave, confirm submission, or inquire about the status of previous leave requests, nor for general job titles, occupational roles, or unrelated HR inquiries (e.g., probation periods). The query must explicitly request to begin the leave application process. If the query does not explicitly request to begin the leave application process, this function should not be triggered.\n"
             "        \"\"\"\n"
-            "        if user_type == \"contractual\":\n"
+            "        if user_type == \"staff\" or user_type == \"outsource\":\n"
             "            return \"annual_leave_form=True\"\n"
+            "        elif user_type == \"faculty\":\n"
+            "            return \"You can use https://aderp.dof.abudhabi.ae/OA_HTML/AppsLocalLogin.jsp for leave application.\"\n"
             "        else:\n"
-            "            return \"The annual leave form URL is : www.annual-leave-form.com\"\n"
+            "            return \"Due to your account type, this feature has been restricted. Please try logging in with an Outlook account or contacting the administrator.\"\n"
         )
     })
 )

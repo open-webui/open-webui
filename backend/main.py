@@ -152,7 +152,12 @@ async def initialize_toolkits():
 async def get_function_call_response(prompt, tool_id, template, task_model_id, user):
     tool = Tools.get_tool_by_id(tool_id)
     tools_specs = json.dumps(tool.specs, indent=2)
-    content = tools_function_calling_generation_template(template, tools_specs)
+    tools_specs_dict = json.loads(tools_specs)
+    for tool in tools_specs_dict:
+        if "parameters" in tool:
+            tool["parameters"] = {}
+    modified_tools_specs = json.dumps(tools_specs_dict, indent=2)
+    content = tools_function_calling_generation_template(template, modified_tools_specs)
 
     payload = {
         "model": task_model_id,
@@ -162,6 +167,8 @@ async def get_function_call_response(prompt, tool_id, template, task_model_id, u
         ],
         "stream": False,
     }
+    print(f'user info: {user}')
+    print(f'user extra sso info: {user.extra_sso}')
 
     response = None
     try:
@@ -193,9 +200,13 @@ async def get_function_call_response(prompt, tool_id, template, task_model_id, u
                 function = getattr(toolkit_module, result["name"])
                 function_result = None
                 try:
-                    if result["name"] == 'display_annual_leave_form' or "user_type" in result["parameters"]:
+                    if result["name"] == 'display_leave_application':
                         result["parameters"] = {}
-                        result["parameters"]["user_type"] = 'contractual'
+                        if user.extra_sso:
+                            extra_sso_dict = json.loads(user.extra_sso)
+                            result["parameters"]["user_type"] = extra_sso_dict.get("emp_type", "").lower() if extra_sso_dict.get("emp_type") else None
+                        else: 
+                            result["parameters"]["user_type"] = None
                         log.info(f'final resuls: {result}')
                     function_result = function(**result["parameters"])
                 except Exception as e:
