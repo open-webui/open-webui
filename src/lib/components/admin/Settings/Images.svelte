@@ -20,13 +20,14 @@
 	} from '$lib/apis/images';
 	import { getBackendConfig } from '$lib/apis';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
 
 	let loading = false;
 
-	let imageGenerationEngine = '';
+	let imageGenerationEngine = 'openai';
 	let enableImageGeneration = false;
 
 	let AUTOMATIC1111_BASE_URL = '';
@@ -128,7 +129,7 @@
 			});
 
 			if (res) {
-				imageGenerationEngine = res.engine;
+				imageGenerationEngine = res.engine ?? 'automatic1111';
 				enableImageGeneration = res.enabled;
 			}
 			const URLS = await getImageGenerationEngineUrls(localStorage.token);
@@ -180,6 +181,38 @@
 		<div>
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
 
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Image Generation (Experimental)')}
+					</div>
+
+					<div class="px-1">
+						<Switch
+							bind:state={enableImageGeneration}
+							on:change={(e) => {
+								const enabled = e.detail;
+
+								if (enabled) {
+									if (imageGenerationEngine === 'automatic1111' && AUTOMATIC1111_BASE_URL === '') {
+										toast.error($i18n.t('AUTOMATIC1111 Base URL is required.'));
+										enableImageGeneration = false;
+									} else if (imageGenerationEngine === 'comfyui' && COMFYUI_BASE_URL === '') {
+										toast.error($i18n.t('ComfyUI Base URL is required.'));
+										enableImageGeneration = false;
+									} else if (imageGenerationEngine === 'openai' && OPENAI_API_KEY === '') {
+										toast.error($i18n.t('OpenAI API Key is required.'));
+										enableImageGeneration = false;
+									}
+								}
+
+								updateImageGeneration();
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Image Generation Engine')}</div>
 				<div class="flex items-center relative">
@@ -191,51 +224,16 @@
 							await updateImageGeneration();
 						}}
 					>
-						<option value="">{$i18n.t('Default (Automatic1111)')}</option>
+						<option value="openai">{$i18n.t('Default (Open AI)')}</option>
 						<option value="comfyui">{$i18n.t('ComfyUI')}</option>
-						<option value="openai">{$i18n.t('Open AI (Dall-E)')}</option>
+						<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
 					</select>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Image Generation (Experimental)')}
-					</div>
-
-					<button
-						class="p-1 px-3 text-xs flex rounded transition"
-						on:click={() => {
-							if (imageGenerationEngine === '' && AUTOMATIC1111_BASE_URL === '') {
-								toast.error($i18n.t('AUTOMATIC1111 Base URL is required.'));
-								enableImageGeneration = false;
-							} else if (imageGenerationEngine === 'comfyui' && COMFYUI_BASE_URL === '') {
-								toast.error($i18n.t('ComfyUI Base URL is required.'));
-								enableImageGeneration = false;
-							} else if (imageGenerationEngine === 'openai' && OPENAI_API_KEY === '') {
-								toast.error($i18n.t('OpenAI API Key is required.'));
-								enableImageGeneration = false;
-							} else {
-								enableImageGeneration = !enableImageGeneration;
-							}
-
-							updateImageGeneration();
-						}}
-						type="button"
-					>
-						{#if enableImageGeneration === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
 				</div>
 			</div>
 		</div>
 		<hr class=" dark:border-gray-850" />
 
-		{#if imageGenerationEngine === ''}
+		{#if imageGenerationEngine === 'automatic1111'}
 			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('AUTOMATIC1111 Base URL')}</div>
 			<div class="flex w-full">
 				<div class="flex-1 mr-2">

@@ -1342,10 +1342,127 @@ COMFYUI_BASE_URL = PersistentConfig(
     os.getenv("COMFYUI_BASE_URL", ""),
 )
 
+COMFYUI_DEFAULT_WORKFLOW = """
+{
+  "3": {
+    "inputs": {
+      "seed": 0,
+      "steps": 20,
+      "cfg": 8,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [
+        "4",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "4": {
+    "inputs": {
+      "ckpt_name": "model.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "5": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": "Prompt",
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "9": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  }
+}
+"""
+
+
 COMFYUI_WORKFLOW = PersistentConfig(
     "COMFYUI_WORKFLOW",
     "image_generation.comfyui.workflow",
-    os.getenv("COMFYUI_WORKFLOW", ""),
+    os.getenv("COMFYUI_WORKFLOW", COMFYUI_DEFAULT_WORKFLOW),
+)
+
+COMFYUI_WORKFLOW_NODES = PersistentConfig(
+    "COMFYUI_WORKFLOW",
+    "image_generation.comfyui.nodes",
+    [],
 )
 
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
