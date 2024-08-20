@@ -180,7 +180,7 @@
 			await tick();
 		}
 
-		await mermaid.initialize({ startOnLoad: false });
+		// await mermaid.initialize({ startOnLoad: false });
 		loaded = true;
 	});
 </script>

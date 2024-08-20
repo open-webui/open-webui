@@ -289,6 +289,11 @@ __builtins__.input = input`);
 	}
 
 	onMount(async () => {
+		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
+			(async () => {
+				await drawMermaidDiagram();
+			})();
+		}
 		if (document.documentElement.classList.contains('dark')) {
 			mermaid.initialize({
 				startOnLoad: true,
