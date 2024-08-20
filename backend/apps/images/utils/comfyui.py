@@ -74,7 +74,7 @@ def get_images(ws, prompt, client_id, base_url):
 
 class ComfyUINodeInput(BaseModel):
     field: Optional[str] = None
-    node_id: str
+    node_ids: list[str] = []
     key: Optional[str] = "text"
     value: Optional[str] = None
 
@@ -106,27 +106,37 @@ async def comfyui_generate_image(
     for node in payload.workflow.nodes:
         if node.field:
             if node.field == "model":
-                workflow[node.node_id]["inputs"][node.key] = model
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"][node.key] = model
             elif node.field == "prompt":
-                workflow[node.node_id]["inputs"]["text"] = payload.prompt
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"]["text"] = payload.prompt
             elif node.field == "negative_prompt":
-                workflow[node.node_id]["inputs"]["text"] = payload.negative_prompt
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"]["text"] = payload.negative_prompt
             elif node.field == "width":
-                workflow[node.node_id]["inputs"]["width"] = payload.width
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"]["width"] = payload.width
             elif node.field == "height":
-                workflow[node.node_id]["inputs"]["height"] = payload.height
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"]["height"] = payload.height
             elif node.field == "n":
-                workflow[node.node_id]["inputs"]["batch_size"] = payload.n
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"]["batch_size"] = payload.n
             elif node.field == "steps":
-                workflow[node.node_id]["inputs"]["steps"] = payload.steps
+                for node_id in node.node_ids:
+                    workflow[node_id]["inputs"]["steps"] = payload.steps
             elif node.field == "seed":
-                workflow[node.node_id]["inputs"]["seed"] = (
+                seed = (
                     payload.seed
                     if payload.seed
                     else random.randint(0, 18446744073709551614)
                 )
+                for node_id in node.node_ids:
+                    workflow[node.node_id]["inputs"]["seed"] = seed
         else:
-            workflow[node.node_id]["inputs"][node.key] = node.value
+            for node_id in node.node_ids:
+                workflow[node_id]["inputs"][node.key] = node.value
 
     try:
         ws = websocket.WebSocket()

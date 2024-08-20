@@ -413,7 +413,6 @@ async def image_generations(
             return images
 
         elif app.state.config.ENGINE == "comfyui":
-
             data = {
                 "prompt": form_data.prompt,
                 "width": width,
