@@ -176,7 +176,6 @@ for version in soup.find_all("h2"):
 
 CHANGELOG = changelog_json
 
-
 ####################################
 # SAFE_MODE
 ####################################
