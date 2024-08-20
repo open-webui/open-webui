@@ -2,23 +2,16 @@
 	import { toast } from 'svelte-sonner';
 
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { config, user } from '$lib/stores';
+	import { config as backendConfig, user } from '$lib/stores';
+
+	import { getBackendConfig } from '$lib/apis';
 	import {
 		getImageGenerationModels,
-		getDefaultImageGenerationModel,
-		updateDefaultImageGenerationModel,
-		getImageSize,
 		getImageGenerationConfig,
 		updateImageGenerationConfig,
-		getImageGenerationEngineUrls,
-		updateImageGenerationEngineUrls,
-		updateImageSize,
-		getImageSteps,
-		updateImageSteps,
-		getOpenAIConfig,
-		updateOpenAIConfig
+		getConfig,
+		updateConfig
 	} from '$lib/apis/images';
-	import { getBackendConfig } from '$lib/apis';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	const dispatch = createEventDispatcher();
@@ -27,127 +20,77 @@
 
 	let loading = false;
 
-	let imageGenerationEngine = 'openai';
-	let enableImageGeneration = false;
+	let config = null;
+	let imageGenerationConfig = null;
 
-	let AUTOMATIC1111_BASE_URL = '';
-	let AUTOMATIC1111_API_AUTH = '';
-	let COMFYUI_BASE_URL = '';
-
-	let OPENAI_API_BASE_URL = '';
-	let OPENAI_API_KEY = '';
-
-	let selectedModel = '';
 	let models = null;
 
-	let imageSize = '';
-	let steps = 50;
+	let inputFiles = null;
 
 	const getModels = async () => {
 		models = await getImageGenerationModels(localStorage.token).catch((error) => {
 			toast.error(error);
 			return null;
 		});
-		selectedModel = await getDefaultImageGenerationModel(localStorage.token).catch((error) => {
-			return '';
-		});
 	};
 
-	const updateUrlHandler = async () => {
-		if (imageGenerationEngine === 'comfyui') {
-			const res = await updateImageGenerationEngineUrls(localStorage.token, {
-				COMFYUI_BASE_URL: COMFYUI_BASE_URL
-			}).catch((error) => {
-				toast.error(error);
-
-				console.log(error);
-				return null;
-			});
-
-			if (res) {
-				COMFYUI_BASE_URL = res.COMFYUI_BASE_URL;
-
-				await getModels();
-
-				if (models) {
-					toast.success($i18n.t('Server connection verified'));
-				}
-			} else {
-				({ COMFYUI_BASE_URL } = await getImageGenerationEngineUrls(localStorage.token));
-			}
-		} else {
-			const res = await updateImageGenerationEngineUrls(localStorage.token, {
-				AUTOMATIC1111_BASE_URL: AUTOMATIC1111_BASE_URL,
-				AUTOMATIC1111_API_AUTH: AUTOMATIC1111_API_AUTH
-			}).catch((error) => {
-				toast.error(error);
-				return null;
-			});
-
-			if (res) {
-				AUTOMATIC1111_BASE_URL = res.AUTOMATIC1111_BASE_URL;
-				AUTOMATIC1111_API_AUTH = res.AUTOMATIC1111_API_AUTH;
-
-				await getModels();
-
-				if (models) {
-					toast.success($i18n.t('Server connection verified'));
-				}
-			} else {
-				({ AUTOMATIC1111_BASE_URL, AUTOMATIC1111_API_AUTH } = await getImageGenerationEngineUrls(
-					localStorage.token
-				));
-			}
-		}
-	};
-	const updateImageGeneration = async () => {
-		const res = await updateImageGenerationConfig(
-			localStorage.token,
-			imageGenerationEngine,
-			enableImageGeneration
-		).catch((error) => {
+	const updateConfigHandler = async () => {
+		const res = await updateConfig(localStorage.token, config).catch((error) => {
 			toast.error(error);
 			return null;
 		});
 
 		if (res) {
-			imageGenerationEngine = res.engine;
-			enableImageGeneration = res.enabled;
+			config = res;
 		}
 
-		if (enableImageGeneration) {
-			config.set(await getBackendConfig(localStorage.token));
+		if (config.enabled) {
+			backendConfig.set(await getBackendConfig());
 			getModels();
 		}
 	};
 
+	const saveHandler = async () => {
+		loading = true;
+
+		await updateConfig(localStorage.token, config).catch((error) => {
+			toast.error(error);
+			loading = false;
+			return null;
+		});
+
+		await updateImageGenerationConfig(localStorage.token, imageGenerationConfig).catch((error) => {
+			toast.error(error);
+			loading = false;
+			return null;
+		});
+
+		dispatch('save');
+		loading = false;
+	};
+
 	onMount(async () => {
 		if ($user.role === 'admin') {
-			const res = await getImageGenerationConfig(localStorage.token).catch((error) => {
+			const res = await getConfig(localStorage.token).catch((error) => {
 				toast.error(error);
 				return null;
 			});
 
 			if (res) {
-				imageGenerationEngine = res.engine ?? 'automatic1111';
-				enableImageGeneration = res.enabled;
+				config = res;
 			}
-			const URLS = await getImageGenerationEngineUrls(localStorage.token);
 
-			AUTOMATIC1111_BASE_URL = URLS.AUTOMATIC1111_BASE_URL;
-			AUTOMATIC1111_API_AUTH = URLS.AUTOMATIC1111_API_AUTH;
-			COMFYUI_BASE_URL = URLS.COMFYUI_BASE_URL;
-
-			const config = await getOpenAIConfig(localStorage.token);
-
-			OPENAI_API_KEY = config.OPENAI_API_KEY;
-			OPENAI_API_BASE_URL = config.OPENAI_API_BASE_URL;
-
-			imageSize = await getImageSize(localStorage.token);
-			steps = await getImageSteps(localStorage.token);
-
-			if (enableImageGeneration) {
+			if (config.enabled) {
 				getModels();
+			}
+
+			const imageConfigRes = await getImageGenerationConfig(localStorage.token).catch((error) => {
+				toast.error(error);
+				return null;
+			});
+
+			if (imageConfigRes) {
+				imageGenerationConfig = imageConfigRes;
 			}
 		}
 	});
@@ -156,205 +99,267 @@
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
-		loading = true;
-
-		if (imageGenerationEngine === 'openai') {
-			await updateOpenAIConfig(localStorage.token, OPENAI_API_BASE_URL, OPENAI_API_KEY);
-		}
-
-		await updateDefaultImageGenerationModel(localStorage.token, selectedModel);
-
-		await updateImageSize(localStorage.token, imageSize).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-		await updateImageSteps(localStorage.token, steps).catch((error) => {
-			toast.error(error);
-			return null;
-		});
-
-		dispatch('save');
-		loading = false;
+		saveHandler();
 	}}
 >
-	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden">
-		<div>
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
-
+	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden pr-2">
+		{#if config && imageGenerationConfig}
 			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Image Generation (Experimental)')}
-					</div>
+				<div class=" mb-1 text-sm font-medium">{$i18n.t('Image Settings')}</div>
 
-					<div class="px-1">
-						<Switch
-							bind:state={enableImageGeneration}
-							on:change={(e) => {
-								const enabled = e.detail;
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Image Generation (Experimental)')}
+						</div>
 
-								if (enabled) {
-									if (imageGenerationEngine === 'automatic1111' && AUTOMATIC1111_BASE_URL === '') {
-										toast.error($i18n.t('AUTOMATIC1111 Base URL is required.'));
-										enableImageGeneration = false;
-									} else if (imageGenerationEngine === 'comfyui' && COMFYUI_BASE_URL === '') {
-										toast.error($i18n.t('ComfyUI Base URL is required.'));
-										enableImageGeneration = false;
-									} else if (imageGenerationEngine === 'openai' && OPENAI_API_KEY === '') {
-										toast.error($i18n.t('OpenAI API Key is required.'));
-										enableImageGeneration = false;
+						<div class="px-1">
+							<Switch
+								bind:state={config.enabled}
+								on:change={(e) => {
+									const enabled = e.detail;
+
+									if (enabled) {
+										if (
+											config.engine === 'automatic1111' &&
+											config.automatic1111.AUTOMATIC1111_BASE_URL === ''
+										) {
+											toast.error($i18n.t('AUTOMATIC1111 Base URL is required.'));
+											config.enabled = false;
+										} else if (
+											config.engine === 'comfyui' &&
+											config.comfyui.COMFYUI_BASE_URL === ''
+										) {
+											toast.error($i18n.t('ComfyUI Base URL is required.'));
+											config.enabled = false;
+										} else if (config.engine === 'openai' && config.openai.OPENAI_API_KEY === '') {
+											toast.error($i18n.t('OpenAI API Key is required.'));
+											config.enabled = false;
+										}
 									}
-								}
 
-								updateImageGeneration();
+									updateConfigHandler();
+								}}
+							/>
+						</div>
+					</div>
+				</div>
+
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Image Generation Engine')}</div>
+					<div class="flex items-center relative">
+						<select
+							class="w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
+							bind:value={config.engine}
+							placeholder={$i18n.t('Select Engine')}
+							on:change={async () => {
+								updateConfigHandler();
 							}}
-						/>
+						>
+							<option value="openai">{$i18n.t('Default (Open AI)')}</option>
+							<option value="comfyui">{$i18n.t('ComfyUI')}</option>
+							<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
+						</select>
 					</div>
 				</div>
 			</div>
-
-			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Image Generation Engine')}</div>
-				<div class="flex items-center relative">
-					<select
-						class="w-fit pr-8 rounded px-2 p-1 text-xs bg-transparent outline-none text-right"
-						bind:value={imageGenerationEngine}
-						placeholder={$i18n.t('Select a mode')}
-						on:change={async () => {
-							await updateImageGeneration();
-						}}
-					>
-						<option value="openai">{$i18n.t('Default (Open AI)')}</option>
-						<option value="comfyui">{$i18n.t('ComfyUI')}</option>
-						<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
-					</select>
-				</div>
-			</div>
-		</div>
-		<hr class=" dark:border-gray-850" />
-
-		{#if imageGenerationEngine === 'automatic1111'}
-			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('AUTOMATIC1111 Base URL')}</div>
-			<div class="flex w-full">
-				<div class="flex-1 mr-2">
-					<input
-						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-						placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
-						bind:value={AUTOMATIC1111_BASE_URL}
-					/>
-				</div>
-				<button
-					class="px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-					type="button"
-					on:click={() => {
-						updateUrlHandler();
-					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</button>
-			</div>
-
-			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				{$i18n.t('Include `--api` flag when running stable-diffusion-webui')}
-				<a
-					class=" text-gray-300 font-medium"
-					href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734"
-					target="_blank"
-				>
-					{$i18n.t('(e.g. `sh webui.sh --api`)')}
-				</a>
-			</div>
-
-			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('AUTOMATIC1111 Api Auth String')}</div>
-			<SensitiveInput
-				placeholder={$i18n.t('Enter api auth string (e.g. username:password)')}
-				bind:value={AUTOMATIC1111_API_AUTH}
-				required={false}
-			/>
-
-			<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-				{$i18n.t('Include `--api-auth` flag when running stable-diffusion-webui')}
-				<a
-					class=" text-gray-300 font-medium"
-					href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/13993"
-					target="_blank"
-				>
-					{$i18n.t('(e.g. `sh webui.sh --api --api-auth username_password`)').replace('_', ':')}
-				</a>
-			</div>
-		{:else if imageGenerationEngine === 'comfyui'}
-			<div class=" mb-2.5 text-sm font-medium">{$i18n.t('ComfyUI Base URL')}</div>
-			<div class="flex w-full">
-				<div class="flex-1 mr-2">
-					<input
-						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-						placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
-						bind:value={COMFYUI_BASE_URL}
-					/>
-				</div>
-				<button
-					class="px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-					type="button"
-					on:click={() => {
-						updateUrlHandler();
-					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</button>
-			</div>
-		{:else if imageGenerationEngine === 'openai'}
-			<div>
-				<div class=" mb-1.5 text-sm font-medium">{$i18n.t('OpenAI API Config')}</div>
-
-				<div class="flex gap-2 mb-1">
-					<input
-						class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-						placeholder={$i18n.t('API Base URL')}
-						bind:value={OPENAI_API_BASE_URL}
-						required
-					/>
-
-					<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OPENAI_API_KEY} />
-				</div>
-			</div>
-		{/if}
-
-		{#if enableImageGeneration}
 			<hr class=" dark:border-gray-850" />
 
-			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Default Model')}</div>
-				<div class="flex w-full">
-					<div class="flex-1 mr-2">
-						{#if imageGenerationEngine === 'openai' && !OPENAI_API_BASE_URL.includes('https://api.openai.com')}
+			<div class="flex flex-col gap-2">
+				{#if (config?.engine ?? 'automatic1111') === 'automatic1111'}
+					<div>
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('AUTOMATIC1111 Base URL')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
+									bind:value={config.automatic1111.AUTOMATIC1111_BASE_URL}
+								/>
+							</div>
+							<button
+								class="px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								type="button"
+								on:click={() => {
+									updateConfigHandler();
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						</div>
+
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Include `--api` flag when running stable-diffusion-webui')}
+							<a
+								class=" text-gray-300 font-medium"
+								href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734"
+								target="_blank"
+							>
+								{$i18n.t('(e.g. `sh webui.sh --api`)')}
+							</a>
+						</div>
+					</div>
+
+					<div>
+						<div class=" mb-2 text-sm font-medium">
+							{$i18n.t('AUTOMATIC1111 Api Auth String')}
+						</div>
+						<SensitiveInput
+							placeholder={$i18n.t('Enter api auth string (e.g. username:password)')}
+							bind:value={config.automatic1111.AUTOMATIC1111_API_AUTH}
+							required={false}
+						/>
+
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Include `--api-auth` flag when running stable-diffusion-webui')}
+							<a
+								class=" text-gray-300 font-medium"
+								href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/13993"
+								target="_blank"
+							>
+								{$i18n
+									.t('(e.g. `sh webui.sh --api --api-auth username_password`)')
+									.replace('_', ':')}
+							</a>
+						</div>
+					</div>
+				{:else if config?.engine === 'comfyui'}
+					<div class="">
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Base URL')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
+									bind:value={config.comfyui.COMFYUI_BASE_URL}
+								/>
+							</div>
+							<button
+								class="px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								type="button"
+								on:click={() => {
+									updateConfigHandler();
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						</div>
+					</div>
+
+					<div class="">
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow')}</div>
+
+						{#if config.comfyui.COMFYUI_WORKFLOW}
+							<textarea
+								class="w-full rounded-lg mb-1 py-2 px-4 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none disabled:text-gray-600 resize-none"
+								rows="10"
+								value={JSON.stringify(JSON.parse(config.comfyui.COMFYUI_WORKFLOW), null, 2)}
+								disabled
+							/>
+						{/if}
+
+						<div class="flex w-full">
+							<div class="flex-1">
+								<input
+									id="upload-comfyui-workflow-input"
+									hidden
+									type="file"
+									accept=".json"
+									on:change={(e) => {
+										const file = e.target.files[0];
+										const reader = new FileReader();
+
+										reader.onload = (e) => {
+											config.comfyui.COMFYUI_WORKFLOW = e.target.result;
+											updateConfigHandler();
+
+											e.target.value = null;
+										};
+
+										reader.readAsText(file);
+									}}
+								/>
+
+								<button
+									class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-800 dark:hover:bg-gray-850 text-center rounded-xl"
+									type="button"
+									on:click={() => {
+										document.getElementById('upload-comfyui-workflow-input')?.click();
+									}}
+								>
+									{$i18n.t('Click here to upload a workflow.json file.')}
+								</button>
+							</div>
+						</div>
+
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Make sure to export a workflow.json file as API format from ComfyUI.')}
+						</div>
+					</div>
+
+					{#if config.comfyui.COMFYUI_WORKFLOW}
+						<div class="">
+							<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow Nodes')}</div>
+
+							<div>hi</div>
+						</div>
+					{/if}
+				{:else if config?.engine === 'openai'}
+					<div>
+						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('OpenAI API Config')}</div>
+
+						<div class="flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={config.openai.OPENAI_API_BASE_URL}
+								required
+							/>
+
+							<SensitiveInput
+								placeholder={$i18n.t('API Key')}
+								bind:value={config.openai.OPENAI_API_KEY}
+							/>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			{#if config?.enabled}
+				<hr class=" dark:border-gray-850" />
+
+				<div>
+					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Default Model')}</div>
+					<div class="flex w-full">
+						<div class="flex-1 mr-2">
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
 										list="model-list"
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-										bind:value={selectedModel}
+										bind:value={imageGenerationConfig.MODEL}
 										placeholder="Select a model"
 									/>
 
@@ -365,51 +370,36 @@
 									</datalist>
 								</div>
 							</div>
-						{:else}
-							<select
+						</div>
+					</div>
+				</div>
+
+				<div>
+					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Image Size')}</div>
+					<div class="flex w-full">
+						<div class="flex-1 mr-2">
+							<input
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-								bind:value={selectedModel}
-								placeholder={$i18n.t('Select a model')}
-								required
-							>
-								{#if !selectedModel}
-									<option value="" disabled selected>{$i18n.t('Select a model')}</option>
-								{/if}
-								{#each models ?? [] as model}
-									<option value={model.id} class="bg-gray-100 dark:bg-gray-700">{model.name}</option
-									>
-								{/each}
-							</select>
-						{/if}
+								placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
+								bind:value={imageGenerationConfig.IMAGE_SIZE}
+							/>
+						</div>
 					</div>
 				</div>
-			</div>
 
-			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Image Size')}</div>
-				<div class="flex w-full">
-					<div class="flex-1 mr-2">
-						<input
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
-							bind:value={imageSize}
-						/>
+				<div>
+					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Steps')}</div>
+					<div class="flex w-full">
+						<div class="flex-1 mr-2">
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+								placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
+								bind:value={imageGenerationConfig.IMAGE_STEPS}
+							/>
+						</div>
 					</div>
 				</div>
-			</div>
-
-			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Steps')}</div>
-				<div class="flex w-full">
-					<div class="flex-1 mr-2">
-						<input
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-							placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
-							bind:value={steps}
-						/>
-					</div>
-				</div>
-			</div>
+			{/if}
 		{/if}
 	</div>
 
