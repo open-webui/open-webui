@@ -265,7 +265,7 @@ class Reranking(BaseModel):
         self, query: str, docs: Sequence["Document"], top_n: int, r_score: float
     ) -> Optional[List[Tuple[str, float]]]:
         try:
-            docs_per_batch = 1
+            docs_per_batch = 50
             with ThreadPoolExecutor() as executor:
                 futures = [
                     executor.submit(self._send_request, query, docs[i:i + docs_per_batch], top_n)
