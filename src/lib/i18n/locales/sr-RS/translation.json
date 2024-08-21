@@ -9,6 +9,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} размишља...",
 	"{{user}}'s Chats": "Ћаскања корисника {{user}}",
 	"{{webUIName}} Backend Required": "Захтева се {{webUIName}} позадинац",
+	"*Prompt node ID(s) are required for image generation": "",
 	"A task model is used when performing tasks such as generating titles for chats and web search queries": "Модел задатка се користи приликом извршавања задатака као што су генерисање наслова за ћаскања и упите за Веб претрагу",
 	"a user": "корисник",
 	"About": "О нама",

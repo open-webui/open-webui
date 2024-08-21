@@ -91,9 +91,19 @@
 
 		groupedMessages = parentMessage?.models.reduce((a, model, modelIdx) => {
 			// Find all messages that are children of the parent message and have the same model
-			const modelMessages = parentMessage?.childrenIds
+			let modelMessages = parentMessage?.childrenIds
 				.map((id) => history.messages[id])
-				.filter((m) => m.modelIdx === modelIdx);
+				.filter((m) => m?.modelIdx === modelIdx);
+
+			if (modelMessages.length === 0) {
+				modelMessages = parentMessage?.childrenIds
+					.map((id) => history.messages[id])
+					.filter((m) => m?.model === model);
+
+				modelMessages.forEach((m) => {
+					m.modelIdx = modelIdx;
+				});
+			}
 
 			return {
 				...a,
@@ -186,6 +196,9 @@
 										await tick();
 										groupedMessagesIdx[modelIdx] = groupedMessages[modelIdx].messages.length - 1;
 									}}
+									on:action={async (e) => {
+										dispatch('action', e.detail);
+									}}
 									on:save={async (e) => {
 										console.log('save', e);
 
@@ -208,7 +221,7 @@
 	{#if !readOnly && isLastMessage}
 		{#if !Object.keys(groupedMessages).find((modelIdx) => {
 			const { messages } = groupedMessages[modelIdx];
-			return !messages[groupedMessagesIdx[modelIdx]].done;
+			return !messages[groupedMessagesIdx[modelIdx]]?.done ?? false;
 		})}
 			<div class="flex justify-end">
 				<div class="w-full">

@@ -9,6 +9,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} sedang berpikir...",
 	"{{user}}'s Chats": "Obrolan {{user}}",
 	"{{webUIName}} Backend Required": "{{webUIName}} Diperlukan Backend",
+	"*Prompt node ID(s) are required for image generation": "",
 	"A task model is used when performing tasks such as generating titles for chats and web search queries": "Model tugas digunakan saat melakukan tugas seperti membuat judul untuk obrolan dan kueri penelusuran web",
 	"a user": "seorang pengguna",
 	"About": "Tentang",

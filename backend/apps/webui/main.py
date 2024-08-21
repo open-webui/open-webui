@@ -280,6 +280,10 @@ async def generate_function_chat_completion(form_data, user):
     files = metadata.get("files", [])
     tool_ids = metadata.get("tool_ids", [])
 
+    # Check if tool_ids is None
+    if tool_ids is None:
+        tool_ids = []
+
     __event_emitter__ = None
     __event_call__ = None
     __task__ = None
@@ -301,9 +305,10 @@ async def generate_function_chat_completion(form_data, user):
         "__messages__": form_data["messages"],
         "__files__": files,
     }
-    configured_tools = get_tools(app, tool_ids, user, tools_params)
 
-    extra_params["__tools__"] = configured_tools
+    tools = get_tools(app, tool_ids, user, tools_params)
+    extra_params["__tools__"] = tools
+
     if model_info:
         if model_info.base_model_id:
             form_data["model"] = model_info.base_model_id

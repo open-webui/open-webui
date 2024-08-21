@@ -133,7 +133,7 @@ async def comfyui_generate_image(
                     else random.randint(0, 18446744073709551614)
                 )
                 for node_id in node.node_ids:
-                    workflow[node.node_id]["inputs"]["seed"] = seed
+                    workflow[node_id]["inputs"][node.key] = seed
         else:
             for node_id in node.node_ids:
                 workflow[node_id]["inputs"][node.key] = node.value
@@ -147,6 +147,8 @@ async def comfyui_generate_image(
         return None
 
     try:
+        log.info("Sending workflow to WebSocket server.")
+        log.info(f"Workflow: {workflow}")
         images = await asyncio.to_thread(get_images, ws, workflow, client_id, base_url)
     except Exception as e:
         log.exception(f"Error while receiving images: {e}")

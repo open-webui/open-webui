@@ -27,7 +27,7 @@
 
 	let models = null;
 
-	let workflowNodes = [
+	let requiredWorkflowNodes = [
 		{
 			type: 'prompt',
 			key: 'text',
@@ -51,6 +51,11 @@
 		{
 			type: 'steps',
 			key: 'steps',
+			node_ids: ''
+		},
+		{
+			type: 'seed',
+			key: 'seed',
 			node_ids: ''
 		}
 	];
@@ -101,11 +106,12 @@
 		}
 
 		if (config?.comfyui?.COMFYUI_WORKFLOW) {
-			config.comfyui.COMFYUI_WORKFLOW_NODES = workflowNodes.map((node) => {
+			config.comfyui.COMFYUI_WORKFLOW_NODES = requiredWorkflowNodes.map((node) => {
 				return {
 					type: node.type,
 					key: node.key,
-					node_ids: node.node_ids.split(',').map((id) => id.trim())
+					node_ids:
+						node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
 				};
 			});
 		}
@@ -150,15 +156,17 @@
 				);
 			}
 
-			if ((config?.comfyui?.COMFYUI_WORKFLOW_NODES ?? []).length >= 5) {
-				workflowNodes = config.comfyui.COMFYUI_WORKFLOW_NODES.map((node) => {
-					return {
-						type: node.type,
-						key: node.key,
-						node_ids: node.node_ids.join(',')
-					};
-				});
-			}
+			requiredWorkflowNodes = requiredWorkflowNodes.map((node) => {
+				const n = config.comfyui.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
+
+				console.log(n);
+
+				return {
+					type: n.type,
+					key: n.key,
+					node_ids: typeof n.node_ids === 'string' ? n.node_ids : n.node_ids.join(',')
+				};
+			});
 
 			const imageConfigRes = await getImageGenerationConfig(localStorage.token).catch((error) => {
 				toast.error(error);
@@ -414,13 +422,13 @@
 							<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow Nodes')}</div>
 
 							<div class="text-xs flex flex-col gap-1.5">
-								{#each workflowNodes as node}
+								{#each requiredWorkflowNodes as node}
 									<div class="flex w-full items-center border dark:border-gray-850 rounded-lg">
 										<div class="flex-shrink-0">
 											<div
 												class=" capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/10 text-green-700 dark:text-green-200"
 											>
-												{node.type}
+												{node.type}{node.type === 'prompt' ? '*' : ''}
 											</div>
 										</div>
 										<div class="">
@@ -443,12 +451,15 @@
 													class="w-full py-1 px-4 rounded-r-lg text-xs bg-transparent outline-none"
 													placeholder="Node Ids"
 													bind:value={node.node_ids}
-													required
 												/>
 											</Tooltip>
 										</div>
 									</div>
 								{/each}
+							</div>
+
+							<div class="mt-2 text-xs text-right text-gray-400 dark:text-gray-500">
+								{$i18n.t('*Prompt node ID(s) are required for image generation')}
 							</div>
 						</div>
 					{/if}
