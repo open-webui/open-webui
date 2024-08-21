@@ -30,11 +30,11 @@ services:
           path: package.json
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.chat.rule=Host(`chat.matn.ai`)"
-      - "traefik.http.routers.chat.entrypoints=websecure"
-      - "traefik.http.routers.chat.tls.certresolver=myresolver"
-      - "traefik.http.routers.chat.tls=true"
-      - "traefik.http.services.chat.loadbalancer.server.port=3000"
+      - "traefik.http.routers.web.rule=Host(`chat.matn.ai`)"
+      - "traefik.http.routers.web.entrypoints=websecure"
+      - "traefik.http.routers.web.tls.certresolver=myresolver"
+      - "traefik.http.routers.web.tls=true"
+      - "traefik.http.services.web.loadbalancer.server.port=3000"
 
   backend:
     build:
