@@ -14,6 +14,7 @@
 	} from '$lib/apis/images';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -25,7 +26,33 @@
 
 	let models = null;
 
-	let inputFiles = null;
+	let workflowNodes = [
+		{
+			type: 'prompt',
+			key: 'text',
+			node_ids: []
+		},
+		{
+			type: 'model',
+			key: 'ckpt_name',
+			node_ids: []
+		},
+		{
+			type: 'width',
+			key: 'width',
+			node_ids: []
+		},
+		{
+			type: 'height',
+			key: 'height',
+			node_ids: []
+		},
+		{
+			type: 'steps',
+			key: 'steps',
+			node_ids: []
+		}
+	];
 
 	const getModels = async () => {
 		models = await getImageGenerationModels(localStorage.token).catch((error) => {
@@ -50,8 +77,27 @@
 		}
 	};
 
+	const validateJSON = (json) => {
+		try {
+			const obj = JSON.parse(json);
+
+			if (obj && typeof obj === 'object') {
+				return true;
+			}
+		} catch (e) {}
+		return false;
+	};
+
 	const saveHandler = async () => {
 		loading = true;
+
+		if (config?.comfyui?.COMFYUI_WORKFLOW) {
+			if (!validateJSON(config.comfyui.COMFYUI_WORKFLOW)) {
+				toast.error('Invalid JSON format for ComfyUI Workflow.');
+				loading = false;
+				return;
+			}
+		}
 
 		await updateConfig(localStorage.token, config).catch((error) => {
 			toast.error(error);
@@ -276,7 +322,6 @@
 								class="w-full rounded-lg mb-1 py-2 px-4 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none disabled:text-gray-600 resize-none"
 								rows="10"
 								value={JSON.stringify(JSON.parse(config.comfyui.COMFYUI_WORKFLOW), null, 2)}
-								disabled
 							/>
 						{/if}
 
@@ -323,45 +368,40 @@
 						<div class="">
 							<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow Nodes')}</div>
 
-							<div class="text-xs">
-								<div class="flex gap-2">
-									<div>Prompt Node</div>
-									<div>Node Ids</div>
-									<div>"text"</div>
-									<div>Default</div>
-								</div>
+							<div class="text-xs flex flex-col gap-1">
+								{#each workflowNodes as node}
+									<div class="flex w-full items-center border border-gray-850 rounded-lg">
+										<div class="flex-shrink-0">
+											<div
+												class=" capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/20 text-green-700 dark:text-green-200"
+											>
+												{node.type}
+											</div>
+										</div>
+										<div class="">
+											<Tooltip content="Input Key (e.g. text, unet_name, steps)">
+												<input
+													class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-none border-r border-gray-850"
+													placeholder="Key"
+													bind:value={node.key}
+												/>
+											</Tooltip>
+										</div>
 
-								<div class="flex gap-2">
-									<div>Model Node</div>
-									<div>Node Ids</div>
-									<div>"text"</div>
-									<div>Default</div>
-								</div>
-
-								<div class="flex gap-2">
-									<div>Image Size Node</div>
-									<div>Node Ids</div>
-									<div>"text"</div>
-									<div>Default</div>
-								</div>
-
-								<div class="flex gap-2">
-									<div>Image Steps Node</div>
-									<div>Node Ids</div>
-									<div>"text"</div>
-									<div>Default</div>
-								</div>
-							</div>
-
-							<hr class=" dark:border-gray-850 my-2" />
-
-							<div class="text-xs">
-								<div class="flex gap-2">
-									<div>Custom Node</div>
-									<div>Node Ids</div>
-									<div>Key</div>
-									<div>Value</div>
-								</div>
+										<div class="w-full">
+											<Tooltip
+												content="Comma separated Node Ids (e.g. 1,2,3)"
+												placement="top-start"
+											>
+												<input
+													class="w-full py-1 px-4 rounded-r-lg text-xs bg-transparent outline-none"
+													placeholder="Node Ids"
+													bind:value={node.node_ids}
+												/>
+											</Tooltip>
+										</div>
+									</div>
+								{/each}
 							</div>
 						</div>
 					{/if}
