@@ -93,7 +93,8 @@ WEBUI_NAME = os.environ.get("WEBUI_NAME", "Chat | Matn.ai")
 
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
 
-WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+# WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
+WEBUI_FAVICON_URL = "https://chat.matn.ai/favicon.png"
 
 
 ####################################
