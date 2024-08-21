@@ -1,3 +1,6 @@
+from asyncio import as_completed
+from concurrent.futures import ThreadPoolExecutor
+
 from fastapi import (
     FastAPI,
     Depends,
@@ -142,6 +145,7 @@ from apps.webui.models.users import (
     Users,
 )
 from constants import ERROR_MESSAGES
+import random
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -236,38 +240,49 @@ class Reranking(BaseModel):
             self.url = SILICONFLOW_API_BASE_URL
 
         if self.api_key is None:
-            self.api_key = SILICONFLOW_API_KEY
+            self.api_key = [key.strip() for key in SILICONFLOW_API_KEY.split(",") if key.strip() != '']
+
+    def _send_request(self, query: str, docs_batch: Sequence["Document"], top_n: int) -> List[Tuple[str, float]]:
+        selected_key = random.choice(self.api_keys) if self.api_keys else None
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {selected_key}",
+        }
+        payload = {
+            "model": self.reranking_model,
+            "query": query,
+            "documents": [doc.page_content for doc in docs_batch],
+            "top_n": top_n,
+        }
+
+        response = requests.post(f"{self.url}/rerank", headers=headers, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        results = data.get("results", [])
+        return [(docs_batch[i["index"]], i["relevance_score"]) for i in results]
 
     def predict(
-            self, query: str, docs: Sequence[Document], top_n: int, r_score: float
+        self, query: str, docs: Sequence["Document"], top_n: int, r_score: float
     ) -> Optional[List[Tuple[str, float]]]:
-        """Sends a reranking request to the API and returns documents with scores."""
         try:
-            import random
-            api_keys = [key.strip() for key in self.api_key.split(",") if key.strip() != '']
-            selected_key = random.choice(api_keys) if api_keys else None
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {selected_key}",
-            }
-            payload = {
-                "model": self.reranking_model,
-                "query": query,
-                "documents": [doc.page_content for doc in docs],
-                "top_n": top_n,
-            }
-            response = requests.post(
-                f"{self.url}/rerank", headers=headers, json=payload
-            )
-            response.raise_for_status()
-            data = response.json()
-            results = data.get("results", [])
-            docs_with_scores = [
-                (docs[i["index"]], i["relevance_score"]) for i in results
-            ]
+            docs_per_batch = 1
+            with ThreadPoolExecutor() as executor:
+                futures = [
+                    executor.submit(self._send_request, query, docs[i:i + docs_per_batch], top_n)
+                    for i in range(0, len(docs), docs_per_batch)
+                ]
+                docs_with_scores = []
+                for future in as_completed(futures):
+                    try:
+                        docs_with_scores.extend(future.result())
+                    except Exception as e:
+                        log.error(f"Error in processing a batch: {e}")
+
             if r_score is not None and r_score > 0:
                 docs_with_scores = [(d, s) for d, s in docs_with_scores if s >= r_score]
+
             return docs_with_scores
+
         except requests.RequestException as e:
             print(f"Error in reranking request: {e}")
         except KeyError as e:
