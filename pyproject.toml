@@ -2,7 +2,7 @@
 name = "voltron"
 description = "voltron"
 authors = [
-    { name = "vcesc", email = "cesc@army.mil" }
+    { name = "cesc", email = "cesc@army.mil" }
 ]
 license = { file = "LICENSE" }
 dependencies = [
