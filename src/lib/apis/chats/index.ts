@@ -499,14 +499,11 @@ export const deleteSharedChatById = async (token: string, id: string) => {
 export const updateRemainingWords = async (chat_user_id: string) => {
 	console.log(chat_user_id)
 	console.log("\n\nTEST\n\n")
-    const response = await fetch(`${MATN_CHARGE_API}`, {
+	const response = await fetch(`${WEBUI_API_BASE_URL}/charge/${chat_user_id}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-		body: JSON.stringify({
-			chat_user_id: chat_user_id
-		})
     });
 
     if (!response.ok) {
