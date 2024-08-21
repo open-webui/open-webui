@@ -13,5 +13,23 @@
 		"ghcr.io/devcontainers-contrib/features/packer-asdf": {},
 		"ghcr.io/devcontainers-contrib/features/pre-commit": {}
 	},
-	"postCreateCommand": "npm install && cd ./backend && pip install --upgrade pip && pip install -r requirements.txt -U"
+	"postCreateCommand": "npm install && cd ./backend && pip install --upgrade pip && pip install -r requirements.txt -U",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"bibhasdn.unique-lines",
+				"DavidAnson.vscode-markdownlint",
+				"donjayamanne.githistory",
+				"github.vscode-github-actions",
+				"GitHub.vscode-pull-request-github",
+				"hashicorp.hcl",
+				"hashicorp.terraform",
+				"ms-python.debugpy",
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"svelte.svelte-vscode",
+				"AndrewButson.vscode-openai"
+			]
+		}
+	}
 }
