@@ -9,6 +9,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} ...يفكر",
 	"{{user}}'s Chats": "دردشات {{user}}",
 	"{{webUIName}} Backend Required": "{{webUIName}} مطلوب",
+	"*Prompt node ID(s) are required for image generation": "",
 	"A task model is used when performing tasks such as generating titles for chats and web search queries": "يتم استخدام نموذج المهمة عند تنفيذ مهام مثل إنشاء عناوين للدردشات واستعلامات بحث الويب",
 	"a user": "مستخدم",
 	"About": "عن",

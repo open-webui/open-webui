@@ -9,6 +9,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} চিন্তা করছে...",
 	"{{user}}'s Chats": "{{user}}র চ্যাটস",
 	"{{webUIName}} Backend Required": "{{webUIName}} ব্যাকএন্ড আবশ্যক",
+	"*Prompt node ID(s) are required for image generation": "",
 	"A task model is used when performing tasks such as generating titles for chats and web search queries": "চ্যাট এবং ওয়েব অনুসন্ধান প্রশ্নের জন্য শিরোনাম তৈরি করার মতো কাজগুলি সম্পাদন করার সময় একটি টাস্ক মডেল ব্যবহার করা হয়",
 	"a user": "একজন ব্যাবহারকারী",
 	"About": "সম্পর্কে",
