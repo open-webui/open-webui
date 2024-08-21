@@ -1,0 +1,63 @@
+- name: Install and Configure Open WebUI
+  hosts: localhost
+  become: yes
+
+  vars:
+    packages:
+      - ca-certificates
+      - curl
+      - ffmpeg
+      - git
+      - htop
+      - jq
+      - make
+      - python3-pip
+      - software-properties-common
+      - tree
+      - vim
+      - wget
+
+  tasks:
+    - name: Update and upgrade all packages
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: dist
+        autoclean: yes
+        autoremove: yes
+
+    - name: Install common packages
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+
+    - name: Download and install NVM
+      become: no
+      shell: |
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+      environment:
+        SHELL: /bin/bash
+      args:
+        executable: /bin/bash
+
+    - name: Load NVM and install Node.js
+      become: no
+      shell: |
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        nvm install node
+        nvm alias default node
+        nvm use default
+      environment:
+        SHELL: /bin/bash
+      args:
+        executable: /bin/bash
+
+    - name: Ensure Node.js is installed
+      command: node -v
+      become: no
+
+    - name: Ensure npm is installed
+      command: npm -v
+      become: no
