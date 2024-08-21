@@ -435,18 +435,20 @@
 						<div class="flex-1 mr-2">
 							<div class="flex w-full">
 								<div class="flex-1">
-									<input
-										list="model-list"
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-										bind:value={imageGenerationConfig.MODEL}
-										placeholder="Select a model"
-									/>
+									<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
+										<input
+											list="model-list"
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+											bind:value={imageGenerationConfig.MODEL}
+											placeholder="Select a model"
+										/>
 
-									<datalist id="model-list">
-										{#each models ?? [] as model}
-											<option value={model.id}>{model.name}</option>
-										{/each}
-									</datalist>
+										<datalist id="model-list">
+											{#each models ?? [] as model}
+												<option value={model.id}>{model.name}</option>
+											{/each}
+										</datalist>
+									</Tooltip>
 								</div>
 							</div>
 						</div>
@@ -457,11 +459,13 @@
 					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Image Size')}</div>
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
-								bind:value={imageGenerationConfig.IMAGE_SIZE}
-							/>
+							<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
+									bind:value={imageGenerationConfig.IMAGE_SIZE}
+								/>
+							</Tooltip>
 						</div>
 					</div>
 				</div>
@@ -470,11 +474,13 @@
 					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Steps')}</div>
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-								placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
-								bind:value={imageGenerationConfig.IMAGE_STEPS}
-							/>
+							<Tooltip content={$i18n.t('Enter Number of Steps (e.g. 50)')} placement="top-start">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+									placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
+									bind:value={imageGenerationConfig.IMAGE_STEPS}
+								/>
+							</Tooltip>
 						</div>
 					</div>
 				</div>
