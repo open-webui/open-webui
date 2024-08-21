@@ -70,7 +70,7 @@
 		>
 			<img src="/logo-main.png" class="w-[7rem]" alt="logo" />
 			<div>
-				<div class=" capitalize line-clamp-1 mb-1" in:fade={{ duration: 200 }}>
+				<div class=" capitalize line-clamp-1 leading-tight" in:fade={{ duration: 200 }}>
 					{#if modelfile}
 						{modelfile.title}
 					{:else}

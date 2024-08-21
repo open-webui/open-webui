@@ -579,7 +579,7 @@
 		</div>
 
 		<!-- <div class="px-5 py-2 mt-2 w-full text-[#555]">Chat History</div> -->
-		<div class="relative flex flex-col overflow-y-auto px-2 max-h-[40%]">
+		<div class="relative flex flex-col overflow-y-auto px-2 flex-1">
 			{#if $tags.length > 0}
 				<div class="px-2.5 mt-0.5 mb-2 flex gap-1 flex-wrap">
 					<button
@@ -839,7 +839,7 @@
 			</div>
 		</div>
 
-		<div class="px-2.5 flex-1 flex flex-col justify-end">
+		<div class="px-2.5 flex-1 flex flex-col justify-end" style="display: none !important;">
 			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 				<!-- <button
 					class="cursor-pointer p-1.5 flex items-center dark:hover:bg-gray-700 rounded-full transition"

@@ -81,29 +81,29 @@
 
 			<div class="self-start flex flex-none items-center">
 				<div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" />
-				<div class="flex flex-col">
+				<div class="relative">
 					{#if $user !== undefined}
-						<button
-							class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							bind:this={dropdownTrigger}
-							on:click={() => {
-								showDropdown = !showDropdown;
-							}}
-						>
-							<div class="self-center">
-								<img
-									src="/user-ava.png"
-									class=" max-w-[30px] object-cover rounded-full"
-									alt="User profile"
-								/>
-							</div>
-							<!-- <div class=" self-center font-semibold">{$user.name}</div> -->
-						</button>
-
+						<Tooltip content={$user.name}>
+							<button
+								class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								bind:this={dropdownTrigger}
+								on:click={() => {
+									showDropdown = !showDropdown;
+								}}
+							>
+								<div class="self-center mr-2">
+										<img
+											src={$user.profile_image_url ?? '/user-ava.png'}
+											class=" max-w-[30px] object-cover rounded-full"
+											alt="User profile"
+										/>
+								</div>
+							</button>
+						</Tooltip>
 						{#if showDropdown}
 							<div
 								id="dropdownDots"
-								class="absolute z-40 top-[80px] right-[20px] rounded-lg shadow w-[160px] bg-white dark:bg-gray-900"
+								class="absolute z-40 top-[60px] right-0 rounded-lg shadow w-[160px] bg-white dark:bg-gray-900"
 								transition:fade|slide={{ duration: 100 }}
 								bind:this={dropdownElement}
 							>
