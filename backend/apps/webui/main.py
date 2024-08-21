@@ -278,7 +278,11 @@ async def generate_function_chat_completion(form_data, user):
     model_info = Models.get_model_by_id(model_id)
     metadata = form_data.pop("metadata", {})
     files = metadata.get("files", [])
-    tool_ids = metadata.get("tool_ids") if metadata.get("tool_ids") else []
+    tool_ids = metadata.get("tool_ids", [])
+
+    # Check if tool_ids is None
+    if tool_ids is None:
+        tool_ids = []
 
     __event_emitter__ = None
     __event_call__ = None
