@@ -131,6 +131,8 @@ from config import (
     SERPER_API_KEY,
     SERPLY_API_KEY,
     TAVILY_API_KEY,
+    SILICONFLOW_API_BASE_URL,
+    SILICONFLOW_API_KEY,
     RAG_WEB_SEARCH_RESULT_COUNT,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     RAG_EMBEDDING_OPENAI_BATCH_SIZE,
@@ -174,6 +176,8 @@ app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE = RAG_EMBEDDING_OPENAI_BATCH_SIZE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
+app.state.config.SILICONFLOW_API_BASE_URL = SILICONFLOW_API_BASE_URL
+app.state.config.SILICONFLOW_API_KEY = SILICONFLOW_API_KEY
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
 app.state.config.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
@@ -222,12 +226,15 @@ def update_reranking_model(
         update_model: bool = False,
 ):
     if reranking_model:
-        import sentence_transformers
+        # import sentence_transformers
 
-        app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
-            get_model_path(reranking_model, update_model),
-            device=DEVICE_TYPE,
-            trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+        # app.state.sentence_transformer_rf = sentence_transformers.CrossEncoder(
+        #     get_model_path(reranking_model, update_model),
+        #     device=DEVICE_TYPE,
+        #     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+        # )
+        app.state.sentence_transformer_rf = Reranking(
+            reranking_model=reranking_model
         )
     else:
         app.state.sentence_transformer_rf = None
@@ -1511,6 +1518,62 @@ class SafeWebBaseLoader(WebBaseLoader):
                 log.error(f"Error loading {path}: {e}")
 
 
+class Reranking(BaseModel):
+    reranking_model: str = Field(..., description="The specific reranking model to use")
+    api_key: Optional[str] = Field(
+        None,
+        description="The API key (automatically set based on provider if not provided)",
+    )
+    url: Optional[str] = Field(
+        None,
+        description="The API base URL (automatically set based on provider if not provided)",
+    )
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        if self.url is None:
+            self.url = app.state.config.SILICONFLOW_API_BASE_URL
+            
+        if self.api_key is None:
+            self.api_key = app.state.config.SILICONFLOW_API_KEY
+            
+    def predict(
+        self, query: str, docs: Sequence[Document], top_n: int, r_score: float
+    ) -> Optional[List[Tuple[str, float]]]:
+        """Sends a reranking request to the API and returns documents with scores."""
+        try:
+            import random
+            api_keys = [key.strip() for key in self.api_key.split(",") if key.strip() != '']
+            selected_key = random.choice(api_keys) if api_keys else None
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {selected_key}",
+            }
+            payload = {
+                "model": self.reranking_model,
+                "query": query,
+                "documents": [doc.page_content for doc in docs],
+                "top_n": top_n,
+            }
+            response = requests.post(
+                f"{self.url}/rerank", headers=headers, json=payload
+            )
+            response.raise_for_status()
+            data = response.json()
+            results = data.get("results", [])
+            docs_with_scores = [
+                (docs[i["index"]], i["relevance_score"]) for i in results
+            ]
+            if r_score is not None and r_score > 0:
+                docs_with_scores = [(d, s) for d, s in docs_with_scores if s >= r_score]
+            return docs_with_scores
+        except requests.RequestException as e:
+            print(f"Error in reranking request: {e}")
+        except KeyError as e:
+            print(f"Unexpected response format: missing key '{e}'")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+        return None
+    
 if ENV == "dev":
     @app.get("/ef")
     async def get_embeddings():

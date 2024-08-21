@@ -462,8 +462,11 @@ class RerankCompressor(BaseDocumentCompressor):
         reranking = self.reranking_function is not None
 
         if reranking:
-            scores = self.reranking_function.predict(
-                [(query, doc.page_content) for doc in documents]
+            docs_with_scores = self.reranking_function.predict(
+                query=query,
+                docs=documents,
+                top_n=self.top_n,
+                r_score=self.r_score,
             )
         else:
             from sentence_transformers import util
@@ -474,11 +477,11 @@ class RerankCompressor(BaseDocumentCompressor):
             )
             scores = util.cos_sim(query_embedding, document_embedding)[0]
 
-        docs_with_scores = list(zip(documents, scores.tolist()))
-        if self.r_score:
-            docs_with_scores = [
-                (d, s) for d, s in docs_with_scores if s >= self.r_score
-            ]
+            docs_with_scores = list(zip(documents, scores.tolist()))
+            if self.r_score:
+                docs_with_scores = [
+                    (d, s) for d, s in docs_with_scores if s >= self.r_score
+                ]
 
         result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
         final_results = []
@@ -490,4 +493,5 @@ class RerankCompressor(BaseDocumentCompressor):
                 metadata=metadata,
             )
             final_results.append(doc)
+
         return final_results

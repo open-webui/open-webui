@@ -1090,6 +1090,10 @@ RAG_RERANKING_MODEL = PersistentConfig(
 if RAG_RERANKING_MODEL.value != "":
     log.info(f"Reranking model set: {RAG_RERANKING_MODEL.value}")
 
+SILICONFLOW_API_BASE_URL = os.environ.get("SILICONFLOW_API_BASE_URL", "")
+
+SILICONFLOW_API_KEY = os.environ.get("SILICONFLOW_API_KEY", "")
+
 RAG_RERANKING_MODEL_AUTO_UPDATE = (
     os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "").lower() == "true"
 )
