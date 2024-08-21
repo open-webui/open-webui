@@ -10,7 +10,8 @@
 		getImageGenerationConfig,
 		updateImageGenerationConfig,
 		getConfig,
-		updateConfig
+		updateConfig,
+		verifyConfigUrl
 	} from '$lib/apis/images';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -255,8 +256,16 @@
 							<button
 								class="px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 								type="button"
-								on:click={() => {
-									updateConfigHandler();
+								on:click={async () => {
+									await updateConfigHandler();
+									const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+										toast.error(error);
+										return null;
+									});
+
+									if (res) {
+										toast.success($i18n.t('Server connection verified'));
+									}
 								}}
 							>
 								<svg
@@ -323,8 +332,16 @@
 							<button
 								class="px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
 								type="button"
-								on:click={() => {
-									updateConfigHandler();
+								on:click={async () => {
+									await updateConfigHandler();
+									const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+										toast.error(error);
+										return null;
+									});
+
+									if (res) {
+										toast.success($i18n.t('Server connection verified'));
+									}
 								}}
 							>
 								<svg

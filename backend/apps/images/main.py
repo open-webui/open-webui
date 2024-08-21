@@ -175,6 +175,31 @@ def get_automatic1111_api_auth():
         return f"Basic {auth1111_base64_encoded_string}"
 
 
+@app.get("/config/url/verify")
+async def verify_url(user=Depends(get_admin_user)):
+    if app.state.config.ENGINE == "automatic1111":
+        try:
+            r = requests.get(
+                url=f"{app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
+                headers={"authorization": get_automatic1111_api_auth()},
+            )
+            r.raise_for_status()
+            return True
+        except Exception as e:
+            app.state.config.ENABLED = False
+            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
+    elif app.state.config.ENGINE == "comfyui":
+        try:
+            r = requests.get(url=f"{app.state.config.COMFYUI_BASE_URL}/object_info")
+            r.raise_for_status()
+            return True
+        except Exception as e:
+            app.state.config.ENABLED = False
+            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
+    else:
+        return True
+
+
 def set_image_model(model: str):
     app.state.config.MODEL = model
     if app.state.config.ENGINE in ["", "automatic1111"]:
