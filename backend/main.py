@@ -525,9 +525,8 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
             "chat_id": body.pop("chat_id", None),
             "message_id": body.pop("id", None),
             "session_id": body.pop("session_id", None),
-            "valves": body.pop("valves", None),
-            "tool_ids": body.pop("tool_ids", None),
-            "files": body.pop("files", None),
+            "tool_ids": body.get("tool_ids", None),
+            "files": body.get("files", None),
         }
         body["metadata"] = metadata
 
@@ -559,6 +558,13 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={"detail": str(e)},
             )
+
+        metadata = {
+            **metadata,
+            "tool_ids": body.pop("tool_ids", None),
+            "files": body.pop("files", None),
+        }
+        body["metadata"] = metadata
 
         try:
             body, flags = await chat_completion_tools_handler(body, user, extra_params)
