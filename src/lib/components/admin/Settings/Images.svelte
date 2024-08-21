@@ -450,7 +450,6 @@
 													class="w-full py-1 px-4 rounded-r-lg text-xs bg-transparent outline-none"
 													placeholder="Node Ids"
 													bind:value={node.node_ids}
-													required
 												/>
 											</Tooltip>
 										</div>
