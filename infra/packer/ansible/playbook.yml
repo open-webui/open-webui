@@ -1,23 +1,70 @@
 ---
 - name: Install and Configure Open WebUI
-  hosts: local
+  hosts: all
   become: yes # Use sudo for administrative tasks
+
   tasks:
-    - name: Install AWS Systems Manager Agent
-      yum:
-        name: amazon-ssm-agent
-        state: present
+    - name: Update all packages to their latest version
+      apt:
+        name: "*"
+        state: latest
+        force_apt_get: True
 
-    - name: Enable and start the SSM Agent
-      systemd:
-        name: amazon-ssm-agent
-        enabled: yes
-        state: started
+    - name: Upgrade the OS (apt-get dist-upgrade)
+      apt:
+        upgrade: dist
 
-    - name: Configure EC2 Detailed Monitoring
-      aws_ec2_instance:
-        instance_id: '{{ ansible_ec2_instance_id }}'
-        monitoring: yes
+    - name: Run the equivalent of "apt-get update" as a separate step
+      apt:
+        update_cache: yes
+
+    - name: Only run "update_cache=yes" if the last one is more than 3600 seconds ago
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Remove useless packages from the cache
+      apt:
+        autoclean: yes
+
+    - name: Remove dependencies that are no longer required
+      apt:
+        autoremove: yes
+
+    - name: Install common packages
+      apt:
+        name: "{{ packages }}"
+      vars:
+        packages:
+          - ca-certificates
+          - curl
+          - ffmpeg
+          - git
+          - htop
+          - jq
+          - make
+          - python3-pip
+          - software-properties-common
+          - tree
+          - vim
+          - wget
+
+    # - name: Install AWS Systems Manager Agent
+    #   apt:
+    #     name: amazon-ssm-agent
+    #     state: present
+    #     update_cache: yes
+
+    # - name: Enable and start the SSM Agent
+    #   systemd:
+    #     name: amazon-ssm-agent
+    #     enabled: yes
+    #     state: started
+
+    # - name: Configure EC2 Detailed Monitoring
+    #   aws_ec2_instance:
+    #     instance_id: '{{ ansible_ec2_instance_id }}'
+    #     monitoring: yes
 
     - name: Clone Open WebUI repository
       git:
@@ -31,18 +78,62 @@
         dest: '/opt/open-webui/.env'
         remote_src: yes # Source file already exists on the target machine
 
-    - name: Install Node.js and npm
-      apt:
-        name:
-          - nodejs
-          - npm
-        state: present
-        update_cache: yes
+    # - name: Install Node.js and npm
+    #   apt_repository:
+    #     repo: ppa:nodejs/ppa
+    #     state: present
+
+    # - name: Install Node.js and npm
+    #   apt:
+    #     name:
+    #       - nodejs
+    #       - npm
+    #     state: present
+    #     update_cache: yes
+
+    #################################
+    # NODE
+    ################################
+    - name: Download and install NVM
+      become: no
+      shell: |
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" # This loads nvm bash_completion
+      environment:
+        SHELL: /bin/bash
+      args:
+        executable: /bin/bash
+
+    - name: Load NVM and install Node.js
+      become: no
+      shell: |
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        nvm install node
+        nvm alias default node
+        nvm use default
+      environment:
+        SHELL: /bin/bash
+
+    - name: Ensure Node.js and npm are installed
+      command: nvm which node
+      become: no
+
+    - name: Ensure npm is installed
+      command: npm --version
+      become: no
+
+    - name: Install frontend packages
+      command: npm install
+      args:
+        chdir: '/opt/open-webui'
 
     - name: Build the frontend
       command: npm run build
       args:
-        chdir: '/opt/open-webui' # Change directory to the Open WebUI folder
+        chdir: '/opt/open-webui'
 
     - name: Create the systemd service for Frontend
       copy:
@@ -107,9 +198,9 @@
         conda activate open-webui-env
 
     - name: Install Python dependencies
-      pip:
-        requirements: /opt/open-webui/backend/requirements.txt
-        virtualenv: /opt/miniconda/envs/open-webui-env
+      shell: |
+        source /opt/miniconda/bin/activate open-webui-env
+        pip install -r /opt/open-webui/backend/requirements.txt
 
     - name: Start Open WebUI application via Service
       command: bash start.sh
