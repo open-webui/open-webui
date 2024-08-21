@@ -484,7 +484,7 @@ async def image_generations(
                 file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
 
                 with open(file_body_path, "w") as f:
-                    json.dump(data.model_dump(exclude_none=True), f)
+                    json.dump(form_data.model_dump(exclude_none=True), f)
 
             log.debug(f"images: {images}")
             return images
