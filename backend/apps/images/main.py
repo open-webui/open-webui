@@ -457,7 +457,17 @@ async def image_generations(
             if form_data.negative_prompt is not None:
                 data["negative_prompt"] = form_data.negative_prompt
 
-            form_data = ComfyUIGenerateImageForm(**data)
+            form_data = ComfyUIGenerateImageForm(
+                {
+                    "workflow": ComfyUIWorkflow(
+                        {
+                            "workflow": app.state.config.COMFYUI_WORKFLOW,
+                            "nodes": app.state.config.COMFYUI_WORKFLOW_NODES,
+                        }
+                    ),
+                    **data,
+                }
+            )
             res = await comfyui_generate_image(
                 app.state.config.MODEL,
                 form_data,
