@@ -229,16 +229,17 @@ class Reranking(BaseModel):
         None,
         description="The API base URL (automatically set based on provider if not provided)",
     )
+
     def __init__(self, **data: Any):
         super().__init__(**data)
         if self.url is None:
             self.url = SILICONFLOW_API_BASE_URL
-            
+
         if self.api_key is None:
             self.api_key = SILICONFLOW_API_KEY
-            
+
     def predict(
-        self, query: str, docs: Sequence[Document], top_n: int, r_score: float
+            self, query: str, docs: Sequence[Document], top_n: int, r_score: float
     ) -> Optional[List[Tuple[str, float]]]:
         """Sends a reranking request to the API and returns documents with scores."""
         try:
@@ -274,7 +275,7 @@ class Reranking(BaseModel):
         except Exception as e:
             print(f"Unexpected error: {e}")
         return None
-    
+
 
 def update_reranking_model(
         reranking_model: str,
@@ -709,8 +710,8 @@ class QueryDocForm(BaseModel):
 
 @app.post("/query/doc")
 def query_doc_handler(
-    form_data: QueryDocForm,
-    user=Depends(get_verified_user),
+        form_data: QueryDocForm,
+        user=Depends(get_verified_user),
 ):
     try:
         if app.state.config.ENABLE_RAG_HYBRID_SEARCH:
