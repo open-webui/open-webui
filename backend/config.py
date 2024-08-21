@@ -1317,7 +1317,7 @@ WHISPER_MODEL_AUTO_UPDATE = (
 IMAGE_GENERATION_ENGINE = PersistentConfig(
     "IMAGE_GENERATION_ENGINE",
     "image_generation.engine",
-    os.getenv("IMAGE_GENERATION_ENGINE", ""),
+    os.getenv("IMAGE_GENERATION_ENGINE", "openai"),
 )
 
 ENABLE_IMAGE_GENERATION = PersistentConfig(
