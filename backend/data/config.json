@@ -4,33 +4,151 @@
 		"default_locale": "",
 		"prompt_suggestions": [
 			{
-				"title": ["Help me study", "vocabulary for a college entrance exam"],
+				"title": [
+					"Help me study",
+					"vocabulary for a college entrance exam"
+				],
 				"content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option."
 			},
 			{
-				"title": ["Give me ideas", "for what to do with my kids' art"],
+				"title": [
+					"Give me ideas",
+					"for what to do with my kids' art"
+				],
 				"content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter."
 			},
 			{
-				"title": ["Tell me a fun fact", "about the Roman Empire"],
+				"title": [
+					"Tell me a fun fact",
+					"about the Roman Empire"
+				],
 				"content": "Tell me a random fun fact about the Roman Empire"
 			},
 			{
-				"title": ["Show me a code snippet", "of a website's sticky header"],
+				"title": [
+					"Show me a code snippet",
+					"of a website's sticky header"
+				],
 				"content": "Show me a code snippet of a website's sticky header in CSS and JavaScript."
 			},
 			{
-				"title": ["Explain options trading", "if I'm familiar with buying and selling stocks"],
+				"title": [
+					"Explain options trading",
+					"if I'm familiar with buying and selling stocks"
+				],
 				"content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks."
 			},
 			{
-				"title": ["Overcome procrastination", "give me tips"],
+				"title": [
+					"Overcome procrastination",
+					"give me tips"
+				],
 				"content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?"
 			},
 			{
-				"title": ["Grammar check", "rewrite it for better readability "],
+				"title": [
+					"Grammar check",
+					"rewrite it for better readability "
+				],
 				"content": "Check the following sentence for grammar and clarity: \"[sentence]\". Rewrite it for better readability while maintaining its original meaning."
 			}
+		],
+		"default_models": "gpt-4o-mini-2024-07-18",
+		"user_permissions": {
+			"chat": {
+				"deletion": true
+			}
+		},
+		"banners": []
+	},
+	"model_filter": {
+		"enable": false,
+		"list": [
+			""
 		]
+	},
+	"rag": {
+		"pdf_extract_images": false,
+		"youtube_loader_language": [
+			"en"
+		],
+		"enable_web_loader_ssl_verification": null,
+		"web": {
+			"search": {
+				"enable": true,
+				"engine": "duckduckgo",
+				"searxng_query_url": "",
+				"google_pse_api_key": "",
+				"google_pse_engine_id": "",
+				"brave_search_api_key": "",
+				"serpstack_api_key": "",
+				"serpstack_https": true,
+				"serper_api_key": "",
+				"serply_api_key": "",
+				"tavily_api_key": "",
+				"result_count": 3,
+				"concurrent_requests": 10
+			}
+		}
+	},
+	"audio": {
+		"tts": {
+			"openai": {
+				"api_base_url": "https://api.openai.com/v1",
+				"api_key": ""
+			},
+			"api_key": "",
+			"engine": "openai",
+			"model": "tts-1",
+			"voice": "alloy"
+		},
+		"stt": {
+			"openai": {
+				"api_base_url": "https://api.openai.com/v1",
+				"api_key": ""
+			},
+			"engine": "openai",
+			"model": "whisper-1"
+		}
+	},
+	"image_generation": {
+		"engine": "openai",
+		"enable": true,
+		"openai": {
+			"api_base_url": "https://api.openai.com/v1",
+			"api_key": ""
+		},
+		"model": "dall-e-3",
+		"size": "512x512",
+		"steps": 5
+	},
+	"ollama": {
+		"base_urls": [
+			"http://10.0.0.6:11434"
+		]
+	},
+	"openai": {
+		"api_base_urls": [
+			"https://api.openai.com/v1"
+		],
+		"api_keys": [
+			""
+		]
+	},
+	"task": {
+		"model": {
+			"default": "llama3.1:latest",
+			"external": "gpt-4o-mini-2024-07-18"
+		},
+		"title": {
+			"prompt_template": "Here is the query:\n{{prompt:middletruncate:8000}}\n\nCreate a concise, 3-5 word phrase with an emoji as a title for the previous query. Suitable Emojis for the summary can be used to enhance understanding but avoid quotation marks or special formatting. RESPOND ONLY WITH THE TITLE TEXT.\n\nExamples of titles:\n\ud83d\udcc9 Stock Market Trends\n\ud83c\udf6a Perfect Chocolate Chip Recipe\nEvolution of Music Streaming\nRemote Work Productivity Tips\nArtificial Intelligence in Healthcare\n\ud83c\udfae Video Game Development Insights"
+		},
+		"search": {
+			"prompt_template": "You are tasked with generating web search queries. Give me an appropriate query to answer my question for google search. Answer with only the query. Today is {{CURRENT_DATE}}.\n\nQuestion:\n{{prompt:end:4000}}",
+			"prompt_length_threshold": 100
+		},
+		"tools": {
+			"prompt_template": "Tools: {{TOOLS}}\nIf a function tool doesn't match the query, return an empty string. Else, pick a function tool, fill in the parameters from the function tool's schema, and return it in the format { \"name\": \"functionName\", \"parameters\": { \"key\": \"value\" } }. Only pick a function if the user asks.  Only return the object. Do not return any other text."
+		}
 	}
 }
