@@ -30,12 +30,12 @@ services:
           path: package.json
     networks:
       - backend
-    labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.chat-frontend.rule=Host(`chat.matn.ai`)"
-        - "traefik.http.routers.chat-frontend.entrypoints=websecure"
-        - "traefik.http.routers.chat-frontend.tls.certresolver=myresolver"
-        - "traefik.http.services.chat-frontend.loadbalancer.server.port=5173"
+    # labels:
+    #     - "traefik.enable=true"
+    #     - "traefik.http.routers.chat-frontend.rule=Host(`chat.matn.ai`)"
+    #     - "traefik.http.routers.chat-frontend.entrypoints=websecure"
+    #     - "traefik.http.routers.chat-frontend.tls.certresolver=myresolver"
+    #     - "traefik.http.services.chat-frontend.loadbalancer.server.port=5173"
 
 
   backend:
@@ -44,8 +44,6 @@ services:
       target: base
     command: ["bash", "dev.sh"]
     env_file: .env
-    networks:
-      - backend
     environment:
      - ENV=dev
      - WEBUI_AUTH=True
@@ -60,8 +58,8 @@ services:
       - data:/app/backend/data
     extra_hosts:
       - host.docker.internal:host-gateway
-    ports:
-      - "8080:8080"
+    # ports:
+    #   - "8080:8080"
     restart: always
     develop:
       watch:
@@ -72,7 +70,14 @@ services:
             - backend/data
         - action: rebuild
           path: backend/requirements.txt
-
+    networks:
+      - backend
+    labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.chat-frontend.rule=Host(`chat.matn.ai`)"
+        - "traefik.http.routers.chat-frontend.entrypoints=websecure"
+        - "traefik.http.routers.chat-frontend.tls.certresolver=myresolver"
+        - "traefik.http.services.chat-frontend.loadbalancer.server.port=8080"
 
   pipelines:
     image: ghcr.io/open-webui/pipelines:main
