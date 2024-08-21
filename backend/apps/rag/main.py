@@ -46,6 +46,7 @@ from typing import Optional
 import mimetypes
 import uuid
 import json
+import random
 
 from apps.webui.models.documents import (
     Documents,
@@ -236,16 +237,14 @@ class Reranking(BaseModel):
             self.url = SILICONFLOW_API_BASE_URL
 
         if self.api_key is None:
-            self.api_key = SILICONFLOW_API_KEY
+            self.api_key = [key.strip() for key in SILICONFLOW_API_KEY.split(",") if key.strip() != '']
 
     def predict(
             self, query: str, docs: Sequence[Document], top_n: int, r_score: float
     ) -> Optional[List[Tuple[str, float]]]:
         """Sends a reranking request to the API and returns documents with scores."""
         try:
-            import random
-            api_keys = [key.strip() for key in self.api_key.split(",") if key.strip() != '']
-            selected_key = random.choice(api_keys) if api_keys else None
+            selected_key = random.choice(self.api_key) if self.api_key else None
             headers = {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {selected_key}",
