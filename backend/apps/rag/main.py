@@ -176,8 +176,6 @@ app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE = RAG_EMBEDDING_OPENAI_BATCH_SIZE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
-app.state.config.SILICONFLOW_API_BASE_URL = SILICONFLOW_API_BASE_URL
-app.state.config.SILICONFLOW_API_KEY = SILICONFLOW_API_KEY
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
 app.state.config.OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
@@ -1531,10 +1529,10 @@ class Reranking(BaseModel):
     def __init__(self, **data: Any):
         super().__init__(**data)
         if self.url is None:
-            self.url = app.state.config.SILICONFLOW_API_BASE_URL
+            self.url = SILICONFLOW_API_BASE_URL
             
         if self.api_key is None:
-            self.api_key = app.state.config.SILICONFLOW_API_KEY
+            self.api_key = SILICONFLOW_API_KEY
             
     def predict(
         self, query: str, docs: Sequence[Document], top_n: int, r_score: float
