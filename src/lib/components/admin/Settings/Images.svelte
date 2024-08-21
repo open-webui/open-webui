@@ -488,6 +488,7 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 											bind:value={imageGenerationConfig.MODEL}
 											placeholder="Select a model"
+											required
 										/>
 
 										<datalist id="model-list">
@@ -511,6 +512,7 @@
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 									placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
 									bind:value={imageGenerationConfig.IMAGE_SIZE}
+									required
 								/>
 							</Tooltip>
 						</div>
@@ -526,6 +528,7 @@
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
 									placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
 									bind:value={imageGenerationConfig.IMAGE_STEPS}
+									required
 								/>
 							</Tooltip>
 						</div>
