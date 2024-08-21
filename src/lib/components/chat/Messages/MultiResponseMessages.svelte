@@ -91,9 +91,19 @@
 
 		groupedMessages = parentMessage?.models.reduce((a, model, modelIdx) => {
 			// Find all messages that are children of the parent message and have the same model
-			const modelMessages = parentMessage?.childrenIds
+			let modelMessages = parentMessage?.childrenIds
 				.map((id) => history.messages[id])
-				.filter((m) => m.modelIdx === modelIdx);
+				.filter((m) => m?.modelIdx === modelIdx);
+
+			if (modelMessages.length === 0) {
+				modelMessages = parentMessage?.childrenIds
+					.map((id) => history.messages[id])
+					.filter((m) => m?.model === model);
+
+				modelMessages.forEach((m) => {
+					m.modelIdx = modelIdx;
+				});
+			}
 
 			return {
 				...a,
