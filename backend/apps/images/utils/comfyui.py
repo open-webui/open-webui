@@ -147,6 +147,8 @@ async def comfyui_generate_image(
         return None
 
     try:
+        log.info("Sending workflow to WebSocket server.")
+        log.info(f"Workflow: {workflow}")
         images = await asyncio.to_thread(get_images, ws, workflow, client_id, base_url)
     except Exception as e:
         log.exception(f"Error while receiving images: {e}")
