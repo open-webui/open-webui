@@ -27,7 +27,8 @@
 		showCallOverlay,
 		tools,
 		currentChatPage,
-		user as _user
+		user as _user,
+		remainingWords
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -65,7 +66,6 @@
 	import { error } from '@sveltejs/kit';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
-	import { remainingWords } from '../../stores';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -234,6 +234,9 @@
 
 		$socket.on('chat-events', chatEventHandler);
 
+		const charge = await updateRemainingWords($_user.id);
+		remainingWords.set(charge);
+
 		if (!$chatId) {
 			chatId.subscribe(async (value) => {
 				if (!value) {
@@ -384,11 +387,9 @@
 			querySelector: '.mermaid'
 		});
 		// console.log("HERE");
-		 console.log("\n\nstart charge\n\n");
+		//  console.log("\n\nstart charge\n\n");
 
 		 const charge = await updateRemainingWords($_user.id);
-		 console.log(charge);
-		 console.log("charge");
 		remainingWords.set(charge);
 		
 		const res = await chatCompleted(localStorage.token, {

@@ -1,11 +1,13 @@
-from fastapi import Depends, Request, HTTPException, status
+from fastapi import Depends, Request, HTTPException, status, Response
 from datetime import datetime, timedelta
 from typing import List, Union, Optional
 from utils.utils import get_verified_user, get_admin_user
 from fastapi import APIRouter
 from pydantic import BaseModel
+import requests
 import json
 import logging
+import httpx
 
 from apps.webui.models.users import Users
 from apps.webui.models.chats import (
@@ -252,6 +254,26 @@ async def get_all_tags(user=Depends(get_verified_user)):
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
 
+############################
+# GetUserCharge
+############################
+
+
+@router.get("/get_user_charge/{chat_user_id}")
+async def get_user_charge(chat_user_id: str):
+    print(chat_user_id)
+
+    url = "https://matn.ai/dashboard/get_chatuser_charge"
+    payload = {
+        "chat_user_id": chat_user_id
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload)
+        response_data = response.json()
+
+    return {"remain": response_data.get('remain')}
+    
 
 ############################
 # GetChatById

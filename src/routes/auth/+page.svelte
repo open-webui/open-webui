@@ -42,6 +42,7 @@
 	};
 
 	const signUpHandler = async () => {
+		return null;
 		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
 			(error) => {
 				toast.error(error);
@@ -229,11 +230,11 @@
 
 								{#if $config?.features.enable_signup}
 									<div class=" mt-4 text-sm text-center">
-										{mode === 'signin'
+										<!-- {mode === 'signin'
 											? $i18n.t("Don't have an account?")
-											: $i18n.t('Already have an account?')}
+											: $i18n.t('Already have an account?')} -->
 
-										<button
+										<!-- <button
 											class=" font-medium underline"
 											type="button"
 											on:click={() => {
@@ -245,7 +246,7 @@
 											}}
 										>
 											{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
-										</button>
+										</button> -->
 									</div>
 								{/if}
 							</div>

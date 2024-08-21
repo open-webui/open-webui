@@ -1,7 +1,7 @@
 from fastapi import Response, Request
 from fastapi import Depends, FastAPI, HTTPException, status
 from datetime import datetime, timedelta
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -36,31 +36,12 @@ router = APIRouter()
 
 
 
-@router.post("/get_user_charge/{chat_user_id}")
-async def get_user_charge(chat_user_id):
-    print(chat_user_id)
-    import requests
-    import json
-
-    url = "http://matn.ai/dashboard/get_chatuser_charge/{chat_user_id}"
-
-    payload = json.dumps({
-    "chat_user_id": chat_user_id
-    })
-    headers = {
-    'Content-Type': 'application/json'
-    }
-
-    response = requests.request("GET", url, headers=headers, data=payload)
-    return response
-    # print(response.text)
-
 ############################
 # GetUsers
 ############################
 
 
-@router.get("/", response_model=List[UserModel])
+@router.get("/", response_model=list[UserModel])
 async def get_users(skip: int = 0, limit: int = 50, user=Depends(get_admin_user)):
     return Users.get_users(skip, limit)
 

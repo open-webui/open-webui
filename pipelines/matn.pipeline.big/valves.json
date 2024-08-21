@@ -1,1 +1,1 @@
-{"pipelines": ["*"], "api_url": "http://host.docker.internal:5050/dashboard/manage_chat"}
+{"pipelines": ["*"], "api_url": "https://matn.ai/dashboard/manage_chat"}

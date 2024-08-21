@@ -66,9 +66,11 @@
             
             <!-- Remaining Words Chipset -->
             <div class="flex items-center mr-3">
-                <div class="chip">
-                    {$remainingWords} {$i18n.t('Words')}
-                </div>
+                <a href="https://matn.ai/finance/create_pay" target="_blank" title="Top-up Charge">
+                    <div class="chip">
+                        {$remainingWords} {$i18n.t('Words')}
+                    </div>
+                </a>
             </div>
             
 			

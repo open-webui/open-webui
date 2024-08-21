@@ -497,10 +497,10 @@ export const deleteSharedChatById = async (token: string, id: string) => {
 
 
 export const updateRemainingWords = async (chat_user_id: string) => {
-	console.log(chat_user_id)
-	console.log("\n\nTEST\n\n")
-	const response = await fetch(`${WEBUI_API_BASE_URL}/charge/${chat_user_id}`, {
-        method: 'POST',
+	// console.log(chat_user_id)
+	// console.log("\n\nTEST\n\n")
+	const response = await fetch(`${WEBUI_API_BASE_URL}/chats/get_user_charge/${chat_user_id}`, {
+        method: 'GET',
         headers: {
             'Content-Type': 'application/json',
         },
@@ -511,7 +511,9 @@ export const updateRemainingWords = async (chat_user_id: string) => {
     }
 
     const data = await response.json();
-    return data['charge'];
+	// console.debug("CHARGE RESPONSE")
+	// console.log(response)
+    return data["remain"];
 }
 
 

@@ -65,7 +65,7 @@ services:
       watch:
         - action: sync
           path: ./backend
-          target: /app/backend
+          target: /app/backend/apps
           ignore:
             - backend/data
         - action: rebuild

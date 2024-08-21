@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import { chats, config, settings, user as _user, mobile, currentChatPage } from '$lib/stores';
+	import { chats, config, settings, user as _user, mobile, currentChatPage,remainingWords } from '$lib/stores';
 	import { tick, getContext, onMount } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
-	import { getChatList, updateChatById } from '$lib/apis/chats';
+	import { getChatList, updateChatById, updateRemainingWords } from '$lib/apis/chats';
 
 	import UserMessage from './Messages/UserMessage.svelte';
 	import ResponseMessage from './Messages/ResponseMessage.svelte';
@@ -40,6 +40,14 @@
 			scrollToBottom();
 		})();
 	}
+
+	onMount(async () => { 
+
+		const charge = await updateRemainingWords($_user.id);
+		remainingWords.set(charge);
+
+
+	});
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
