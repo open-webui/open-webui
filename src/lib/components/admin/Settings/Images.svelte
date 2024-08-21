@@ -30,27 +30,27 @@
 		{
 			type: 'prompt',
 			key: 'text',
-			node_ids: []
+			node_ids: ''
 		},
 		{
 			type: 'model',
 			key: 'ckpt_name',
-			node_ids: []
+			node_ids: ''
 		},
 		{
 			type: 'width',
 			key: 'width',
-			node_ids: []
+			node_ids: ''
 		},
 		{
 			type: 'height',
 			key: 'height',
-			node_ids: []
+			node_ids: ''
 		},
 		{
 			type: 'steps',
 			key: 'steps',
-			node_ids: []
+			node_ids: ''
 		}
 	];
 
@@ -99,6 +99,16 @@
 			}
 		}
 
+		if (config?.comfyui?.COMFYUI_WORKFLOW) {
+			config.comfyui.COMFYUI_WORKFLOW_NODES = workflowNodes.map((node) => {
+				return {
+					type: node.type,
+					key: node.key,
+					node_ids: node.node_ids.split(',').map((id) => id.trim())
+				};
+			});
+		}
+
 		await updateConfig(localStorage.token, config).catch((error) => {
 			toast.error(error);
 			loading = false;
@@ -111,6 +121,7 @@
 			return null;
 		});
 
+		getModels();
 		dispatch('save');
 		loading = false;
 	};
@@ -128,6 +139,24 @@
 
 			if (config.enabled) {
 				getModels();
+			}
+
+			if (config.comfyui.COMFYUI_WORKFLOW) {
+				config.comfyui.COMFYUI_WORKFLOW = JSON.stringify(
+					JSON.parse(config.comfyui.COMFYUI_WORKFLOW),
+					null,
+					2
+				);
+			}
+
+			if ((config?.comfyui?.COMFYUI_WORKFLOW_NODES ?? []).length >= 5) {
+				workflowNodes = config.comfyui.COMFYUI_WORKFLOW_NODES.map((node) => {
+					return {
+						type: node.type,
+						key: node.key,
+						node_ids: node.node_ids.join(',')
+					};
+				});
 			}
 
 			const imageConfigRes = await getImageGenerationConfig(localStorage.token).catch((error) => {
@@ -321,7 +350,8 @@
 							<textarea
 								class="w-full rounded-lg mb-1 py-2 px-4 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none disabled:text-gray-600 resize-none"
 								rows="10"
-								value={JSON.stringify(JSON.parse(config.comfyui.COMFYUI_WORKFLOW), null, 2)}
+								bind:value={config.comfyui.COMFYUI_WORKFLOW}
+								required
 							/>
 						{/if}
 
@@ -338,8 +368,6 @@
 
 										reader.onload = (e) => {
 											config.comfyui.COMFYUI_WORKFLOW = e.target.result;
-											updateConfigHandler();
-
 											e.target.value = null;
 										};
 
@@ -384,19 +412,21 @@
 													class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-none border-r dark:border-gray-850"
 													placeholder="Key"
 													bind:value={node.key}
+													required
 												/>
 											</Tooltip>
 										</div>
 
 										<div class="w-full">
 											<Tooltip
-												content="Comma separated Node Ids (e.g. 1,2,3)"
+												content="Comma separated Node Ids (e.g. 1 or 1,2)"
 												placement="top-start"
 											>
 												<input
 													class="w-full py-1 px-4 rounded-r-lg text-xs bg-transparent outline-none"
 													placeholder="Node Ids"
 													bind:value={node.node_ids}
+													required
 												/>
 											</Tooltip>
 										</div>
