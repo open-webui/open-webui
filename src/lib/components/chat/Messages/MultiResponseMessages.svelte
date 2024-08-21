@@ -211,7 +211,7 @@
 	{#if !readOnly && isLastMessage}
 		{#if !Object.keys(groupedMessages).find((modelIdx) => {
 			const { messages } = groupedMessages[modelIdx];
-			return !messages[groupedMessagesIdx[modelIdx]].done;
+			return !messages[groupedMessagesIdx[modelIdx]]?.done ?? false;
 		})}
 			<div class="flex justify-end">
 				<div class="w-full">
