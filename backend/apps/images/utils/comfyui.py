@@ -73,7 +73,7 @@ def get_images(ws, prompt, client_id, base_url):
 
 
 class ComfyUINodeInput(BaseModel):
-    field: Optional[str] = None
+    type: Optional[str] = None
     node_ids: list[str] = []
     key: Optional[str] = "text"
     value: Optional[str] = None
@@ -104,29 +104,29 @@ async def comfyui_generate_image(
     workflow = json.loads(payload.workflow.workflow)
 
     for node in payload.workflow.nodes:
-        if node.field:
-            if node.field == "model":
+        if node.type:
+            if node.type == "model":
                 for node_id in node.node_ids:
                     workflow[node_id]["inputs"][node.key] = model
-            elif node.field == "prompt":
+            elif node.type == "prompt":
                 for node_id in node.node_ids:
                     workflow[node_id]["inputs"]["text"] = payload.prompt
-            elif node.field == "negative_prompt":
+            elif node.type == "negative_prompt":
                 for node_id in node.node_ids:
                     workflow[node_id]["inputs"]["text"] = payload.negative_prompt
-            elif node.field == "width":
+            elif node.type == "width":
                 for node_id in node.node_ids:
                     workflow[node_id]["inputs"]["width"] = payload.width
-            elif node.field == "height":
+            elif node.type == "height":
                 for node_id in node.node_ids:
                     workflow[node_id]["inputs"]["height"] = payload.height
-            elif node.field == "n":
+            elif node.type == "n":
                 for node_id in node.node_ids:
                     workflow[node_id]["inputs"]["batch_size"] = payload.n
-            elif node.field == "steps":
+            elif node.type == "steps":
                 for node_id in node.node_ids:
                     workflow[node_id]["inputs"]["steps"] = payload.steps
-            elif node.field == "seed":
+            elif node.type == "seed":
                 seed = (
                     payload.seed
                     if payload.seed
