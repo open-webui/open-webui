@@ -44,6 +44,8 @@ services:
       target: base
     command: ["bash", "dev.sh"]
     env_file: .env
+    networks:
+      - backend
     environment:
      - ENV=dev
      - WEBUI_AUTH=True
