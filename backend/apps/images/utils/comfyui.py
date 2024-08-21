@@ -133,7 +133,7 @@ async def comfyui_generate_image(
                     else random.randint(0, 18446744073709551614)
                 )
                 for node_id in node.node_ids:
-                    workflow[node.node_id]["inputs"][node.key] = seed
+                    workflow[node_id]["inputs"][node.key] = seed
         else:
             for node_id in node.node_ids:
                 workflow[node_id]["inputs"][node.key] = node.value
