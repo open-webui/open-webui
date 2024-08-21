@@ -298,7 +298,8 @@ def get_models(user=Depends(get_verified_user)):
 
             for node in app.state.config.COMFYUI_WORKFLOW_NODES:
                 if node["type"] == "model":
-                    model_node_id = node["node_ids"][0]
+                    if node["node_ids"]:
+                        model_node_id = node["node_ids"][0]
                     break
 
             if model_node_id:
