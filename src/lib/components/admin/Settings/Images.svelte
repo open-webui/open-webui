@@ -110,7 +110,8 @@
 				return {
 					type: node.type,
 					key: node.key,
-					node_ids: node.node_ids.split(',').map((id) => id.trim())
+					node_ids:
+						node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
 				};
 			});
 		}
@@ -427,7 +428,7 @@
 											<div
 												class=" capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/10 text-green-700 dark:text-green-200"
 											>
-												{node.type}
+												{node.type}{node.type === 'prompt' ? '*' : ''}
 											</div>
 										</div>
 										<div class="">
@@ -455,6 +456,10 @@
 										</div>
 									</div>
 								{/each}
+							</div>
+
+							<div class="mt-2 text-xs text-right text-gray-400 dark:text-gray-500">
+								{$i18n.t('*Prompt node ID(s) are required for image generation')}
 							</div>
 						</div>
 					{/if}
