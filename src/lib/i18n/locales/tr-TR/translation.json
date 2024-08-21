@@ -9,6 +9,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} düşünüyor...",
 	"{{user}}'s Chats": "{{user}} Sohbetleri",
 	"{{webUIName}} Backend Required": "{{webUIName}} Arkayüz Gerekli",
+	"*Prompt node ID(s) are required for image generation": "",
 	"A task model is used when performing tasks such as generating titles for chats and web search queries": "Bir görev modeli, sohbetler ve web arama sorguları için başlık oluşturma gibi görevleri yerine getirirken kullanılır",
 	"a user": "bir kullanıcı",
 	"About": "Hakkında",

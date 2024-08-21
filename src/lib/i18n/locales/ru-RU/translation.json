@@ -9,6 +9,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} думает...",
 	"{{user}}'s Chats": "Чаты {{user}}'а",
 	"{{webUIName}} Backend Required": "Необходимо подключение к серверу {{webUIName}}",
+	"*Prompt node ID(s) are required for image generation": "",
 	"A task model is used when performing tasks such as generating titles for chats and web search queries": "Модель задач используется при выполнении таких задач, как генерация заголовков для чатов и поисковых запросов в Интернете",
 	"a user": "пользователь",
 	"About": "О программе",

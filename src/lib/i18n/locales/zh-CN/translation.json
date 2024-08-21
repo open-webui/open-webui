@@ -9,6 +9,7 @@
 	"{{modelName}} is thinking...": "{{modelName}} 正在思考...",
 	"{{user}}'s Chats": "{{user}} 的对话记录",
 	"{{webUIName}} Backend Required": "需要 {{webUIName}} 后端",
+	"*Prompt node ID(s) are required for image generation": "",
 	"A task model is used when performing tasks such as generating titles for chats and web search queries": "任务模型用于执行生成对话标题和网络搜索查询等任务",
 	"a user": "用户",
 	"About": "关于",
