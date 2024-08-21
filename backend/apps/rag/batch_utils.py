@@ -17,6 +17,19 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
+TEXT_LENGTH_THRESHOLD_FOR_BATCH_API: int = 500_000
+MAX_CHUNK_SIZE_PER_REQUEST: int = 2048
+BATCH_REQUEST_COMPLETION_WINDOW: Literal["24h"] = "24h"
+TOKEN_LIMIT_PER_BATCH: int = (
+    1_000_000  # Basic TPM for Tier 1, assuming one batch is processed per minute
+)
+BATCH_RETRIEVE_WAIT_INTERVAL: int = 60
+TENAICITY_RETRY_ATTEMPTS: int = 5
+TENAICITY_WAIT_MIN: int = 4
+TENAICITY_WAIT_MAX: int = 10
+TENAICITY_WAIT_MULTIPLIER: int = 1
+FALLBACK_ENCODING: str = "cl100k_base"
+FALLBACK_TOKEN_COUNTER: Callable[[str], int] = lambda text: len(text) // 4  # noqa: E731
 
 
 def _print_with_time(msg: str) -> None:
@@ -26,12 +39,15 @@ def _print_with_time(msg: str) -> None:
 def _get_token_count(model: str) -> Callable[[str], int]:
     # Get the token count function for the model, or a rough estimate if not available
     try:
-        return lambda text: len(tiktoken.encoding_for_model(model).encode(text))
+        func = tiktoken.encoding_for_model(model)
+        return FALLBACK_TOKEN_COUNTER
     except Exception as e:
         log.exception(e)
 
     try:
-        return lambda text: len(tiktoken.get_encoding("cl100k_base").encode(text))
+        func: tiktoken.Encoding = tiktoken.get_encoding(FALLBACK_ENCODING)
+        return lambda text: len(func.encode(text))
+
     except Exception as e:
         log.exception(e)
 
@@ -46,7 +62,11 @@ def _texts_iterator(lst: list[str], chunk_size: int) -> Iterable[tuple[int, list
 
 
 def _request_iterator(
-    texts: list[str], model: str, uuid: str, batch_idx: int, chunk_size: int = 2048
+    texts: list[str],
+    model: str,
+    uuid: str,
+    batch_idx: int,
+    chunk_size: int = MAX_CHUNK_SIZE_PER_REQUEST,
 ) -> Iterable[bytes]:
     # Yield individual requests for a chunk of texts
     # Each request is a JSON-encoded dictionary with the custom_id, method, url, and body
@@ -62,14 +82,58 @@ def _request_iterator(
         )
 
 
-@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=10))
+def _batch_iterator(
+    texts: list[str],
+    model: str,
+    uuid: str,
+    token_limit: int,
+    chunk_size: int = MAX_CHUNK_SIZE_PER_REQUEST,
+) -> Iterable[tuple[int, bytes]]:
+    current_request: list[str] = []
+    current_tokens = 0
+    batch_idx: int = 0
+    text2tokens: Callable[[str], int] = _get_token_count(model)
+    for text in texts:
+        tokens: int = text2tokens(text)
+        if current_tokens + tokens > token_limit:
+            yield (
+                batch_idx,
+                b"\n".join(
+                    _request_iterator(
+                        current_request, model, uuid, batch_idx, chunk_size
+                    )
+                ),
+            )
+            batch_idx += 1
+            current_request = [text]
+            current_tokens = tokens
+        else:
+            current_request.append(text)
+            current_tokens += tokens
+    if current_request:
+        yield (
+            batch_idx,
+            b"\n".join(
+                _request_iterator(current_request, model, uuid, batch_idx, chunk_size)
+            ),
+        )
+
+
+@retry(
+    stop=stop_after_attempt(TENAICITY_RETRY_ATTEMPTS),
+    wait=wait_exponential(
+        multiplier=TENAICITY_WAIT_MULTIPLIER,
+        min=TENAICITY_WAIT_MIN,
+        max=TENAICITY_WAIT_MAX,
+    ),
+)
 def _process_one_batch(
     client: OpenAI,
     uuid: str,
     batch_idx: int,
     batch: bytes,
-    completion_window: Literal["24h"] = "24h",
-    wait_interval: int = 30,
+    completion_window: Literal["24h"],
+    wait_interval: int,
 ) -> list[list[float]]:
     # Process a single batch of requests
     # This function creates a batch job, waits for it to complete, and returns the embeddings
@@ -119,47 +183,14 @@ def _process_one_batch(
         raise
 
 
-def _batch_iterator(
-    texts: list[str], model: str, uuid: str, token_limit: int, chunk_size: int = 2048
-) -> Iterable[tuple[int, bytes]]:
-    current_request: list[str] = []
-    current_tokens = 0
-    batch_idx: int = 0
-    text2tokens: Callable[[str], int] = _get_token_count(model)
-    for text in texts:
-        tokens: int = text2tokens(text)
-        if current_tokens + tokens > token_limit:
-            yield (
-                batch_idx,
-                b"\n".join(
-                    _request_iterator(
-                        current_request, model, uuid, batch_idx, chunk_size
-                    )
-                ),
-            )
-            batch_idx += 1
-            current_request = [text]
-            current_tokens = tokens
-        else:
-            current_request.append(text)
-            current_tokens += tokens
-    if current_request:
-        yield (
-            batch_idx,
-            b"\n".join(
-                _request_iterator(current_request, model, uuid, batch_idx, chunk_size)
-            ),
-        )
-
-
 def _request_async_embedding(
     model: str,
     texts: list[str],
     key: str,
-    url: str = "https://api.openai.com/v1",
-    completion_window: Literal["24h"] = "24h",
-    wait_interval: int = 60,
-    token_limit: int = 1_000_000,  # Basic TPM for Tier 1, assuming one batch is processed per minute
+    url: str,
+    completion_window: Literal["24h"],
+    wait_interval: int,
+    token_limit: int,
 ) -> list[list[float]]:
     uuid: str = uuid4().hex
     client: OpenAI = OpenAI(api_key=key, base_url=url)
@@ -172,7 +203,14 @@ def _request_async_embedding(
     ]
 
 
-@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=10))
+@retry(
+    stop=stop_after_attempt(TENAICITY_RETRY_ATTEMPTS),
+    wait=wait_exponential(
+        multiplier=TENAICITY_WAIT_MULTIPLIER,
+        min=TENAICITY_WAIT_MIN,
+        max=TENAICITY_WAIT_MAX,
+    ),
+)
 def _request_sync_embedding(url, key, texts, model):
     log.info("Using single processing for OpenAI embeddings")
     r = requests.post(
@@ -200,55 +238,21 @@ def generate_openai_batch_embeddings(
         log.info(
             f"len(texts): {len(texts)} / sum(len(text) for text in texts): {text_length}"
         )
-        if text_length < 500_000:
+        if text_length < TEXT_LENGTH_THRESHOLD_FOR_BATCH_API:
             log.info("Using single processing for OpenAI embeddings")
-            func = _request_sync_embedding
             return _request_sync_embedding(url, key, texts, model)
         else:
             log.info("Using batch processing for OpenAI embeddings")
-            func = _request_async_embedding
-        return func(model, texts, key, url)
+            return _request_async_embedding(
+                model,
+                texts,
+                key,
+                url,
+                BATCH_REQUEST_COMPLETION_WINDOW,
+                BATCH_RETRIEVE_WAIT_INTERVAL,
+                TOKEN_LIMIT_PER_BATCH,
+            )
 
     except Exception as e:
         log.exception(e)
         return None
-
-
-if __name__ == "__main__":
-    import os
-
-    def test_request_async_embedding() -> None:
-        # Set up OpenAI API key and model
-        api_key: str = os.environ["OPENAI_API_KEY"]
-        model = "text-embedding-3-small"
-        print(f"Using OpenAI API Key: {api_key} / Model: {model}")
-
-        # Set up test texts
-        texts: list[str] = [
-            "This is the first test sentence.",
-            "Here's another sentence for testing.",
-            "And one more to make sure everything works.",
-            "Let's add a fourth sentence for good measure.",
-            "Finally, a fifth sentence to really test the batch processing.",
-        ]
-
-        # Request embeddings
-        embeddings: list[list[float]] = _request_async_embedding(
-            model=model, texts=texts, key=api_key
-        )
-
-        # Validate results
-        assert (
-            len(embeddings) == len(texts)
-        ), f"Number of embeddings ({len(embeddings)}) does not match number of texts ({len(texts)})."
-
-        # Validate dimensions
-        expected_dim = 1536
-        for i, embedding in enumerate(embeddings):
-            assert (
-                len(embedding) == expected_dim
-            ), f"Embedding {i} has dimension {len(embedding)} instead of {expected_dim}."
-
-        print("All tests passed!")
-
-    test_request_async_embedding()
