@@ -98,3 +98,23 @@ select {
 		height: auto !important;
 	}
 }
+
+.mobile-only {
+	display: none;
+}
+
+@media (max-width: 768px) {
+	.mobile-only {
+		display: inherit;
+	}
+}
+
+.pc-only {
+	display: inherit;
+}
+
+@media (max-width: 768px) {
+	.pc-only {
+		display: none;
+	}
+}

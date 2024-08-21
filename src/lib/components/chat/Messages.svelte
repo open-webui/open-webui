@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { chats, config, modelfiles, settings, user } from '$lib/stores';
+	import { chats, config, modelfiles, settings, user, isMobile } from '$lib/stores';
 	import { tick, getContext } from 'svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -10,6 +10,7 @@
 	import UserMessage from './Messages/UserMessage.svelte';
 	import ResponseMessage from './Messages/ResponseMessage.svelte';
 	import Placeholder from './Messages/Placeholder.svelte';
+	import SuggestionsMobile from './MessageInput/SuggestionsMobile.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { imageGenerations } from '$lib/apis/images';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
@@ -238,15 +239,7 @@
 			history: history
 		});
 	};
-</script>
-
-<div class="h-full flex mb-16">
-	{#if messages.length == 0}
-		<Placeholder
-			models={selectedModels}
-			modelfiles={selectedModelfiles}
-			{suggestionPrompts}
-			submitPrompt={async (p) => {
+	const submitPrompt = async (p) => {
 				let text = p;
 
 				if (p.includes('{{CLIPBOARD}}')) {
@@ -279,8 +272,20 @@
 				}
 
 				await tick();
-			}}
+			}
+</script>
+
+<div class="h-full flex flex-col mb-24">
+	{#if messages.length == 0}
+		<Placeholder
+			models={selectedModels}
+			modelfiles={selectedModelfiles}
+			{suggestionPrompts}
+			{submitPrompt}
 		/>
+		{#if $isMobile}
+		<SuggestionsMobile {suggestionPrompts} {submitPrompt} />
+		{/if}
 	{:else}
 		<div class="w-full pt-2">
 			{#key chatId}

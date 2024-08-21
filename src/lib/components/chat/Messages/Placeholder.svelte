@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { user } from '$lib/stores';
+	import { user, isMobile } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	import { blur, fade } from 'svelte/transition';
@@ -66,9 +66,9 @@
 		</div>
 
 		<div
-			class=" mt-2 mb-8 text-6xl text-gray-800 dark:text-gray-100 font-bold flex items-center gap-4"
+			class=" mt-2 mb-8 {$isMobile ? 'text-3xl' : 'text-6xl'} text-gray-800 dark:text-gray-100 font-bold flex items-center gap-4"
 		>
-			<img src="/logo-main.png" class="w-[7rem]" alt="logo" />
+			<img src="/logo-main.png" class="{$isMobile ? 'h-[3.5rem]' : 'h-[6rem]'}" alt="logo" />
 			<div>
 				<div class=" capitalize line-clamp-1 leading-tight" in:fade={{ duration: 200 }}>
 					{#if modelfile}
@@ -92,7 +92,7 @@
 							</div>
 						{/if}
 					{:else}
-						<div class=" font-bold text-[#0000004D] dark:text-gray-500 text-2xl">
+						<div class=" font-bold text-[#0000004D] dark:text-gray-500 {$isMobile?'text-lg':'text-2xl'}">
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}
@@ -103,8 +103,10 @@
 			</div>
 		</div>
 
+		{#if !$isMobile}
 		<div class=" w-full" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions {suggestionPrompts} {submitPrompt} />
 		</div>
+		{/if}
 	</div>
 {/key}
