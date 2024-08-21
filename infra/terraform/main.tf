@@ -59,3 +59,16 @@ module "vpc_disabled" {
 
   context = module.this.context
 }
+
+
+module "ssh_key_pair" {
+  source  = "cloudposse/key-pair/aws"
+  version = "0.20.0"
+
+  ssh_public_key_path   = "./secrets"
+  generate_ssh_key      = "true"
+  private_key_extension = ".pem"
+  public_key_extension  = ".pub"
+
+  context = module.this.context
+}
