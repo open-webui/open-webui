@@ -16,7 +16,8 @@
     } from '$lib/stores';
 
     // Define a store for tracking the remaining words
-    export const remainingWords = writable(0);
+    // export const remainingWords = writable(0);
+    import { remainingWords } from '$lib/stores';
 
     import { slide } from 'svelte/transition';
     import ShareChatModal from '../chat/ShareChatModal.svelte';

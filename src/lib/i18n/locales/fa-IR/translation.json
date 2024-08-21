@@ -691,6 +691,7 @@
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "هشدار: اگر شما به روز کنید یا تغییر دهید مدل شما، باید تمام سند ها را مجددا وارد کنید.",
 	"Web": "وب",
 	"Web API": "",
+	"Words":"کلمات باقی‌مانده",
 	"Web Loader Settings": "تنظیمات لودر وب",
 	"Web Params": "پارامترهای وب",
 	"Web Search": "جستجوی وب",

@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import { WEBUI_BASE_URL } from '$lib/constants';
 
+
 //////////////////////////
 // Helper functions
 //////////////////////////

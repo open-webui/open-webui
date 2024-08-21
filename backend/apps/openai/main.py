@@ -297,6 +297,7 @@ async def get_all_models(raw=False) -> dict[str, list] | list:
     return models
 
 
+
 @app.get("/models")
 @app.get("/models/{url_idx}")
 async def get_models(url_idx: Optional[int] = None, user=Depends(get_verified_user)):

@@ -69,6 +69,10 @@
 	// Web functions
 	//////////////////////////
 
+	const getUserCharge = async () => {
+
+	};
+
 	const loadSharedChat = async () => {
 		await models.set(await getModels(localStorage.token));
 		await chatId.set($page.params.id);
@@ -78,6 +82,7 @@
 		});
 
 		if (chat) {
+
 			user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
 				console.error(error);
 				return null;

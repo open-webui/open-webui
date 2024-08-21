@@ -26,7 +26,8 @@
 		socket,
 		showCallOverlay,
 		tools,
-		currentChatPage
+		currentChatPage,
+		user as _user
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -46,7 +47,8 @@
 		getChatById,
 		getChatList,
 		getTagsById,
-		updateChatById
+		updateChatById,
+		updateRemainingWords
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { runWebSearch } from '$lib/apis/rag';
@@ -63,6 +65,7 @@
 	import { error } from '@sveltejs/kit';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
+	import { remainingWords } from '../../stores';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -380,7 +383,14 @@
 		await mermaid.run({
 			querySelector: '.mermaid'
 		});
+		// console.log("HERE");
+		 console.log("\n\nstart charge\n\n");
 
+		 const charge = await updateRemainingWords($_user.id);
+		 console.log(charge);
+		 console.log("charge");
+		remainingWords.set(charge);
+		
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,
 			messages: messages.map((m) => ({

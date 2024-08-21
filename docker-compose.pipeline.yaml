@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    container_name: pipelines
+    ports:
+      - "9099:9099"
+    volumes:
+      - pipelines:/app/pipelines
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: always
+
+volumes:
+  pipelines: {}

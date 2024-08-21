@@ -1,4 +1,4 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { WEBUI_API_BASE_URL, MATN_CHARGE_API } from '$lib/constants';
 import { getTimeRange } from '$lib/utils';
 
 export const createNewChat = async (token: string, chat: object) => {
@@ -494,6 +494,29 @@ export const deleteSharedChatById = async (token: string, id: string) => {
 
 	return res;
 };
+
+
+export const updateRemainingWords = async (chat_user_id: string) => {
+	console.log(chat_user_id)
+	console.log("\n\nTEST\n\n")
+    const response = await fetch(`${MATN_CHARGE_API}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+		body: JSON.stringify({
+			chat_user_id: chat_user_id
+		})
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch remaining words');
+    }
+
+    const data = await response.json();
+    return data['charge'];
+}
+
 
 export const updateChatById = async (token: string, id: string, chat: object) => {
 	let error = null;

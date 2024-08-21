@@ -1,0 +1,1 @@
+{"pipelines": ["*"], "api_url": "http://host.docker.internal:5050/dashboard/manage_chat"}

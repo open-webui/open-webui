@@ -47,6 +47,8 @@ export const currentChatPage = writable(1);
 
 export type Model = OpenAIModel | OllamaModel;
 
+export const remainingWords = writable(0);;
+
 type BaseModel = {
 	id: string;
 	name: string;
