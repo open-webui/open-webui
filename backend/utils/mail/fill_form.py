@@ -1,6 +1,6 @@
 from pdfrw import PdfReader, PdfWriter, PageMerge
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter,A4
 import io
 
 from datetime import datetime
@@ -148,8 +148,8 @@ class FillLeaveForm:
         if not is_valid_number(data['{DAYS}']):
             raise ValueError("# of days must be a valid number!")
         
-        # if not is_valid_address(data['{ADDRESS}']):
-        #     raise ValueError("Address is invalid!")
+        if not is_valid_address(data['{ADDRESS}']):
+            raise ValueError("Address is invalid!")
 
         if not is_valid_phone_number(data['{TELE}']):
             raise ValueError("Telephone number is invalid!")
@@ -168,22 +168,22 @@ class FillLeaveForm:
         # self.validate_context(self.data, required_keys)
         
         packet = io.BytesIO()
-        can = canvas.Canvas(packet, pagesize=letter)
-        can.setFont("Helvetica", 10)
-        can.drawString(120, 690, self.data['{NAME}'])
-        can.drawString(400, 690, self.data['{ID}'])
-        can.drawString(120, 666, self.data['{JOBTITLE}'])
-        can.drawString(400, 666, self.data['{DEPT}'])
-        can.drawString(50, 620, self.data['{LEAVETYPE}'])
-        can.drawString(50, 570, self.data['{REMARKS}'])
-        can.drawString(160, 490, self.data['{LEAVEFROM}'])
-        can.drawString(320, 490, self.data['{LEAVETO}'])
-        can.drawString(475, 490, self.data['{DAYS}'])
-        can.drawString(160, 445, self.data['{ADDRESS}'])
-        can.drawString(160, 415, self.data['{TELE}'])
-        can.drawString(320, 415, self.data['{EMAIL}'])
-        can.drawString(120, 245, self.data['{DATE}'])
-        can.drawString(255, 245, self.data['{DATE}'])
+        can = canvas.Canvas(packet, pagesize=A4)
+        can.setFont("Helvetica", 9)
+        can.drawString(110, 690, self.data['{NAME}'])
+        can.drawString(345, 690, self.data['{ID}'])
+        can.drawString(110, 666, self.data['{JOBTITLE}'])
+        can.drawString(345, 666, self.data['{DEPT}'])
+        can.drawString(45, 620, self.data['{LEAVETYPE}'])
+        can.drawString(45, 570, self.data['{REMARKS}'])
+        can.drawString(152, 490, self.data['{LEAVEFROM}'])
+        can.drawString(300, 490, self.data['{LEAVETO}'])
+        can.drawString(485, 490, self.data['{DAYS}'])
+        can.drawString(152, 445, self.data['{ADDRESS}'])
+        can.drawString(152, 415, self.data['{TELE}'])
+        can.drawString(302, 415, self.data['{EMAIL}'])
+        can.drawString(110, 255, self.data['{DATE}'])
+        can.drawString(260, 255, self.data['{DATE}'])
         can.save()
         # Move to the beginning of the StringIO buffer
         packet.seek(0)
@@ -196,6 +196,27 @@ class FillLeaveForm:
             merger = PageMerge(page)
             merger.add(overlay_page).render()
         # leave_{first_name}_{last_name}_start_date_end_date.pdf
-        out_file = self.output_path+'leave_'+'_'.join(self.data['{NAME}'].split())+'_'+self.data['{LEAVEFROM}'].replace('-', '_')+'_'+self.data['{LEAVETO}'].replace('-', '_')+'.docx'
+        out_file = self.output_path+'leave_'+'_'.join(self.data['{NAME}'].split())+'_'+self.data['{LEAVEFROM}'].replace('-', '_')+'_'+self.data['{LEAVETO}'].replace('-', '_')+'.pdf'
         PdfWriter(out_file, trailer=template).write()
         return out_file
+
+# if __name__ == '__main__':
+#     template_path = 'utils/mail/leave_template.pdf'
+#     output_path = 'utils/mail/'
+#     data = {
+#         '{NAME}': 'John Doe John Doe',
+#         '{ID}': 'AI4567',
+#         '{JOBTITLE}': 'Natural Language Processing Engineer',
+#         '{DEPT}': 'Center for Integrative Artificial Intelligence',
+#         '{LEAVETYPE}': 'Annual Leave',
+#         '{REMARKS}': 'Sick Leave',
+#         '{LEAVEFROM}': 'August 1, 2022',
+#         '{LEAVETO}': 'August 10, 2022',
+#         '{DAYS}': '100',
+#         '{ADDRESS}': '123 Main St, Anytown, USA',
+#         '{TELE}': '123-456-7890',
+#         '{EMAIL}': 'nikhil.ranjan@mbzuai.ac.ae',
+#         '{DATE}': 'August 1, 2022'
+#     }
+#     ff = FillLeaveForm(template_path, output_path, data).fill_template()
+#     print(ff)
