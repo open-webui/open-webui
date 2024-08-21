@@ -23,6 +23,8 @@ from typing import Optional
 from utils.misc import get_last_user_message, add_or_update_system_message
 from config import SRC_LOG_LEVELS, CHROMA_CLIENT
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -225,16 +227,22 @@ def get_embedding_function(
             if isinstance(query, list):
                 if embedding_engine == "openai":
                     embeddings = []
-                    for i in range(0, len(query), batch_size):
-                        embeddings.extend(f(query[i : i + batch_size]))
+                    with ThreadPoolExecutor(max_workers=10) as executor:
+                        futures = [
+                            executor.submit(f, query[i : i + batch_size])
+                            for i in range(0, len(query), batch_size)
+                        ]
+                        for future in as_completed(futures):
+                            embeddings.extend(future.result())
                     return embeddings
                 else:
-                    return [f(q) for q in query]
+                    with ThreadPoolExecutor(max_workers=10) as executor:
+                        futures = [executor.submit(f, q) for q in query]
+                        return [future.result() for future in as_completed(futures)]
             else:
                 return f(query)
 
         return lambda query: generate_multiple(query, func)
-
 
 def get_rag_context(
     files,
