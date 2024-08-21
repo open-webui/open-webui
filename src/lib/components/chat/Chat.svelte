@@ -270,9 +270,11 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
-		window.history.replaceState(history.state, '', `/`);
-		await chatId.set('');
+		if ($page.url.pathname.includes('/c/')) {
+			window.history.replaceState(history.state, '', `/`);
+		}
 
+		await chatId.set('');
 		autoScroll = true;
 
 		title = '';

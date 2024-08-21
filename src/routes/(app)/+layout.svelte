@@ -32,7 +32,8 @@
 		config,
 		showCallOverlay,
 		tools,
-		functions
+		functions,
+		temporaryChatEnabled
 	} from '$lib/stores';
 
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
@@ -40,6 +41,7 @@
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import { getFunctions } from '$lib/apis/functions';
+	import { page } from '$app/stores';
 
 	const i18n = getContext('i18n');
 
@@ -175,6 +177,10 @@
 
 			if ($user.role === 'admin') {
 				showChangelog.set(localStorage.version !== $config.version);
+			}
+
+			if ($page.url.searchParams.get('temporary-chat') === 'true') {
+				temporaryChatEnabled.set(true);
 			}
 
 			await tick();
