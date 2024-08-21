@@ -219,6 +219,63 @@ def update_embedding_model(
         app.state.sentence_transformer_ef = None
 
 
+class Reranking(BaseModel):
+    reranking_model: str = Field(..., description="The specific reranking model to use")
+    api_key: Optional[str] = Field(
+        None,
+        description="The API key (automatically set based on provider if not provided)",
+    )
+    url: Optional[str] = Field(
+        None,
+        description="The API base URL (automatically set based on provider if not provided)",
+    )
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        if self.url is None:
+            self.url = SILICONFLOW_API_BASE_URL
+            
+        if self.api_key is None:
+            self.api_key = SILICONFLOW_API_KEY
+            
+    def predict(
+        self, query: str, docs: Sequence[Document], top_n: int, r_score: float
+    ) -> Optional[List[Tuple[str, float]]]:
+        """Sends a reranking request to the API and returns documents with scores."""
+        try:
+            import random
+            api_keys = [key.strip() for key in self.api_key.split(",") if key.strip() != '']
+            selected_key = random.choice(api_keys) if api_keys else None
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {selected_key}",
+            }
+            payload = {
+                "model": self.reranking_model,
+                "query": query,
+                "documents": [doc.page_content for doc in docs],
+                "top_n": top_n,
+            }
+            response = requests.post(
+                f"{self.url}/rerank", headers=headers, json=payload
+            )
+            response.raise_for_status()
+            data = response.json()
+            results = data.get("results", [])
+            docs_with_scores = [
+                (docs[i["index"]], i["relevance_score"]) for i in results
+            ]
+            if r_score is not None and r_score > 0:
+                docs_with_scores = [(d, s) for d, s in docs_with_scores if s >= r_score]
+            return docs_with_scores
+        except requests.RequestException as e:
+            print(f"Error in reranking request: {e}")
+        except KeyError as e:
+            print(f"Unexpected response format: missing key '{e}'")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+        return None
+    
+
 def update_reranking_model(
         reranking_model: str,
         update_model: bool = False,
@@ -1516,62 +1573,6 @@ class SafeWebBaseLoader(WebBaseLoader):
                 log.error(f"Error loading {path}: {e}")
 
 
-class Reranking(BaseModel):
-    reranking_model: str = Field(..., description="The specific reranking model to use")
-    api_key: Optional[str] = Field(
-        None,
-        description="The API key (automatically set based on provider if not provided)",
-    )
-    url: Optional[str] = Field(
-        None,
-        description="The API base URL (automatically set based on provider if not provided)",
-    )
-    def __init__(self, **data: Any):
-        super().__init__(**data)
-        if self.url is None:
-            self.url = SILICONFLOW_API_BASE_URL
-            
-        if self.api_key is None:
-            self.api_key = SILICONFLOW_API_KEY
-            
-    def predict(
-        self, query: str, docs: Sequence[Document], top_n: int, r_score: float
-    ) -> Optional[List[Tuple[str, float]]]:
-        """Sends a reranking request to the API and returns documents with scores."""
-        try:
-            import random
-            api_keys = [key.strip() for key in self.api_key.split(",") if key.strip() != '']
-            selected_key = random.choice(api_keys) if api_keys else None
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {selected_key}",
-            }
-            payload = {
-                "model": self.reranking_model,
-                "query": query,
-                "documents": [doc.page_content for doc in docs],
-                "top_n": top_n,
-            }
-            response = requests.post(
-                f"{self.url}/rerank", headers=headers, json=payload
-            )
-            response.raise_for_status()
-            data = response.json()
-            results = data.get("results", [])
-            docs_with_scores = [
-                (docs[i["index"]], i["relevance_score"]) for i in results
-            ]
-            if r_score is not None and r_score > 0:
-                docs_with_scores = [(d, s) for d, s in docs_with_scores if s >= r_score]
-            return docs_with_scores
-        except requests.RequestException as e:
-            print(f"Error in reranking request: {e}")
-        except KeyError as e:
-            print(f"Unexpected response format: missing key '{e}'")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-        return None
-    
 if ENV == "dev":
     @app.get("/ef")
     async def get_embeddings():
