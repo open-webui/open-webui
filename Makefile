@@ -6,7 +6,9 @@ else
     DOCKER_COMPOSE := docker compose
 endif
 
-include infra/Makefile
+-include .env.secrets
+
+include libs/make/*.mk
 
 .PHONY: frontend/run
 frontend/run:
@@ -14,7 +16,7 @@ frontend/run:
 
 .PHONY: backend/run
 backend/run:
-	@bash -c "source activate open-webui-env && cd backend && bash dev.sh"
+	@cd backend && bash dev.sh
 
 install:
 	$(DOCKER_COMPOSE) up -d
