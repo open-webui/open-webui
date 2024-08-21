@@ -390,7 +390,7 @@
 		//  console.log("\n\nstart charge\n\n");
 
 		 const charge = await updateRemainingWords($_user.id);
-		remainingWords.set(charge);
+		 remainingWords.set(charge);
 		
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,

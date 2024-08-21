@@ -46,7 +46,6 @@
 		const charge = await updateRemainingWords($_user.id);
 		remainingWords.set(charge);
 
-
 	});
 
 	const scrollToBottom = () => {

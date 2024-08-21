@@ -512,7 +512,7 @@ export const updateRemainingWords = async (chat_user_id: string) => {
 
     const data = await response.json();
 	// console.debug("CHARGE RESPONSE")
-	// console.log(response)
+	console.log(data)
     return data["remain"];
 }
 

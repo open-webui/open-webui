@@ -99,13 +99,13 @@ class Pipeline:
         headers = {'Content-Type': 'application/json'}
 
         try:
-            response = requests.post(self.valves.api_url, headers=headers, data=payload)
+            response = requests.request( "POST", self.valves.api_url, headers=headers, data=payload)
             response.raise_for_status()
 
-            result = json.dumps(response.text)
-            logger.info(f"API Response: {response.text}")
-            charge = result['remain']
-            if charge < 10:
+            result = json.loads(response.content)
+            logger.info(f"API Response: {response.content}")
+            charge = result.get('remain')
+            if charge is not None and int(charge) < 10:
                 raise Exception("You've exceeded your available balance. Please top up your account on matn.ai.")
             
 

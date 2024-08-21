@@ -260,7 +260,7 @@ async def get_all_tags(user=Depends(get_verified_user)):
 
 
 @router.get("/get_user_charge/{chat_user_id}")
-async def get_user_charge(chat_user_id: str):
+async def get_user_charge(chat_user_id):
     print(chat_user_id)
 
     url = "https://matn.ai/dashboard/get_chatuser_charge"
