@@ -31,8 +31,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web.rule=Host(`chat.matn.ai`)"
-      - "traefik.http.routers.web.entrypoints=websecure"
-      - "traefik.http.routers.web.tls.certresolver=myresolver"
+      - "traefik.http.routers.web.entrypoints=chat"
+      - "traefik.http.routers.web.tls.certresolver=chat"
 
   backend:
     build:
