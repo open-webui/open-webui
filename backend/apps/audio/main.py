@@ -38,6 +38,7 @@ from config import (
     AUDIO_TTS_MODEL,
     AUDIO_TTS_VOICE,
     AppConfig,
+    CORS_ALLOW_ORIGIN,
 )
 from constants import ERROR_MESSAGES
 from utils.utils import (
@@ -52,7 +53,7 @@ log.setLevel(SRC_LOG_LEVELS["AUDIO"])
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ALLOW_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

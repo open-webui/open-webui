@@ -12,7 +12,8 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import { marked } from 'marked';
 	import { processResponseContent, replaceTokens } from '$lib/utils';
-	import MarkdownTokens from './MarkdownTokens.svelte';
+	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
+	import Markdown from './Markdown.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -44,8 +45,8 @@
 		messageEditTextAreaElement?.focus();
 	};
 
-	const editMessageConfirmHandler = async () => {
-		confirmEditMessage(message.id, editedContent);
+	const editMessageConfirmHandler = async (submit = true) => {
+		confirmEditMessage(message.id, editedContent, submit);
 
 		edit = false;
 		editedContent = '';
@@ -84,7 +85,7 @@
 
 					{#if message.timestamp}
 						<span
-							class=" invisible group-hover:visible text-gray-400 text-xs font-medium uppercase"
+							class=" invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
 						>
 							{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
 						</span>
@@ -93,9 +94,7 @@
 			</div>
 		{/if}
 
-		<div
-			class="prose chat-{message.role} w-full max-w-full dark:prose-invert prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line"
-		>
+		<div class="chat-{message.role} w-full min-w-full markdown-prose">
 			{#if message.files}
 				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
 					{#each message.files as file}
@@ -136,31 +135,45 @@
 							const isEnterPressed = e.key === 'Enter';
 
 							if (isCmdOrCtrlPressed && isEnterPressed) {
-								document.getElementById('save-edit-message-button')?.click();
+								document.getElementById('confirm-edit-message-button')?.click();
 							}
 						}}
 					/>
 
-					<div class=" mt-2 mb-1 flex justify-end space-x-1.5 text-sm font-medium">
-						<button
-							id="close-edit-message-button"
-							class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
-							on:click={() => {
-								cancelEditMessage();
-							}}
-						>
-							{$i18n.t('Cancel')}
-						</button>
+					<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
+						<div>
+							<button
+								id="save-edit-message-button"
+								class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+								on:click={() => {
+									editMessageConfirmHandler(false);
+								}}
+							>
+								{$i18n.t('Save')}
+							</button>
+						</div>
 
-						<button
-							id="save-edit-message-button"
-							class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
-							on:click={() => {
-								editMessageConfirmHandler();
-							}}
-						>
-							{$i18n.t('Send')}
-						</button>
+						<div class="flex space-x-1.5">
+							<button
+								id="close-edit-message-button"
+								class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+								on:click={() => {
+									cancelEditMessage();
+								}}
+							>
+								{$i18n.t('Cancel')}
+							</button>
+
+							<button
+								id="confirm-edit-message-button"
+								class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+								on:click={() => {
+									editMessageConfirmHandler();
+								}}
+							>
+								{$i18n.t('Send')}
+							</button>
+						</div>
 					</div>
 				</div>
 			{:else}
@@ -174,14 +187,7 @@
 								: ' w-full'}"
 						>
 							{#if message.content}
-								<div class="">
-									{#key message.id}
-										<MarkdownTokens
-											id={message.id}
-											tokens={marked.lexer(processResponseContent(message?.content))}
-										/>
-									{/key}
-								</div>
+								<Markdown id={message.id} content={message.content} />
 							{/if}
 						</div>
 					</div>

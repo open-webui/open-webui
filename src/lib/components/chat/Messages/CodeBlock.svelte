@@ -3,6 +3,8 @@
 	import { loadPyodide } from 'pyodide';
 	import mermaid from 'mermaid';
 
+	import { v4 as uuidv4 } from 'uuid';
+
 	import { getContext, getAllContexts, onMount } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 
@@ -213,15 +215,19 @@ __builtins__.input = input`);
 
 	let debounceTimeout;
 
-	$: if (code) {
-		if (lang === 'mermaid' && (token?.raw ?? '').endsWith('```')) {
+	const drawMermaidDiagram = async () => {
+		try {
+			const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+			mermaidHtml = svg;
+		} catch (error) {
+			console.log('Error:', error);
+		}
+	};
+
+	$: if (token.raw) {
+		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			(async () => {
-				try {
-					const { svg } = await mermaid.render(`mermaid-${id}`, code);
-					mermaidHtml = svg;
-				} catch (error) {
-					console.error('Error:', error);
-				}
+				await drawMermaidDiagram();
 			})();
 		} else {
 			// Function to perform the code highlighting
@@ -237,15 +243,18 @@ __builtins__.input = input`);
 	}
 
 	onMount(async () => {
-		await mermaid.initialize({ startOnLoad: true });
-
-		if (lang === 'mermaid' && (token?.raw ?? '').endsWith('```')) {
-			try {
-				const { svg } = await mermaid.render(`mermaid-${id}`, code);
-				mermaidHtml = svg;
-			} catch (error) {
-				console.error('Error:', error);
-			}
+		if (document.documentElement.classList.contains('dark')) {
+			mermaid.initialize({
+				startOnLoad: true,
+				theme: 'dark',
+				securityLevel: 'loose'
+			});
+		} else {
+			mermaid.initialize({
+				startOnLoad: true,
+				theme: 'default',
+				securityLevel: 'loose'
+			});
 		}
 	});
 </script>
@@ -253,9 +262,9 @@ __builtins__.input = input`);
 <div class="my-2" dir="ltr">
 	{#if lang === 'mermaid'}
 		{#if mermaidHtml}
-			{@html mermaidHtml}
+			{@html `${mermaidHtml}`}
 		{:else}
-			<pre class=" mermaid-{id}">{code}</pre>
+			<pre class="mermaid">{code}</pre>
 		{/if}
 	{:else}
 		<div
