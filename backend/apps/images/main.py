@@ -268,12 +268,43 @@ def get_models(user=Depends(get_verified_user)):
             r = requests.get(url=f"{app.state.config.COMFYUI_BASE_URL}/object_info")
             info = r.json()
 
-            return list(
-                map(
-                    lambda model: {"id": model, "name": model},
-                    info["CheckpointLoaderSimple"]["input"]["required"]["ckpt_name"][0],
+            workflow = json.loads(app.state.config.COMFYUI_WORKFLOW)
+            model_node_id = None
+
+            for node in app.state.config.COMFYUI_WORKFLOW_NODES:
+                if node["type"] == "model":
+                    model_node_id = node["node_ids"][0]
+                    break
+
+            if model_node_id:
+                model_list_key = None
+
+                print(workflow[model_node_id]["class_type"])
+                for key in info[workflow[model_node_id]["class_type"]]["input"][
+                    "required"
+                ]:
+                    if "_name" in key:
+                        model_list_key = key
+                        break
+
+                if model_list_key:
+                    return list(
+                        map(
+                            lambda model: {"id": model, "name": model},
+                            info[workflow[model_node_id]["class_type"]]["input"][
+                                "required"
+                            ][model_list_key][0],
+                        )
+                    )
+            else:
+                return list(
+                    map(
+                        lambda model: {"id": model, "name": model},
+                        info["CheckpointLoaderSimple"]["input"]["required"][
+                            "ckpt_name"
+                        ][0],
+                    )
                 )
-            )
         elif (
             app.state.config.ENGINE == "automatic1111" or app.state.config.ENGINE == ""
         ):
