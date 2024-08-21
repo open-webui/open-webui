@@ -368,12 +368,12 @@
 						<div class="">
 							<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow Nodes')}</div>
 
-							<div class="text-xs flex flex-col gap-1">
+							<div class="text-xs flex flex-col gap-1.5">
 								{#each workflowNodes as node}
-									<div class="flex w-full items-center border border-gray-850 rounded-lg">
+									<div class="flex w-full items-center border dark:border-gray-850 rounded-lg">
 										<div class="flex-shrink-0">
 											<div
-												class=" capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/20 text-green-700 dark:text-green-200"
+												class=" capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/10 text-green-700 dark:text-green-200"
 											>
 												{node.type}
 											</div>
@@ -381,7 +381,7 @@
 										<div class="">
 											<Tooltip content="Input Key (e.g. text, unet_name, steps)">
 												<input
-													class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-none border-r border-gray-850"
+													class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-none border-r dark:border-gray-850"
 													placeholder="Key"
 													bind:value={node.key}
 												/>
