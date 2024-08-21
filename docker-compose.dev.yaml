@@ -32,9 +32,10 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.chat.rule=Host(`chat.matn.ai`)"
       - "traefik.http.routers.chat.entrypoints=websecure"
+      - "traefik.http.routers.chat.tls.certresolver=myresolver"
       - "traefik.http.routers.chat.tls=true"
       - "traefik.http.services.chat.loadbalancer.server.port=3000"
-      
+
   backend:
     build:
       context: .
@@ -47,7 +48,7 @@ services:
      - WEBUI_SECRET_KEY=1cbcdc97bc1c47620317e943a38d02ce
      - ENABLE_SIGNUP=True
      - DEFAULT_USER_ROLE=user
-     - MATN_CHARGE_API=https://9ad4-93-119-216-188.ngrok-free.app/dashboard/get_chatuser_charge
+     - MATN_CHARGE_API=https://matn.ai/dashboard/get_chatuser_charge
     #  - WEBUI_AUTH_TRUSTED_EMAIL_HEADER=X-User-Email
     #  - ADMIN_EMAIL=saman.esmaeil@zohomail.com
     #  - WEBUI_AUTH_TRUSTED_NAME_HEADER=chat-matn-ai
