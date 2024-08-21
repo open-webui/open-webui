@@ -1,8 +1,8 @@
 [project]
-name = "open-webui"
-description = "Open WebUI"
+name = "voltron"
+description = "voltron"
 authors = [
-    { name = "Timothy Jaeryang Baek", email = "tim@openwebui.com" }
+    { name = "vcesc", email = "cesc@army.mil" }
 ]
 license = { file = "LICENSE" }
 dependencies = [
@@ -98,7 +98,7 @@ classifiers = [
 ]
 
 [project.scripts]
-open-webui = "open_webui:app"
+voltron = "voltron:app"
 
 [build-system]
 requires = ["hatchling"]
@@ -130,4 +130,4 @@ exclude = [
     "webui.db",
     "chroma.sqlite3",
 ]
-force-include = { "CHANGELOG.md" = "open_webui/CHANGELOG.md", build = "open_webui/frontend" }
+

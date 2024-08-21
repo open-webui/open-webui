@@ -1,6 +1,6 @@
 {
-	"name": "APEN Voltron",
-	"version": "0.1.00-alpha",
+	"name": "voltron",
+	"version": "0.1.00",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
