@@ -386,6 +386,15 @@
 										{continueGeneration}
 										{mergeResponses}
 										{regenerateResponse}
+										on:action={async (e) => {
+											console.log('action', e);
+											if (typeof e.detail === 'string') {
+												await chatActionHandler(chatId, e.detail, message.model, message.id);
+											} else {
+												const { id, event } = e.detail;
+												await chatActionHandler(chatId, id, message.model, message.id, event);
+											}
+										}}
 										on:change={async () => {
 											await updateChatById(localStorage.token, chatId, {
 												messages: messages,
