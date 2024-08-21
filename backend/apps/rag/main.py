@@ -13,7 +13,7 @@ import os, shutil, logging, re
 from datetime import datetime
 
 from pathlib import Path
-from typing import Union, Sequence, Iterator, Any
+from typing import Any, Iterator, List, Optional, Sequence, Tuple, Union
 
 from chromadb.utils.batch_utils import create_batches
 from langchain_core.documents import Document
@@ -41,7 +41,7 @@ import validators
 import urllib.parse
 import socket
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 import mimetypes
 import uuid
