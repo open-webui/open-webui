@@ -142,7 +142,7 @@
 			/>
 		{/if}
 	{:else if token.type === 'space'}
-		{''}
+		<div class="my-0.5" />
 	{:else}
 		{console.log('Unknown token', token)}
 	{/if}
