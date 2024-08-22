@@ -222,12 +222,12 @@
 						{#if $config?.features.enable_login_form}
 							<div class="mt-5">
 								<button
-									class=" bg-gray-900 hover:bg-gray-800 w-full rounded-2xl text-white font-medium text-sm py-3 transition"
+									class=" bg-gray-900 hover:bg-gray-800 w-full mb-4 rounded-2xl text-white font-medium text-sm py-3 transition"
 									type="submit"
 								>
 									{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
 								</button>
-								<a class="font-medium underline" href="https://matn.ai/auth/reset" target="_blank">Reset Password</a>
+								<a class="font-medium underline text-sm" href="https://matn.ai/auth/reset" target="_blank">Reset Password</a>
 
 								{#if $config?.features.enable_signup}
 									<div class=" mt-4 text-sm text-center">
