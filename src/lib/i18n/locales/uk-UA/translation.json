@@ -537,6 +537,7 @@
 	"Searched {{count}} sites_many": "Переглянуто {{count}} сайтів",
 	"Searched {{count}} sites_other": "Переглянуто {{count}} сайтів",
 	"Searching \"{{searchQuery}}\"": "Шукаю \"{{searchQuery}}\"",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "URL-адреса запиту Searxng",
 	"See readme.md for instructions": "Див. readme.md для інструкцій",
 	"See what's new": "Подивіться, що нового",

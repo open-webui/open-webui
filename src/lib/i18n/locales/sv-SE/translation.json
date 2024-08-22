@@ -535,6 +535,7 @@
 	"Searched {{count}} sites_one": "Sökte på {{count}} sites_one",
 	"Searched {{count}} sites_other": "Sökte på {{count}} sites_other",
 	"Searching \"{{searchQuery}}\"": "Söker \"{{searchQuery}}\"",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "Searxng Query URL",
 	"See readme.md for instructions": "Se readme.md för instruktioner",
 	"See what's new": "Se vad som är nytt",

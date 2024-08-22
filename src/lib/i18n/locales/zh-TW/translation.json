@@ -535,6 +535,7 @@
 	"Searched {{count}} sites_one": "已搜尋 {{count}} 個網站",
 	"Searched {{count}} sites_other": "已搜尋 {{count}} 個網站",
 	"Searching \"{{searchQuery}}\"": "正在搜尋 \"{{searchQuery}}\"",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "Searxng 查詢 URL",
 	"See readme.md for instructions": "檢視 readme.md 以取得說明",
 	"See what's new": "查看新功能",
