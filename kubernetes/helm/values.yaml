@@ -1,8 +1,7 @@
 nameOverride: ""
 
 ollama:
-  externalHost: "http://192.168.100.14:31774"
-  # externalHost: "http://192.168.100.14:32381"
+  externalHost: ""
   annotations: {}
   podAnnotations: {}
   replicaCount: 1
@@ -107,8 +106,7 @@ hrwebui:
     storageClass: ""
     selector: {}
     annotations: {}
-  nodeSelector: 
-    kubernetes.io/hostname: ciai-cpu-w05588
+  nodeSelector: {}
   tolerations: []
   service:
     type: NodePort

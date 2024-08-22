@@ -1,7 +1,5 @@
 # values-prod.yaml
 hrwebui:
-  nodeSelector:
-    kubernetes.io/hostname: ciai-cpu-w05588
   persistence:
     size: 5Gi
   sso:

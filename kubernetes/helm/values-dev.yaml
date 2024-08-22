@@ -1,4 +1,7 @@
 # values-prod.yaml
+ollama:
+  externalHost: "http://192.168.100.14:31774"
+  # externalHost: "http://192.168.100.14:32381"
 hrwebui:
   nodeSelector:
     kubernetes.io/hostname: ciai-cpu-w05588
