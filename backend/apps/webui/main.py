@@ -256,11 +256,13 @@ def get_function_params(function_module, form_data, user, extra_params=None):
     addition_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
     params = {"body": form_data} | addition_params
 
-    if hasattr(function_module, "UserValves"):
+    if "__user__" in params and hasattr(function_module, "UserValves"):
         user_valves = Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
-        params["__user__"]["valves"] = function_module.UserValves(
-            **(user_valves if user_valves else {})
-        )
+        try:
+            params["__user__"]["valves"] = function_module.UserValves(**user_valves)
+        except Exception as e:
+            log.exception(e)
+            params["__user__"]["valves"] = function_module.UserValves()
 
     return params
 
