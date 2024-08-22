@@ -227,10 +227,10 @@
 								>
 									{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
 								</button>
+								<a class="font-medium underline" href="https://matn.ai/auth/reset" target="_blank">Reset Password</a>
 
 								{#if $config?.features.enable_signup}
 									<div class=" mt-4 text-sm text-center">
-										<a class="font-medium underline" href="https://matn.ai/auth/reset" target="_blank">Reset Password</a>
 										<!-- {mode === 'signin'
 											? $i18n.t("Don't have an account?")
 											: $i18n.t('Already have an account?')} -->
