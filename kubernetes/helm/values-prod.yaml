@@ -1,0 +1,23 @@
+# values-prod.yaml
+hrwebui:
+  nodeSelector:
+    kubernetes.io/hostname: ciai-cpu-w05588
+  persistence:
+    size: 5Gi
+  sso:
+    azure:
+      enabled: true
+      clientId: ""
+      clientSecret: ""
+      tenant: "c93272d3-1b07-4b3d-a3b6-19b34a973915"
+      redirectUri: "https://hr.ciai-mbzuai.ac.ae/login"
+  mail:
+    enabled: false
+    hr: ""
+  mssql:
+    enabled: true
+    server: "10.127.129.4"
+    user: ""
+    password: ""
+    database: "ADERP"
+    view: "EMPLOYEE_INFO_V"

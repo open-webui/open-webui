@@ -47,13 +47,66 @@ spec:
           value: http://192.168.100.14:31774
           {{- end}}
           # value: {{ include "ollama.url" . | quote }}
-        envFrom:
-        - secretRef:
-            name: azure
-        - secretRef:
-            name: mail
-        - secretRef:
-            name: mssql
+        # SSO Configuration
+        - name: CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure
+              key: CLIENT_ID
+        - name: CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: azure
+              key: CLIENT_SECRET
+        - name: TENANT
+          {{- if .Values.hrwebui.sso.azure.enabled}}
+          value: {{ .Values.hrwebui.sso.azure.tenant}}
+          {{- else}}
+          value: c93272d3-1b07-4b3d-a3b6-19b34a973915
+          {{- end}}
+        - name: REDIRECT_URI
+          {{- if .Values.hrwebui.sso.azure.enabled}}
+          value: {{ .Values.hrwebui.sso.azure.redirectUri}}
+          {{- else}}
+          value: http://localhost:8080/api/v1/auths/signin/callback
+          {{- end}}
+        - name: HR_EMAIL
+          {{- if .Values.hrwebui.mail.enabled}}
+          value: {{ .Values.hrwebui.mail.hr}}
+          {{- else}}
+          value: 
+          {{- end}}
+        # SSO Configuration
+        # MSSQL Database Configuration
+        - name: MSSQL_SERVER
+          {{- if .Values.hrwebui.mssql.enabled}}
+          value: {{ .Values.hrwebui.mssql.server}}
+          {{- else}}
+          value: 
+          {{- end}}
+        - name: MSSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mssql
+              key: MSSQL_USER
+        - name: MSSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mssql
+              key: MSSQL_PASSWORD
+        - name: MSSQL_DATABASE
+          {{- if .Values.hrwebui.mssql.enabled}}
+          value: {{ .Values.hrwebui.mssql.database}}
+          {{- else}}
+          value: 
+          {{- end}}
+        - name: MSSQL_VIEW
+          {{- if .Values.hrwebui.mssql.enabled}}
+          value: {{ .Values.hrwebui.mssql.view}}
+          {{- else}}
+          value: 
+          {{- end}}
+        # MSSQL Database Configuration
         tty: true
       imagePullSecrets:
       - name: {{.Values.hrwebui.imagePullSecrets.name}}

@@ -83,7 +83,7 @@ hrwebui:
   replicaCount: 1
   image:
     repository: ghcr.io/ciai-engineering/open-webui
-    tag: "git-3c99fe3"
+    tag: "local_dev"
     pullPolicy: Always
   resources: {}
   imagePullSecrets: 
@@ -118,3 +118,20 @@ hrwebui:
     nodePort: 31031
     labels: {}
     loadBalancerClass: "" 
+  sso:
+    azure:
+      enabled: true
+      clientId: ""
+      clientSecret: ""
+      tenant: ""
+      redirectUri: ""
+  mail:
+    enabled: false
+    hr: ""
+  mssql:
+    enabled: true
+    server: ""
+    user: ""
+    password: ""
+    database: ""
+    view: ""
