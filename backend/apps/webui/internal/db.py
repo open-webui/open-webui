@@ -54,11 +54,10 @@ else:
 # Workaround to handle the peewee migration
 # This is required to ensure the peewee migration is handled before the alembic migration
 def handle_peewee_migration(DATABASE_URL):
+    # db = None
     try:
         # Replace the postgresql:// with postgres:// to handle the peewee migration
-        db = register_connection(
-            DATABASE_URL.replace("postgresql://", "postgres://"), unquote_password=True
-        )
+        db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
         migrate_dir = BACKEND_DIR / "apps" / "webui" / "internal" / "migrations"
         router = Router(db, logger=log, migrate_dir=migrate_dir)
         router.run()
@@ -67,7 +66,6 @@ def handle_peewee_migration(DATABASE_URL):
     except Exception as e:
         log.error(f"Failed to initialize the database connection: {e}")
         raise
-
     finally:
         # Properly closing the database connection
         if db and not db.is_closed():
