@@ -535,6 +535,7 @@
 	"Searched {{count}} sites_one": "Mencari {{count}} situs_satu",
 	"Searched {{count}} sites_other": "Mencari {{count}} situs_lain",
 	"Searching \"{{searchQuery}}\"": "Mencari \"{{searchQuery}}\"",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "URL Kueri Pencarian Searxng",
 	"See readme.md for instructions": "Lihat readme.md untuk instruksi",
 	"See what's new": "Lihat apa yang baru",

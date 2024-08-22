@@ -534,6 +534,7 @@
 	"Search Tools": "",
 	"Searched {{count}} sites_other": "{{count}} sites_other検索",
 	"Searching \"{{searchQuery}}\"": "",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "Searxng クエリ URL",
 	"See readme.md for instructions": "手順については readme.md を参照してください",
 	"See what's new": "新機能を見る",

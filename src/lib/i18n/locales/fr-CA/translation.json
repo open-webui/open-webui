@@ -536,6 +536,7 @@
 	"Searched {{count}} sites_many": "Recherché {{count}} sites_many",
 	"Searched {{count}} sites_other": "Recherché {{count}} sites_autres",
 	"Searching \"{{searchQuery}}\"": "Recherche de « {{searchQuery}} »",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "URL de recherche Searxng",
 	"See readme.md for instructions": "Voir le fichier readme.md pour les instructions",
 	"See what's new": "Découvrez les nouvelles fonctionnalités",

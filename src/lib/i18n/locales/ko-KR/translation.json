@@ -535,6 +535,7 @@
 	"Searched {{count}} sites_one": "sites_one {{count}} 검색됨",
 	"Searched {{count}} sites_other": "sites_other {{count}} 검색됨",
 	"Searching \"{{searchQuery}}\"": "\"{{searchQuery}}\" 검색 중",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "Searxng 쿼리 URL",
 	"See readme.md for instructions": "설명은 readme.md를 참조하세요.",
 	"See what's new": "새로운 기능 보기",

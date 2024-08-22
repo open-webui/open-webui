@@ -537,6 +537,7 @@
 	"Searched {{count}} sites_many": "Ieškota {{count}} sites_many",
 	"Searched {{count}} sites_other": "Ieškota {{count}} sites_other",
 	"Searching \"{{searchQuery}}\"": "Ieškoma \"{{searchQuery}}\"",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "Searxng užklausos URL",
 	"See readme.md for instructions": "Žiūrėti readme.md papildomoms instrukcijoms",
 	"See what's new": "Žiūrėti naujoves",

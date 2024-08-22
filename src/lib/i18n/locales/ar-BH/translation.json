@@ -539,6 +539,7 @@
 	"Searched {{count}} sites_many": "تم البحث في {{count}} sites_many",
 	"Searched {{count}} sites_other": "تم البحث في {{count}} sites_other",
 	"Searching \"{{searchQuery}}\"": "",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "عنوان URL لاستعلام Searxng",
 	"See readme.md for instructions": "readme.md للحصول على التعليمات",
 	"See what's new": "ما الجديد",

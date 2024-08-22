@@ -535,6 +535,7 @@
 	"Searched {{count}} sites_one": "ค้นหา {{count}} เว็บไซต์",
 	"Searched {{count}} sites_other": "ค้นหา {{count}} เว็บไซต์",
 	"Searching \"{{searchQuery}}\"": "กำลังค้นหา \"{{searchQuery}}\"",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "URL คำค้นหา",
 	"See readme.md for instructions": "ดู readme.md สำหรับคำแนะนำ",
 	"See what's new": "ดูสิ่งที่ใหม่",
