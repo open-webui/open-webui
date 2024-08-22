@@ -39,8 +39,7 @@
 			};
 		});
 	}
-	$: dayCount =
-		(new Date(endDate).getTime() - new Date(startDate).getTime()) / 1000 / 60 / 60 / 24 + 1;
+	$: dayCount = countWeekdays(startDate, endDate);
 	$: if (new Date(startDate).getTime() - new Date(endDate).getTime() > 0) {
 		endDate = new Date(startDate);
 	}
@@ -48,6 +47,24 @@
 		days = dayCount;
 	}
 
+	const countWeekdays = (startDate, endDate) => {
+		// make sure in right order
+		if (endDate < startDate) return 0;
+
+		let count = 0;
+		let currentDate = new Date(startDate);
+
+		while (currentDate <= endDate) {
+			const dayOfWeek = currentDate.getDay();
+			// skip Saturday and Sunday
+			if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+				count++;
+			}
+			// continue for next count
+			currentDate.setDate(currentDate.getDate() + 1);
+		}
+		return count;
+	};
 	const dateFormatter = (val) => {
 		const date = val ? new Date(val) : new Date();
 		// const dateString = date.toDateString().split(' ')

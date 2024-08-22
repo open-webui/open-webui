@@ -64,7 +64,7 @@
 	}
 
 	const countWeekdays = (startDate, endDate) => {
-		// 确保日期是正确顺序
+		// make sure in right order
 		if (endDate < startDate) return 0;
 
 		let count = 0;
@@ -72,11 +72,11 @@
 
 		while (currentDate <= endDate) {
 			const dayOfWeek = currentDate.getDay();
-			// 跳过周六和周日
+			// skip Saturday and Sunday
 			if (dayOfWeek !== 0 && dayOfWeek !== 6) {
 				count++;
 			}
-			// 日期加一天
+			// continue for next count
 			currentDate.setDate(currentDate.getDate() + 1);
 		}
 		return count;
