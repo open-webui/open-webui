@@ -4,7 +4,7 @@
 	import { tick, createEventDispatcher, getContext } from 'svelte';
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
-	import { modelfiles, settings } from '$lib/stores';
+	import { modelfiles, settings, user as userStore } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -57,7 +57,7 @@
 <div class=" flex w-full">
 	<!-- Customization: change user icon -->
 	<ProfileImage
-		src="/user-ava.png"
+		src={$userStore.profile_image_url ?? '/user-ava.png'}
 	/>
 
 	<div class="w-full overflow-hidden">

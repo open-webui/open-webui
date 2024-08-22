@@ -6,6 +6,7 @@
 
 	export let show = true;
 	export let size = 'md';
+	export let clickToClose = false;
 
 	let modalElement = null;
 	let mounted = false;
@@ -49,10 +50,12 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={modalElement}
-		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center z-[9999] overflow-hidden overscroll-contain"
+		class="modal-content fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center z-[9999] overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
-			show = false;
+			if (clickToClose) {
+				show = false;
+			}
 		}}
 	>
 		<div
@@ -76,7 +79,7 @@
 
 	@keyframes scaleUp {
 		from {
-			transform: scale(0.985);
+			transform: scale(0.85);
 			opacity: 0;
 		}
 		to {

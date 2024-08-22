@@ -39,6 +39,8 @@ export const showSidebar = writable(false);
 export const showSettings = writable(false);
 export const showChangelog = writable(false);
 
+export const isMobile = writable(false);
+
 type Model = OpenAIModel | OllamaModel;
 
 type OpenAIModel = {

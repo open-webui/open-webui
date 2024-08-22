@@ -25,7 +25,8 @@
 		documents,
 		tags,
 		showChangelog,
-		config
+		config,
+		isMobile
 	} from '$lib/stores';
 	import { REQUIRED_OLLAMA_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -164,6 +165,9 @@
 					showShortcutsButtonElement.click();
 				}
 			});
+
+			isMobile.set(window.innerWidth <= 768)
+			window.addEventListener('resize', () => {isMobile.set(window.innerWidth <= 768)});
 
 			if ($user.role === 'admin') {
 				showChangelog.set(localStorage.version !== $config.version);

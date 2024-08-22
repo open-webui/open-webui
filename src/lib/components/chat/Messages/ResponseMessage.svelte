@@ -14,7 +14,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, settings } from '$lib/stores';
+	import { config, settings, isMobile } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -34,6 +34,7 @@
 	import RateComment from './RateComment.svelte';
 	import CitationsModal from '$lib/components/chat/Messages/CitationsModal.svelte';
 	import FormActionModal from '$lib/components/chat/Messages/FormActionModal.svelte';
+	import FormActionModalMobile from '$lib/components/chat/Messages/FormActionModalMobile.svelte';
 
 	export let modelfiles = [];
 	export let message;
@@ -70,7 +71,7 @@
 	let showCitationModal = false;
 	let selectedCitation = null;
 
-	let showLeaveForm = false;
+	let showLeaveForm = true;
 
 	let useModelName = false;
 
@@ -448,6 +449,20 @@
 												code={revertSanitizedResponseContent(token.text)}
 											/>
 										{:else if token.raw.includes('annual_leave_form')}
+											{#if $isMobile}
+											<FormActionModalMobile
+												show={showLeaveForm}
+												on:confirm={(e) => {
+													const data = e.detail ?? {};
+													editedContent = `Leave request submitted. You have applied for Sick leave from date ${data.leavefrom} to ${data.leaveto} for ${data.days} days.`
+													editMessageConfirmHandler();
+												}}
+												on:cancel={() => {
+													editedContent = 'leave_request_canceled';
+													editMessageConfirmHandler();
+												}}
+											/>
+											{:else}
 											<FormActionModal
 												on:confirm={(e) => {
 													const data = e.detail ?? {};
@@ -459,6 +474,7 @@
 													editMessageConfirmHandler();
 												}}
 											/>
+											{/if}
 										{:else if token.raw.includes('leave_request_canceled')}
 											<button
 												class="px-4 my-2 rounded-lg bg-[#ffffffaa] hover:bg-[#fff]"

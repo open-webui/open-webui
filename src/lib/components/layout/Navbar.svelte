@@ -2,7 +2,7 @@
 	import { getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings, user } from '$lib/stores';
+	import { WEBUI_NAME, chatId, modelfiles, settings, showSettings, user, isMobile } from '$lib/stores';
 
 	import { slide, fade } from 'svelte/transition';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -65,45 +65,50 @@
 <nav id="nav" class=" sticky py-2.5 top-0 flex flex-row justify-center z-30">
 	<div class=" flex max-w-full w-full mx-auto px-5 pt-3 md:px-[1.3rem]">
 		<div class="flex flex-wrap justify-between items-center w-full max-w-full">
-			<button
-				class="flex self-center"
-				on:click={() => {
-					initNewChat();
-				}}
-			>
-				<img src="/logo-mbzuai.png" class="w-[108px]" alt="logo-mbzuai" />
-				<img src="/logo-ciai.png" class="ml-4 w-[70px]" alt="logo-ciai" />
+			<button class="flex self-center" on:click={() => {
+				initNewChat();
+			}}>
+				<img
+					src="/logo-mbzuai.png"
+					class="w-[108px] pc-only"
+					alt="logo-mbzuai"
+				/>
+				<img
+					src="/logo-ciai.png"
+					class="mx-4 w-[70px] pc-only"
+					alt="logo-ciai"
+				/>
 			</button>
 
-			<div class="overflow-hidden ml-5 flex-1 text-xl font-semibold text-black dark:text-white">
+			<div class="overflow-hidden flex-1 text-semibold text-black dark:text-white">
 				MBZUAI ServiceDesk Chatbot
 			</div>
 
-			<div class="self-start flex flex-none items-center">
+			<div class="self-start flex flex-none items-center pc-only">
 				<div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" />
-				<div class="flex flex-col">
+				<div class="relative">
 					{#if $user !== undefined}
-						<button
-							class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							bind:this={dropdownTrigger}
-							on:click={() => {
-								showDropdown = !showDropdown;
-							}}
-						>
-							<div class="self-center">
-								<img
-									src="/user-ava.png"
-									class=" max-w-[30px] object-cover rounded-full"
-									alt="User profile"
-								/>
-							</div>
-							<!-- <div class=" self-center font-semibold">{$user.name}</div> -->
-						</button>
-
+						<Tooltip content={$user.name}>
+							<button
+								class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								bind:this={dropdownTrigger}
+								on:click={() => {
+									showDropdown = !showDropdown;
+								}}
+							>
+								<div class="self-center mr-2">
+										<img
+											src={$user.profile_image_url ?? '/user-ava.png'}
+											class=" max-w-[30px] object-cover rounded-full"
+											alt="User profile"
+										/>
+								</div>
+							</button>
+						</Tooltip>
 						{#if showDropdown}
 							<div
 								id="dropdownDots"
-								class="absolute z-40 top-[80px] right-[20px] rounded-lg shadow w-[160px] bg-white dark:bg-gray-900"
+								class="absolute z-40 top-[60px] right-0 rounded-lg shadow w-[160px] bg-white dark:bg-gray-900"
 								transition:fade|slide={{ duration: 100 }}
 								bind:this={dropdownElement}
 							>
@@ -275,7 +280,7 @@
 						</button>
 					</Menu>
 				{/if} -->
-				<Tooltip content={$i18n.t('New Chat')}>
+				<!-- <Tooltip content={$i18n.t('New Chat')}>
 					<button
 						id="new-chat-button"
 						class=" cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
@@ -299,8 +304,35 @@
 							</svg>
 						</div>
 					</button>
-				</Tooltip>
+				</Tooltip> -->
 			</div>
+
+			<!-- New Chat -->
+			<Tooltip content={$i18n.t('New Chat')}>
+				<button
+					id="new-chat-button"
+					class=" cursor-pointer p-1.5 flex dark:hover:bg-gray-700 rounded-full transition"
+					on:click={() => {
+						initNewChat();
+					}}
+				>
+					<div class=" m-auto self-center">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							class="w-5 h-5"
+						>
+							<path
+								d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"
+							/>
+							<path
+								d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"
+							/>
+						</svg>
+					</div>
+				</button>
+			</Tooltip>
 		</div>
 	</div>
 </nav>

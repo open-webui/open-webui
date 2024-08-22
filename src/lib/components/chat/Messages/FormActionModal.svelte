@@ -120,7 +120,7 @@
 	};
 	const handleConfirm = () => {
 		if (!$user.extra_sso) {
-			window.alert('User type error. Only supports users login with outlook account.');
+			toast.error('User type error. Only supports users login with outlook account.');
 			return;
 		}
 		const ssoData = JSON.parse($user.extra_sso);
@@ -152,7 +152,7 @@
 </script>
 
 <!-- <Modal size="lg" bind:show> -->
-<div class="w-3/4 bg-[#ffffffdd] rounded-lg my-4 mx-2">
+<div class="w-3/4 bg-[#ffffffdd] rounded-lg my-4 mx-2 modal-content">
 	<!-- <div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center capitalize">
 				{$i18n.t('Citation')}
@@ -275,4 +275,22 @@
 		</div>
 	</div>
 </div>
+
 <!-- </Modal> -->
+
+<style>
+	.modal-content {
+		animation: scaleUp 0.5s ease-out forwards;
+	}
+
+	@keyframes scaleUp {
+		from {
+			transform: scale(0.85);
+			opacity: 0;
+		}
+		to {
+			transform: scale(1);
+			opacity: 1;
+		}
+	}
+</style>

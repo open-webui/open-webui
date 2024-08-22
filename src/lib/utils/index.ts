@@ -3,6 +3,7 @@ import sha256 from 'js-sha256';
 import { getOllamaModels } from '$lib/apis/ollama';
 import { getOpenAIModels } from '$lib/apis/openai';
 import { getLiteLLMModels } from '$lib/apis/litellm';
+import { toast } from 'svelte-sonner';
 
 export const getModels = async (token: string) => {
 	let models = await Promise.all([
@@ -532,12 +533,14 @@ export const fetchApi = async (url, options) => {
 	})
 	if (error) {
 		if (error.status == 401) {
-			localStorage.removeItem('token');
-			window.alert('Unauthorized request. Please try loging in again.')
-			location.href = '/auth';
+			toast.error("Unauthorized request. Please try loging in again. Auto-redirect in 3 seconds...")
+			setTimeout(() => {
+				localStorage.removeItem('token');
+				location.href = '/auth';
+			}, 3000);
 			return null
 		} else {
-			window.alert('Request failed. Please try again.')
+			toast.error('Request failed.')
 		}
 	}
 	return result

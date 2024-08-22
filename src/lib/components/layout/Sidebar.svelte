@@ -1,6 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { user, chats, settings, showSettings, chatId, tags, showSidebar, documents } from '$lib/stores';
+	import {
+		user,
+		chats,
+		settings,
+		showSettings,
+		chatId,
+		tags,
+		showSidebar,
+		documents,
+		isMobile
+	} from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -14,16 +24,14 @@
 		getAllChatTags,
 		archiveChatById
 	} from '$lib/apis/chats';
-	import {
-		uploadDocToVectorDB
-	} from '$lib/apis/rag';
+	import { uploadDocToVectorDB } from '$lib/apis/rag';
 	import { createNewDoc, getDocs } from '$lib/apis/documents';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { toast } from 'svelte-sonner';
 	import { fade, slide } from 'svelte/transition';
 	import { SUPPORTED_FILE_TYPE, SUPPORTED_FILE_EXTENSIONS, WEBUI_BASE_URL } from '$lib/constants';
 	import { transformFileName } from '$lib/utils';
-	
+
 	import Tooltip from '../common/Tooltip.svelte';
 	import ChatMenu from './Sidebar/ChatMenu.svelte';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -31,7 +39,6 @@
 	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
 	import ModelSelector from '../chat/ModelSelector.svelte';
 	const BREAKPOINT = 1024;
-
 
 	export let shareEnabled: boolean = false;
 	// export let selectedModels;
@@ -60,8 +67,7 @@
 	let filesInputElement;
 	let inputFiles;
 
-
-	let arrowClass = ''
+	let arrowClass = '';
 	let documentsMock = [
 		{
 			collection_name: 'collection_name',
@@ -104,16 +110,31 @@
 			filename: 'filename1',
 			name: 'name1',
 			title: 'title1'
-		},
-		]
+		}
+	];
 	let filteredDocs;
-	$: filteredDocs = showMoreDoc ? $documents : $documents.slice(0,5)
+	$: filteredDocs = showMoreDoc ? $documents : $documents.slice(0, 5);
+
+	let dropdownElement;
+	let dropdownTrigger;
+
+	const handleOutsideClick = (evt) => {
+		// click elements other than tigger button or dropdown menu itself when dropdown shows
+		if (
+			dropdownElement &&
+			!dropdownElement.contains(evt.target) &&
+			showDropdown &&
+			!dropdownTrigger.contains(evt.target)
+		) {
+			showDropdown = false;
+		}
+	};
 
 	onMount(async () => {
 		// showSidebar.set(window.innerWidth > BREAKPOINT);
 
 		// customization: hide sidebar by default
-		showSidebar.set(false)
+		showSidebar.set(false);
 		await chats.set(await getChatList(localStorage.token));
 
 		let touchstart;
@@ -151,11 +172,13 @@
 		window.addEventListener('touchstart', onTouchStart);
 		window.addEventListener('touchend', onTouchEnd);
 		window.addEventListener('resize', onResize);
+		document.addEventListener('click', handleOutsideClick);
 
 		return () => {
 			window.removeEventListener('touchstart', onTouchStart);
 			window.removeEventListener('touchend', onTouchEnd);
 			window.removeEventListener('resize', onResize);
+			document.removeEventListener('click', handleOutsideClick);
 		};
 	});
 
@@ -254,7 +277,9 @@
 	id="sidebar"
 	class="h-screen max-h-[100dvh] min-h-screen {$showSidebar
 		? 'lg:relative w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} bg-[#ffffffaa] text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 rounded-r-2xl
+		: '-translate-x-[260px] w-[0px]'} bg-{$isMobile
+		? 'white'
+		: '[#ffffffaa]'} text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 rounded-r-2xl
         "
 	data-state={$showSidebar}
 >
@@ -263,8 +288,11 @@
 			? ''
 			: 'invisible'}"
 	>
-		
-
+		<!-- logo for mobile -->
+		<div class="flex px-5 pt-10 pb-5 mobile-only">
+			<img src="/logo-mbzuai.png" class="w-[5rem]" alt="logo-mbzuai" />
+			<img src="/logo-ciai.png" class="ml-4 w-[4rem]" alt="logo-ciai" />
+		</div>
 		<!-- {#if $user?.role === 'admin'}
 			<div class="px-2 flex justify-center mt-0.5">
 				<a
@@ -409,20 +437,30 @@
 			<!-- FILE LIST -->
 		<div class="relative flex flex-col overflow-y-auto px-4 max-h-[38%]" style="display: none !important;">
 			{#each filteredDocs as doc}
-				<div 
-				class=" flex items-center space-x-3 rounded-xl px-3.5 py-1.5 hover:bg-gray-100 dark:hover:bg-[#33333320]"
+				<div
+					class=" flex items-center space-x-3 rounded-xl px-3.5 py-1.5 hover:bg-gray-100 dark:hover:bg-[#33333320]"
 				>
 					<div class="dark:text-[#999]">
-						<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+						<svg
+							width="12"
+							height="12"
+							viewBox="0 0 12 12"
+							fill="none"
+							stroke="currentColor"
+							xmlns="http://www.w3.org/2000/svg"
+						>
 							<g clip-path="url(#clip0_1_16)">
-							<path d="M10.7775 11.1525H1.2225C0.924135 11.1525 0.637987 11.034 0.427009 10.823C0.21603 10.612 0.0975037 10.3259 0.0975037 10.0275V1.9875C0.0975037 1.68913 0.21603 1.40298 0.427009 1.19201C0.637987 0.981027 0.924135 0.862501 1.2225 0.862501H4.5C4.66304 0.861414 4.82429 0.896503 4.97214 0.965238C5.11999 1.03397 5.25075 1.13465 5.355 1.26L6.0225 2.01C6.05773 2.05087 6.10153 2.08349 6.15079 2.10552C6.20005 2.12756 6.25355 2.13848 6.3075 2.1375L10.755 2.0925C11.0548 2.09447 11.3417 2.21441 11.5536 2.42637C11.7656 2.63833 11.8855 2.92525 11.8875 3.225V9.975C11.8935 10.1256 11.8694 10.2759 11.8166 10.417C11.7638 10.5582 11.6834 10.6874 11.58 10.797C11.4766 10.9067 11.3524 10.9946 11.2146 11.0557C11.0768 11.1167 10.9282 11.1496 10.7775 11.1525ZM1.2225 1.6125C1.12305 1.6125 1.02766 1.65201 0.957339 1.72234C0.887012 1.79266 0.847504 1.88804 0.847504 1.9875V10.0275C0.847504 10.127 0.887012 10.2223 0.957339 10.2927C1.02766 10.363 1.12305 10.4025 1.2225 10.4025H10.7775C10.8777 10.4025 10.9738 10.3633 11.0454 10.2931C11.1169 10.223 11.158 10.1276 11.16 10.0275V3.2775C11.16 3.17606 11.1197 3.07877 11.048 3.00703C10.9762 2.9353 10.8789 2.895 10.7775 2.895L6.3375 2.94C6.17052 2.9448 6.00485 2.9091 5.85465 2.83596C5.70446 2.76283 5.5742 2.65442 5.475 2.52L4.815 1.77C4.77813 1.72131 4.73053 1.68178 4.6759 1.65446C4.62127 1.62715 4.56108 1.61279 4.5 1.6125H1.2225Z" fill="#323333"/>
+								<path
+									d="M10.7775 11.1525H1.2225C0.924135 11.1525 0.637987 11.034 0.427009 10.823C0.21603 10.612 0.0975037 10.3259 0.0975037 10.0275V1.9875C0.0975037 1.68913 0.21603 1.40298 0.427009 1.19201C0.637987 0.981027 0.924135 0.862501 1.2225 0.862501H4.5C4.66304 0.861414 4.82429 0.896503 4.97214 0.965238C5.11999 1.03397 5.25075 1.13465 5.355 1.26L6.0225 2.01C6.05773 2.05087 6.10153 2.08349 6.15079 2.10552C6.20005 2.12756 6.25355 2.13848 6.3075 2.1375L10.755 2.0925C11.0548 2.09447 11.3417 2.21441 11.5536 2.42637C11.7656 2.63833 11.8855 2.92525 11.8875 3.225V9.975C11.8935 10.1256 11.8694 10.2759 11.8166 10.417C11.7638 10.5582 11.6834 10.6874 11.58 10.797C11.4766 10.9067 11.3524 10.9946 11.2146 11.0557C11.0768 11.1167 10.9282 11.1496 10.7775 11.1525ZM1.2225 1.6125C1.12305 1.6125 1.02766 1.65201 0.957339 1.72234C0.887012 1.79266 0.847504 1.88804 0.847504 1.9875V10.0275C0.847504 10.127 0.887012 10.2223 0.957339 10.2927C1.02766 10.363 1.12305 10.4025 1.2225 10.4025H10.7775C10.8777 10.4025 10.9738 10.3633 11.0454 10.2931C11.1169 10.223 11.158 10.1276 11.16 10.0275V3.2775C11.16 3.17606 11.1197 3.07877 11.048 3.00703C10.9762 2.9353 10.8789 2.895 10.7775 2.895L6.3375 2.94C6.17052 2.9448 6.00485 2.9091 5.85465 2.83596C5.70446 2.76283 5.5742 2.65442 5.475 2.52L4.815 1.77C4.77813 1.72131 4.73053 1.68178 4.6759 1.65446C4.62127 1.62715 4.56108 1.61279 4.5 1.6125H1.2225Z"
+									fill="#323333"
+								/>
 							</g>
 							<defs>
-							<clipPath id="clip0_1_16">
-							<rect width="12" height="12" fill="white"/>
-							</clipPath>
+								<clipPath id="clip0_1_16">
+									<rect width="12" height="12" fill="white" />
+								</clipPath>
 							</defs>
-							</svg>
+						</svg>
 					</div>
 					<div class="overflow-hidden whitespace-nowrap text-ellipsis">{doc.name}</div>
 				</div>
@@ -495,22 +533,20 @@
 		<!-- New Chat -->
 		<div class="px-2 mt-4 flex space-x-2">
 			<!-- <Tooltip content="Start a new chat" placement="right"> -->
-				<a
-					id="sidebar-new-chat-button"
-					class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition font-semibold"
-					href="/"
-					on:click={async () => {
-						selectedChatId = null;
-
-						await goto('/');
-						const newChatButton = document.getElementById('new-chat-button');
-						setTimeout(() => {
-							newChatButton?.click();
-						}, 0);
-					}}
-				>
-					Start New Chat<span>+</span>
-					<!-- <div class="flex self-center">
+			<button
+				id="sidebar-new-chat-button"
+				class="flex-grow flex justify-between rounded-xl px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition font-semibold"
+				on:click={async () => {
+					selectedChatId = null;
+					showSidebar.set(false);
+					const newChatButton = document.getElementById('new-chat-button');
+					setTimeout(() => {
+						newChatButton?.click();
+					}, 0);
+				}}
+			>
+				Start New Chat<span>+</span>
+				<!-- <div class="flex self-center">
 						<div class="self-center mr-1.5">
 							<img
 								src="{WEBUI_BASE_URL}/static/favicon.ico"
@@ -520,7 +556,7 @@
 						</div>
 
 						<div class=" self-center font-medium text-sm">{$i18n.t('New Chat')}</div> -->
-						<!-- <img
+				<!-- <img
 							src="/logo-mbzuai.svg"
 							alt="logo-mbzuai"
 						/>
@@ -531,7 +567,7 @@
 						/>
 					</div> -->
 
-					<!-- <div class="self-center">
+				<!-- <div class="self-center">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
@@ -546,7 +582,7 @@
 							/>
 						</svg>
 					</div> -->
-				</a>
+			</button>
 			<!-- </Tooltip> -->
 		</div>
 		<!-- Search Input  -->
@@ -569,7 +605,7 @@
 
 				<input
 					class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm dark:text-gray-300 dark:bg-gray-950 outline-none"
-					placeholder='Search Chat'
+					placeholder="Search Chat"
 					bind:value={search}
 					on:focus={() => {
 						enrichChatsWithContent($chats);
@@ -579,7 +615,7 @@
 		</div>
 
 		<!-- <div class="px-5 py-2 mt-2 w-full text-[#555]">Chat History</div> -->
-		<div class="relative flex flex-col overflow-y-auto px-2 max-h-[40%]">
+		<div class="relative flex flex-col overflow-y-auto px-2 flex-1">
 			{#if $tags.length > 0}
 				<div class="px-2.5 mt-0.5 mb-2 flex gap-1 flex-wrap">
 					<button
@@ -839,9 +875,9 @@
 			</div>
 		</div>
 
-		<div class="px-2.5 flex-1 flex flex-col justify-end">
+		<div class="px-2.5 flex flex-col justify-end">
 			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
-				<!-- <button
+			<!-- <button
 					class="cursor-pointer p-1.5 flex items-center dark:hover:bg-gray-700 rounded-full transition"
 					id="open-settings-button"
 					on:click={async () => {
@@ -854,7 +890,7 @@
 					</svg>
 					<span class="ml-3">{$i18n.t('Settings')}</span>
 				</button> -->
-				<!-- <button
+			<!-- <button
 					class="cursor-pointer p-1 flex items-center dark:hover:bg-gray-700 rounded-full transition"
 					id="open-settings-button"
 					on:click={async () => {
@@ -869,10 +905,11 @@
 					
 					<span class="ml-3">LLama3 (Model name here)</span>
 				</button> -->
-			<!-- <div class="flex flex-col">
-				{#if $user !== undefined}
+			<div class="flex flex-col">
+				{#if $user !== undefined && $isMobile}
 					<button
 						class=" flex rounded-xl py-3 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						bind:this={dropdownTrigger}
 						on:click={() => {
 							showDropdown = !showDropdown;
 						}}
@@ -890,11 +927,12 @@
 					{#if showDropdown}
 						<div
 							id="dropdownDots"
-							class="absolute z-40 bottom-[70px] rounded-lg shadow w-[240px] bg-white dark:bg-gray-900"
+							class="absolute z-40 bottom-[70px] rounded-lg shadow w-[240px] bg-gray-50 dark:bg-gray-900"
 							transition:fade|slide={{ duration: 100 }}
+							bind:this={dropdownElement}
 						>
 							<div class="p-1 py-2 w-full">
-								{#if $user.role === 'admin'}
+								<!-- {#if $user.role === 'admin'}
 									<button
 										class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 										on:click={() => {
@@ -959,8 +997,35 @@
 										<ArchiveBox className="size-5" strokeWidth="1.5" />
 									</div>
 									<div class=" self-center font-medium">{$i18n.t('Archived Chats')}</div>
-								</button>
-
+								</button> -->
+								{#if $user.role === 'admin'}
+								<a
+									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+									href="/documents"
+									on:click={() => {
+										// selectedChatId = null;
+										chatId.set('');
+									}}
+								>
+									<div class="self-center ml-1 mr-3 dark:text-white">
+										<svg
+											width="14"
+											height="14"
+											viewBox="0 0 12 12"
+											fill="none"
+											stroke-width="1"
+											stroke="currentColor"
+											xmlns="http://www.w3.org/2000/svg"
+										>
+											<path
+												d="M10.7775 11.1525H1.22247C0.924105 11.1525 0.637956 11.034 0.426978 10.823C0.216 10.612 0.0974731 10.3259 0.0974731 10.0275V1.9875C0.0974731 1.68913 0.216 1.40298 0.426978 1.192C0.637956 0.981023 0.924105 0.862497 1.22247 0.862497H4.49997C4.66301 0.861411 4.82426 0.896499 4.97211 0.965235C5.11996 1.03397 5.25072 1.13464 5.35497 1.26L6.02247 2.01C6.0577 2.05087 6.1015 2.08348 6.15076 2.10552C6.20002 2.12755 6.25352 2.13847 6.30747 2.1375L10.755 2.0925C11.0547 2.09446 11.3416 2.21441 11.5536 2.42637C11.7656 2.63833 11.8855 2.92525 11.8875 3.225V9.975C11.8935 10.1256 11.8694 10.2759 11.8166 10.417C11.7638 10.5582 11.6833 10.6874 11.5799 10.797C11.4766 10.9067 11.3523 10.9946 11.2145 11.0557C11.0767 11.1167 10.9282 11.1496 10.7775 11.1525ZM1.22247 1.6125C1.12302 1.6125 1.02763 1.65201 0.957308 1.72233C0.886982 1.79266 0.847473 1.88804 0.847473 1.9875V10.0275C0.847473 10.127 0.886982 10.2223 0.957308 10.2927C1.02763 10.363 1.12302 10.4025 1.22247 10.4025H10.7775C10.8776 10.4025 10.9738 10.3632 11.0453 10.2931C11.1168 10.223 11.158 10.1276 11.16 10.0275V3.2775C11.16 3.17605 11.1197 3.07876 11.0479 3.00703C10.9762 2.9353 10.8789 2.895 10.7775 2.895L6.33747 2.94C6.17049 2.94479 6.00482 2.9091 5.85462 2.83596C5.70443 2.76282 5.57417 2.65441 5.47497 2.52L4.81497 1.77C4.7781 1.72131 4.7305 1.68177 4.67587 1.65446C4.62124 1.62714 4.56105 1.61278 4.49997 1.6125H1.22247Z"
+												fill="#323333"
+											/>
+										</svg>
+									</div>
+									<div class=" self-center font-medium">{$i18n.t('Documents')}</div>
+								</a>
+								{/if}
 								<button
 									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 									on:click={async () => {
@@ -1029,7 +1094,7 @@
 						</div>
 					{/if}
 				{/if}
-			</div> -->
+			</div>
 		</div>
 	</div>
 
