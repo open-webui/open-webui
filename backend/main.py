@@ -299,23 +299,25 @@ async def chat_completion_filter_functions_handler(body, model, extra_params):
 
             # Get the signature of the function
             sig = inspect.signature(inlet)
-            params = {"body": body}
+            params = {"body": body} | {
+                k: v
+                for k, v in {
+                    **extra_params,
+                    "__model__": model,
+                    "__id__": filter_id,
+                }.items()
+                if k in sig.parameters
+            }
 
-            # Extra parameters to be passed to the function
-            custom_params = {**extra_params, "__model__": model, "__id__": filter_id}
-            if hasattr(function_module, "UserValves") and "__user__" in sig.parameters:
+            if "__user__" in params and hasattr(function_module, "UserValves"):
                 try:
-                    uid = custom_params["__user__"]["id"]
-                    custom_params["__user__"]["valves"] = function_module.UserValves(
-                        **Functions.get_user_valves_by_id_and_user_id(filter_id, uid)
+                    params["__user__"]["valves"] = function_module.UserValves(
+                        **Functions.get_user_valves_by_id_and_user_id(
+                            filter_id, params["__user__"]["id"]
+                        )
                     )
                 except Exception as e:
                     print(e)
-
-            # Add extra params in contained in function signature
-            for key, value in custom_params.items():
-                if key in sig.parameters:
-                    params[key] = value
 
             if inspect.iscoroutinefunction(inlet):
                 body = await inlet(**params)
@@ -372,7 +374,9 @@ async def chat_completion_tools_handler(
 ) -> tuple[dict, dict]:
     # If tool_ids field is present, call the functions
     metadata = body.get("metadata", {})
+
     tool_ids = metadata.get("tool_ids", None)
+    log.debug(f"{tool_ids=}")
     if not tool_ids:
         return body, {}
 
@@ -381,16 +385,17 @@ async def chat_completion_tools_handler(
     citations = []
 
     task_model_id = get_task_model_id(body["model"])
-
-    log.debug(f"{tool_ids=}")
-
-    custom_params = {
-        **extra_params,
-        "__model__": app.state.MODELS[task_model_id],
-        "__messages__": body["messages"],
-        "__files__": metadata.get("files", []),
-    }
-    tools = get_tools(webui_app, tool_ids, user, custom_params)
+    tools = get_tools(
+        webui_app,
+        tool_ids,
+        user,
+        {
+            **extra_params,
+            "__model__": app.state.MODELS[task_model_id],
+            "__messages__": body["messages"],
+            "__files__": metadata.get("files", []),
+        },
+    )
     log.info(f"{tools=}")
 
     specs = [tool["spec"] for tool in tools.values()]
@@ -530,17 +535,15 @@ class ChatCompletionMiddleware(BaseHTTPMiddleware):
         }
         body["metadata"] = metadata
 
-        __user__ = {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        }
-
         extra_params = {
-            "__user__": __user__,
             "__event_emitter__": get_event_emitter(metadata),
             "__event_call__": get_event_call(metadata),
+            "__user__": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "role": user.role,
+            },
         }
 
         # Initialize data_items to store additional data to be sent to the client
