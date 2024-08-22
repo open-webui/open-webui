@@ -301,7 +301,9 @@ async def generate_function_chat_completion(form_data, user):
             "name": user.name,
             "role": user.role,
         },
-        "__tools__": get_tools(
+    }
+    extra_params["__tools__"] = (
+        get_tools(
             app,
             tool_ids,
             user,
@@ -312,18 +314,6 @@ async def generate_function_chat_completion(form_data, user):
                 "__files__": files,
             },
         ),
-    }
-
-    extra_params["__tools__"] = get_tools(
-        app,
-        tool_ids,
-        user,
-        {
-            **extra_params,
-            "__model__": app.state.MODELS[form_data["model"]],
-            "__messages__": form_data["messages"],
-            "__files__": files,
-        },
     )
 
     if model_info:
