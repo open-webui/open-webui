@@ -543,6 +543,7 @@
 	"Select a engine": "",
 	"Select a function": "",
 	"Select a model": "",
+	"Searching in Knowledge for \"{{searchQuery}}\"": "",
 	"Select a pipeline": "",
 	"Select a pipeline url": "",
 	"Select a tool": "",
