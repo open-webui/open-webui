@@ -809,7 +809,18 @@
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		if (model?.info?.meta?.knowledge ?? false) {
+			// Only initialize and add status if knowledge exists
+			responseMessage.statusHistory = [
+				{
+					action: 'knowledge_search',
+					description: $i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
+						searchQuery: userMessage.content
+					}),
+					done: false
+				}
+			];
 			files.push(...model.info.meta.knowledge);
+			messages = messages; // Trigger Svelte update
 		}
 		files.push(
 			...(userMessage?.files ?? []).filter((item) =>
@@ -817,6 +828,8 @@
 			),
 			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
 		);
+
+		scrollToBottom();
 
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:start', {
@@ -888,6 +901,12 @@
 
 							if ('citations' in data) {
 								responseMessage.citations = data.citations;
+								// Only remove status if it was initially set
+								if (model?.info?.meta?.knowledge ?? false) {
+									responseMessage.statusHistory = responseMessage.statusHistory.filter(
+										(status) => status.action !== 'knowledge_search'
+									);
+								}
 								continue;
 							}
 
@@ -977,7 +996,20 @@
 				}
 			}
 
-			await saveChatHandler(_chatId);
+			if ($chatId == _chatId) {
+				if ($settings.saveChatHistory ?? true) {
+					chat = await updateChatById(localStorage.token, _chatId, {
+						messages: messages,
+						history: history,
+						models: selectedModels,
+						params: params,
+						files: chatFiles
+					});
+
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				}
+			}
 		} else {
 			if (res !== null) {
 				const error = await res.json();
@@ -1044,7 +1076,18 @@
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		if (model?.info?.meta?.knowledge ?? false) {
+			// Only initialize and add status if knowledge exists
+			responseMessage.statusHistory = [
+				{
+					action: 'knowledge_search',
+					description: $i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
+						searchQuery: userMessage.content
+					}),
+					done: false
+				}
+			];
 			files.push(...model.info.meta.knowledge);
+			messages = messages; // Trigger Svelte update
 		}
 		files.push(
 			...(userMessage?.files ?? []).filter((item) =>
@@ -1184,6 +1227,12 @@
 
 					if (citations) {
 						responseMessage.citations = citations;
+						// Only remove status if it was initially set
+						if (model?.info?.meta?.knowledge ?? false) {
+							responseMessage.statusHistory = responseMessage.statusHistory.filter(
+								(status) => status.action !== 'knowledge_search'
+							);
+						}
 						continue;
 					}
 
@@ -1238,7 +1287,7 @@
 				}
 
 				if ($chatId == _chatId) {
-					if (!$temporaryChatEnabled) {
+					if ($settings.saveChatHistory ?? true) {
 						chat = await updateChatById(localStorage.token, _chatId, {
 							models: selectedModels,
 							messages: messages,
