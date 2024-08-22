@@ -6,14 +6,15 @@ hrwebui:
   nodeSelector:
     kubernetes.io/hostname: ciai-cpu-w05588
   persistence:
-    size: 2Gi
+    size: 5Gi
   sso:
     azure:
       enabled: true
       clientId: ""
       clientSecret: ""
       tenant: "c93272d3-1b07-4b3d-a3b6-19b34a973915"
-      redirectUri: "http://localhost:8080/api/v1/auths/signin/callback"
+      redirectUri: "https://hr.ciai-mbzuai.ac.ae/login"
+      # redirectUri: "http://localhost:8080/api/v1/auths/signin/callback"
   mail:
     enabled: false
     hr: ""
