@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { config, models, settings, showCallOverlay } from '$lib/stores';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick, getContext, onDestroy } from 'svelte';
 
 	import {
 		blobToFile,
@@ -47,6 +47,7 @@
 	let rmsLevel = 0;
 	let hasStartedSpeaking = false;
 	let mediaRecorder;
+	let audioStream = null;
 	let audioChunks = [];
 
 	let videoInputDevices = [];
@@ -212,17 +213,23 @@
 		} else {
 			audioChunks = [];
 			mediaRecorder = false;
+
+			if (audioStream) {
+				const tracks = audioStream.getTracks();
+				tracks.forEach((track) => track.stop());
+			}
+			audioStream = null;
 		}
 	};
 
 	const startRecording = async () => {
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		mediaRecorder = new MediaRecorder(stream);
+		audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		mediaRecorder = new MediaRecorder(audioStream);
 
 		mediaRecorder.onstart = () => {
 			console.log('Recording started');
 			audioChunks = [];
-			analyseAudio(stream);
+			analyseAudio(audioStream);
 		};
 
 		mediaRecorder.ondataavailable = (event) => {
@@ -614,6 +621,12 @@
 			await stopRecordingCallback(false);
 			await stopCamera();
 		};
+	});
+
+	onDestroy(async () => {
+		await stopAllAudio();
+		await stopRecordingCallback(false);
+		await stopCamera();
 	});
 </script>
 
