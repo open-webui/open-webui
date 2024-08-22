@@ -601,8 +601,8 @@
 		let selectedModelIds = modelId
 			? [modelId]
 			: atSelectedModel !== undefined
-				? [atSelectedModel.id]
-				: selectedModels;
+			? [atSelectedModel.id]
+			: selectedModels;
 
 		// Create response messages for each selected model
 		const responseMessageIds = {};
@@ -763,11 +763,11 @@
 								? await getAndUpdateUserLocation(localStorage.token)
 								: undefined
 						)}${
-							(responseMessage?.userContext ?? null)
+							responseMessage?.userContext ?? null
 								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 								: ''
 						}`
-					}
+				  }
 				: undefined,
 			...messages
 		]
@@ -809,7 +809,18 @@
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		if (model?.info?.meta?.knowledge ?? false) {
+			// Only initialize and add status if knowledge exists
+			responseMessage.statusHistory = [
+				{
+					done: false,
+					action: 'rag_search',
+					description: $i18n.t(`Searching in Knowledge for "{{searchQuery}}"`, {
+						searchQuery: userMessage.content
+					})
+				}
+			];
 			files.push(...model.info.meta.knowledge);
+			messages = messages; // Trigger Svelte update
 		}
 		files.push(
 			...(userMessage?.files ?? []).filter((item) =>
@@ -817,6 +828,8 @@
 			),
 			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
 		);
+
+		scrollToBottom();
 
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:start', {
@@ -835,10 +848,10 @@
 			options: {
 				...(params ?? $settings.params ?? {}),
 				stop:
-					(params?.stop ?? $settings?.params?.stop ?? undefined)
+					params?.stop ?? $settings?.params?.stop ?? undefined
 						? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
 								(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-							)
+						  )
 						: undefined,
 				num_predict: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
 				repeat_penalty:
@@ -888,6 +901,12 @@
 
 							if ('citations' in data) {
 								responseMessage.citations = data.citations;
+								// Only remove status if it was initially set
+								if (responseMessage.statusHistory) {
+									responseMessage.statusHistory = responseMessage.statusHistory.filter(
+										(status) => status.action !== 'rag_search'
+									);
+								}
 								continue;
 							}
 
@@ -977,7 +996,20 @@
 				}
 			}
 
-			await saveChatHandler(_chatId);
+			if ($chatId == _chatId) {
+				if ($settings.saveChatHistory ?? true) {
+					chat = await updateChatById(localStorage.token, _chatId, {
+						messages: messages,
+						history: history,
+						models: selectedModels,
+						params: params,
+						files: chatFiles
+					});
+
+					currentChatPage.set(1);
+					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				}
+			}
 		} else {
 			if (res !== null) {
 				const error = await res.json();
@@ -1044,7 +1076,18 @@
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		if (model?.info?.meta?.knowledge ?? false) {
+			// Only initialize and add status if knowledge exists
+			responseMessage.statusHistory = [
+				{
+					done: false,
+					action: 'rag_search',
+					description: $i18n.t(`Searching in Knowledge for "{{searchQuery}}"`, {
+						searchQuery: userMessage.content
+					})
+				}
+			];
 			files.push(...model.info.meta.knowledge);
+			messages = messages; // Trigger Svelte update
 		}
 		files.push(
 			...(userMessage?.files ?? []).filter((item) =>
@@ -1071,10 +1114,10 @@
 					stream: true,
 					model: model.id,
 					stream_options:
-						(model.info?.meta?.capabilities?.usage ?? false)
+						model.info?.meta?.capabilities?.usage ?? false
 							? {
 									include_usage: true
-								}
+							  }
 							: undefined,
 					messages: [
 						params?.system || $settings.system || (responseMessage?.userContext ?? null)
@@ -1087,11 +1130,11 @@
 											? await getAndUpdateUserLocation(localStorage.token)
 											: undefined
 									)}${
-										(responseMessage?.userContext ?? null)
+										responseMessage?.userContext ?? null
 											? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 											: ''
 									}`
-								}
+							  }
 							: undefined,
 						...messages
 					]
@@ -1107,7 +1150,7 @@
 												text:
 													arr.length - 1 !== idx
 														? message.content
-														: (message?.raContent ?? message.content)
+														: message?.raContent ?? message.content
 											},
 											...message.files
 												.filter((file) => file.type === 'image')
@@ -1118,20 +1161,20 @@
 													}
 												}))
 										]
-									}
+								  }
 								: {
 										content:
 											arr.length - 1 !== idx
 												? message.content
-												: (message?.raContent ?? message.content)
-									})
+												: message?.raContent ?? message.content
+								  })
 						})),
 					seed: params?.seed ?? $settings?.params?.seed ?? undefined,
 					stop:
-						(params?.stop ?? $settings?.params?.stop ?? undefined)
+						params?.stop ?? $settings?.params?.stop ?? undefined
 							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
 									(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-								)
+							  )
 							: undefined,
 					temperature: params?.temperature ?? $settings?.params?.temperature ?? undefined,
 					top_p: params?.top_p ?? $settings?.params?.top_p ?? undefined,
@@ -1184,6 +1227,12 @@
 
 					if (citations) {
 						responseMessage.citations = citations;
+						// Only remove status if it was initially set
+						if (responseMessage.statusHistory) {
+							responseMessage.statusHistory = responseMessage.statusHistory.filter(
+								(status) => status.action !== 'rag_search'
+							);
+						}
 						continue;
 					}
 
@@ -1238,7 +1287,7 @@
 				}
 
 				if ($chatId == _chatId) {
-					if (!$temporaryChatEnabled) {
+					if ($settings.saveChatHistory ?? true) {
 						chat = await updateChatById(localStorage.token, _chatId, {
 							models: selectedModels,
 							messages: messages,
