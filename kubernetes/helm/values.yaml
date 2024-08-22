@@ -119,8 +119,6 @@ hrwebui:
   sso:
     azure:
       enabled: true
-      clientId: ""
-      clientSecret: ""
       tenant: ""
       redirectUri: ""
   mail:
@@ -129,7 +127,5 @@ hrwebui:
   mssql:
     enabled: true
     server: ""
-    user: ""
-    password: ""
     database: ""
     view: ""
