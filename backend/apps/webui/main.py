@@ -258,7 +258,7 @@ def get_function_params(function_module, form_data, user, extra_params=None):
 
     if "__user__" in params and hasattr(function_module, "UserValves"):
         user_valves = Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
-        if user_valves:
+        if user_valves is not None:
             try:
                 params["__user__"]["valves"] = function_module.UserValves(**user_valves)
             except Exception as e:
