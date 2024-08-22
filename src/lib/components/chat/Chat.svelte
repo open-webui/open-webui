@@ -601,8 +601,8 @@
 		let selectedModelIds = modelId
 			? [modelId]
 			: atSelectedModel !== undefined
-			? [atSelectedModel.id]
-			: selectedModels;
+				? [atSelectedModel.id]
+				: selectedModels;
 
 		// Create response messages for each selected model
 		const responseMessageIds = {};
@@ -763,11 +763,11 @@
 								? await getAndUpdateUserLocation(localStorage.token)
 								: undefined
 						)}${
-							responseMessage?.userContext ?? null
+							(responseMessage?.userContext ?? null)
 								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 								: ''
 						}`
-				  }
+					}
 				: undefined,
 			...messages
 		]
@@ -812,11 +812,11 @@
 			// Only initialize and add status if knowledge exists
 			responseMessage.statusHistory = [
 				{
-					done: false,
-					action: 'rag_search',
-					description: $i18n.t(`Searching in Knowledge for "{{searchQuery}}"`, {
+					action: 'knowledge_search',
+					description: $i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
 						searchQuery: userMessage.content
-					})
+					}),
+					done: false
 				}
 			];
 			files.push(...model.info.meta.knowledge);
@@ -848,10 +848,10 @@
 			options: {
 				...(params ?? $settings.params ?? {}),
 				stop:
-					params?.stop ?? $settings?.params?.stop ?? undefined
+					(params?.stop ?? $settings?.params?.stop ?? undefined)
 						? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
 								(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-						  )
+							)
 						: undefined,
 				num_predict: params?.max_tokens ?? $settings?.params?.max_tokens ?? undefined,
 				repeat_penalty:
@@ -902,9 +902,9 @@
 							if ('citations' in data) {
 								responseMessage.citations = data.citations;
 								// Only remove status if it was initially set
-								if (responseMessage.statusHistory) {
+								if (model?.info?.meta?.knowledge ?? false) {
 									responseMessage.statusHistory = responseMessage.statusHistory.filter(
-										(status) => status.action !== 'rag_search'
+										(status) => status.action !== 'knowledge_search'
 									);
 								}
 								continue;
@@ -1079,11 +1079,11 @@
 			// Only initialize and add status if knowledge exists
 			responseMessage.statusHistory = [
 				{
-					done: false,
-					action: 'rag_search',
-					description: $i18n.t(`Searching in Knowledge for "{{searchQuery}}"`, {
+					action: 'knowledge_search',
+					description: $i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
 						searchQuery: userMessage.content
-					})
+					}),
+					done: false
 				}
 			];
 			files.push(...model.info.meta.knowledge);
@@ -1114,10 +1114,10 @@
 					stream: true,
 					model: model.id,
 					stream_options:
-						model.info?.meta?.capabilities?.usage ?? false
+						(model.info?.meta?.capabilities?.usage ?? false)
 							? {
 									include_usage: true
-							  }
+								}
 							: undefined,
 					messages: [
 						params?.system || $settings.system || (responseMessage?.userContext ?? null)
@@ -1130,11 +1130,11 @@
 											? await getAndUpdateUserLocation(localStorage.token)
 											: undefined
 									)}${
-										responseMessage?.userContext ?? null
+										(responseMessage?.userContext ?? null)
 											? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 											: ''
 									}`
-							  }
+								}
 							: undefined,
 						...messages
 					]
@@ -1150,7 +1150,7 @@
 												text:
 													arr.length - 1 !== idx
 														? message.content
-														: message?.raContent ?? message.content
+														: (message?.raContent ?? message.content)
 											},
 											...message.files
 												.filter((file) => file.type === 'image')
@@ -1161,20 +1161,20 @@
 													}
 												}))
 										]
-								  }
+									}
 								: {
 										content:
 											arr.length - 1 !== idx
 												? message.content
-												: message?.raContent ?? message.content
-								  })
+												: (message?.raContent ?? message.content)
+									})
 						})),
 					seed: params?.seed ?? $settings?.params?.seed ?? undefined,
 					stop:
-						params?.stop ?? $settings?.params?.stop ?? undefined
+						(params?.stop ?? $settings?.params?.stop ?? undefined)
 							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
 									(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-							  )
+								)
 							: undefined,
 					temperature: params?.temperature ?? $settings?.params?.temperature ?? undefined,
 					top_p: params?.top_p ?? $settings?.params?.top_p ?? undefined,
@@ -1228,9 +1228,9 @@
 					if (citations) {
 						responseMessage.citations = citations;
 						// Only remove status if it was initially set
-						if (responseMessage.statusHistory) {
+						if (model?.info?.meta?.knowledge ?? false) {
 							responseMessage.statusHistory = responseMessage.statusHistory.filter(
-								(status) => status.action !== 'rag_search'
+								(status) => status.action !== 'knowledge_search'
 							);
 						}
 						continue;
