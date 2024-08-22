@@ -311,6 +311,10 @@
 			}
 		}
 
+		if ($page.url.searchParams.get('call') === 'true') {
+			showCallOverlay.set(true);
+		}
+
 		selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
