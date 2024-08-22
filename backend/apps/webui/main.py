@@ -314,6 +314,18 @@ async def generate_function_chat_completion(form_data, user):
         ),
     }
 
+    extra_params["__tools__"] = get_tools(
+        app,
+        tool_ids,
+        user,
+        {
+            **extra_params,
+            "__model__": app.state.MODELS[form_data["model"]],
+            "__messages__": form_data["messages"],
+            "__files__": files,
+        },
+    )
+
     if model_info:
         if model_info.base_model_id:
             form_data["model"] = model_info.base_model_id
