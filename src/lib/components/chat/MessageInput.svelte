@@ -570,7 +570,7 @@
 								</div>
 							{/if}
 
-							<div class=" flex", id="tools-scrollbar">
+							<div class=" flex">
 								<div class=" ml-0.5 self-end mb-1.5 flex space-x-1">
 									<InputMenu
 										bind:webSearchEnabled
