@@ -256,7 +256,7 @@ def get_function_params(function_module, form_data, user, extra_params=None):
     addition_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
     params = {"body": form_data} | addition_params
 
-    if "__user__" in params and hasattr(function_module, "UserValves"):
+    if hasattr(function_module, "UserValves"):
         user_valves = Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
         params["__user__"]["valves"] = function_module.UserValves(
             **(user_valves if user_valves else {})
@@ -268,10 +268,11 @@ def get_function_params(function_module, form_data, user, extra_params=None):
 async def generate_function_chat_completion(form_data, user):
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
+
     metadata = form_data.pop("metadata", {})
+
     files = metadata.get("files", [])
     tool_ids = metadata.get("tool_ids", [])
-
     # Check if tool_ids is None
     if tool_ids is None:
         tool_ids = []
@@ -297,15 +298,18 @@ async def generate_function_chat_completion(form_data, user):
             "role": user.role,
         },
     }
-    tools_params = {
-        **extra_params,
-        "__model__": app.state.MODELS[form_data["model"]],
-        "__messages__": form_data["messages"],
-        "__files__": files,
-    }
 
-    tools = get_tools(app, tool_ids, user, tools_params)
-    extra_params["__tools__"] = tools
+    extra_params["__tools__"] = get_tools(
+        app,
+        tool_ids,
+        user,
+        {
+            **extra_params,
+            "__model__": app.state.MODELS[form_data["model"]],
+            "__messages__": form_data["messages"],
+            "__files__": files,
+        },
+    )
 
     if model_info:
         if model_info.base_model_id:
