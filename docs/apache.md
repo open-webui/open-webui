@@ -2,7 +2,7 @@
 
 Sometimes, its beneficial to host Ollama, separate from the UI, but retain the RAG and RBAC support features shared across users:
 
-# Open WebUI Configuration
+# APEN Voltron Configuration
 
 ## UI Configuration
 
@@ -193,7 +193,3 @@ Open your site at https://server.com!
 If you encounter any misconfiguration or errors, please file an issue or engage with our discussion. There are a lot of friendly developers here to assist you.
 
 Let's make this UI much more user friendly for everyone!
-
-Thanks for making open-webui your UI Choice for AI!
-
-This doc is made by **Bob Reyes**, your **Open-WebUI** fan from the Philippines.
