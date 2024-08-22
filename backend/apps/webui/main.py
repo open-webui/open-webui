@@ -313,7 +313,8 @@ async def generate_function_chat_completion(form_data, user):
             },
         ),
     }
-
+    
+    
     if model_info:
         if model_info.base_model_id:
             form_data["model"] = model_info.base_model_id
