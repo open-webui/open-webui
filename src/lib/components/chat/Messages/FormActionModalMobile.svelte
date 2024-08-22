@@ -28,7 +28,22 @@
 	let address = '';
 	let dayCount = 0;
 	let days = 0;
-	const leaves = ['Annual Leave', 'Sick Leave'];
+	const leaves = [
+		'Annual Leave',
+		'Sick Leave',
+		'Maternity Leave',
+		'Paternity Leave',
+		'Unpaid Leave',
+		'Compassionate Leave',
+		'Administrative Leave',
+		'Emergency Leave',
+		'Educational Leave',
+		'Lecture, Course/Exams',
+		'Escort Leave',
+		'Military Service',
+		'Iddah Leave',
+		'Haj Leave'
+	];
 
 	$: if (citation) {
 		mergedDocuments = citation.document?.map((c, i) => {
@@ -103,7 +118,8 @@
 	};
 	const handleConfirm = () => {
 		if (!$user.extra_sso) {
-			toast.error('User type error. Only supports users login with outlook account.').return;
+			toast.error('User type error. Only supports users login with outlook account.');
+			return;
 		}
 		const ssoData = JSON.parse($user.extra_sso);
 		const formData = {
