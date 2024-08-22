@@ -35,9 +35,10 @@
 	export let items: {
 		label: string;
 		value: string;
+		model: Model;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		[key: string]: any;
-	} = [];
+	}[] = [];
 
 	export let className = 'w-[32rem]';
 
@@ -532,6 +533,14 @@
 							setTimeout(() => {
 								newChatButton?.click();
 							}, 0);
+
+							// add 'temporary-chat=true' to the URL
+							if ($temporaryChatEnabled) {
+								history.replaceState(null, '', '?temporary-chat=true');
+							} else {
+								history.replaceState(null, '', location.pathname);
+							}
+
 							show = false;
 						}}
 					>

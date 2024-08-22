@@ -137,6 +137,7 @@ from config import (
     RAG_WEB_SEARCH_RESULT_COUNT,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+    CORS_ALLOW_ORIGIN,
 )
 
 from apps.webui.models.users import (
@@ -314,11 +315,9 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
 )
 
-origins = ["*"]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=CORS_ALLOW_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

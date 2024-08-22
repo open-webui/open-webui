@@ -160,6 +160,7 @@
 					if (sessionUser) {
 						// Save Session User to Store
 						await user.set(sessionUser);
+						await config.set(await getBackendConfig());
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');

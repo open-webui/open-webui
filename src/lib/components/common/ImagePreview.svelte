@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 
 	export let show = false;
 	export let src = '';
@@ -111,6 +111,14 @@
 		document.body.removeChild(previewElement);
 		document.body.style.overflow = 'unset';
 	}
+
+	onDestroy(() => {
+		show = false;
+
+		if (previewElement) {
+			document.body.removeChild(previewElement);
+		}
+	});
 </script>
 
 {#if show}

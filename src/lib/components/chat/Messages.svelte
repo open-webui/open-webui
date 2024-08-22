@@ -53,34 +53,43 @@
 		}
 	};
 
-	const confirmEditMessage = async (messageId, content) => {
-		let userPrompt = content;
-		let userMessageId = uuidv4();
+	const confirmEditMessage = async (messageId, content, submit = true) => {
+		if (submit) {
+			let userPrompt = content;
+			let userMessageId = uuidv4();
 
-		let userMessage = {
-			id: userMessageId,
-			parentId: history.messages[messageId].parentId,
-			childrenIds: [],
-			role: 'user',
-			content: userPrompt,
-			...(history.messages[messageId].files && { files: history.messages[messageId].files }),
-			models: selectedModels
-		};
+			let userMessage = {
+				id: userMessageId,
+				parentId: history.messages[messageId].parentId,
+				childrenIds: [],
+				role: 'user',
+				content: userPrompt,
+				...(history.messages[messageId].files && { files: history.messages[messageId].files }),
+				models: selectedModels
+			};
 
-		let messageParentId = history.messages[messageId].parentId;
+			let messageParentId = history.messages[messageId].parentId;
 
-		if (messageParentId !== null) {
-			history.messages[messageParentId].childrenIds = [
-				...history.messages[messageParentId].childrenIds,
-				userMessageId
-			];
+			if (messageParentId !== null) {
+				history.messages[messageParentId].childrenIds = [
+					...history.messages[messageParentId].childrenIds,
+					userMessageId
+				];
+			}
+
+			history.messages[userMessageId] = userMessage;
+			history.currentId = userMessageId;
+
+			await tick();
+			await sendPrompt(userPrompt, userMessageId);
+		} else {
+			history.messages[messageId].content = content;
+			await tick();
+			await updateChatById(localStorage.token, chatId, {
+				messages: messages,
+				history: history
+			});
 		}
-
-		history.messages[userMessageId] = userMessage;
-		history.currentId = userMessageId;
-
-		await tick();
-		await sendPrompt(userPrompt, userMessageId);
 	};
 
 	const updateChatMessages = async () => {
@@ -377,6 +386,15 @@
 										copyToClipboard={copyToClipboardWithToast}
 										{continueGeneration}
 										{regenerateResponse}
+										on:action={async (e) => {
+											console.log('action', e);
+											if (typeof e.detail === 'string') {
+												await chatActionHandler(chatId, e.detail, message.model, message.id);
+											} else {
+												const { id, event } = e.detail;
+												await chatActionHandler(chatId, id, message.model, message.id, event);
+											}
+										}}
 										on:change={async () => {
 											await updateChatById(localStorage.token, chatId, {
 												messages: messages,

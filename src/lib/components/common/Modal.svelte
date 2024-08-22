@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 
 	import { flyAndScale } from '$lib/utils/transitions';
@@ -47,6 +47,13 @@
 		document.body.removeChild(modalElement);
 		document.body.style.overflow = 'unset';
 	}
+
+	onDestroy(() => {
+		show = false;
+		if (modalElement) {
+			document.body.removeChild(modalElement);
+		}
+	});
 </script>
 
 {#if show}

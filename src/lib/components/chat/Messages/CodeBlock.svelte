@@ -3,6 +3,8 @@
 	import { loadPyodide } from 'pyodide';
 	import mermaid from 'mermaid';
 
+	import { v4 as uuidv4 } from 'uuid';
+
 	import { getContext, getAllContexts, onMount } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 
@@ -289,11 +291,6 @@ __builtins__.input = input`);
 	}
 
 	onMount(async () => {
-		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
-			(async () => {
-				await drawMermaidDiagram();
-			})();
-		}
 		if (document.documentElement.classList.contains('dark')) {
 			mermaid.initialize({
 				startOnLoad: true,

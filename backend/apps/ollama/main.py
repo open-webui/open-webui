@@ -41,6 +41,7 @@ from config import (
     MODEL_FILTER_LIST,
     UPLOAD_DIR,
     AppConfig,
+    CORS_ALLOW_ORIGIN,
 )
 from utils.misc import (
     calculate_sha256,
@@ -55,7 +56,7 @@ log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ALLOW_ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -729,11 +730,8 @@ async def generate_chat_completion(
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
 ):
-    log.debug(f"{form_data.model_dump_json(exclude_none=True).encode()}=")
-
-    payload = {
-        **form_data.model_dump(exclude_none=True, exclude=["metadata"]),
-    }
+    payload = {**form_data.model_dump(exclude_none=True)}
+    log.debug(f"{payload = }")
     if "metadata" in payload:
         del payload["metadata"]
 

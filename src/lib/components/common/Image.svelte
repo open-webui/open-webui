@@ -8,7 +8,7 @@
 	export let isMarkdown: boolean = true;
 	export let showImagePreview = false;
 
-	export let className = '';
+	export let className = ' w-full';
 
 	let _src = '';
 	$: _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
