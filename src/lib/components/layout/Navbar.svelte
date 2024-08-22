@@ -70,17 +70,22 @@
 			}}>
 				<img
 					src="/logo-mbzuai.png"
-					class="w-[108px] pc-only"
+					class="w-[108px] pc-only mr-4"
 					alt="logo-mbzuai"
 				/>
 				<img
 					src="/logo-ciai.png"
-					class="mx-4 w-[70px] pc-only"
+					class="mr-4 w-[70px] pc-only"
 					alt="logo-ciai"
+				/>
+				<img 
+					src="/logo-main.png"
+					class="w-[30px] pc-only mr-2"
+					alt="system-logo"
 				/>
 			</button>
 
-			<div class="overflow-hidden flex-1 text-semibold text-black dark:text-white">
+			<div class="overflow-hidden flex-1 font-normal text-base text-black dark:text-white opacity-75">
 				MBZUAI ServiceDesk Chatbot
 			</div>
 

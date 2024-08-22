@@ -57,8 +57,9 @@
 						// await getUserDefaultPrompt(sessionUser)
 					} else {
 						// Redirect Invalid Session User to /auth Page
-						localStorage.removeItem('token');
-						await goto('/auth');
+						// comment out this because already have 401 redirect in fetchApi in /lib/utils/index.ts
+						// localStorage.removeItem('token');
+						// await goto('/auth');
 					}
 				} else {
 					// await goto('/login');

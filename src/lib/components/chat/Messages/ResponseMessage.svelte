@@ -477,7 +477,7 @@
 											{/if}
 										{:else if token.raw.includes('leave_request_canceled')}
 											<button
-												class="px-4 my-2 rounded-lg bg-[#ffffffaa] hover:bg-[#fff]"
+												class="px-4 my-2 rounded-lg bg-[#ffffffaa] hover:bg-[#fff] dark:bg-[#ffffff50] dark:hover:bg-[#ffffff80]"
 												on:click={() => {
 													editedContent = 'annual_leave_form';
 													editMessageConfirmHandler();

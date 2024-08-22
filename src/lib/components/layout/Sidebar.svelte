@@ -262,6 +262,19 @@
 			await documents.set(await getDocs(localStorage.token));
 		}
 	};
+
+	const handleSignOut = () => {
+		localStorage.removeItem('token');
+		let _settings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+		delete _settings.system;
+		localStorage.setItem('settings', JSON.stringify(_settings));
+		if ($user.extra_sso) {
+			location.href = '/api/v1/auths/signin/ssoout';
+		} else {
+			location.href = '/auth';
+		}
+		showDropdown = false;
+	};
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={shareChatId} />
@@ -292,6 +305,7 @@
 		<div class="flex px-5 pt-10 pb-5 mobile-only">
 			<img src="/logo-mbzuai.png" class="w-[5rem]" alt="logo-mbzuai" />
 			<img src="/logo-ciai.png" class="ml-4 w-[4rem]" alt="logo-ciai" />
+			<img src="/logo-main.png" class="ml-4 h-[24px]" alt="system-logo" />
 		</div>
 		<!-- {#if $user?.role === 'admin'}
 			<div class="px-2 flex justify-center mt-0.5">
@@ -1064,9 +1078,7 @@
 								<button
 									class="flex rounded-md py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 									on:click={() => {
-										localStorage.removeItem('token');
-										location.href = '/auth';
-										showDropdown = false;
+										handleSignOut()
 									}}
 								>
 									<div class=" self-center mr-3">

@@ -152,7 +152,7 @@
 </script>
 
 <!-- <Modal size="lg" bind:show> -->
-<div class="w-3/4 bg-[#ffffffdd] rounded-lg my-4 mx-2 modal-content">
+<div class="w-3/4 bg-[#ffffffdd] dark:bg-[#ffffff80] rounded-lg my-4 mx-2 modal-content">
 	<!-- <div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center capitalize">
 				{$i18n.t('Citation')}
@@ -177,7 +177,7 @@
 		</div> -->
 
 	<div class="flex flex-col md:flex-row w-full px-6 py-5 md:space-x-4">
-		<div class=" w-full dark:text-gray-200 overflow-y-scroll scrollbar-hidden p-5">
+		<div class=" w-full dark:text-gray-900 overflow-y-scroll scrollbar-hidden p-5">
 			<form
 				on:submit|preventDefault={() => {
 					handleConfirm();
@@ -192,7 +192,7 @@
 							<select
 								required
 								bind:value={type}
-								class="flex-1 rounded-md px-2 h-[44px]"
+								class="flex-1 rounded-md px-2 h-[44px] bg-transparent"
 								style="border: 1px solid #0000004D"
 							>
 								{#each leaves as leaveType}
@@ -261,7 +261,7 @@
 				</div>
 				<div class="flex mt-4 justify-end">
 					<button
-						class="py-1 px-12 rounded-lg border border-black/opacity-3 text-black/opacity-60 text-sm"
+						class="py-1 px-12 rounded-lg border border-black/opacity-3 text-black/opacity-60 text-sm dark:text-white"
 						on:click={() => {
 							// show = false;
 							dispatch('cancel');
