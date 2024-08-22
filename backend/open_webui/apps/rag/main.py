@@ -5,13 +5,32 @@ import os
 import shutil
 import socket
 import urllib.parse
-import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional, Sequence, Union
 
 import requests
 import validators
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi.middleware.cors import CORSMiddleware
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import (
+    BSHTMLLoader,
+    CSVLoader,
+    Docx2txtLoader,
+    OutlookMessageLoader,
+    PyPDFLoader,
+    TextLoader,
+    UnstructuredEPubLoader,
+    UnstructuredExcelLoader,
+    UnstructuredMarkdownLoader,
+    UnstructuredPowerPointLoader,
+    UnstructuredRSTLoader,
+    UnstructuredXMLLoader,
+    WebBaseLoader,
+    YoutubeLoader,
+)
+from langchain_core.documents import Document
+from open_webui.apps.rag.embedding_model import set_embedding_function
 from open_webui.apps.rag.search.brave import search_brave
 from open_webui.apps.rag.search.duckduckgo import search_duckduckgo
 from open_webui.apps.rag.search.google_pse import search_google_pse
@@ -24,23 +43,20 @@ from open_webui.apps.rag.search.serply import search_serply
 from open_webui.apps.rag.search.serpstack import search_serpstack
 from open_webui.apps.rag.search.tavily import search_tavily
 from open_webui.apps.rag.utils import (
-    get_embedding_function,
     get_model_path,
     query_collection,
     query_collection_with_hybrid_search,
     query_doc,
     query_doc_with_hybrid_search,
 )
+from open_webui.apps.rag.vector_store import VECTOR_STORE_CONNECTOR
 from open_webui.apps.webui.models.documents import DocumentForm, Documents
 from open_webui.apps.webui.models.files import Files
-from chromadb.utils.batch_utils import create_batches
 from open_webui.config import (
     BRAVE_SEARCH_API_KEY,
-    CHROMA_CLIENT,
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
-    CORS_ALLOW_ORIGIN,
     DEVICE_TYPE,
     DOCS_DIR,
     ENABLE_RAG_HYBRID_SEARCH,
@@ -53,8 +69,6 @@ from open_webui.config import (
     PDF_EXTRACT_IMAGES,
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_MODEL,
-    RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-    RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_OPENAI_BATCH_SIZE,
     RAG_FILE_MAX_COUNT,
     RAG_FILE_MAX_SIZE,
@@ -85,27 +99,6 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
-from fastapi.middleware.cors import CORSMiddleware
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import (
-    BSHTMLLoader,
-    CSVLoader,
-    Docx2txtLoader,
-    OutlookMessageLoader,
-    PyPDFLoader,
-    TextLoader,
-    UnstructuredEPubLoader,
-    UnstructuredExcelLoader,
-    UnstructuredMarkdownLoader,
-    UnstructuredPowerPointLoader,
-    UnstructuredRSTLoader,
-    UnstructuredXMLLoader,
-    WebBaseLoader,
-    YoutubeLoader,
-)
-from langchain_core.documents import Document
-from pydantic import BaseModel
 from open_webui.utils.misc import (
     calculate_sha256,
     calculate_sha256_string,
@@ -113,14 +106,21 @@ from open_webui.utils.misc import (
     sanitize_filename,
 )
 from open_webui.utils.utils import get_admin_user, get_verified_user
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.state.config = AppConfig()
-
 app.state.config.TOP_K = RAG_TOP_K
 app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
@@ -173,20 +173,13 @@ app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 
 
-def update_embedding_model(
-    embedding_model: str,
-    update_model: bool = False,
-):
-    if embedding_model and app.state.config.RAG_EMBEDDING_ENGINE == "":
-        import sentence_transformers
-
-        app.state.sentence_transformer_ef = sentence_transformers.SentenceTransformer(
-            get_model_path(embedding_model, update_model),
-            device=DEVICE_TYPE,
-            trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-        )
-    else:
-        app.state.sentence_transformer_ef = None
+app.state.EMBEDDING_FUNCTION = set_embedding_function(
+    embedding_engine=app.state.config.RAG_EMBEDDING_ENGINE,
+    model_name=app.state.config.RAG_EMBEDDING_MODEL,
+    base_url=app.state.config.OPENAI_API_BASE_URL,
+    api_key=app.state.config.OPENAI_API_KEY,
+    batch_size=app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+)
 
 
 def update_reranking_model(
@@ -205,32 +198,9 @@ def update_reranking_model(
         app.state.sentence_transformer_rf = None
 
 
-update_embedding_model(
-    app.state.config.RAG_EMBEDDING_MODEL,
-    RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-)
-
 update_reranking_model(
     app.state.config.RAG_RERANKING_MODEL,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
-)
-
-
-app.state.EMBEDDING_FUNCTION = get_embedding_function(
-    app.state.config.RAG_EMBEDDING_ENGINE,
-    app.state.config.RAG_EMBEDDING_MODEL,
-    app.state.sentence_transformer_ef,
-    app.state.config.OPENAI_API_KEY,
-    app.state.config.OPENAI_API_BASE_URL,
-    app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=CORS_ALLOW_ORIGIN,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 
@@ -315,15 +285,12 @@ async def update_embedding_config(
                     else 1
                 )
 
-        update_embedding_model(app.state.config.RAG_EMBEDDING_MODEL)
-
-        app.state.EMBEDDING_FUNCTION = get_embedding_function(
-            app.state.config.RAG_EMBEDDING_ENGINE,
-            app.state.config.RAG_EMBEDDING_MODEL,
-            app.state.sentence_transformer_ef,
-            app.state.config.OPENAI_API_KEY,
-            app.state.config.OPENAI_API_BASE_URL,
-            app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+        app.state.EMBEDDING_FUNCTION = set_embedding_function(
+            embedding_engine=app.state.config.RAG_EMBEDDING_ENGINE,
+            model_name=app.state.config.RAG_EMBEDDING_MODEL,
+            base_url=app.state.config.OPENAI_API_BASE_URL,
+            api_key=app.state.config.OPENAI_API_KEY,
+            batch_size=app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
         )
 
         return {
@@ -952,26 +919,89 @@ def store_web_search(form_data: SearchForm, user=Depends(get_verified_user)):
 
 
 def store_data_in_vector_db(
-    data, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
+    data: list[Document],
+    collection_name: str,
+    metadata: dict = {},
+    overwrite: bool = False,
+    append: bool = False,
+    silent_error: bool = True,
 ) -> bool:
+    """
+    Transform texts to embedded chunk of documents and store in the VectorStore.
+
+    Args:
+        data (list[Document]): List of LangChain Documents.
+        collection_name (str): The collection name to store chunk of embedded documents.
+        metadata (dict): The metadata dict to add with the documents.
+        overwrite (bool): Whether to overwrite current collection. If the collection
+            exists already and overwrite is set to False then raises an error if append
+            option is not set to True.
+        append (bool): Whether to append data to the collection.
+        silent_error (bool): If an expected error appears will still return True.
+    """
+    # In case the overwrite option is set to False and append option is set to False
+    # check if the collection is empty before storing data.
+    if not overwrite and not append:
+        vector_store = VECTOR_STORE_CONNECTOR.get_vs_collection(
+            collection_name=collection_name,
+            embedding_function=app.state.EMBEDDING_FUNCTION,
+        )
+        if not vector_store.is_collection_empty():
+            if silent_error:
+                return True
+            else:
+                raise Exception(
+                    "The VectorStore collection is not empty. Consider setting overwrite or append option to True."
+                )
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.config.CHUNK_SIZE,
         chunk_overlap=app.state.config.CHUNK_OVERLAP,
         add_start_index=True,
     )
-
     docs = text_splitter.split_documents(data)
 
     if len(docs) > 0:
         log.info(f"store_data_in_vector_db {docs}")
-        return store_docs_in_vector_db(docs, collection_name, metadata, overwrite), None
+        return store_docs_in_vector_db(docs, collection_name, metadata, overwrite)
     else:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
 
 def store_text_in_vector_db(
-    text, metadata, collection_name, overwrite: bool = False
+    text: str,
+    metadata: dict,
+    collection_name: str,
+    overwrite: bool = False,
+    append: bool = False,
+    silent_error: bool = True,
 ) -> bool:
+    """
+    Transform texts to embedded chunk of texts and store in the VectorStore.
+
+    Args:
+        text (str): The text to embed and store to VectorStore.
+        metadata (dict): The metadata dict to add with the text.
+        collection_name (str): The collection name to store chunk of embedded text.
+        overwrite (bool): Whether to overwrite current collection. If the collection
+            exists already and overwrite is set to False then raises an error if append
+            option is not set to True.
+        append (bool): Whether to append data to the collection.
+        silent_error (bool): If an expected error appears will still return True.
+    """
+    # In case the overwrite option is set to False and append option is set to False
+    # check if the collection is empty before storing data.
+    if not overwrite and not append:
+        vector_store = VECTOR_STORE_CONNECTOR.get_vs_collection(
+            collection_name=collection_name,
+            embedding_function=app.state.EMBEDDING_FUNCTION,
+        )
+        if not vector_store.is_collection_empty():
+            if silent_error:
+                return True
+            else:
+                raise Exception(
+                    "The VectorStore collection is not empty. Consider setting overwrite or append option to True."
+                )
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=app.state.config.CHUNK_SIZE,
         chunk_overlap=app.state.config.CHUNK_OVERLAP,
@@ -982,57 +1012,20 @@ def store_text_in_vector_db(
 
 
 def store_docs_in_vector_db(
-    docs, collection_name, metadata: Optional[dict] = None, overwrite: bool = False
+    docs, collection_name, metadata: dict = {}, overwrite: bool = False
 ) -> bool:
     log.info(f"store_docs_in_vector_db {docs} {collection_name}")
-
-    texts = [doc.page_content for doc in docs]
-    metadatas = [{**doc.metadata, **(metadata if metadata else {})} for doc in docs]
-
-    # ChromaDB does not like datetime formats
-    # for meta-data so convert them to string.
-    for metadata in metadatas:
-        for key, value in metadata.items():
-            if isinstance(value, datetime):
-                metadata[key] = str(value)
-
     try:
-        if overwrite:
-            for collection in CHROMA_CLIENT.list_collections():
-                if collection_name == collection.name:
-                    log.info(f"deleting existing collection {collection_name}")
-                    CHROMA_CLIENT.delete_collection(name=collection_name)
-
-        collection = CHROMA_CLIENT.create_collection(name=collection_name)
-
-        embedding_func = get_embedding_function(
-            app.state.config.RAG_EMBEDDING_ENGINE,
-            app.state.config.RAG_EMBEDDING_MODEL,
-            app.state.sentence_transformer_ef,
-            app.state.config.OPENAI_API_KEY,
-            app.state.config.OPENAI_API_BASE_URL,
-            app.state.config.RAG_EMBEDDING_OPENAI_BATCH_SIZE,
+        VECTOR_STORE_CONNECTOR.vs_class.from_documents(
+            documents=docs,
+            collection_name=collection_name,
+            embedding=app.state.EMBEDDING_FUNCTION,
+            overwrite_collection=overwrite,
+            additional_metadata=metadata,
         )
-
-        embedding_texts = list(map(lambda x: x.replace("\n", " "), texts))
-        embeddings = embedding_func(embedding_texts)
-
-        for batch in create_batches(
-            api=CHROMA_CLIENT,
-            ids=[str(uuid.uuid4()) for _ in texts],
-            metadatas=metadatas,
-            embeddings=embeddings,
-            documents=texts,
-        ):
-            collection.add(*batch)
-
         return True
     except Exception as e:
-        if e.__class__.__name__ == "UniqueConstraintError":
-            return True
-
         log.exception(e)
-
         return False
 
 
@@ -1396,7 +1389,21 @@ def scan_docs_dir(user=Depends(get_admin_user)):
 
 @app.post("/reset/db")
 def reset_vector_db(user=Depends(get_admin_user)):
-    CHROMA_CLIENT.reset()
+    try:
+        VECTOR_STORE_CONNECTOR.vs_class(
+            embedding_function=app.state.EMBEDDING_FUNCTION
+        ).reset()
+    except NotImplementedError:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Reset not implemented with this VectorStore type.",
+        )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
 
 
 @app.post("/reset/uploads")
@@ -1425,6 +1432,22 @@ def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
 
 @app.post("/reset")
 def reset(user=Depends(get_admin_user)) -> bool:
+    try:
+        VECTOR_STORE_CONNECTOR.vs_class(
+            embedding_function=app.state.EMBEDDING_FUNCTION
+        ).reset()
+    except NotImplementedError:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Reset not implemented with this VectorStore type.",
+        )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
     folder = f"{UPLOAD_DIR}"
     for filename in os.listdir(folder):
         file_path = os.path.join(folder, filename)
@@ -1435,11 +1458,6 @@ def reset(user=Depends(get_admin_user)) -> bool:
                 shutil.rmtree(file_path)
         except Exception as e:
             log.error("Failed to delete %s. Reason: %s" % (file_path, e))
-
-    try:
-        CHROMA_CLIENT.reset()
-    except Exception as e:
-        log.exception(e)
 
     return True
 

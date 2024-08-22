@@ -1,12 +1,13 @@
 import logging
 from typing import Optional
 
-from open_webui.apps.webui.models.memories import Memories, MemoryModel
-from open_webui.config import CHROMA_CLIENT
-from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from langchain_core.documents import Document
+from open_webui.apps.rag.vector_store import VECTOR_STORE_CONNECTOR
+from open_webui.apps.webui.models.memories import Memories, MemoryModel
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.utils import get_verified_user
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -49,14 +50,15 @@ async def add_memory(
     user=Depends(get_verified_user),
 ):
     memory = Memories.insert_new_memory(user.id, form_data.content)
-    memory_embedding = request.app.state.EMBEDDING_FUNCTION(memory.content)
-
-    collection = CHROMA_CLIENT.get_or_create_collection(name=f"user-memory-{user.id}")
-    collection.upsert(
-        documents=[memory.content],
+    # Create documents to ingest to VectorStore
+    memory_document = Document(
+        page_content=memory.content, metadata={"created_at": memory.created_at}
+    )
+    VECTOR_STORE_CONNECTOR.vs_class.from_documents(
+        documents=[memory_document],
+        collection_name=f"user-memory-{user.id}",
+        embedding=request.app.state.EMBEDDING_FUNCTION,
         ids=[memory.id],
-        embeddings=[memory_embedding],
-        metadatas=[{"created_at": memory.created_at}],
     )
 
     return memory
@@ -76,13 +78,24 @@ class QueryMemoryForm(BaseModel):
 async def query_memory(
     request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user)
 ):
-    query_embedding = request.app.state.EMBEDDING_FUNCTION(form_data.content)
-    collection = CHROMA_CLIENT.get_or_create_collection(name=f"user-memory-{user.id}")
-
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=form_data.k,  # how many results to return
+    vector_store = VECTOR_STORE_CONNECTOR.get_vs_collection(
+        collection_name=f"user-memory-{user.id}",
+        embedding_function=request.app.state.EMBEDDING_FUNCTION,
     )
+
+    list_docs_with_scores = vector_store.similarity_search_with_score(
+        query=form_data.content,
+        k=form_data.k,
+    )
+    results = {
+        "distances": [[doc_with_score[1] for doc_with_score in list_docs_with_scores]],
+        "documents": [
+            [doc_with_score[0].page_content for doc_with_score in list_docs_with_scores]
+        ],
+        "metadatas": [
+            [doc_with_score[0].metadata for doc_with_score in list_docs_with_scores]
+        ],
+    }
 
     return results
 
@@ -94,16 +107,26 @@ async def query_memory(
 async def reset_memory_from_vector_db(
     request: Request, user=Depends(get_verified_user)
 ):
-    CHROMA_CLIENT.delete_collection(f"user-memory-{user.id}")
-    collection = CHROMA_CLIENT.get_or_create_collection(name=f"user-memory-{user.id}")
-
+    vector_store = VECTOR_STORE_CONNECTOR.get_vs_collection(
+        collection_name=f"user-memory-{user.id}",
+        embedding_function=request.app.state.EMBEDDING_FUNCTION,
+    )
+    vector_store.delete_collection()
     memories = Memories.get_memories_by_user_id(user.id)
-    for memory in memories:
-        memory_embedding = request.app.state.EMBEDDING_FUNCTION(memory.content)
-        collection.upsert(
-            documents=[memory.content],
-            ids=[memory.id],
-            embeddings=[memory_embedding],
+    # Create documents to ingest to VectorStore
+    list_docs = [
+        Document(
+            page_content=memory.content,
+        )
+        for memory in memories
+    ]
+    list_ids = [memory.id for memory in memories]
+    if list_docs:
+        VECTOR_STORE_CONNECTOR.vs_class.from_documents(
+            documents=list_docs,
+            collection_name=f"user-memory-{user.id}",
+            embedding=request.app.state.EMBEDDING_FUNCTION,
+            ids=list_ids,
         )
     return True
 
@@ -114,12 +137,16 @@ async def reset_memory_from_vector_db(
 
 
 @router.delete("/delete/user", response_model=bool)
-async def delete_memory_by_user_id(user=Depends(get_verified_user)):
+async def delete_memory_by_user_id(request: Request, user=Depends(get_verified_user)):
     result = Memories.delete_memories_by_user_id(user.id)
 
     if result:
         try:
-            CHROMA_CLIENT.delete_collection(f"user-memory-{user.id}")
+            vector_store = VECTOR_STORE_CONNECTOR.get_vs_collection(
+                collection_name=f"user-memory-{user.id}",
+                embedding_function=request.app.state.EMBEDDING_FUNCTION,
+            )
+            vector_store.delete_collection()
         except Exception as e:
             log.error(e)
         return True
@@ -144,17 +171,15 @@ async def update_memory_by_id(
         raise HTTPException(status_code=404, detail="Memory not found")
 
     if form_data.content is not None:
-        memory_embedding = request.app.state.EMBEDDING_FUNCTION(form_data.content)
-        collection = CHROMA_CLIENT.get_or_create_collection(
-            name=f"user-memory-{user.id}"
+        memory_document = Document(
+            page_content=form_data.content,
+            metadata={"created_at": memory.created_at, "updated_at": memory.updated_at},
         )
-        collection.upsert(
-            documents=[form_data.content],
+        VECTOR_STORE_CONNECTOR.vs_class.from_documents(
+            documents=[memory_document],
+            collection_name=f"user-memory-{user.id}",
+            embedding=request.app.state.EMBEDDING_FUNCTION,
             ids=[memory.id],
-            embeddings=[memory_embedding],
-            metadatas=[
-                {"created_at": memory.created_at, "updated_at": memory.updated_at}
-            ],
         )
 
     return memory
@@ -166,14 +191,17 @@ async def update_memory_by_id(
 
 
 @router.delete("/{memory_id}", response_model=bool)
-async def delete_memory_by_id(memory_id: str, user=Depends(get_verified_user)):
+async def delete_memory_by_id(
+    request: Request, memory_id: str, user=Depends(get_verified_user)
+):
     result = Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
 
     if result:
-        collection = CHROMA_CLIENT.get_or_create_collection(
-            name=f"user-memory-{user.id}"
+        vector_store = VECTOR_STORE_CONNECTOR.get_vs_collection(
+            collection_name=f"user-memory-{user.id}",
+            embedding_function=request.app.state.EMBEDDING_FUNCTION,
         )
-        collection.delete(ids=[memory_id])
+        vector_store.delete(ids=[memory_id])
         return True
 
     return False

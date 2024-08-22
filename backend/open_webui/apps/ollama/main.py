@@ -596,58 +596,30 @@ async def generate_embeddings(
         )
 
 
-def generate_ollama_embeddings(
-    form_data: GenerateEmbeddingsForm,
-    url_idx: Optional[int] = None,
-):
-    log.info(f"generate_ollama_embeddings {form_data}")
+def get_ollama_embedding_model_name_and_base_url(
+    model_name: str,
+) -> tuple[str, str]:
+    """
+    Get Ollama embedding model name based on an input model name not formatted
+    and fetches also the base URL of the Ollama server.
 
-    if url_idx is None:
-        model = form_data.model
+    Args:
+        input_model_name (str): The input model name not formatted.
 
-        if ":" not in model:
-            model = f"{model}:latest"
-
-        if model in app.state.MODELS:
-            url_idx = random.choice(app.state.MODELS[model]["urls"])
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model),
-            )
-
-    url = app.state.config.OLLAMA_BASE_URLS[url_idx]
-    log.info(f"url: {url}")
-
-    r = requests.request(
-        method="POST",
-        url=f"{url}/api/embeddings",
-        headers={"Content-Type": "application/json"},
-        data=form_data.model_dump_json(exclude_none=True).encode(),
-    )
-    try:
-        r.raise_for_status()
-
-        data = r.json()
-
-        log.info(f"generate_ollama_embeddings {data}")
-
-        if "embedding" in data:
-            return data["embedding"]
-        else:
-            raise Exception("Something went wrong :/")
-    except Exception as e:
-        log.exception(e)
-        error_detail = "Open WebUI: Server Connection Error"
-        if r is not None:
-            try:
-                res = r.json()
-                if "error" in res:
-                    error_detail = f"Ollama: {res['error']}"
-            except Exception:
-                error_detail = f"Ollama: {e}"
-
-        raise Exception(error_detail)
+    Returns:
+        tuple: Tuple of model_name and base_url.
+    """
+    if ":" not in model_name:
+        model_name = f"{model_name}:latest"
+    if model_name in app.state.MODELS:
+        url_idx = random.choice(app.state.MODELS[model_name]["urls"])
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(model_name),
+        )
+    base_url = app.state.config.OLLAMA_BASE_URLS[url_idx]
+    return model_name, base_url
 
 
 class GenerateCompletionForm(BaseModel):

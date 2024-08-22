@@ -1,18 +1,16 @@
 import logging
+import operator
 import os
-from typing import Optional, Union
+from typing import Any, Optional, Sequence
 
-import requests
-from open_webui.apps.ollama.main import (
-    GenerateEmbeddingsForm,
-    generate_ollama_embeddings,
-)
-from open_webui.config import CHROMA_CLIENT
-from open_webui.env import SRC_LOG_LEVELS
 from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
-from langchain_core.documents import Document
+from langchain_core.callbacks import Callbacks
+from langchain_core.documents import BaseDocumentCompressor, Document
+from langchain_core.pydantic_v1 import Extra
+from open_webui.apps.rag.vector_store import VECTOR_STORE_CONNECTOR
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.misc import get_last_user_message
 
 log = logging.getLogger(__name__)
@@ -26,14 +24,27 @@ def query_doc(
     k: int,
 ):
     try:
-        collection = CHROMA_CLIENT.get_collection(name=collection_name)
-        query_embeddings = embedding_function(query)
-
-        result = collection.query(
-            query_embeddings=[query_embeddings],
-            n_results=k,
+        vector_store = VECTOR_STORE_CONNECTOR.get_vs_collection(
+            collection_name=collection_name,
+            embedding_function=embedding_function,
         )
-
+        list_docs_with_scores = vector_store.similarity_search_with_score(
+            query=query, k=k
+        )
+        result = {
+            "distances": [
+                [doc_with_score[1] for doc_with_score in list_docs_with_scores]
+            ],
+            "documents": [
+                [
+                    doc_with_score[0].page_content
+                    for doc_with_score in list_docs_with_scores
+                ]
+            ],
+            "metadatas": [
+                [doc_with_score[0].metadata for doc_with_score in list_docs_with_scores]
+            ],
+        }
         log.info(f"query_doc:result {result}")
         return result
     except Exception as e:
@@ -49,23 +60,18 @@ def query_doc_with_hybrid_search(
     r: float,
 ):
     try:
-        collection = CHROMA_CLIENT.get_collection(name=collection_name)
-        documents = collection.get()  # get all documents
-
-        bm25_retriever = BM25Retriever.from_texts(
-            texts=documents.get("documents"),
-            metadatas=documents.get("metadatas"),
+        vector_store = VECTOR_STORE_CONNECTOR.get_vs_collection(
+            collection_name=collection_name,
+            embedding_function=embedding_function,
         )
+        retriever = vector_store.as_retriever(search_kwargs={"k": k})
+        list_docs = vector_store.get_documents()
+
+        bm25_retriever = BM25Retriever.from_documents(documents=list_docs)
         bm25_retriever.k = k
 
-        chroma_retriever = ChromaRetriever(
-            collection=collection,
-            embedding_function=embedding_function,
-            top_n=k,
-        )
-
         ensemble_retriever = EnsembleRetriever(
-            retrievers=[bm25_retriever, chroma_retriever], weights=[0.5, 0.5]
+            retrievers=[bm25_retriever, retriever], weights=[0.5, 0.5]
         )
 
         compressor = RerankCompressor(
@@ -189,49 +195,6 @@ def rag_template(template: str, context: str, query: str):
     return template
 
 
-def get_embedding_function(
-    embedding_engine,
-    embedding_model,
-    embedding_function,
-    openai_key,
-    openai_url,
-    batch_size,
-):
-    if embedding_engine == "":
-        return lambda query: embedding_function.encode(query).tolist()
-    elif embedding_engine in ["ollama", "openai"]:
-        if embedding_engine == "ollama":
-            func = lambda query: generate_ollama_embeddings(
-                GenerateEmbeddingsForm(
-                    **{
-                        "model": embedding_model,
-                        "prompt": query,
-                    }
-                )
-            )
-        elif embedding_engine == "openai":
-            func = lambda query: generate_openai_embeddings(
-                model=embedding_model,
-                text=query,
-                key=openai_key,
-                url=openai_url,
-            )
-
-        def generate_multiple(query, f):
-            if isinstance(query, list):
-                if embedding_engine == "openai":
-                    embeddings = []
-                    for i in range(0, len(query), batch_size):
-                        embeddings.extend(f(query[i : i + batch_size]))
-                    return embeddings
-                else:
-                    return [f(q) for q in query]
-            else:
-                return f(query)
-
-        return lambda query: generate_multiple(query, func)
-
-
 def get_rag_context(
     files,
     messages,
@@ -253,7 +216,9 @@ def get_rag_context(
         collection_names = (
             file["collection_names"]
             if file["type"] == "collection"
-            else [file["collection_name"]] if file["collection_name"] else []
+            else [file["collection_name"]]
+            if file["collection_name"]
+            else []
         )
 
         collection_names = set(collection_names).difference(extracted_collections)
@@ -352,90 +317,6 @@ def get_model_path(model: str, update_model: bool = False):
     except Exception as e:
         log.exception(f"Cannot determine model snapshot path: {e}")
         return model
-
-
-def generate_openai_embeddings(
-    model: str,
-    text: Union[str, list[str]],
-    key: str,
-    url: str = "https://api.openai.com/v1",
-):
-    if isinstance(text, list):
-        embeddings = generate_openai_batch_embeddings(model, text, key, url)
-    else:
-        embeddings = generate_openai_batch_embeddings(model, [text], key, url)
-
-    return embeddings[0] if isinstance(text, str) else embeddings
-
-
-def generate_openai_batch_embeddings(
-    model: str, texts: list[str], key: str, url: str = "https://api.openai.com/v1"
-) -> Optional[list[list[float]]]:
-    try:
-        r = requests.post(
-            f"{url}/embeddings",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {key}",
-            },
-            json={"input": texts, "model": model},
-        )
-        r.raise_for_status()
-        data = r.json()
-        if "data" in data:
-            return [elem["embedding"] for elem in data["data"]]
-        else:
-            raise "Something went wrong :/"
-    except Exception as e:
-        print(e)
-        return None
-
-
-from typing import Any
-
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from langchain_core.retrievers import BaseRetriever
-
-
-class ChromaRetriever(BaseRetriever):
-    collection: Any
-    embedding_function: Any
-    top_n: int
-
-    def _get_relevant_documents(
-        self,
-        query: str,
-        *,
-        run_manager: CallbackManagerForRetrieverRun,
-    ) -> list[Document]:
-        query_embeddings = self.embedding_function(query)
-
-        results = self.collection.query(
-            query_embeddings=[query_embeddings],
-            n_results=self.top_n,
-        )
-
-        ids = results["ids"][0]
-        metadatas = results["metadatas"][0]
-        documents = results["documents"][0]
-
-        results = []
-        for idx in range(len(ids)):
-            results.append(
-                Document(
-                    metadata=metadatas[idx],
-                    page_content=documents[idx],
-                )
-            )
-        return results
-
-
-import operator
-from typing import Optional, Sequence
-
-from langchain_core.callbacks import Callbacks
-from langchain_core.documents import BaseDocumentCompressor, Document
-from langchain_core.pydantic_v1 import Extra
 
 
 class RerankCompressor(BaseDocumentCompressor):
