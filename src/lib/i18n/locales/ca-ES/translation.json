@@ -536,6 +536,7 @@
 	"Searched {{count}} sites_many": "S'han cercat {{count}} pàgines",
 	"Searched {{count}} sites_other": "S'han cercat {{count}} pàgines",
 	"Searching \"{{searchQuery}}\"": "Cercant \"{{searchQuery}}\"",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "URL de consulta de Searxng",
 	"See readme.md for instructions": "Consulta l'arxiu readme.md per obtenir instruccions",
 	"See what's new": "Veure què hi ha de nou",

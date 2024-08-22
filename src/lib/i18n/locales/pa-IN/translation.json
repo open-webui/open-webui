@@ -535,6 +535,7 @@
 	"Searched {{count}} sites_one": "ਖੋਜਿਆ {{count}} sites_one",
 	"Searched {{count}} sites_other": "ਖੋਜਿਆ {{count}} sites_other",
 	"Searching \"{{searchQuery}}\"": "",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "Searxng Query URL",
 	"See readme.md for instructions": "ਹਦਾਇਤਾਂ ਲਈ readme.md ਵੇਖੋ",
 	"See what's new": "ਨਵਾਂ ਕੀ ਹੈ ਵੇਖੋ",

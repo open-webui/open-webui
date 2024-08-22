@@ -536,6 +536,7 @@
 	"Searched {{count}} sites_few": "Pretraženo {{count}} sites_few",
 	"Searched {{count}} sites_other": "Pretraženo {{count}} sites_other",
 	"Searching \"{{searchQuery}}\"": "",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "Searxng URL upita",
 	"See readme.md for instructions": "Pogledajte readme.md za upute",
 	"See what's new": "Pogledajte što je novo",

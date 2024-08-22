@@ -536,6 +536,7 @@
 	"Searched {{count}} sites_two": "חיפש {{count}} sites_two",
 	"Searched {{count}} sites_other": "חיפש {{count}} sites_other",
 	"Searching \"{{searchQuery}}\"": "",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "כתובת URL של שאילתת Searxng",
 	"See readme.md for instructions": "ראה את readme.md להוראות",
 	"See what's new": "ראה מה חדש",

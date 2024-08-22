@@ -537,6 +537,7 @@
 	"Searched {{count}} sites_many": "Wyszukiwano {{count}} sites_many",
 	"Searched {{count}} sites_other": "Wyszukiwano {{count}} sites_other",
 	"Searching \"{{searchQuery}}\"": "",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "Adres URL zapytania Searxng",
 	"See readme.md for instructions": "Zajrzyj do readme.md po instrukcje",
 	"See what's new": "Zobacz co nowego",

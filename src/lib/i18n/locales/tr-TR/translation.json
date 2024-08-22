@@ -535,6 +535,7 @@
 	"Searched {{count}} sites_one": "Arandı {{count}} sites_one",
 	"Searched {{count}} sites_other": "Arandı {{count}} sites_other",
 	"Searching \"{{searchQuery}}\"": "\"{{searchQuery}}\" aranıyor",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "Searxng Sorgu URL'si",
 	"See readme.md for instructions": "Yönergeler için readme.md dosyasına bakın",
 	"See what's new": "Yeniliklere göz atın",

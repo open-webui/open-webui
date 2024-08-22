@@ -534,6 +534,7 @@
 	"Search Tools": "Tìm kiếm Tools",
 	"Searched {{count}} sites_other": "Đã tìm thấy {{count}} trang web",
 	"Searching \"{{searchQuery}}\"": "Đang tìm \"{{searchQuery}}\"",
+	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searxng Query URL": "URL truy vấn Searxng",
 	"See readme.md for instructions": "Xem readme.md để biết hướng dẫn",
 	"See what's new": "Xem những cập nhật mới",
