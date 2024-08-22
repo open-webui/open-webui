@@ -277,6 +277,7 @@ async def generate_function_chat_completion(form_data, user):
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
     metadata = form_data.pop("metadata", {})
+
     files = metadata.get("files", [])
     tool_ids = metadata.get("tool_ids", [])
 
@@ -299,15 +300,18 @@ async def generate_function_chat_completion(form_data, user):
         "__event_call__": __event_call__,
         "__task__": __task__,
     }
-    tools_params = {
-        **extra_params,
-        "__model__": app.state.MODELS[form_data["model"]],
-        "__messages__": form_data["messages"],
-        "__files__": files,
-    }
 
-    tools = get_tools(app, tool_ids, user, tools_params)
-    extra_params["__tools__"] = tools
+    extra_params["__tools__"] = get_tools(
+        app,
+        tool_ids,
+        user,
+        {
+            **extra_params,
+            "__model__": app.state.MODELS[form_data["model"]],
+            "__messages__": form_data["messages"],
+            "__files__": files,
+        },
+    )
 
     if model_info:
         if model_info.base_model_id:
