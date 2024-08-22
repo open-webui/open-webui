@@ -26,7 +26,7 @@ from apps.webui.models.files import (
     FileModel,
     FileModelResponse,
 )
-from utils.utils import get_current_user, get_admin_user
+from utils.utils import get_verified_user, get_admin_user
 from constants import ERROR_MESSAGES
 
 from importlib import util
@@ -50,7 +50,7 @@ router = APIRouter()
 
 
 @router.post("/")
-def upload_file(file: UploadFile = File(...), user=Depends(get_current_user)):
+def upload_file(file: UploadFile = File(...), user=Depends(get_verified_user)):
     log.info(f"file.content_type: {file.content_type}")
     try:
         unsanitized_filename = file.filename
@@ -105,7 +105,7 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_current_user)):
 
 
 @router.get("/", response_model=list[FileModel])
-async def list_files(user=Depends(get_current_user)):
+async def list_files(user=Depends(get_verified_user)):
     files = Files.get_files()
     return files
 
@@ -153,7 +153,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
 
 
 @router.get("/{id}", response_model=Optional[FileModel])
-async def get_file_by_id(id: str, user=Depends(get_current_user)):
+async def get_file_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
     if file:
@@ -171,7 +171,7 @@ async def get_file_by_id(id: str, user=Depends(get_current_user)):
 
 
 @router.get("/{id}/content", response_model=Optional[FileModel])
-async def get_file_content_by_id(id: str, user=Depends(get_current_user)):
+async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
     if file:
@@ -194,7 +194,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_current_user)):
 
 
 @router.get("/{id}/content/{file_name}", response_model=Optional[FileModel])
-async def get_file_content_by_id(id: str, user=Depends(get_current_user)):
+async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
     if file:
@@ -222,7 +222,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_current_user)):
 
 
 @router.delete("/{id}")
-async def delete_file_by_id(id: str, user=Depends(get_current_user)):
+async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
 
     if file:
