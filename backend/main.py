@@ -9,18 +9,12 @@ import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
-from typing import List, Optional
-from typing import Optional, Callable, Awaitable
+from typing import Optional
 
 import aiohttp
 import requests
 from authlib.integrations.starlette_client import OAuth
 from authlib.oidc.core import UserInfo
-import mimetypes
-import shutil
-import inspect
-from typing import Optional
-
 from fastapi import FastAPI, Request, Depends, status, UploadFile, File, Form
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,8 +42,6 @@ from apps.openai.main import (
 )
 from apps.rag.main import app as rag_app
 from apps.rag.utils import get_rag_context, rag_template
-from apps.rag.utils import get_rag_context, rag_template
-from apps.socket.main import app as socket_app, get_event_emitter, get_event_call
 from apps.socket.main import app as socket_app, get_event_emitter, get_event_call
 from apps.webui.internal.db import Session
 from apps.webui.main import (
@@ -57,51 +49,13 @@ from apps.webui.main import (
     get_pipe_models,
     generate_function_chat_completion,
 )
-from apps.webui.internal.db import Session
-
-
-from pydantic import BaseModel
-
 from apps.webui.models.auths import Auths
 from apps.webui.models.functions import Functions
-from apps.webui.models.functions import Functions
 from apps.webui.models.models import Models
-from apps.webui.models.tools import Tools
 from apps.webui.models.users import Users, UserModel
 from apps.webui.models.users import change_init_background_random_image_url
 from apps.webui.routers.users import change_background_random_image_url
-from apps.webui.utils import load_toolkit_module_by_id, load_function_module_by_id
-from apps.webui.models.functions import Functions
-from apps.webui.models.users import Users, UserModel
-
 from apps.webui.utils import load_function_module_by_id
-
-from utils.utils import (
-    get_admin_user,
-    get_verified_user,
-    get_current_user,
-    get_http_authorization_cred,
-    get_password_hash,
-    create_token,
-    decode_token,
-)
-from utils.task import (
-    title_generation_template,
-    search_query_generation_template,
-    tools_function_calling_generation_template,
-    moa_response_generation_template,
-)
-
-from utils.tools import get_tools
-from utils.misc import (
-    get_last_user_message,
-    add_or_update_system_message,
-    prepend_to_first_user_message_content,
-    parse_duration,
-)
-
-from apps.rag.utils import get_rag_context, rag_template
-
 from config import (
     WEBUI_NAME,
     WEBUI_URL,
@@ -147,11 +101,6 @@ from constants import ERROR_MESSAGES, WEBHOOK_MESSAGES, TASKS
 from utils.misc import (
     get_last_user_message,
     add_or_update_system_message,
-    parse_duration,
-)
-from utils.misc import (
-    get_last_user_message,
-    add_or_update_system_message,
     prepend_to_first_user_message_content,
     parse_duration,
 )
@@ -160,18 +109,9 @@ from utils.task import (
     search_query_generation_template,
     tools_function_calling_generation_template,
 )
-from utils.task import (
-    title_generation_template,
-    search_query_generation_template,
-    tools_function_calling_generation_template,
-)
+from utils.tools import get_tools
 from utils.utils import (
-    get_admin_user,
-    get_verified_user,
-    get_current_user,
-    get_http_authorization_cred,
-    get_password_hash,
-    create_token,
+    decode_token,
 )
 from utils.utils import (
     get_admin_user,
