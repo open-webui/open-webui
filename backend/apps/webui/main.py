@@ -251,10 +251,12 @@ def get_function_params(function_module, form_data, user, extra_params=None):
         extra_params = {}
 
     pipe_id = get_pipe_id(form_data)
+
     # Get the signature of the function
     sig = inspect.signature(function_module.pipe)
-    addition_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
-    params = {"body": form_data} | addition_params
+    params = {"body": form_data} | {
+        k: v for k, v in extra_params.items() if k in sig.parameters
+    }
 
     if "__user__" in params and hasattr(function_module, "UserValves"):
         user_valves = Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
