@@ -69,7 +69,7 @@ jobs:
           # https://github.com/docker/metadata-action?tab=readme-ov-file#typeraw
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ steps.get_version.outputs.version }}
+            type=raw,value=${{ steps.get_version.outputs.version }},enable=${{ github.ref == 'refs/heads/main' }}
             type=ref,event=branch
             type=ref,event=tag
             type=sha,prefix=git-
