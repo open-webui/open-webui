@@ -1,0 +1,98 @@
+---
+- name: Install Imagine
+  hosts: all
+  become: yes
+  tasks:
+    - name: Clone Open WebUI repository
+      git:
+        repo: 'https://github.com/open-webui/open-webui.git'
+        dest: '/opt/open-webui'
+        force: yes # Forces a clean clone if the repo already exists
+
+    - name: Copy the .env.example to .env
+      copy:
+        src: '/opt/open-webui/.env.example'
+        dest: '/opt/open-webui/.env'
+        remote_src: yes # Source file already exists on the target machine
+
+    - name: Install frontend packages
+      command: npm install
+      args:
+        chdir: '/opt/open-webui'
+
+    - name: Build the frontend
+      command: npm run build
+      args:
+        chdir: '/opt/open-webui'
+
+    - name: Create the systemd service for Frontend
+      copy:
+        dest: /etc/systemd/system/open-webui-frontend.service
+        content: |
+          [Unit]
+          Description=Open WebUI Frontend
+          After=network.target
+
+          [Service]
+          ExecStart=/usr/bin/npm start
+          WorkingDirectory=/opt/open-webui
+          Restart=always
+          StandardOutput=syslog
+          StandardError=syslog
+          SyslogIdentifier=open-webui-frontend
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Create the systemd service for Backend
+      copy:
+        dest: /etc/systemd/system/open-webui-backend.service
+        content: |
+          [Unit]
+          Description=Open WebUI Backend
+          After=network.target
+
+          [Service]
+          ExecStart=/bin/bash -c "cd /opt/open-webui/backend && ./start.sh"
+          Restart=always
+          StandardOutput=syslog
+          StandardError=syslog
+          SyslogIdentifier=open-webui-backend
+
+          [Install]
+          WantedBy=multi-user.target
+
+    # - name: Install Conda
+    #   shell: |
+    #     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+    #     bash miniconda.sh -b -p /opt/miniconda
+    #     echo 'export PATH="/opt/miniconda/bin:$PATH"' >> ~/.bashrc
+    #     . ~/.bashrc
+
+    # - name: Create and activate conda environment
+    #   shell: |
+    #     . /opt/miniconda/bin/activate
+    #     conda create --name open-webui-env python=3.11 -y
+    #     conda activate open-webui-env
+
+    # - name: Install Python dependencies
+    #   shell: |
+    #     . /opt/miniconda/bin/activate open-webui-env
+    #     pip install -r /opt/open-webui/backend/requirements.txt
+
+    # - name: Start Open WebUI application via Service
+    #   command: bash start.sh
+    #   args:
+    #     chdir: '/opt/open-webui/backend'
+
+    - name: Enable and start the Open WebUI Frontend service
+      systemd:
+        name: open-webui-frontend
+        enabled: yes
+        state: started
+
+    - name: Enable and start the Open WebUI Backend service
+      systemd:
+        name: open-webui-backend
+        enabled: yes
+        state: started
