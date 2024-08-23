@@ -78,11 +78,3 @@ duckduckgo-search~=6.2.1
 docker~=7.1.0
 pytest~=8.3.2
 pytest-docker~=3.1.1
-
-
---extra-index-url https://download.pytorch.org/whl/nightly/rocm6.1
-
-# Pre-release versions of PyTorch packages
-torch>=0.0.0.dev0
-torchvision>=0.0.0.dev0
-torchaudio>=0.0.0.dev0
