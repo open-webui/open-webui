@@ -2,6 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { chats, config, settings, user as _user, mobile, currentChatPage } from '$lib/stores';
 	import { tick, getContext, onMount } from 'svelte';
+
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
 	import UserMessage from './Messages/UserMessage.svelte';
@@ -10,6 +11,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import { imageGenerations } from '$lib/apis/images';
 	import { copyToClipboard, findWordIndices } from '$lib/utils';
+
 	import CompareMessages from './Messages/CompareMessages.svelte';
 	import MultiResponseMessages from './Messages/MultiResponseMessages.svelte';
 
