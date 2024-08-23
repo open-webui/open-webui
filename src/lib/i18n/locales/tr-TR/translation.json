@@ -6,7 +6,6 @@
 	"(latest)": "(en son)",
 	"{{ models }}": "{{ models }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: Temel modeli silemezsiniz",
-	"{{modelName}} is thinking...": "{{modelName}} düşünüyor...",
 	"{{user}}'s Chats": "{{user}} Sohbetleri",
 	"{{webUIName}} Backend Required": "{{webUIName}} Arkayüz Gerekli",
 	"*Prompt node ID(s) are required for image generation": "",

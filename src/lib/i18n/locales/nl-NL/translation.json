@@ -6,7 +6,6 @@
 	"(latest)": "(nieuwste)",
 	"{{ models }}": "{{ modellen }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: U kunt een basismodel niet verwijderen",
-	"{{modelName}} is thinking...": "{{modelName}} is aan het denken...",
 	"{{user}}'s Chats": "{{user}}'s Chats",
 	"{{webUIName}} Backend Required": "{{webUIName}} Backend Verlpicht",
 	"*Prompt node ID(s) are required for image generation": "",

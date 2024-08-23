@@ -6,7 +6,6 @@
 	"(latest)": "(остання)",
 	"{{ models }}": "{{ models }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: Ви не можете видалити базову модель.",
-	"{{modelName}} is thinking...": "{{modelName}} думає...",
 	"{{user}}'s Chats": "Чати {{user}}а",
 	"{{webUIName}} Backend Required": "Необхідно підключення бекенду {{webUIName}}",
 	"*Prompt node ID(s) are required for image generation": "",

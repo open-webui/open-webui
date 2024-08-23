@@ -6,7 +6,6 @@
 	"(latest)": "（最新版）",
 	"{{ models }}": "{{ models }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}：您無法刪除基礎模型",
-	"{{modelName}} is thinking...": "{{modelName}} 正在思考...",
 	"{{user}}'s Chats": "{{user}} 的對話",
 	"{{webUIName}} Backend Required": "需要 {{webUIName}} 後端",
 	"*Prompt node ID(s) are required for image generation": "",

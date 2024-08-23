@@ -6,7 +6,6 @@
 	"(latest)": "(ล่าสุด)",
 	"{{ models }}": "{{ models }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: คุณไม่สามารถลบโมเดลพื้นฐานได้",
-	"{{modelName}} is thinking...": "{{modelName}} กำลังคิด...",
 	"{{user}}'s Chats": "การสนทนาของ {{user}}",
 	"{{webUIName}} Backend Required": "ต้องการ Backend ของ {{webUIName}}",
 	"*Prompt node ID(s) are required for image generation": "",

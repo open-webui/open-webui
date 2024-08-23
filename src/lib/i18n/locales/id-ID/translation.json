@@ -6,7 +6,6 @@
 	"(latest)": "(terbaru)",
 	"{{ models }}": "{{ models }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: Anda tidak dapat menghapus model dasar",
-	"{{modelName}} is thinking...": "{{modelName}} sedang berpikir...",
 	"{{user}}'s Chats": "Obrolan {{user}}",
 	"{{webUIName}} Backend Required": "{{webUIName}} Diperlukan Backend",
 	"*Prompt node ID(s) are required for image generation": "",
