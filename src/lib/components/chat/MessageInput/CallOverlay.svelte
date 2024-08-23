@@ -243,6 +243,15 @@
 		mediaRecorder.start();
 	};
 
+	const stopAudioStream = async () => {
+		if (audioStream) {
+			const tracks = audioStream.getTracks();
+			tracks.forEach((track) => track.stop());
+		}
+
+		audioStream = null;
+	};
+
 	// Function to calculate the RMS level from time domain data
 	const calculateRMS = (data: Uint8Array) => {
 		let sumSquares = 0;
@@ -911,6 +920,8 @@
 				<button
 					class=" p-3 rounded-full bg-gray-50 dark:bg-gray-900"
 					on:click={async () => {
+						stopAudioStream();
+						stopVideoStream();
 						showCallOverlay.set(false);
 					}}
 					type="button"
