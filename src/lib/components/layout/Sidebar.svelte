@@ -589,11 +589,8 @@
 		</div>
 
 		<div class="px-2.5">
-<<<<<<< HEAD
 			<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 				 
-=======
->>>>>>> 45eb7f55 (Finalized Artifacts Modal)
 			<div class="flex flex-col font-primary">
 				<!-- <hr class=" border-gray-900 mb-1 w-full" /> -->
 				 

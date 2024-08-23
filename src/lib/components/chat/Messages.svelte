@@ -393,11 +393,7 @@
 				{/each}
 
 				{#if bottomPadding}
-<<<<<<< HEAD
 					<div class=" pb-6" />
-=======
-					<div class="pb-6" />
->>>>>>> 45eb7f55 (Finalized Artifacts Modal)
 				{/if}
 			{/key}
 		</div>

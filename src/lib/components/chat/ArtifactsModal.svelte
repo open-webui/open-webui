@@ -259,11 +259,7 @@
             </div>
         </div>
 
-<<<<<<< HEAD
         <div class="p-4 flex-grow overflow-auto">
-=======
-        <div class="p-4">
->>>>>>> 45eb7f55 (Finalized Artifacts Modal)
             {#if error}
                 <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
                     <strong class="font-bold">Error!</strong>
@@ -271,7 +267,6 @@
                 </div>
             {/if}
 
-<<<<<<< HEAD
             <div class="bg-white dark:bg-gray-800 p-4 rounded-lg h-full flex flex-col">
                 {#if viewMode === 'full'}
                     {#if renderedContents.length > 0}
@@ -279,15 +274,6 @@
                             renderRatio === 'responsive' ? 'max-w-full' :
                             renderRatio === 'mobile' ? 'mobile-view' :
                             'w-full h-full'
-=======
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg">
-                {#if viewMode === 'full'}
-                    {#if renderedContents.length > 0}
-                        <div class={`w-full mx-auto ${
-                            renderRatio === 'responsive' ? 'max-w-full' :
-                            renderRatio === 'mobile' ? 'mobile-view' :
-                            'w-full h-screen'
->>>>>>> 45eb7f55 (Finalized Artifacts Modal)
                         }`}>
                             <iframe
                                 bind:this={iframeElement}
@@ -356,20 +342,14 @@
         z-index: 9999;
         background-color: rgb(17 24 39);
         color: white;
-<<<<<<< HEAD
         display: flex;
         flex-direction: column;
-=======
->>>>>>> 45eb7f55 (Finalized Artifacts Modal)
     }
 
     iframe {
         max-width: 100%;
         margin: 0 auto;
-<<<<<<< HEAD
         flex-grow: 1;
-=======
->>>>>>> 45eb7f55 (Finalized Artifacts Modal)
     }
 
     .mobile-view {
