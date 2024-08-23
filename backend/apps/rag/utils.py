@@ -149,16 +149,20 @@ def query_collection(
 ):
     results = []
     for collection_name in collection_names:
-        try:
-            result = query_doc(
-                collection_name=collection_name,
-                query=query,
-                k=k,
-                embedding_function=embedding_function,
-            )
-            results.append(result)
-        except Exception:
+        if collection_name:
+            try:
+                result = query_doc(
+                    collection_name=collection_name,
+                    query=query,
+                    k=k,
+                    embedding_function=embedding_function,
+                )
+                results.append(result)
+            except Exception:
+                pass
+        else:
             pass
+
     return merge_and_sort_query_results(results, k=k)
 
 
@@ -257,7 +261,7 @@ def get_rag_context(
         collection_names = (
             file["collection_names"]
             if file["type"] == "collection"
-            else [file["collection_name"]]
+            else [file["collection_name"]] if file["collection_name"] else []
         )
 
         collection_names = set(collection_names).difference(extracted_collections)
