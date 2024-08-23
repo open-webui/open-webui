@@ -10,8 +10,6 @@
 	import Placeholder from './Messages/Placeholder.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { imageGenerations } from '$lib/apis/images';
-	import { copyToClipboard, findWordIndices } from '$lib/utils';
-
 	import CompareMessages from './Messages/CompareMessages.svelte';
 	import MultiResponseMessages from './Messages/MultiResponseMessages.svelte';
 
