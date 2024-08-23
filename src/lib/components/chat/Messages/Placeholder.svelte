@@ -70,7 +70,7 @@
 		>
 			<img src="/logo-main.png" class="{$isMobile ? 'h-[3.5rem]' : 'h-[6rem]'}" alt="logo" />
 			<div>
-				<div class=" capitalize line-clamp-1 leading-tight" in:fade={{ duration: 200 }}>
+				<div class=" capitalize leading-tight" in:fade={{ duration: 200 }}>
 					{#if modelfile}
 						{modelfile.title}
 					{:else}

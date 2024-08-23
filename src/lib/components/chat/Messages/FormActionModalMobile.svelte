@@ -28,7 +28,22 @@
 	let address = '';
 	let dayCount = 0;
 	let days = 0;
-	const leaves = ['Annual Leave', 'Sick Leave'];
+	const leaves = [
+		'Annual Leave',
+		'Sick Leave',
+		'Maternity Leave',
+		'Paternity Leave',
+		'Unpaid Leave',
+		'Compassionate Leave',
+		'Administrative Leave',
+		'Emergency Leave',
+		'Educational Leave',
+		'Lecture, Course/Exams',
+		'Escort Leave',
+		'Military Service',
+		'Iddah Leave',
+		'Haj Leave'
+	];
 
 	$: if (citation) {
 		mergedDocuments = citation.document?.map((c, i) => {
@@ -39,8 +54,7 @@
 			};
 		});
 	}
-	$: dayCount =
-		(new Date(endDate).getTime() - new Date(startDate).getTime()) / 1000 / 60 / 60 / 24 + 1;
+	$: dayCount = countWeekdays(startDate, endDate);
 	$: if (new Date(startDate).getTime() - new Date(endDate).getTime() > 0) {
 		endDate = new Date(startDate);
 	}
@@ -48,6 +62,24 @@
 		days = dayCount;
 	}
 
+	const countWeekdays = (startDate, endDate) => {
+		// make sure in right order
+		if (endDate < startDate) return 0;
+
+		let count = 0;
+		let currentDate = new Date(startDate);
+
+		while (currentDate <= endDate) {
+			const dayOfWeek = currentDate.getDay();
+			// skip Saturday and Sunday
+			if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+				count++;
+			}
+			// continue for next count
+			currentDate.setDate(currentDate.getDate() + 1);
+		}
+		return count;
+	};
 	const dateFormatter = (val) => {
 		const date = val ? new Date(val) : new Date();
 		// const dateString = date.toDateString().split(' ')
@@ -86,7 +118,8 @@
 	};
 	const handleConfirm = () => {
 		if (!$user.extra_sso) {
-			toast.error('User type error. Only supports users login with outlook account.').return;
+			toast.error('User type error. Only supports users login with outlook account.');
+			return;
 		}
 		const ssoData = JSON.parse($user.extra_sso);
 		const formData = {
@@ -142,7 +175,7 @@
 		</div> -->
 
 		<div class="flex flex-col w-full px-2 py-4 md:space-x-4">
-			<div class=" w-full dark:text-gray-200 overflow-y-scroll scrollbar-hidden p-5">
+			<div class=" w-full dark:text-gray-600 overflow-y-scroll scrollbar-hidden p-5">
 				<form
 					on:submit|preventDefault={() => {
 						handleConfirm();
@@ -159,7 +192,7 @@
 								<select
 									required
 									bind:value={type}
-									class="flex-1 rounded-md px-2 h-[44px]"
+									class="flex-1 rounded-md px-2 h-[44px] bg-transparent"
 									style="border: 1px solid #0000004D"
 								>
 									{#each leaves as leaveType}
@@ -235,7 +268,7 @@
 					</div>
 					<div class="flex mt-4 justify-end">
 						<button
-							class="py-1 px-12 rounded-lg border border-black/opacity-3 text-black/opacity-60 text-sm"
+							class="py-1 px-12 rounded-lg border border-gray-500 dark:border-gray-600 text-black/opacity-60 text-sm"
 							on:click={() => {
 								// show = false;
 								dispatch('cancel');

@@ -62,7 +62,7 @@
 							<div class="text-sm text-gray-600 font-normal line-clamp-2">{prompt.title[1]}</div>
 						{:else}
 							<div
-								class=" self-center text-base font-medium dark:text-gray-300 dark:group-hover:text-gray-100 transition line-clamp-2"
+								class=" self-center text-base font-medium dark:text-gray-600 dark:group-hover:text-gray-800 transition line-clamp-2"
 							>
 								{prompt.content}
 							</div>

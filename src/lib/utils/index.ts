@@ -533,7 +533,7 @@ export const fetchApi = async (url, options) => {
 	})
 	if (error) {
 		if (error.status == 401) {
-			toast.error("Unauthorized request. Please try loging in again. Auto-redirect in 3 seconds...")
+			toast.error("Unauthorized request. Please try logging in again. Auto-redirect in 3 seconds...")
 			setTimeout(() => {
 				localStorage.removeItem('token');
 				location.href = '/auth';
