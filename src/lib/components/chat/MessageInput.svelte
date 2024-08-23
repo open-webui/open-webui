@@ -766,7 +766,11 @@
 														let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 														// If the user grants the permission, proceed to show the call overlay
 
-														stream.getTracks().forEach((track) => track.stop());
+														if (stream) {
+															const tracks = stream.getTracks();
+															tracks.forEach((track) => track.stop());
+														}
+
 														stream = null;
 
 														showCallOverlay.set(true);
