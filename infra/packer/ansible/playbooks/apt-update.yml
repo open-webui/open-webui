@@ -1,0 +1,33 @@
+---
+- name: Update and Upgrade OS packages
+  hosts: all
+  become: yes
+
+  vars:
+    packages:
+      - ca-certificates
+      - curl
+      - ffmpeg
+      - git
+      - htop
+      - jq
+      - make
+      - python3-pip
+      - software-properties-common
+      - tree
+      - vim
+      - wget
+
+  tasks:
+    - name: Update and upgrade all packages
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: dist
+        autoclean: yes
+        autoremove: yes
+
+    - name: Install common packages
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+
