@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { config, models, settings, showCallOverlay } from '$lib/stores';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick, getContext, onDestroy } from 'svelte';
 
 	import {
 		blobToFile,
@@ -28,6 +28,8 @@
 	export let chatId;
 	export let modelId;
 
+	let wakeLock = null;
+
 	let model = null;
 
 	let loading = false;
@@ -45,6 +47,7 @@
 	let rmsLevel = 0;
 	let hasStartedSpeaking = false;
 	let mediaRecorder;
+	let audioStream = null;
 	let audioChunks = [];
 
 	let videoInputDevices = [];
@@ -210,17 +213,23 @@
 		} else {
 			audioChunks = [];
 			mediaRecorder = false;
+
+			if (audioStream) {
+				const tracks = audioStream.getTracks();
+				tracks.forEach((track) => track.stop());
+			}
+			audioStream = null;
 		}
 	};
 
 	const startRecording = async () => {
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		mediaRecorder = new MediaRecorder(stream);
+		audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		mediaRecorder = new MediaRecorder(audioStream);
 
 		mediaRecorder.onstart = () => {
 			console.log('Recording started');
 			audioChunks = [];
-			analyseAudio(stream);
+			analyseAudio(audioStream);
 		};
 
 		mediaRecorder.ondataavailable = (event) => {
@@ -509,6 +518,34 @@
 	};
 
 	onMount(async () => {
+		const setWakeLock = async () => {
+			try {
+				wakeLock = await navigator.wakeLock.request('screen');
+			} catch (err) {
+				// The Wake Lock request has failed - usually system related, such as battery.
+				console.log(err);
+			}
+
+			if (wakeLock) {
+				// Add a listener to release the wake lock when the page is unloaded
+				wakeLock.addEventListener('release', () => {
+					// the wake lock has been released
+					console.log('Wake Lock released');
+				});
+			}
+		};
+
+		if ('wakeLock' in navigator) {
+			await setWakeLock();
+
+			document.addEventListener('visibilitychange', async () => {
+				// Re-request the wake lock if the document becomes visible
+				if (wakeLock !== null && document.visibilityState === 'visible') {
+					await setWakeLock();
+				}
+			});
+		}
+
 		model = $models.find((m) => m.id === modelId);
 
 		startRecording();
@@ -584,6 +621,12 @@
 			await stopRecordingCallback(false);
 			await stopCamera();
 		};
+	});
+
+	onDestroy(async () => {
+		await stopAllAudio();
+		await stopRecordingCallback(false);
+		await stopCamera();
 	});
 </script>
 

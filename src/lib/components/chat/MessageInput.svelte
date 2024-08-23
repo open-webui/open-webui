@@ -52,7 +52,7 @@
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
 
-	export let autoScroll = true;
+	export let autoScroll = false;
 
 	export let atSelectedModel: Model | undefined;
 	export let selectedModels: [''];
@@ -97,7 +97,10 @@
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollHeight;
+		element.scrollTo({
+			top: element.scrollHeight,
+			behavior: 'smooth'
+		});
 	};
 
 	const uploadFileHandler = async (file, base64_url, enableBase64) => {
